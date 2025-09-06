@@ -2,7 +2,10 @@
 
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRExpected.h>
+#include <MRMesh/MRVector3.h>
 #include <MRVoxels/MRVoxelsFwd.h>
+
+#include <variant>
 
 namespace MR::FillingSurface
 {
@@ -76,5 +79,55 @@ MRVOXELS_API float estimateDensity( Type type, float targetIso );
 MRVOXELS_API float getMinimalResolution( Type type, float iso );
 
 } // namespace TPMS
+
+
+
+namespace CellularSurface // Surface of cylinders in a grid
+{
+
+struct Params
+{
+    Vector3f period = Vector3f::diagonal( 1 );  // the distance between consecutive cylinders in each direction
+    Vector3f width = Vector3f::diagonal( 0.4f );// the width of cylinders in each direction
+    float r = 0;        // the radius of uniting spheres
+};
+
+MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback cb = {} );
+
+MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb = {} );
+
+}
+
+
+enum class Kind : int
+{
+    TPMS = 0,
+    Cellular
+};
+MRVOXELS_API std::vector<std::string> getKindNames();
+
+using MeshParams = std::variant
+    < std::reference_wrapper<TPMS::MeshParams>
+    , std::reference_wrapper<CellularSurface::Params>
+    >;
+
+using ConstMeshParams = std::variant
+    < std::reference_wrapper<const TPMS::MeshParams>
+    , std::reference_wrapper<const CellularSurface::Params>
+    >;
+
+// Useful in plugins/UI to store all possible values of params and don't forget them when the kind is changed
+struct AllMeshParams
+{
+    Kind kind = Kind::Cellular;
+    TPMS::MeshParams tpmsParams;
+    CellularSurface::Params cellularParams;
+
+    MRVOXELS_API MeshParams toMeshParams();
+    MRVOXELS_API ConstMeshParams toConstMeshParams() const;
+};
+
+MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParams params, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParams params, ProgressCallback cb = {} );
 
 } // namespace FillingSurface

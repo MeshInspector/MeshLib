@@ -6,6 +6,8 @@
 #include "MRMesh/MRMeshDecimate.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshComponents.h"
+#include "MRMesh/MRCylinder.h"
+#include "MRMesh/MRMeshFixer.h"
 #include <MRMesh/MRMeshBoolean.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -422,5 +424,127 @@ float getMinimalResolution( Type type, float iso )
 }
 
 } // namespace TPMS
+
+
+namespace CellularSurface
+{
+
+Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback )
+{
+    const auto delta = params.period - 2*params.width;
+    if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
+        return unexpected( "Period must be larger than width" );
+
+    std::vector<Mesh> bar( 3 );
+
+    for ( int ax = 0; ax < 3; ++ax )
+    {
+        int ax1 = ( ax + 1 ) % 3;
+        int ax2 = ( ax + 2 ) % 3;
+        for ( int i = 0; i < size[ax1] / params.period[ax1]; ++i )
+        {
+            for ( int j = 0; j < size[ax2] / params.period[ax2]; ++j )
+            {
+                auto mesh = makeCylinder( params.width[ax], size[ax] );
+
+                AffineXf3f tr;
+                if ( ax == 0 )
+                    tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
+                if ( ax == 1 )
+                {
+                    tr.A = Matrix3f::rotation( Vector3f::plusX(), PI2_F );
+                    tr = AffineXf3f::translation( Vector3f::plusY() * size.y ) * tr;
+                }
+
+                Vector3f s;
+                s[ax1] = i * params.period[ax1];
+                s[ax2] = j * params.period[ax2];
+
+                mesh.transform( AffineXf3f::translation( s ) * tr );
+                bar[ax].addMesh( mesh );
+            }
+        }
+    }
+
+//    Mesh result;
+//    result.addMesh( bar[0] );
+//    result.addMesh( bar[1] );
+//    result.addMesh( bar[2] );
+//    return result;
+
+    auto r1 = boolean( bar[0], bar[1], BooleanOperation::Union );
+    if ( !r1 )
+        return unexpected( r1.errorString );
+
+    if ( auto fixDeg = fixMeshDegeneracies( *r1, { .maxDeviation = std::min( params.width.x, std::min( params.width.y, params.width.z ) ) / 10.f } ); !fixDeg )
+        return unexpected( fixDeg.error() );
+
+//    auto r2 = boolean( r1.mesh, bar[2], BooleanOperation::Union );
+//    if ( !r2 )
+//        return unexpected( r2.errorString );
+
+//    if ( auto fixDeg = fixMeshDegeneracies( *r2, { .maxDeviation = 0.001f } ); !fixDeg )
+//        return unexpected( fixDeg.error() );
+//
+    return r1.mesh;
+}
+
+Expected<Mesh> fill( const Mesh&, const Params&, ProgressCallback )
+{
+    return {};
+}
+
+} // namespace CellularSurface
+
+std::vector<std::string> getKindNames()
+{
+    return { "TPMS", "Cellular" };
+}
+
+MeshParams AllMeshParams::toMeshParams()
+{
+    switch ( kind )
+    {
+        case Kind::TPMS:
+            return tpmsParams;
+        case Kind::Cellular:
+            return cellularParams;
+        default:
+            assert( false );
+            return tpmsParams;
+    }
+}
+
+ConstMeshParams AllMeshParams::toConstMeshParams() const
+{
+    switch ( kind )
+    {
+        case Kind::TPMS:
+            return tpmsParams;
+        case Kind::Cellular:
+            return cellularParams;
+        default:
+            assert( false );
+            return tpmsParams;
+    }
+}
+
+Expected<Mesh> build( const Vector3f& size, ConstMeshParams params, ProgressCallback cb )
+{
+    return std::visit( overloaded{
+        [&size, &cb] ( const TPMS::MeshParams& params ) { return TPMS::build( size, params, cb ); },
+        [&size, &cb] ( const CellularSurface::Params& params ) { return CellularSurface::build( size, params, cb ); }
+    }, params );
+}
+
+Expected<Mesh> fill( const Mesh& mesh, ConstMeshParams params, ProgressCallback cb )
+{
+    return std::visit( overloaded{
+        [&mesh, &cb] ( const TPMS::MeshParams& params ) { return TPMS::fill( mesh, params, cb ); },
+        [&mesh, &cb] ( const CellularSurface::Params& params ) { return CellularSurface::fill( mesh, params, cb ); }
+    }, params );
+}
+
+
 
 } // namespace FillingSurface

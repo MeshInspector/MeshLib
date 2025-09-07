@@ -21,6 +21,28 @@
 namespace MR::FillingSurface
 {
 
+namespace
+{
+
+struct SizeAndXf
+{
+    Vector3f size;
+    AffineXf3f xf;
+};
+
+/// Given mesh, returns the size of the filling surface (with padding) and its transform back to mesh
+SizeAndXf getFillingSizeAndXf( const Mesh& mesh, float period )
+{
+    const auto extraStep = Vector3f::diagonal( period );
+
+    SizeAndXf ret;
+    ret.xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
+    ret.size = mesh.getBoundingBox().size() + 1.5f*extraStep;
+    return ret;
+}
+
+}
+
 namespace TPMS
 {
 
@@ -349,13 +371,11 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 {
     MR_TIMER;
     // first construct a surface by the bounding box of the mesh
-    const auto extraStep = Vector3f::diagonal( 1.f / params.frequency );
-    auto sponge = build( mesh.getBoundingBox().size() + 1.5f*extraStep, params, subprogress( cb, 0.f, 0.9f ) );
+    auto [size, xf] = getFillingSizeAndXf( mesh, 1.f / params.frequency );
+
+    auto sponge = build( size, params, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
         return sponge;
-
-    // translation to mesh csys
-    const auto xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
 
     BooleanOperation booleanOp = isThick( params.type ) ? BooleanOperation::OutsideB : BooleanOperation::Union;
     auto res = boolean( mesh, *sponge, booleanOp, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
@@ -375,8 +395,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 
 size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution )
 {
-    const auto extraStep = Vector3f::diagonal( 1.f / frequency );
-    const auto dims = getDimsAndSize( mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution ).dims;
+    const auto dims = getDimsAndSize( getFillingSizeAndXf( mesh, 1.f / frequency ).size, frequency, resolution ).dims;
     return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
 }
 

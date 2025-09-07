@@ -33,7 +33,7 @@ jobs:
           echo "release_tag=$TAG" >> $GITHUB_OUTPUT
 
           # Minimal matrix: Release only
-          MATRIX_FILE=".github/workflows/matrix/windows-release-config.json"
+          MATRIX_FILE=".github/workflows/matrix/windows-finalize-release-config.json"
           MATRIX=$(jq -c . < "$MATRIX_FILE")
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 

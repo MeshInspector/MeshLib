@@ -88,8 +88,8 @@ namespace CellularSurface // Surface of cylinders in a grid
 struct Params
 {
     Vector3f period = Vector3f::diagonal( 1 );  // the distance between consecutive cylinders in each direction
-    Vector3f width = Vector3f::diagonal( 0.4f );// the width of cylinders in each direction
-    float r = 0;        // the radius of uniting spheres
+    Vector3f width = Vector3f::diagonal( 0.3f );// the width of cylinders in each direction
+    float r = 0.4;        // the radius of uniting spheres
 };
 
 MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback cb = {} );

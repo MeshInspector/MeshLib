@@ -8,6 +8,7 @@
 #include "MRMesh/MRMeshComponents.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRMeshFixer.h"
+#include "MRMesh/MRMakeSphereMesh.h"
 #include <MRMesh/MRMeshBoolean.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -466,27 +467,33 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
         }
     }
 
-//    Mesh result;
-//    result.addMesh( bar[0] );
-//    result.addMesh( bar[1] );
-//    result.addMesh( bar[2] );
-//    return result;
+    Mesh spheres;
+    for ( int x = 0; x < size[0] / params.period[0]; ++x )
+    {
+        for ( int y = 0; y < size[1] / params.period[1]; ++y )
+        {
+            for ( int z = 0; z < size[2] / params.period[2]; ++z )
+            {
+                auto mesh = makeSphere( { .radius = params.r } );
+                auto s = mult( Vector3f( x, y ,z ), params.period );
+                mesh.transform( AffineXf3f::translation( s ) );
+                spheres.addMesh( mesh );
+            }
+        }
+    }
 
-    auto r1 = boolean( bar[0], bar[1], BooleanOperation::Union );
-    if ( !r1 )
-        return unexpected( r1.errorString );
-
-    if ( auto fixDeg = fixMeshDegeneracies( *r1, { .maxDeviation = std::min( params.width.x, std::min( params.width.y, params.width.z ) ) / 10.f } ); !fixDeg )
-        return unexpected( fixDeg.error() );
-
-//    auto r2 = boolean( r1.mesh, bar[2], BooleanOperation::Union );
-//    if ( !r2 )
-//        return unexpected( r2.errorString );
-
-//    if ( auto fixDeg = fixMeshDegeneracies( *r2, { .maxDeviation = 0.001f } ); !fixDeg )
-//        return unexpected( fixDeg.error() );
-//
-    return r1.mesh;
+    Mesh r = std::move( spheres );
+    for ( const auto& m : bar )
+    {
+        auto t = boolean( r, m, BooleanOperation::Union );
+        if ( !t )
+            return unexpected( t.errorString );
+        if ( auto fixDeg = fixMeshDegeneracies( *t, { .maxDeviation = 0.001f } ); !fixDeg )
+            return unexpected( fixDeg.error() );
+        decimateMesh( t.mesh, { .maxError = 0.001f, .stabilizer = 1e-5 } );
+        r = std::move( t.mesh );
+    }
+    return r;
 }
 
 Expected<Mesh> fill( const Mesh&, const Params&, ProgressCallback )

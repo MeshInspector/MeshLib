@@ -37,6 +37,7 @@ jobs:
             C:\vcpkg\*
 
       - name: Update vcpkg packages
+        # NOTE: This step (thirdparty/install.bat) is the only one keeping us from using github runner for this job
         run: |
           .\thirdparty\install.bat
 

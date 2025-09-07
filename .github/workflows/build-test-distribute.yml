@@ -65,6 +65,7 @@ jobs:
       config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.tag-build-release-windows == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       nuget_build:           ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
     secrets: inherit

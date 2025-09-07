@@ -13,6 +13,9 @@ on:
       internal_build:
         required: true
         type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
       upload_test_artifacts:
         required: true
         type: boolean

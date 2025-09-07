@@ -10,6 +10,7 @@
 #include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include <MRMesh/MRMeshBoolean.h>
+#include <MRMesh/MRMeshBuilder.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
 
@@ -436,64 +437,75 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
 
-    std::vector<Mesh> bar( 3 );
+    constexpr float eps = 1e-5;
 
-    for ( int ax = 0; ax < 3; ++ax )
+    Mesh baseElement;
     {
-        int ax1 = ( ax + 1 ) % 3;
-        int ax2 = ( ax + 2 ) % 3;
-        for ( int i = 0; i < size[ax1] / params.period[ax1]; ++i )
+        baseElement.addMesh( makeSphere( { .radius = params.r } ) );
+        baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );
+
+        for ( int ax = 0; ax < 3; ++ax )
         {
-            for ( int j = 0; j < size[ax2] / params.period[ax2]; ++j )
+            int ax1 = ( ax + 1 ) % 3;
+            int ax2 = ( ax + 2 ) % 3;
+            auto cyl = makeCylinder( params.width[0], params.period[0] );
+            AffineXf3f tr;
+            if ( ax == 0 )
+                tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
+            if ( ax == 1 )
             {
-                auto mesh = makeCylinder( params.width[ax], size[ax] );
-
-                AffineXf3f tr;
-                if ( ax == 0 )
-                    tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
-                if ( ax == 1 )
-                {
-                    tr.A = Matrix3f::rotation( Vector3f::plusX(), PI2_F );
-                    tr = AffineXf3f::translation( Vector3f::plusY() * size.y ) * tr;
-                }
-
-                Vector3f s;
-                s[ax1] = i * params.period[ax1];
-                s[ax2] = j * params.period[ax2];
-
-                mesh.transform( AffineXf3f::translation( s ) * tr );
-                bar[ax].addMesh( mesh );
+                tr.A = Matrix3f::rotation( Vector3f::plusX(), PI2_F );
+                tr = AffineXf3f::translation( Vector3f::plusY() * params.period.y ) * tr;
             }
-        }
-    }
 
-    Mesh spheres;
-    for ( int x = 0; x < size[0] / params.period[0]; ++x )
-    {
-        for ( int y = 0; y < size[1] / params.period[1]; ++y )
-        {
-            for ( int z = 0; z < size[2] / params.period[2]; ++z )
-            {
-                auto mesh = makeSphere( { .radius = params.r } );
-                auto s = mult( Vector3f( x, y ,z ), params.period );
-                mesh.transform( AffineXf3f::translation( s ) );
-                spheres.addMesh( mesh );
-            }
+            Vector3f s;
+            s[ax1] = params.period[ax1] / 2.f;
+            s[ax2] = params.period[ax2] / 2.f;
+            cyl.transform( AffineXf3f::translation( s ) * tr );
+            auto r = boolean( baseElement, cyl, BooleanOperation::Union );
+            if ( !r )
+                return unexpected( r.errorString );
+            baseElement = std::move( r.mesh );
         }
-    }
-
-    Mesh r = std::move( spheres );
-    for ( const auto& m : bar )
-    {
-        auto t = boolean( r, m, BooleanOperation::Union );
-        if ( !t )
-            return unexpected( t.errorString );
-        if ( auto fixDeg = fixMeshDegeneracies( *t, { .maxDeviation = 0.001f } ); !fixDeg )
+        if ( auto fixDeg = fixMeshDegeneracies( baseElement, { .maxDeviation = 0.001f } ); !fixDeg )
             return unexpected( fixDeg.error() );
-        decimateMesh( t.mesh, { .maxError = 0.001f, .stabilizer = 1e-5 } );
-        r = std::move( t.mesh );
+        decimateMesh( baseElement, { .maxError = 0.001f, .stabilizer = 1e-5 } );
+
+        FaceBitSet toDel;
+        for ( auto f : baseElement.topology.getValidFaces() )
+        {
+            auto n =  baseElement.normal( f );
+            if ( std::abs( std::abs( n.x ) - 1.f ) < eps || std::abs( std::abs( n.y ) - 1.f ) < eps || std::abs( std::abs( n.z ) - 1.f ) < eps )
+            {
+                toDel.autoResizeSet( f, true );
+            }
+        }
+
+        baseElement.deleteFaces( toDel );
+        if ( baseElement.topology.findNumHoles() != 6 )
+            return unexpected( "Incorrect base element" );
     }
-    return r;
+
+
+    Mesh result;
+    for ( int x = 0; x < size.x / params.period.x; ++x )
+    {
+        for ( int y = 0; y < size.y / params.period.y; ++y )
+        {
+            for ( int z = 0; z < size.z / params.period.z; ++z )
+            {
+                auto mesh = baseElement;
+                mesh.transform( AffineXf3f::translation( mult( Vector3f( x, y, z ), params.period ) ) );
+                result.addMesh( mesh );
+            }
+        }
+    }
+
+    MeshBuilder::uniteCloseVertices( result, eps );
+    if ( MeshComponents::getNumComponents( result ) != 1 )
+        return unexpected( "Failed to unify result" );
+
+    return result;
 }
 
 Expected<Mesh> fill( const Mesh&, const Params&, ProgressCallback )

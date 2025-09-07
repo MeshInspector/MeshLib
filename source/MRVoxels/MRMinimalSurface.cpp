@@ -433,7 +433,7 @@ namespace CellularSurface
 
 Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback )
 {
-    const auto delta = params.period - 2*params.width;
+    const auto delta = params.period - params.width;
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
 
@@ -448,7 +448,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
         {
             int ax1 = ( ax + 1 ) % 3;
             int ax2 = ( ax + 2 ) % 3;
-            auto cyl = makeCylinder( params.width[0], params.period[0] );
+            auto cyl = makeCylinder( params.width[ax] / 2.f, params.period[ax] );
             AffineXf3f tr;
             if ( ax == 0 )
                 tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );

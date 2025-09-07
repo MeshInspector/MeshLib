@@ -431,7 +431,7 @@ float getMinimalResolution( Type type, float iso )
 namespace CellularSurface
 {
 
-Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback )
+Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback cb )
 {
     MR_TIMER;
 
@@ -441,6 +441,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
 
     constexpr float eps = 1e-5;
 
+    reportProgress( cb, 0.f );
     Mesh baseElement;
     {
         baseElement.addMesh( makeSphere( { .radius = params.r } ) );
@@ -487,8 +488,9 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
         if ( baseElement.topology.findNumHoles() != 6 )
             return unexpected( "Incorrect base element" );
     }
+    reportProgress( cb, 0.2f );
 
-
+    auto sp = subprogress( cb, 0.2f, 1.f );
     Mesh result;
     for ( int x = 0; x < size.x / params.period.x; ++x )
     {
@@ -501,6 +503,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
                 result.addMesh( mesh, {}, true );
             }
         }
+        reportProgress( sp, x * params.period.x / float( size.x ) );
     }
 
     MeshBuilder::uniteCloseVertices( result, eps );

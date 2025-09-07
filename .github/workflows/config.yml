@@ -227,7 +227,7 @@ jobs:
           if [[ "${{ env.full_config_build }}" == "true" || github.event_name == 'schedule' ]]; then
             MATRIX_FILE=".github/workflows/matrix/windows-full-config.json"
           elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'build-release-windows') }}" == "true" ]]; then
-            MATRIX_FILE=".github/workflows/matrix/windows-standart-config.json"
+            MATRIX_FILE=".github/workflows/matrix/windows-standard-config.json"
           else
             MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
           fi

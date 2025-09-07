@@ -503,7 +503,8 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
                 result.addMesh( mesh, {}, true );
             }
         }
-        reportProgress( sp, x * params.period.x / float( size.x ) );
+        if ( !reportProgress( sp, x * params.period.x / float( size.x ) ) )
+            return unexpectedOperationCanceled();
     }
 
     MeshBuilder::uniteCloseVertices( result, eps );

@@ -433,6 +433,8 @@ namespace CellularSurface
 
 Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback )
 {
+    MR_TIMER;
+
     const auto delta = params.period - params.width;
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
@@ -496,7 +498,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
             {
                 auto mesh = baseElement;
                 mesh.transform( AffineXf3f::translation( mult( Vector3f( x, y, z ), params.period ) ) );
-                result.addMesh( mesh );
+                result.addMesh( mesh, {}, true );
             }
         }
     }

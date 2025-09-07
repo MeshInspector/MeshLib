@@ -533,9 +533,17 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     return result;
 }
 
-Expected<Mesh> fill( const Mesh&, const Params&, ProgressCallback )
+Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb )
 {
-    return {};
+    auto [size, xf] = getFillingSizeAndXf( mesh, std::ranges::max( params.period ) );
+    auto filling = build( size, params, subprogress( cb, 0.f, 0.2f ) );
+    if ( !filling )
+        return filling;
+
+    auto res = boolean( mesh, *filling, BooleanOperation::Union, &xf, {}, subprogress( cb, 0.2f, 1.f ) );
+    if ( !res )
+        return unexpected( res.errorString );
+    return *res;
 }
 
 } // namespace CellularSurface

@@ -91,7 +91,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.py-version }}
 

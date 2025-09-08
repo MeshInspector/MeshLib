@@ -227,7 +227,9 @@ struct LineCap
     enum class Decoration
     {
         none,
+        extend, // No special decoration, but the line extends a bit longer than the target point.
         arrow,
+        point, // A small circle.
     };
     Decoration decoration{};
 

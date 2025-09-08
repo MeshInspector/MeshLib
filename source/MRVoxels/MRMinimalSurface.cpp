@@ -12,6 +12,7 @@
 #include "MRMesh/MRBestFitPolynomial.h"
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshBuilder.h>
+#include <MRPch/MRFmt.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
 
@@ -459,7 +460,8 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
 
-    constexpr float eps = 1e-5;
+    constexpr float normalEps = 1e-5;
+    constexpr float decimateEps = 1e-3;
 
     reportProgress( cb, 0.f );
     Mesh baseElement;
@@ -475,6 +477,15 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
             int ax1 = ( ax + 1 ) % 3;
             int ax2 = ( ax + 2 ) % 3;
             auto cyl = makeCylinder( params.width[ax] / 2.f, params.period[ax] );
+            FaceBitSet cylToDel;
+            for ( auto f : cyl.topology.getValidFaces() )
+            {
+                auto n =  cyl.normal( f );
+                if ( std::abs( std::abs( n.z ) - 1.f ) < normalEps )
+                    cylToDel.autoResizeSet( f, true );
+            }
+            cyl.deleteFaces( cylToDel );
+
             AffineXf3f tr;
             if ( ax == 0 )
                 tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
@@ -493,23 +504,8 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
                 return unexpected( r.errorString );
             baseElement = std::move( r.mesh );
         }
-        if ( auto fixDeg = fixMeshDegeneracies( baseElement, { .maxDeviation = 0.001f } ); !fixDeg )
-            return unexpected( fixDeg.error() );
-        decimateMesh( baseElement, { .maxError = 0.001f, .stabilizer = 1e-5 } );
 
-        FaceBitSet toDel;
-        for ( auto f : baseElement.topology.getValidFaces() )
-        {
-            auto n =  baseElement.normal( f );
-            if ( std::abs( std::abs( n.x ) - 1.f ) < eps || std::abs( std::abs( n.y ) - 1.f ) < eps || std::abs( std::abs( n.z ) - 1.f ) < eps )
-            {
-                toDel.autoResizeSet( f, true );
-            }
-        }
-
-        baseElement.deleteFaces( toDel );
-        if ( baseElement.topology.findNumHoles() != 6 )
-            return unexpected( "Incorrect base element" );
+        decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5, .touchNearBdEdges = false, .touchBdVerts = false   } );
     }
     reportProgress( cb, 0.2f );
 
@@ -530,7 +526,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
             return unexpectedOperationCanceled();
     }
 
-    MeshBuilder::uniteCloseVertices( result, eps );
+    MeshBuilder::uniteCloseVertices( result, decimateEps );
     if ( MeshComponents::getNumComponents( result ) != 1 )
         return unexpected( "Failed to unify result" );
 

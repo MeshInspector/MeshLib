@@ -9,6 +9,7 @@
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRBestFitPolynomial.h"
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshBuilder.h>
 
@@ -576,8 +577,24 @@ float estimateDensity( float T, float width, float R )
     }
 }
 
-float estimateWidth( float /*T*/, float /*R*/, float /*d*/ )
+float estimateWidth( float T, float R, float d )
 {
+    // first guess R <= std::sqrt( 3.f ) * cr
+    Polynomial<float, 3> p1( { T*T*T*d, 0, -3.f*M_PIf*T, 8.f*std::sqrt( 2.f ) } );
+    float sol = -1.f;
+    for ( float v : p1.solve( 1e-3 ) )
+    {
+        if ( v > 0 && 2.f*v < T )
+        {
+            sol = v;
+            break;
+        }
+    }
+
+    if ( sol > 0 && R <= std::sqrt( 3.f ) * sol )
+    {
+        return sol * 2.f;
+    }
     return 0.f;
 }
 

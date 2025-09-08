@@ -468,7 +468,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     {
         if ( params.r > std::sqrt( 3.f ) * std::ranges::min( params.width / 2.f ) )
         {
-            baseElement.addMesh( makeSphere( { .radius = params.r } ) );
+            baseElement.addMesh( makeSphere( { .radius = params.r, .numMeshVertices = params.highRes ? 500 : 100 } ) );
             baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );
         }
 
@@ -476,7 +476,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
         {
             int ax1 = ( ax + 1 ) % 3;
             int ax2 = ( ax + 2 ) % 3;
-            auto cyl = makeCylinder( params.width[ax] / 2.f, params.period[ax] );
+            auto cyl = makeCylinder( params.width[ax] / 2.f, params.period[ax], params.highRes ? 64 : 16 );
             FaceBitSet cylToDel;
             for ( auto f : cyl.topology.getValidFaces() )
             {
@@ -586,12 +586,23 @@ float estimateWidth( float T, float R, float d )
             break;
         }
     }
-
     if ( sol > 0 && R <= std::sqrt( 3.f ) * sol )
-    {
         return sol * 2.f;
+
+
+    const auto alpha = d*T*T*T - (4.f / 3.f)*M_PIf*R*R*R + 4.f*M_PIf*R*R*R;
+    const auto beta = -3.f*M_PIf*T;
+    p1 = Polynomial<float, 3>( { sqr(alpha) - sqr(4*M_PIf*R*R*R), 48.f*sqr(M_PIf*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(M_PIf*R), 16.f*sqr(M_PIf) } );
+    for ( float v : p1.solve( 1e-3 ) )
+    {
+        if ( v > 0 && 2.f*std::sqrt(v) < T )
+        {
+            sol = v;
+            break;
+        }
     }
-    return 0.f;
+    assert( sol >= 0 );
+    return std::max( sol, 0.f );
 }
 
 } // namespace CellularSurface

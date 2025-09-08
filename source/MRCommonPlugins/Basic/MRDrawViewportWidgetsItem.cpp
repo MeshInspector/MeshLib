@@ -137,7 +137,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         else
         {
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
-            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4() );
+            ImGui::PushStyleColor( ImGuiCol_Button, viewport.getParameters().backgroundColor.scaledAlpha( 0.75f ) );
             ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle ) );
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::HeaderSeparator ) );
         }

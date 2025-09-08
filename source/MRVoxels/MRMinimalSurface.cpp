@@ -549,6 +549,7 @@ float estimateDensity( float T, float width, float R )
 {
     const auto cr = width / 2.f;
 
+    // usefull link: https://en.wikipedia.org/wiki/Steinmetz_solid
     auto Vbase = [cr] ( float T )
     {
         return cr*cr * ( 3.f * M_PIf * T - 8.f*std::sqrt( 2.f )*cr );

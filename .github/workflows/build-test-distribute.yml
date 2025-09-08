@@ -351,7 +351,7 @@ jobs:
           pattern: RunnerSysStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         id: aws-creds
         with:
           aws-region: us-east-1

@@ -28,7 +28,7 @@ static constexpr int numCircleSegments = 128;
 static constexpr int sphereDetailLevel = 2048;
 
 // Separator between object name and extra information.
-static constexpr std::string_view nameExtrasSeparator = "   |   ";
+static constexpr std::string_view nameExtrasSeparator = "  |  ";
 
 static std::string lengthToString( float value )
 {

@@ -7,7 +7,6 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshComponents.h"
 #include "MRMesh/MRCylinder.h"
-#include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRBestFitPolynomial.h"
 #include <MRMesh/MRMeshBoolean.h>
@@ -578,26 +577,30 @@ float estimateWidth( float T, float R, float d )
     // first guess R <= std::sqrt( 3.f ) * cr
     Polynomial<float, 3> p1( { T*T*T*d, 0, -3.f*M_PIf*T, 8.f*std::sqrt( 2.f ) } );
     float sol = -1.f;
-    for ( float v : p1.solve( 1e-3 ) )
+    for ( float x : p1.solve( 1e-3 ) )
     {
-        if ( v > 0 && 2.f*v < T )
+        if ( x > 0 && 2.f*x < T && R <= std::sqrt( 3.f ) * x )
         {
-            sol = v;
+            sol = x;
             break;
         }
     }
-    if ( sol > 0 && R <= std::sqrt( 3.f ) * sol )
+    if ( sol > 0 )
         return sol * 2.f;
 
 
+    sol = -1.f;
     const auto alpha = d*T*T*T - (4.f / 3.f)*M_PIf*R*R*R + 4.f*M_PIf*R*R*R;
     const auto beta = -3.f*M_PIf*T;
     p1 = Polynomial<float, 3>( { sqr(alpha) - sqr(4*M_PIf*R*R*R), 48.f*sqr(M_PIf*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(M_PIf*R), 16.f*sqr(M_PIf) } );
     for ( float v : p1.solve( 1e-3 ) )
     {
-        if ( v > 0 && 2.f*std::sqrt(v) < T )
+        if ( v < 0 )
+            continue;
+        auto x = std::sqrt(v);
+        if ( 2.f*x < T && R > std::sqrt( 3.f ) * x )
         {
-            sol = v;
+            sol = 2.f*x;
             break;
         }
     }

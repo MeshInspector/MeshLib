@@ -47,6 +47,14 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
                 const auto realDensity = res->volume() / res->getBoundingBox().volume();
                 const auto predictedDensity = FillingSurface::CellularSurface::estimateDensity( T, W, R );
                 ASSERT_NEAR( realDensity, predictedDensity, 0.01f );
+
+                const auto predictedWidth = FillingSurface::CellularSurface::estimateWidth( T, R, realDensity );
+
+                // sometimes more than one solution exist, so we should not compare directly with W, but rather we have to rebuild the surface
+                auto res2 = FillingSurface::CellularSurface::build( size,
+                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( predictedWidth ), .r = R, .highRes = true } );
+                const auto predictedDensity2 = res->volume() / res->getBoundingBox().volume();
+                ASSERT_NEAR( realDensity, predictedDensity2, 0.01f );
             }
         }
     }

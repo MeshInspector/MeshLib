@@ -96,6 +96,10 @@ MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, P
 
 MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb = {} );
 
+MRVOXELS_API float estimateDensity( float period, float width, float r );
+
+MRVOXELS_API float estimateWidth( float period, float r, float targetDensity );
+
 }
 
 

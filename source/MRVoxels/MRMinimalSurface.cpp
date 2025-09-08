@@ -463,8 +463,11 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     reportProgress( cb, 0.f );
     Mesh baseElement;
     {
-        baseElement.addMesh( makeSphere( { .radius = params.r } ) );
-        baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );
+        if ( params.r > std::sqrt( 3.f ) * std::ranges::min( params.width / 2.f ) )
+        {
+            baseElement.addMesh( makeSphere( { .radius = params.r } ) );
+            baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );
+        }
 
         for ( int ax = 0; ax < 3; ++ax )
         {
@@ -544,6 +547,38 @@ Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb
     if ( !res )
         return unexpected( res.errorString );
     return *res;
+}
+
+float estimateDensity( float T, float width, float R )
+{
+    const auto cr = width / 2.f;
+
+    auto Vbase = [cr] ( float T )
+    {
+        return cr*cr * ( 3.f * M_PIf * T - 8.f*std::sqrt( 2.f )*cr );
+    };
+
+    if ( R <= std::sqrt( 3.f ) * cr )
+    {
+        return Vbase( T ) / ( T*T*T );
+    }
+    else
+    {
+        const auto t = std::sqrt( R*R - cr*cr );
+        const auto third = 1.f / 3.f;
+        const auto Vhat = M_PIf*( 2.f*third*R*R*R - t*( 2*R*R + cr*cr )*third );
+        const auto Vsphere = 4.f*third*M_PIf*R*R*R;
+
+        const auto internalBase = Vbase( 2*t );
+        const auto fullBase = Vbase( T );
+
+        return ( Vsphere - internalBase - 6.f*Vhat + fullBase ) / ( T*T*T );
+    }
+}
+
+float estimateWidth( float /*T*/, float /*R*/, float /*d*/ )
+{
+    return 0.f;
 }
 
 } // namespace CellularSurface

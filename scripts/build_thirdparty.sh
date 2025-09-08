@@ -147,10 +147,10 @@ popd
 
 # copy libs (some of them are handled by their `cmake --install`, but some are not)
 echo "Copying thirdparty libs.."
-if [[ $OSTYPE == 'darwin'* ]]; then
-  LIB_SUFFIX="*.dylib"
-elif [ "${MR_EMSCRIPTEN}" = "ON" ]; then
+if [ "${MR_EMSCRIPTEN}" = "ON" ]; then
   LIB_SUFFIX="*.a"
+elif [[ $OSTYPE == 'darwin'* ]]; then
+  LIB_SUFFIX="*.dylib"
 else
   LIB_SUFFIX="*.so"
 fi

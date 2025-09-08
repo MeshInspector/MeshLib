@@ -195,14 +195,12 @@ ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameExtraTex
         if ( passOrFail )
         {
             ret.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
-            ret.add( ImGuiMeasurementIndicators::TextFont{ RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold ) } );
         }
         // The value itself.
         ret.addElem( { .var = lengthToString( prop->value ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
         if ( passOrFail )
         {
             ret.add( ImGuiMeasurementIndicators::TextColor{} );
-            ret.add( ImGuiMeasurementIndicators::TextFont{} );
         }
 
         if ( prop->referenceValue && tol )

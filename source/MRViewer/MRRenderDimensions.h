@@ -111,6 +111,9 @@ class LengthTask : public BasicUiRenderTask
     Color color_;
     LengthParams params_;
 
+    // For single-axis measurements, this computes the corner point.
+    MRVIEWER_API Vector3f computeCornerPoint();
+
 public:
     LengthTask() {}
     MRVIEWER_API LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const LengthParams& params );

@@ -363,6 +363,8 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
             switch ( ( front ? lineParams.capB : lineParams.capA ).decoration )
             {
             case LineCap::Decoration::none:
+            case LineCap::Decoration::extend:
+            case LineCap::Decoration::point:
                 // Nothing.
                 break;
             case LineCap::Decoration::arrow:
@@ -420,10 +422,15 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 : normalize( a - ( midpointsFixed.empty() ? b : midpointsFixed.front() ) );
 
             const LineCap& thisCap = front ? lineParams.capB : lineParams.capA;
+
+            // Draw the cap decoration.
             switch ( thisCap.decoration )
             {
             case LineCap::Decoration::none:
                 // Nothing.
+                break;
+            case LineCap::Decoration::extend:
+                point += d * params.notchHalfLen;
                 break;
             case LineCap::Decoration::arrow:
                 if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
@@ -434,6 +441,9 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 else
                     point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
                 break;
+            case LineCap::Decoration::point:
+                ImGuiMeasurementIndicators::point( thisElem, menuScaling, params, point );
+                break;
             }
 
             if ( !thisCap.text.isEmpty() )
@@ -443,13 +453,16 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 text( thisElem, menuScaling, params, *extraPoint, thisCap.text, leaderDir );
             }
 
+            // Extend the outline further on some caps.
             switch ( thisCap.decoration )
             {
             case LineCap::Decoration::none:
+            case LineCap::Decoration::extend:
                 if ( thisElem == Element::outline )
                     ( extraPoint ? *extraPoint : point ) += ( extraPoint ? normalize( *extraPoint - point ) : d ) * outlineWidth;
                 break;
             case LineCap::Decoration::arrow:
+            case LineCap::Decoration::point:
                 // Nothing.
                 break;
             }

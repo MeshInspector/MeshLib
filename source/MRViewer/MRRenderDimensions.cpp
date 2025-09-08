@@ -391,21 +391,29 @@ void AngleTask::renderPass()
     }
 }
 
+Vector3f LengthTask::computeCornerPoint()
+{
+    assert( params_.onlyOneAxis );
+    if ( !params_.onlyOneAxis )
+        return {};
+
+    Vector3f ret = params_.points[0];
+    ret[*params_.onlyOneAxis] = params_.points[1][*params_.onlyOneAxis];
+    return ret;
+}
+
 LengthTask::LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const LengthParams& params )
     : menuScaling_( uiParams.scale ), viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ), params_( params )
 {
     for ( std::size_t i = 0; i < 2; i++ )
         params_.points[i] = xf( params_.points[i] );
 
-    Vector3f depthRefPoint = params_.points[0] + ( params_.points[1] - params_.points[0] ) / 2.f;
+    Vector3f depthRefPoint = params_.points[0] + ( ( params_.onlyOneAxis ? computeCornerPoint() : params_.points[1] ) - params_.points[0] ) / 2.f;
     renderTaskDepth = viewport_->projectToViewportSpace( depthRefPoint ).z;
 }
 
 void LengthTask::renderPass()
 {
-    ImVec2 a = toScreenCoords( *viewport_, params_.points[0] );
-    ImVec2 b = toScreenCoords( *viewport_, params_.points[1] );
-
     float distanceValue = 0;
     if ( params_.onlyOneAxis )
         distanceValue = std::abs( params_.points[1][*params_.onlyOneAxis] - params_.points[0][*params_.onlyOneAxis] );
@@ -458,7 +466,28 @@ void LengthTask::renderPass()
         }
     }
 
-    ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text );
+    ImVec2 a = toScreenCoords( *viewport_, params_.points[0] );
+    ImVec2 b = toScreenCoords( *viewport_, params_.points[1] );
+
+    if ( params_.onlyOneAxis )
+    {
+        Vector3f cornerPointWorld = computeCornerPoint();
+        ImVec2 cornerPointScreen = toScreenCoords( *viewport_, cornerPointWorld );
+
+        for ( auto elem : { ImGuiMeasurementIndicators::Element::outline, ImGuiMeasurementIndicators::Element::main } )
+        {
+            ImGuiMeasurementIndicators::distance( elem, menuScaling_, indicatorParams, a, cornerPointScreen, text );
+            ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, cornerPointScreen, b, {
+                .flags = ImGuiMeasurementIndicators::LineFlags::narrow,
+                .capA = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::extend },
+                .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::point },
+            } );
+        }
+    }
+    else
+    {
+        ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text );
+    }
 }
 
 }

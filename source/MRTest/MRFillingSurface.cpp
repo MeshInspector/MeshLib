@@ -2,10 +2,9 @@
 
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshFillHole.h>
+#include <MRMesh/MRBox.h>
 #include <MRVoxels/MRMinimalSurface.h>
-#include "MRMesh/MRMeshFillHole.h"
-#include "MRMesh/MRBox.h"
-
 
 namespace MR
 {

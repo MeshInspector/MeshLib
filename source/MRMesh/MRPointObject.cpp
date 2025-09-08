@@ -132,13 +132,6 @@ bool PointObject::comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const
     return !bool( referenceNormal_ ); // If we don't have a reference normal, we calculate the euclidean distance, which can't be negative.
 }
 
-bool PointObject::comparisonToleranceMakesSenseNow( std::size_t i ) const
-{
-    (void)i;
-    assert( i == 0 );
-    return bool( referencePos_ ); // The normal is optional.
-}
-
 std::size_t PointObject::numComparisonReferenceValues() const
 {
     return 2;
@@ -178,22 +171,7 @@ void PointObject::setComparisonReferenceValue( std::size_t i, std::optional<Comp
         // When removing the normal, also zero the negative tolerance. See also `comparisonToleranceIsAlwaysOnlyPositive()`.
         if ( &target == &referenceNormal_ && tolerance_ )
             tolerance_->negative = 0;
-
-        // When removing the position, also remove the normal and the tolerance.
-        if ( &target == &referencePos_ )
-        {
-            setComparisonReferenceValue( 1, {} );
-            setComparisonTolerance( 0, {} );
-        }
     }
-}
-
-bool PointObject::comparisonReferenceValueMakesSenseNow( std::size_t i ) const
-{
-    assert( i < 2 );
-    if ( i == 1 )
-        return bool( referencePos_ ); // The normal only makes sense if the position is set.
-    return true;
 }
 
 void PointObject::swapBase_( Object& other )

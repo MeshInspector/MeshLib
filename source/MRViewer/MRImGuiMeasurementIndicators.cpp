@@ -3,6 +3,7 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
 #include "MRViewer/MRColorTheme.h"
+#include "MRViewer/MRRibbonFontManager.h"
 
 #include <parallel_hashmap/phmap.h>
 
@@ -72,6 +73,23 @@ void point( Element elem, float menuScaling, const Params& params, ImVec2 point 
 
         params.list->AddCircleFilled( point, radius, ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32() );
     } );
+}
+
+static Text::FontFunc& defaultFontFuncStorage()
+{
+    // We default to a monospaced font. Just in case, use a function and re-get it every time.
+    static Text::FontFunc ret = []{ return RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Monospace ); };
+    return ret;
+}
+
+const Text::FontFunc& Text::getStaticDefaultFontFunc()
+{
+    return defaultFontFuncStorage();
+}
+
+void Text::setStaticDefaultFontFunc( FontFunc func )
+{
+    defaultFontFuncStorage() = std::move( func );
 }
 
 void Text::addText( std::string_view text )

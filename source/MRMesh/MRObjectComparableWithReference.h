@@ -73,11 +73,6 @@ class MRMESH_CLASS ObjectComparableWithReference
     // `i` goes up to `numComparableProperties()`, exclusive.
     [[nodiscard]] virtual bool comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const { (void)i; return false; }
 
-    // If false, you shouldn't offer the user to set this tolerance now, to indicate that they should set other properties first.
-    // The other setters should be written to automatically reset the tolerances when it becomes false for them.
-    // `i` goes up to `numComparableProperties()`, exclusive.
-    [[nodiscard]] virtual bool comparisonToleranceMakesSenseNow( std::size_t i ) const { (void)i; return true; }
-
 
     // Reference values:
 
@@ -107,11 +102,6 @@ class MRMESH_CLASS ObjectComparableWithReference
     // Only a certain variant type is legal to pass, depending on the derived class and the index. Use `getComparisonReferenceValue()` to determine that type.
     // `i` goes up to `numComparisonReferenceValues()`, exclusive.
     virtual void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) = 0;
-
-    // If false, you shouldn't offer the user to set this reference value now, to indicate that they should set other properties first.
-    // The other setters should be written to automatically reset the reference values when it becomes false for them.
-    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
-    [[nodiscard]] virtual bool comparisonReferenceValueMakesSenseNow( std::size_t i ) const { (void)i; return true; }
 };
 
 }

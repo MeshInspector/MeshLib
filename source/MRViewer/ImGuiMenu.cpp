@@ -1639,9 +1639,6 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
     const std::size_t numRefs = object.numComparisonReferenceValues();
     for ( std::size_t i = 0; i < numRefs; i++ )
     {
-        if ( !object.comparisonReferenceValueMakesSenseNow( i ) )
-            continue;
-
         auto nominalValue = object.getComparisonReferenceValue( i );
 
         ImGui::SetNextItemWidth( fullWidth );
@@ -1668,9 +1665,6 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
     const std::size_t numTols = object.numComparableProperties();
     for ( std::size_t i = 0; i < numTols; i++ )
     {
-        if ( !object.comparisonToleranceMakesSenseNow( i ) )
-            continue;
-
         bool hasTol = false;
         ObjectComparableWithReference::ComparisonTolerance tol;
         if ( auto opt = object.getComparisonTolerence( i ) )

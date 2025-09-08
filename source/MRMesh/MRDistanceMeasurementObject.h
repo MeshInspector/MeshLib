@@ -75,7 +75,6 @@ public:
     [[nodiscard]] MRMESH_API std::optional<ComparableProperty> computeComparableProperty( std::size_t i ) const override;
     [[nodiscard]] MRMESH_API std::optional<ComparisonTolerance> getComparisonTolerence( std::size_t i ) const override;
     MRMESH_API void setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance ) override;
-    [[nodiscard]] MRMESH_API bool comparisonToleranceMakesSenseNow( std::size_t i ) const override;
     MRMESH_API std::string_view getComparisonReferenceValueName( std::size_t i ) const override;
     [[nodiscard]] MRMESH_API ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const override;
     MRMESH_API void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) override;

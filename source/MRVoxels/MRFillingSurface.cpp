@@ -11,6 +11,7 @@
 #include "MRMesh/MRBestFitPolynomial.h"
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRConstants.h>
 #include <MRPch/MRFmt.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -552,7 +553,7 @@ float estimateDensity( float T, float width, float R )
     // usefull link: https://en.wikipedia.org/wiki/Steinmetz_solid
     auto Vbase = [cr] ( float T )
     {
-        return cr*cr * ( 3.f * M_PIf * T - 8.f*std::sqrt( 2.f )*cr );
+        return cr*cr * ( 3.f * PI_F * T - 8.f*std::sqrt( 2.f )*cr );
     };
 
     if ( R <= std::sqrt( 3.f ) * cr )
@@ -563,8 +564,8 @@ float estimateDensity( float T, float width, float R )
     {
         const auto t = std::sqrt( R*R - cr*cr );
         const auto third = 1.f / 3.f;
-        const auto Vhat = M_PIf*( 2.f*third*R*R*R - t*( 2*R*R + cr*cr )*third );
-        const auto Vsphere = 4.f*third*M_PIf*R*R*R;
+        const auto Vhat = PI_F*( 2.f*third*R*R*R - t*( 2*R*R + cr*cr )*third );
+        const auto Vsphere = 4.f*third*PI_F*R*R*R;
 
         const auto internalBase = Vbase( 2*t );
         const auto fullBase = Vbase( T );
@@ -576,7 +577,7 @@ float estimateDensity( float T, float width, float R )
 float estimateWidth( float T, float R, float d )
 {
     // first guess R <= std::sqrt( 3.f ) * cr
-    Polynomial<float, 3> p1( { T*T*T*d, 0, -3.f*M_PIf*T, 8.f*std::sqrt( 2.f ) } );
+    Polynomial<float, 3> p1( { T*T*T*d, 0, -3.f*PI_F*T, 8.f*std::sqrt( 2.f ) } );
     float sol = -1.f;
     for ( float x : p1.solve( 1e-3 ) )
     {
@@ -591,9 +592,9 @@ float estimateWidth( float T, float R, float d )
 
 
     sol = -1.f;
-    const auto alpha = d*T*T*T - (4.f / 3.f)*M_PIf*R*R*R + 4.f*M_PIf*R*R*R;
-    const auto beta = -3.f*M_PIf*T;
-    p1 = Polynomial<float, 3>( { sqr(alpha) - sqr(4*M_PIf*R*R*R), 48.f*sqr(M_PIf*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(M_PIf*R), 16.f*sqr(M_PIf) } );
+    const auto alpha = d*T*T*T - (4.f / 3.f)*PI_F*R*R*R + 4.f*PI_F*R*R*R;
+    const auto beta = -3.f*PI_F*T;
+    p1 = Polynomial<float, 3>( { sqr(alpha) - sqr(4*PI_F*R*R*R), 48.f*sqr(PI_F*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(PI_F*R), 16.f*sqr(PI_F) } );
     for ( float v : p1.solve( 1e-3 ) )
     {
         if ( v < 0 )

@@ -115,12 +115,12 @@ enum class Kind : int
 };
 MRVOXELS_API std::vector<std::string> getKindNames();
 
-MR_BIND_IGNORE using MeshParams = std::variant
+using MeshParams = std::variant
     < std::reference_wrapper<TPMS::MeshParams>
     , std::reference_wrapper<CellularSurface::Params>
     >;
 
-MR_BIND_IGNORE using ConstMeshParams = std::variant
+using ConstMeshParams = std::variant
     < std::reference_wrapper<const TPMS::MeshParams>
     , std::reference_wrapper<const CellularSurface::Params>
     >;

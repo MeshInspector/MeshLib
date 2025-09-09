@@ -1,4 +1,4 @@
-#include "MRMinimalSurface.h"
+#include "MRFillingSurface.h"
 
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBox.h>

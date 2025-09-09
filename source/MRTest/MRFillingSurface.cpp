@@ -4,7 +4,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRBox.h>
-#include <MRVoxels/MRMinimalSurface.h>
+#include <MRVoxels/MRFillingSurface.h>
 
 namespace MR
 {

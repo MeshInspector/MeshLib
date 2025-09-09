@@ -58,6 +58,11 @@ Params::Params()
         std::swap( colorText.g, colorTextOutline.g );
         std::swap( colorText.b, colorTextOutline.b );
     }
+
+    float tHovered = 0.2f;
+    float tActive = 0.3f;
+    colorTextOutlineHovered = colorTextOutline * ( 1 - tHovered ) + colorText * tHovered;
+    colorTextOutlineActive = colorTextOutline * ( 1 - tActive ) + colorText * tActive;
 }
 
 void point( Element elem, float menuScaling, const Params& params, ImVec2 point )
@@ -223,8 +228,10 @@ void Text::update( bool force ) const
     }
 }
 
-void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor ) const
+Text::DrawResult Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor ) const
 {
+    DrawResult ret;
+
     update();
 
     ImU32 defaultColorFixed = defaultTextColor.color ? *defaultTextColor.color : ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
@@ -233,6 +240,8 @@ void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColo
     // Specifically for the full text size, we don't do `max( size, computedSize )`, as it makes more sense this way.
     // See the comment on `size` in the class.
     ImVec2 curPos = pos + ( size - computedSize ) * align;
+    ret.cornerA = curPos;
+    ret.cornerB = curPos + computedSize;
 
     ImFont* curFont = defaultFont;
 
@@ -283,15 +292,19 @@ void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColo
             }, elem.var );
         }
     }
+
+    return ret;
 }
 
-void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, const Text& text, ImVec2 push, ImVec2 pivot )
+std::optional<TextResult> text( Element elem, float menuScaling, const Params& params, ImVec2 pos, const Text& text, const TextParams& textParams, ImVec2 push, ImVec2 pivot )
 {
     if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
+        return {}; // Nothing to draw.
 
     if ( text.isEmpty() )
-        return;
+        return {};
+
+    TextResult ret;
 
     float textOutlineWidth = params.textOutlineWidth * menuScaling;
     float textOutlineRounding = params.textOutlineRounding * menuScaling;
@@ -300,19 +313,52 @@ void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, co
     ImVec2 textToLineSpacingB = params.textToLineSpacingB * menuScaling;
 
     text.update();
-    ImVec2 textPos = pos - ( text.computedSize * pivot );
+    ret.textCornerA = pos - ( text.computedSize * pivot );
 
     if ( push != ImVec2{} )
     {
         push = normalize( push );
-        ImVec2 point = ImVec2( push.x > 0 ? textPos.x - textToLineSpacingA.x : textPos.x + text.computedSize.x + textToLineSpacingB.x, push.y > 0 ? textPos.y - textToLineSpacingA.y : textPos.y + text.computedSize.y + textToLineSpacingB.y );
-        textPos += push * (-dot( push, point - pos ) + textToLineSpacingRadius );
+        ImVec2 point = ImVec2( push.x > 0 ? ret.textCornerA.x - textToLineSpacingA.x : ret.textCornerA.x + text.computedSize.x + textToLineSpacingB.x, push.y > 0 ? ret.textCornerA.y - textToLineSpacingA.y : ret.textCornerA.y + text.computedSize.y + textToLineSpacingB.y );
+        ret.textCornerA += push * (-dot( push, point - pos ) + textToLineSpacingRadius );
     }
 
+    ret.textCornerA = round( ret.textCornerA );
+    ret.textCornerB = ret.textCornerA + text.computedSize;
+    ret.bgCornerA = ret.textCornerA - textToLineSpacingA - textOutlineWidth;
+    ret.bgCornerB = ret.textCornerB + textToLineSpacingB + textOutlineWidth;
+
     if ( bool( elem & Element::outline ) )
-        params.list->AddRectFilled( round( textPos ) - textToLineSpacingA - textOutlineWidth, textPos + text.computedSize + textToLineSpacingB + textOutlineWidth, params.colorTextOutline.getUInt32(), textOutlineRounding );
+    {
+        const auto& color = textParams.isActive ? params.colorTextOutlineActive : textParams.isHovered ? params.colorTextOutlineHovered : params.colorTextOutline;
+        params.list->AddRectFilled( ret.bgCornerA, ret.bgCornerB, color.getUInt32(), textOutlineRounding );
+    }
     if ( bool( elem & Element::main ) )
-        text.draw( *params.list, menuScaling, round( textPos ), params.colorText.getUInt32() );
+    {
+        text.draw( *params.list, menuScaling, ret.textCornerA, params.colorText.getUInt32() );
+
+        // I think the colored frame should be in `Element::main`.
+        if ( textParams.borderColor.a > 0 )
+        {
+            float lineWidthUnselected = params.clickableLabelLineWidth * menuScaling;
+            float lineWidthSelected = params.clickableLabelLineWidthSelected * menuScaling;
+
+            float lineWidth = textParams.isSelected ? lineWidthSelected : lineWidthUnselected;
+            float outlineWidth = params.clickableLabelOutlineWidth * menuScaling * 2 + lineWidth;
+
+            float rectShrink = lineWidthUnselected / 2;
+
+            // First, the outline for the frame.
+            // Using `PathRect()` here because it doesn't shrink the rect by half a pixel, unlike `AddRect()`.
+            params.list->PathRect( ret.bgCornerA + rectShrink, ret.bgCornerB - rectShrink, textOutlineRounding - rectShrink );
+            params.list->PathStroke( params.colorOutline.getUInt32(), ImDrawFlags_Closed, outlineWidth );
+
+            // The frame itself.
+            params.list->PathRect( ret.bgCornerA + rectShrink, ret.bgCornerB - rectShrink, textOutlineRounding - rectShrink );
+            params.list->PathStroke( textParams.borderColor.scaledAlpha( params.colorOutline.a / 255.f ).getUInt32(), ImDrawFlags_Closed, lineWidth );
+        }
+    }
+
+    return ret;
 }
 
 void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir )
@@ -345,10 +391,10 @@ void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec
         params.list->AddTriangleFilled( a, b, c, params.colorMain.getUInt32() );
 }
 
-void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams )
+std::optional<LineResult> line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams )
 {
     if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
+        return {}; // Nothing to draw.
 
     float arrowLen = params.arrowLen * menuScaling;
 
@@ -398,7 +444,9 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
     }
 
     if ( a == b && midpointsFixed.empty() )
-        return;
+        return {};
+
+    LineResult ret;
 
     float lineWidth = ( bool( lineParams.flags & LineFlags::narrow ) ? params.smallWidth : params.width ) * menuScaling;
     float outlineWidth = params.outlineWidth * menuScaling;
@@ -450,7 +498,7 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
             {
                 ImVec2 leaderDir( ( d.x > 0 ? 1.f : -1.f ), 0 );
                 extraPoint = points[front] + leaderDir * leaderLineLen;
-                text( thisElem, menuScaling, params, *extraPoint, thisCap.text, leaderDir );
+                ( front ? ret.capB : ret.capA ) = text( thisElem, menuScaling, params, *extraPoint, thisCap.text, thisCap.textParams, leaderDir );
             }
 
             // Extend the outline further on some caps.
@@ -479,12 +527,14 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
 
         params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
     } );
+
+    return ret;
 }
 
-void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams )
+std::optional<DistanceResult> distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams )
 {
     if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
+        return {}; // Nothing to draw.
 
     float textToLineSpacingRadius = params.textToLineSpacingRadius * menuScaling;
     ImVec2 textToLineSpacingA = params.textToLineSpacingA * menuScaling;
@@ -560,6 +610,8 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
         gapB = b + dir * invertedOverhang;
     }
 
+    DistanceResult ret;
+
     forEachElement( elem, [&]( Element thisElem )
     {
         if ( !useInvertedStyle && ( text.isEmpty() || drawTextOutOfLine || distanceParams.moveTextToLineEndIndex ) )
@@ -570,7 +622,7 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
             };
             if ( distanceParams.moveTextToLineEndIndex )
                 ( *distanceParams.moveTextToLineEndIndex ? lineParams.capB : lineParams.capA ).text = text;
-            line( thisElem, menuScaling, params, a, b, lineParams );
+            ret.line = line( thisElem, menuScaling, params, a, b, lineParams );
         }
         else
         {
@@ -588,12 +640,14 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
             drawLineEnd( true );
 
             if ( useInvertedStyle )
-                line( thisElem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
+                ret.line = line( thisElem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
         }
 
         if ( !distanceParams.moveTextToLineEndIndex )
-            ImGuiMeasurementIndicators::text( thisElem, menuScaling, params, center, text, drawTextOutOfLine ? n : ImVec2{} );
+            ret.text = ImGuiMeasurementIndicators::text( thisElem, menuScaling, params, center, text, distanceParams.textParams, drawTextOutOfLine ? n : ImVec2{} );
     } );
+
+    return ret;
 }
 
 } // namespace MR::ImGuiMeasurementIndicators

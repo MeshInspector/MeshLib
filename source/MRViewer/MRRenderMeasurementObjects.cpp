@@ -38,6 +38,8 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
             object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::xAbsolute ? std::optional( 0 ) :
             object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::yAbsolute ? std::optional( 1 ) :
             object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::zAbsolute ? std::optional( 2 ) : std::nullopt,
+        .objectToSelect = object_,
+        .objectName = object_->name(),
         .referenceValue =
             ref.isSet ? std::optional( std::get<float>( ref.var ) ) : std::nullopt,
         .tolerance =
@@ -60,6 +62,8 @@ void RenderRadiusObject::renderUi( const UiRenderParams& params )
         .drawAsDiameter = object_->getDrawAsDiameter(),
         .isSpherical = object_->getIsSpherical(),
         .visualLengthMultiplier = object_->getVisualLengthMultiplier(),
+        .objectToSelect = object_,
+        .objectName = object_->name(),
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }
@@ -82,6 +86,8 @@ void RenderAngleObject::renderUi( const UiRenderParams& params )
             object_->getShouldVisualizeRay( false ),
             object_->getShouldVisualizeRay( true ),
         },
+        .objectToSelect = object_,
+        .objectName = object_->name(),
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }

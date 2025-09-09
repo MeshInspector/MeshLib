@@ -3,6 +3,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
+#include "MRViewer/MRRenderClickableRect.h"
 #include "MRViewer/exports.h"
 
 #include <optional>
@@ -36,9 +37,16 @@ struct RadiusParams
     // The visual leader line length multiplier, relative to the radius.
     // You're recommended to set a min absolute value for the resulting length when rendering.
     float visualLengthMultiplier = 2 / 3.f;
+
+    // What object to select when the label is clicked.
+    // Optional. Not clickable if this is null.
+    const VisualObject* objectToSelect = nullptr;
+
+    // Optional. If specified, this name is drawn above the measurement.
+    std::string objectName;
 };
 
-class RadiusTask : public BasicUiRenderTask
+class RadiusTask : public BasicClickableRectUiRenderTask
 {
     float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
@@ -47,8 +55,13 @@ class RadiusTask : public BasicUiRenderTask
 
 public:
     RadiusTask() {}
+
+    // Here `objectToSelect` is optional, and the label will not be clickable if this is null.
     MRVIEWER_API RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const RadiusParams& params );
-    MRVIEWER_API void renderPass();
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 struct AngleParams
@@ -65,9 +78,16 @@ struct AngleParams
 
     // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
     std::array<bool, 2> shouldVisualizeRay{ true, true };
+
+    // What object to select when the label is clicked.
+    // Optional. Not clickable if this is null.
+    const VisualObject* objectToSelect = nullptr;
+
+    // Optional. If specified, this name is drawn above the measurement.
+    std::string objectName;
 };
 
-class AngleTask : public BasicUiRenderTask
+class AngleTask : public BasicClickableRectUiRenderTask
 {
     float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
@@ -77,7 +97,10 @@ class AngleTask : public BasicUiRenderTask
 public:
     AngleTask() {}
     MRVIEWER_API AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const AngleParams& params );
-    MRVIEWER_API void renderPass();
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 
@@ -92,6 +115,13 @@ struct LengthParams
     // If set, use only once axis (with this index, 0..2) instead of euclidean.
     std::optional<int> onlyOneAxis;
 
+    // What object to select when the label is clicked.
+    // Optional. Not clickable if this is null.
+    const VisualObject* objectToSelect = nullptr;
+
+    // Optional. If specified, this name is drawn above the measurement.
+    std::string objectName;
+
     // If set, we're comparing the distance with a reference value.
     std::optional<float> referenceValue;
 
@@ -104,7 +134,7 @@ struct LengthParams
     std::optional<Tolerance> tolerance;
 };
 
-class LengthTask : public BasicUiRenderTask
+class LengthTask : public BasicClickableRectUiRenderTask
 {
     float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
@@ -117,7 +147,10 @@ class LengthTask : public BasicUiRenderTask
 public:
     LengthTask() {}
     MRVIEWER_API LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const LengthParams& params );
-    MRVIEWER_API void renderPass();
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 }

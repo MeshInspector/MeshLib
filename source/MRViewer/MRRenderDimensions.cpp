@@ -1,10 +1,12 @@
 #include "MRRenderDimensions.h"
 
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRImGuiMeasurementIndicators.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRRibbonFontManager.h"
+#include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
@@ -26,6 +28,37 @@ static std::string lengthToleranceToString( float value, int dir )
 static std::string angleToString( float value )
 {
     return valueToString<AngleUnit>( value, { .style = NumberStyle::normal, .stripTrailingZeroes = false } );
+}
+
+static bool objectIsSelectable( const VisualObject* object )
+{
+    return object && !object->isGlobalAncillary();
+}
+
+static void selectObject( const VisualObject* object )
+{
+    if ( !objectIsSelectable( object ) )
+        return;
+
+    RibbonMenu::instance()->simulateNameTagClick(
+        // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
+        // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
+        *const_cast<VisualObject*>( object ),
+        ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
+    );
+}
+
+static ImGuiMeasurementIndicators::TextParams makeTextParams( ViewportId viewportId, const VisualObject* object, const BasicClickableRectUiRenderTask& task )
+{
+    if ( !objectIsSelectable( object ) )
+        return {};
+
+    return {
+        .borderColor = object->getFrontColor( object->isSelected(), viewportId ).scaledAlpha( 0.75f ), // Arbitrary alpha factor to make the borders less visible.
+        .isHovered = task.isHovered,
+        .isActive = task.isActive,
+        .isSelected = object->isSelected(),
+    };
 }
 
 [[nodiscard]] static ImVec2 toScreenCoords( const Viewport& viewport, const Vector3f& point )
@@ -50,6 +83,10 @@ RadiusTask::RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Co
 
 void RadiusTask::renderPass()
 {
+    // We set those after we're done drawing.
+    clickableCornerA_ = {};
+    clickableCornerB_ = {};
+
     const Vector3f dirTowardsCamera = viewport_->getViewXf().A.z.normalized();
 
     Vector3f worldRadiusVec = params_.radiusAsVector;
@@ -75,20 +112,6 @@ void RadiusTask::renderPass()
     ImGuiMeasurementIndicators::Params indicatorParams;
     indicatorParams.colorMain = color_;
 
-    #if 0 // Alternative rendering by drawing a diameter line across the circle. This is outdated.
-    ImVec2 a = toScreenCoords( radius->getWorldCenter() - worldRadiusVec );
-    ImVec2 b = toScreenCoords( radius->getWorldCenter() + worldRadiusVec );
-
-    ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling, indicatorParams,
-        a, b, {
-            ImGuiMeasurementIndicators::TextIcon::diameter, std::size_t( params_.isSpherical ),
-            fmt::format( "{}  {:.{}f}", params_.isSpherical ? "S" : "", radiusValue, cDistanceDigits ),
-        },
-        {
-            .moveTextToLineEndIndex = true,
-        }
-    );
-    #else
     ImVec2 center = toScreenCoords( *viewport_, params_.center );
     ImVec2 point = toScreenCoords( *viewport_, params_.center + worldRadiusVec );
 
@@ -100,26 +123,41 @@ void RadiusTask::renderPass()
     if ( ImGuiMath::lengthSq( farPoint - point ) < minRadiusLen * minRadiusLen )
         farPoint = point + ImGuiMath::normalize( point - center ) * minRadiusLen;
 
-    ImGuiMeasurementIndicators::Text string;
+    ImGuiMeasurementIndicators::Text text;
+    if ( !params_.objectName.empty() )
+    {
+        text.addText( params_.objectName );
+        text.addLine();
+    }
 
     if ( params_.isSpherical )
-        string.addText( "S" );
+        text.addText( "S" );
 
     if ( params_.drawAsDiameter )
-        string.add( ImGuiMeasurementIndicators::TextIcon::diameter );
+        text.add( ImGuiMeasurementIndicators::TextIcon::diameter );
     else
-        string.addText( "R" );
+        text.addText( "R" );
 
-    string.addText( "  " );
-    string.addText( lengthToString( radiusValue * ( params_.drawAsDiameter ? 2 : 1 ) ) );
+    text.addText( " " );
+    text.addText( lengthToString( radiusValue * ( params_.drawAsDiameter ? 2 : 1 ) ) );
 
-    ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams,
+    auto lineResult = ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams,
         farPoint, point, {
-            .capA = { .text = string },
+            .capA = { .text = text, .textParams = makeTextParams( viewport_->id, params_.objectToSelect, *this ) },
             .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow },
         }
     );
-    #endif
+
+    if ( lineResult && lineResult->capA && objectIsSelectable( params_.objectToSelect ) )
+    {
+        clickableCornerA_ = lineResult->capA->bgCornerA;
+        clickableCornerB_ = lineResult->capA->bgCornerB;
+    }
+}
+
+void RadiusTask::onClick()
+{
+    selectObject( params_.objectToSelect );
 }
 
 AngleTask::AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const AngleParams& params )
@@ -145,6 +183,10 @@ AngleTask::AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Colo
 
 void AngleTask::renderPass()
 {
+    // We set those after we're done drawing.
+    clickableCornerA_ = {};
+    clickableCornerB_ = {};
+
     // It would be nice to reuse this buffer between all the curves in the scene...
     std::vector<ImVec2> pointBuffer;
 
@@ -336,6 +378,14 @@ void AngleTask::renderPass()
             invertedStartB = curve.b + dirB * invertedOverhang;
         }
 
+        ImGuiMeasurementIndicators::Text text;
+        if ( !params_.objectName.empty() )
+        {
+            text.addText( params_.objectName );
+            text.addLine();
+        }
+        text.addText( angleToString( angleValue ) );
+
         auto drawElem = [&]( ImGuiMeasurementIndicators::Element elem )
         {
             // The main curve.
@@ -383,12 +433,22 @@ void AngleTask::renderPass()
             }
 
             // The text.
-            ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams, textPos, angleToString( angleValue ), normal );
+            auto textResult = ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.objectToSelect, *this ), normal );
+            if ( textResult && objectIsSelectable( params_.objectToSelect ) )
+            {
+                clickableCornerA_ = textResult->bgCornerA;
+                clickableCornerB_ = textResult->bgCornerB;
+            }
         };
 
         drawElem( ImGuiMeasurementIndicators::Element::outline );
         drawElem( ImGuiMeasurementIndicators::Element::main );
     }
+}
+
+void AngleTask::onClick()
+{
+    selectObject( params_.objectToSelect );
 }
 
 Vector3f LengthTask::computeCornerPoint()
@@ -414,6 +474,10 @@ LengthTask::LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Co
 
 void LengthTask::renderPass()
 {
+    // We set those after we're done drawing.
+    clickableCornerA_ = {};
+    clickableCornerB_ = {};
+
     float distanceValue = 0;
     if ( params_.onlyOneAxis )
         distanceValue = std::abs( params_.points[1][*params_.onlyOneAxis] - params_.points[0][*params_.onlyOneAxis] );
@@ -425,6 +489,11 @@ void LengthTask::renderPass()
     indicatorParams.colorMain = color_;
 
     ImGuiMeasurementIndicators::Text text;
+    if ( !params_.objectName.empty() )
+    {
+        text.addText( params_.objectName );
+        text.addLine();
+    }
 
     std::string_view axisName;
     if ( params_.onlyOneAxis )
@@ -469,6 +538,8 @@ void LengthTask::renderPass()
     ImVec2 a = toScreenCoords( *viewport_, params_.points[0] );
     ImVec2 b = toScreenCoords( *viewport_, params_.points[1] );
 
+    std::optional<ImGuiMeasurementIndicators::DistanceResult> distanceResult;
+
     if ( params_.onlyOneAxis )
     {
         Vector3f cornerPointWorld = computeCornerPoint();
@@ -476,7 +547,7 @@ void LengthTask::renderPass()
 
         for ( auto elem : { ImGuiMeasurementIndicators::Element::outline, ImGuiMeasurementIndicators::Element::main } )
         {
-            ImGuiMeasurementIndicators::distance( elem, menuScaling_, indicatorParams, a, cornerPointScreen, text );
+            distanceResult = ImGuiMeasurementIndicators::distance( elem, menuScaling_, indicatorParams, a, cornerPointScreen, text, { .textParams = makeTextParams( viewport_->id, params_.objectToSelect, *this ) } );
             ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, cornerPointScreen, b, {
                 .flags = ImGuiMeasurementIndicators::LineFlags::narrow,
                 .capA = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::extend },
@@ -486,8 +557,19 @@ void LengthTask::renderPass()
     }
     else
     {
-        ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text );
+        distanceResult = ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text, { .textParams = makeTextParams( viewport_->id, params_.objectToSelect, *this ) } );
     }
+
+    if ( distanceResult && distanceResult->text && objectIsSelectable( params_.objectToSelect ) )
+    {
+        clickableCornerA_ = distanceResult->text->bgCornerA;
+        clickableCornerB_ = distanceResult->text->bgCornerB;
+    }
+}
+
+void LengthTask::onClick()
+{
+    selectObject( params_.objectToSelect );
 }
 
 }

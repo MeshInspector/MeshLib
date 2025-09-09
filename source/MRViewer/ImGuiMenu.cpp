@@ -3537,7 +3537,9 @@ BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackw
     const auto& menuPlugin = getViewerInstance().getMenuPlugin();
     menuPlugin->drawSceneUiSignal( menuPlugin->menu_scaling(), viewport, tasks );
 
-    return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
+    return {
+        .consumedInteractions = ( ImGui::GetIO().WantCaptureMouse || getViewerInstance().getHoveredViewportId() != viewport ) * BasicUiRenderTask::InteractionMask::mouseHover,
+    };
 }
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )

@@ -21,6 +21,8 @@ struct Params
     Color colorOutline;
     Color colorText;
     Color colorTextOutline;
+    Color colorTextOutlineHovered;
+    Color colorTextOutlineActive;
 
     float pointDiameter = 6;
 
@@ -29,6 +31,10 @@ struct Params
     float outlineWidth = 1.5f;
     float textOutlineWidth = 4.f;
     float textOutlineRounding = 3.f;
+
+    float clickableLabelLineWidth = 1.f;
+    float clickableLabelLineWidthSelected = 2.f;
+    float clickableLabelOutlineWidth = 1.f;
 
     float arrowLen = 12;
     float arrowHalfWidth = 4;
@@ -39,7 +45,7 @@ struct Params
 
     // The spacing box around the text is extended by this amount.
     ImVec2 textToLineSpacingA = ImVec2( 0, 0 ); // Top-left corner.
-    ImVec2 textToLineSpacingB = ImVec2( 0, 2 ); // Bottom-right corner.
+    ImVec2 textToLineSpacingB = ImVec2( 0, 0 ); // Bottom-right corner.
     // Further, the lines around the text are shortened by this amount.
     float textToLineSpacingRadius = 8;
 
@@ -206,9 +212,38 @@ struct Text
     // If `force == false`, only acts if `dirty == true`. In any case, resets the dirty flag.
     MRVIEWER_API void update( bool force = false ) const;
 
+    struct DrawResult
+    {
+        ImVec2 cornerA;
+        ImVec2 cornerB;
+    };
+
     // Draws the text to the specified draw list. Automatically calls `update()`.
     // If `defaultTextColor` is not specified, takes it from ImGui.
-    MRVIEWER_API void draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor = {} ) const;
+    MRVIEWER_API DrawResult draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor = {} ) const;
+};
+
+struct TextParams
+{
+    // Optional. The convention is that this should only be set if the text is possible to hover.
+    // The border is drawn only if the alpha of this isn't zero.
+    Color borderColor = Color::transparent();
+
+    // Should imply `borderColor`.
+    bool isHovered = false;
+    // Should imply `isHovered`.
+    bool isActive = false;
+
+    // This is independent from the bools above, but currently requires `borderColor` to be meaningful.
+    bool isSelected = false;
+};
+
+struct TextResult
+{
+    ImVec2 textCornerA; // The narrow rect right around the text.
+    ImVec2 textCornerB;
+    ImVec2 bgCornerA; // The padded rect of the text background.
+    ImVec2 bgCornerB;
 };
 
 // Draws a floating text bubble.
@@ -216,8 +251,11 @@ struct Text
 // by the amount necessarily to clear a perpendicular going through the center point.
 // If `pivot` is specified, the bubble is positioned according to its size (like in ImGui::SetNextWindowPos):
 // { 0, 0 } for top left corner, { 0.5f, 0.5f } for center (default), { 1, 1 } for bottom right corner.
-MRVIEWER_API void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, const Text& text,
-                        ImVec2 push = {}, ImVec2 pivot = { 0.5f, 0.5f } );
+MRVIEWER_API std::optional<TextResult> text(
+    Element elem, float menuScaling, const Params& params, ImVec2 pos,
+    const Text& text, const TextParams& textParams = {},
+    ImVec2 push = {}, ImVec2 pivot = { 0.5f, 0.5f }
+);
 
 // Draws a triangle from an arrow.
 MRVIEWER_API void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir );
@@ -234,6 +272,7 @@ struct LineCap
     Decoration decoration{};
 
     Text text;
+    TextParams textParams;
 };
 
 enum class LineFlags
@@ -253,18 +292,31 @@ struct LineParams
     std::span<const ImVec2> midPoints;
 };
 
+struct LineResult
+{
+    std::optional<TextResult> capA, capB;
+};
+
 // Draws a line or an arrow.
-MRVIEWER_API void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
+MRVIEWER_API std::optional<LineResult> line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
 
 struct DistanceParams
 {
     // If this is set, the text is moved from the middle of the line to one of the line ends (false = A, true = B).
     std::optional<bool> moveTextToLineEndIndex;
+
+    TextParams textParams;
+};
+
+struct DistanceResult
+{
+    std::optional<LineResult> line;
+    std::optional<TextResult> text;
 };
 
 // Draws a distance arrow between two points, automatically selecting the best visual style.
 // The `string` is optional.
-MRVIEWER_API void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams = {} );
+MRVIEWER_API std::optional<DistanceResult> distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams = {} );
 
 struct CurveParams
 {

@@ -14,39 +14,6 @@
 namespace MR
 {
 
-void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backParams )
-{
-    if ( bool( backParams.consumedInteractions & InteractionMask::mouseHover ) )
-        return;
-
-    // If it wasn't clipped to nothing...
-    if ( ImGuiMath::CompareAll( windowCornerA ) < windowCornerB )
-    {
-        // React to hover and possibly click.
-        if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= windowCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < windowCornerB )
-        {
-            if ( backParams.tryConsumeMouseHover() )
-            {
-                isHovered = true;
-
-                if ( prevFrameHovered && ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
-                    isActive = true;
-
-                if ( prevFrameHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-                {
-                    RibbonMenu::instance()->simulateNameTagClick(
-                        // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
-                        // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
-                        *const_cast<VisualObject*>( object ),
-                        ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
-                    );
-                }
-            }
-        }
-    }
-    prevFrameHovered = isHovered;
-}
-
 void RenderNameObject::Task::renderPass()
 {
     // Set `text.computedSize`.
@@ -120,18 +87,21 @@ void RenderNameObject::Task::renderPass()
     {
         ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params->scale, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, ImVec2( 0, 0 ) );
     }
+}
 
-    // Reset the variables.
-    isHovered = false;
-    isActive = false;
+void RenderNameObject::Task::onClick()
+{
+    RibbonMenu::instance()->simulateNameTagClick(
+        // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
+        // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
+        *const_cast<VisualObject*>( object ),
+        ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
+    );
 }
 
 void RenderNameObject::renderUi( const UiRenderParams& params )
 {
     task_.params = &params;
-
-    task_.isHovered = false;
-    task_.isActive = false;
 
     if ( !task_.object->getVisualizeProperty( VisualizeMaskType::Name, params.viewportId ) )
         return; // The name is hidden in this viewport.
@@ -261,8 +231,8 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
 
     task_.textPos = ImGuiMath::round( task_.textPos );
 
-    task_.windowCornerA = ImGuiMath::clamp( task_.textPos - task_.paddingA, viewportCornerA, viewportCornerB );
-    task_.windowCornerB = ImGuiMath::clamp( task_.textPos + task_.text.computedSize + task_.paddingB, viewportCornerA, viewportCornerB );
+    task_.clickableCornerA_ = task_.textPos - task_.paddingA;
+    task_.clickableCornerB_ = task_.textPos + task_.text.computedSize + task_.paddingB;
 
     // A non-owning pointer to our task_.
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } );

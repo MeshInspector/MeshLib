@@ -62,9 +62,7 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
 
     for ( int i = 0; i< int( FontType::Count ); ++i )
     {
-        if ( i == int( FontType::Monospace ) )
-            loadFont_( FontType::Monospace, ImGui::GetIO().Fonts->GetGlyphRangesDefault(), scaling );
-        else if ( i == int( FontType::Icons ) )
+        if ( i == int( FontType::Icons ) )
             loadFont_( FontType::Icons, iconRanges, scaling );
         else
             loadFont_( FontType( i ), charRanges, scaling );

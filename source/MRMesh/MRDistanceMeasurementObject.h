@@ -54,7 +54,8 @@ public:
         euclidean, // Euclidean distance.
         euclideanWithSignedDeltasPerAxis, // Euclidean distance, but also display per-axis deltas with signs.
         euclideanWithAbsoluteDeltasPerAxis, // Euclidean distance, but also display per-axis deltas without signs.
-        // Absolute distance in one axis:
+        // Absolute distance in one axis.
+        // This can still be made negative by `setIsNegative(true)`. The point is that the real sign is ignored.
         xAbsolute,
         yAbsolute,
         zAbsolute,

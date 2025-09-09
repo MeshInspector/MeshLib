@@ -1516,7 +1516,8 @@ float ImGuiMenu::drawSelectionInformation_()
         auto* obj = selectedObjs.front().get();
         if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
         {
-            drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+            // This is named either `Distance` or `Distance X`/Y/Z.
+            drawUnitInfo( std::string( distance->getComparablePropertyName( 0 ) ).c_str(), distance->computeDistance(), LengthUnit{} );
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
         }

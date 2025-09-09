@@ -239,6 +239,19 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     newPoint->setBaseColor( params.ordinaryPointColor );
     newPoint->create( obj, pt );
 
+    newPoint->setCanMoveCallback( [this, obj = obj] ( SurfacePointWidget& pointWidget, const PickedPoint& )->bool
+    {
+        const int index = getPointIndex( obj, pointWidget );
+        if ( index < 0 )
+        {
+            assert( false );
+            return false;
+        }
+        if ( params.canMovePoint )
+            return params.canMovePoint( obj, index );
+        return true;
+    } );
+
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {
         const int index = getPointIndex( obj, pointWidget );

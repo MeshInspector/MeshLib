@@ -505,7 +505,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
             baseElement = std::move( r.mesh );
         }
 
-        decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5, .touchNearBdEdges = false, .touchBdVerts = false   } );
+        decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5f, .touchNearBdEdges = false, .touchBdVerts = false   } );
     }
     reportProgress( cb, 0.2f );
 
@@ -577,9 +577,9 @@ float estimateDensity( float T, float width, float R )
 std::optional<float> estimateWidth( float T, float R, float d )
 {
     // first guess R <= std::sqrt( 3.f ) * cr
-    Polynomial<float, 3> p1( { T*T*T*d, 0, -3.f*PI_F*T, 8.f*std::sqrt( 2.f ) } );
+    Polynomial<float, 3> p1{ { T*T*T*d, 0, -3.f*PI_F*T, 8.f*std::sqrt( 2.f ) } };
     float sol = -1.f;
-    for ( float x : p1.solve( 1e-3 ) )
+    for ( float x : p1.solve( 1e-3f ) )
     {
         if ( x > 0 && 2.f*x < T && R <= std::sqrt( 3.f ) * x )
         {
@@ -594,8 +594,8 @@ std::optional<float> estimateWidth( float T, float R, float d )
     sol = -1.f;
     const auto alpha = d*T*T*T - (4.f / 3.f)*PI_F*R*R*R + 4.f*PI_F*R*R*R;
     const auto beta = -3.f*PI_F*T;
-    p1 = Polynomial<float, 3>( { sqr(alpha) - sqr(4*PI_F*R*R*R), 48.f*sqr(PI_F*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(PI_F*R), 16.f*sqr(PI_F) } );
-    for ( float v : p1.solve( 1e-3 ) )
+    p1 = Polynomial<float, 3>{ { sqr(alpha) - sqr(4*PI_F*R*R*R), 48.f*sqr(PI_F*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(PI_F*R), 16.f*sqr(PI_F) } };
+    for ( float v : p1.solve( 1e-3f ) )
     {
         if ( v < 0 )
             continue;

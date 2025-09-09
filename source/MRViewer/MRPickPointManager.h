@@ -64,6 +64,10 @@ public:
         /// This callback is invoked after a point is added with its index
         PickerPointCallBack onPointAdd;
 
+        /// This callback is invoked before point move start (but not from API or history),
+        /// the move is canceled if this callback returns false
+        AllowCallBack canMovePoint;
+
         /// This callback is invoked when a point starts being dragged
         PickerPointCallBack onPointMoveStart;
 

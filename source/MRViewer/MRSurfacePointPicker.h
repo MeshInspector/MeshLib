@@ -130,6 +130,11 @@ public:
     /// sets new position for the widget and returns previous position in the argument
     MRVIEWER_API void swapCurrentPosition( PickedPoint& pos );
 
+    // this callback is called before modification starts if it is set, and can cancel it by returning false
+    void setCanMoveCallback( std::function<bool( SurfacePointWidget&, const PickedPoint& )> canMove )
+    {
+        canMove_ = canMove;
+    }
     // this callback is called when modification starts if it is set
     void setStartMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove )
     {
@@ -160,7 +165,8 @@ public:
     /// activates dragging of this widget;
     /// this method is called automatically on mouse down,
     /// but it can also be called manually, please be sure that mouse is over this widget and is down
-    void startDragging();
+    /// may return false if moving is forbidden by callback
+    bool startDragging();
 
 private:
     MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
@@ -184,6 +190,7 @@ private:
 
     boost::signals2::scoped_connection onBaseObjectWorldXfChanged_;
 
+    std::function<bool( SurfacePointWidget &, const PickedPoint& )> canMove_;
     std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove_;
     std::function<void( SurfacePointWidget &, const PickedPoint& )> onMove_;
     std::function<void( SurfacePointWidget &, const PickedPoint& )> endMove_;

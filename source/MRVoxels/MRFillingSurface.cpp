@@ -460,8 +460,8 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
 
-    constexpr float normalEps = 1e-5;
-    constexpr float decimateEps = 1e-3;
+    constexpr float normalEps = 1e-5f;
+    constexpr float decimateEps = 1e-3f;
 
     reportProgress( cb, 0.f );
     Mesh baseElement;
@@ -518,11 +518,11 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
             for ( int z = 0; z < size.z / params.period.z; ++z )
             {
                 auto mesh = baseElement;
-                mesh.transform( AffineXf3f::translation( mult( Vector3f( x, y, z ), params.period ) ) );
+                mesh.transform( AffineXf3f::translation( mult( Vector3f( (float)x, (float)y, (float)z ), params.period ) ) );
                 result.addMesh( mesh, {}, true );
             }
         }
-        if ( !reportProgress( sp, x * params.period.x / float( size.x ) ) )
+        if ( !reportProgress( sp, (float)x * params.period.x / float( size.x ) ) )
             return unexpectedOperationCanceled();
     }
 

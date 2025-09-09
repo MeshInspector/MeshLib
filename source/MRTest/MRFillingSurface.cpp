@@ -5,7 +5,6 @@
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRBox.h>
 #include <MRVoxels/MRFillingSurface.h>
-#include <spdlog/spdlog.h>
 
 namespace MR
 {
@@ -50,7 +49,6 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
                 ASSERT_NEAR( realDensity, predictedDensity, 0.01f );
 
                 float R2use = R;
-                spdlog::info( "{:.3f}, {:.3f}, {:.3f}", T, R, W );
                 auto maybePredictedWidth = FillingSurface::CellularSurface::estimateWidth( T, R2use, realDensity );
 
                 // sometimes no solutions exist, then the first retry with reduced sphere size must succeed

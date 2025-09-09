@@ -469,15 +469,33 @@
 	},
 	"SelectedMeasurements": {
 		"a": 255,
-		"b": 240,
-		"g": 255,
-		"r": 50
+		"b": 107,
+		"g": 40,
+		"r": 193
 	},
 	"UnselectedMeasurements": {
 		"a": 255,
 		"b": 255,
 		"g": 255,
 		"r": 255
+	},
+	"UnselectedMeasurementsX": {
+		"a": 255,
+		"b": 100,
+		"g": 100,
+		"r": 255
+	},
+	"UnselectedMeasurementsY": {
+		"a": 255,
+		"b": 100,
+		"g": 255,
+		"r": 100
+	},
+	"UnselectedMeasurementsZ": {
+		"a": 255,
+		"b": 255,
+		"g": 100,
+		"r": 100
 	},
 	"SelectedTemporaryMeasurements": {
 		"a": 255,
@@ -487,9 +505,9 @@
 	},
 	"UnselectedTemporaryMeasurements": {
 		"a": 255,
-		"b": 0,
+		"b": 255,
 		"g": 255,
-		"r": 27
+		"r": 0
 	},
 	"SelectedObjectMesh": {
 		"a": 255,

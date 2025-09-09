@@ -95,6 +95,7 @@
 #include "MRUIRectAllocator.h"
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRString.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -350,12 +351,13 @@ static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR:
 void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
+    builder.AddChar( 0x2014 ); // EM DASH
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
-    builder.AddChar( 0x2212 ); // MINUS SIGN
-    builder.AddChar( 0x222A ); // UNION
-    builder.AddChar( 0x2229 ); // INTERSECTION
     builder.AddChar( 0x2208 ); // INSIDE
     builder.AddChar( 0x2209 ); // OUTSIDE
+    builder.AddChar( 0x2212 ); // MINUS SIGN
+    builder.AddChar( 0x2229 ); // INTERSECTION
+    builder.AddChar( 0x222A ); // UNION
     // Characters not in the font, with custom glyphs added in `addCustomGlyphs_`:
     // 0x207B SUPERSCRIPT MINUS
 #ifndef __EMSCRIPTEN__
@@ -892,12 +894,12 @@ void ImGuiMenu::draw_helpers()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::button( "Save", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
-            if ( tagEditorState_.name != tagEditorState_.initName )
+            if ( const auto name = std::string{ trim( tagEditorState_.name ) }; !name.empty() && name != tagEditorState_.initName )
             {
                 if ( tagEditorState_.hasFrontColor )
                 {
                     VisualObjectTagManager::unregisterTag( tagEditorState_.initName );
-                    VisualObjectTagManager::registerTag( tagEditorState_.name, {
+                    VisualObjectTagManager::registerTag( name, {
                         .selectedColor = tagEditorState_.selectedColor,
                         .unselectedColor = tagEditorState_.unselectedColor,
                     } );
@@ -908,7 +910,7 @@ void ImGuiMenu::draw_helpers()
                     if ( obj->tags().contains( tagEditorState_.initName ) )
                     {
                         obj->removeTag( tagEditorState_.initName );
-                        obj->addTag( tagEditorState_.name );
+                        obj->addTag( name );
                     }
                 }
             }
@@ -1372,6 +1374,8 @@ float ImGuiMenu::drawSelectionInformation_()
         editedFeatureObject_.reset();
     }
 
+    drawTagInformation_( selectedObjs );
+
     // customize input text widget design
     const ImVec4 originalFrameBgColor = ImGui::GetStyleColorVec4( ImGuiCol_FrameBg );
     const float originalFrameBorderSize = ImGui::GetStyle().FrameBorderSize;
@@ -1381,11 +1385,6 @@ float ImGuiMenu::drawSelectionInformation_()
     MR_FINALLY { ImGui::PopStyleVar( 2 ); ImGui::PopStyleColor( 1 ); };
 
     const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
-
-    // Width for half-width widgets.
-    // There are two separate variables to prevent rounding from messing up the alignment.
-    const float itemWidthHalf1 = std::round( ( itemWidth - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
-    const float itemWidthHalf2 = itemWidth - itemWidthHalf1 - ImGui::GetStyle().ItemInnerSpacing.x;
 
     auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     auto labelColor = textColor;
@@ -1427,15 +1426,6 @@ float ImGuiMenu::drawSelectionInformation_()
     {
         drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }
-
-    drawTagInformation_( selectedObjs, {
-        .textColor = textColor,
-        .labelColor = labelColor,
-        .selectedTextColor = selectedTextColor,
-        .itemWidth = itemWidth,
-        .item2Width = getSceneInfoItemWidth_( 2 ),
-        .item3Width = getSceneInfoItemWidth_( 3 ),
-    } );
 
     // Bounding box.
     if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
@@ -1529,80 +1519,6 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
-
-            bool hasNominal = distance->hasComparisonReferenceValues();
-            bool hasTolerance = distance->hasComparisonTolerances();
-
-            ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
-
-            { // Nominal distance.
-                float nominalValue = 0;
-                if ( hasNominal )
-                    nominalValue = distance->getComparisonReferenceValue( 0 );
-
-                ImGui::SetNextItemWidth( itemWidth );
-
-                ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
-                MR_FINALLY{ ImGui::PopStyleColor(); };
-                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
-                MR_FINALLY{ ImGui::PopStyleVar(); };
-
-                if ( UI::input<LengthUnit>( "Nominal", nominalValue, -FLT_MAX, FLT_MAX, { .decorationFormatString = hasNominal ? "{}" : "Not specified" } ) )
-                    distance->setComparisonReferenceValue( 0, nominalValue );
-
-                if ( hasNominal )
-                {
-                    ImGui::SameLine();
-
-                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
-                    if ( UI::buttonEx( "\xC3\x97###removeNominal", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
-                    {
-                        distance->resetComparisonReferenceValues();
-                        distance->resetComparisonTolerances(); // This too.
-                        hasNominal = false;
-                        hasTolerance = false;
-                    }
-
-                    UI::setTooltipIfHovered( "Remove nominal value and tolerance", menu_scaling() );
-                }
-            }
-
-            // Tolerance.
-            if ( hasNominal ) // Sic!
-            {
-                ObjectComparableWithReference::ComparisonTolerance tol;
-                if ( hasTolerance )
-                    tol = distance->getComparisonTolerences( 0 );
-
-                ImGui::SetNextItemWidth( itemWidthHalf1 );
-
-                ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
-                MR_FINALLY{ ImGui::PopStyleColor(); };
-                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
-                MR_FINALLY{ ImGui::PopStyleVar(); };
-
-                if ( UI::input<LengthUnit>( "###positiveTolerance", tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTolerance ? "{}" : "Not specified" } ) )
-                    distance->setComparisonTolerance( 0, tol );
-
-                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-
-                ImGui::SetNextItemWidth( itemWidthHalf2 );
-
-                if ( UI::input<LengthUnit>( "Tolerance##negative", tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTolerance ? "{}" : "Not specified" } ) )
-                    distance->setComparisonTolerance( 0, tol );
-
-                if ( hasTolerance )
-                {
-                    ImGui::SameLine();
-
-                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
-
-                    if ( UI::buttonEx( "\xC3\x97###removeTolerance", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
-                        distance->resetComparisonTolerances();
-
-                    UI::setTooltipIfHovered( "Remove tolerance", menu_scaling() );
-                }
-            }
         }
         else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
             drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
@@ -1618,6 +1534,23 @@ float ImGuiMenu::drawSelectionInformation_()
         .item2Width = getSceneInfoItemWidth_( 2 ),
         .item3Width = getSceneInfoItemWidth_( 3 ),
     } );
+
+    if ( selectedObjs.size() == 1 )
+    {
+        if ( auto comp = selectedObjs.front()->asType<ObjectComparableWithReference>() )
+        {
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            // Restore the original frame style for this.
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
+            MR_FINALLY{ ImGui::PopStyleColor(); };
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
+            MR_FINALLY{ ImGui::PopStyleVar(); };
+
+            drawComparablePropertiesEditor_( *comp );
+        }
+    }
 
     // This looks a bit better.
     for ( int i = 0; i < 5; i++ )
@@ -1693,6 +1626,93 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
     if ( !anyActive )
         editedFeatureObject_.reset();
+}
+
+void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& object )
+{
+    const float fullWidth = getSceneInfoItemWidth_( 1 );
+    const ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
+
+    const std::string_view notSpecifiedStr = "\xE2\x80\x94"; // U+2014 EM DASH
+
+    // Reference values.
+    const std::size_t numRefs = object.numComparisonReferenceValues();
+    for ( std::size_t i = 0; i < numRefs; i++ )
+    {
+        auto nominalValue = object.getComparisonReferenceValue( i );
+
+        ImGui::SetNextItemWidth( fullWidth );
+
+        if ( std::visit( [&]( auto& elem ){ return UI::input<LengthUnit>( std::string( object.getComparisonReferenceValueName( i ) ).c_str(), elem, -FLT_MAX, FLT_MAX, { .decorationFormatString = nominalValue.isSet ? "{}" : notSpecifiedStr } ); }, nominalValue.var ) )
+            object.setComparisonReferenceValue( i, nominalValue.var );
+
+        if ( nominalValue.isSet )
+        {
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+            if ( UI::buttonEx( fmt::format( "\xC3\x97###removeNominal:{}", object.getComparisonReferenceValueName( i ) ).c_str(), buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                object.setComparisonReferenceValue( i, {} );
+        }
+    }
+
+    // Width for half-width widgets.
+    // There are two separate variables to prevent rounding from messing up the alignment.
+    const float halfWidth1 = std::round( ( fullWidth - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
+    const float halfWidth2 = fullWidth - halfWidth1 - ImGui::GetStyle().ItemInnerSpacing.x;
+
+    // Tolerances.
+    const std::size_t numTols = object.numComparableProperties();
+    for ( std::size_t i = 0; i < numTols; i++ )
+    {
+        bool hasTol = false;
+        ObjectComparableWithReference::ComparisonTolerance tol;
+        if ( auto opt = object.getComparisonTolerence( i ) )
+        {
+            hasTol = true;
+            tol = *opt;
+        }
+
+        ImGui::SetNextItemWidth( fullWidth );
+
+        std::string name;
+        if ( numTols == 1 )
+            name = "Tolerance";
+        else
+            name = fmt::format( "{} tolerance", object.getComparablePropertyName( i ) );
+
+        if ( object.comparisonToleranceIsAlwaysOnlyPositive( i ) )
+        {
+            ImGui::SetNextItemWidth( fullWidth );
+            if ( UI::input<LengthUnit>( name.c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+                object.setComparisonTolerance( i, tol );
+        }
+        else
+        {
+            ImGui::SetNextItemWidth( halfWidth1 );
+
+            if ( UI::input<LengthUnit>( fmt::format( "###positive:{}", name ).c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+                object.setComparisonTolerance( i, tol );
+
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+
+            ImGui::SetNextItemWidth( halfWidth2 );
+
+            if ( UI::input<LengthUnit>( fmt::format( "{}###negative", name ).c_str(), tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+                object.setComparisonTolerance( i, tol );
+        }
+
+        // The button to remove tolerance.
+        if ( hasTol )
+        {
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+
+            if ( UI::buttonEx( fmt::format( "\xC3\x97###removeTolerance:{}", name ).c_str(), buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                object.setComparisonTolerance( i, {} );
+        }
+    }
 }
 
 bool ImGuiMenu::drawGeneralOptions( const std::vector<std::shared_ptr<Object>>& selectedObjs )
@@ -2187,16 +2207,11 @@ void ImGuiMenu::drawCustomSelectionInformation_( const std::vector<std::shared_p
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}
 
-void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style )
+void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     const auto initWidth = ImGui::GetContentRegionAvail().x;
     const auto initCursorScreenPos = ImGui::GetCursorScreenPos();
-    const auto initCursorPos = ImGui::GetCursorPos();
-    const auto itemInnerSpacing = ImGui::GetStyle().ItemInnerSpacing;
-    const auto textLineHeight = ImGui::GetTextLineHeight();
-
-    if ( ImGui::InvisibleButton( "##EnterTagsWindow", { style.itemWidth, textLineHeight } ) )
-        ImGui::OpenPopup( "TagsPopup" );
+    const auto itemWidth = getSceneInfoItemWidth_();
 
     static const auto setIntersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
     {
@@ -2244,7 +2259,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         text = "–";
 
     auto textSize = ImGui::CalcTextSize( text.c_str() );
-    if ( style.itemWidth < textSize.x )
+    if ( itemWidth < textSize.x )
     {
         // TODO: cache
         const auto ellipsisSize = ImGui::CalcTextSize( "..." );
@@ -2252,19 +2267,20 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         for ( --textLen; textLen > 0; --textLen )
         {
             textSize = ImGui::CalcTextSize( text.data(), text.data() + textLen );
-            if ( textSize.x + ellipsisSize.x <= style.itemWidth )
+            if ( textSize.x + ellipsisSize.x <= itemWidth )
                 break;
         }
         text = text.substr( 0, textLen ) + "...";
         textSize = ImGui::CalcTextSize( text.c_str() );
     }
 
-    const auto offset = std::floor( ( style.itemWidth - textSize.x ) * 0.5f );
-    ImGui::SetCursorPos( { initCursorPos.x + offset, initCursorPos.y } );
-    ImGui::TextColored( style.textColor, "%s", text.c_str() );
+    const auto initCursorPos = ImGui::GetCursorPos();
+    ImGui::SetNextItemAllowOverlap();
+    UI::inputTextCentered( "Tags", text, itemWidth );
 
-    ImGui::SetCursorPos( { initCursorPos.x + style.itemWidth + itemInnerSpacing.x, initCursorPos.y } );
-    ImGui::TextColored( style.labelColor, "Tags" );
+    ImGui::SetCursorPos( initCursorPos );
+    if ( ImGui::InvisibleButton( "##EnterTagsWindow", { itemWidth, ImGui::GetFrameHeight() } ) )
+        ImGui::OpenPopup( "TagsPopup" );
 
     static const auto BeginPopup2 = [] ( const char* name, ImVec2 size, const ImVec2* pos = nullptr )
     {
@@ -2293,13 +2309,15 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
+        const auto& style = ImGui::GetStyle();
+
         auto* iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
         if ( iconsFont )
             iconsFont->Scale = cDefaultFontSize / cBigIconSize;
 
         const auto buttonWidth = [&] ( const char* label )
         {
-            return ImGui::GetStyle().FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
+            return style.FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
         };
         if ( iconsFont )
             ImGui::PushFont( iconsFont );
@@ -2327,6 +2345,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             {
                 const auto color = allVisTags.at( tag ).selectedColor;
                 ImGui::PushStyleColor( ImGuiCol_Button, color );
+                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::getLuminance( color ) > 0.5f ? Color::black() : Color::white() );
             }
 
             ImGui::PushStyleVar( ImGuiStyleVar_ButtonTextAlign, { 0.0f, 0.5f } );
@@ -2359,7 +2378,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             ImGui::PopStyleVar();
 
             if ( allVisTags.contains( tag ) )
-                ImGui::PopStyleColor();
+                ImGui::PopStyleColor( 2 );
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
             if ( iconsFont )
@@ -2426,21 +2445,23 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             }
             return 0;
         };
-        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - style.ItemInnerSpacing.x - addButtonWidth );
         if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion, tagCompletion, &allKnownTags ) )
         {
-            for ( const auto& selObj : selected )
-                selObj->addTag( tagNewName_ );
+            if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
+                for ( const auto& selObj : selected )
+                    selObj->addTag( name );
             tagNewName_.clear();
         }
 
         if ( iconsFont )
             ImGui::PushFont( iconsFont );
-        ImGui::SameLine( 0, itemInnerSpacing.x );
+        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
-            for ( const auto& selObj : selected )
-                selObj->addTag( tagNewName_ );
+            if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
+                for ( const auto& selObj : selected )
+                    selObj->addTag( name );
             tagNewName_.clear();
         }
         if ( iconsFont )

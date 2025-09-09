@@ -1,7 +1,10 @@
 #pragma once
 
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector3.h"
+
 #include <optional>
+#include <variant>
 
 namespace MR
 {
@@ -25,11 +28,26 @@ class MRMESH_CLASS ObjectComparableWithReference
     // When comparing this object with a reference, how many different properties can we output?
     [[nodiscard]] virtual std::size_t numComparableProperties() const = 0;
 
+    // `i` goes up to `numComparableProperties()`, exclusive.
     [[nodiscard]] virtual std::string_view getComparablePropertyName( std::size_t i ) const = 0;
 
-    // Effectively computes `this->property - other.property`, or returns null on failure.
-    // `other` will be `dynamic_cast`-ed to the same derived type as `this`.
-    [[nodiscard]] virtual std::optional<float> compareProperty( const Object& other, std::size_t i ) const = 0;
+    struct ComparableProperty
+    {
+        float value = 0;
+
+        // This can be null if the reference value isn't set, or something else is wrong.
+        // This can match whatever is set via `get/setComparisonReferenceValue()`, but not necessarily.
+        // E.g. for point coordinates, those functions act on the reference coordinates (three optional floats), but this number is always zero,
+        //   and the `value` is the distance to those coordinates.
+        std::optional<float> referenceValue = 0.f;
+    };
+
+    // Compute a value of a property.
+    // Compare `value` and `referenceValue` using the tolerance.
+    // This can return null if the value is impossible to compute, e.g. for some types if the reference isn't set (e.g. if
+    //   we're computing the distance to a reference point).
+    // `i` goes up to `numComparableProperties()`, exclusive.
+    [[nodiscard]] virtual std::optional<ComparableProperty> computeComparableProperty( std::size_t i ) const = 0;
 
 
     // Tolerances:
@@ -43,30 +61,47 @@ class MRMESH_CLASS ObjectComparableWithReference
         float negative = 0;
     };
 
-    // True if this object includes tolerance information.
-    [[nodiscard]] virtual bool hasComparisonTolerances() const = 0;
+    // Returns the tolerance for a specific comparable property. Returns null if not set.
+    // `i` goes up to `numComparableProperties()`, exclusive.
+    [[nodiscard]] virtual std::optional<ComparisonTolerance> getComparisonTolerence( std::size_t i ) const = 0;
 
-    // Returns the tolerance for a specific comparable property. Only call if `hasComparisonTolerances() == true`.
-    [[nodiscard]] virtual ComparisonTolerance getComparisonTolerences( std::size_t i ) const = 0;
+    // Sets the tolerance for a specific comparable property.
+    // `i` goes up to `numComparableProperties()`, exclusive.
+    virtual void setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance ) = 0;
 
-    // Sets the tolerance for a specific comparable property. Only call if `hasComparisonTolerances() == true`.
-    // Makes `hasComparisonTolerances()` return true.
-    virtual void setComparisonTolerance( std::size_t i, const ComparisonTolerance& newTolerance ) = 0;
-
-    // Removes all tolerance information, and makes `hasComparisonTolerances()` return true.
-    virtual void resetComparisonTolerances() = 0;
+    // If true, indicates that the getter will always return zero negative tolerance, and the setter will ignore the negative tolerance.
+    // `i` goes up to `numComparableProperties()`, exclusive.
+    [[nodiscard]] virtual bool comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const { (void)i; return false; }
 
 
     // Reference values:
 
-    // True if this object has built-in reference values, and doesn't need another object to compare against.
-    [[nodiscard]] virtual bool hasComparisonReferenceValues() const = 0;
-    // Returns the internal reference value. Only call if `hasComparisonReferenceValue() == true`.
-    [[nodiscard]] virtual float getComparisonReferenceValue( std::size_t i ) const = 0;
+    // The number and types of reference values can be entirely different compared to `numComparableProperties()`.
+    [[nodiscard]] virtual std::size_t numComparisonReferenceValues() const { return numComparableProperties(); }
+
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
+    [[nodiscard]] virtual std::string_view getComparisonReferenceValueName( std::size_t i ) const = 0;
+
+    // This can't be `std::optional<Var>`, because we still need the variant to know the correct type.
+    struct ComparisonReferenceValue
+    {
+        using Var = std::variant<float, Vector3f>;
+
+        bool isSet = false;
+
+        // If `isSet == false`, this will hold zeroes, or some other default values.
+        Var var;
+    };
+
+    // Returns the internal reference value.
+    // If the value wasn't set yet (as indicated by `isSet == false`), you can still use the returned variant to get the expected type.
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
+    [[nodiscard]] virtual ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const = 0;
     // Sets the internal reference value. Makes `hasComparisonReferenceValue()` return true.
-    virtual void setComparisonReferenceValue( std::size_t i, float value ) = 0;
-    // Makes `hasComparisonReferenceValue()` return false.
-    virtual void resetComparisonReferenceValues() = 0;
+    // If you pass nullopt, removes this reference value.
+    // Only a certain variant type is legal to pass, depending on the derived class and the index. Use `getComparisonReferenceValue()` to determine that type.
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
+    virtual void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) = 0;
 };
 
 }

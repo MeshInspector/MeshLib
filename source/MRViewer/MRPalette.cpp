@@ -721,13 +721,12 @@ Color Palette::getColor( float val ) const
     if ( val == 1.f )
         return colors.back();
 
-    float dIdx = val * ( colors.size() - 1 );
-
     if ( texture_.filter == FilterType::Discrete )
-        return colors[int( std::round( dIdx ) )];
+        return colors[int( val * colors.size() )];
 
     if ( texture_.filter == FilterType::Linear )
     {
+        float dIdx = val * ( colors.size() - 1 );
         int dId = int( trunc( dIdx ) );
         float c = dIdx - dId;
         return  ( 1 - c ) * colors[dId] + c * colors[dId + 1];

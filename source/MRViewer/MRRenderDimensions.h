@@ -89,7 +89,7 @@ struct LengthParams
     // Whether the distance should be displayed as a negative one.
     bool drawAsNegative = false;
 
-    // If set, use only once axis (with this index, 0..2) instead of eucledian.
+    // If set, use only once axis (with this index, 0..2) instead of euclidean.
     std::optional<int> onlyOneAxis;
 
     // If set, we're comparing the distance with a reference value.
@@ -110,6 +110,9 @@ class LengthTask : public BasicUiRenderTask
     Viewport* viewport_ = nullptr;
     Color color_;
     LengthParams params_;
+
+    // For single-axis measurements, this computes the corner point.
+    MRVIEWER_API Vector3f computeCornerPoint();
 
 public:
     LengthTask() {}

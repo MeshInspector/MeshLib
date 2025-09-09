@@ -51,9 +51,9 @@ public:
 
     enum class DistanceMode
     {
-        eucledian, // Eucledian distance.
-        eucledianWithSignedDeltasPerAxis, // Eucledian distance, but also display per-axis deltas with signs.
-        eucledianWithAbsoluteDeltasPerAxis, // Eucledian distance, but also display per-axis deltas without signs.
+        euclidean, // Euclidean distance.
+        euclideanWithSignedDeltasPerAxis, // Euclidean distance, but also display per-axis deltas with signs.
+        euclideanWithAbsoluteDeltasPerAxis, // Euclidean distance, but also display per-axis deltas without signs.
         // Absolute distance in one axis:
         xAbsolute,
         yAbsolute,
@@ -64,7 +64,7 @@ public:
     MRMESH_API virtual void setDistanceMode( DistanceMode mode );
 
     // Computes the distance value. This is affected by `getDistanceMode()`.
-    // In `eucledian`, this is `getWorldDelta().length() * (isNegative() ? -1 : 1)`.
+    // In `euclidean`, this is `getWorldDelta().length() * (isNegative() ? -1 : 1)`.
     [[nodiscard]] MRMESH_API float computeDistance() const;
 
     [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
@@ -72,15 +72,12 @@ public:
     // Implement `ObjectComparableWithReference`:
     [[nodiscard]] MRMESH_API std::size_t numComparableProperties() const override;
     [[nodiscard]] MRMESH_API std::string_view getComparablePropertyName( std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API std::optional<float> compareProperty( const Object& other, std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API bool hasComparisonTolerances() const override;
-    [[nodiscard]] MRMESH_API ComparisonTolerance getComparisonTolerences( std::size_t i ) const override;
-    MRMESH_API void setComparisonTolerance( std::size_t i, const ComparisonTolerance& newTolerance ) override;
-    MRMESH_API void resetComparisonTolerances() override;
-    [[nodiscard]] MRMESH_API bool hasComparisonReferenceValues() const override;
-    [[nodiscard]] MRMESH_API float getComparisonReferenceValue( std::size_t i ) const override;
-    MRMESH_API void setComparisonReferenceValue( std::size_t i, float value ) override;
-    MRMESH_API void resetComparisonReferenceValues() override;
+    [[nodiscard]] MRMESH_API std::optional<ComparableProperty> computeComparableProperty( std::size_t i ) const override;
+    [[nodiscard]] MRMESH_API std::optional<ComparisonTolerance> getComparisonTolerence( std::size_t i ) const override;
+    MRMESH_API void setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance ) override;
+    MRMESH_API std::string_view getComparisonReferenceValueName( std::size_t i ) const override;
+    [[nodiscard]] MRMESH_API ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const override;
+    MRMESH_API void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) override;
 
 protected:
     DistanceMeasurementObject( const DistanceMeasurementObject& other ) = default;
@@ -101,7 +98,7 @@ private:
     bool isNegative_ = false;
 
     // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
-    DistanceMode perCoordDeltas_ = DistanceMode::eucledian;
+    DistanceMode perCoordDeltas_ = DistanceMode::euclidean;
 
     // The cached value for `computeDistance()`.
     mutable std::optional<float> cachedValue_;

@@ -262,7 +262,12 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
             if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || topology.dest( topology.prev( pEId ) ) == nVId )
             {
                 assert( fromSameTriangle( topology, mesh.toTriPoint( nVId ), MeshTriPoint( MeshEdgePoint( pEId, 0.5f ) ) ) );
-                return OneMeshIntersection{ findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr ) };
+                FaceId sharedFaceWithCur = findSharedFace( topology, nVId, pEId, curr );
+                auto verts = topology.getTriVerts( sharedFaceWithCur );
+                if ( verts[0] == nVId || verts[1] == nVId || verts[2] == nVId )
+                    return OneMeshIntersection{ sharedFaceWithCur,mesh.triPoint( curr ) };
+                // we fall here if prev and next have shared face, but this face is not shared with curr,
+                // if this happens we continue to default case
             }
         }
         else if ( std::holds_alternative<EdgeId>( next.primitiveId ) )

@@ -3,6 +3,7 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
 #include "MRViewer/MRColorTheme.h"
+#include "MRViewer/MRRibbonFontManager.h"
 
 #include <parallel_hashmap/phmap.h>
 
@@ -72,6 +73,23 @@ void point( Element elem, float menuScaling, const Params& params, ImVec2 point 
 
         params.list->AddCircleFilled( point, radius, ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32() );
     } );
+}
+
+static Text::FontFunc& defaultFontFuncStorage()
+{
+    // We default to a monospaced font. Just in case, use a function and re-get it every time.
+    static Text::FontFunc ret = []{ return RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Monospace ); };
+    return ret;
+}
+
+const Text::FontFunc& Text::getStaticDefaultFontFunc()
+{
+    return defaultFontFuncStorage();
+}
+
+void Text::setStaticDefaultFontFunc( FontFunc func )
+{
+    defaultFontFuncStorage() = std::move( func );
 }
 
 void Text::addText( std::string_view text )
@@ -345,6 +363,8 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
             switch ( ( front ? lineParams.capB : lineParams.capA ).decoration )
             {
             case LineCap::Decoration::none:
+            case LineCap::Decoration::extend:
+            case LineCap::Decoration::point:
                 // Nothing.
                 break;
             case LineCap::Decoration::arrow:
@@ -402,10 +422,15 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 : normalize( a - ( midpointsFixed.empty() ? b : midpointsFixed.front() ) );
 
             const LineCap& thisCap = front ? lineParams.capB : lineParams.capA;
+
+            // Draw the cap decoration.
             switch ( thisCap.decoration )
             {
             case LineCap::Decoration::none:
                 // Nothing.
+                break;
+            case LineCap::Decoration::extend:
+                point += d * params.notchHalfLen;
                 break;
             case LineCap::Decoration::arrow:
                 if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
@@ -416,6 +441,9 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 else
                     point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
                 break;
+            case LineCap::Decoration::point:
+                ImGuiMeasurementIndicators::point( thisElem, menuScaling, params, point );
+                break;
             }
 
             if ( !thisCap.text.isEmpty() )
@@ -425,13 +453,16 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 text( thisElem, menuScaling, params, *extraPoint, thisCap.text, leaderDir );
             }
 
+            // Extend the outline further on some caps.
             switch ( thisCap.decoration )
             {
             case LineCap::Decoration::none:
+            case LineCap::Decoration::extend:
                 if ( thisElem == Element::outline )
                     ( extraPoint ? *extraPoint : point ) += ( extraPoint ? normalize( *extraPoint - point ) : d ) * outlineWidth;
                 break;
             case LineCap::Decoration::arrow:
+            case LineCap::Decoration::point:
                 // Nothing.
                 break;
             }

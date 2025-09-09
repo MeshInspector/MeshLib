@@ -133,22 +133,22 @@ public:
     // this callback is called before modification starts if it is set, and can cancel it by returning false
     void setCanMoveCallback( std::function<bool( SurfacePointWidget&, const PickedPoint& )> canMove )
     {
-        canMove_ = canMove;
+        canMove_ = std::move( canMove );
     }
     // this callback is called when modification starts if it is set
     void setStartMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove )
     {
-        startMove_ = startMove;
+        startMove_ = std::move( startMove );
     }
     // this callback is called on modification if it is set
     void setOnMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> onMove )
     {
-        onMove_ = onMove;
+        onMove_ = std::move( onMove );
     }
     // this callback is called when modification ends if it is set
     void setEndMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> endMove )
     {
-        endMove_ = endMove;
+        endMove_ = std::move( endMove );
     }
 
     std::shared_ptr<VisualObject>& getBaseSurface()

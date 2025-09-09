@@ -502,6 +502,8 @@ void LengthTask::renderPass()
     // "Measured" prefix for value.
     if ( params_.referenceValue )
         text.addElem( { .var = fmt::format( "Measured{}: ", axisName ), .columnId = 0 } );
+    else if ( !axisName.empty() )
+        text.addElem( { .var = fmt::format( "{}: ", axisName.substr( 1 ) ), .columnId = 0 } );
 
     const bool passOrFail = params_.referenceValue && params_.tolerance;
     const bool pass = passOrFail && distanceValue >= *params_.referenceValue + params_.tolerance->negative && distanceValue <= *params_.referenceValue + params_.tolerance->positive;

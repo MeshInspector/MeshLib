@@ -98,4 +98,30 @@ void RenderAngleObject::renderUi( const UiRenderParams& params )
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }
 
+MR_REGISTER_RENDER_OBJECT_IMPL( PointMeasurementObject, RenderPointMeasurementObject )
+
+RenderPointMeasurementObject::RenderPointMeasurementObject( const VisualObject& object )
+    : RenderObjectCombinator( object )
+{
+    nameUiScreenOffset = Vector2f( 0.1f, 0.1f );
+}
+
+ImGuiMeasurementIndicators::Text RenderPointMeasurementObject::getObjectNameText( const VisualObject& object, ViewportId ) const
+{
+    if ( const auto* pointObj = dynamic_cast<const PointMeasurementObject*>( &object ) )
+    {
+        std::ostringstream oss;
+
+        const auto p = pointObj->worldXf().b;
+        oss << fmt::format( "{0:.{3}f}, {1:.{3}f}, {2:.{3}f}", p.x, p.y, p.z, 3 );
+
+        assert( pointObj->numComparableProperties() == 1 );
+        if ( const auto dev = pointObj->computeComparableProperty( 0 ) )
+        {
+            oss << fmt::format( "\nDeviation: {}", dev->value );
+        }
+    }
+    return {};
+}
+
 }

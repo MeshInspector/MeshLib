@@ -1,9 +1,9 @@
 #pragma once
 
-#include "MRMesh/MRIRenderObject.h"
-#include "MRViewer/exports.h"
+#include "exports.h"
+#include "MRImGui.h"
 
-#include <imgui.h>
+#include "MRMesh/MRIRenderObject.h"
 
 namespace MR
 {

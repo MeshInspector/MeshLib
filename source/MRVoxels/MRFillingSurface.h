@@ -115,18 +115,18 @@ enum class Kind : int
 };
 MRVOXELS_API std::vector<std::string> getKindNames();
 
-using MeshParams = std::variant
+MR_BIND_IGNORE using MeshParams = std::variant
     < std::reference_wrapper<TPMS::MeshParams>
     , std::reference_wrapper<CellularSurface::Params>
     >;
 
-using ConstMeshParams = std::variant
+MR_BIND_IGNORE using ConstMeshParams = std::variant
     < std::reference_wrapper<const TPMS::MeshParams>
     , std::reference_wrapper<const CellularSurface::Params>
     >;
 
 // Useful in plugins/UI to store all possible values of params and don't forget them when the kind is changed
-struct AllMeshParams
+struct MR_BIND_IGNORE AllMeshParams
 {
     Kind kind = Kind::Cellular;
     TPMS::MeshParams tpmsParams;
@@ -136,7 +136,7 @@ struct AllMeshParams
     MRVOXELS_API ConstMeshParams toConstMeshParams() const;
 };
 
-MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParams params, ProgressCallback cb = {} );
-MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParams params, ProgressCallback cb = {} );
+MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParams params, ProgressCallback cb = {} );
+MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParams params, ProgressCallback cb = {} );
 
 } // namespace FillingSurface

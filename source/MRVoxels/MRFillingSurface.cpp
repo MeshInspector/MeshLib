@@ -574,7 +574,7 @@ float estimateDensity( float T, float width, float R )
     }
 }
 
-float estimateWidth( float T, float R, float d )
+std::optional<float> estimateWidth( float T, float R, float d )
 {
     // first guess R <= std::sqrt( 3.f ) * cr
     Polynomial<float, 3> p1( { T*T*T*d, 0, -3.f*PI_F*T, 8.f*std::sqrt( 2.f ) } );
@@ -606,8 +606,7 @@ float estimateWidth( float T, float R, float d )
             break;
         }
     }
-    assert( sol >= 0 );
-    return std::max( sol, 0.f );
+    return sol > 0 ? std::optional{ sol } : std::nullopt;
 }
 
 } // namespace CellularSurface

@@ -6,6 +6,7 @@
 #include <MRVoxels/MRVoxelsFwd.h>
 
 #include <variant>
+#include <optional>
 
 namespace MR::FillingSurface
 {
@@ -103,7 +104,7 @@ MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, Progre
 
 MRVOXELS_API float estimateDensity( float period, float width, float r );
 
-MRVOXELS_API float estimateWidth( float period, float r, float targetDensity );
+MRVOXELS_API std::optional<float> estimateWidth( float period, float r, float targetDensity );
 
 }
 

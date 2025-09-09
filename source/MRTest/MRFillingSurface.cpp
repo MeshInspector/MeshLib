@@ -5,6 +5,7 @@
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRBox.h>
 #include <MRVoxels/MRFillingSurface.h>
+#include <spdlog/spdlog.h>
 
 namespace MR
 {
@@ -30,6 +31,7 @@ TEST( MRMesh, CellularFillingSurface )
 TEST( MRMesh, CellularFillingSurfaceDensity )
 {
     Vector3f size{ 1.f, 1.f, 1.f };
+    int noSolutions = 0;
 
     for ( float T = 0.1f; T < 1.f; T += 0.1f )
     {
@@ -47,16 +49,30 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
                 const auto predictedDensity = FillingSurface::CellularSurface::estimateDensity( T, W, R );
                 ASSERT_NEAR( realDensity, predictedDensity, 0.01f );
 
-                const auto predictedWidth = FillingSurface::CellularSurface::estimateWidth( T, R, realDensity );
+                float R2use = R;
+                spdlog::info( "{:.3f}, {:.3f}, {:.3f}", T, R, W );
+                auto maybePredictedWidth = FillingSurface::CellularSurface::estimateWidth( T, R2use, realDensity );
+
+                // sometimes no solutions exist, then the first retry with reduced sphere size must succeed
+                if ( !maybePredictedWidth )
+                {
+                    R2use /= 2.f;
+                    maybePredictedWidth = FillingSurface::CellularSurface::estimateWidth( T, R2use, realDensity );
+                    ++noSolutions;
+                }
+                ASSERT_TRUE( maybePredictedWidth );
 
                 // sometimes more than one solution exist, so we should not compare directly with W, but rather we have to rebuild the surface
                 auto res2 = FillingSurface::CellularSurface::build( size,
-                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( predictedWidth ), .r = R, .highRes = true } );
-                const auto predictedDensity2 = res->volume() / res->getBoundingBox().volume();
+                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( *maybePredictedWidth ), .r = R2use, .highRes = true } );
+                ASSERT_TRUE( res2 );
+                const auto predictedDensity2 = res2->volume() / res2->getBoundingBox().volume();
                 ASSERT_NEAR( realDensity, predictedDensity2, 0.01f );
             }
         }
     }
+
+    ASSERT_EQ( noSolutions, 1 );
 }
 
 }

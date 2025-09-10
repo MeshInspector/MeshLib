@@ -91,12 +91,9 @@ void RenderNameObject::Task::renderPass()
 
 void RenderNameObject::Task::onClick()
 {
-    RibbonMenu::instance()->simulateNameTagClick(
-        // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
-        // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
-        *const_cast<VisualObject*>( object ),
-        ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
-    );
+    // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
+    // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
+    RibbonMenu::instance()->simulateNameTagClickWithKeyboardModifiers( *const_cast<VisualObject*>( object ) );
 }
 
 void RenderNameObject::renderUi( const UiRenderParams& params )

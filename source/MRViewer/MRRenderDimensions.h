@@ -16,8 +16,17 @@ class Viewport;
 namespace MR::RenderDimensions
 {
 
+struct BasicDimensionParams
+{
+    // What object to select when the label is clicked.
+    // Optional. Not clickable if this is null.
+    const VisualObject* objectToSelect = nullptr;
 
-struct RadiusParams
+    // Optional. If specified, this name is drawn above the measurement.
+    std::string objectName;
+};
+
+struct RadiusParams : BasicDimensionParams
 {
     // The center point.
     Vector3f center;
@@ -37,13 +46,6 @@ struct RadiusParams
     // The visual leader line length multiplier, relative to the radius.
     // You're recommended to set a min absolute value for the resulting length when rendering.
     float visualLengthMultiplier = 2 / 3.f;
-
-    // What object to select when the label is clicked.
-    // Optional. Not clickable if this is null.
-    const VisualObject* objectToSelect = nullptr;
-
-    // Optional. If specified, this name is drawn above the measurement.
-    std::string objectName;
 };
 
 class RadiusTask : public BasicClickableRectUiRenderTask
@@ -64,7 +66,7 @@ public:
     MRVIEWER_API void onClick() override;
 };
 
-struct AngleParams
+struct AngleParams : BasicDimensionParams
 {
     // The center point.
     Vector3f center;
@@ -78,13 +80,6 @@ struct AngleParams
 
     // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
     std::array<bool, 2> shouldVisualizeRay{ true, true };
-
-    // What object to select when the label is clicked.
-    // Optional. Not clickable if this is null.
-    const VisualObject* objectToSelect = nullptr;
-
-    // Optional. If specified, this name is drawn above the measurement.
-    std::string objectName;
 };
 
 class AngleTask : public BasicClickableRectUiRenderTask
@@ -104,7 +99,7 @@ public:
 };
 
 
-struct LengthParams
+struct LengthParams : BasicDimensionParams
 {
     // The points between which we're measuring.
     std::array<Vector3f, 2> points;
@@ -114,13 +109,6 @@ struct LengthParams
 
     // If set, use only once axis (with this index, 0..2) instead of euclidean.
     std::optional<int> onlyOneAxis;
-
-    // What object to select when the label is clicked.
-    // Optional. Not clickable if this is null.
-    const VisualObject* objectToSelect = nullptr;
-
-    // Optional. If specified, this name is drawn above the measurement.
-    std::string objectName;
 
     // If set, we're comparing the distance with a reference value.
     std::optional<float> referenceValue;

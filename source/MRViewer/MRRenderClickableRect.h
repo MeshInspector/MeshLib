@@ -24,6 +24,7 @@ public:
     // This is called when the click happens.
     virtual void onClick() = 0;
 
+    // This is what ultimately calls `onClick()` if the certain conditions hold.
     MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& backParams ) override;
 
     // Set those to set the clickable area. Zero both to disable the clicks.

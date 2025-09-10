@@ -993,6 +993,11 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
     return true;
 }
 
+bool ImGuiMenu::simulateNameTagClickWithKeyboardModifiers( Object& object )
+{
+    return simulateNameTagClick( object, ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne );
+}
+
 bool ImGuiMenu::anyImGuiWindowIsHovered() const
 {
     return ImGui::GetIO().WantCaptureMouse;

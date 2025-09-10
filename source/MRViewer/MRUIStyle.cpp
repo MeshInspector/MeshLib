@@ -187,6 +187,14 @@ void init()
     textureR->update( data );
 }
 
+ImGuiKey getImGuiModPrimaryCtrl()
+{
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
+        return ImGuiMod_Ctrl;
+    else
+        return ImGuiMod_Super;
+}
+
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
     bool simulateClick = customParams.enableTestEngine && TestEngine::createButton( customParams.testEngineName.empty() ? label : customParams.testEngineName );
@@ -887,6 +895,7 @@ static std::string modifiersToString( int modifiers )
     std::string modsText;
     for ( const auto& [bit, name] : {
         std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+        std::pair( ImGuiMod_Super, getSuperModName() ),
         std::pair( ImGuiMod_Shift, "Shift" ),
         std::pair( ImGuiMod_Alt, "Alt" ),
     } )

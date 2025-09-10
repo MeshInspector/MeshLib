@@ -77,7 +77,7 @@ void resetSettings( Viewer * viewer )
     const size_t memLimit = std::max( size_t( 2 ) * 1024 * 1024 * 1024, getSystemMemory().physicalTotal / 2 );
 #endif
     viewer->mouseController().setMouseControl( rotKey, MouseMode::Rotation );
-    rotKey.mod = GLFW_MOD_CONTROL;
+    rotKey.mod = getGlfwModPrimaryCtrl();
     viewer->mouseController().setMouseControl( rotKey, MouseMode::Roll );
     spdlog::info( "History memory limit: {}", bytesString( memLimit ) );
     viewer->getGlobalHistoryStore()->setMemoryLimit( memLimit );

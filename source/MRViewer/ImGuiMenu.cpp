@@ -995,7 +995,7 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
 
 bool ImGuiMenu::simulateNameTagClickWithKeyboardModifiers( Object& object )
 {
-    return simulateNameTagClick( object, ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne );
+    return simulateNameTagClick( object, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne );
 }
 
 bool ImGuiMenu::anyImGuiWindowIsHovered() const

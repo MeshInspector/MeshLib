@@ -26,6 +26,8 @@ void pdfPrintError( const char* funcName, HPDF_Doc doc, HPDF_STATUS status )
     if ( status == HPDF_OK )
         return;
 
+    assert( false );
+
     spdlog::warn( "Pdf: Error in {} call.", funcName );
     spdlog::warn( "Failed with error: {} {}", status, GetHpdfErrorDescription( status ) );
     if ( doc )
@@ -159,9 +161,9 @@ std::string GetHpdfErrorDescription( HPDF_STATUS errorCode )
     }
 }
 
-const std::string& sGetDefaultFontName( MR::PdfParameters::BuildinFont font )
+const std::string& sGetDefaultFontName( MR::PdfBuildinFont font )
 {
-    static const std::array<std::string, int( MR::PdfParameters::BuildinFont::Count )> cFontNames = {
+    static const std::array<std::string, int( MR::PdfBuildinFont::Count )> cFontNames = {
         std::string( "Courier" ),
         std::string( "Courier-Bold" ),
         std::string( "Courier-Oblique" ),
@@ -206,7 +208,8 @@ constexpr HPDF_REAL pageWorkWidth = borderFieldRight - borderFieldLeft;
 constexpr HPDF_REAL spacing = 6 * scaleFactor;
 
 constexpr HPDF_REAL textSpacing = 4 * scaleFactor;
-constexpr HPDF_REAL lineSpacingScale = 1.2f;
+constexpr HPDF_REAL lineSpacingScale = 1.5f;
+constexpr float underlineShiftScale = 0.33f;
 
 constexpr HPDF_REAL labelHeight = 10 * scaleFactor;
 
@@ -236,36 +239,56 @@ struct Pdf::State
     HPDF_Font defaultFontBold = nullptr;
     HPDF_Font tableFont = nullptr;
     HPDF_Font tableFontBold = nullptr;
-};
 
-struct Pdf::TextParams
-{
-    HPDF_Font font = nullptr;
-    float fontSize = 14.f;
-    HPDF_TextAlignment alignment = HPDF_TALIGN_LEFT;
-    Color colorText = Color::black();
-
-    static TextParams title( const Pdf& pdf )
+    std::array<HPDF_Font, int( PdfBuildinFont::Count )> fonts;
+    std::map<std::filesystem::path, HPDF_Font> customFonts;
+    HPDF_Font getFont( PdfGeneralFont generalFontName )
     {
-        return { .font = pdf.state_->defaultFont, .fontSize = pdf.params_.titleSize, .alignment = HPDF_TALIGN_CENTER };
+        if ( std::holds_alternative<PdfBuildinFont>( generalFontName ) )
+        {
+            PdfBuildinFont fontName = std::get<PdfBuildinFont>( generalFontName );
+            HPDF_Font& font = fonts[int( fontName )];
+            if ( !font )
+                font = HPDF_GetFont( document, sGetDefaultFontName( fontName ).c_str(), NULL );
+            if ( !font )
+                pdfPrintError( "HPDF_GetFont", document, HPDF_GetError( document ) );
+            return font;
+        }
+        else
+        {
+            auto fontPath = std::get<std::filesystem::path>( generalFontName );
+            auto fontIt = customFonts.find( fontPath );
+            if ( fontIt != customFonts.end() )
+            {
+                return fontIt->second;
+            }
+            else
+            {
+                HPDF_Font font = nullptr;
+                std::string fontName;
+                const auto pathStr = utf8string( fontPath );
+                const char* fontNameCstr = HPDF_LoadTTFontFromFile( document, pathStr.c_str(), HPDF_TRUE );
+                if ( fontNameCstr )
+                    fontName = fontNameCstr;
+                else
+                {
+                    spdlog::debug( "Pdf: Can't find font: \"{}\".", pathStr );
+                    pdfPrintError( "HPDF_LoadTTFontFromFile", document, HPDF_GetError( document ) );
+                }
+                if ( !fontName.empty() )
+                    font = HPDF_GetFont( document, fontName.c_str(), "UTF-8" );
+                if ( !font )
+                {
+                    spdlog::debug( "Pdf: Can't load font: \"{}\".", pathStr );
+                    pdfPrintError( "HPDF_GetFont", document, HPDF_GetError( document ) );
+                }
+                else
+                    customFonts.insert( { fontPath, font } );
+                return font;
+            }
+        }
     }
-    static TextParams text( const Pdf& pdf )
-    {
-        return { .font = pdf.state_->defaultFont, .fontSize = pdf.params_.textSize };
-    }
-    static TextParams table( const Pdf& pdf )
-    {
-        return { .font = pdf.state_->tableFont, .fontSize = pdf.params_.textSize };
-    }
-};
 
-struct Pdf::TextCellParams
-{
-    TextParams textParams;
-
-    Box2f rect;
-    Color colorBorder = Color::transparent();
-    Color colorBackground = Color::transparent();
 
 };
 
@@ -282,63 +305,23 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
     
     MR_HPDF_CHECK_RES_STATUS( HPDF_UseUTFEncodings( state_->document ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_SetCurrentEncoder( state_->document, "UTF-8" ) );
-
     MR_HPDF_CHECK_RES_STATUS( HPDF_SetCompressionMode( state_->document, HPDF_COMP_ALL ) );
 
-    state_->activePage = HPDF_AddPage( state_->document );
-    if ( !state_->activePage )
+    auto loadFont = [&] ( const std::variant<PdfBuildinFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )
     {
-        spdlog::warn( "Pdf: Can't create page." );
-        pdfPrintError( "HPDF_AddPage", state_->document, HPDF_GetError( state_->document ) );
-        reset_();
-        return;
-    }
+        if ( std::holds_alternative<PdfBuildinFont>( inFontInfo ) )
+        {
+            outFont = state_->getFont( std::get<PdfBuildinFont>( inFontInfo ) );
+            return;
+        }
 
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT ) );
-
-    auto getFont = [&] ( const std::variant<PdfParameters::BuildinFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )->bool
-    {
-        std::string fontName;
-        bool useUTF8 = false;
-        bool ok = true;
-        if ( std::holds_alternative<PdfParameters::BuildinFont>( inFontInfo ) )
-        {
-            fontName = sGetDefaultFontName( std::get<PdfParameters::BuildinFont>( inFontInfo ) );
-        }
-        else
-        {
-            auto pathStr = utf8string( std::get<std::filesystem::path>( inFontInfo ) );
-            const char* fontNameCstr = HPDF_LoadTTFontFromFile( state_->document, pathStr.c_str(), HPDF_TRUE );
-            if ( fontNameCstr )
-                fontName = fontNameCstr;
-            else
-                ok = false;
-            useUTF8 = true;
-        }
-        if ( !fontName.empty() )
-            outFont = HPDF_GetFont( state_->document, fontName.c_str(), useUTF8 ? "UTF-8" : NULL );
-        if ( !outFont )
-        {
-            spdlog::debug( "Pdf: Can't find font: \"{}\".", ok ? fontName : utf8string( std::get<std::filesystem::path>( inFontInfo ) ) );
-            pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
-            return false;
-        }
-        return true;
+        
     };
 
-    if ( !getFont( params_.defaultFont, state_->defaultFont ) )
-        return;
-    if ( !getFont( params_.defaultFontBold, state_->defaultFontBold ) )
-        return;
-    if ( !getFont( params_.tableFont, state_->tableFont ) )
-        return;
-    if ( !getFont( params_.tableFontBold, state_->tableFontBold ) )
-        return;
-
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
-
-    cursorX_ = borderFieldLeft;
-    cursorY_ = borderFieldTop;
+    loadFont( params_.defaultFont, state_->defaultFont );
+    loadFont( params_.defaultFontBold, state_->defaultFontBold );
+    loadFont( params_.tableFont, state_->tableFont );
+    loadFont( params_.tableFontBold, state_->tableFontBold );
 }
 
 Pdf::Pdf( Pdf&& other ) noexcept
@@ -358,9 +341,42 @@ Pdf::~Pdf()
     reset_();
 }
 
-void Pdf::addText(const std::string& text, bool isTitle /*= false*/ )
+void Pdf::addText( const std::string& text, bool isTitle /*= false*/ )
 {
-    addText_( text, isTitle ? TextParams::title( *this ) : TextParams::text( *this ) );
+    TextParams params = isTitle ? TextParams{ .fontName = params_.defaultFont, .fontSize = params_.titleSize } :
+        TextParams{.fontName = params_.defaultFont, .fontSize = params_.textSize};
+
+    addText( text, params );
+}
+
+void Pdf::addText(const std::string& text, const TextParams& params )
+{
+    if ( !checkDocument_( "add text" ) )
+        return;
+
+    if ( !params.colorText.a )
+        return;
+
+    int strNum = int( calcTextLineWidths_( text, borderFieldRight - cursorX_, params ).size() );
+    const auto textHeight = static_cast< HPDF_REAL >( params.fontSize * strNum * lineSpacingScale );
+
+    // TODO need add the ability to transfer text between pages
+    if ( cursorY_ - textHeight < borderFieldBottom )
+        newPage();
+
+    Box2f rect;
+    rect.include( { cursorX_, cursorY_ } );
+    rect.include( { borderFieldRight, cursorY_ - textHeight } );
+    drawTextInRect( text, rect, params );
+
+    cursorY_ -= textHeight;
+    moveCursorToNewLine();
+}
+
+float Pdf::getTextWidth( const std::string& text, const TextParams& params )
+{
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
+    return MR_HPDF_CHECK_ERROR( HPDF_Page_TextWidth( state_->activePage, text.c_str() ) );
 }
 
 void Pdf::addTable( const std::vector<std::pair<std::string, float>>& table )
@@ -387,7 +403,7 @@ void Pdf::addTable( const std::vector<std::pair<std::string, float>>& table )
     {
         resStr += fmt::format( "\n{: <{}} : {: >{}}", table[i].first, maxFirstSize, valueStrs[i], maxSecondSize );
     }
-    addText_( resStr, TextParams::table( *this ) );
+    addText( resStr, { .fontName = params_.tableFont, .fontSize = params_.textSize } );
 }
 
 void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats )
@@ -398,7 +414,7 @@ void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats
         return;
     }
 
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->tableFont, params_.textSize ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->tableFontBold, params_.textSize ) );
 
     size_t longestMin = std::max_element( paletteStats.begin(), paletteStats.end(), [] ( const PaletteRowStats& lhv, const PaletteRowStats& rhv )
     {
@@ -677,9 +693,9 @@ Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
     TextCellParams params;
     params.colorBackground = tableParams_.colorTitleBg;
     params.colorBorder = tableParams_.colorLines;
-    params.textParams.font = state_->tableFontBold;
+    params.textParams.fontName = PdfBuildinFont::CourierBold;
     params.textParams.fontSize = tableParams_.fontSize;
-    params.textParams.alignment = HPDF_TALIGN_CENTER;
+    params.textParams.alignment = AlignmentHorizontal::Center;
     params.textParams.colorText = tableParams_.colorTitleText;
 
     const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
@@ -691,7 +707,7 @@ Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
     for ( int i = 0; i < titles.size(); ++i )
     {
         params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
-        drawTextCell_( titles[i], params );
+        drawTextCell( titles[i], params );
         posX += columnsInfo_[i].width;
     }
     cursorY_ -= textHeight;
@@ -717,9 +733,9 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
     TextCellParams params;
     params.colorBackground = ( rowCounter_ & 1 ) ? tableParams_.colorCellBg1 : tableParams_.colorCellBg2;
     params.colorBorder = tableParams_.colorLines;
-    params.textParams.font = state_->tableFont;
+    params.textParams.fontName = PdfBuildinFont::Courier;
     params.textParams.fontSize = tableParams_.fontSize;
-    params.textParams.alignment = HPDF_TALIGN_CENTER;
+    params.textParams.alignment = AlignmentHorizontal::Center;
     params.textParams.colorText = tableParams_.colorCellText;
 
     const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
@@ -745,10 +761,10 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
             if ( cellParams.colorCellBorder.has_value() )
                 customParams.colorBorder = *cellParams.colorCellBorder;
 
-            drawTextCell_( text, customParams );
+            drawTextCell( text, customParams );
         }
         else
-            drawTextCell_( text, params );
+            drawTextCell( text, params );
         posX += columnsInfo_[i].width;
     }
     ++rowCounter_;
@@ -758,35 +774,11 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
 
 float Pdf::getTableTextWidth( const std::string& text )
 {
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->tableFont, params_.textSize ) );
     return MR_HPDF_CHECK_ERROR( HPDF_Page_TextWidth( state_->activePage, text.c_str() ) );
 }
 
-void Pdf::addText_( const std::string& text, const TextParams& textParams )
-{
-    if ( !checkDocument_( "add text" ) )
-        return;
-
-    if ( !textParams.colorText.a )
-        return;
-
-    int strNum = calcTextLinesCount_( text );
-    const auto textHeight = static_cast< HPDF_REAL >( textParams.fontSize * strNum * lineSpacingScale );
-
-    // TODO need add the ability to transfer text between pages
-    if ( cursorY_ - textHeight < borderFieldBottom )
-        newPage();
-
-    Box2f rect;
-    rect.include( { cursorX_, cursorY_ } );
-    rect.include( { borderFieldRight, cursorY_ - textHeight } );
-    drawTextRect_( text, rect, textParams );
-
-    cursorY_ -= textHeight;
-    moveCursorToNewLine();
-}
-
-void Pdf::drawTextRect_( const std::string& text, const Box2f& rect, const TextParams& params )
+void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const TextParams& params )
 {
     if ( !checkDocument_( "draw text (rect)" ) )
         return;
@@ -794,20 +786,48 @@ void Pdf::drawTextRect_( const std::string& text, const Box2f& rect, const TextP
     if ( text.empty() || !params.colorText.a )
         return;
 
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, params.font, params.fontSize ) );
+    auto widths = calcTextLineWidths_( text, rect.size().x, params );
+
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize ) );
 
-    const float verticalOffset = ( rect.size().y - params.fontSize ) / 2.f;
+    const float verticalOffset = ( rect.size().y - params.fontSize * ( widths.size() * lineSpacingScale - ( lineSpacingScale  - 1.f ) ) ) / 2.f;
 
     Vector4f c = Vector4f( params.colorText );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBFill( state_->activePage, c.x, c.y, c.z ) );
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
+
+    HPDF_TextAlignment textAlignment;
+    if ( params.alignment == AlignmentHorizontal::Left )
+        textAlignment = HPDF_TALIGN_LEFT;
+    else if ( params.alignment == AlignmentHorizontal::Right )
+        textAlignment = HPDF_TALIGN_RIGHT;
+    else
+        textAlignment = HPDF_TALIGN_CENTER;
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y - verticalOffset,
-        rect.max.x, rect.min.y + verticalOffset, text.c_str(), params.alignment, nullptr ) );
+        rect.max.x, rect.min.y + verticalOffset, text.c_str(), textAlignment, nullptr ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
 
+    if ( params.underline )
+    {
 
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetLineWidth( state_->activePage, params.fontSize / 10.f ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBStroke( state_->activePage, c.x, c.y, c.z ) );
+
+        for ( int i = 0; i < widths.size(); ++i )
+        {
+            float posX = rect.min.x;
+            if ( params.alignment == AlignmentHorizontal::Right )
+                posX = rect.max.x - widths[i];
+            else if ( params.alignment == AlignmentHorizontal::Center )
+                posX = rect.center().x - widths[i] / 2.f;
+            const float posY = rect.max.y - verticalOffset - params.fontSize * ( lineSpacingScale * underlineShiftScale + ( 1.f - underlineShiftScale ) ) - i * params.fontSize * lineSpacingScale;
+            MR_HPDF_CHECK_RES_STATUS( HPDF_Page_MoveTo( state_->activePage, posX, posY ) );
+            MR_HPDF_CHECK_RES_STATUS( HPDF_Page_LineTo( state_->activePage, posX + widths[i], posY ) );
+        }
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Stroke( state_->activePage ) );
+    }
 }
 
 void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor )
@@ -831,35 +851,34 @@ void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& str
     }
 }
 
-void Pdf::drawTextCell_( const std::string& text, const TextCellParams& params )
+void Pdf::drawTextCell( const std::string& text, const TextCellParams& params )
 {
     drawRect_( params.rect, params.colorBackground, params.colorBorder );
-    drawTextRect_( text, params.rect, params.textParams );
+    drawTextInRect( text, params.rect, params.textParams );
 }
 
 void Pdf::reset_()
 {
     HPDF_ResetError( state_->document );
     HPDF_Free( state_->document );
-    state_->document = nullptr;
-    state_->activePage = nullptr;
-    state_->defaultFont = nullptr;
-    state_->tableFont = nullptr;
 }
 
-int Pdf::calcTextLinesCount_( const std::string& text )
+std::vector<float> Pdf::calcTextLineWidths_( const std::string& text, float width, const TextParams& params )
 {
-    HPDF_REAL r;
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
+
+    HPDF_REAL realWidth;
     HPDF_UINT substrStart = 0;
-    int count = 0;
-    for ( ; substrStart < text.size(); ++count )
+    std::vector<float> widths;
+    for ( ; substrStart < text.size(); )
     {
-        HPDF_UINT lineSize = MR_HPDF_CHECK_ERROR( HPDF_Page_MeasureText( state_->activePage, text.data() + substrStart, pageWorkWidth, HPDF_TRUE, &r ) );
+        HPDF_UINT lineSize = MR_HPDF_CHECK_ERROR( HPDF_Page_MeasureText( state_->activePage, text.data() + substrStart, width, HPDF_TRUE, &realWidth ) );
         if ( lineSize == 0 )
             break;
         substrStart += lineSize;
+        widths.push_back( realWidth );
     }
-    return count;
+    return widths;
 }
 
 bool Pdf::checkDocument_( const std::string& logAction ) const

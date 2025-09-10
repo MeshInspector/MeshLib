@@ -1,7 +1,7 @@
 {
   "include": [
     {
-      "_comment": "win19/debug/cmake - C++/C distribution debug build",
+      "_comment": "win19/debug/cmake - C++ distribution debug build",
       "os": "windows-2019",
       "runner": ["self-hosted", "windows", "x64", "vs-2019", "meshinspector"],
       "config": "Debug",
@@ -13,7 +13,7 @@
       "vcpkg-version": "__VCPKG_VERSION_VS19__"
     },
     {
-      "_comment": "win19/release/cmake - C++/C distribution release build",
+      "_comment": "win19/release/cmake - C++ distribution release build",
       "os": "windows-2019",
       "runner": ["self-hosted", "windows", "x64", "vs-2019", "meshinspector"],
       "config": "Release",

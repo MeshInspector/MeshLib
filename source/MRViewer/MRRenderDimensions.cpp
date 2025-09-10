@@ -551,6 +551,7 @@ void LengthTask::renderPass()
                 .flags = ImGuiMeasurementIndicators::LineFlags::narrow,
                 .capA = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::extend },
                 .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::point },
+                .stipple = indicatorParams.stippleDashed,
             } );
         }
     }

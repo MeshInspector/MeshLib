@@ -5,8 +5,6 @@
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRRibbonFontManager.h"
 
-#include <parallel_hashmap/phmap.h>
-
 namespace MR::ImGuiMeasurementIndicators
 {
 
@@ -63,6 +61,14 @@ Params::Params()
     float tActive = 0.3f;
     colorTextOutlineHovered = colorTextOutline * ( 1 - tHovered ) + colorText * tHovered;
     colorTextOutlineActive = colorTextOutline * ( 1 - tActive ) + colorText * tActive;
+
+    static constexpr Stipple::Segment stippleSegmentsDashed[] = {
+        { 0, 0.5f },
+    };
+    stippleDashed = {
+        .patternLength = 12,
+        .segments = stippleSegmentsDashed,
+    };
 }
 
 void point( Element elem, float menuScaling, const Params& params, ImVec2 point )
@@ -375,7 +381,7 @@ void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec
 
     ImVec2 a = point;
     ImVec2 b = a - dir * arrowLen + n * arrowHalfWidth;
-    ImVec2 c =  a - dir * arrowLen - n * arrowHalfWidth;
+    ImVec2 c = a - dir * arrowLen - n * arrowHalfWidth;
 
     if ( bool( elem & Element::outline ) )
     {
@@ -461,6 +467,8 @@ std::optional<LineResult> line( Element elem, float menuScaling, const Params& p
         // Those are added on the ends of the line, if specified.
         std::optional<ImVec2> extraPoints[2];
 
+        auto midpointsFixed2 = midpointsFixed;
+
         for ( bool front : { false, true } )
         {
             ImVec2& point = points[front];
@@ -481,13 +489,36 @@ std::optional<LineResult> line( Element elem, float menuScaling, const Params& p
                 point += d * params.notchHalfLen;
                 break;
             case LineCap::Decoration::arrow:
-                if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
-                    point -= d * arrowTipBackwardOffset;
-                arrowTriangle( thisElem, menuScaling, params, point, d );
-                if ( thisCap.text.isEmpty() )
-                    point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
-                else
-                    point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
+                {
+                    if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
+                        point -= d * arrowTipBackwardOffset;
+                    ImVec2 arrowTip = point;
+                    arrowTriangle( thisElem, menuScaling, params, arrowTip, d );
+                    if ( thisCap.text.isEmpty() )
+                    {
+                        point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
+
+                        // Now trim some extra points to avoid artifacts (which tend to appear when both the stipple and antialiasing are enabled,
+                        //   but can probably appear without the stipple too).
+                        ImVec2 prevPoint = arrowTip;
+                        float accumLen = 0;
+                        while ( !midpointsFixed2.empty() )
+                        {
+                            ImVec2 p = front ? midpointsFixed2.back() : midpointsFixed2.front();
+                            if ( dot( p - prevPoint, d ) > 0 )
+                                break; // The line has went into a different direction.
+                            midpointsFixed2 = midpointsFixed2.subspan( front ? 0 : 1, midpointsFixed2.size() - 1 );
+                            accumLen += length( p - prevPoint );
+                            if ( accumLen >= arrowLen )
+                                break; // The line has probably exited the arrow tip already.
+                            prevPoint = p;
+                        }
+                    }
+                    else
+                    {
+                        point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
+                    }
+                }
                 break;
             case LineCap::Decoration::point:
                 ImGuiMeasurementIndicators::point( thisElem, menuScaling, params, point );
@@ -500,32 +531,166 @@ std::optional<LineResult> line( Element elem, float menuScaling, const Params& p
                 extraPoint = points[front] + leaderDir * leaderLineLen;
                 ( front ? ret.capB : ret.capA ) = text( thisElem, menuScaling, params, *extraPoint, thisCap.text, thisCap.textParams, leaderDir );
             }
-
-            // Extend the outline further on some caps.
-            switch ( thisCap.decoration )
-            {
-            case LineCap::Decoration::none:
-            case LineCap::Decoration::extend:
-                if ( thisElem == Element::outline )
-                    ( extraPoint ? *extraPoint : point ) += ( extraPoint ? normalize( *extraPoint - point ) : d ) * outlineWidth;
-                break;
-            case LineCap::Decoration::arrow:
-            case LineCap::Decoration::point:
-                // Nothing.
-                break;
-            }
         }
 
-        if ( extraPoints[0] )
-            params.list->PathLineTo( *extraPoints[0] );
-        params.list->PathLineTo( points[0] );
-        for ( ImVec2 point : midpointsFixed )
-            params.list->PathLineTo( point );
-        params.list->PathLineTo( points[1] );
-        if ( extraPoints[1] )
-            params.list->PathLineTo( *extraPoints[1] );
+        // Check this again, in case we happened to remove more midpoints.
+        if ( a == b && midpointsFixed2.empty() )
+            return;
 
-        params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
+        // Those used to extend the outline forward and backward.
+        bool isFirstPathPoint = true;
+        std::optional<ImVec2> queuedPathPoint;
+        std::optional<ImVec2> prevPathPoint;
+
+        auto pathPoint = [&]( ImVec2 p )
+        {
+            if ( elem == Element::main )
+            {
+                params.list->PathLineTo( p );
+                return;
+            }
+
+            // At this point we're drawing the outline.
+
+            if ( queuedPathPoint )
+            {
+                if ( !prevPathPoint || *prevPathPoint != *queuedPathPoint )
+                    prevPathPoint = queuedPathPoint;
+
+                if ( isFirstPathPoint && p != *queuedPathPoint )
+                {
+                    // Extend the first point backwards.
+                    isFirstPathPoint = false;
+                    *queuedPathPoint -= normalize( p - *queuedPathPoint ) * outlineWidth;
+                }
+
+                params.list->PathLineTo( *queuedPathPoint );
+            }
+            queuedPathPoint = p;
+        };
+        auto pathStroke = [&]
+        {
+            if ( elem == Element::outline )
+            {
+                if ( queuedPathPoint && prevPathPoint )
+                {
+                    // Extend the last point forward.
+                    *queuedPathPoint += normalize( *queuedPathPoint - *prevPathPoint ) * outlineWidth;
+                }
+
+                params.list->PathLineTo( *queuedPathPoint );
+
+                isFirstPathPoint = true;
+                queuedPathPoint.reset();
+                prevPathPoint.reset();
+            }
+
+            params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
+        };
+
+        auto forEachPoint = [&]( auto&& func )
+        {
+            if ( extraPoints[0] )
+                func( *extraPoints[0] );
+            func( points[0] );
+            for ( ImVec2 point : midpointsFixed2 )
+                func( point );
+            func( points[1] );
+            if ( extraPoints[1] )
+                func( *extraPoints[1] );
+        };
+
+        if ( !lineParams.stipple )
+        {
+            forEachPoint( pathPoint );
+            pathStroke();
+        }
+        else
+        {
+            const float patternLen = lineParams.stipple->patternLength * menuScaling;
+
+            float t = 0; // The current phase, between 0 and 1.
+            bool nowActive = false; // Are we in the middle of a segment right now?
+            std::size_t segmIndex = 0; // The index into the pattern.
+
+            // The last known argument to `addPoint()`.
+            std::optional<ImVec2> prevPoint;
+
+            auto addPoint = [&]( ImVec2 point )
+            {
+                if ( prevPoint )
+                {
+                    // The input segment length measured in pixels.
+                    const float inputPixelLen = length( point - *prevPoint );
+                    // The input segment length measured in pattern periods. We substract stuff from this.
+                    // This may be greater than 1.
+                    const float inputPeriodsLen = inputPixelLen / patternLen;
+
+                    // Which part of `inputPeriodsLen` was already consumed. Goes from 0 to `inputPeriodsLen`.
+                    float consumedInputPeriodsLen = 0;
+
+                    while ( true )
+                    {
+                        const Stipple::Segment& thisSegm = lineParams.stipple->segments[segmIndex];
+
+                        // How many more periods do we want to skip until the end of the output segment.
+                        float remPatternPeriodsLen = thisSegm.get( nowActive ) - t;
+                        if ( remPatternPeriodsLen < 0 )
+                            remPatternPeriodsLen += 1; // Wrap around.
+                        assert( remPatternPeriodsLen >= 0 && remPatternPeriodsLen <= 1 );
+
+                        // Can we finish the output segment during this input segment?
+                        if ( inputPeriodsLen - consumedInputPeriodsLen >= remPatternPeriodsLen )
+                        {
+                            // Yes we can.
+
+                            consumedInputPeriodsLen += remPatternPeriodsLen;
+
+                            // Emit the point.
+                            float subT = consumedInputPeriodsLen / inputPeriodsLen;
+                            pathPoint( *prevPoint * ( 1.f - subT ) + point * subT );
+                            // Update the phase.
+                            t = thisSegm.get( nowActive );
+                            // Render the output segment if we're finishing it. Update the index into the pattern.
+                            if ( nowActive )
+                            {
+                                pathStroke();
+
+                                segmIndex++;
+                                if ( segmIndex == lineParams.stipple->segments.size() )
+                                    segmIndex = 0;
+                            }
+                            // Start/stop the output segment.
+                            nowActive = !nowActive;
+                        }
+                        else
+                        {
+                            // No, the input segment is too short or the output segment is too long.
+
+                            // Advance the phase.
+                            t += inputPeriodsLen - consumedInputPeriodsLen;
+                            assert( t >= 0 && t <= 1 ); // This can't possibly wrap around, because otherwise we would just finish the segment.
+
+                            // Emit the intermediate point. This makes segments more smooth.
+                            if ( nowActive )
+                                pathPoint( point );
+
+                            break;
+                        }
+                    }
+                }
+
+                prevPoint = point;
+            };
+
+            forEachPoint( addPoint );
+
+            // Flush the last segment if needed.
+            // Here we don't need `pathPoint( *prevPoint );`, because unfinished segments already write the last point,
+            //   which is normally used to make them more smooth.
+            if ( nowActive )
+                pathStroke();
+        }
     } );
 
     return ret;

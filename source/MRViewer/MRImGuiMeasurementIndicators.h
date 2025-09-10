@@ -14,6 +14,27 @@
 namespace MR::ImGuiMeasurementIndicators
 {
 
+// Parameters for drawing dotted lines.
+struct Stipple
+{
+    // This is automatically multiplied by `menuScaling`.
+    // This is the period of the stipple pattern.
+    float patternLength = 16;
+
+    struct Segment
+    {
+        // This is the start and end positions of this segment, from 0 to 1. This is automatically multiplied by `patternLength`.
+        // You must ensure `0 <= a < b <= 1`, and if there are multiple segments, that `segments[i].b < segments[i + 1].a`.
+        // The only exception to this is that the `b` of the last segment can be less than the `a` of the last segment,
+        //   as long as it's also less than the `a` of the first segment. This can help with pattern wraparound.
+        float a = 0;
+        float b = 0;
+
+        [[nodiscard]] float get( bool end ) const { return end ? b : a; }
+    };
+    std::span<const Segment> segments;
+};
+
 struct Params
 {
     ImDrawList* list = ImGui::GetBackgroundDrawList();
@@ -61,6 +82,13 @@ struct Params
 
     // A small perpendicular line at the end of some arrows.
     float notchHalfLen = 8;
+
+    // We don't use those directly, but you can pass them to `LineParams::stipple` if you want:
+    // [
+
+    // ---   ---   ---
+    Stipple stippleDashed;
+    // ]
 
     // This picks the colors based on the current color theme.
     MRVIEWER_API Params();
@@ -290,6 +318,9 @@ struct LineParams
     LineCap capB{};
 
     std::span<const ImVec2> midPoints;
+
+    // For drawing dotted lines. You can get presets for this parameter from `ImGuiMeasurementIndicators::Params::stipple___`.
+    std::optional<Stipple> stipple;
 };
 
 struct LineResult

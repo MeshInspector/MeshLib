@@ -32,14 +32,16 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
     auto ref = object_->getComparisonReferenceValue( 0 );
     auto tol = object_->getComparisonTolerence( 0 );
     task_ = RenderDimensions::LengthTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
+        .common = {
+            .objectToSelect = object_,
+            .objectName = object_->name(),
+        },
         .points = { pointA, pointB },
         .drawAsNegative = object_->isNegative(),
         .onlyOneAxis =
             object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::xAbsolute ? std::optional( 0 ) :
             object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::yAbsolute ? std::optional( 1 ) :
             object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::zAbsolute ? std::optional( 2 ) : std::nullopt,
-        .objectToSelect = object_,
-        .objectName = object_->name(),
         .referenceValue =
             ref.isSet ? std::optional( std::get<float>( ref.var ) ) : std::nullopt,
         .tolerance =
@@ -56,14 +58,16 @@ RenderRadiusObject::RenderRadiusObject( const VisualObject& object )
 void RenderRadiusObject::renderUi( const UiRenderParams& params )
 {
     task_ = RenderDimensions::RadiusTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
+        .common = {
+            .objectToSelect = object_,
+            .objectName = object_->name(),
+        },
         .center = object_->getWorldCenter(),
         .radiusAsVector = object_->getWorldRadiusAsVector(),
         .normal = object_->getWorldNormal(),
         .drawAsDiameter = object_->getDrawAsDiameter(),
         .isSpherical = object_->getIsSpherical(),
         .visualLengthMultiplier = object_->getVisualLengthMultiplier(),
-        .objectToSelect = object_,
-        .objectName = object_->name(),
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }
@@ -76,6 +80,10 @@ RenderAngleObject::RenderAngleObject( const VisualObject& object )
 void RenderAngleObject::renderUi( const UiRenderParams& params )
 {
     task_ = RenderDimensions::AngleTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
+        .common = {
+            .objectToSelect = object_,
+            .objectName = object_->name(),
+        },
         .center = object_->getWorldPoint(),
         .rays = {
             object_->getWorldRay( false ),
@@ -86,8 +94,6 @@ void RenderAngleObject::renderUi( const UiRenderParams& params )
             object_->getShouldVisualizeRay( false ),
             object_->getShouldVisualizeRay( true ),
         },
-        .objectToSelect = object_,
-        .objectName = object_->name(),
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }

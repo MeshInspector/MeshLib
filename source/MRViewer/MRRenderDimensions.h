@@ -16,7 +16,7 @@ class Viewport;
 namespace MR::RenderDimensions
 {
 
-struct BasicDimensionParams
+struct CommonParams
 {
     // What object to select when the label is clicked.
     // Optional. Not clickable if this is null.
@@ -26,8 +26,10 @@ struct BasicDimensionParams
     std::string objectName;
 };
 
-struct RadiusParams : BasicDimensionParams
+struct RadiusParams
 {
+    CommonParams common;
+
     // The center point.
     Vector3f center;
 
@@ -66,8 +68,10 @@ public:
     MRVIEWER_API void onClick() override;
 };
 
-struct AngleParams : BasicDimensionParams
+struct AngleParams
 {
+    CommonParams common;
+
     // The center point.
     Vector3f center;
 
@@ -99,8 +103,10 @@ public:
 };
 
 
-struct LengthParams : BasicDimensionParams
+struct LengthParams
 {
+    CommonParams common;
+
     // The points between which we're measuring.
     std::array<Vector3f, 2> points;
 

@@ -121,9 +121,9 @@ void RadiusTask::renderPass()
         farPoint = point + ImGuiMath::normalize( point - center ) * minRadiusLen;
 
     ImGuiMeasurementIndicators::Text text;
-    if ( !params_.objectName.empty() )
+    if ( !params_.common.objectName.empty() )
     {
-        text.addText( params_.objectName );
+        text.addText( params_.common.objectName );
         text.addLine();
     }
 
@@ -140,12 +140,12 @@ void RadiusTask::renderPass()
 
     auto lineResult = ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams,
         farPoint, point, {
-            .capA = { .text = text, .textParams = makeTextParams( viewport_->id, params_.objectToSelect, *this ) },
+            .capA = { .text = text, .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) },
             .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow },
         }
     );
 
-    if ( lineResult && lineResult->capA && objectIsSelectable( params_.objectToSelect ) )
+    if ( lineResult && lineResult->capA && objectIsSelectable( params_.common.objectToSelect ) )
     {
         clickableCornerA_ = lineResult->capA->bgCornerA;
         clickableCornerB_ = lineResult->capA->bgCornerB;
@@ -154,7 +154,7 @@ void RadiusTask::renderPass()
 
 void RadiusTask::onClick()
 {
-    selectObject( params_.objectToSelect );
+    selectObject( params_.common.objectToSelect );
 }
 
 AngleTask::AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const AngleParams& params )
@@ -376,9 +376,9 @@ void AngleTask::renderPass()
         }
 
         ImGuiMeasurementIndicators::Text text;
-        if ( !params_.objectName.empty() )
+        if ( !params_.common.objectName.empty() )
         {
-            text.addText( params_.objectName );
+            text.addText( params_.common.objectName );
             text.addLine();
         }
         text.addText( angleToString( angleValue ) );
@@ -430,8 +430,8 @@ void AngleTask::renderPass()
             }
 
             // The text.
-            auto textResult = ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.objectToSelect, *this ), normal );
-            if ( textResult && objectIsSelectable( params_.objectToSelect ) )
+            auto textResult = ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.common.objectToSelect, *this ), normal );
+            if ( textResult && objectIsSelectable( params_.common.objectToSelect ) )
             {
                 clickableCornerA_ = textResult->bgCornerA;
                 clickableCornerB_ = textResult->bgCornerB;
@@ -445,7 +445,7 @@ void AngleTask::renderPass()
 
 void AngleTask::onClick()
 {
-    selectObject( params_.objectToSelect );
+    selectObject( params_.common.objectToSelect );
 }
 
 Vector3f LengthTask::computeCornerPoint()
@@ -486,9 +486,9 @@ void LengthTask::renderPass()
     indicatorParams.colorMain = color_;
 
     ImGuiMeasurementIndicators::Text text;
-    if ( !params_.objectName.empty() )
+    if ( !params_.common.objectName.empty() )
     {
-        text.addText( params_.objectName );
+        text.addText( params_.common.objectName );
         text.addLine();
     }
 
@@ -546,7 +546,7 @@ void LengthTask::renderPass()
 
         for ( auto elem : { ImGuiMeasurementIndicators::Element::outline, ImGuiMeasurementIndicators::Element::main } )
         {
-            distanceResult = ImGuiMeasurementIndicators::distance( elem, menuScaling_, indicatorParams, a, cornerPointScreen, text, { .textParams = makeTextParams( viewport_->id, params_.objectToSelect, *this ) } );
+            distanceResult = ImGuiMeasurementIndicators::distance( elem, menuScaling_, indicatorParams, a, cornerPointScreen, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
             ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, cornerPointScreen, b, {
                 .flags = ImGuiMeasurementIndicators::LineFlags::narrow,
                 .capA = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::extend },
@@ -556,10 +556,10 @@ void LengthTask::renderPass()
     }
     else
     {
-        distanceResult = ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text, { .textParams = makeTextParams( viewport_->id, params_.objectToSelect, *this ) } );
+        distanceResult = ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
     }
 
-    if ( distanceResult && distanceResult->text && objectIsSelectable( params_.objectToSelect ) )
+    if ( distanceResult && distanceResult->text && objectIsSelectable( params_.common.objectToSelect ) )
     {
         clickableCornerA_ = distanceResult->text->bgCornerA;
         clickableCornerB_ = distanceResult->text->bgCornerB;
@@ -568,7 +568,7 @@ void LengthTask::renderPass()
 
 void LengthTask::onClick()
 {
-    selectObject( params_.objectToSelect );
+    selectObject( params_.common.objectToSelect );
 }
 
 }

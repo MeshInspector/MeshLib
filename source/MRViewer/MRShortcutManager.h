@@ -86,7 +86,7 @@ public:
     MRVIEWER_API bool onKeyRepeat_( int key, int modifier ) override;
 
     //make string from strictly one modifier
-    MRVIEWER_API static std::string getModifierString( int mod );
+    MRVIEWER_API static const char* getModifierString( int mod );
     //make string from a key without modifiers, for arrow characters it uses icons font
     MRVIEWER_API static std::string getKeyString( int key );
     // make string from all modifiers and with/without key and returns it

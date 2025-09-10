@@ -894,10 +894,10 @@ static std::string modifiersToString( int modifiers )
 {
     std::string modsText;
     for ( const auto& [bit, name] : {
-        std::pair( ImGuiMod_Ctrl, std::string( "Ctrl" ) ),
+        std::pair( ImGuiMod_Ctrl, "Ctrl" ),
         std::pair( ImGuiMod_Super, getSuperModName() ),
-        std::pair( ImGuiMod_Shift, std::string( "Shift" ) ),
-        std::pair( ImGuiMod_Alt, std::string( "Alt" ) ),
+        std::pair( ImGuiMod_Shift, "Shift" ),
+        std::pair( ImGuiMod_Alt, "Alt" ),
     } )
     {
         if ( modifiers & bit )

@@ -27,7 +27,7 @@ MRVIEWER_API int getGlfwModPrimaryCtrl();
 // macos    - Command
 // wasm/mac - Command
 // otherwise - Super
-MRVIEWER_API const std::string& getSuperModName();
+MRVIEWER_API const char* getSuperModName();
 
 // Load OpenGL and its extensions
 inline int loadGL()

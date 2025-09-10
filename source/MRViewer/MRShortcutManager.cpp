@@ -74,7 +74,7 @@ bool ShortcutManager::onKeyRepeat_( int key, int modifier )
     return processShortcut( { key, modifier }, Reason::KeyRepeat );
 }
 
-std::string ShortcutManager::getModifierString( int mod )
+const char* ShortcutManager::getModifierString( int mod )
 {
     switch ( mod )
     {
@@ -168,13 +168,13 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
 {
     std::string res;
     if ( key.mod & GLFW_MOD_ALT )
-        res += getModifierString( GLFW_MOD_ALT ) + "+";
+        res += getModifierString( GLFW_MOD_ALT ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_CONTROL )
-        res += getModifierString( GLFW_MOD_CONTROL ) + "+";
+        res += getModifierString( GLFW_MOD_CONTROL ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_SHIFT )
-        res += getModifierString( GLFW_MOD_SHIFT ) + "+";
+        res += getModifierString( GLFW_MOD_SHIFT ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_SUPER )
-        res += getModifierString( GLFW_MOD_SUPER ) + "+";
+        res += getModifierString( GLFW_MOD_SUPER ) + std::string( "+" );
     if ( respectKey )
         res += getKeyString( key.key );
     return res;

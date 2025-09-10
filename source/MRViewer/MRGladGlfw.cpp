@@ -25,9 +25,9 @@ int getGlfwModPrimaryCtrl()
 #endif
 }
 
-const std::string& getSuperModName()
+const char* getSuperModName()
 {
-    static const std::string& supperName = [] ()->std::string
+    static const char* superName = [] ()->const char*
     {
 #ifdef _WIN32
         return "Win";
@@ -42,7 +42,7 @@ const std::string& getSuperModName()
         return "Super";
 #endif
     }( );
-    return supperName;
+    return superName;
 }
 
 }

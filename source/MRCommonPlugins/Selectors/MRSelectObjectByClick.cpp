@@ -34,11 +34,11 @@ void SelectObjectByClick::drawDialog( float, ImGuiContext* )
 
 bool SelectObjectByClick::onMouseDown_( MouseButton button, int modifiers )
 {
-    if ( button != MouseButton::Left || ( modifiers & ~glfwModCtrlOrSupper() ) != 0 )
+    if ( button != MouseButton::Left || ( modifiers & ~getGlfwModPrimaryCtrl() ) != 0 )
         return false;
 
     picked_ = true;
-    ctrl_ = modifiers == glfwModCtrlOrSupper();
+    ctrl_ = modifiers == getGlfwModPrimaryCtrl();
     return true;
 }
 

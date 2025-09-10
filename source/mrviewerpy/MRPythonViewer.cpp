@@ -97,7 +97,8 @@ using namespace MR;
 enum class PythonKeyMod
 {
     Empty = 0,
-    CtrlOrSuper = MR_CONTROL_OR_SUPER,
+    Ctrl = GLFW_MOD_CONTROL,
+    Super = GLFW_MOD_SUPER,
     Shift = GLFW_MOD_SHIFT,
     Alt = GLFW_MOD_ALT,
 };
@@ -135,7 +136,7 @@ private:
         auto& mouseController = viewer->mouseController();
         mouseController.setMouseControl( { MouseButton::Right, 0 }, MouseMode::Translation );
         mouseController.setMouseControl( { MouseButton::Middle, 0 }, MouseMode::Rotation );
-        mouseController.setMouseControl( { MouseButton::Middle, glfwModCtrlOrSupper() }, MouseMode::Roll );
+        mouseController.setMouseControl( { MouseButton::Middle, getGlfwModPrimaryCtrl() }, MouseMode::Roll );
     }
 };
 
@@ -171,7 +172,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 
     pybind11::enum_<PythonKeyMod>( m, "KeyMod" )
         .value( "Empty", PythonKeyMod::Empty )
-        .value( "CtrlOrSuper", PythonKeyMod::CtrlOrSuper )
+        .value( "Ctrl", PythonKeyMod::Ctrl )
+        .value( "Super", PythonKeyMod::Super )
         .value( "Shift", PythonKeyMod::Shift )
         .value( "Alt", PythonKeyMod::Alt )
         .def( pybind11::self | pybind11::self )

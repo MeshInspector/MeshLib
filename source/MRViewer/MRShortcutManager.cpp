@@ -1,7 +1,7 @@
 #include "MRShortcutManager.h"
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
-#include <GLFW/glfw3.h>
+#include "MRGladGlfw.h"
 
 namespace MR
 {
@@ -85,7 +85,7 @@ std::string ShortcutManager::getModifierString( int mod )
     case GLFW_MOD_SHIFT:
         return "Shift";
     case GLFW_MOD_SUPER:
-        return "Command";
+        return getSuperModName();
     default:
         return "";
     }

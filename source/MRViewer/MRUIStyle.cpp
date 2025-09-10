@@ -187,9 +187,9 @@ void init()
     textureR->update( data );
 }
 
-ImGuiKey ImGuiModCtrlOrSupper()
+ImGuiKey ImGuiModCtrlOrSuper()
 {
-    if ( glfwModCtrlOrSupper() == GLFW_MOD_CONTROL )
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
         return ImGuiMod_Ctrl;
     else
         return ImGuiMod_Super;
@@ -894,10 +894,10 @@ static std::string modifiersToString( int modifiers )
 {
     std::string modsText;
     for ( const auto& [bit, name] : {
-        std::pair( ImGuiMod_Ctrl, "Ctrl" ),
-        std::pair( ImGuiMod_Super, "Command" ),
-        std::pair( ImGuiMod_Shift, "Shift" ),
-        std::pair( ImGuiMod_Alt, "Alt" ),
+        std::pair( ImGuiMod_Ctrl, std::string( "Ctrl" ) ),
+        std::pair( ImGuiMod_Super, getSuperModName() ),
+        std::pair( ImGuiMod_Shift, std::string( "Shift" ) ),
+        std::pair( ImGuiMod_Alt, std::string( "Alt" ) ),
     } )
     {
         if ( modifiers & bit )

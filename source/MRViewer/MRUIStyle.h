@@ -105,7 +105,7 @@ struct PlotAxis
 };
 
 /// returns imgui modifier Id based on current environment
-MRVIEWER_API ImGuiKey ImGuiModCtrlOrSupper();
+MRVIEWER_API ImGuiKey ImGuiModCtrlOrSuper();
 
 /// returns true if button is pressed in this frame, preserve its further processing in viewer keyboard events system if taken here
 MRVIEWER_API bool checkKey( ImGuiKey passedKey );

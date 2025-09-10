@@ -144,7 +144,7 @@ void AncillaryImGuiLabel::preDraw_()
 
         params.list->PushClipRect( minRect, maxRect );
         ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, scaling, params,
-            ImVec2( viewerCoord.x, viewerCoord.y ), sWithI, {}, pivot_ );
+            ImVec2( viewerCoord.x, viewerCoord.y ), sWithI, {}, {}, pivot_ );
         params.list->PopClipRect();
     }
 }

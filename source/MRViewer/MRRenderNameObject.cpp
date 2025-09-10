@@ -85,7 +85,7 @@ void RenderNameObject::Task::renderPass()
     // The extra text.
     if ( !textExtra.isEmpty() )
     {
-        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params->scale, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, ImVec2( 0, 0 ) );
+        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params->scale, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, {}, ImVec2( 0, 0 ) );
     }
 }
 

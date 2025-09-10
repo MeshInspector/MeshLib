@@ -32,6 +32,10 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
     auto ref = object_->getComparisonReferenceValue( 0 );
     auto tol = object_->getComparisonTolerence( 0 );
     task_ = RenderDimensions::LengthTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
+        .common = {
+            .objectToSelect = object_,
+            .objectName = object_->name(),
+        },
         .points = { pointA, pointB },
         .drawAsNegative = object_->isNegative(),
         .onlyOneAxis =
@@ -54,6 +58,10 @@ RenderRadiusObject::RenderRadiusObject( const VisualObject& object )
 void RenderRadiusObject::renderUi( const UiRenderParams& params )
 {
     task_ = RenderDimensions::RadiusTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
+        .common = {
+            .objectToSelect = object_,
+            .objectName = object_->name(),
+        },
         .center = object_->getWorldCenter(),
         .radiusAsVector = object_->getWorldRadiusAsVector(),
         .normal = object_->getWorldNormal(),
@@ -72,6 +80,10 @@ RenderAngleObject::RenderAngleObject( const VisualObject& object )
 void RenderAngleObject::renderUi( const UiRenderParams& params )
 {
     task_ = RenderDimensions::AngleTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
+        .common = {
+            .objectToSelect = object_,
+            .objectName = object_->name(),
+        },
         .center = object_->getWorldPoint(),
         .rays = {
             object_->getWorldRay( false ),

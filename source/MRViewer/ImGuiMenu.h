@@ -326,6 +326,8 @@ public:
   NameTagClickSignal nameTagClickSignal;
   // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
+  // This version uses the currently held keyboard modifiers instead of a custom `mode`.
+  MRVIEWER_API bool simulateNameTagClickWithKeyboardModifiers( Object& object );
 
   using DrawSceneUiSignal = boost::signals2::signal<void( float menuScaling, ViewportId viewportId, UiRenderParams::UiTaskList& tasks )>;
   // This is called every frame for every viewport. Use this to draw UI bits on top of the scene.

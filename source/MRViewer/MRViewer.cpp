@@ -2315,6 +2315,14 @@ int Viewer::viewport_index( const ViewportId id ) const
 
 ViewportId Viewer::getHoveredViewportId() const
 {
+    if ( auto id = getHoveredViewportIdOrInvalid() )
+        return id;
+    else
+        return viewport_list[selected_viewport_index].id;
+}
+
+ViewportId Viewer::getHoveredViewportIdOrInvalid() const
+{
     const auto& currentPos = mouseController_->getMousePos();
     for ( int i = 0; i < viewport_list.size(); i++ )
     {
@@ -2332,7 +2340,7 @@ ViewportId Viewer::getHoveredViewportId() const
         }
     }
 
-    return viewport_list[selected_viewport_index].id;
+    return {}; // No viewport is hovered, return an invalid ID.
 }
 
 void Viewer::select_hovered_viewport()
@@ -2775,7 +2783,7 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
     }
     if ( sceneTextureOn && !forSceneTexture )
         return 1; // disable msaa for main framebuffer if scene texture is used
-    
+
     int cDefaultMSAA = 8;
 #if defined(__EMSCRIPTEN__)
     cDefaultMSAA = 4;

@@ -3,6 +3,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
 #include "MRViewer/MRImGuiMeasurementIndicators.h"
+#include "MRViewer/MRRenderClickableRect.h"
 #include "MRViewer/exports.h"
 #include "MRViewer/MRImGui.h"
 
@@ -13,13 +14,10 @@ namespace MR
 
 class MRVIEWER_CLASS RenderNameObject : public virtual IRenderObject
 {
-    struct Task : BasicUiRenderTask
+    struct Task : BasicClickableRectUiRenderTask
     {
         const VisualObject* object = nullptr;
         const UiRenderParams* params = nullptr;
-
-        ImVec2 windowCornerA;
-        ImVec2 windowCornerB;
 
         ImVec2 point;
         ImVec2 point2;
@@ -36,12 +34,8 @@ class MRVIEWER_CLASS RenderNameObject : public virtual IRenderObject
         ImGuiMeasurementIndicators::Text textExtra;
         float textToExtraTextSpacing = 0;
 
-        bool prevFrameHovered = false;
-        bool isHovered = false;
-        bool isActive = false;
-
-        MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& backParams ) override;
         MRVIEWER_API void renderPass() override;
+        MRVIEWER_API void onClick() override;
     };
     Task task_;
 public:

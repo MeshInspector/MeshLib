@@ -993,6 +993,11 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
     return true;
 }
 
+bool ImGuiMenu::simulateNameTagClickWithKeyboardModifiers( Object& object )
+{
+    return simulateNameTagClick( object, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne );
+}
+
 bool ImGuiMenu::anyImGuiWindowIsHovered() const
 {
     return ImGui::GetIO().WantCaptureMouse;
@@ -3537,7 +3542,9 @@ BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackw
     const auto& menuPlugin = getViewerInstance().getMenuPlugin();
     menuPlugin->drawSceneUiSignal( menuPlugin->menu_scaling(), viewport, tasks );
 
-    return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
+    return {
+        .consumedInteractions = ( ImGui::GetIO().WantCaptureMouse || getViewerInstance().getHoveredViewportId() != viewport ) * BasicUiRenderTask::InteractionMask::mouseHover,
+    };
 }
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )

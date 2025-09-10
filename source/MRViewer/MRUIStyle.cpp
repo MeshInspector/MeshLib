@@ -187,7 +187,7 @@ void init()
     textureR->update( data );
 }
 
-ImGuiKey ImGuiModCtrlOrSuper()
+ImGuiKey getImGuiModPrimaryCtrl()
 {
     if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
         return ImGuiMod_Ctrl;

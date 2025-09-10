@@ -71,11 +71,11 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     ImGui::Separator();
 
     ImGui::Text( "Mode:" );
-    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode, int( XfMode::Move ),   0,                          UI::ImGuiModCtrlOrSuper() | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode, int( XfMode::Move ),   0,                          UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode, int( XfMode::Rotate ), UI::ImGuiModCtrlOrSuper(), UI::ImGuiModCtrlOrSuper() | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode, int( XfMode::Rotate ), UI::getImGuiModPrimaryCtrl(), UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,               UI::ImGuiModCtrlOrSuper() | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,               UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
 
     ImGui::Text( "Target:" );
     UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget, int( XfTarget::Picked ),                0, ImGuiMod_Shift );

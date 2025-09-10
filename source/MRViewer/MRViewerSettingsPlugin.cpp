@@ -1083,7 +1083,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
                     clikedBtn = MouseButton::Middle;
 
                 int modifier = 0;
-                if ( ImGui::IsKeyDown( UI::ImGuiModCtrlOrSuper() ) )
+                if ( ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) )
                     modifier |= getGlfwModPrimaryCtrl();
                 if ( ImGui::GetIO().KeyAlt )
                     modifier |= GLFW_MOD_ALT;

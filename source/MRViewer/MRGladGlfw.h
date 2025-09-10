@@ -1,4 +1,5 @@
 #pragma once
+#include "MRViewerFwd.h"
 
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>
@@ -10,6 +11,14 @@
 #undef APIENTRY
 #endif
 
+// Modifier for shortcuts
+// Some shortcuts still use GLFW_MOD_CONTROL on Mac to avoid conflict with system shortcuts
+#if !defined( __APPLE__ )
+#define MR_CONTROL_OR_SUPER GLFW_MOD_CONTROL
+#else
+#define MR_CONTROL_OR_SUPER GLFW_MOD_SUPER
+#endif
+
 #ifndef __EMSCRIPTEN__
 #define MR_GLSL_VERSION_LINE R"(#version 150)"
 #else
@@ -17,6 +26,9 @@
 #endif
 
 namespace MR {
+
+// Returns modifier id of SUPER on mac or wasm on macos, or CTRL otherwise
+MRVIEWER_API int glfwModCtrlOrSupper();
 
 // Load OpenGL and its extensions
 inline int loadGL()

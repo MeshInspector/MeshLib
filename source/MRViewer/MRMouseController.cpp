@@ -80,6 +80,8 @@ std::string MouseController::getControlString( const MouseControlKey& key )
         res += "Ctrl+";
     if ( key.mod & GLFW_MOD_SHIFT )
         res += "Shift+";
+    if ( key.mod & GLFW_MOD_SUPER )
+        res += "Command+";
     switch ( key.btn )
     {
     case MouseButton::Left:

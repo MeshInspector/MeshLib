@@ -1069,7 +1069,10 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
-            ImGui::Text( "Click here with preferred mouse button \nwith/without modifier (alt/ctrl/shift)" );
+            ctrlStr = "ctrl";
+            if ( glfwModCtrlOrSupper() == GLFW_MOD_SUPER )
+                ctrlStr = "command";
+            ImGui::Text( "Click here with preferred mouse button \nwith/without modifier (alt/%s/shift)", ctrlStr.c_str() );
             ImGui::EndTooltip();
 
             if ( ImGui::GetIO().MouseClicked[0] || ImGui::GetIO().MouseClicked[1] || ImGui::GetIO().MouseClicked[2] )
@@ -1081,8 +1084,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
                     clikedBtn = MouseButton::Middle;
 
                 int modifier = 0;
-                if ( ImGui::GetIO().KeyCtrl )
-                    modifier |= GLFW_MOD_CONTROL;
+                if ( ImGui::IsKeyDown( UI::ImGuiModCtrlOrSupper() ) )
+                    modifier |= glfwModCtrlOrSupper();
                 if ( ImGui::GetIO().KeyAlt )
                     modifier |= GLFW_MOD_ALT;
                 if ( ImGui::GetIO().KeyShift )

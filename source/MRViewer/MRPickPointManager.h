@@ -27,7 +27,7 @@ public:
     struct Params
     {
         /// Modifier key for closing a contour (ordered vector of points) using the widget
-        int widgetContourCloseMod = GLFW_MOD_CONTROL;
+        int widgetContourCloseMod = glfwModCtrlOrSupper();
 
         /// Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;

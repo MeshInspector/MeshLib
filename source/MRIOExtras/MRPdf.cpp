@@ -190,9 +190,11 @@ namespace
 // size of A4 page in pixels (uses 72 PPI)
 // https://www.papersizes.org/a-sizes-in-pixels.htm
 // TODO need get this value from PoDoFo
+// true value is 595.276 x 841.89
+// https://github.com/libharu/libharu/wiki/API%3A-Page#user-content-HPDF_Page_SetSize
 constexpr HPDF_REAL pageWidth = 595.;
 constexpr HPDF_REAL pageHeight = 842.;
-constexpr HPDF_REAL scaleFactor = static_cast<HPDF_REAL>(17. / 6.); // ~2.8(3)
+constexpr HPDF_REAL scaleFactor = static_cast<HPDF_REAL>(17. / 6.); // ~2.8(3) conversion mm to points (pixels)
 
 constexpr HPDF_REAL borderFieldLeft = 20 * scaleFactor;
 constexpr HPDF_REAL borderFieldRight = pageWidth - 10 * scaleFactor;
@@ -481,9 +483,12 @@ void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats
 
 void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params )
 {
-    if ( !state_->document )
+    if ( !checkDocument_( "add image" ) )
+        return;
+
+    if ( imagePath.empty() )
     {
-        spdlog::warn( "Can't add image to pdf page: no valid document" );
+        spdlog::warn( "Pdf: can't add image from file: empty path." );
         return;
     }
 
@@ -495,24 +500,47 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageP
     }
 
     const HPDF_REAL additionalHeight = labelHeight * !params.caption.empty();
-    HPDF_REAL imageWidth = params.size.x;
-    if ( imageWidth == 0.f )
-        imageWidth = (HPDF_REAL)MR_HPDF_CHECK_ERROR( HPDF_Image_GetWidth( pdfImage ) );
-    else if ( imageWidth < 0.f )
-        imageWidth = borderFieldRight - cursorX_;
-    HPDF_REAL imageHeight = params.size.y;
-    if ( params.uniformScaleFromWidth )
-        imageHeight = imageWidth * MR_HPDF_CHECK_ERROR( HPDF_Image_GetHeight( pdfImage ) ) / MR_HPDF_CHECK_ERROR( HPDF_Image_GetWidth( pdfImage ) );
-    else if ( imageHeight == 0.f )
-        imageHeight = (HPDF_REAL)MR_HPDF_CHECK_ERROR( HPDF_Image_GetHeight( pdfImage ) );
-    else if ( imageHeight < 0.f )
-        imageHeight = cursorY_ - borderFieldBottom - additionalHeight;
+    HPDF_REAL width = params.size.x;
+    HPDF_REAL height = params.size.y;
+    HPDF_REAL realWidth = (HPDF_REAL) MR_HPDF_CHECK_ERROR( HPDF_Image_GetWidth( pdfImage ) );
+    HPDF_REAL realHeight = ( HPDF_REAL )MR_HPDF_CHECK_ERROR( HPDF_Image_GetHeight( pdfImage ) );
+
+    if ( width <= 0.f )
+        width = borderFieldRight - cursorX_;
+    if ( height<= 0.f )
+        height = cursorY_ - borderFieldBottom - additionalHeight;
+
+    HPDF_REAL imageWidth = width;
+    HPDF_REAL imageHeight = height;
+
+    float posX = cursorX_;
+    float posY = cursorY_;
+    if ( params.uniformScale == ImageParams::UniformScale::FromWidth )
+    {
+        imageHeight = realHeight / realWidth * imageWidth;
+        if ( params.alignmentVertical == ImageParams::AlignmentVertical::Top )
+            posY -= imageHeight;
+        else if ( params.alignmentVertical == ImageParams::AlignmentVertical::Bottom )
+            posY -= height;
+        else
+            posY -= height / 2.f + imageHeight / 2.f;
+    }
+    else if ( params.uniformScale == ImageParams::UniformScale::FromHeight )
+    {
+        imageWidth = realWidth / realHeight * imageHeight;
+        if ( params.alignmentHorizontal == AlignmentHorizontal::Right )
+            posX = posX + width - imageWidth;
+        else if ( params.alignmentHorizontal == AlignmentHorizontal::Center )
+            posX = posX + width / 2.f - imageWidth / 2.f;
+
+        posY -= imageHeight;
+    }
 
     if ( cursorY_ - imageHeight - additionalHeight < borderFieldBottom )
         newPage();
 
-    cursorY_ -= imageHeight;
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, pdfImage, cursorX_, cursorY_, imageWidth, imageHeight ) );
+    cursorY_ = posY;
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, pdfImage, posX, posY, imageWidth, imageHeight ) );
 
     if ( !params.caption.empty() )
     {
@@ -542,9 +570,13 @@ void Pdf::newPage()
         return;
     }
 
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT ) );
+
     cursorX_ = borderFieldLeft;
     cursorY_ = borderFieldTop;
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT) );
+
+    if ( newPageAction_ )
+        newPageAction_( *this );
 }
 
 void Pdf::saveToFile( const std::filesystem::path& documentPath )

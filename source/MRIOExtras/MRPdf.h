@@ -70,8 +70,15 @@ public:
     MRIOEXTRAS_API Pdf( const PdfParameters& params = PdfParameters() );
     MRIOEXTRAS_API Pdf( Pdf&& other ) noexcept;
     MRIOEXTRAS_API Pdf& operator=( Pdf other ) noexcept; // Sic, passing by value.
-    /// Dtor. Automatically do close
+    /// Dtor.
     MRIOEXTRAS_API ~Pdf();
+
+    enum class AlignmentHorizontal
+    {
+        Left,
+        Center,
+        Right
+    };
 
     /**
      * Add text block in current cursor position.
@@ -110,17 +117,31 @@ public:
         /// caption if not empty - add caption under marks (if exist) or image.
         std::string caption;
         /// set height to keep same scale as width scale
-        bool uniformScaleFromWidth = false;
+        enum class UniformScale
+        {
+            None,
+            FromWidth,
+            FromHeight
+        } uniformScale = UniformScale::None;
+        enum class AlignmentVertical
+        {
+            Top,
+            Center,
+            Bottom
+        } alignmentVertical = AlignmentVertical::Top;
+        AlignmentHorizontal alignmentHorizontal = AlignmentHorizontal::Left;
     };
     /**
      * @brief Add image from file in current cursor position.
      * If image bigger than page size, autoscale image to page size.
      * Move cursor.
      */
-    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params ); 
+    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params );
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();
+    /// set function to customize new page after creation
+    void setNewPageAction( std::function<void(Pdf&)> action ) { newPageAction_ =  action; }
 
     /// Save document to file
     MRIOEXTRAS_API void saveToFile( const std::filesystem::path& documentPath );
@@ -151,7 +172,6 @@ public:
         // \param fmtStr format string like fmt::format
         MRIOEXTRAS_API std::string toString( const std::string& fmtStr = "{}" ) const;
     };
-
     // set up new table (clear table customization, reset parameters to default values)
     MRIOEXTRAS_API void newTable( int columnCount );
     // set table column widths
@@ -203,6 +223,8 @@ private:
 
     PdfParameters params_;
 
+    std::function<void( Pdf& )> newPageAction_;
+
     float cursorX_ = 0;
     float cursorY_ = 0;
 
@@ -231,8 +253,6 @@ private:
 
         float fontSize = 12.f;
     } tableParams_;
-
-
 };
 
 }

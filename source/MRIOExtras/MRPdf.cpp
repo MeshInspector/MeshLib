@@ -11,6 +11,7 @@
 
 #include <fstream>
 #include <vector>
+#include <map>
 
 #undef NOMINMAX
 
@@ -693,7 +694,7 @@ Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
     TextCellParams params;
     params.colorBackground = tableParams_.colorTitleBg;
     params.colorBorder = tableParams_.colorLines;
-    params.textParams.fontName = PdfBuildinFont::CourierBold;
+    params.textParams.fontName = params_.tableFontBold;
     params.textParams.fontSize = tableParams_.fontSize;
     params.textParams.alignment = AlignmentHorizontal::Center;
     params.textParams.colorText = tableParams_.colorTitleText;
@@ -733,7 +734,7 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
     TextCellParams params;
     params.colorBackground = ( rowCounter_ & 1 ) ? tableParams_.colorCellBg1 : tableParams_.colorCellBg2;
     params.colorBorder = tableParams_.colorLines;
-    params.textParams.fontName = PdfBuildinFont::Courier;
+    params.textParams.fontName = params_.tableFont;
     params.textParams.fontSize = tableParams_.fontSize;
     params.textParams.alignment = AlignmentHorizontal::Center;
     params.textParams.colorText = tableParams_.colorCellText;

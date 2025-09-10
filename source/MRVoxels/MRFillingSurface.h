@@ -98,17 +98,24 @@ struct Params
 
 };
 
+/// Build a cellular surface of size \p size
 MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback cb = {} );
 
+/// Fill given mesh with a cellular surface
 MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb = {} );
 
+/// Estimate the density of the cellular surface
 MRVOXELS_API float estimateDensity( float period, float width, float r );
 
+/// Estimate the width that is needed to attain the \p targetDensity. Inverse of \ref estimateDensity.
+/// \note The width is not unique in general, no guarantees are made about which value among possible will be returned.
+//    Due to the simplification of the formula (sphere must either fully contain the intersection of cylinders or be inside it), solution not always exists.
 MRVOXELS_API std::optional<float> estimateWidth( float period, float r, float targetDensity );
 
 }
 
 
+// Different kinds of filling surface
 enum class Kind : int
 {
     TPMS = 0,
@@ -137,6 +144,7 @@ struct MR_BIND_IGNORE AllMeshParams
     MRVOXELS_API ConstMeshParamsRef toConstMeshParams() const;
 };
 
+/// Unified functions to build and fill using the specified filling structures.
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb = {} );
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb = {} );
 

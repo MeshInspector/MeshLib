@@ -44,7 +44,7 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
                 fillHoles( *res, res->topology.findHoleRepresentiveEdges() );
                 ASSERT_TRUE( res->topology.findNumHoles() == 0 );
 
-                const auto realDensity = res->volume() / res->getBoundingBox().volume();
+                const auto realDensity = static_cast<float>( res->volume() / res->getBoundingBox().volume() );
                 const auto predictedDensity = FillingSurface::CellularSurface::estimateDensity( T, W, R );
                 ASSERT_NEAR( realDensity, predictedDensity, 0.01f );
 

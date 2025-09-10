@@ -616,7 +616,7 @@ std::vector<std::string> getKindNames()
     return { "TPMS", "Cellular" };
 }
 
-MeshParams AllMeshParams::toMeshParams()
+MeshParamsRef AllMeshParams::toMeshParams()
 {
     switch ( kind )
     {
@@ -630,7 +630,7 @@ MeshParams AllMeshParams::toMeshParams()
     }
 }
 
-ConstMeshParams AllMeshParams::toConstMeshParams() const
+ConstMeshParamsRef AllMeshParams::toConstMeshParams() const
 {
     switch ( kind )
     {
@@ -644,7 +644,7 @@ ConstMeshParams AllMeshParams::toConstMeshParams() const
     }
 }
 
-Expected<Mesh> build( const Vector3f& size, ConstMeshParams params, ProgressCallback cb )
+Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb )
 {
     return std::visit( overloaded{
         [&size, &cb] ( const TPMS::MeshParams& params ) { return TPMS::build( size, params, cb ); },
@@ -652,7 +652,7 @@ Expected<Mesh> build( const Vector3f& size, ConstMeshParams params, ProgressCall
     }, params );
 }
 
-Expected<Mesh> fill( const Mesh& mesh, ConstMeshParams params, ProgressCallback cb )
+Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb )
 {
     return std::visit( overloaded{
         [&mesh, &cb] ( const TPMS::MeshParams& params ) { return TPMS::fill( mesh, params, cb ); },

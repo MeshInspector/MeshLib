@@ -38,6 +38,9 @@ on:
       ubuntu_x64_config_matrix:
         description: "Config matrix for Ubuntu x64 builds"
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
+      windows_x64_config_matrix:
+        description: "Config matrix for Windows builds"
+        value: ${{ jobs.prepare-config.outputs.windows_x64_config_matrix }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
@@ -85,6 +88,7 @@ jobs:
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
       linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
       # please list the required tags here
@@ -97,12 +101,13 @@ jobs:
       tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
       tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
       # tags for disabling builds for different systems
+      tag-build-release-windows: ${{ contains( github.event.pull_request.labels.*.name, 'build-release-windows' ) }}
       tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
-      tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
-      tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
-      tag-disable-linux-vcpkg:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
-      tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
-      tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
+      tag-disable-ubuntu-x64:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
+      tag-disable-ubuntu-arm64:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
+      tag-disable-linux-vcpkg:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
+      tag-disable-macos:          ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
+      tag-disable-emscripten:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 
     runs-on: aws-micro
 
@@ -207,7 +212,7 @@ jobs:
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
           echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
 
-      - name: Set matrix for ubuntu-arm64 builds
+      - name: Set matrix for ubuntu-x64 builds
         id: set-ubuntu-x64-matrix
         run: |
           if [[ "${{ env.full_config_build }}" == "true" ]]; then
@@ -215,3 +220,23 @@ jobs:
           else
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set matrix for windows-x64 builds
+        id: set-windows-x64-matrix
+        run: |
+          if [[ "${{ env.full_config_build }}" == "true" || github.event_name == 'schedule' ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-full-config.json"
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'build-release-windows') }}" == "true" ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-standard-config.json"
+          else
+            MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
+          fi
+
+          jq \
+            --arg vs19 "2024.10.21" \
+            --arg vs22 "2025.04.09" \
+            '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
+            | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
+            "$MATRIX_FILE" > tmp.json
+
+          echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

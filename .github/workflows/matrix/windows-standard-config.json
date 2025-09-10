@@ -1,0 +1,51 @@
+{
+  "include": [
+    {
+      "_comment": "win19/debug/cmake - C++ distribution debug build",
+      "os": "windows-2019",
+      "runner": ["self-hosted", "windows", "x64", "vs-2019", "meshinspector"],
+      "config": "Debug",
+      "build_system": "CMake",
+      "vc-path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community",
+      "CUDA-VERSION": "11.4.2.47141",
+      "CUDA-MAJOR": "11",
+      "CUDA-MINOR": "4",
+      "vcpkg-version": "__VCPKG_VERSION_VS19__"
+    },
+    {
+      "_comment": "win19/release/cmake - C++ distribution release build",
+      "os": "windows-2019",
+      "runner": ["self-hosted", "windows", "x64", "vs-2019", "meshinspector"],
+      "config": "Release",
+      "build_system": "CMake",
+      "vc-path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community",
+      "CUDA-VERSION": "11.4.2.47141",
+      "CUDA-MAJOR": "11",
+      "CUDA-MINOR": "4",
+      "vcpkg-version": "__VCPKG_VERSION_VS19__"
+    },
+    {
+      "_comment": "win22/release/msbuild - C# distribution",
+      "os": "windows-2022",
+      "runner": ["windows-2022"],
+      "config": "Release",
+      "build_system": "MSBuild",
+      "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
+      "CUDA-VERSION": "12.0.1.52833",
+      "CUDA-MAJOR": "12",
+      "CUDA-MINOR": "0",
+      "vcpkg-version": "__VCPKG_VERSION_VS22__"
+    },
+    {
+      "os": "windows-2022",
+      "runner": ["windows-2022"],
+      "config": "Release",
+      "build_system": "CMake",
+      "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
+      "CUDA-VERSION": "12.0.1.52833",
+      "CUDA-MAJOR": "12",
+      "CUDA-MINOR": "0",
+      "vcpkg-version": "__VCPKG_VERSION_VS22__"
+    }
+  ]
+}

@@ -33,7 +33,7 @@ jobs:
           echo "release_tag=$TAG" >> $GITHUB_OUTPUT
 
           # Minimal matrix: Release only
-          MATRIX_FILE=".github/workflows/matrix/windows-release-config.json"
+          MATRIX_FILE=".github/workflows/matrix/windows-finalize-release-config.json"
           MATRIX=$(jq -c . < "$MATRIX_FILE")
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
@@ -45,3 +45,77 @@ jobs:
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT
+
+  windows-build-test:
+    needs: [ config ]
+    uses: ./.github/workflows/build-test-windows.yml
+    with:
+      config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      "true"
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build:           ${{ needs.config.outputs.nuget_build == 'true' }}
+    secrets: inherit
+
+  update-win-version:
+    needs:
+      - config
+      - windows-build-test
+    uses: ./.github/workflows/update-win-version.yml
+    with:
+      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
+      app_version: ${{ needs.config.outputs.app_version }}
+    secrets: inherit
+
+  upload-distributions:
+    if: ${{ !cancelled() }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs:
+      - config
+      - update-win-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download All Developer Distributives
+        uses: actions/download-artifact@v5
+        with:
+          pattern: Distributives*
+          merge-multiple: true
+
+      - name: Rename Distributives
+        run: |
+          shopt -s nullglob
+          for PKG_FILE in MeshLibDist*.zip ; do
+            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}"
+          done
+
+      - name: Upload Distributives
+        run: |
+          shopt -s nullglob
+          PKG_FILES="MeshLibDist*.zip meshlib_*.zip meshlib_*.tar.xz"
+          if [ -n "$(echo $PKG_FILES)" ] ; then
+            echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
+            gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
+          fi
+
+  update-artifacts:
+    timeout-minutes: 15
+    runs-on: aws-micro
+    needs: upload-distributions
+    if: always()
+    steps:
+        # all distribution
+      - name: Delete All MeshInspector Distribution Files
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: Distributives*
+          failOnError: false
+
+      - name: Delete All MeshInspector Distribution Files
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: WindowsArchive*
+          failOnError: false

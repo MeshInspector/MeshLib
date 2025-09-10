@@ -172,10 +172,22 @@ void ViewportGlobalBasis::setVisible( bool on, ViewportMask vpMask /*= ViewportM
         child->setVisible( on, vpMask );
 }
 
+void ViewportGlobalBasis::setVisibilityMask( ViewportMask vpMask )
+{
+    for ( const auto& child : axesChildren() )
+        child->setVisibilityMask( vpMask );
+}
+
 void ViewportGlobalBasis::setGridVisible( bool on, ViewportMask vpMask /*= ViewportMask::all() */ )
 {
     for ( const auto& child : grids_ )
         child->setVisible( on, vpMask );
+}
+
+void ViewportGlobalBasis::setGridVisibilityMask( ViewportMask vpMask )
+{
+    for ( const auto& child : grids_ )
+        child->setVisibilityMask( vpMask );
 }
 
 void ViewportGlobalBasis::creteGrids_()

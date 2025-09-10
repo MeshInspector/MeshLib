@@ -84,7 +84,7 @@ void drawTooltip( T min, T max )
 {
     static bool inputMode = false;
     if ( IsItemActivated() )
-        inputMode = ( GetIO().MouseClicked[0] && GetIO().KeyCtrl ) || GetIO().MouseDoubleClicked[0];
+        inputMode = ( GetIO().MouseClicked[0] && ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) ) || GetIO().MouseDoubleClicked[0];
 
     if ( IsItemActive() )
     {

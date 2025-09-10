@@ -484,6 +484,9 @@
     <ClCompile Include="MRViewportGlobalBasis.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRGladGlfw.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">

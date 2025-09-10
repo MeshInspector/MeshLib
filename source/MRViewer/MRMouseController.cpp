@@ -7,6 +7,7 @@
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRWasm.h"
+#include "MRShortcutManager.h"
 
 
 #ifdef __EMSCRIPTEN__
@@ -75,11 +76,15 @@ std::string MouseController::getControlString( const MouseControlKey& key )
 {
     std::string res;
     if ( key.mod & GLFW_MOD_ALT )
-        res += "Alt+";
+        res += ShortcutManager::getModifierString( GLFW_MOD_ALT );
     if ( key.mod & GLFW_MOD_CONTROL )
-        res += "Ctrl+";
+        res += ShortcutManager::getModifierString( GLFW_MOD_CONTROL );
     if ( key.mod & GLFW_MOD_SHIFT )
-        res += "Shift+";
+        res += ShortcutManager::getModifierString( GLFW_MOD_SHIFT );
+    if ( key.mod & GLFW_MOD_SUPER )
+        res += ShortcutManager::getModifierString( GLFW_MOD_SUPER );
+    if ( !res.empty() )
+        res += "+";
     switch ( key.btn )
     {
     case MouseButton::Left:

@@ -1,4 +1,5 @@
 #pragma once
+#include "MRViewerFwd.h"
 
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>
@@ -17,6 +18,16 @@
 #endif
 
 namespace MR {
+
+// Returns modifier id of SUPER on mac or wasm on macos, or CTRL otherwise
+MRVIEWER_API int getGlfwModPrimaryCtrl();
+
+// Retunrs name of the SUPER modifier depending on current environment:
+// windows - Win
+// macos    - Command
+// wasm/mac - Command
+// otherwise - Super
+MRVIEWER_API const char* getSuperModName();
 
 // Load OpenGL and its extensions
 inline int loadGL()

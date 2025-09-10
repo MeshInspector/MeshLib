@@ -71,11 +71,11 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     ImGui::Separator();
 
     ImGui::Text( "Mode:" );
-    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode, int( XfMode::Move ),   0,              ImGuiMod_Ctrl | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode, int( XfMode::Move ),   0,                          UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode, int( XfMode::Rotate ), ImGuiMod_Ctrl,  ImGuiMod_Ctrl | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode, int( XfMode::Rotate ), UI::getImGuiModPrimaryCtrl(), UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,   ImGuiMod_Ctrl | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,               UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
 
     ImGui::Text( "Target:" );
     UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
@@ -139,13 +139,13 @@ ObjAndPick MoveObjectByMouse::MoveObjectByMouseWithSelected::pickObjects_( std::
 
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::modeFromPickModifiers_( int modifiers ) const
 {
-    if ( ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) != 0 ||
-     ( modifiers & ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) == ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) )
+    if ( ( modifiers & ~( GLFW_MOD_SHIFT | getGlfwModPrimaryCtrl() | GLFW_MOD_ALT ) ) != 0 ||
+     ( modifiers & ( getGlfwModPrimaryCtrl() | GLFW_MOD_ALT ) ) == ( getGlfwModPrimaryCtrl() | GLFW_MOD_ALT ) )
         return TransformMode::None;
 
     if ( int( modXfMode ) == int( XfMode::Scale ) || ( modifiers & GLFW_MOD_ALT ) == GLFW_MOD_ALT )
         return TransformMode::UniformScale;
-    else if ( int( modXfMode ) == int( XfMode::Rotate ) || ( modifiers & GLFW_MOD_CONTROL ) == GLFW_MOD_CONTROL )
+    else if ( int( modXfMode ) == int( XfMode::Rotate ) || ( modifiers & getGlfwModPrimaryCtrl() ) == getGlfwModPrimaryCtrl() )
         return TransformMode::Rotation;
     else
         return TransformMode::Translation;

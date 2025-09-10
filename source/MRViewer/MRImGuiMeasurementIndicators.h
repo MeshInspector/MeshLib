@@ -17,8 +17,8 @@ namespace MR::ImGuiMeasurementIndicators
 // Parameters for drawing dotted lines.
 struct Stipple
 {
+    // This is the period of the stipple pattern, in pixels.
     // This is automatically multiplied by `menuScaling`.
-    // This is the period of the stipple pattern.
     float patternLength = 16;
 
     struct Segment

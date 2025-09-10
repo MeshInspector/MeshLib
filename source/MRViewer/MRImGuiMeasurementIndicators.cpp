@@ -63,10 +63,10 @@ Params::Params()
     colorTextOutlineActive = colorTextOutline * ( 1 - tActive ) + colorText * tActive;
 
     static constexpr Stipple::Segment stippleSegmentsDashed[] = {
-        { 0, 0.5f },
+        { 0, 0.45f },
     };
     stippleDashed = {
-        .patternLength = 12,
+        .patternLength = 16,
         .segments = stippleSegmentsDashed,
     };
 }
@@ -352,10 +352,11 @@ std::optional<TextResult> text( Element elem, float menuScaling, const Params& p
             float outlineWidth = params.clickableLabelOutlineWidth * menuScaling * 2 + lineWidth;
 
             float rectShrink = lineWidthUnselected / 2;
+            float rectShrinkOutline = rectShrink - ( lineWidthSelected - lineWidthUnselected ) / 2;
 
             // First, the outline for the frame.
             // Using `PathRect()` here because it doesn't shrink the rect by half a pixel, unlike `AddRect()`.
-            params.list->PathRect( ret.bgCornerA + rectShrink, ret.bgCornerB - rectShrink, textOutlineRounding - rectShrink );
+            params.list->PathRect( ret.bgCornerA + rectShrinkOutline, ret.bgCornerB - rectShrinkOutline, textOutlineRounding - rectShrinkOutline );
             params.list->PathStroke( params.colorOutline.getUInt32(), ImDrawFlags_Closed, outlineWidth );
 
             // The frame itself.

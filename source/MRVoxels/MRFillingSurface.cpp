@@ -507,7 +507,8 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
 
         decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5f, .touchNearBdEdges = false, .touchBdVerts = false   } );
     }
-    reportProgress( cb, 0.2f );
+    if ( !reportProgress( cb, 0.2f ) )
+        return unexpectedOperationCanceled();
 
     auto sp = subprogress( cb, 0.2f, 1.f );
     Mesh result;

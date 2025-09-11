@@ -133,7 +133,7 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.tag-build-release-windows != 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     needs:
       - config
       - windows-build-test

@@ -72,9 +72,9 @@ jobs:
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
 
           # Push the changes
-          echo "${GITHUB_TOKEN}" | gh auth login --with-token
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
           git push origin ${new_branch}
-
+      
           # Create a pull request using GitHub CLI
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
@@ -82,3 +82,6 @@ jobs:
                        --head ${new_branch} \
                        --label bump-vcpkg \
                        --reviewer MaxRayskiy,Grantim
+
+          
+

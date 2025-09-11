@@ -452,7 +452,7 @@ float getMinimalResolution( Type type, float iso )
 namespace CellularSurface
 {
 
-Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback cb )
+Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb )
 {
     MR_TIMER;
 
@@ -534,7 +534,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallba
     return result;
 }
 
-Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb )
+Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallback& cb )
 {
     auto [size, xf] = getFillingSizeAndXf( mesh, std::ranges::max( params.period ) );
     auto filling = build( size, params, subprogress( cb, 0.f, 0.2f ) );

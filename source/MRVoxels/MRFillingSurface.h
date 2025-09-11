@@ -88,21 +88,21 @@ namespace CellularSurface // Surface of cylinders in a grid
 
 struct Params
 {
-    Vector3f period = Vector3f::diagonal( 1.f );    // the distance between consecutive cylinders in each direction
-    Vector3f width = Vector3f::diagonal( 0.3f );    // the width of cylinders in each direction
-    float r = 0.4f;        // the radius of uniting spheres
+    Vector3f period = Vector3f::diagonal( 1.f );    ///< the distance between consecutive cylinders in each direction
+    Vector3f width = Vector3f::diagonal( 0.3f );    ///< the width of cylinders in each direction
+    float r = 0.4f;         ///< the radius of uniting spheres
 
     // used in tests in order to make surfaces close to their analytical expression
-    // recommended to be false for real usage
+    // recommended to be false for real usage for better performance
     bool highRes = false;
 
 };
 
 /// Build a cellular surface of size \p size
-MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb = {} );
 
 /// Fill given mesh with a cellular surface
-MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallback& cb = {} );
 
 /// Estimate the density of the cellular surface
 MRVOXELS_API float estimateDensity( float period, float width, float r );

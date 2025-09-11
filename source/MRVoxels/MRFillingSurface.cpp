@@ -617,34 +617,6 @@ std::vector<std::string> getKindNames()
     return { "TPMS", "Cellular" };
 }
 
-MeshParamsRef AllMeshParams::toMeshParams()
-{
-    switch ( kind )
-    {
-        case Kind::TPMS:
-            return tpmsParams;
-        case Kind::Cellular:
-            return cellularParams;
-        default:
-            assert( false );
-            return tpmsParams;
-    }
-}
-
-ConstMeshParamsRef AllMeshParams::toConstMeshParams() const
-{
-    switch ( kind )
-    {
-        case Kind::TPMS:
-            return tpmsParams;
-        case Kind::Cellular:
-            return cellularParams;
-        default:
-            assert( false );
-            return tpmsParams;
-    }
-}
-
 Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb )
 {
     return std::visit( overloaded{

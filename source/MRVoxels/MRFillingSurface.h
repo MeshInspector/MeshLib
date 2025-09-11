@@ -133,17 +133,6 @@ using ConstMeshParamsRef = std::variant
     , std::reference_wrapper<const CellularSurface::Params>
     >;
 
-// Useful in plugins/UI to store all possible values of params and don't forget them when the kind is changed
-struct MR_BIND_IGNORE AllMeshParams
-{
-    Kind kind = Kind::Cellular;
-    TPMS::MeshParams tpmsParams;
-    CellularSurface::Params cellularParams;
-
-    MRVOXELS_API MeshParamsRef toMeshParams();
-    MRVOXELS_API ConstMeshParamsRef toConstMeshParams() const;
-};
-
 /// Unified functions to build and fill using the specified filling structures.
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb = {} );
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb = {} );

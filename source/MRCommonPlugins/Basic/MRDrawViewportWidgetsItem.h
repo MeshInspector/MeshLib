@@ -30,7 +30,7 @@ public:
         // Register a new button. They will be sorted by `order` (then by name) ascending, left-to-right.
         // The `onClick` callback will be called late, make sure it doens't dangle the captures.
         // `active` only affects how the button is rendered.
-        virtual void addButton( float order, std::string name, bool active, std::string icon, std::function<void()> onClick ) = 0;
+        virtual void addButton( float order, std::string name, bool active, std::string icon, std::string tooltip, std::function<void()> onClick ) = 0;
     };
 
     virtual void providedViewportWidgets( ViewportWidgetInterface& in ) = 0;

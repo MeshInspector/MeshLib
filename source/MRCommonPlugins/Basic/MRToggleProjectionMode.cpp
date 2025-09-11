@@ -31,7 +31,8 @@ void ToggleProjectionModeItem::providedViewportWidgets( ViewportWidgetInterface&
 
     bool isOrtho = getViewerInstance().viewport( id ).getParameters().orthographic;
 
-    in.addButton( 30, "Projection mode", false, isOrtho ? "Viewport projection orthographic" : "Viewport projection perspective",
+    in.addButton( 30, "Projection", false, isOrtho ? "Viewport projection orthographic" : "Viewport projection perspective",
+        isOrtho ? "Projection: switch to perspective" : "Projection: switch to orthographic",
         [id]
         {
             auto& viewport = getViewerInstance().viewport( id );

@@ -9,6 +9,7 @@
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
@@ -52,6 +53,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         std::string name;
         bool active = false;
         std::string icon;
+        std::string tooltip;
         std::function<void()> onClick;
 
         auto tieForSorting() const { return std::tie( order, name ); }
@@ -64,13 +66,14 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
 
         [[nodiscard]] ViewportId viewportId() const override { return id; }
 
-        void addButton( float order, std::string name, bool active, std::string icon, std::function<void()> onClick ) override
+        void addButton( float order, std::string name, bool active, std::string icon, std::string tooltip, std::function<void()> onClick ) override
         {
             Entry& e = entries.emplace_back();;
             e.order = order;
             e.name = std::move( name );
             e.active = active;
             e.icon = std::move( icon );
+            e.tooltip = std::move( tooltip );
             e.onClick = std::move( onClick );
         }
     };
@@ -146,6 +149,10 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         // The button.
         if ( ImGui::Button( fmt::format( "##cornerButtonWindow.{}.{}", viewport.id.value(), e.name ).c_str(), buttonSize - buttonShrink * 2 ) )
             e.onClick();
+
+        // The tooltip, if any.
+        if ( !e.tooltip.empty() )
+            UI::setTooltipIfHovered( e.tooltip, menuScaling );
 
         // The icon.
         auto icon = RibbonIcons::findByName( e.icon, std::max( imageSize.x, imageSize.y ), RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );

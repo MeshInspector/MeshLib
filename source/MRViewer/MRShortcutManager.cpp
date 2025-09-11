@@ -81,7 +81,7 @@ const char* ShortcutManager::getModifierString( int mod )
     case GLFW_MOD_CONTROL:
         return "Ctrl";
     case GLFW_MOD_ALT:
-        return "Alt";
+        return getAltModName();
     case GLFW_MOD_SHIFT:
         return "Shift";
     case GLFW_MOD_SUPER:

@@ -45,4 +45,22 @@ const char* getSuperModName()
     return superName;
 }
 
+const char* getAltModName()
+{
+    static const char* altName = [] ()->const char*
+    {
+#ifdef __EMSCRIPTEN__
+        if ( bool( EM_ASM_INT( return is_mac() ) ) )
+            return "Option";
+        else
+            return "Alt";
+#elif defined(__APPLE__)
+        return "Option";
+#else
+        return "Alt";
+#endif
+    }( );
+    return altName;
+}
+
 }

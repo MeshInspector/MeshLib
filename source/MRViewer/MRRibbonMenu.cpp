@@ -42,20 +42,10 @@
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
+#include "MRGladGlfw.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
-
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-volatile"
-#endif
-
-#include <GLFW/glfw3.h>
-
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 namespace MR
 {
@@ -1502,7 +1492,7 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
             pushNotification( {
                 .text = "Camera operations that are controlled by left mouse button "
                         "may not work while this tool is active\n"
-                        "Hold Alt additionally to control camera",
+                        "Hold " + std::string( getAltModName() ) + " additionally to control camera",
                 .type = NotificationType::Info,
                 .lifeTimeSec = 3.0f } );
         }

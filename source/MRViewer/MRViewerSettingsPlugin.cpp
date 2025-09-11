@@ -1071,7 +1071,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         {
             ImGui::BeginTooltip();
             ctrlStr = ShortcutManager::getModifierString( getGlfwModPrimaryCtrl() );
-            ImGui::Text( "Click here with preferred mouse button \nwith/without modifier (Alt/%s/Shift)", ctrlStr.c_str() );
+            ImGui::Text( "Click here with preferred mouse button \nwith/without modifier (%s/%s/Shift)", getAltModName(), ctrlStr.c_str() );
             ImGui::EndTooltip();
 
             if ( ImGui::GetIO().MouseClicked[0] || ImGui::GetIO().MouseClicked[1] || ImGui::GetIO().MouseClicked[2] )
@@ -1108,7 +1108,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
             keysListWithAlt += ", ";
         keysListWithAlt += MouseController::getControlString( ctrlAlt );
     }
-    UI::transparentTextWrapped( "Camera controls can also be used with Alt" );
+    UI::transparentTextWrapped( "Camera controls can also be used with %s", getAltModName() );
     if ( !keysListWithAlt.empty() )
         UI::setTooltipIfHovered( keysListWithAlt, menuScaling );
 }

@@ -897,7 +897,7 @@ static std::string modifiersToString( int modifiers )
         std::pair( ImGuiMod_Ctrl, "Ctrl" ),
         std::pair( ImGuiMod_Super, getSuperModName() ),
         std::pair( ImGuiMod_Shift, "Shift" ),
-        std::pair( ImGuiMod_Alt, "Alt" ),
+        std::pair( ImGuiMod_Alt, getAltModName() ),
     } )
     {
         if ( modifiers & bit )
@@ -1682,7 +1682,7 @@ void detail::drawDragTooltip( std::string rangeText )
         ImGui::SetMouseCursor( ImGuiMouseCursor_None );
         drawDragCursor();
         ImGui::BeginTooltip();
-        ImGui::TextUnformatted( "Drag with Shift - faster, Alt - slower" );
+        ImGui::Text( "Drag with Shift - faster, %s - slower", getAltModName() );
         ImGui::EndTooltip();
 
         if ( !rangeText.empty() )

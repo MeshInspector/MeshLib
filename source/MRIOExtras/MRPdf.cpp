@@ -26,9 +26,6 @@ void pdfPrintError( const char* funcName, HPDF_Doc doc, HPDF_STATUS status )
 {
     if ( status == HPDF_OK )
         return;
-
-    assert( false );
-
     spdlog::warn( "Pdf: Error in {} call.", funcName );
     spdlog::warn( "Failed with error: {} {}", status, GetHpdfErrorDescription( status ) );
     if ( doc )

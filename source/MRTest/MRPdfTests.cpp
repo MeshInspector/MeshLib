@@ -12,7 +12,6 @@ TEST( MRMesh, Pdf )
 {
     UniqueTemporaryFolder pathFolder( {} );
     Pdf pdfTest;
-    pdfTest.newPage();
     pdfTest.addText( "Test Title", true );
     pdfTest.addText( "Test text"
         "\nstring 1"

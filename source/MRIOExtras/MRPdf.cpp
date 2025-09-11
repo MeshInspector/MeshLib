@@ -373,6 +373,9 @@ void Pdf::addText(const std::string& text, const TextParams& params )
 
 float Pdf::getTextWidth( const std::string& text, const TextParams& params )
 {
+    if ( !checkDocument_( "get text wisth" ) )
+        return 0;
+
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
     return MR_HPDF_CHECK_ERROR( HPDF_Page_TextWidth( state_->activePage, text.c_str() ) );
 }
@@ -406,11 +409,8 @@ void Pdf::addTable( const std::vector<std::pair<std::string, float>>& table )
 
 void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats )
 {
-    if ( !state_->document )
-    {
-        spdlog::warn( "Pdf: Can't add text to pdf page: no valid document" );
+    if ( !checkDocument_( "add palette stats table" ) )
         return;
-    }
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->tableFontBold, params_.textSize ) );
 
@@ -772,6 +772,9 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
 
 float Pdf::getTableTextWidth( const std::string& text )
 {
+    if ( !checkDocument_( "get table text width" ) )
+        return 0;
+
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->tableFont, params_.textSize ) );
     return MR_HPDF_CHECK_ERROR( HPDF_Page_TextWidth( state_->activePage, text.c_str() ) );
 }
@@ -863,6 +866,9 @@ void Pdf::reset_()
 
 std::vector<float> Pdf::calcTextLineWidths_( const std::string& text, float width, const TextParams& params )
 {
+    if ( !checkDocument_( "calc text line widths" ) )
+        return {};
+
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
 
     HPDF_REAL realWidth;
@@ -879,13 +885,15 @@ std::vector<float> Pdf::calcTextLineWidths_( const std::string& text, float widt
     return widths;
 }
 
-bool Pdf::checkDocument_( const std::string& logAction ) const
+bool Pdf::checkDocument_( const std::string& logAction )
 {
     if ( !state_->document )
     {
         spdlog::warn( "Pdf: Can't {}: no valid document", logAction );
         return false;
     }
+    if ( !state_->activePage )
+        newPage();
     if ( !state_->activePage )
     {
         spdlog::warn( "Pdf: Can't {}: no valid page", logAction );

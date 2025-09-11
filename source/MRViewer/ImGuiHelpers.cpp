@@ -29,8 +29,6 @@ namespace ImGui
 
 using namespace MR;
 
-const std::string dragTooltipStr = "Drag with Shift - faster, Alt - slower";
-
 void drawCursorArrow()
 {
     auto drawList = ImGui::GetForegroundDrawList();
@@ -93,7 +91,7 @@ void drawTooltip( T min, T max )
             SetMouseCursor( ImGuiMouseCursor_None );
             drawCursorArrow();
             BeginTooltip();
-            Text( "%s", dragTooltipStr.c_str() );
+            Text( "Drag with Shift - faster, %s - slower", getAltModName() );
             EndTooltip();
         }
 

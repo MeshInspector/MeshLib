@@ -536,7 +536,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
 
 Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallback& cb )
 {
-    auto [size, xf] = getFillingSizeAndXf( mesh, std::ranges::max( params.period ) );
+    auto [size, xf] = getFillingSizeAndXf( mesh, std::max( params.period.x, std::max( params.period.y, params.period.z ) ) );
     auto filling = build( size, params, subprogress( cb, 0.f, 0.2f ) );
     if ( !filling )
         return filling;

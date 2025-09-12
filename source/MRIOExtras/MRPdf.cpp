@@ -34,6 +34,7 @@ void pdfPrintError( const char* funcName, HPDF_Doc doc, HPDF_STATUS status )
         if ( status != HPDF_OK )
             spdlog::warn( "Error detail: {} {}", status, std::strerror( status ) );
     }
+    assert( false );
 }
 
 #define MR_HPDF_CHECK_RES_STATUS( ... ) \
@@ -625,17 +626,16 @@ void Pdf::saveToFile( const std::filesystem::path& documentPath )
         return;
     }
 
+    HPDF_UINT32 streamSize = HPDF_GetStreamSize( state_->document );
     /* get the data from the stream and output it to stdout. */
-    for ( ;;)
+    while ( streamSize > 0 )
     {
         HPDF_BYTE buf[4096];
-        HPDF_UINT32 siz = 4096;
-        MR_HPDF_CHECK_RES_STATUS( HPDF_ReadFromStream( state_->document, buf, &siz ) );
+        HPDF_UINT32 size = streamSize > 4096 ? 4096 : streamSize;
+        streamSize -= size;
+        MR_HPDF_CHECK_RES_STATUS( HPDF_ReadFromStream( state_->document, buf, &size ) );
 
-        if ( siz == 0 )
-            break;
-
-        if ( !outFile.write( ( const char* )buf, siz ) )
+        if ( !outFile.write( ( const char* )buf, size ) )
         {
             spdlog::error( "Pdf: Error while saving pdf to file \"{}\"", pathString );
             break;

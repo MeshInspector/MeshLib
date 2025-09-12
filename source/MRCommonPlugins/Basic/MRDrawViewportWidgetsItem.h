@@ -1,11 +1,11 @@
 #pragma once
 
 #include "MRCommonPlugins/exports.h"
-#include "MRMesh/MRViewportId.h"
 #include "MRViewer/MRRibbonMenuItem.h"
+#include "MRMesh/MRViewportId.h"
+#include "MRMesh/MRSignal.h"
 
 #include <boost/signals2/connection.hpp>
-#include <boost/signals2/signal.hpp>
 
 namespace MR
 {

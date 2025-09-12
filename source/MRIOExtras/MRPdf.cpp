@@ -627,11 +627,12 @@ void Pdf::saveToFile( const std::filesystem::path& documentPath )
     }
 
     HPDF_UINT32 streamSize = HPDF_GetStreamSize( state_->document );
+    const HPDF_UINT32 maxBufSize = 4096;
     /* get the data from the stream and output it to stdout. */
     while ( streamSize > 0 )
     {
-        HPDF_BYTE buf[4096];
-        HPDF_UINT32 size = streamSize > 4096 ? 4096 : streamSize;
+        HPDF_BYTE buf[maxBufSize];
+        HPDF_UINT32 size = std::min( streamSize, maxBufSize );
         streamSize -= size;
         MR_HPDF_CHECK_RES_STATUS( HPDF_ReadFromStream( state_->document, buf, &size ) );
 

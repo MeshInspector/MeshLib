@@ -50,6 +50,7 @@
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCylinderApproximation.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
+    <ClCompile Include="MRFillingSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

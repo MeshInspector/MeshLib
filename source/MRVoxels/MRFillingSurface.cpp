@@ -466,7 +466,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
     reportProgress( cb, 0.f );
     Mesh baseElement;
     {
-        if ( params.r > std::sqrt( 3.f ) * std::ranges::min( params.width / 2.f ) )
+        if ( params.r > std::sqrt( 3.f ) * std::min( params.width.x, std::min( params.width.y, params.width.z ) ) / 2.f  )
         {
             baseElement.addMesh( makeSphere( { .radius = params.r, .numMeshVertices = params.highRes ? 500 : 100 } ) );
             baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );

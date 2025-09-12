@@ -306,21 +306,10 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
     MR_HPDF_CHECK_RES_STATUS( HPDF_SetCurrentEncoder( state_->document, "UTF-8" ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_SetCompressionMode( state_->document, HPDF_COMP_ALL ) );
 
-    auto loadFont = [&] ( const std::variant<PdfBuildinFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )
-    {
-        if ( std::holds_alternative<PdfBuildinFont>( inFontInfo ) )
-        {
-            outFont = state_->getFont( std::get<PdfBuildinFont>( inFontInfo ) );
-            return;
-        }
-
-        
-    };
-
-    loadFont( params_.defaultFont, state_->defaultFont );
-    loadFont( params_.defaultFontBold, state_->defaultFontBold );
-    loadFont( params_.tableFont, state_->tableFont );
-    loadFont( params_.tableFontBold, state_->tableFontBold );
+    state_->defaultFont = state_->getFont( params_.defaultFont );
+    state_->defaultFontBold = state_->getFont( params_.defaultFontBold );
+    state_->tableFont = state_->getFont( params_.tableFont );
+    state_->tableFontBold = state_->getFont( params_.tableFontBold );
 }
 
 Pdf::Pdf( Pdf&& other ) noexcept
@@ -342,7 +331,7 @@ Pdf::~Pdf()
 
 void Pdf::addText( const std::string& text, bool isTitle /*= false*/ )
 {
-    TextParams params = isTitle ? TextParams{ .fontName = params_.defaultFont, .fontSize = params_.titleSize } :
+    TextParams params = isTitle ? TextParams{ .fontName = params_.defaultFont, .fontSize = params_.titleSize, .alignment = AlignmentHorizontal::Center } :
         TextParams{.fontName = params_.defaultFont, .fontSize = params_.textSize};
 
     addText( text, params );
@@ -528,34 +517,34 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageP
     HPDF_REAL imageWidth = width;
     HPDF_REAL imageHeight = height;
 
-    float posX = cursorX_;
-    float posY = cursorY_;
+    float shiftPosX = 0;
+    float shiftPosY = 0;
     if ( params.uniformScale == ImageParams::UniformScale::FromWidth )
     {
         imageHeight = realHeight / realWidth * imageWidth;
         if ( params.alignmentVertical == ImageParams::AlignmentVertical::Top )
-            posY -= imageHeight;
+            shiftPosY = imageHeight;
         else if ( params.alignmentVertical == ImageParams::AlignmentVertical::Bottom )
-            posY -= height;
+            shiftPosY = height;
         else
-            posY -= height / 2.f + imageHeight / 2.f;
+            shiftPosY = height / 2.f + imageHeight / 2.f;
     }
-    else if ( params.uniformScale == ImageParams::UniformScale::FromHeight )
+    else 
+        shiftPosY = imageHeight;
+    if ( params.uniformScale == ImageParams::UniformScale::FromHeight )
     {
         imageWidth = realWidth / realHeight * imageHeight;
         if ( params.alignmentHorizontal == AlignmentHorizontal::Right )
-            posX = posX + width - imageWidth;
+            shiftPosX = width - imageWidth;
         else if ( params.alignmentHorizontal == AlignmentHorizontal::Center )
-            posX = posX + width / 2.f - imageWidth / 2.f;
-
-        posY -= imageHeight;
+            shiftPosX = width / 2.f - imageWidth / 2.f;
     }
 
     if ( cursorY_ - imageHeight - additionalHeight < borderFieldBottom )
         newPage();
 
-    cursorY_ = posY;
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, pdfImage, posX, posY, imageWidth, imageHeight ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, pdfImage, cursorX_ + shiftPosX, cursorY_ - shiftPosY, imageWidth, imageHeight ) );
+    cursorY_ -= shiftPosY;
 
     if ( !params.caption.empty() )
     {

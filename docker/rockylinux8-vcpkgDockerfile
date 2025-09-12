@@ -5,14 +5,20 @@ ARG VCPKG_TRIPLET=x64-linux-meshlib
 FROM rockylinux:8 AS build
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
+    dnf -y install epel-release && \
     dnf -y install --enablerepo powertools \
         git cmake gcc-toolset-11 ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3.12-pip \
+        autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3.12-pip \
         && \
     dnf clean all
+
+# override system autoconf
+RUN mkdir -p /opt/autoconf27/bin/ && \
+    for APP in autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames ; do ln -s /usr/bin/${APP}27 /opt/autoconf27/bin/${APP} ; done && \
+    echo 'export PATH=/opt/autoconf27/bin:$PATH' > /opt/autoconf27/enable
 
 WORKDIR /root
 
@@ -37,6 +43,7 @@ COPY thirdparty/vcpkg/triplets MeshLib/triplets
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN source /opt/rh/gcc-toolset-11/enable && \
+    source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
     ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt

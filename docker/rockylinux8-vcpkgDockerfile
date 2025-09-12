@@ -37,7 +37,7 @@ WORKDIR /root/vcpkg
 
 # replace the original source URL with a faster mirror's one
 RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/vcpkg-make/portfile.cmake && \
-    sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake && \
+    sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
 
 # build vcpkg packages
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt

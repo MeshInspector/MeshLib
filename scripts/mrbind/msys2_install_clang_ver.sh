@@ -39,10 +39,14 @@ if [[ $1 = 18.* || $1 = 19.* ]]; then
     SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
     "$SCRIPT_DIR/msys2_make_dummy_cc-libs_pkg.sh" "$DOWNLOAD_DIR"
     PACKAGE_FILES+=" $DOWNLOAD_DIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst"
+
+    # Also install the outdated libxml.
+    wget -q --show-progress -c "https://mirror.msys2.org/mingw/clang64/mingw-w64-clang-x86_64-libxml2-2.14.5-2-any.pkg.tar.zst" -O "$DOWNLOAD_DIR/mingw-w64-clang-x86_64-libxml2-2.14.5-2-any.pkg.tar.zst"
+    PACKAGE_FILES+=" $DOWNLOAD_DIR/mingw-w64-clang-x86_64-libxml2-2.14.5-2-any.pkg.tar.zst"
 else
     # If you see this message, then this specific workaround is no longer necessary. Please destroy this entire `[...]` code block,
     #   and destroy the `msys2_make_dummy_cc-libs_pkg.sh` script.
-    echo "### NOTE: Now when we've updated Clang to 20+, the cc-libs stub workaround is no longer necessary! Please remove it from the `msys2_install_clang_ver.sh` script."
+    echo "### NOTE: Now when we've updated Clang to 20+, those workarounds are no longer necessary! Please remove them from the `msys2_install_clang_ver.sh` script."
 fi
 # ]
 

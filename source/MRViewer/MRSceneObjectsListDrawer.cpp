@@ -671,8 +671,8 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
 
 void SceneObjectsListDrawer::updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
-    auto newSelection = getPreSelection_( objPtr, ImGui::GetIO().KeyShift, ImGui::GetIO().KeyCtrl, selected, all );
-    if ( ImGui::GetIO().KeyCtrl )
+    auto newSelection = getPreSelection_( objPtr, ImGui::GetIO().KeyShift, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ), selected, all );
+    if ( ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) )
     {
         for ( auto& sel : newSelection )
         {

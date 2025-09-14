@@ -17,6 +17,29 @@
 namespace MR
 {
 
+/// Fonts included in libharu
+/// please note that using default font does not allow UTF-8 encoding
+enum class PdfBuildinFont
+{
+    Courier,
+    CourierBold,
+    CourierOblique,
+    CourierBoldOblique,
+    Helvetica,
+    HelveticaBold,
+    HelveticaOblique,
+    HelveticaBoldOblique,
+    TimesRoman,
+    TimesBold,
+    TimesItalic,
+    TimesBoldItalic,
+    Symbol,
+    ZapfDingbats,
+    Count
+};
+
+using PdfGeneralFont = std::variant<PdfBuildinFont, std::filesystem::path>;
+
 /**
  * @brief Parameters of document style
  */
@@ -25,39 +48,16 @@ struct PdfParameters
     float titleSize = 18.f;
     float textSize = 14.f;
 
-    /// <summary>
-    /// Fonts included in libharu
-    /// please note that using default font does not allow UTF-8 encoding
-    /// </summary>
-    enum class BuildinFont
-    {
-        Courier,
-        CourierBold,
-        CourierOblique,
-        CourierBoldOblique,
-        Helvetica,
-        HelveticaBold,
-        HelveticaOblique,
-        HelveticaBoldOblique,
-        TimesRoman,
-        TimesBold,
-        TimesItalic,
-        TimesBoldItalic,
-        Symbol,
-        ZapfDingbats,
-        Count
-    };
-
     /**
      * @brief Font name
      */
-    std::variant<BuildinFont, std::filesystem::path> defaultFont = BuildinFont::Helvetica;
-    std::variant<BuildinFont, std::filesystem::path> defaultFontBold = BuildinFont::HelveticaBold;
+    PdfGeneralFont defaultFont = PdfBuildinFont::Helvetica;
+    PdfGeneralFont defaultFontBold = PdfBuildinFont::HelveticaBold;
     /**
     * Font name for table (monospaced)
     */
-    std::variant<BuildinFont, std::filesystem::path> tableFont = BuildinFont::Courier;
-    std::variant<BuildinFont, std::filesystem::path> tableFontBold = BuildinFont::CourierBold;
+    PdfGeneralFont tableFont = PdfBuildinFont::Courier;
+    PdfGeneralFont tableFontBold = PdfBuildinFont::CourierBold;
 };
 
 /**
@@ -66,13 +66,31 @@ struct PdfParameters
 class Pdf
 {
 public:
-    /// Ctor
+    /// Ctor. Create a document, but not a page. To create a new page use newPage() method
     MRIOEXTRAS_API Pdf( const PdfParameters& params = PdfParameters() );
     MRIOEXTRAS_API Pdf( Pdf&& other ) noexcept;
     MRIOEXTRAS_API Pdf& operator=( Pdf other ) noexcept; // Sic, passing by value.
-    /// Dtor. Automatically do close
+    /// Dtor.
     MRIOEXTRAS_API ~Pdf();
 
+    enum class AlignmentHorizontal
+    {
+        Left,
+        Center,
+        Right
+    };
+
+    // parameters to drawing text
+    struct TextParams
+    {
+        PdfGeneralFont fontName = PdfBuildinFont::Helvetica;
+
+        float fontSize = 14.f;
+
+        AlignmentHorizontal alignment = AlignmentHorizontal::Left;
+        Color colorText = Color::black();
+        bool underline = false;
+    };
     /**
      * Add text block in current cursor position.
      * Move cursor.
@@ -82,6 +100,9 @@ public:
      * if isTitle - horAlignment = center, use titleFontSize
      */
     MRIOEXTRAS_API void addText( const std::string& text, bool isTitle = false );
+    MRIOEXTRAS_API void addText( const std::string& text, const TextParams& params );
+    /// return text width
+    MRIOEXTRAS_API float getTextWidth( const std::string& text, const TextParams& params );
 
     /**
      * Add set of pair string - value in current cursor position.
@@ -110,17 +131,31 @@ public:
         /// caption if not empty - add caption under marks (if exist) or image.
         std::string caption;
         /// set height to keep same scale as width scale
-        bool uniformScaleFromWidth = false;
+        enum class UniformScale
+        {
+            None,
+            FromWidth,
+            FromHeight
+        } uniformScale = UniformScale::None;
+        enum class AlignmentVertical
+        {
+            Top,
+            Center,
+            Bottom
+        } alignmentVertical = AlignmentVertical::Top;
+        AlignmentHorizontal alignmentHorizontal = AlignmentHorizontal::Left;
     };
     /**
      * @brief Add image from file in current cursor position.
      * If image bigger than page size, autoscale image to page size.
      * Move cursor.
      */
-    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params ); 
+    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params );
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();
+    /// set function to customize new page after creation
+    void setNewPageAction( std::function<void(Pdf&)> action ) { newPageAction_ =  action; }
 
     /// Save document to file
     MRIOEXTRAS_API void saveToFile( const std::filesystem::path& documentPath );
@@ -151,7 +186,6 @@ public:
         // \param fmtStr format string like fmt::format
         MRIOEXTRAS_API std::string toString( const std::string& fmtStr = "{}" ) const;
     };
-
     // set up new table (clear table customization, reset parameters to default values)
     MRIOEXTRAS_API void newTable( int columnCount );
     // set table column widths
@@ -162,9 +196,9 @@ public:
     MRIOEXTRAS_API Expected<void> setColumnValuesFormat( const std::vector<std::string>& formats );
     // add in pdf table row with values
     MRIOEXTRAS_API Expected<void> addRow( const std::vector<Cell>& cells );
+    // parameters to customization table cell
     // return text width (for table font parameters)
     MRIOEXTRAS_API float getTableTextWidth( const std::string& text );
-    // parameters to customization table cell
     struct CellCustomParams
     {
         std::optional<Color> colorText;
@@ -176,37 +210,43 @@ public:
     // add rule to customize table cells
     void setTableCustomRule( TableCustomRule rule ) { tableCustomRule_ = rule; }
 
-private:
-    struct TextParams;
-    // common method for adding different types of text
-    void addText_( const std::string& text, const TextParams& params );
+    // basic drawing methods without automatic cursor position control
 
     // draw text in specific rect on page
     // text will be cropped by rect
-    void drawTextRect_( const std::string& text, const Box2f& rect, const TextParams& params );
+    MRIOEXTRAS_API void drawTextInRect( const std::string& text, const Box2f& rect, const TextParams& params );
 
+    struct TextCellParams
+    {
+        TextParams textParams;
+
+        Box2f rect;
+        Color colorBorder = Color::transparent();
+        Color colorBackground = Color::transparent();
+    };
+    MRIOEXTRAS_API void drawTextCell( const std::string& text, const TextCellParams& params );
+
+private:
     // draw rect (filled with border)
-    void drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor );
-
-    struct TextCellParams;
-    void drawTextCell_( const std::string& text, const TextCellParams& params );
-
+    MRIOEXTRAS_API void drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor );
 
     // close pdf document without saving. After this impossible add anything in document.
     void reset_();
 
-    // count the number of rows with auto-transfer in mind for a given page (page, font and font size)
-    int calcTextLinesCount_( const std::string& text );
+    // calculate the width of the lines, taking into account automatic hyphenation
+    std::vector<float> calcTextLineWidths_( const std::string& text, float width, const TextParams& params );
 
     struct State;
     std::unique_ptr<State> state_;
 
     PdfParameters params_;
 
+    std::function<void( Pdf& )> newPageAction_;
+
     float cursorX_ = 0;
     float cursorY_ = 0;
 
-    bool checkDocument_( const std::string& logAction ) const;
+    bool checkDocument_( const std::string& logAction );
     void moveCursorToNewLine();
 
     // table parts
@@ -231,8 +271,6 @@ private:
 
         float fontSize = 12.f;
     } tableParams_;
-
-
 };
 
 }

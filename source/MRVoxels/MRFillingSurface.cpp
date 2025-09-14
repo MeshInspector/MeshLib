@@ -1,4 +1,4 @@
-#include "MRMinimalSurface.h"
+#include "MRFillingSurface.h"
 
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBox.h>
@@ -6,7 +6,13 @@
 #include "MRMesh/MRMeshDecimate.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshComponents.h"
+#include "MRMesh/MRCylinder.h"
+#include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRBestFitPolynomial.h"
 #include <MRMesh/MRMeshBoolean.h>
+#include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRConstants.h>
+#include <MRPch/MRFmt.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
 
@@ -14,7 +20,32 @@
 #include <string>
 #include <map>
 
-namespace MR::TPMS
+namespace MR::FillingSurface
+{
+
+namespace
+{
+
+struct SizeAndXf
+{
+    Vector3f size;
+    AffineXf3f xf;
+};
+
+/// Given mesh, returns the size of the filling surface (with padding) and its transform back to mesh
+SizeAndXf getFillingSizeAndXf( const Mesh& mesh, float period )
+{
+    const auto extraStep = Vector3f::diagonal( period );
+
+    SizeAndXf ret;
+    ret.xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
+    ret.size = mesh.getBoundingBox().size() + 1.5f*extraStep;
+    return ret;
+}
+
+}
+
+namespace TPMS
 {
 
 std::vector<std::string> getTypeNames()
@@ -342,13 +373,11 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 {
     MR_TIMER;
     // first construct a surface by the bounding box of the mesh
-    const auto extraStep = Vector3f::diagonal( 1.f / params.frequency );
-    auto sponge = build( mesh.getBoundingBox().size() + 1.5f*extraStep, params, subprogress( cb, 0.f, 0.9f ) );
+    auto [size, xf] = getFillingSizeAndXf( mesh, 1.f / params.frequency );
+
+    auto sponge = build( size, params, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
         return sponge;
-
-    // translation to mesh csys
-    const auto xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
 
     BooleanOperation booleanOp = isThick( params.type ) ? BooleanOperation::OutsideB : BooleanOperation::Union;
     auto res = boolean( mesh, *sponge, booleanOp, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
@@ -368,8 +397,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 
 size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution )
 {
-    const auto extraStep = Vector3f::diagonal( 1.f / frequency );
-    const auto dims = getDimsAndSize( mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution ).dims;
+    const auto dims = getDimsAndSize( getFillingSizeAndXf( mesh, 1.f / frequency ).size, frequency, resolution ).dims;
     return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
 }
 
@@ -418,5 +446,193 @@ float getMinimalResolution( Type type, float iso )
     return std::max( 5.f, 1.f / delta );
 }
 
+} // namespace TPMS
 
+
+namespace CellularSurface
+{
+
+Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb )
+{
+    MR_TIMER;
+
+    const auto delta = params.period - params.width;
+    if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
+        return unexpected( "Period must be larger than width" );
+
+    constexpr float normalEps = 1e-5f;
+    constexpr float decimateEps = 1e-3f;
+
+    reportProgress( cb, 0.f );
+    Mesh baseElement;
+    {
+        if ( params.r > std::sqrt( 3.f ) * std::min( params.width.x, std::min( params.width.y, params.width.z ) ) / 2.f  )
+        {
+            baseElement.addMesh( makeSphere( { .radius = params.r, .numMeshVertices = params.highRes ? 500 : 100 } ) );
+            baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );
+        }
+
+        for ( int ax = 0; ax < 3; ++ax )
+        {
+            int ax1 = ( ax + 1 ) % 3;
+            int ax2 = ( ax + 2 ) % 3;
+            auto cyl = makeCylinder( params.width[ax] / 2.f, params.period[ax], params.highRes ? 64 : 16 );
+            FaceBitSet cylToDel;
+            for ( auto f : cyl.topology.getValidFaces() )
+            {
+                auto n =  cyl.normal( f );
+                if ( std::abs( std::abs( n.z ) - 1.f ) < normalEps )
+                    cylToDel.autoResizeSet( f, true );
+            }
+            cyl.deleteFaces( cylToDel );
+
+            AffineXf3f tr;
+            if ( ax == 0 )
+                tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
+            if ( ax == 1 )
+            {
+                tr.A = Matrix3f::rotation( Vector3f::plusX(), PI2_F );
+                tr = AffineXf3f::translation( Vector3f::plusY() * params.period.y ) * tr;
+            }
+
+            Vector3f s;
+            s[ax1] = params.period[ax1] / 2.f;
+            s[ax2] = params.period[ax2] / 2.f;
+            cyl.transform( AffineXf3f::translation( s ) * tr );
+            auto r = boolean( baseElement, cyl, BooleanOperation::Union );
+            if ( !r )
+                return unexpected( r.errorString );
+            baseElement = std::move( r.mesh );
+        }
+
+        decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5f, .touchNearBdEdges = false, .touchBdVerts = false   } );
+    }
+    if ( !reportProgress( cb, 0.2f ) )
+        return unexpectedOperationCanceled();
+
+    auto sp = subprogress( cb, 0.2f, 1.f );
+    Mesh result;
+    for ( int x = 0; x < size.x / params.period.x; ++x )
+    {
+        for ( int y = 0; y < size.y / params.period.y; ++y )
+        {
+            for ( int z = 0; z < size.z / params.period.z; ++z )
+            {
+                auto mesh = baseElement;
+                mesh.transform( AffineXf3f::translation( mult( Vector3f( (float)x, (float)y, (float)z ), params.period ) ) );
+                result.addMesh( mesh, {}, true );
+            }
+        }
+        if ( !reportProgress( sp, (float)x * params.period.x / float( size.x ) ) )
+            return unexpectedOperationCanceled();
+    }
+
+    MeshBuilder::uniteCloseVertices( result, decimateEps );
+    if ( MeshComponents::getNumComponents( result ) != 1 )
+        return unexpected( "Failed to unify result" );
+
+    return result;
 }
+
+Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallback& cb )
+{
+    auto [size, xf] = getFillingSizeAndXf( mesh, std::max( params.period.x, std::max( params.period.y, params.period.z ) ) );
+    auto filling = build( size, params, subprogress( cb, 0.f, 0.2f ) );
+    if ( !filling )
+        return filling;
+
+    auto res = boolean( mesh, *filling, BooleanOperation::Union, &xf, {}, subprogress( cb, 0.2f, 1.f ) );
+    if ( !res )
+        return unexpected( res.errorString );
+    return *res;
+}
+
+float estimateDensity( float T, float width, float R )
+{
+    const auto cr = width / 2.f;
+
+    // usefull link: https://en.wikipedia.org/wiki/Steinmetz_solid
+    auto Vbase = [cr] ( float T )
+    {
+        return cr*cr * ( 3.f * PI_F * T - 8.f*std::sqrt( 2.f )*cr );
+    };
+
+    if ( R <= std::sqrt( 3.f ) * cr )
+    {
+        return Vbase( T ) / ( T*T*T );
+    }
+    else
+    {
+        const auto t = std::sqrt( R*R - cr*cr );
+        const auto third = 1.f / 3.f;
+        const auto Vhat = PI_F*( 2.f*third*R*R*R - t*( 2*R*R + cr*cr )*third );
+        const auto Vsphere = 4.f*third*PI_F*R*R*R;
+
+        const auto internalBase = Vbase( 2*t );
+        const auto fullBase = Vbase( T );
+
+        return ( Vsphere - internalBase - 6.f*Vhat + fullBase ) / ( T*T*T );
+    }
+}
+
+std::optional<float> estimateWidth( float T, float R, float d )
+{
+    // first guess R <= std::sqrt( 3.f ) * cr
+    Polynomial<float, 3> p1{ { T*T*T*d, 0, -3.f*PI_F*T, 8.f*std::sqrt( 2.f ) } };
+    float sol = -1.f;
+    for ( float x : p1.solve( 1e-3f ) )
+    {
+        if ( x > 0 && 2.f*x < T && R <= std::sqrt( 3.f ) * x )
+        {
+            sol = x;
+            break;
+        }
+    }
+    if ( sol > 0 )
+        return sol * 2.f;
+
+
+    sol = -1.f;
+    const auto alpha = d*T*T*T - (4.f / 3.f)*PI_F*R*R*R + 4.f*PI_F*R*R*R;
+    const auto beta = -3.f*PI_F*T;
+    p1 = Polynomial<float, 3>{ { sqr(alpha) - sqr(4*PI_F*R*R*R), 48.f*sqr(PI_F*R*R) + 2.f*alpha*beta, sqr(beta) - 48.f*sqr(PI_F*R), 16.f*sqr(PI_F) } };
+    for ( float v : p1.solve( 1e-3f ) )
+    {
+        if ( v < 0 )
+            continue;
+        auto x = std::sqrt(v);
+        if ( 2.f*x < T && R > std::sqrt( 3.f ) * x )
+        {
+            sol = 2.f*x;
+            break;
+        }
+    }
+    return sol > 0 ? std::optional{ sol } : std::nullopt;
+}
+
+} // namespace CellularSurface
+
+std::vector<std::string> getKindNames()
+{
+    return { "TPMS", "Cellular" };
+}
+
+Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb )
+{
+    return std::visit( overloaded{
+        [&size, &cb] ( const TPMS::MeshParams& params ) { return TPMS::build( size, params, cb ); },
+        [&size, &cb] ( const CellularSurface::Params& params ) { return CellularSurface::build( size, params, cb ); }
+    }, params );
+}
+
+Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb )
+{
+    return std::visit( overloaded{
+        [&mesh, &cb] ( const TPMS::MeshParams& params ) { return TPMS::fill( mesh, params, cb ); },
+        [&mesh, &cb] ( const CellularSurface::Params& params ) { return CellularSurface::fill( mesh, params, cb ); }
+    }, params );
+}
+
+
+
+} // namespace FillingSurface

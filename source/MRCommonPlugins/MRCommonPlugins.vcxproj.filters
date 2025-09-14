@@ -31,6 +31,12 @@
     <Filter Include="resource\icons\X3">
       <UniqueIdentifier>{c8d6b122-1ded-4171-b50a-5109b3a53cb3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resource\independent_icons\X1">
+      <UniqueIdentifier>{cc931752-457b-4254-864e-b20a9b1c3567}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\independent_icons\X3">
+      <UniqueIdentifier>{a8dc6e72-bdcc-437f-87ca-acf530c22c55}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp">
@@ -78,6 +84,12 @@
     <ClCompile Include="Voxels\MRBinaryOperationsPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Basic\MRToggleProjectionMode.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -110,6 +122,9 @@
     </ClInclude>
     <ClInclude Include="Voxels\MRBinaryOperationsPlugin.h">
       <Filter>Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h">
+      <Filter>Basic</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -767,6 +782,24 @@
     </Image>
     <Image Include="resource\icons\X0_75\Binary Operations.png">
       <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Viewport basis.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Viewport projection orthographic.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Viewport projection perspective.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Viewport basis.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Viewport projection orthographic.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Viewport projection perspective.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

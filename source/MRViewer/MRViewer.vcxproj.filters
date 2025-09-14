@@ -484,6 +484,12 @@
     <ClCompile Include="MRViewportGlobalBasis.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRGladGlfw.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderClickableRect.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -944,6 +950,9 @@
     <ClInclude Include="MRVisualObjectTag.h" />
     <ClInclude Include="MRViewportGlobalBasis.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderClickableRect.h">
+      <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

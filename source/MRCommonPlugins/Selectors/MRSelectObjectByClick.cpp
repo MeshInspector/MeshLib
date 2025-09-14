@@ -8,7 +8,7 @@
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRVisualObject.h"
-#include <GLFW/glfw3.h>
+#include "MRViewer/MRGladGlfw.h"
 
 namespace MR
 {
@@ -34,11 +34,11 @@ void SelectObjectByClick::drawDialog( float, ImGuiContext* )
 
 bool SelectObjectByClick::onMouseDown_( MouseButton button, int modifiers )
 {
-    if ( button != MouseButton::Left || ( modifiers & ~GLFW_MOD_CONTROL ) != 0 )
+    if ( button != MouseButton::Left || ( modifiers & ~getGlfwModPrimaryCtrl() ) != 0 )
         return false;
 
     picked_ = true;
-    ctrl_ = modifiers == GLFW_MOD_CONTROL;
+    ctrl_ = modifiers == getGlfwModPrimaryCtrl();
     return true;
 }
 

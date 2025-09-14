@@ -255,11 +255,12 @@ public:
 
     // Get unique id of the vieport containing the mouse
     // if mouse is out of any viewport returns index of last selected viewport
-    // (current_mouse_x, current_mouse_y)
     MRVIEWER_API ViewportId getHoveredViewportId() const;
 
+    // Same, but returns an invalid ID if no viewport is hovered, instead of returning the last selected viewport.
+    MRVIEWER_API ViewportId getHoveredViewportIdOrInvalid() const;
+
     // Change selected_core_index to the viewport containing the mouse
-    // (current_mouse_x, current_mouse_y)
     MRVIEWER_API void select_hovered_viewport();
 
     // Calls fitData for single/each viewport in viewer

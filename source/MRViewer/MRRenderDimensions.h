@@ -3,6 +3,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
+#include "MRViewer/MRRenderClickableRect.h"
 #include "MRViewer/exports.h"
 
 #include <optional>
@@ -15,9 +16,20 @@ class Viewport;
 namespace MR::RenderDimensions
 {
 
+struct CommonParams
+{
+    // What object to select when the label is clicked.
+    // Optional. Not clickable if this is null.
+    const VisualObject* objectToSelect = nullptr;
+
+    // Optional. If specified, this name is drawn above the measurement.
+    std::string objectName;
+};
 
 struct RadiusParams
 {
+    CommonParams common;
+
     // The center point.
     Vector3f center;
 
@@ -38,7 +50,7 @@ struct RadiusParams
     float visualLengthMultiplier = 2 / 3.f;
 };
 
-class RadiusTask : public BasicUiRenderTask
+class RadiusTask : public BasicClickableRectUiRenderTask
 {
     float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
@@ -47,12 +59,19 @@ class RadiusTask : public BasicUiRenderTask
 
 public:
     RadiusTask() {}
+
+    // Here `objectToSelect` is optional, and the label will not be clickable if this is null.
     MRVIEWER_API RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const RadiusParams& params );
-    MRVIEWER_API void renderPass();
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 struct AngleParams
 {
+    CommonParams common;
+
     // The center point.
     Vector3f center;
 
@@ -67,7 +86,7 @@ struct AngleParams
     std::array<bool, 2> shouldVisualizeRay{ true, true };
 };
 
-class AngleTask : public BasicUiRenderTask
+class AngleTask : public BasicClickableRectUiRenderTask
 {
     float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
@@ -77,12 +96,17 @@ class AngleTask : public BasicUiRenderTask
 public:
     AngleTask() {}
     MRVIEWER_API AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const AngleParams& params );
-    MRVIEWER_API void renderPass();
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 
 struct LengthParams
 {
+    CommonParams common;
+
     // The points between which we're measuring.
     std::array<Vector3f, 2> points;
 
@@ -104,17 +128,23 @@ struct LengthParams
     std::optional<Tolerance> tolerance;
 };
 
-class LengthTask : public BasicUiRenderTask
+class LengthTask : public BasicClickableRectUiRenderTask
 {
     float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
     Color color_;
     LengthParams params_;
 
+    // For single-axis measurements, this computes the corner point.
+    MRVIEWER_API Vector3f computeCornerPoint();
+
 public:
     LengthTask() {}
     MRVIEWER_API LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const LengthParams& params );
-    MRVIEWER_API void renderPass();
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 }

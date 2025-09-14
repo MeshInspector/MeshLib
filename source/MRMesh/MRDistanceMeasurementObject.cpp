@@ -83,13 +83,35 @@ DistanceMeasurementObject::DistanceMode DistanceMeasurementObject::getDistanceMo
 
 void DistanceMeasurementObject::setDistanceMode( DistanceMode mode )
 {
-    perCoordDeltas_ = mode;
+    if ( mode != perCoordDeltas_ )
+    {
+        perCoordDeltas_ = mode;
+        cachedValue_ = {};
+    }
 }
 
 float DistanceMeasurementObject::computeDistance() const
 {
     if ( !cachedValue_ )
-        cachedValue_ = getWorldDelta().length() * ( isNegative() ? -1.f : 1.f );
+    {
+        int axis = -1;
+        switch ( perCoordDeltas_ )
+        {
+        case DistanceMode::xAbsolute:
+            axis = 0;
+            break;
+        case DistanceMode::yAbsolute:
+            axis = 1;
+            break;
+        case DistanceMode::zAbsolute:
+            axis = 2;
+            break;
+        default:
+            // Nothing.
+            break;
+        }
+        cachedValue_ = ( axis == -1 ? getWorldDelta().length() : std::abs( getWorldDelta()[axis] ) ) * ( isNegative() ? -1.f : 1.f );
+    }
     return *cachedValue_;
 }
 
@@ -109,7 +131,18 @@ std::string_view DistanceMeasurementObject::getComparablePropertyName( std::size
 {
     (void)i;
     assert( i == 0 );
-    return "Distance";
+
+    switch ( perCoordDeltas_ )
+    {
+    case DistanceMode::xAbsolute:
+        return "X Distance";
+    case DistanceMode::yAbsolute:
+        return "Y Distance";
+    case DistanceMode::zAbsolute:
+        return "Z Distance";
+    default:
+        return "Distance";
+    }
 }
 
 std::optional<DistanceMeasurementObject::ComparableProperty> DistanceMeasurementObject::computeComparableProperty( std::size_t i ) const
@@ -134,13 +167,6 @@ void DistanceMeasurementObject::setComparisonTolerance( std::size_t i, std::opti
     (void)i;
     assert( i == 0 );
     tolerance_ = newTolerance;
-}
-
-bool DistanceMeasurementObject::comparisonToleranceMakesSenseNow( std::size_t i ) const
-{
-    (void)i;
-    assert( i == 0 );
-    return bool( referenceValue_ );
 }
 
 std::string_view DistanceMeasurementObject::getComparisonReferenceValueName( std::size_t i ) const
@@ -171,9 +197,6 @@ void DistanceMeasurementObject::setComparisonReferenceValue( std::size_t i, std:
     else
     {
         referenceValue_.reset();
-
-        // For convenience, also reset the tolerance.
-        setComparisonTolerance( 0, {} );
     }
 }
 

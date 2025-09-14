@@ -30,6 +30,7 @@
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
     <ClCompile Include="MRDragDropWin32Handler.cpp" />
+    <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
@@ -147,6 +148,7 @@
     <ClCompile Include="MRRenderImGui.cpp" />
     <ClCompile Include="MRRenderToImage.cpp" />
     <ClCompile Include="MRVisualObjectTag.cpp" />
+    <ClCompile Include="MRRenderClickableRect.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -309,6 +311,7 @@
     <ClInclude Include="MRRenderImGui.h" />
     <ClInclude Include="MRRenderToImage.h" />
     <ClInclude Include="MRVisualObjectTag.h" />
+    <ClInclude Include="MRRenderClickableRect.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

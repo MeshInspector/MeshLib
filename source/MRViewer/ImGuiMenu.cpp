@@ -993,6 +993,11 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
     return true;
 }
 
+bool ImGuiMenu::simulateNameTagClickWithKeyboardModifiers( Object& object )
+{
+    return simulateNameTagClick( object, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne );
+}
+
 bool ImGuiMenu::anyImGuiWindowIsHovered() const
 {
     return ImGui::GetIO().WantCaptureMouse;
@@ -1516,7 +1521,8 @@ float ImGuiMenu::drawSelectionInformation_()
         auto* obj = selectedObjs.front().get();
         if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
         {
-            drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+            // This is named either `Distance` or `Distance X`/Y/Z.
+            drawUnitInfo( std::string( distance->getComparablePropertyName( 0 ) ).c_str(), distance->computeDistance(), LengthUnit{} );
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
         }
@@ -1639,9 +1645,6 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
     const std::size_t numRefs = object.numComparisonReferenceValues();
     for ( std::size_t i = 0; i < numRefs; i++ )
     {
-        if ( !object.comparisonReferenceValueMakesSenseNow( i ) )
-            continue;
-
         auto nominalValue = object.getComparisonReferenceValue( i );
 
         ImGui::SetNextItemWidth( fullWidth );
@@ -1668,9 +1671,6 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
     const std::size_t numTols = object.numComparableProperties();
     for ( std::size_t i = 0; i < numTols; i++ )
     {
-        if ( !object.comparisonToleranceMakesSenseNow( i ) )
-            continue;
-
         bool hasTol = false;
         ObjectComparableWithReference::ComparisonTolerance tol;
         if ( auto opt = object.getComparisonTolerence( i ) )
@@ -3542,7 +3542,9 @@ BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackw
     const auto& menuPlugin = getViewerInstance().getMenuPlugin();
     menuPlugin->drawSceneUiSignal( menuPlugin->menu_scaling(), viewport, tasks );
 
-    return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
+    return {
+        .consumedInteractions = ( ImGui::GetIO().WantCaptureMouse || getViewerInstance().getHoveredViewportId() != viewport ) * BasicUiRenderTask::InteractionMask::mouseHover,
+    };
 }
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )

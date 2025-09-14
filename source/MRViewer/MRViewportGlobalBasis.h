@@ -39,15 +39,19 @@ public:
 
     /// Set visibility for all child objects
     MRVIEWER_API void setVisible( bool on, ViewportMask vpMask = ViewportMask::all() );
+    MRVIEWER_API void setVisibilityMask( ViewportMask vpMask );
 
     /// returns true if object is present and visible
     bool isVisible( ViewportMask vpMask = ViewportMask::any() ) const { return !axes_.empty() && axes_[0] && axes_[0]->isVisible( vpMask ); }
+    ViewportMask getVisibilityMask() const { return (!axes_.empty() && axes_[0] ) ? axes_[0]->visibilityMask() : ViewportMask(); }
     
     /// Set visibility for grid objects
     MRVIEWER_API void setGridVisible( bool on, ViewportMask vpMask = ViewportMask::all() );
+    MRVIEWER_API void setGridVisibilityMask( ViewportMask vpMask );
 
     /// returns true if grid is present and visible
     bool isGridVisible( ViewportMask vpMask = ViewportMask::any() ) const { return !grids_.empty() && grids_[0] && grids_[0]->isVisible( vpMask ); }
+    ViewportMask getGridVisibilityMask() const { return (!grids_.empty() && grids_[0] ) ? grids_[0]->visibilityMask() : ViewportMask(); }
 
     /// clears connections of this structure (by default it changes colors on theme change and change font size on rescale)
     void resetConnections() { connections_.clear(); }

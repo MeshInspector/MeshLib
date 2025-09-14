@@ -3,8 +3,7 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
 #include "MRViewer/MRColorTheme.h"
-
-#include <parallel_hashmap/phmap.h>
+#include "MRViewer/MRRibbonFontManager.h"
 
 namespace MR::ImGuiMeasurementIndicators
 {
@@ -57,6 +56,19 @@ Params::Params()
         std::swap( colorText.g, colorTextOutline.g );
         std::swap( colorText.b, colorTextOutline.b );
     }
+
+    float tHovered = 0.2f;
+    float tActive = 0.3f;
+    colorTextOutlineHovered = colorTextOutline * ( 1 - tHovered ) + colorText * tHovered;
+    colorTextOutlineActive = colorTextOutline * ( 1 - tActive ) + colorText * tActive;
+
+    static constexpr Stipple::Segment stippleSegmentsDashed[] = {
+        { 0, 0.45f },
+    };
+    stippleDashed = {
+        .patternLength = 16,
+        .segments = stippleSegmentsDashed,
+    };
 }
 
 void point( Element elem, float menuScaling, const Params& params, ImVec2 point )
@@ -72,6 +84,23 @@ void point( Element elem, float menuScaling, const Params& params, ImVec2 point 
 
         params.list->AddCircleFilled( point, radius, ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32() );
     } );
+}
+
+static Text::FontFunc& defaultFontFuncStorage()
+{
+    // We default to a monospaced font. Just in case, use a function and re-get it every time.
+    static Text::FontFunc ret = []{ return RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Monospace ); };
+    return ret;
+}
+
+const Text::FontFunc& Text::getStaticDefaultFontFunc()
+{
+    return defaultFontFuncStorage();
+}
+
+void Text::setStaticDefaultFontFunc( FontFunc func )
+{
+    defaultFontFuncStorage() = std::move( func );
 }
 
 void Text::addText( std::string_view text )
@@ -205,8 +234,10 @@ void Text::update( bool force ) const
     }
 }
 
-void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor ) const
+Text::DrawResult Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor ) const
 {
+    DrawResult ret;
+
     update();
 
     ImU32 defaultColorFixed = defaultTextColor.color ? *defaultTextColor.color : ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
@@ -215,6 +246,8 @@ void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColo
     // Specifically for the full text size, we don't do `max( size, computedSize )`, as it makes more sense this way.
     // See the comment on `size` in the class.
     ImVec2 curPos = pos + ( size - computedSize ) * align;
+    ret.cornerA = curPos;
+    ret.cornerB = curPos + computedSize;
 
     ImFont* curFont = defaultFont;
 
@@ -265,15 +298,19 @@ void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColo
             }, elem.var );
         }
     }
+
+    return ret;
 }
 
-void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, const Text& text, ImVec2 push, ImVec2 pivot )
+std::optional<TextResult> text( Element elem, float menuScaling, const Params& params, ImVec2 pos, const Text& text, const TextParams& textParams, ImVec2 push, ImVec2 pivot )
 {
     if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
+        return {}; // Nothing to draw.
 
     if ( text.isEmpty() )
-        return;
+        return {};
+
+    TextResult ret;
 
     float textOutlineWidth = params.textOutlineWidth * menuScaling;
     float textOutlineRounding = params.textOutlineRounding * menuScaling;
@@ -282,19 +319,54 @@ void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, co
     ImVec2 textToLineSpacingB = params.textToLineSpacingB * menuScaling;
 
     text.update();
-    ImVec2 textPos = pos - ( text.computedSize * pivot );
+    ret.textCornerA = pos - ( text.computedSize * pivot );
 
     if ( push != ImVec2{} )
     {
         push = normalize( push );
-        ImVec2 point = ImVec2( push.x > 0 ? textPos.x - textToLineSpacingA.x : textPos.x + text.computedSize.x + textToLineSpacingB.x, push.y > 0 ? textPos.y - textToLineSpacingA.y : textPos.y + text.computedSize.y + textToLineSpacingB.y );
-        textPos += push * (-dot( push, point - pos ) + textToLineSpacingRadius );
+        ImVec2 point = ImVec2( push.x > 0 ? ret.textCornerA.x - textToLineSpacingA.x : ret.textCornerA.x + text.computedSize.x + textToLineSpacingB.x, push.y > 0 ? ret.textCornerA.y - textToLineSpacingA.y : ret.textCornerA.y + text.computedSize.y + textToLineSpacingB.y );
+        ret.textCornerA += push * (-dot( push, point - pos ) + textToLineSpacingRadius );
     }
 
+    ret.textCornerA = round( ret.textCornerA );
+    ret.textCornerB = ret.textCornerA + text.computedSize;
+    ret.bgCornerA = ret.textCornerA - textToLineSpacingA - textOutlineWidth;
+    ret.bgCornerB = ret.textCornerB + textToLineSpacingB + textOutlineWidth;
+
     if ( bool( elem & Element::outline ) )
-        params.list->AddRectFilled( round( textPos ) - textToLineSpacingA - textOutlineWidth, textPos + text.computedSize + textToLineSpacingB + textOutlineWidth, params.colorTextOutline.getUInt32(), textOutlineRounding );
+    {
+        const auto& color = textParams.isActive ? params.colorTextOutlineActive : textParams.isHovered ? params.colorTextOutlineHovered : params.colorTextOutline;
+        params.list->AddRectFilled( ret.bgCornerA, ret.bgCornerB, color.getUInt32(), textOutlineRounding );
+    }
     if ( bool( elem & Element::main ) )
-        text.draw( *params.list, menuScaling, round( textPos ), params.colorText.getUInt32() );
+    {
+        text.draw( *params.list, menuScaling, ret.textCornerA, params.colorText.getUInt32() );
+
+        // I think the colored frame should be in `Element::main`.
+        if ( textParams.borderColor.a > 0 )
+        {
+            float lineWidthUnselected = params.clickableLabelLineWidth * menuScaling;
+            float lineWidthSelected = params.clickableLabelLineWidthSelected * menuScaling;
+
+            float lineWidth = textParams.isSelected ? lineWidthSelected : lineWidthUnselected;
+            float outlineWidth = params.clickableLabelOutlineWidth * menuScaling * 2 + lineWidth;
+
+            float rectShrink = lineWidthUnselected / 2;
+            if ( textParams.isSelected )
+                rectShrink -= ( lineWidthSelected - lineWidthUnselected ) / 2;
+
+            // First, the outline for the frame.
+            // Using `PathRect()` here because it doesn't shrink the rect by half a pixel, unlike `AddRect()`.
+            params.list->PathRect( ret.bgCornerA + rectShrink, ret.bgCornerB - rectShrink, textOutlineRounding - rectShrink );
+            params.list->PathStroke( params.colorOutline.getUInt32(), ImDrawFlags_Closed, outlineWidth );
+
+            // The frame itself.
+            params.list->PathRect( ret.bgCornerA + rectShrink, ret.bgCornerB - rectShrink, textOutlineRounding - rectShrink );
+            params.list->PathStroke( textParams.borderColor.scaledAlpha( params.colorOutline.a / 255.f ).getUInt32(), ImDrawFlags_Closed, lineWidth );
+        }
+    }
+
+    return ret;
 }
 
 void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir )
@@ -311,7 +383,7 @@ void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec
 
     ImVec2 a = point;
     ImVec2 b = a - dir * arrowLen + n * arrowHalfWidth;
-    ImVec2 c =  a - dir * arrowLen - n * arrowHalfWidth;
+    ImVec2 c = a - dir * arrowLen - n * arrowHalfWidth;
 
     if ( bool( elem & Element::outline ) )
     {
@@ -327,10 +399,10 @@ void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec
         params.list->AddTriangleFilled( a, b, c, params.colorMain.getUInt32() );
 }
 
-void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams )
+std::optional<LineResult> line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams )
 {
     if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
+        return {}; // Nothing to draw.
 
     float arrowLen = params.arrowLen * menuScaling;
 
@@ -345,6 +417,8 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
             switch ( ( front ? lineParams.capB : lineParams.capA ).decoration )
             {
             case LineCap::Decoration::none:
+            case LineCap::Decoration::extend:
+            case LineCap::Decoration::point:
                 // Nothing.
                 break;
             case LineCap::Decoration::arrow:
@@ -378,7 +452,9 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
     }
 
     if ( a == b && midpointsFixed.empty() )
-        return;
+        return {};
+
+    LineResult ret;
 
     float lineWidth = ( bool( lineParams.flags & LineFlags::narrow ) ? params.smallWidth : params.width ) * menuScaling;
     float outlineWidth = params.outlineWidth * menuScaling;
@@ -393,6 +469,8 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
         // Those are added on the ends of the line, if specified.
         std::optional<ImVec2> extraPoints[2];
 
+        auto midpointsFixed2 = midpointsFixed;
+
         for ( bool front : { false, true } )
         {
             ImVec2& point = points[front];
@@ -402,19 +480,50 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 : normalize( a - ( midpointsFixed.empty() ? b : midpointsFixed.front() ) );
 
             const LineCap& thisCap = front ? lineParams.capB : lineParams.capA;
+
+            // Draw the cap decoration.
             switch ( thisCap.decoration )
             {
             case LineCap::Decoration::none:
                 // Nothing.
                 break;
+            case LineCap::Decoration::extend:
+                point += d * params.notchHalfLen;
+                break;
             case LineCap::Decoration::arrow:
-                if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
-                    point -= d * arrowTipBackwardOffset;
-                arrowTriangle( thisElem, menuScaling, params, point, d );
-                if ( thisCap.text.isEmpty() )
-                    point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
-                else
-                    point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
+                {
+                    if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
+                        point -= d * arrowTipBackwardOffset;
+                    ImVec2 arrowTip = point;
+                    arrowTriangle( thisElem, menuScaling, params, arrowTip, d );
+                    if ( thisCap.text.isEmpty() )
+                    {
+                        point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
+
+                        // Now trim some extra points to avoid artifacts (which tend to appear when both the stipple and antialiasing are enabled,
+                        //   but can probably appear without the stipple too).
+                        ImVec2 prevPoint = arrowTip;
+                        float accumLen = 0;
+                        while ( !midpointsFixed2.empty() )
+                        {
+                            ImVec2 p = front ? midpointsFixed2.back() : midpointsFixed2.front();
+                            if ( dot( p - prevPoint, d ) > 0 )
+                                break; // The line has went into a different direction.
+                            midpointsFixed2 = midpointsFixed2.subspan( front ? 0 : 1, midpointsFixed2.size() - 1 );
+                            accumLen += length( p - prevPoint );
+                            if ( accumLen >= arrowLen )
+                                break; // The line has probably exited the arrow tip already.
+                            prevPoint = p;
+                        }
+                    }
+                    else
+                    {
+                        point += d * invertedOverhang; // Extend the line instead of shortening it, to prepare for a leader line.
+                    }
+                }
+                break;
+            case LineCap::Decoration::point:
+                ImGuiMeasurementIndicators::point( thisElem, menuScaling, params, point );
                 break;
             }
 
@@ -422,38 +531,177 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
             {
                 ImVec2 leaderDir( ( d.x > 0 ? 1.f : -1.f ), 0 );
                 extraPoint = points[front] + leaderDir * leaderLineLen;
-                text( thisElem, menuScaling, params, *extraPoint, thisCap.text, leaderDir );
-            }
-
-            switch ( thisCap.decoration )
-            {
-            case LineCap::Decoration::none:
-                if ( thisElem == Element::outline )
-                    ( extraPoint ? *extraPoint : point ) += ( extraPoint ? normalize( *extraPoint - point ) : d ) * outlineWidth;
-                break;
-            case LineCap::Decoration::arrow:
-                // Nothing.
-                break;
+                ( front ? ret.capB : ret.capA ) = text( thisElem, menuScaling, params, *extraPoint, thisCap.text, thisCap.textParams, leaderDir );
             }
         }
 
-        if ( extraPoints[0] )
-            params.list->PathLineTo( *extraPoints[0] );
-        params.list->PathLineTo( points[0] );
-        for ( ImVec2 point : midpointsFixed )
-            params.list->PathLineTo( point );
-        params.list->PathLineTo( points[1] );
-        if ( extraPoints[1] )
-            params.list->PathLineTo( *extraPoints[1] );
+        // Check this again, in case we happened to remove more midpoints.
+        if ( a == b && midpointsFixed2.empty() )
+            return;
 
-        params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
+        // Those used to extend the outline forward and backward.
+        bool isFirstPathPoint = true;
+        std::optional<ImVec2> queuedPathPoint;
+        std::optional<ImVec2> prevPathPoint;
+
+        auto pathPoint = [&]( ImVec2 p )
+        {
+            if ( elem == Element::main )
+            {
+                params.list->PathLineTo( p );
+                return;
+            }
+
+            // At this point we're drawing the outline.
+
+            if ( queuedPathPoint )
+            {
+                if ( !prevPathPoint || *prevPathPoint != *queuedPathPoint )
+                    prevPathPoint = queuedPathPoint;
+
+                if ( isFirstPathPoint && p != *queuedPathPoint )
+                {
+                    // Extend the first point backwards.
+                    isFirstPathPoint = false;
+                    *queuedPathPoint -= normalize( p - *queuedPathPoint ) * outlineWidth;
+                }
+
+                params.list->PathLineTo( *queuedPathPoint );
+            }
+            queuedPathPoint = p;
+        };
+        auto pathStroke = [&]
+        {
+            if ( elem == Element::outline )
+            {
+                if ( queuedPathPoint && prevPathPoint )
+                {
+                    // Extend the last point forward.
+                    *queuedPathPoint += normalize( *queuedPathPoint - *prevPathPoint ) * outlineWidth;
+                }
+
+                params.list->PathLineTo( *queuedPathPoint );
+
+                isFirstPathPoint = true;
+                queuedPathPoint.reset();
+                prevPathPoint.reset();
+            }
+
+            params.list->PathStroke( ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32(), 0, lineWidth + ( outlineWidth * 2 ) * ( thisElem == Element::outline ) );
+        };
+
+        auto forEachPoint = [&]( auto&& func )
+        {
+            if ( extraPoints[0] )
+                func( *extraPoints[0] );
+            func( points[0] );
+            for ( ImVec2 point : midpointsFixed2 )
+                func( point );
+            func( points[1] );
+            if ( extraPoints[1] )
+                func( *extraPoints[1] );
+        };
+
+        if ( !lineParams.stipple )
+        {
+            forEachPoint( pathPoint );
+            pathStroke();
+        }
+        else
+        {
+            const float patternLen = lineParams.stipple->patternLength * menuScaling;
+
+            float t = 0; // The current phase, between 0 and 1.
+            bool nowActive = false; // Are we in the middle of a segment right now?
+            std::size_t segmIndex = 0; // The index into the pattern.
+
+            // The last known argument to `addPoint()`.
+            std::optional<ImVec2> prevPoint;
+
+            auto addPoint = [&]( ImVec2 point )
+            {
+                if ( prevPoint )
+                {
+                    // The input segment length measured in pixels.
+                    const float inputPixelLen = length( point - *prevPoint );
+                    // The input segment length measured in pattern periods. We substract stuff from this.
+                    // This may be greater than 1.
+                    const float inputPeriodsLen = inputPixelLen / patternLen;
+
+                    // Which part of `inputPeriodsLen` was already consumed. Goes from 0 to `inputPeriodsLen`.
+                    float consumedInputPeriodsLen = 0;
+
+                    while ( true )
+                    {
+                        const Stipple::Segment& thisSegm = lineParams.stipple->segments[segmIndex];
+
+                        // How many more periods do we want to skip until the end of the output segment.
+                        float remPatternPeriodsLen = thisSegm.get( nowActive ) - t;
+                        if ( remPatternPeriodsLen < 0 )
+                            remPatternPeriodsLen += 1; // Wrap around.
+                        assert( remPatternPeriodsLen >= 0 && remPatternPeriodsLen <= 1 );
+
+                        // Can we finish the output segment during this input segment?
+                        if ( inputPeriodsLen - consumedInputPeriodsLen >= remPatternPeriodsLen )
+                        {
+                            // Yes we can.
+
+                            consumedInputPeriodsLen += remPatternPeriodsLen;
+
+                            // Emit the point.
+                            float subT = consumedInputPeriodsLen / inputPeriodsLen;
+                            pathPoint( *prevPoint * ( 1.f - subT ) + point * subT );
+                            // Update the phase.
+                            t = thisSegm.get( nowActive );
+                            // Render the output segment if we're finishing it. Update the index into the pattern.
+                            if ( nowActive )
+                            {
+                                pathStroke();
+
+                                segmIndex++;
+                                if ( segmIndex == lineParams.stipple->segments.size() )
+                                    segmIndex = 0;
+                            }
+                            // Start/stop the output segment.
+                            nowActive = !nowActive;
+                        }
+                        else
+                        {
+                            // No, the input segment is too short or the output segment is too long.
+
+                            // Advance the phase.
+                            t += inputPeriodsLen - consumedInputPeriodsLen;
+                            assert( t >= 0 && t <= 1 ); // This can't possibly wrap around, because otherwise we would just finish the segment.
+
+                            // Emit the intermediate point. This makes segments more smooth.
+                            if ( nowActive )
+                                pathPoint( point );
+
+                            break;
+                        }
+                    }
+                }
+
+                prevPoint = point;
+            };
+
+            forEachPoint( addPoint );
+
+            // Flush the last segment if needed.
+            // Here we don't need `pathPoint( *prevPoint );`, because unfinished segments already write the last point,
+            //   which is normally used to make them more smooth.
+            if ( nowActive )
+                pathStroke();
+        }
     } );
+
+    return ret;
 }
 
-void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams )
+std::optional<DistanceResult> distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams )
 {
     if ( ( elem & Element::both ) == Element{} )
-        return; // Nothing to draw.
+        return {}; // Nothing to draw.
 
     float textToLineSpacingRadius = params.textToLineSpacingRadius * menuScaling;
     ImVec2 textToLineSpacingA = params.textToLineSpacingA * menuScaling;
@@ -529,6 +777,8 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
         gapB = b + dir * invertedOverhang;
     }
 
+    DistanceResult ret;
+
     forEachElement( elem, [&]( Element thisElem )
     {
         if ( !useInvertedStyle && ( text.isEmpty() || drawTextOutOfLine || distanceParams.moveTextToLineEndIndex ) )
@@ -539,7 +789,7 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
             };
             if ( distanceParams.moveTextToLineEndIndex )
                 ( *distanceParams.moveTextToLineEndIndex ? lineParams.capB : lineParams.capA ).text = text;
-            line( thisElem, menuScaling, params, a, b, lineParams );
+            ret.line = line( thisElem, menuScaling, params, a, b, lineParams );
         }
         else
         {
@@ -557,12 +807,14 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
             drawLineEnd( true );
 
             if ( useInvertedStyle )
-                line( thisElem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
+                ret.line = line( thisElem, menuScaling, params, a - dir * ( arrowLen / 2 ), b + dir * ( arrowLen / 2 ), { .flags = LineFlags::narrow } );
         }
 
         if ( !distanceParams.moveTextToLineEndIndex )
-            ImGuiMeasurementIndicators::text( thisElem, menuScaling, params, center, text, drawTextOutOfLine ? n : ImVec2{} );
+            ret.text = ImGuiMeasurementIndicators::text( thisElem, menuScaling, params, center, text, distanceParams.textParams, drawTextOutOfLine ? n : ImVec2{} );
     } );
+
+    return ret;
 }
 
 } // namespace MR::ImGuiMeasurementIndicators

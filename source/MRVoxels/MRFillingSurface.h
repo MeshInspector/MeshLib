@@ -2,10 +2,16 @@
 
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRExpected.h>
+#include <MRMesh/MRVector3.h>
 #include <MRVoxels/MRVoxelsFwd.h>
 
+#include <variant>
+#include <optional>
 
-namespace MR::TPMS // Triply Periodic Minimal Surface
+namespace MR::FillingSurface
+{
+
+namespace TPMS // Triply Periodic Minimal Surface
 {
 
 
@@ -73,4 +79,62 @@ MRVOXELS_API float estimateDensity( Type type, float targetIso );
 /// Returns minimal reasonable resolution for given parameters
 MRVOXELS_API float getMinimalResolution( Type type, float iso );
 
+} // namespace TPMS
+
+
+
+namespace CellularSurface // Surface of cylinders in a grid
+{
+
+struct Params
+{
+    Vector3f period = Vector3f::diagonal( 1.f );    ///< the distance between consecutive cylinders in each direction
+    Vector3f width = Vector3f::diagonal( 0.3f );    ///< the width of cylinders in each direction
+    float r = 0.4f;         ///< the radius of uniting spheres
+
+    // used in tests in order to make surfaces close to their analytical expression
+    // recommended to be false for real usage for better performance
+    bool highRes = false;
+
+};
+
+/// Build a cellular surface of size \p size
+MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb = {} );
+
+/// Fill given mesh with a cellular surface
+MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallback& cb = {} );
+
+/// Estimate the density of the cellular surface
+MRVOXELS_API float estimateDensity( float period, float width, float r );
+
+/// Estimate the width that is needed to attain the \p targetDensity. Inverse of \ref estimateDensity.
+/// \note The width is not unique in general, no guarantees are made about which value among possible will be returned.
+//    Due to the simplification of the formula (sphere must either fully contain the intersection of cylinders or be inside it), solution not always exists.
+MRVOXELS_API std::optional<float> estimateWidth( float period, float r, float targetDensity );
+
 }
+
+
+// Different kinds of filling surface
+enum class Kind : int
+{
+    TPMS = 0,
+    Cellular
+};
+MRVOXELS_API std::vector<std::string> getKindNames();
+
+using MeshParamsRef = std::variant
+    < std::reference_wrapper<TPMS::MeshParams>
+    , std::reference_wrapper<CellularSurface::Params>
+    >;
+
+using ConstMeshParamsRef = std::variant
+    < std::reference_wrapper<const TPMS::MeshParams>
+    , std::reference_wrapper<const CellularSurface::Params>
+    >;
+
+/// Unified functions to build and fill using the specified filling structures.
+MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb = {} );
+MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb = {} );
+
+} // namespace FillingSurface

@@ -62,12 +62,11 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
+      config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.tag-build-release-windows == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vs19_vcpkg_version:    ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:    ${{ needs.config.outputs.vs22_vcpkg_version }}
       nuget_build:           ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
     secrets: inherit
 
@@ -134,70 +133,15 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     needs:
       - config
       - windows-build-test
-    timeout-minutes: 60
-    runs-on: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
-    env:
+    uses: ./.github/workflows/update-win-version.yml
+    with:
       vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          submodules: true
-
-      - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{env.vs19_vcpkg_version}}
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v4
-        id: vcpkg-cache
-        with:
-          key: vcpkg-cache-${{env.vs19_vcpkg_version}}
-          path: |
-            C:\vcpkg\*
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat
-
-      - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v5
-        with:
-          pattern: WindowsArchive*
-          merge-multiple: true
-
-      - name: Extract Windows Binaries
-        run: |
-          tar -xvzf MREDist_Release.zip
-          tar -xvzf MREDist_Debug.zip
-          tar -xvzf MeshLibC2Headers.zip
-
-      - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
-
-      - name: Archive Distribution
-        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
-
-      - name: Test Example Plugin # call it after archive not to pack build results
-        run: |
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
-
-      - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v4
-        with:
-          name: DistributivesWin
-          path: MeshLibDist.zip
-          retention-days: 1
+      app_version: ${{ needs.config.outputs.app_version }}
+    secrets: inherit
 
   create-nuget-package:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build_enable_ubuntu_x64 == 'true'}}
@@ -351,7 +295,7 @@ jobs:
           pattern: RunnerSysStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         id: aws-creds
         with:
           aws-region: us-east-1

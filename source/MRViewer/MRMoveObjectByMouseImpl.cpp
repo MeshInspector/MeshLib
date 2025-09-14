@@ -306,7 +306,7 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPickModifier
 {
     if ( modifiers == 0 )
         return TransformMode::Translation;
-    else if ( modifiers == GLFW_MOD_CONTROL )
+    else if ( modifiers == getGlfwModPrimaryCtrl() )
         return TransformMode::Rotation;
     return TransformMode::None;
 }

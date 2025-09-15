@@ -7,6 +7,7 @@
 #include "MRPositionVertsSmoothly.h"
 #include "MRMapOrHashMap.h"
 #include "MRBuffer.h"
+#include "MRRingIterator.h"
 
 namespace MR
 {
@@ -33,8 +34,6 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
 {
     MR_TIMER;
 
-    assert( params.dirFieldStabilizer > 0 );
-
     VertNormals dirs;
     dirs.resizeNoInit( m.topology.vertSize() );
     BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
@@ -42,11 +41,26 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
         dirs[v] = m.pseudonormal( v );
     } );
 
-    //const bool smoothDirs = params.dirFieldStabilizer < FLT_MAX;
-    //if ( smoothDirs )
+    const auto maxOffset = std::max( params.insideOffset, params.outsideOffset );
+    if ( maxOffset > 0 )
     {
         Buffer<float, VertId> vertStabilizers( m.topology.vertSize() );
         Buffer<float, UndirectedEdgeId> edgeWeights( m.topology.undirectedEdgeSize() );
+
+        BitSetParallelFor( m.topology.getValidVerts(), [&, rden = 1 / ( 2 * sqr( maxOffset ) )]( VertId v )
+        {
+            float vertStabilizer = 0;
+            for ( auto e : orgRing( m.topology, v ) )
+            {
+                // gaussian, weight is 1 for very short edges (compared to offset) and 0 for very long edges
+                auto edgeW = exp( -m.edgeLengthSq( e ) * rden );
+                if ( e.even() ) //only one thread to write in undirected edge
+                    edgeWeights[e] = edgeW;
+                // stabilizer is 1 if all edges are long compared to offset, and 0 otherwise
+                vertStabilizer = std::max( vertStabilizer, 1 - edgeW );
+            }
+            vertStabilizers[v] = vertStabilizer;
+        } );
 
         /// smooth directions on original mesh to avoid boundary effects near stitches
         positionVertsSmoothlySharpBd( m.topology, dirs, PositionVertsSmoothlyParams

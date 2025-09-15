@@ -1358,6 +1358,8 @@ void ViewerSettingsPlugin::resetSettings_()
     if ( auto& settingsManager = viewer->getViewerSettingsManager() )
         settingsManager->saveString( "multisampleAntiAliasing", "invalid" );// invalidate record, so next time - default value will be used
 
+    SceneSettings::set( SceneSettings::BoolType::AsymmetricTolerance, false );
+
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
     {

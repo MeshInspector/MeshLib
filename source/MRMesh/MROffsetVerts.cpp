@@ -6,6 +6,7 @@
 #include "MRTimer.h"
 #include "MRPositionVertsSmoothly.h"
 #include "MRMapOrHashMap.h"
+#include "MRBuffer.h"
 
 namespace MR
 {
@@ -41,11 +42,19 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
         dirs[v] = m.pseudonormal( v );
     } );
 
-    const bool smoothDirs = params.dirFieldStabilizer < FLT_MAX;
-    if ( smoothDirs )
+    //const bool smoothDirs = params.dirFieldStabilizer < FLT_MAX;
+    //if ( smoothDirs )
     {
+        Buffer<float, VertId> vertStabilizers( m.topology.vertSize() );
+        Buffer<float, UndirectedEdgeId> edgeWeights( m.topology.undirectedEdgeSize() );
+
         /// smooth directions on original mesh to avoid boundary effects near stitches
-        positionVertsSmoothlySharpBd( m.topology, dirs, { .stabilizer = params.dirFieldStabilizer } );
+        positionVertsSmoothlySharpBd( m.topology, dirs, PositionVertsSmoothlyParams
+            {
+                .vertStabilizers = [&vertStabilizers]( VertId v ) { return vertStabilizers[v]; },
+                .edgeWeights = [&edgeWeights]( UndirectedEdgeId ue ) { return edgeWeights[ue]; }
+            }
+        );
         BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
         {
             dirs[v] = dirs[v].normalized();

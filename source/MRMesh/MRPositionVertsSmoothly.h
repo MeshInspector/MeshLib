@@ -27,6 +27,9 @@ struct PositionVertsSmoothlyParams
 
     /// the more the value, the bigger attraction of each vertex to its original position
     float stabilizer = 0;
+
+    /// if specified then it is used instead of \p stabilizer
+    VertMetric vertStabilizers;
 };
 
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;

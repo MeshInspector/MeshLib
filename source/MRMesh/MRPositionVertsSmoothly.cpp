@@ -43,7 +43,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams
 void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params )
 {
     MR_TIMER;
-    assert( params.stabilizer > 0 || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
 
     const auto & verts = topology.getVertIds( params.region );
     const auto sz = verts.count();
@@ -81,7 +81,14 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
         }
         if ( params.vertShifts )
             sumFixed += sumW * Vector3d( (*params.vertShifts)[v] );
-        if ( params.stabilizer != 0 )
+        if ( params.vertStabilizers )
+        {
+            const auto s = params.vertStabilizers( v ); //for VertexMass::Unit only
+            assert( s >= 0 );
+            sumW += s;
+            sumFixed += Vector3d( s * points[v] );
+        }
+        else if ( params.stabilizer != 0 )
         {
             const auto s = params.stabilizer; //for VertexMass::Unit only
             sumW += s;

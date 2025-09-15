@@ -53,7 +53,7 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
             for ( auto e : orgRing( m.topology, v ) )
             {
                 // gaussian, weight is 1 for very short edges (compared to offset) and 0 for very long edges
-                auto edgeW = exp( -m.edgeLengthSq( e ) * rden );
+                auto edgeW = std::exp( -m.edgeLengthSq( e ) * rden );
                 if ( e.even() ) //only one thread to write in undirected edge
                     edgeWeights[e] = edgeW;
                 // stabilizer is 1 if all edges are long compared to offset, and 0 otherwise

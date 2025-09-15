@@ -428,18 +428,19 @@ void AngleTask::renderPass()
                     }
                 }
             }
-
-            // The text.
-            auto textResult = ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.common.objectToSelect, *this ), normal );
-            if ( textResult && objectIsSelectable( params_.common.objectToSelect ) )
-            {
-                clickableCornerA_ = textResult->bgCornerA;
-                clickableCornerB_ = textResult->bgCornerB;
-            }
         };
 
         drawElem( ImGuiMeasurementIndicators::Element::outline );
         drawElem( ImGuiMeasurementIndicators::Element::main );
+
+        // The text.
+        // This is intentionally outside of the `drawElem()` lambda, to be completely on top of the angle indicator.
+        auto textResult = ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.common.objectToSelect, *this ), normal );
+        if ( textResult && objectIsSelectable( params_.common.objectToSelect ) )
+        {
+            clickableCornerA_ = textResult->bgCornerA;
+            clickableCornerB_ = textResult->bgCornerB;
+        }
     }
 }
 

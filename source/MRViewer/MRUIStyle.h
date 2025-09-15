@@ -231,6 +231,10 @@ struct CheckboxOrModifierState
     // Whether the setting is currently inverted because the modifier is held.
     bool modifierHeld = false;
 
+    CheckboxOrModifierState() {}
+
+    CheckboxOrModifierState( bool baseValue ) : baseValue( baseValue ) {}
+
     // You usually want to read this instead of the variables above.
     // Returns `baseValue`, but inverted if `modifierHeld` is set.
     [[nodiscard]] explicit operator bool() const { return baseValue != modifierHeld; }

@@ -724,12 +724,18 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
 void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
 {
-    drawSeparator_( "Visuals", menuScaling );
+    const auto& style = ImGui::GetStyle();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+    MR_FINALLY{ ImGui::PopStyleVar(); };
+    ImGui::PushItemWidth( 200.0f * menuScaling );
+    MR_FINALLY{ ImGui::PopItemWidth(); };
 
     float value = 0;
-    const auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    ImGui::PushItemWidth( 200.0f * menuScaling );
+    bool valueBool = false;
+
+    drawSeparator_( "Visuals", menuScaling );
+
     value = SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha );
     if ( UI::slider<NoUnit>( "Surface opacity", value, 0.f, 1.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureMeshAlpha, value );
@@ -750,8 +756,11 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     if ( UI::slider<PixelSizeUnit>( "Line width (subfeatures)", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 
-    ImGui::PopItemWidth();
-    ImGui::PopStyleVar();
+    drawSeparator_( "Quality Control", menuScaling );
+
+    valueBool = SceneSettings::get( SceneSettings::BoolType::AsymmetricTolerance );
+    if ( UI::checkbox( "Separate +/- tolerance", &valueBool ) )
+        SceneSettings::set( SceneSettings::BoolType::AsymmetricTolerance, valueBool );
 }
 
 void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
@@ -807,7 +816,7 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
                     UI::transparentTextWrapped( "GPU multisampling settings override application value." );
                 if ( requestedMSAA != initMSAA && !viewer->isSceneTextureEnabled() )
                     UI::transparentTextWrapped( "Application requires restart to apply this change" );
-            }                
+            }
         }
     }
 

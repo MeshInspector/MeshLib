@@ -1687,24 +1687,48 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
         else
             name = fmt::format( "{} tolerance", object.getComparablePropertyName( i ) );
 
-        if ( object.comparisonToleranceIsAlwaysOnlyPositive( i ) )
+        std::string inputNamePositive = fmt::format( "###positive:{}", name );
+        std::string inputNameNegative = fmt::format( "{}###negative", name );
+
+        const bool onlyPositive = object.comparisonToleranceIsAlwaysOnlyPositive( i );
+
+        if (
+            // Object says only positive tolerance is needed. Or...
+            onlyPositive ||
+            (
+                // The tolerance is actually symmetric, and...
+                tol.positive == -tol.negative &&
+                // Asymmetric tolerance is disabled in settings, and...
+                !SceneSettings::get( SceneSettings::BoolType::AsymmetricTolerance ) &&
+                // The asymmetric input widgets are not currently enabled. This is to make sure the user has to remove the focus before the symmetry is forced.
+                ImGui::GetActiveID() != ImGui::GetID( inputNamePositive.c_str() ) &&
+                ImGui::GetActiveID() != ImGui::GetID( inputNameNegative.c_str() )
+            )
+        )
         {
             ImGui::SetNextItemWidth( fullWidth );
             if ( UI::input<LengthUnit>( name.c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+            {
+                // If the reason why we're only showing one input is NOT the fact that this tolerance is always only positive,
+                //   then make sure we're setting it symmetrically.
+                if ( !onlyPositive )
+                    tol.negative = -tol.positive;
+
                 object.setComparisonTolerance( i, tol );
+            }
         }
         else
         {
             ImGui::SetNextItemWidth( halfWidth1 );
 
-            if ( UI::input<LengthUnit>( fmt::format( "###positive:{}", name ).c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+            if ( UI::input<LengthUnit>( inputNamePositive.c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
                 object.setComparisonTolerance( i, tol );
 
             ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
 
             ImGui::SetNextItemWidth( halfWidth2 );
 
-            if ( UI::input<LengthUnit>( fmt::format( "{}###negative", name ).c_str(), tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+            if ( UI::input<LengthUnit>( inputNameNegative.c_str(), tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
                 object.setComparisonTolerance( i, tol );
         }
 

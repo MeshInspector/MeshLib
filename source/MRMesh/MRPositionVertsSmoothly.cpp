@@ -43,7 +43,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams
 void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params )
 {
     MR_TIMER;
-    assert( params.stabilizer > 0 || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
 
     const auto & verts = topology.getVertIds( params.region );
     const auto sz = verts.count();
@@ -64,24 +64,32 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
         Vector3d sumFixed;
         for ( auto e : orgRing( topology, v ) )
         {
-            sumW += 1;
+            const double edgeW = params.edgeWeights ? params.edgeWeights( e ) : 1;
+            sumW += edgeW;
             auto d = topology.dest( e );
             if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
             {
                 // free neighbor
                 int di = it->second;
                 if ( n > di ) // row > col: fill only lower left part of matrix
-                    mTriplets.emplace_back( n, di, -1 );
+                    mTriplets.emplace_back( n, di, -edgeW );
             }
             else
             {
                 // fixed neighbor
-                sumFixed += Vector3d( points[d] );
+                sumFixed += edgeW * Vector3d( points[d] );
             }
         }
         if ( params.vertShifts )
             sumFixed += sumW * Vector3d( (*params.vertShifts)[v] );
-        if ( params.stabilizer != 0 )
+        if ( params.vertStabilizers )
+        {
+            const auto s = params.vertStabilizers( v ); //for VertexMass::Unit only
+            assert( s >= 0 );
+            sumW += s;
+            sumFixed += Vector3d( s * points[v] );
+        }
+        else if ( params.stabilizer != 0 )
         {
             const auto s = params.stabilizer; //for VertexMass::Unit only
             sumW += s;

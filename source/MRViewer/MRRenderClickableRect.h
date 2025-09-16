@@ -3,7 +3,7 @@
 #include "exports.h"
 #include "MRImGui.h"
 
-#include "MRMesh/MRIRenderObject.h"
+#include "MRViewer/MRImGui.h"
 
 namespace MR
 {

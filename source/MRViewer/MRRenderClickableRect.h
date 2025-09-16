@@ -1,7 +1,7 @@
 #pragma once
 
-#include "exports.h"
-#include "MRImGui.h"
+#include "MRMesh/MRIRenderObject.h"
+#include "MRViewer/exports.h"
 
 #include "MRViewer/MRImGui.h"
 

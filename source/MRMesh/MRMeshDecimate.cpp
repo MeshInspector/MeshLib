@@ -533,9 +533,19 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     // cannot collapse internal edge if its left and right faces share another edge
     if ( vl && vr )
     {
+        bool oDegree2 = false;
         if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
-            return { .status =  CollapseStatus::SharedEdge };
+            oDegree2 = true; // (pe) is shared between left and right faces of edgeToCollapse
+
+        bool dDegree2 = false;
         if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
+            dDegree2 = true; // (pe) is shared between left and right faces of edgeToCollapse
+        
+        // if both oDegree2 and dDegree2 are true, then vl == vr
+        assert( !oDegree2 || !dDegree2 || vl == vr );
+
+        // but can collapse if left and right faces of edgeToCollapse share all 3 edges
+        if ( oDegree2 != dDegree2 )
             return { .status =  CollapseStatus::SharedEdge };
     }
     const bool collapsingFlippable = !settings_.notFlippable || !settings_.notFlippable->test( edgeToCollapse );

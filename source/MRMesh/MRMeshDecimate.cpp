@@ -1465,7 +1465,7 @@ TEST( MRMesh, MeshDecimateParallel )
     DecimateSettings settings
     {
         .maxError = 1000000, // no actual limit
-        .maxDeletedVertices = cNumVerts - 1, // also no limit, but tests limitedDeletion mode
+        .maxDeletedVertices = cNumVerts - 3,
         .subdivideParts = 8
     };
     decimateMesh( mesh, settings );

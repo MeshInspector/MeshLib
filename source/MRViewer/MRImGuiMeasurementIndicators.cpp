@@ -546,7 +546,7 @@ std::optional<LineResult> line( Element elem, float menuScaling, const Params& p
 
         auto pathPoint = [&]( ImVec2 p )
         {
-            if ( elem == Element::main )
+            if ( thisElem == Element::main )
             {
                 params.list->PathLineTo( p );
                 return;
@@ -572,7 +572,7 @@ std::optional<LineResult> line( Element elem, float menuScaling, const Params& p
         };
         auto pathStroke = [&]
         {
-            if ( elem == Element::outline )
+            if ( thisElem == Element::outline )
             {
                 if ( queuedPathPoint && prevPathPoint )
                 {

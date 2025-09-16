@@ -51,7 +51,6 @@ void SceneSettings::setCNCMachineSettings( const CNCMachineSettings& settings )
 SceneSettings::SceneSettings()
 {
     boolSettings_[int( BoolType::UseDefaultScenePropertiesOnDeserialization )] = true;
-    boolSettings_[int( BoolType::AsymmetricTolerance )] = false;
 
     floatSettings_[int( FloatType::FeaturePointsAlpha )] = 1;
     floatSettings_[int( FloatType::FeatureLinesAlpha )] = 1;

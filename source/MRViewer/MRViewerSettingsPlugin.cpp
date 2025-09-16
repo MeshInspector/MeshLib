@@ -755,12 +755,6 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     value = SceneSettings::get( SceneSettings::FloatType::FeatureSubLineWidth );
     if ( UI::slider<PixelSizeUnit>( "Line width (subfeatures)", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
-
-    drawSeparator_( "Quality Control", menuScaling );
-
-    valueBool = SceneSettings::get( SceneSettings::BoolType::AsymmetricTolerance );
-    if ( UI::checkbox( "Separate +/- tolerance", &valueBool ) )
-        SceneSettings::set( SceneSettings::BoolType::AsymmetricTolerance, valueBool );
 }
 
 void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
@@ -1357,8 +1351,6 @@ void ViewerSettingsPlugin::resetSettings_()
 
     if ( auto& settingsManager = viewer->getViewerSettingsManager() )
         settingsManager->saveString( "multisampleAntiAliasing", "invalid" );// invalidate record, so next time - default value will be used
-
-    SceneSettings::set( SceneSettings::BoolType::AsymmetricTolerance, false );
 
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )

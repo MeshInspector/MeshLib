@@ -18,8 +18,6 @@ public:
     {
         /// on deserialization replace object properties with default values from SceneSettings and SceneColors
         UseDefaultScenePropertiesOnDeserialization,
-        /// When setting tolerance values for measurements, allow different positive and negative tolerance.
-        AsymmetricTolerance,
         /// total count
         Count
     };

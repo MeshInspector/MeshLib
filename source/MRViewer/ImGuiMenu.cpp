@@ -1692,6 +1692,8 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
 
         const bool onlyPositive = object.comparisonToleranceIsAlwaysOnlyPositive( i );
 
+        bool asymmetric = true;
+
         if (
             // Object says only positive tolerance is needed. Or...
             onlyPositive ||
@@ -1699,7 +1701,7 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
                 // The tolerance is actually symmetric, and...
                 tol.positive == -tol.negative &&
                 // Asymmetric tolerance is disabled in settings, and...
-                !SceneSettings::get( SceneSettings::BoolType::AsymmetricTolerance ) &&
+                !asymmetric &&
                 // The asymmetric input widgets are not currently enabled. This is to make sure the user has to remove the focus before the symmetry is forced.
                 ImGui::GetActiveID() != ImGui::GetID( inputNamePositive.c_str() ) &&
                 ImGui::GetActiveID() != ImGui::GetID( inputNameNegative.c_str() )

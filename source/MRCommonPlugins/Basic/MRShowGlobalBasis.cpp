@@ -89,7 +89,7 @@ public:
         switch ( state )
         {
         case State::none:
-            icon = "Viewport basis"; // This needs to be changed.
+            icon = "Viewport basis off";
             break;
         case State::basis:
             icon = "Viewport basis";

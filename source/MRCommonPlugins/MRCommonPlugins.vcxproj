@@ -292,10 +292,14 @@
     <Image Include="resource\icons\X3\Top View.png" />
     <Image Include="resource\icons\X3\Vertical Viewports.png" />
     <Image Include="resource\icons\X3\Viewer settings.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis off.png" />
     <Image Include="resource\independent_icons\X1\Viewport basis.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis and grid.png" />
     <Image Include="resource\independent_icons\X1\Viewport projection orthographic.png" />
     <Image Include="resource\independent_icons\X1\Viewport projection perspective.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis off.png" />
     <Image Include="resource\independent_icons\X3\Viewport basis.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis and grid.png" />
     <Image Include="resource\independent_icons\X3\Viewport projection orthographic.png" />
     <Image Include="resource\independent_icons\X3\Viewport projection perspective.png" />
   </ItemGroup>

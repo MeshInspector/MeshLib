@@ -27,6 +27,12 @@ struct PositionVertsSmoothlyParams
 
     /// the more the value, the bigger attraction of each vertex to its original position
     float stabilizer = 0;
+
+    /// if specified then it is used instead of \p stabilizer
+    VertMetric vertStabilizers;
+
+    /// if specified then it is used for edge weights instead of default 1
+    UndirectedEdgeMetric edgeWeights;
 };
 
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;

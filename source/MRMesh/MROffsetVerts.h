@@ -18,11 +18,6 @@ struct ThickenParams
 
     /// the amount of offset for cloned mirrored mesh vertices in the opposite direction
     float insideOffset = 0;
-
-    /// offset directions of vertices can be smoothed for nearby vertices to have similar directions,
-    /// the value FLT_MAX means no smoothing at all, and use vertices' pseudo-normals as is for offset directions,
-    /// other values >= 0 active directions smoothing, which becomes larger for smaller positive values
-    float dirFieldStabilizer = FLT_MAX;
 };
 
 /// given a mesh \p m, representing a surface,

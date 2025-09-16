@@ -732,7 +732,6 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     MR_FINALLY{ ImGui::PopItemWidth(); };
 
     float value = 0;
-    bool valueBool = false;
 
     drawSeparator_( "Visuals", menuScaling );
 

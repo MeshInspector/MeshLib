@@ -49,7 +49,7 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
 
         BitSetParallelFor( m.topology.getValidVerts(), [&, rden = 1 / ( 2 * sqr( maxOffset ) )]( VertId v )
         {
-            float vertStabilizer = 0;
+            float vertStabilizer = 1;
             for ( auto e : orgRing( m.topology, v ) )
             {
                 // gaussian, weight is 1 for very short edges (compared to offset) and 0 for very long edges
@@ -57,7 +57,7 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
                 if ( e.even() ) //only one thread to write in undirected edge
                     edgeWeights[e] = edgeW;
                 // stabilizer is 1 if all edges are long compared to offset, and 0 otherwise
-                vertStabilizer = std::max( vertStabilizer, 1 - edgeW );
+                vertStabilizer = std::min( vertStabilizer, 1 - edgeW );
             }
             vertStabilizers[v] = vertStabilizer;
         } );

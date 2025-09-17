@@ -141,7 +141,6 @@
     <ClCompile Include="MRUIRectAllocator.cpp" />
     <ClCompile Include="MRUINonOverlappingLabels.cpp" />
     <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
-    <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRSceneOperations.cpp" />
     <ClCompile Include="MRSceneReorder.cpp" />
     <ClCompile Include="MRModalDialog.cpp" />

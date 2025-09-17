@@ -74,7 +74,6 @@ ELSEIF(APPLE)
     MRMesh
     MRIOExtras
     MRSymbolMesh
-    GTest::gtest
     fmt
     tbb
     spdlog
@@ -91,7 +90,6 @@ ELSEIF(APPLE)
   )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(GDCM CONFIG REQUIRED)
-  find_package(GTest REQUIRED)
   find_package(cpr REQUIRED)
   find_package(glad REQUIRED)
   find_package(hidapi REQUIRED)
@@ -100,7 +98,6 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     MRMesh
     MRIOExtras
     MRSymbolMesh
-    GTest::gtest
     cpr::cpr
     imgui
     glad::glad
@@ -124,7 +121,6 @@ ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
     MRMesh
     MRIOExtras
     MRSymbolMesh
-    gtest
     cpr
     imgui
     glad

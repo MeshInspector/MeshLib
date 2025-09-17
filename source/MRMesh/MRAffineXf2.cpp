@@ -2,6 +2,16 @@
 #include "MRConstants.h"
 #include "MRGTest.h"
 
+#ifdef MRMESH_NO_GTEST
+  #if MRMESH_NO_GTEST
+    #pragma message("MRMesh: MRMESH_NO_GTEST 1")
+  #else
+    #pragma message("MRMesh: MRMESH_NO_GTEST 0")
+  #endif
+#else
+  #pragma message("MRMesh: MRMESH_NO_GTEST not defined")
+#endif
+
 namespace MR
 {
 

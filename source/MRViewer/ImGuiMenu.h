@@ -433,7 +433,7 @@ protected:
         MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks ) override;
-        MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
+        MRVIEWER_API void finishBackwardPass( ViewportId viewport, const BasicUiRenderTask::BackwardPassParams& params ) override;
 
         // Which things are blocked by our `renderUi()` calls.
         BasicUiRenderTask::InteractionMask consumedInteractions{};

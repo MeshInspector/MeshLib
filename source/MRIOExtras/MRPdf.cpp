@@ -215,6 +215,12 @@ constexpr HPDF_REAL labelHeight = 10 * scaleFactor;
 constexpr float tableCellPaddingX = 4 * scaleFactor;
 constexpr float tableCellPaddingY = 1 * scaleFactor;
 
+
+float getTextHeight( float fontSize, int lineCount = 1 )
+{
+    return fontSize * ( lineCount * lineSpacingScale - ( lineSpacingScale - 1.f ) );
+}
+
 }
 
 std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
@@ -346,7 +352,7 @@ void Pdf::addText(const std::string& text, const TextParams& params )
         return;
 
     int strNum = int( calcTextLineWidths_( text, borderFieldRight - cursorX_, params ).size() );
-    const auto textHeight = static_cast< HPDF_REAL >( params.fontSize * strNum * lineSpacingScale );
+    const auto textHeight = static_cast< HPDF_REAL >( getTextHeight( params.fontSize, strNum ) );
 
     // TODO need add the ability to transfer text between pages
     if ( cursorY_ - textHeight < borderFieldBottom )
@@ -686,19 +692,19 @@ Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
     params.textParams.alignment = AlignmentHorizontal::Center;
     params.textParams.colorText = tableParams_.colorTitleText;
 
-    const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
+    const auto cellHeight = params.textParams.fontSize * 1.6f;
     
-    if ( cursorY_ - textHeight < borderFieldBottom )
+    if ( cursorY_ - cellHeight < borderFieldBottom )
         newPage();
 
     float posX = borderFieldLeft;
     for ( int i = 0; i < titles.size(); ++i )
     {
-        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        params.rect = Box2f( { posX, cursorY_ - cellHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
         drawTextCell( titles[i], params );
         posX += columnsInfo_[i].width;
     }
-    cursorY_ -= textHeight;
+    cursorY_ -= cellHeight;
     return {};
 }
 
@@ -726,15 +732,15 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
     params.textParams.alignment = AlignmentHorizontal::Center;
     params.textParams.colorText = tableParams_.colorCellText;
 
-    const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
+    const auto cellHeight = params.textParams.fontSize * 1.6f;
 
-    if ( cursorY_ - textHeight < borderFieldBottom )
+    if ( cursorY_ - cellHeight < borderFieldBottom )
         newPage();
 
     float posX = borderFieldLeft;
     for ( int i = 0; i < cells.size(); ++i )
     {
-        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        params.rect = Box2f( { posX, cursorY_ - cellHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
         std::string text = cells[i].toString( columnsInfo_[i].valueFormat );
         if ( tableCustomRule_ )
         {
@@ -756,7 +762,7 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
         posX += columnsInfo_[i].width;
     }
     ++rowCounter_;
-    cursorY_ -= textHeight;
+    cursorY_ -= cellHeight;
     return {};
 }
 
@@ -782,12 +788,17 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize ) );
 
-    const float verticalOffset = ( rect.size().y - params.fontSize * ( widths.size() * lineSpacingScale - ( lineSpacingScale  - 1.f ) ) ) / 2.f;
+    const float verticalOffset = ( rect.size().y - getTextHeight( params.fontSize, int( widths.size() ) ) ) / 2.f;
 
     Vector4f c = Vector4f( params.colorText );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBFill( state_->activePage, c.x, c.y, c.z ) );
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
+
+    // this is the vertical alignment in the center of the cell
+    const float realBaseline = params.fontSize / 2.f * ( 1 + MR_HPDF_CHECK_ERROR( HPDF_Font_GetCapHeight( state_->getFont( params.fontName ) ) ) / 1000.f );
+    const auto bb = MR_HPDF_CHECK_ERROR( HPDF_Font_GetBBox( state_->getFont( params.fontName ) ) );
+    const float fontGlyphShift = params.fontSize * bb.top / 1000.f - realBaseline;
 
     HPDF_TextAlignment textAlignment;
     if ( params.alignment == AlignmentHorizontal::Left )
@@ -796,8 +807,8 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
         textAlignment = HPDF_TALIGN_RIGHT;
     else
         textAlignment = HPDF_TALIGN_CENTER;
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y - verticalOffset,
-        rect.max.x, rect.min.y + verticalOffset, text.c_str(), textAlignment, nullptr ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y - verticalOffset + fontGlyphShift,
+        rect.max.x, rect.min.y + verticalOffset + fontGlyphShift, text.c_str(), textAlignment, nullptr ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
 
     if ( params.underline )
@@ -813,7 +824,7 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
                 posX = rect.max.x - widths[i];
             else if ( params.alignment == AlignmentHorizontal::Center )
                 posX = rect.center().x - widths[i] / 2.f;
-            const float posY = rect.max.y - verticalOffset - params.fontSize * ( lineSpacingScale * underlineShiftScale + ( 1.f - underlineShiftScale ) ) - i * params.fontSize * lineSpacingScale;
+            const float posY = rect.max.y - verticalOffset - realBaseline - params.fontSize * ( ( lineSpacingScale - 1.f ) * underlineShiftScale + i * lineSpacingScale );
             MR_HPDF_CHECK_RES_STATUS( HPDF_Page_MoveTo( state_->activePage, posX, posY ) );
             MR_HPDF_CHECK_RES_STATUS( HPDF_Page_LineTo( state_->activePage, posX + widths[i], posY ) );
         }

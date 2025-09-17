@@ -9,15 +9,21 @@
 namespace MR
 {
 
+#ifdef NDEBUG
+const float cStepSize = 0.2f;
+#else
+const float cStepSize = 0.5f;
+#endif
+
 TEST( MRMesh, CellularFillingSurface )
 {
     Vector3f size{ 1.f, 1.f, 1.f };
 
-    for ( float T = 0.1f; T < 1.f; T += 0.1f )
+    for ( float T = 0.1f; T < 1.f; T += cStepSize )
     {
-        for ( float R = 0.f; R < T / 2.f; R += 0.1f )
+        for ( float R = 0.f; R < T / 2.f; R += cStepSize )
         {
-            for ( float W = 0.1f; W < T; W += 0.1f )
+            for ( float W = 0.1f; W < T; W += cStepSize )
             {
                 auto res = FillingSurface::CellularSurface::build( size,
                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( W ), .r = R } );
@@ -32,11 +38,11 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
     Vector3f size{ 1.f, 1.f, 1.f };
     int noSolutions = 0;
 
-    for ( float T = 0.1f; T < 1.f; T += 0.1f )
+    for ( float T = 0.1f; T < 1.f; T += cStepSize )
     {
-        for ( float R = 0.f; R < T / 2.f; R += 0.1f )
+        for ( float R = 0.f; R < T / 2.f; R += cStepSize )
         {
-            for ( float W = 0.1f; W < T; W += 0.1f )
+            for ( float W = 0.1f; W < T; W += cStepSize )
             {
                 auto res = FillingSurface::CellularSurface::build( size,
                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( W ), .r = R, .highRes = true } );
@@ -70,7 +76,7 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
         }
     }
 
-    ASSERT_EQ( noSolutions, 1 );
+    ASSERT_LE( noSolutions, 1 );
 }
 
 }

@@ -13,13 +13,14 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 IF(APPLE)
+  find_package(GTest REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
     MRViewer
     jsoncpp
     fmt
-    gtest
+    GTest::gtest
     spdlog
     OpenVDB
     tbb

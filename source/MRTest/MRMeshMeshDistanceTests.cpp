@@ -9,7 +9,7 @@
 namespace MR
 {
 
-TEST(MRMesh, MeshDistance)
+TEST(MRTest, MeshDistance)
 {
     Mesh sphere1 = makeUVSphere( 1, 8, 8 );
 
@@ -27,7 +27,7 @@ TEST(MRMesh, MeshDistance)
     EXPECT_TRUE( dist12 > 0.9f && dist12 < 1.0f );
 }
 
-TEST( MRMesh, MeshMeshClosestPoint )
+TEST( MRTest, MeshMeshClosestPoint )
 {
     auto cube1 = makeCube();
     auto cube2 = makeCube();

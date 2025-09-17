@@ -9,7 +9,7 @@
 namespace MR
 {
 
-TEST( MRMesh, CellularFillingSurface )
+TEST( MRTest, CellularFillingSurface )
 {
     Vector3f size{ 1.f, 1.f, 1.f };
 
@@ -27,7 +27,7 @@ TEST( MRMesh, CellularFillingSurface )
     }
 }
 
-TEST( MRMesh, CellularFillingSurfaceDensity )
+TEST( MRTest, CellularFillingSurfaceDensity )
 {
     Vector3f size{ 1.f, 1.f, 1.f };
     int noSolutions = 0;

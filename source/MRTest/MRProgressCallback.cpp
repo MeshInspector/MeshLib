@@ -5,7 +5,7 @@
 namespace MR
 {
 
-TEST( MRMesh, ProgressCallback )
+TEST( MRTest, ProgressCallback )
 {
     std::vector<float> progressValues;
     ProgressCallback cb = [&progressValues] ( float v )

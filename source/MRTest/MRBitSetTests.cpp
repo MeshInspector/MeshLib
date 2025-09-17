@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST(MRMesh, BitSet)
+TEST(MRTest, BitSet)
 {
     BitSet bs0(4);
     bs0.set(0);
@@ -49,7 +49,7 @@ TEST(MRMesh, BitSet)
     EXPECT_TRUE( bs0.is_subset_of( bs3 ) );
 }
 
-TEST(MRMesh, TaggedBitSet)
+TEST(MRTest, TaggedBitSet)
 {
     VertBitSet bs0( 3 );
     bs0.set( VertId( 0 ) );

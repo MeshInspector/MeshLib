@@ -11,7 +11,7 @@
 namespace MR
 {
 
-TEST( MRMesh, findClosestWeightedPoint )
+TEST( MRTest, findClosestWeightedPoint )
 {
     PointCloud pc;
     pc.points.push_back( Vector3f( 0, 0, 0 ) );
@@ -51,7 +51,7 @@ TEST( MRMesh, findClosestWeightedPoint )
     }
 }
 
-TEST( MRMesh, findClosestWeightedMeshPoint )
+TEST( MRTest, findClosestWeightedMeshPoint )
 {
     Triangulation t{
         { 0_v, 1_v, 2_v }
@@ -100,7 +100,7 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
     }
 }
 
-TEST( MRMesh, weightedMeshShell )
+TEST( MRTest, weightedMeshShell )
 {
     auto cube = makeCube();
     auto rot = Matrix3f::rotation( { 1.f, 1.f, 1.f }, PI_F / 6.f );
@@ -166,13 +166,13 @@ static void testClosestWeightedMeshPointContinuity( bool bidir )
     EXPECT_NEAR( maxGrad, 1.f, 0.1f ); // gradient should be 1 as distance should change linearly
 }
 
-TEST( MRMesh, findClosestWeightedMeshPointContinuity )
+TEST( MRTest, findClosestWeightedMeshPointContinuity )
 {
     testClosestWeightedMeshPointContinuity( false );
     testClosestWeightedMeshPointContinuity( true );
 }
 
-TEST( MRMesh, WeightedClosed )
+TEST( MRTest, WeightedClosed )
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -216,7 +216,7 @@ TEST( MRMesh, WeightedClosed )
     ASSERT_FLOAT_EQ( maxDiff, 1.f );
 }
 
-TEST( MRMesh, findClosestWeightedMeshPointSharpAngle )
+TEST( MRTest, findClosestWeightedMeshPointSharpAngle )
 {
     Triangulation t{
         { 0_v, 2_v, 1_v },

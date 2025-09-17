@@ -5,7 +5,7 @@
 namespace MR
 {
 
-TEST( MRMesh, Laplacian )
+TEST( MRTest, Laplacian )
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
 

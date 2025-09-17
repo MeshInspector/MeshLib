@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, doSegmentSegmentIntersect )
+TEST( MRTest, doSegmentSegmentIntersect )
 {
     std::array<PreciseVertCoords2, 4> vs = 
     { 
@@ -33,7 +33,7 @@ TEST( MRMesh, doSegmentSegmentIntersect )
     EXPECT_FALSE( res.doIntersect );
 }
 
-TEST( MRMesh, sosCCW )
+TEST( MRTest, sosCCW )
 {
     std::array<PreciseVertCoords2, 9> vs =
     {
@@ -57,7 +57,7 @@ TEST( MRMesh, sosCCW )
     EXPECT_TRUE(  ccw( { vs[0],vs[3],vs[8] } ) );
 }
 
-TEST( MRMesh, sosCCW2 )
+TEST( MRTest, sosCCW2 )
 {
     std::array<PreciseVertCoords2, 4> vs =
     {
@@ -71,7 +71,7 @@ TEST( MRMesh, sosCCW2 )
     EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
 }
 
-TEST( MRMesh, sosSmaller2 )
+TEST( MRTest, sosSmaller2 )
 {
     std::array<PreciseVertCoords2, 5> vs =
     {
@@ -93,7 +93,7 @@ TEST( MRMesh, sosSmaller2 )
     EXPECT_FALSE( smaller2( { vs[1], vs[0], vs[4], vs[2] } ) );
 }
 
-TEST( MRMesh, sosSmaller2FullDegen )
+TEST( MRTest, sosSmaller2FullDegen )
 {
     std::array<PreciseVertCoords2, 4> vs = 
     { 
@@ -113,7 +113,7 @@ TEST( MRMesh, sosSmaller2FullDegen )
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, sosInCircle )
+TEST( MRTest, sosInCircle )
 {
     std::array<PreciseVertCoords2, 4> vs =
     {
@@ -133,7 +133,7 @@ TEST( MRMesh, sosInCircle )
     EXPECT_TRUE( inCircle( vs ) );
 }
 
-TEST( MRMesh, segmentIntersectionOrder2a )
+TEST( MRTest, segmentIntersectionOrder2a )
 {
     const std::array<PreciseVertCoords2, 6> vs = 
     { 
@@ -163,7 +163,7 @@ TEST( MRMesh, segmentIntersectionOrder2a )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[4], vs[5], vs[0], vs[2], vs[0], vs[3] } ) );
 }
 
-TEST( MRMesh, segmentIntersectionOrder2FullDegen )
+TEST( MRTest, segmentIntersectionOrder2FullDegen )
 {
     std::array<PreciseVertCoords2, 6> vs = 
     { 
@@ -191,7 +191,7 @@ TEST( MRMesh, segmentIntersectionOrder2FullDegen )
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, doSegmentSegmentIntersectPartialDegen )
+TEST( MRTest, doSegmentSegmentIntersectPartialDegen )
 {
     EXPECT_TRUE( doSegmentSegmentIntersect( {
         PreciseVertCoords2{ 0_v, { 0,  0} },
@@ -233,7 +233,7 @@ TEST( MRMesh, doSegmentSegmentIntersectPartialDegen )
         }
 }
 
-TEST( MRMesh, sosInCircle2 )
+TEST( MRTest, sosInCircle2 )
 {
     std::array<PreciseVertCoords2, 5> vs =
     {
@@ -257,7 +257,7 @@ TEST( MRMesh, sosInCircle2 )
     EXPECT_FALSE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
-TEST( MRMesh, segmentIntersectionOrder2b )
+TEST( MRTest, segmentIntersectionOrder2b )
 {
     PreciseVertCoords2 vs[6] =
     {
@@ -292,7 +292,7 @@ TEST( MRMesh, segmentIntersectionOrder2b )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[4], vs[5], vs[2] } ) );
 }
 
-TEST( MRMesh, findTwoSegmentsIntersection )
+TEST( MRTest, findTwoSegmentsIntersection )
 {
     const Vector3i a( -100, -50 , 0 );
     const Vector3i b(  300, 150 , 0 );
@@ -326,7 +326,7 @@ TEST( MRMesh, findTwoSegmentsIntersection )
     EXPECT_EQ( *v, d );
 }
 
-TEST( MRMesh, orientParaboloid3d )
+TEST( MRTest, orientParaboloid3d )
 {
     // large numbers requiring more than 64-bit arithmetic, and degeneration (b==c)
     const Vector2i a{ 54209929, -710917541 };
@@ -334,7 +334,7 @@ TEST( MRMesh, orientParaboloid3d )
     EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
 }
 
-TEST( MRMesh, doTriangleSegmentIntersect )
+TEST( MRTest, doTriangleSegmentIntersect )
 {
     const std::array<PreciseVertCoords, 5> vs = 
     { 
@@ -352,7 +352,7 @@ TEST( MRMesh, doTriangleSegmentIntersect )
     EXPECT_TRUE( res.dIsLeftFromABC );
 }
 
-TEST( MRMesh, doTriangleSegmentIntersect2 )
+TEST( MRTest, doTriangleSegmentIntersect2 )
 {
     const std::array<PreciseVertCoords, 8> vs = 
     { 
@@ -396,7 +396,7 @@ TEST( MRMesh, doTriangleSegmentIntersect2 )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[3], vs[0], vs[4], vs[5] } ) );
 }
 
-TEST( MRMesh, doTriangleSegmentIntersectFullDegen )
+TEST( MRTest, doTriangleSegmentIntersectFullDegen )
 {
     std::array<PreciseVertCoords, 5> vs = 
     { 
@@ -419,7 +419,7 @@ TEST( MRMesh, doTriangleSegmentIntersectFullDegen )
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, segmentIntersectionOrder3FullDegen )
+TEST( MRTest, segmentIntersectionOrder3FullDegen )
 {
     std::array<PreciseVertCoords, 8> vs;
     for ( VertId i = 0_v; i < 8; ++i )
@@ -450,7 +450,7 @@ TEST( MRMesh, segmentIntersectionOrder3FullDegen )
     while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, segmentIntersectionOrder3a )
+TEST( MRTest, segmentIntersectionOrder3a )
 {
     PreciseVertCoords vs[8] =
     {
@@ -489,7 +489,7 @@ TEST( MRMesh, segmentIntersectionOrder3a )
     EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[6], vs[7], vs[5], vs[6], vs[7] } ) );
 }
 
-TEST( MRMesh, segmentIntersectionOrder3b )
+TEST( MRTest, segmentIntersectionOrder3b )
 {
     PreciseVertCoords vs[8] =
     {
@@ -510,7 +510,7 @@ TEST( MRMesh, segmentIntersectionOrder3b )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[2], vs[2], vs[3], vs[4] } ) );
 }
 
-TEST( MRMesh, getToIntConverter )
+TEST( MRTest, getToIntConverter )
 {
     auto toInt = getToIntConverter( Box3d( {0,0,-1.0}, {0,0,1.0} ) );
     auto i0 = toInt( { 0,0,-1.f } );

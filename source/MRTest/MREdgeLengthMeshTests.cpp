@@ -6,7 +6,7 @@
 namespace MR
 {
 
-TEST( MRMesh, EdgeLengthMesh )
+TEST( MRTest, EdgeLengthMesh )
 {
     auto mesh = makeCube();
     auto elMesh = EdgeLengthMesh::fromMesh( mesh );

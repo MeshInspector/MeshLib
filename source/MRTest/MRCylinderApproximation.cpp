@@ -14,7 +14,7 @@ constexpr int thetaResolution = 180;
 namespace MR
 {
 
-TEST( MRMesh, CylinderApproximation )
+TEST( MRTest, CylinderApproximation )
 {
     float originalRadius = 1.5f;
     float originalLength = 10.0f;

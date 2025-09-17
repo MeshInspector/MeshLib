@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST( MRMesh, Polyline2 )
+TEST( MRTest, Polyline2 )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );
@@ -37,7 +37,7 @@ TEST( MRMesh, Polyline2 )
     }
 }
 
-TEST( MRMesh, Polyline2LoopDir )
+TEST( MRTest, Polyline2LoopDir )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );
@@ -55,7 +55,7 @@ TEST( MRMesh, Polyline2LoopDir )
     EXPECT_TRUE( plClosed.loopDirArea( 1_e ).z < 0.0f );
 }
 
-TEST( MRMesh, Polyline3 )
+TEST( MRTest, Polyline3 )
 {
     Contour3f cont;
     cont.push_back( Vector3f( 0.f, 0.f, 0.f ) );
@@ -88,7 +88,7 @@ TEST( MRMesh, Polyline3 )
     }
 }
 
-TEST( MRMesh, PolylineSplitEdge )
+TEST( MRTest, PolylineSplitEdge )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );

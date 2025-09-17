@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, BooleanIntersectionsSort )
+TEST( MRTest, BooleanIntersectionsSort )
 {
     Mesh meshA;
     meshA.points = std::vector<Vector3f>
@@ -61,7 +61,7 @@ TEST( MRMesh, BooleanIntersectionsSort )
         EXPECT_TRUE( dot( meshA.dirDblArea( f ), aNorm ) > 0.0f );
 }
 
-TEST( MRMesh, MeshCollidePrecise )
+TEST( MRTest, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );
     auto meshB = makeTorus( 1.1f, 0.5f, 8, 8 );

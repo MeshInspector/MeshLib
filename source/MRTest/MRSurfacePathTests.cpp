@@ -5,7 +5,7 @@
 namespace MR
 {
 
-TEST( MRMesh, SurfacePathTargets )
+TEST( MRTest, SurfacePathTargets )
 {
     Triangulation t{
         { 0_v, 1_v, 2_v }

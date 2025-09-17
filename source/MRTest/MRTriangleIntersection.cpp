@@ -35,7 +35,7 @@ namespace
 
 namespace MR
 {
-TEST( MRMesh, TriangleSegmentIntersectFloat )
+TEST( MRTest, TriangleSegmentIntersectFloat )
 {
     Vector3f a{2,  1, 0};
     Vector3f b{-2,  1, 0};
@@ -49,7 +49,7 @@ TEST( MRMesh, TriangleSegmentIntersectFloat )
     EXPECT_TRUE( intersection );
 }
 
-TEST( MRMesh, PointTriangleIntersectFloat )
+TEST( MRTest, PointTriangleIntersectFloat )
 {
     EXPECT_TRUE( isPointInPlane( ::T1[0], ::T1[0], ::T1[1], ::T1[2] ) );
     EXPECT_TRUE( isPointInPlane( ( ::T1[0] + ::T1[1] + ::T1[2] ) / 3.0f, ::T1[0], ::T1[1], ::T1[2] ) );

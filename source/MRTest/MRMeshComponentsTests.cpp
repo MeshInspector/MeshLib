@@ -7,7 +7,7 @@
 namespace MR
 {
 
-TEST(MRMesh, getAllComponentsEdges)
+TEST(MRTest, getAllComponentsEdges)
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -44,7 +44,7 @@ TEST(MRMesh, getAllComponentsEdges)
     ASSERT_EQ( comp[0].count(), 5 );
 }
 
-TEST(MRMesh, getLargestComponentVerts)
+TEST(MRTest, getLargestComponentVerts)
 {
     auto mesh = makeCube();
     {

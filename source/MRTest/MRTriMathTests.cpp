@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST( MRMesh, TriMath )
+TEST( MRTest, TriMath )
 {
     EXPECT_EQ( circumcircleCenter( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), Vector3d( 0.5, 0.5, 0 ) );
     EXPECT_EQ( circumcircleCenter( Vector3d{ 0, 0, 1 }, Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 } ), Vector3d( 0, 0, 0.5 ) );
@@ -30,7 +30,7 @@ TEST( MRMesh, TriMath )
     EXPECT_EQ( quadrangleOtherDiagonal( 5., 4., 3., 4., 5. ), std::sqrt( 73. ) );
 }
 
-TEST( MRMesh, gradientInTri )
+TEST( MRTest, gradientInTri )
 {
     Vector3d a{ 1, 1, 1 };
     Vector3d b{ 1, 2, 1 };
@@ -93,7 +93,7 @@ TEST( MRMesh, gradientInTri )
     EXPECT_FALSE( e.has_value() );
 }
 
-TEST( MRMesh, tangentPlaneToSpheres )
+TEST( MRTest, tangentPlaneToSpheres )
 {
     auto p0 = tangentPlaneToSpheres( Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 }, 1., 2., 3. );
     EXPECT_FALSE( p0.has_value() );
@@ -112,7 +112,7 @@ TEST( MRMesh, tangentPlaneToSpheres )
     EXPECT_NEAR( p3->d, 0, 1e-15 );
 }
 
-TEST( MRMesh, quadrangleOtherDiagonal )
+TEST( MRTest, quadrangleOtherDiagonal )
 {
     const double exp1 = 3.5551215012835908;
     auto d1 = quadrangleOtherDiagonal( 3., 4., 6., 3., 4. );
@@ -136,7 +136,7 @@ TEST( MRMesh, quadrangleOtherDiagonal )
     EXPECT_NEAR( float( exp3 ), *d3f, 1e-6f );
 }
 
-TEST( MRMesh, triangleAnglesFromEdgeLengths )
+TEST( MRTest, triangleAnglesFromEdgeLengths )
 {
     EXPECT_NEAR(            cotan( 3., 4., 5. ), 4. / 3, 1e-15 );
     EXPECT_NEAR( tanSqOfHalfAngle( 3., 4., 5. ), 1. / 9, 1e-15 );

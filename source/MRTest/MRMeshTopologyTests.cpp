@@ -4,7 +4,7 @@
 namespace MR
 {
 
-TEST( MRMesh, splitEdge )
+TEST( MRTest, splitEdge )
 {
     MeshTopology topology;
     EdgeId a = topology.makeEdge();

@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, ExtractPlaneSections )
+TEST( MRTest, ExtractPlaneSections )
 {
     Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f() );
     Plane3f plane = Plane3f{ Vector3f::diagonal( 1.F ), 1.F }.normalized();
@@ -88,7 +88,7 @@ TEST( MRMesh, ExtractPlaneSections )
     }
 }
 
-TEST( MRMesh, ExtractXYPlaneSections )
+TEST( MRTest, ExtractXYPlaneSections )
 {
     auto testSection = []( const MeshPart & mp, float zLevel )
     {
@@ -154,7 +154,7 @@ TEST( MRMesh, ExtractXYPlaneSections )
     EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::Yes ).size(), 6 );
 }
 
-TEST( MRMesh, TrackPlaneSection )
+TEST( MRTest, TrackPlaneSection )
 {
     const Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f::diagonal( -0.5F ) );
     const float eps = 1e-6f;
@@ -190,7 +190,7 @@ TEST( MRMesh, TrackPlaneSection )
         EXPECT_LT( std::abs( p.a - 0.5f ), eps );
 }
 
-TEST( MRMesh, TrackPlaneSectionOnDistance )
+TEST( MRTest, TrackPlaneSectionOnDistance )
 {
     Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f::diagonal( -0.5F ) );
     const float eps = 1e-6f;

@@ -14,7 +14,7 @@ template struct Box<Vector2d>;
 template struct Box<Vector3f>;
 template struct Box<Vector3d>;
 
-TEST(MRMesh, Box)
+TEST(MRTest, Box)
 {
     Box3d b1{ Vector3d{ 0, 0, 0 }, Vector3d{ 1, 1, 1 } };
     Box3d b2{ Vector3d{ -1, -1, -1 }, Vector3d{ 1, 1, 1 } };

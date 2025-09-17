@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, ExtractSectionsFromPolyline )
+TEST( MRTest, ExtractSectionsFromPolyline )
 {
     Plane3f plane( { 1.f, 0.f, 0.f }, 1.f );
 
@@ -67,7 +67,7 @@ TEST( MRMesh, ExtractSectionsFromPolyline )
     }
 }
 
-TEST( MRMesh, SubdividePolylineWithPlane )
+TEST( MRTest, SubdividePolylineWithPlane )
 {
     std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {2.f, 2.f, 2.f}, {4.f, 4.f, 4.f}, {6.f, 6.f, 6.f},
                                      {4.f, 8.f, 4.f}, {2.f, 10.f, 2.f}, {0.f, 12.f, 0.f} };
@@ -95,7 +95,7 @@ TEST( MRMesh, SubdividePolylineWithPlane )
     EXPECT_EQ( topUEdges, expectedTopUEdges );
 }
 
-TEST( MRMesh, TrimWithPlaneInfinity )
+TEST( MRTest, TrimWithPlaneInfinity )
 {
     // infinity cycle
     std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {1.f, 1.f, 0.f}, {2.f, 0.f, 0.f} };
@@ -105,7 +105,7 @@ TEST( MRMesh, TrimWithPlaneInfinity )
     trimWithPlane( polyline, plane );
 }
 
-TEST( MRMesh, TrimPolylineWithPlane )
+TEST( MRTest, TrimPolylineWithPlane )
 {
     std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {2.f, 2.f, 2.f}, {0.f, 4.f, 0.f} };
     Plane3f plane( { 1.f, 0.f, 0.f }, 1.f );

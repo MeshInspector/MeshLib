@@ -12,7 +12,7 @@ namespace MR
 {
 
 // below test crashed on Fedora 40 and 41 because of incompatibility between VDB and TBB
-TEST( MRMesh, VersionVDB )
+TEST( MRTest, VersionVDB )
 {
 #if defined TBB_VERSION_PATCH
     spdlog::info( "TBB version: {}.{}.{}", TBB_VERSION_MAJOR, TBB_VERSION_MINOR, TBB_VERSION_PATCH );
@@ -22,7 +22,7 @@ TEST( MRMesh, VersionVDB )
     spdlog::info( "OpenVDB version: {}", OPENVDB_LIBRARY_VERSION_STRING );
 }
 
-TEST( MRMesh, MeshVoxelsConverterSelfIntersections )
+TEST( MRTest, MeshVoxelsConverterSelfIntersections )
 {
     auto torus = makeTorusWithSelfIntersections( 2.f, 1.f, 10, 10 );
     MeshVoxelsConverter converter;

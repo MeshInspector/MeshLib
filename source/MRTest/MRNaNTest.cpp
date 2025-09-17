@@ -8,7 +8,7 @@ namespace MR
 float gTestNaN = cQuietNan;
 float gTestZero = 0;
 
-TEST( MRMesh, NaN )
+TEST( MRTest, NaN )
 {
     // tests basic precondition for Marching Cubes algorithm to be correct
     EXPECT_FALSE( gTestNaN < gTestZero || gTestNaN >= gTestZero );

@@ -7,7 +7,7 @@
 namespace MR
 {
 
-TEST(MRMesh, LoadSave) 
+TEST(MRTest, LoadSave) 
 {
     std::string file = 
         "OFF\n"

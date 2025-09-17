@@ -13,7 +13,7 @@
 namespace MR
 {
 
-TEST(MRMesh, TBBTask)
+TEST(MRTest, TBBTask)
 {
     const auto numThreads = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     spdlog::info( "TBB number of threads is {}", numThreads );

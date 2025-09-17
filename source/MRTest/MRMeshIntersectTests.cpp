@@ -7,7 +7,7 @@
 namespace MR
 {
 
-TEST(MRMesh, MeshIntersect) 
+TEST(MRTest, MeshIntersect) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
 

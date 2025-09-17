@@ -54,7 +54,7 @@ float torusVolume( float majorRadius, float minorRadius )
 namespace MR
 {
 
-TEST( MRMesh, makeSolidOfRevolution )
+TEST( MRTest, makeSolidOfRevolution )
 {
     const auto radius = 2.f;
     const auto height = 10.f;

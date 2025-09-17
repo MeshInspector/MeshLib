@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, Pdf )
+TEST( MRTest, Pdf )
 {
     UniqueTemporaryFolder pathFolder( {} );
     Pdf pdfTest;

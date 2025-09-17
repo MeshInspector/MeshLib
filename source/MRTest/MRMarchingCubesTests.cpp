@@ -6,7 +6,7 @@
 namespace MR
 {
 
-TEST( MRMesh, MarchingCubes )
+TEST( MRTest, MarchingCubes )
 {
     SimpleVolume fltVol
     {

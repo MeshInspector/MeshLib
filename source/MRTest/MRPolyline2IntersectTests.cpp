@@ -6,7 +6,7 @@
 namespace MR
 {
 
-TEST( MRMesh, Polyline2RayIntersect )
+TEST( MRTest, Polyline2RayIntersect )
 {
     Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
     Polyline2 polyline;
@@ -21,7 +21,7 @@ TEST( MRMesh, Polyline2RayIntersect )
     ASSERT_EQ( res->distanceAlongLine, 1.0f / 4 );
 }
 
-TEST( MRMesh, Polyline2RayIntersectFloat )
+TEST( MRTest, Polyline2RayIntersectFloat )
 {
     const Line2f lineA( { 21.226973f, -29.397297f }, { 0.9549145f, 0.29688108f} );
     const Line2f lineB( lineA.p + lineA.d.normalized() * 7.f, lineA.d );
@@ -38,7 +38,7 @@ TEST( MRMesh, Polyline2RayIntersectFloat )
     EXPECT_NEAR( projResB->distanceAlongLine, 0.5f, 1e-5f );
 }
 
-TEST( MRMesh, IsPointInsidePolyline )
+TEST( MRTest, IsPointInsidePolyline )
 {
     Vector2f as[9] = {
         { -1, -1 },

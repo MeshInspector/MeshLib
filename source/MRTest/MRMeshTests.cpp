@@ -9,7 +9,7 @@
 namespace MR
 {
 
-TEST(MRMesh, Pack)
+TEST(MRTest, Pack)
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -67,7 +67,7 @@ TEST(MRMesh, Pack)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId() );
 }
 
-TEST(MRMesh, Pack2)
+TEST(MRTest, Pack2)
 {
     auto mesh = makeCube();
     mesh.topology.deleteFace( 2_f );
@@ -94,7 +94,7 @@ TEST(MRMesh, Pack2)
     EXPECT_EQ( fsAfterPack, mesh.topology.getValidFaces() );
 }
 
-TEST(MRMesh, AddPartByMask) 
+TEST(MRTest, AddPartByMask) 
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -151,7 +151,7 @@ TEST(MRMesh, AddPartByMask)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), 21_e ); // 11*2 = 22 half-edges in total
 }
 
-TEST(MRMesh, AddPartByMaskAndStitch) 
+TEST(MRTest, AddPartByMaskAndStitch) 
 {
     Triangulation t{ { 0_v, 1_v, 2_v } };
     auto topology0 = MeshBuilder::fromTriangles( t );
@@ -178,7 +178,7 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     EXPECT_EQ( topologyRes.lastNotLoneEdge(), 5_e ); // 3*2 = 6 half-edges in total
 }
 
-TEST(MRMesh, AddMesh)
+TEST(MRTest, AddMesh)
 {
     auto cube = makeCube();
     cube.topology.deleteFace( 0_f );
@@ -249,7 +249,7 @@ TEST(MRMesh, AddMesh)
     EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );
 }
 
-TEST(MRMesh, AddMeshPart)
+TEST(MRTest, AddMeshPart)
 {
     const auto cube = makeCube();
     FaceBitSet fs( cube.topology.faceSize(), true );
@@ -321,7 +321,7 @@ TEST(MRMesh, AddMeshPart)
     EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );
 }
 
-TEST( MRMesh, BasicExport )
+TEST( MRTest, BasicExport )
 {
     Mesh mesh = makeCube();
 
@@ -334,7 +334,7 @@ TEST( MRMesh, BasicExport )
     (void)vertexTripples;
 }
 
-TEST(MRMesh, SplitEdge)
+TEST(MRTest, SplitEdge)
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} },
@@ -380,7 +380,7 @@ TEST(MRMesh, SplitEdge)
     EXPECT_EQ( region.count(), 3 );
 }
 
-TEST(MRMesh, SplitEdge1)
+TEST(MRTest, SplitEdge1)
 {
     Mesh mesh;
     const auto e01 = mesh.topology.makeEdge();
@@ -402,7 +402,7 @@ TEST(MRMesh, SplitEdge1)
     EXPECT_EQ( mesh.points[v01], ( Vector3f( .5f, 0.f, 0.f ) ) );
 }
 
-TEST(MRMesh, SplitFace)
+TEST(MRTest, SplitFace)
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} }
@@ -425,7 +425,7 @@ TEST(MRMesh, SplitFace)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(11) ); // 6*2 = 12 half-edges in total
 }
 
-TEST( MRMesh, isOutside )
+TEST( MRTest, isOutside )
 {
     Mesh mesh = makeCube();
     EXPECT_TRUE( mesh.isOutside( Vector3f( 2, 0, 0 ) ) );

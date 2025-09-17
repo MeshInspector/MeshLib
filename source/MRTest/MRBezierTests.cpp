@@ -5,7 +5,7 @@
 namespace MR
 {
 
-TEST( MRMesh, Bezier )
+TEST( MRTest, Bezier )
 {
     const CubicBezierCurve3f bezier =
     {

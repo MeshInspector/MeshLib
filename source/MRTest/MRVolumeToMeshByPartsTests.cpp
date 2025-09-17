@@ -13,7 +13,7 @@
 namespace MR
 {
 
-TEST( MRMesh, volumeToMeshByParts )
+TEST( MRTest, volumeToMeshByParts )
 {
     const Vector3i dimensions { 101, 101, 101 };
     constexpr float radius = 50.f;

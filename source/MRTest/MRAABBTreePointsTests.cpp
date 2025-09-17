@@ -6,7 +6,7 @@
 namespace MR
 {
 
-TEST( MRMesh, AABBTreePoints )
+TEST( MRTest, AABBTreePoints )
 {
     PointCloud spherePC = meshToPointCloud( makeUVSphere( 1, 8, 8 ) );
     AABBTreePoints tree( spherePC );
@@ -26,7 +26,7 @@ TEST( MRMesh, AABBTreePoints )
     assert( tree.nodes().empty() );
 }
 
-TEST( MRMesh, AABBTreePointsFromMesh )
+TEST( MRTest, AABBTreePointsFromMesh )
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTreePoints tree( sphere );

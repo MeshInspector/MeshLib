@@ -1818,7 +1818,7 @@ void Viewer::drawUiRenderObjects_()
             --it;
             ( *it )->earlyBackwardPass( backwardPassParams );
         }
-        uiRenderManager.finishBackwardPass( backwardPassParams );
+        uiRenderManager.finishBackwardPass( viewport.id, backwardPassParams );
 
         for ( const auto& task : tasks )
             task->renderPass();

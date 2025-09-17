@@ -3569,13 +3569,22 @@ BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackw
     menuPlugin->drawSceneUiSignal( menuPlugin->menu_scaling(), viewport, tasks );
 
     return {
-        .consumedInteractions = ( ImGui::GetIO().WantCaptureMouse || getViewerInstance().getHoveredViewportId() != viewport ) * BasicUiRenderTask::InteractionMask::mouseHover,
+        .consumedInteractions = ( ImGui::GetIO().WantCaptureMouse || getViewerInstance().getHoveredViewportIdOrInvalid() != viewport ) * BasicUiRenderTask::InteractionMask::mouseHover,
     };
 }
 
-void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
+void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( ViewportId viewport, const BasicUiRenderTask::BackwardPassParams& params )
 {
-    if ( ImGui::GetIO().WantCaptureMouse )
+    auto hoveredViewport = getViewerInstance().getHoveredViewportIdOrInvalid();
+
+    if ( hoveredViewport != viewport )
+    {
+        if ( !hoveredViewport.valid() )
+            consumedInteractions = {}; // No viewports are hovered, just zero this.
+
+        // Otherwise we have some hovered viewport, but it's not this one, so we let that one viewport set `consumedInteractions`.
+    }
+    else if ( ImGui::GetIO().WantCaptureMouse )
     {
         // Some other UI is hovered, but not ours.
         consumedInteractions = {};

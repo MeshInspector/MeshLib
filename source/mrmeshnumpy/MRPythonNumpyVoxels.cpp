@@ -6,6 +6,8 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRParallelFor.h"
 
+using namespace MR;
+
 MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
     pybind11::buffer_info info = voxelsArray.request();
@@ -21,23 +23,23 @@ MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsAr
     auto strideY = info.strides[1] / info.itemsize;
     auto strideZ = info.strides[2] / info.itemsize;
 
-    MR::VolumeIndexer indexer( res.dims );
+    VolumeIndexer indexer( res.dims );
     if ( info.format == pybind11::format_descriptor<double>::format() )
     {
         double* data = reinterpret_cast< double* >( info.ptr );
-        MR::ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+        ParallelFor( 0_vox, indexer.endId(), [&] ( VoxelId i )
         {
-            auto pos = indexer.toPos( MR::VoxelId( i ) );
-            res.data[MR::VoxelId( i )] = float( data[size_t( pos.x ) * strideX + size_t( pos.y ) * strideY + size_t( pos.z ) * strideZ] );
+            auto pos = indexer.toPos( i );
+            res.data[i] = float( data[size_t( pos.x ) * strideX + size_t( pos.y ) * strideY + size_t( pos.z ) * strideZ] );
         } );
     }
     else if ( info.format == pybind11::format_descriptor<float>::format() )
     {
         float* data = reinterpret_cast< float* >( info.ptr );
-        MR::ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+        ParallelFor( 0_vox, indexer.endId(), [&] ( VoxelId i )
         {
-            auto pos = indexer.toPos( MR::VoxelId( i ) );
-            res.data[MR::VoxelId( i )] = float( data[size_t( pos.x ) * strideX + size_t( pos.y ) * strideY + size_t( pos.z ) * strideZ] );
+            auto pos = indexer.toPos( i );
+            res.data[i] = data[size_t( pos.x ) * strideX + size_t( pos.y ) * strideY + size_t( pos.z ) * strideZ];
         } );
     }
     else
@@ -56,11 +58,11 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
 
     const size_t cZ = simpleVolume.dims.z;
     const size_t cZY = simpleVolume.dims.z * simpleVolume.dims.y;
-    MR::VolumeIndexer indexer( simpleVolume.dims );
-    MR::ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+    VolumeIndexer indexer( simpleVolume.dims );
+    ParallelFor( 0_vox, indexer.endId(), [&] ( VoxelId i )
     {
-        auto pos = indexer.toPos( MR::VoxelId( i ) );
-        data[size_t( pos.x ) * cZY + size_t( pos.y ) * cZ + size_t( pos.z )] = simpleVolume.data[VoxelId( i )];
+        auto pos = indexer.toPos( i );
+        data[size_t( pos.x ) * cZY + size_t( pos.y ) * cZ + size_t( pos.z )] = simpleVolume.data[i];
     } );
 
     // Create a Python object that will free the allocated

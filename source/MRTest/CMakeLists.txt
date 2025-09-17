@@ -91,7 +91,9 @@ IF(MESHLIB_PYTHON_SUPPORT)
     MREmbeddedPython
     pybind11nonlimitedapi_stubs
   )
-  IF(NOT WIN32)
+  IF(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::module)
+  ELSEIF(NOT WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
   ENDIF()
 ELSE()

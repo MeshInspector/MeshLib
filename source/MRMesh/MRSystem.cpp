@@ -607,6 +607,17 @@ void setupLoggerByDefault()
     std::time_t t = std::chrono::system_clock::to_time_t( now );
     auto fileName = GetTempDirectory();
     fileName /= "Logs";
+    // ensure Logs directory exists (spdlog does not create parent dirs)
+    {
+        std::error_code ec;
+        if ( !std::filesystem::is_directory( fileName, ec ) )
+        {
+            ec.clear();
+            std::filesystem::create_directories( fileName, ec );
+            if ( ec )
+                spdlog::error( "Failed to create logs directory {}: {}", utf8string( fileName ), systemToUtf8( ec.message() ) );
+        }
+    }
     removeOldLogs( fileName );
 
     fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", LocaltimeOrZero( t ),
@@ -616,6 +627,7 @@ void setupLoggerByDefault()
     file_sink->set_level( minLevel );
     file_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( file_sink );
+    Logger::instance().setLogFilePath( fileName );
 
 #ifdef _WIN32
     auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();

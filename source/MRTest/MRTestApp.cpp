@@ -136,7 +136,9 @@ int main( int argc, char** argv )
     }
 #endif
 
+    spdlog::info( "MRTest.main1: GetUnitTestImpl()={}", (void*)testing::internal::GetUnitTestImpl() );
     ::testing::InitGoogleTest(&argc, argv);
+    spdlog::info( "MRTest.main2: GetUnitTestImpl()={}", (void*)testing::internal::GetUnitTestImpl() );
     MR::CommandLoop::removeCommands( false ); // that are added there by plugin constructors
     return RUN_ALL_TESTS();
 }

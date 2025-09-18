@@ -421,9 +421,6 @@
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
-    <ClCompile Include="MRCPRTests.cpp">
-      <Filter>Requests</Filter>
-    </ClCompile>
     <ClCompile Include="MRClipboard.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>

@@ -129,24 +129,28 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
     }
     case TouchpadParameters::SwipeMode::SwipeMovesCamera:
     {
-        const auto sceneCenterVpPos = viewport.projectToViewportSpace( sceneCenterPos );
+        // do match RMB translation behavior: use the same reference depth as in the MouseController
+        constexpr float zpos = 0.75f;
 
-        const auto mousePos = viewer.mouseController().getMousePos();
-        const auto oldScreenPos = Vector3f( (float)mousePos.x, (float)mousePos.y, sceneCenterVpPos.z );
-        const auto newScreenPos = oldScreenPos + swipeDirection;
+        const Vector2i& mousePos = viewer.mouseController().getMousePos();
+        const Vector2f windowDelta{ deltaX, deltaY };
+        const Vector2f framebufferDelta = windowDelta * viewer.pixelRatio;
+        const Vector3f oldScreenPos = Vector3f( ( float )mousePos.x, ( float )mousePos.y, zpos );
+        const Vector3f newScreenPos = oldScreenPos + Vector3f( framebufferDelta.x, framebufferDelta.y, 0.f );
 
-        const auto oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
-        const auto newVpPos = viewer.screenToViewport( newScreenPos, viewport.id );
+        const Vector3f oldVpPos = viewer.screenToViewport( oldScreenPos, viewport.id );
+        const Vector3f newVpPos = viewer.screenToViewport( newScreenPos, viewport.id );
 
-        const auto oldWorldPos = viewport.unprojectFromViewportSpace( oldVpPos );
-        const auto newWorldPos = viewport.unprojectFromViewportSpace( newVpPos );
+        const Vector3f oldWorldPos = viewport.unprojectFromViewportSpace( oldVpPos );
+        const Vector3f newWorldPos = viewport.unprojectFromViewportSpace( newVpPos );
 
         const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
         viewport.transformView( xf );
 
+        // keep GLFW cursor in sync with the logical mouse so switching to RMB translation does not jump
         Vector2d pos;
         glfwGetCursorPos( viewer.window, &pos.x, &pos.y );
-        pos += Vector2d( deltaX, deltaY ) / (double)viewer.pixelRatio;
+        pos += Vector2d( ( double )windowDelta.x, ( double )windowDelta.y );
         glfwSetCursorPos( viewer.window, pos.x, pos.y );
 #if defined( __APPLE__ )
         // on macOS glfwSetCursorPos may not immediately emit a mouse move; update internal state to avoid a jump

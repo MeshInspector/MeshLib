@@ -11,11 +11,120 @@ class ShowGlobalBasisMenuItem : public RibbonMenuItem, public ProvidesViewportWi
 {
 public:
     ShowGlobalBasisMenuItem();
-    bool action() override;
 
-    void toggleInViewport( ViewportId id );
+    enum class State
+    {
+        // Those define the cycle order when clicking the button.
+        none,
+        basis,
+        basisAndGrid,
+        _count,
+    };
 
-    void providedViewportWidgets( ViewportWidgetInterface& in ) override;
+    [[nodiscard]] static State nextState( State state )
+    {
+        state = State( int( state ) + 1 );
+        if ( state == State::_count )
+            state = State{};
+        return state;
+    }
+
+    [[nodiscard]] State getCurrentState( ViewportId id )
+    {
+        auto& viewer = Viewer::instanceRef();
+        bool isVisible = viewer.globalBasis->isVisible( id );
+        bool isGridVisible = viewer.globalBasis->isGridVisible( id );
+
+        if ( !isVisible )
+            return State::none;
+        else if ( !isGridVisible )
+            return State::basis;
+        else
+            return State::basisAndGrid;
+    }
+
+    void setState( ViewportId id, State state )
+    {
+        auto& viewer = Viewer::instanceRef();
+        switch ( state )
+        {
+        case State::none:
+            viewer.globalBasis->setVisible( false, id );
+            viewer.globalBasis->setGridVisible( false, id );
+            break;
+        case State::basis:
+            viewer.globalBasis->setVisible( true, id );
+            viewer.globalBasis->setGridVisible( false, id );
+            break;
+        case State::basisAndGrid:
+            viewer.globalBasis->setVisible( true, id );
+            viewer.globalBasis->setGridVisible( true, id );
+            break;
+        case State::_count:
+            // Should be unreachable.
+            break;
+        }
+    }
+
+    void cycleState( ViewportId id )
+    {
+        setState( id, nextState( getCurrentState( id ) ) );
+    }
+
+    bool action() override
+    {
+        cycleState( getViewerInstance().viewport().id );
+        return false;
+    }
+
+    void providedViewportWidgets( ViewportWidgetInterface& in ) override
+    {
+        auto id = in.viewportId();
+        if ( !showButtonInViewports.contains( id ) )
+            return;
+
+        State state = getCurrentState( id );
+
+        const char* icon = nullptr;
+        switch ( state )
+        {
+        case State::none:
+            icon = "Viewport basis off";
+            break;
+        case State::basis:
+            icon = "Viewport basis";
+            break;
+        case State::basisAndGrid:
+            icon = "Viewport basis and grid";
+            break;
+        case State::_count:
+            // Should be unreachable.
+            break;
+        }
+
+        state = nextState( state );
+
+        const char* tooltip = nullptr;
+        switch ( state )
+        {
+        case State::none:
+            tooltip = "Basis: hide basis and grid";
+            break;
+        case State::basis:
+            tooltip = "Basis: show basis";
+            break;
+        case State::basisAndGrid:
+            tooltip = "Basis: show both basis and grid";
+            break;
+        case State::_count:
+            // Should be unreachable.
+            break;
+        }
+
+        in.addButton( 20, "Basis", false, icon, tooltip,
+            [this, id, state]{ setState( id, state ); }
+        );
+    }
 
     ViewportMask showButtonInViewports = ViewportMask::all();
 };
@@ -23,44 +132,6 @@ public:
 ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
     RibbonMenuItem( "Show_Hide Global Basis" )
 {}
-
-void ShowGlobalBasisMenuItem::toggleInViewport( ViewportId id )
-{
-    auto& viewer = Viewer::instanceRef();
-    bool isVisible = viewer.globalBasis->isVisible( id );
-    bool isGridVisible = viewer.globalBasis->isGridVisible( id );
-    if ( !isVisible )
-    {
-        viewer.globalBasis->setVisible( true, id );
-        viewer.globalBasis->setGridVisible( false, id );
-    }
-    else if ( !isGridVisible )
-    {
-        viewer.globalBasis->setGridVisible( true, id );
-    }
-    else
-    {
-        viewer.globalBasis->setVisible( false, id );
-        viewer.globalBasis->setGridVisible( false, id );
-    }
-}
-
-bool ShowGlobalBasisMenuItem::action()
-{
-    toggleInViewport( getViewerInstance().viewport().id );
-    return false;
-}
-
-void ShowGlobalBasisMenuItem::providedViewportWidgets( ViewportWidgetInterface& in )
-{
-    auto id = in.viewportId();
-    if ( !showButtonInViewports.contains( id ) )
-        return;
-
-    in.addButton( 20, "Toggle Basis", false, "Viewport basis",
-        [this, id]{ toggleInViewport( id ); }
-    );
-}
 
 MR_REGISTER_RIBBON_ITEM( ShowGlobalBasisMenuItem )
 }

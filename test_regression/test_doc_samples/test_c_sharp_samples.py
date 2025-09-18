@@ -59,8 +59,8 @@ from pytest_check import check
                                           id="MeshExport"),
                             pytest.param({'sample': "MeshFixDegeneraciesExample",
                                            'input_files': ['mesh.ctm'],
-                                           'output_files': ['mesh_fixed.ctm'],
-                                           'args': ['mesh.ctm', 'mesh_fixed.ctm']
+                                           'output_files': ['mesh_fixed_v2.ctm'],
+                                           'args': ['mesh.ctm', 'mesh_fixed_v2.ctm']
                                            },
                                           id="MeshFixDegeneracies"),
                          ])

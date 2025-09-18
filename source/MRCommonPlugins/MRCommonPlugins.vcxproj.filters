@@ -783,7 +783,13 @@
     <Image Include="resource\icons\X0_75\Binary Operations.png">
       <Filter>resource\icons\X0_75</Filter>
     </Image>
+    <Image Include="resource\independent_icons\X1\Viewport basis off.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
     <Image Include="resource\independent_icons\X1\Viewport basis.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Viewport basis and grid.png">
       <Filter>resource\independent_icons\X1</Filter>
     </Image>
     <Image Include="resource\independent_icons\X1\Viewport projection orthographic.png">
@@ -792,7 +798,13 @@
     <Image Include="resource\independent_icons\X1\Viewport projection perspective.png">
       <Filter>resource\independent_icons\X1</Filter>
     </Image>
+    <Image Include="resource\independent_icons\X3\Viewport basis off.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
     <Image Include="resource\independent_icons\X3\Viewport basis.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Viewport basis and grid.png">
       <Filter>resource\independent_icons\X3</Filter>
     </Image>
     <Image Include="resource\independent_icons\X3\Viewport projection orthographic.png">

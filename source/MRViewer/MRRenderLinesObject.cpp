@@ -14,6 +14,8 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRVector2.h"
+#include "MRViewport.h"
+#include "MRMesh/MR2to3.h"
 
 namespace MR
 {
@@ -100,6 +102,7 @@ size_t RenderLinesObject::glBytes() const
     return
         positionsTex_.size()
         + vertColorsTex_.size()
+        + accumScreenLengthTex_.size()
         + lineColorsTex_.size();
 }
 
@@ -115,6 +118,9 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
     auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
     bindLines_( shaderType );
     auto shader = GLStaticHolder::getShaderId( shaderType );
+
+
+    calcAndBindLength_( renderParams, shader );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -271,6 +277,55 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
     else
         positionsTex_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "vertices" ), 0 ) );
+}
+
+void RenderLinesObject::calcAndBindLength_( const ModelRenderParams& params, GLuint shaderId )
+{
+    GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
+    int maxTexSize = 0;
+    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
+    assert( maxTexSize > 0 );
+    RenderBufferRef<float> accumScreenLength;
+    Vector2i res;
+    if ( objLines_->polyline() )
+    {
+        const auto& polyline = objLines_->polyline();
+        const auto& topology = polyline->topology;
+        auto lastValid = topology.lastNotLoneEdge();
+        auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
+
+        auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+        res = calcTextureRes( int( 2 * numL ), maxTexSize );
+        accumScreenLength = glBuffer.prepareBuffer<float>( res.x * res.y );
+        std::fill( accumScreenLength.data(), accumScreenLength.data() + accumScreenLength.size(), 0.0f );
+        lineIndicesSize_ = numL;
+        auto validVerts = topology.getValidVerts();
+        while ( validVerts.any() )
+        {
+            auto oid = validVerts.find_first();
+            auto e = topology.edgeWithOrg( oid );
+            for(;; )
+            {
+                validVerts.reset( oid );
+                auto did = topology.dest( e );
+                auto o = getViewerInstance().viewport( params.viewportId ).projectToViewportSpace( params.modelMatrix( polyline->points[oid] ) );
+                auto d = getViewerInstance().viewport( params.viewportId ).projectToViewportSpace( params.modelMatrix( polyline->points[did] ) );
+                accumScreenLength[e] = accumScreenLength[topology.next( e )];
+                accumScreenLength[e.sym()] = accumScreenLength[e] + MR::distance( to2dim( o ), to2dim( d ) );
+                if ( !validVerts.test( did ) )
+                    break;
+                auto nextE = topology.next( e.sym() );
+                if ( nextE == e.sym() )
+                    break;
+                e = nextE;
+                oid = topology.org( e );
+            }
+        }
+    }
+    accumScreenLengthTex_.loadData(
+        { .resolution = GlTexture2::ToResolution( res ), .internalFormat = GL_R32F, .format = GL_RED, .type = GL_FLOAT },
+        accumScreenLength );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "accumScnLength" ), 3 ) );
 }
 
 void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )

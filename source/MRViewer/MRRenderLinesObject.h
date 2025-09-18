@@ -31,6 +31,7 @@ private:
     GLuint linesPickerArrayObjId_{ 0 };
 
     GlTexture2 positionsTex_;
+    GlTexture2 accumScreenLengthTex_;
     GlTexture2 vertColorsTex_;
     GlTexture2 lineColorsTex_;
 
@@ -38,6 +39,7 @@ private:
     void renderPicker_( const ModelBaseRenderParams& params, unsigned geomId, bool points );
 
     void bindPositions_( GLuint shaderId );
+    void calcAndBindLength_( const ModelRenderParams& params, GLuint shaderId );
 
     void bindLines_( GLStaticHolder::ShaderType shaderType );
     void bindLinesPicker_( GLStaticHolder::ShaderType shaderType );

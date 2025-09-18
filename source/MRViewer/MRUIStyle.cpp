@@ -20,6 +20,21 @@ namespace MR
 namespace UI
 {
 
+[[nodiscard]] static ImGuiID stringToId( std::string_view key )
+{
+    return ImGui::GetID( key.data(), key.data() + key.size() );
+}
+
+bool StateStorage::readBool( std::string_view key, bool defaultValue )
+{
+    return ImGui::GetStateStorage()->GetBool( stringToId( key ), defaultValue );
+}
+
+void StateStorage::writeBool( std::string_view key, bool value )
+{
+    ImGui::GetStateStorage()->SetBool( stringToId( key ), value );
+}
+
 std::vector<std::unique_ptr<MR::ImGuiImage>> textures = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( TextureType::Count ) );
 
 std::unique_ptr<MR::ImGuiImage>& getTexture( TextureType type )

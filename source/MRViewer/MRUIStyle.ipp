@@ -457,5 +457,146 @@ void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textCol
         } );
 }
 
+template <detail::Scalar T, typename F>
+bool plusMinusGeneric( const char* label, T& plus, T& minus, F&& func )
+{
+    auto getStateKeyIsAsym = [&, ret = std::string{}]() mutable -> const std::string&
+    {
+        if ( ret.empty() )
+            ret = fmt::format( "MR::plusMinus:{}", label );
+        return ret;
+    };
+
+    auto getPlusName = [&, ret = std::string{}]() mutable -> const std::string&
+    {
+        if ( ret.empty() )
+            ret = fmt::format( "###plus:{}", label );
+        return ret;
+    };
+    auto getMinusName = [&, ret = std::string{}]() mutable -> const std::string&
+    {
+        if ( ret.empty() )
+            ret = fmt::format( "###minus:{}", label );
+        return ret;
+    };
+
+    // Display asymmetrically if...
+    bool isAsym =
+        // The values are different, or...
+        plus != -minus ||
+        // The state says so, or...
+        StateStorage::readBool( getStateKeyIsAsym(), false ) ||
+        // Any of the plus/minus widgets are active. To make sure we don't remove them while they're being edited.
+        detail::isItemActive( getPlusName().c_str() ) || detail::isItemActive( getMinusName().c_str() )
+    ;
+
+    float toggleSymButtonWidth = ImGui::GetFrameHeight();
+    float fullWidth = ImGui::CalcItemWidth();
+
+    // Draw the symmetry toggle first (and the label). This is because we want any `IsItemActive()` checks after this widget to act on the plus/minus
+    //   widgets (which we `BeginGroup()` together to get events at the same time).
+
+    // The label.
+    ImGui::GetWindowDrawList()->AddText(
+        ImVec2( ImGui::GetCursorScreenPos().x + fullWidth + ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetCursorScreenPos().y + ImGui::GetStyle().FramePadding.y ),
+        ImGui::GetColorU32( ImGuiCol_Text ),
+        label
+    );
+
+    bool markEditedBecauseOfEnableSymmetry = false;
+
+    ImVec2 baseCursorPos = ImGui::GetCursorPos();
+
+    // The symmetry toggle.
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + fullWidth - toggleSymButtonWidth );
+    if ( ( buttonEx )( fmt::format( "{}###toggleSymmetry:{}", isAsym ? "+/-" : "\xC2\xB1"/*U+00B1 PLUS-MINUS SIGN*/, label ).c_str(), ImVec2( toggleSymButtonWidth, ImGui::GetFrameHeight() ), { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) )
+    {
+        isAsym = !isAsym;
+
+        StateStorage::writeBool( getStateKeyIsAsym(), isAsym );
+
+        // If enabling symmetry, make the values equal.
+        if ( !isAsym )
+        {
+            if ( !( plus == -minus ) ) // Not using `!=` to hopefully support NaNs a bit better, but this wasn't tested.
+            {
+                minus = -plus;
+                markEditedBecauseOfEnableSymmetry = true; // Can't mark now, because we don't know which ID the `EndGroup()` will generate yet.
+            }
+        }
+    }
+
+    // Restore cursor position.
+    ImGui::SameLine(); // Just in case?
+    ImGui::SetCursorPos( baseCursorPos );
+
+    float widthWithoutButton = std::round( fullWidth - toggleSymButtonWidth - ImGui::GetStyle().ItemInnerSpacing.x );
+
+    bool ret = markEditedBecauseOfEnableSymmetry;
+
+    if ( isAsym )
+    {
+        // Two separate widths to avoid rounding errors. Should be almost equal.
+        float halfWidth1 = std::round( ( widthWithoutButton - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
+        float halfWidth2 = std::round( widthWithoutButton - ImGui::GetStyle().ItemInnerSpacing.x - halfWidth1 );
+
+        { // The group with two inputs.
+            ImGui::BeginGroup();
+            MR_FINALLY{ ImGui::EndGroup(); };
+
+            { // The plus half.
+                ImGui::PushItemWidth( halfWidth1 ); // This instead of `SetNextItemWidth()` just in case, in case the lambda uses it multiple times somehow.
+                MR_FINALLY{ ImGui::PopItemWidth(); };
+                if ( func( getPlusName().c_str(), plus ) )
+                    ret = true;
+            }
+
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+
+            { // The minus half.
+                ImGui::PushItemWidth( halfWidth2 ); // This instead of `SetNextItemWidth()` just in case, in case the lambda uses it multiple times somehow.
+                MR_FINALLY{ ImGui::PopItemWidth(); };
+                if ( func( getMinusName().c_str(), minus ) )
+                    ret = true;
+            }
+        }
+    }
+    else
+    {
+        ImGui::PushItemWidth( widthWithoutButton ); // This instead of `SetNextItemWidth()` just in case, in case the lambda uses it multiple times somehow.
+        MR_FINALLY{ ImGui::PopItemWidth(); };
+
+        // This name can't match the plus/minus names, because we check if those are active above.
+        if ( func( fmt::format( "###sym:{}", label ).c_str(), plus ) )
+        {
+            minus = -plus;
+            ret = true;
+        }
+    }
+
+    if ( markEditedBecauseOfEnableSymmetry )
+        detail::markItemEdited( ImGui::GetItemID() );
+
+    return ret;
+}
+
+template <UnitEnum E, detail::Scalar T, typename F>
+bool inputPlusMinus( const char* label, T& plus, T& minus, T plusMin, T plusMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, F&& wrapFunc )
+{
+    return plusMinusGeneric(
+        label, plus, minus,
+        [&]( const char* subLabel, T& value ) -> bool
+        {
+            return wrapFunc(
+                value,
+                [&]( T& wrappedValue ) -> bool
+                {
+                    bool isPlus = &wrappedValue == &plus;
+                    return (input)( subLabel, wrappedValue, isPlus ? plusMin : -plusMax, isPlus ? plusMax : -plusMin, std::move( unitParams ), flags );
+                }
+            );
+        }
+    );
+}
 
 }

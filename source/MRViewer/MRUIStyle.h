@@ -19,6 +19,15 @@ class ImGuiImage;
 namespace UI
 {
 
+// Use this to store state across frames. Like what `CollapsingHeader()` uses to store it's open/close state.
+namespace StateStorage
+{
+
+[[nodiscard]] MRVIEWER_API bool readBool( std::string_view key, bool defaultValue = false );
+MRVIEWER_API void writeBool( std::string_view key, bool value );
+
+}
+
 // enumeration texture types
 enum class TextureType
 {
@@ -84,7 +93,7 @@ struct PlotAxis
     ImVec2 startAxisPoint;
 
     // size plot by axis
-    float size;
+    float size = 100.f;
     // optimal length between dashes
     float optimalLenth = 10.0f;
     // the minimum value of the axis
@@ -397,6 +406,18 @@ bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::low
 template <UnitEnum E, detail::VectorOrScalar T>
 void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
 
+// A generic wrapper for drawing plus-minus drags/inputs/etc that can be toggled between symmetric and asymmetric mode.
+// Prefer `inputPlusMinus()` and other functions written on top of this one.
+// `func` is a `(const char* subLabel, T& value) -> bool`, draw your widget there with the automatic width,
+//   the specified label and value, and return its return value. `value` will receive either `plus` or `minus`.
+template <detail::Scalar T, typename F>
+bool plusMinusGeneric( const char* label, T& plus, T& minus, F&& func );
+
+// An `input()` for two numbers that can be toggled between symmetric and asymmetric mode.
+// Notice the `wrapFunc` parameter. If specified, that is a `(T& value, auto&& f) -> bool` lambda that must do `return f(value);`. That is called for each of the two
+//   plus/minus parts of the widget, and lets you e.g. set a custom style for those.
+template <UnitEnum E, detail::Scalar T, typename F = std::nullptr_t>
+bool inputPlusMinus( const char* label, T& plus, T& minus, T plusMin = T{}, T plusMax = std::numeric_limits<T>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, F&& wrapFunc = nullptr );
 
 /// returns icons font character for given notification type, and its color
 MRVIEWER_API const std::pair<const char*, ImU32>& notificationChar( NotificationType type );

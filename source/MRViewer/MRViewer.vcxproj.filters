@@ -487,6 +487,9 @@
     <ClCompile Include="MRRenderClickableRect.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRUIQualityControl.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -950,6 +953,9 @@
     </ClInclude>
     <ClInclude Include="MRRenderClickableRect.h">
       <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUIQualityControl.h">
+      <Filter>UIStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

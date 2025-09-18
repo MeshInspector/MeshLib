@@ -62,4 +62,8 @@ MRMESH_API void replaceInplace( std::string& target, std::string_view from, std:
 /// Removes all whitespace character (detected by std::isspace) at the end of string view
 [[nodiscard]] MRMESH_API std::string_view trimRight( std::string_view str );
 
+
+/// Returns true if `str` has at least one `{...}` formatting placeholder.
+[[nodiscard]] MRMESH_API bool hasFormatPlaceholders( std::string_view str );
+
 } //namespace MR

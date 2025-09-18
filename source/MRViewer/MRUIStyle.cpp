@@ -7,18 +7,29 @@
 #include "MRRibbonFontManager.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
-#include "imgui_internal.h"
+#include "MRViewer/MRViewer.h"
 #include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRMesh/MRString.h"
+
+#include <imgui_internal.h>
 
 
 namespace MR
 {
 
-
 namespace UI
 {
+
+float scale()
+{
+    return getViewerInstance().getMenuPlugin()->menu_scaling();
+}
+
+bool isItemActive( const char* name )
+{
+    return ImGui::GetActiveID() == ImGui::GetID( name );
+}
 
 [[nodiscard]] static ImGuiID stringToId( std::string_view key )
 {
@@ -1714,11 +1725,6 @@ void detail::markItemEdited( ImGuiID id )
     ImGui::MarkItemEdited( id );
 }
 
-bool detail::isItemActive( const char* name )
-{
-    return ImGui::GetActiveID() == ImGui::GetID( name );
-}
-
 static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 {
     return !bool( flags & ( ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password ) );
@@ -1726,7 +1732,7 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 
 static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    if ( detail::isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
+    if ( isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
         ImGui::ClearActiveID();
 
     bool ret = func();

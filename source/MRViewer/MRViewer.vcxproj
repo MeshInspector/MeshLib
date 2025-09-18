@@ -148,6 +148,7 @@
     <ClCompile Include="MRRenderToImage.cpp" />
     <ClCompile Include="MRVisualObjectTag.cpp" />
     <ClCompile Include="MRRenderClickableRect.cpp" />
+    <ClCompile Include="MRUIQualityControl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -311,6 +312,7 @@
     <ClInclude Include="MRRenderToImage.h" />
     <ClInclude Include="MRVisualObjectTag.h" />
     <ClInclude Include="MRRenderClickableRect.h" />
+    <ClInclude Include="MRUIQualityControl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

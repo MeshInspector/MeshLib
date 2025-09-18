@@ -28,6 +28,15 @@ std::string getLinesVertexShaderBaseArgumentsBlock( bool points )
     return base;
 }
 
+std::string getLinesVertexShaderDashArgumentsBlock()
+{
+    return R"(
+  uniform highp sampler2D accumScnLength;
+  uniform bool dashed;
+  out float scnLength;
+)";
+}
+
 std::string getLinesVertexShaderColorsArgumentsBlock()
 {
     return R"(
@@ -50,6 +59,14 @@ std::string getLinesShaderHeaderBlock()
     return MR_GLSL_VERSION_LINE_330 R"(
             precision highp float;
             precision highp int;
+)";
+}
+
+std::string getLinesFragmentShaderDashArgumentsBlock()
+{
+    return R"(
+  uniform bool dashed;
+  in float scnLength;
 )";
 }
 
@@ -76,6 +93,14 @@ std::string getLinesFragmentShaderArgumentsBlock()
 )";
 }
 
+std::string getLinesFragmentShaderDashBlock()
+{
+    return R"(
+    if ( dashed && ( int(scnLength / 20.0) % 2 == 1 ) )
+        discard;
+)";
+}
+
 std::string getLinesFragmentShaderColoringBlock()
 {
     return R"(
@@ -93,6 +118,16 @@ std::string getLinesFragmentShaderColoringBlock()
     outColor = vec4(colorCpy.rgb,colorCpy.a * globalAlpha);
     if (outColor.a == 0.0)
       discard;
+)";
+}
+
+std::string getLinesVertexDashFetchBlock()
+{
+    return R"(
+    if ( dashed )
+      scnLength = texelFetch( accumScnLength, ivec2( baseCoordId % uint(vTexSize.x), baseCoordId / uint(vTexSize.x) ), 0 ).r;
+    else
+      scnLength = 0.0;
 )";
 }
 
@@ -133,8 +168,8 @@ std::string getLinesVertexShaderPositionBlock()
 
     basePix = basePix + dir * 0.5 * width;
 
-    projBasePos.xy = ( 2.0 * (basePix - viewport.xy) / (viewport.zw) - vec2(1.0,1.0) ) * projBasePos.w;
-    
+    projBasePos.xy = ( 2.0 * (basePix - viewport.xy) / (viewport.zw) - vec2(1.0,1.0) ) * projBasePos.w; 
+
     gl_Position = projBasePos;
 
     primitiveIdf1 = float( uint( baseLineId >> 20u ) ) + 0.5;
@@ -184,9 +219,11 @@ std::string getLinesVertexShader()
         getLinesShaderHeaderBlock() +
         getLinesVertexShaderBaseArgumentsBlock( false ) +
         getLinesVertexShaderColorsArgumentsBlock() +
+        getLinesVertexShaderDashArgumentsBlock() +
         getLinesVertexShaderWidthArgumentsBlock() +
         getShaderMainBeginBlock() +
         getLinesVertexShaderPositionBlock() +
+        getLinesVertexDashFetchBlock() +
         getLinesVertexShaderColoringBlock() +
         getFragmentShaderEndBlock( false );
 }
@@ -196,7 +233,9 @@ std::string getLinesFragmentShader( bool alphaSort )
     return
         getFragmentShaderHeaderBlock( alphaSort, alphaSort ) +
         getLinesFragmentShaderArgumentsBlock() +
+        getLinesFragmentShaderDashArgumentsBlock() +
         getShaderMainBeginBlock() +
+        getLinesFragmentShaderDashBlock() +
         getFragmentShaderClippingBlock() +
         getLinesFragmentShaderColoringBlock() +
         getFragmentShaderEndBlock( alphaSort );

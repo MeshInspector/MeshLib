@@ -188,6 +188,8 @@ const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMas
             return showPoints_;
         case LinesVisualizePropertyType::Smooth:
             return smoothConnections_;
+        case LinesVisualizePropertyType::Dashed:
+            return dashed_;
         case LinesVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
         assert( false && "Invalid enum." );

@@ -77,6 +77,7 @@ protected:
     GlTexture2 borderTexture_;
     GlTexture2 emptyVertsColorTexture_;
     GlTexture2 emptyLinesColorTexture_;
+    GlTexture2 emptyScnLengthColorTexture_;
 
     int maxTexSize_{ 0 };
 

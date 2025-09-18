@@ -1935,6 +1935,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", LinesVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Smooth corners", LinesVisualizePropertyType::Smooth, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Dashed", LinesVisualizePropertyType::Dashed, viewportid );
         make_width<ObjectLinesHolder>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getLineWidth();

@@ -32,6 +32,7 @@ std::string getLinesVertexShaderDashArgumentsBlock()
 {
     return R"(
   uniform highp sampler2D accumScnLength;
+  uniform bool dashed;
   out float scnLength;
 )";
 }
@@ -64,6 +65,7 @@ std::string getLinesShaderHeaderBlock()
 std::string getLinesFragmentShaderDashArgumentsBlock()
 {
     return R"(
+  uniform bool dashed;
   in float scnLength;
 )";
 }
@@ -94,7 +96,7 @@ std::string getLinesFragmentShaderArgumentsBlock()
 std::string getLinesFragmentShaderDashBlock()
 {
     return R"(
-    if ( int(scnLength / 20.0) % 2 == 1 )
+    if ( dashed && ( int(scnLength / 20.0) % 2 == 1 ) )
         discard;
 )";
 }
@@ -122,7 +124,10 @@ std::string getLinesFragmentShaderColoringBlock()
 std::string getLinesVertexDashFetchBlock()
 {
     return R"(
-    scnLength = texelFetch( accumScnLength, ivec2( baseCoordId % uint(vTexSize.x), baseCoordId / uint(vTexSize.x) ), 0 ).r;
+    if ( dashed )
+      scnLength = texelFetch( accumScnLength, ivec2( baseCoordId % uint(vTexSize.x), baseCoordId / uint(vTexSize.x) ), 0 ).r;
+    else
+      scnLength = 0.0;
 )";
 }
 

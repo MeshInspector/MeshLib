@@ -136,6 +136,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objLines_->getColoringType() == ColoringType::VertsColorMap ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), objLines_->getColoringType() == ColoringType::LinesColorMap ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dashed" ), objLines_->getVisualizeProperty( LinesVisualizePropertyType::Dashed, renderParams.viewportId ) ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),

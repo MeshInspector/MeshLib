@@ -52,9 +52,6 @@ int main( int argc, char** argv )
         return true;
     };
 
-    MR::loadMeshDll();
-    MR::loadMRViewerDll();
-
     MR::setupLoggerByDefault();
 
     // print compiler info

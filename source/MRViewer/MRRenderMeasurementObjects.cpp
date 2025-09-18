@@ -104,6 +104,7 @@ RenderPointMeasurementObject::RenderPointMeasurementObject( const VisualObject& 
     : RenderObjectCombinator( object )
 {
     nameUiScreenOffset = Vector2f( 0.1f, 0.1f );
+    nameUiPointIsRelativeToBoundingBoxCenter = false;
 }
 
 ImGuiMeasurementIndicators::Text RenderPointMeasurementObject::getObjectNameText( const VisualObject& object, ViewportId ) const
@@ -120,6 +121,8 @@ ImGuiMeasurementIndicators::Text RenderPointMeasurementObject::getObjectNameText
         {
             oss << fmt::format( "\nDeviation: {}", dev->value );
         }
+
+        return oss.str();
     }
     return {};
 }

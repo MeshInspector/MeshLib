@@ -2,6 +2,7 @@
 #include "exports.h"
 #include <MRMesh/MRIRenderObject.h>
 #include <MRMesh/MRMeshTexture.h>
+#include "MRMesh/MRMatrix4.h"
 #include <MRMesh/MRId.h>
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
@@ -52,6 +53,15 @@ private:
 
     void update_();
 
+    // these are to be checked as dirty flag for calculating screen length on CPU
+    Matrix4f prevProj_;
+    Matrix4f prevView_;
+    Matrix4f prevModel_;
+    Vector4i prevViewport_;
+    bool needAccumLengthDirtyUpdate_( const ModelRenderParams& params );
+    void resetAccumLengthDirty_( const ModelRenderParams& params );
+
+    bool needUpdateScreenLengths_{ true };
     // Marks dirty buffers that need to be uploaded to OpenGL
     uint32_t dirty_;
 };

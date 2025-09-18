@@ -22,6 +22,12 @@ namespace UI
 // Returns the global UI scale. Use this instead of passing around the scale in parameters.
 [[nodiscard]] MRVIEWER_API float scale();
 
+namespace detail
+{
+    // Strictly for internal use. Updates the value that `scale()` returns.
+    MRVIEWER_API void setCurrentScale( float newScale );
+}
+
 // Checks if the item with this name in the current window is active.
 [[nodiscard]] MRVIEWER_API bool isItemActive( const char* name );
 

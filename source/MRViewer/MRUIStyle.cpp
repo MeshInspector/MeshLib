@@ -21,11 +21,22 @@ namespace MR
 namespace UI
 {
 
+static float curScale =
+    #ifdef NDEBUG
+    1;
+    #else
+    -1; // Use an invalid value to catch missing `setCurrentScale()`.
+    #endif
+
 float scale()
 {
-    auto menu = getViewerInstance().getMenuPlugin();
-    assert( menu );
-    return menu ? menu->menu_scaling() : 1.f;
+    assert( curScale > 0 );
+    return curScale;
+}
+
+void detail::setCurrentScale( float newScale )
+{
+    curScale = newScale;
 }
 
 bool isItemActive( const char* name )

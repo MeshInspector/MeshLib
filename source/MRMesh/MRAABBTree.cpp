@@ -7,6 +7,7 @@
 #include "MRBuffer.h"
 #include "MRGTest.h"
 #include "MRRegionBoundary.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -32,6 +33,14 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
 AABBTree::AABBTree( const MeshPart & mp )
 {
     MR_TIMER;
+
+    static struct A
+    {
+        A()
+        {
+            spdlog::info( "MRMesh.A: GetUnitTestImpl()={}", (void*)testing::internal::GetUnitTestImpl() );
+        }
+    } a_;
 
     const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
@@ -129,5 +138,13 @@ TEST(MRMesh, ProjectionToEmptyMesh)
     bool hasProjection = Mesh{}.projectPoint( p ).valid();
     EXPECT_FALSE( hasProjection );
 }
+
+static struct B
+{
+    B()
+    {
+        spdlog::info( "MRMesh.B: GetUnitTestImpl()={}", (void*)testing::internal::GetUnitTestImpl() );
+    }
+} b_;
 
 } //namespace MR

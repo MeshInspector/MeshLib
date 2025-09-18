@@ -39,7 +39,6 @@ bool TouchpadController::touchpadRotateGestureBegin_()
     // rotate camera around the scene's center
     viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::Static );
     viewport.setRotation( true );
-    viewport.rotationCenterMode( initRotateParams_.rotationMode );
 
     return true;
 }
@@ -61,6 +60,8 @@ bool TouchpadController::touchpadRotateGestureEnd_()
     auto& viewport = viewer.viewport();
 
     viewport.setRotation( false );
+    // restore initial rotation center mode
+    viewport.rotationCenterMode( initRotateParams_.rotationMode );
 
     return true;
 }

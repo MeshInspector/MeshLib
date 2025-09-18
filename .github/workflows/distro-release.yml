@@ -12,7 +12,7 @@ jobs:
     runs-on: aws-micro
     env:
       vs19_vcpkg_version: "2024.10.21"
-      vs22_vcpkg_version: "2025.04.09"
+      vs22_vcpkg_version: "2025.08.27"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}
       release_tag: ${{ steps.set.outputs.release_tag }}

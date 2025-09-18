@@ -443,6 +443,15 @@ void ImGuiMenu::postResize_( int width, int height )
 
 void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
 {
+    // Recompute the final menu scale.
+#ifdef __EMSCRIPTEN__
+    currentMenuScaling_ = float( emscripten_get_device_pixel_ratio() ) * userScaling_;
+#elif defined __APPLE__
+    currentMenuScaling_ = pixel_ratio_ * userScaling_;
+#else
+    currentMenuScaling_ = hidpi_scaling_ / pixel_ratio_ * userScaling_;
+#endif
+
     reload_font();
     rescaleStyle_();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
@@ -733,13 +742,7 @@ float ImGuiMenu::hidpi_scaling()
 
 float ImGuiMenu::menu_scaling() const
 {
-#ifdef __EMSCRIPTEN__
-    return float( emscripten_get_device_pixel_ratio() ) * userScaling_;
-#elif defined __APPLE__
-    return pixel_ratio_ * userScaling_;
-#else
-    return hidpi_scaling_ / pixel_ratio_ * userScaling_;
-#endif
+    return currentMenuScaling_;
 }
 
 void ImGuiMenu::setUserScaling( float scaling )

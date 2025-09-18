@@ -64,14 +64,17 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         PostResizeListener, PostRescaleListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
-  float hidpi_scaling_;
+  float hidpi_scaling_ = 1;
 
   // Ratio between the framebuffer size and the window size.
   // May be different from the hipdi scaling!
-  float pixel_ratio_;
+  float pixel_ratio_ = 1;
 
   // user defined additional scaling modifier
-  float userScaling_ = 1.0f;
+  float userScaling_ = 1;
+
+  // This is auto-updated on rescale. This is computed from the other scale variables above.
+  float currentMenuScaling_ = 1;
 
   // ImGui Context
   ImGuiContext * context_ = nullptr;

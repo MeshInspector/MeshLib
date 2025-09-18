@@ -23,7 +23,9 @@ namespace UI
 
 float scale()
 {
-    return getViewerInstance().getMenuPlugin()->menu_scaling();
+    auto menu = getViewerInstance().getMenuPlugin();
+    assert( menu );
+    return menu ? menu->menu_scaling() : 1.f;
 }
 
 bool isItemActive( const char* name )

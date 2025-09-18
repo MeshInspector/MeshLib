@@ -21,22 +21,25 @@ namespace MR
 namespace UI
 {
 
-static float curScale =
-    #ifdef NDEBUG
-    1;
-    #else
-    -1; // Use an invalid value to catch missing `setCurrentScale()`.
-    #endif
+namespace detail
+{
+    static float sScale =
+        #ifdef NDEBUG
+        1;
+        #else
+        -1; // Use an invalid value to catch missing `setScale()`.
+        #endif
+}
 
 float scale()
 {
-    assert( curScale > 0 );
-    return curScale;
+    assert( detail::sScale > 0 );
+    return detail::sScale;
 }
 
-void detail::setCurrentScale( float newScale )
+void detail::setScale( float newScale )
 {
-    curScale = newScale;
+    detail::sScale = newScale;
 }
 
 bool isItemActive( const char* name )

@@ -414,7 +414,7 @@ void ImGuiMenu::reload_font(int font_size)
 
   load_font(font_size);
 
-  UI::detail::setCurrentScale( menu_scaling() ); // Send the menu scale to the UI.
+  UI::detail::setScale( menu_scaling() ); // Send the menu scale to the UI.
 }
 
 void ImGuiMenu::shutdown()

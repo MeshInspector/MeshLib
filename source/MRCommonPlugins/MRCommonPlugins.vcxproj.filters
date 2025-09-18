@@ -31,6 +31,9 @@
     <Filter Include="resource\icons\X3">
       <UniqueIdentifier>{c8d6b122-1ded-4171-b50a-5109b3a53cb3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resource\independent_icons">
+      <UniqueIdentifier>{cc931752-457b-4254-864e-b20a9b1c3567}</UniqueIdentifier>
+    </Filter>
     <Filter Include="resource\independent_icons\X1">
       <UniqueIdentifier>{cc931752-457b-4254-864e-b20a9b1c3567}</UniqueIdentifier>
     </Filter>

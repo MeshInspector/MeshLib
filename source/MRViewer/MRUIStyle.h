@@ -25,7 +25,7 @@ namespace UI
 namespace detail
 {
     // Strictly for internal use. Updates the value that `scale()` returns.
-    MRVIEWER_API void setCurrentScale( float newScale );
+    MRVIEWER_API void setScale( float newScale );
 }
 
 // Checks if the item with this name in the current window is active.

@@ -213,4 +213,23 @@ std::string_view trimRight( std::string_view str )
     return str.substr( 0, l );
 }
 
+bool hasFormatPlaceholders( std::string_view str )
+{
+    for ( std::size_t i = 0; i < str.size(); i++ )
+    {
+        if ( str[i] == '{' )
+        {
+            if ( i + 1 < str.size() && str[i + 1] == '{' )
+            {
+                i++;
+                continue; // Escaped.
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
 }

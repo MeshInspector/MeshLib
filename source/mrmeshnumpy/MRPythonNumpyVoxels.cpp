@@ -3,6 +3,10 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRVoxels/MRVoxelsVolume.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRParallelFor.h"
+
+using namespace MR;
 
 MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
@@ -19,24 +23,24 @@ MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsAr
     auto strideY = info.strides[1] / info.itemsize;
     auto strideZ = info.strides[2] / info.itemsize;
 
-    const size_t cX = res.dims.x;
-    const size_t cXY = res.dims.x * res.dims.y;
-
+    VolumeIndexer indexer( res.dims );
     if ( info.format == pybind11::format_descriptor<double>::format() )
     {
         double* data = reinterpret_cast< double* >( info.ptr );
-        for ( size_t x = 0; x < res.dims.x; ++x )
-            for ( size_t y = 0; y < res.dims.y; ++y )
-                for ( size_t z = 0; z < res.dims.z; ++z )
-                    res.data[MR::VoxelId( x + y * cX + z * cXY )] = float( data[x * strideX + y * strideY + z * strideZ] );
+        ParallelFor( 0_vox, indexer.endId(), [&] ( VoxelId i )
+        {
+            auto pos = indexer.toPos( i );
+            res.data[i] = float( data[size_t( pos.x ) * strideX + size_t( pos.y ) * strideY + size_t( pos.z ) * strideZ] );
+        } );
     }
     else if ( info.format == pybind11::format_descriptor<float>::format() )
     {
         float* data = reinterpret_cast< float* >( info.ptr );
-        for ( size_t x = 0; x < res.dims.x; ++x )
-            for ( size_t y = 0; y < res.dims.y; ++y )
-                for ( size_t z = 0; z < res.dims.z; ++z )
-                    res.data[MR::VoxelId( x + y * cX + z * cXY )] = data[x * strideX + y * strideY + z * strideZ];
+        ParallelFor( 0_vox, indexer.endId(), [&] ( VoxelId i )
+        {
+            auto pos = indexer.toPos( i );
+            res.data[i] = data[size_t( pos.x ) * strideX + size_t( pos.y ) * strideY + size_t( pos.z ) * strideZ];
+        } );
     }
     else
         throw std::runtime_error( "dtype of input python vector should be float32 or float64" );
@@ -52,15 +56,14 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
     const size_t size = size_t( simpleVolume.dims.x ) * simpleVolume.dims.y * simpleVolume.dims.z;
     double* data = new double[size];
 
-    const size_t cX = simpleVolume.dims.x;
-    const size_t cXY = simpleVolume.dims.x * simpleVolume.dims.y;
     const size_t cZ = simpleVolume.dims.z;
     const size_t cZY = simpleVolume.dims.z * simpleVolume.dims.y;
-
-    for ( size_t x = 0; x < simpleVolume.dims.x; ++x )
-        for ( size_t y = 0; y < simpleVolume.dims.y; ++y )
-            for ( size_t z = 0; z < simpleVolume.dims.z; ++z )
-                data[x * cZY + y * cZ + z] = simpleVolume.data[VoxelId( x + y * cX + z * cXY )];
+    VolumeIndexer indexer( simpleVolume.dims );
+    ParallelFor( 0_vox, indexer.endId(), [&] ( VoxelId i )
+    {
+        auto pos = indexer.toPos( i );
+        data[size_t( pos.x ) * cZY + size_t( pos.y ) * cZ + size_t( pos.z )] = simpleVolume.data[i];
+    } );
 
     // Create a Python object that will free the allocated
     // memory when destroyed:

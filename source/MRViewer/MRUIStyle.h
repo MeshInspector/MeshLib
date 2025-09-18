@@ -19,6 +19,27 @@ class ImGuiImage;
 namespace UI
 {
 
+// Returns the global UI scale. Use this instead of passing around the scale in parameters.
+[[nodiscard]] MRVIEWER_API float scale();
+
+namespace detail
+{
+    // Strictly for internal use. Updates the value that `scale()` returns.
+    MRVIEWER_API void setScale( float newScale );
+}
+
+// Checks if the item with this name in the current window is active.
+[[nodiscard]] MRVIEWER_API bool isItemActive( const char* name );
+
+// Use this to store state across frames. Like what `CollapsingHeader()` uses to store it's open/close state.
+namespace StateStorage
+{
+
+[[nodiscard]] MRVIEWER_API bool readBool( std::string_view key, bool defaultValue = false );
+MRVIEWER_API void writeBool( std::string_view key, bool value );
+
+}
+
 // enumeration texture types
 enum class TextureType
 {
@@ -84,7 +105,7 @@ struct PlotAxis
     ImVec2 startAxisPoint;
 
     // size plot by axis
-    float size;
+    float size = 100.f;
     // optimal length between dashes
     float optimalLenth = 10.0f;
     // the minimum value of the axis
@@ -356,20 +377,19 @@ namespace detail
     template <UnitEnum E, VectorOrScalar T, typename F>
     [[nodiscard]] bool unitWidget( const char* label, T& v, UnitToStringParams<E>& unitParams, F&& func );
 
-    // Some default slider parameters. For now they are hardcoded here, but we can move them elsewhere later.
-
-    // Default drag speed for `UI::drag()`.
-    template <UnitEnum E, VectorOrScalar T>
-    requires ( VectorTraits<T>::size == 1 )
-    [[nodiscard]] float getDefaultDragSpeed();
-
-    // Default step speed for `UI::input()`.
-    template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
-    [[nodiscard]] T getDefaultStep( bool fast );
 }
 
 // Default flags for `slider()` and `drag()` below.
 inline constexpr int defaultSliderFlags = ImGuiSliderFlags_AlwaysClamp;
+
+// Default drag speed for `UI::drag()`.
+template <UnitEnum E, detail::VectorOrScalar T>
+requires ( VectorTraits<T>::size == 1 )
+[[nodiscard]] float getDefaultDragSpeed();
+
+// Default step speed for `UI::input()`.
+template <UnitEnum E, detail::VectorOrScalar T, detail::VectorOrScalar TargetType>
+[[nodiscard]] T getDefaultStep( bool fast );
 
 // Draw a slider.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
@@ -384,7 +404,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
 // If only the min limit is specified, then the max limit is assumed to be the largest number.
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = detail::getDefaultStep<E, U, T>( false ), const U& stepFast = detail::getDefaultStep<E, U, T>( true ) );
+bool drag( const char* label, T& v, SpeedType vSpeed = getDefaultDragSpeed<E, SpeedType>(), const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = getDefaultStep<E, U, T>( false ), const U& stepFast = getDefaultStep<E, U, T>( true ) );
 
 // Like `drag()`, but clicking it immediately activates text input, so it's not actually draggable.
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
@@ -396,6 +416,27 @@ bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::low
 // This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T>
 void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
+
+
+// A generic wrapper for drawing plus-minus drags/inputs/etc that can be toggled between symmetric and asymmetric mode.
+// Prefer `inputPlusMinus()` and other functions written on top of this one.
+// `func` is a `(const char* subLabel, T& value, const UnitToStringParams<E>& subUnitParams) -> bool`, draw your widget there with the automatic width,
+//   the specified label and value, and return its return value. `value` will receive either `plus` or `minus`.
+template <UnitEnum E, detail::Scalar T, typename F>
+bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<E> unitToStringParams, F&& func );
+
+// A `drag()` for two numbers that can be toggled between symmetric and asymmetric mode.
+// Notice the `wrapFunc` parameter. If specified, it is a `(const char* subLabel, T& value, auto&& f) -> bool` lambda that must do `return f();`.
+//   That is called for each of the two plus/minus parts of the widget, and lets you e.g. set a custom style for those.
+// Here we intentionally don't allow passing the step values, that wouldn't render too well.
+template <UnitEnum E, detail::Scalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, typename F = std::nullptr_t>
+bool dragPlusMinus( const char* label, T& plus, T& minus, SpeedType speed = getDefaultDragSpeed<E, SpeedType>(), T plusMin = T{}, T plusMax = std::numeric_limits<T>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, F&& wrapFunc = nullptr );
+
+// An `input()` for two numbers that can be toggled between symmetric and asymmetric mode.
+// Notice the `wrapFunc` parameter. If specified, it is a `(const char* subLabel, T& value, auto&& f) -> bool` lambda that must do `return f();`.
+//   That is called for each of the two plus/minus parts of the widget, and lets you e.g. set a custom style for those.
+template <UnitEnum E, detail::Scalar T, typename F = std::nullptr_t>
+bool inputPlusMinus( const char* label, T& plus, T& minus, T plusMin = T{}, T plusMax = std::numeric_limits<T>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, F&& wrapFunc = nullptr );
 
 
 /// returns icons font character for given notification type, and its color

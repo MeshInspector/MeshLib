@@ -18,6 +18,7 @@ IF(APPLE)
     MRIOExtras
     MRViewer
     jsoncpp
+    cpr
     fmt
     gtest
     spdlog
@@ -43,10 +44,12 @@ ELSE()
   ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(GTest REQUIRED)
     find_package(OpenVDB REQUIRED)
+    find_package(cpr REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
       MRViewer
+      cpr::cpr
       JsonCpp::JsonCpp
       fmt::fmt
       GTest::gtest
@@ -61,6 +64,7 @@ ELSE()
       MRIOExtras
       MRViewer
       JsonCpp::JsonCpp
+      cpr
       fmt
       gtest
       spdlog

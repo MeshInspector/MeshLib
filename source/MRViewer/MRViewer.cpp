@@ -53,7 +53,6 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRMesh/MRGTest.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
@@ -387,10 +386,6 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     return res;
-}
-
-void loadMRViewerDll()
-{
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
@@ -2808,13 +2803,5 @@ void Viewer::GLPrimitivesCounter::reset()
     for ( size_t i = 0; i < size_t( GLPrimitivesType::Count ); ++i )
         counter[i] = 0;
 }
-
-// simple test to make sure this dll was linked and loaded to test project
-TEST( MRViewer, LoadTest )
-{
-    bool load = true;
-    ASSERT_EQ( load, true );
-}
-
 
 }

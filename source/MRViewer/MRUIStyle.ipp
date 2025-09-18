@@ -5,6 +5,7 @@
 #include "MRUIStyle.h" // To help intellisense.
 #include "MRUITestEngine.h"
 #include "MRViewerInstance.h"
+#include "MRMesh/MRString.h"
 
 namespace MR::UI
 {
@@ -142,31 +143,6 @@ namespace detail
         return drawWidget( v );
     }
 
-    template <UnitEnum E, VectorOrScalar T>
-    requires ( VectorTraits<T>::size == 1 )
-    [[nodiscard]] float getDefaultDragSpeed()
-    {
-        if constexpr ( std::is_same_v<E, NoUnit> )
-            return 1;
-        else if constexpr ( std::is_same_v<E, LengthUnit> )
-            return getDefaultUnitParams<LengthUnit>().targetUnit == LengthUnit::mm ? 1 : 1/16.f;
-        else if constexpr ( std::is_same_v<E, AngleUnit> )
-            return PI_F / 180;
-        else
-            return 1;
-    }
-
-    template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
-    [[nodiscard]] T getDefaultStep( bool fast )
-    {
-        if constexpr ( VectorTraits<TargetType>::size > 1 )
-            return 0; // Multi-element widgets have no step buttons by default.
-        else if constexpr ( std::is_integral_v<T> )
-            return fast ? 100 : 1;
-        else
-            return 0;
-    }
-
     // See `drawDragTooltip()`.
     template <UnitEnum E, VectorOrScalar T>
     [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams )
@@ -196,6 +172,31 @@ namespace detail
     {
         return std::array{ "x", "y", "z", "w" }[i];
     }
+}
+
+template <UnitEnum E, detail::VectorOrScalar T>
+requires ( VectorTraits<T>::size == 1 )
+[[nodiscard]] float getDefaultDragSpeed()
+{
+    if constexpr ( std::is_same_v<E, NoUnit> )
+        return 1;
+    else if constexpr ( std::is_same_v<E, LengthUnit> )
+        return getDefaultUnitParams<LengthUnit>().targetUnit == LengthUnit::mm ? 1 : 1/16.f;
+    else if constexpr ( std::is_same_v<E, AngleUnit> )
+        return PI_F / 180;
+    else
+        return 1;
+}
+
+template <UnitEnum E, detail::VectorOrScalar T, detail::VectorOrScalar TargetType>
+[[nodiscard]] T getDefaultStep( bool fast )
+{
+    if constexpr ( VectorTraits<TargetType>::size > 1 )
+        return 0; // Multi-element widgets have no step buttons by default.
+    else if constexpr ( std::is_integral_v<T> )
+        return fast ? 100 : 1;
+    else
+        return 0;
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
@@ -242,7 +243,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
-            bool forceShowZeroes = unitParams.stripTrailingZeroes && detail::isItemActive( elemLabel );
+            bool forceShowZeroes = unitParams.stripTrailingZeroes && isItemActive( elemLabel );
             if ( forceShowZeroes )
                 unitParams.stripTrailingZeroes = false;
             MR_FINALLY{
@@ -347,7 +348,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             std::string elemLabelFixed = plusMinusButtons ? std::string( "###" ) + elemLabel : elemLabel;
 
             // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
-            bool forceShowZeroes = unitParams.stripTrailingZeroes && detail::isItemActive( elemLabelFixed.c_str() );
+            bool forceShowZeroes = unitParams.stripTrailingZeroes && isItemActive( elemLabelFixed.c_str() );
             if ( forceShowZeroes )
                 unitParams.stripTrailingZeroes = false;
 
@@ -457,5 +458,186 @@ void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textCol
         } );
 }
 
+template <UnitEnum E, detail::Scalar T, typename F>
+bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<E> unitToStringParams, F&& func )
+{
+    auto getStateKeyIsAsym = [&, ret = std::string{}]() mutable -> const std::string&
+    {
+        if ( ret.empty() )
+            ret = fmt::format( "MR::plusMinus:{}", label );
+        return ret;
+    };
+
+    auto getPlusName = [&, ret = std::string{}]() mutable -> const std::string&
+    {
+        if ( ret.empty() )
+            ret = fmt::format( "###plus:{}", label );
+        return ret;
+    };
+    auto getMinusName = [&, ret = std::string{}]() mutable -> const std::string&
+    {
+        if ( ret.empty() )
+            ret = fmt::format( "###minus:{}", label );
+        return ret;
+    };
+
+    // Display asymmetrically if...
+    bool isAsym =
+        // The values are different, or...
+        plus != -minus ||
+        // The state says so, or...
+        StateStorage::readBool( getStateKeyIsAsym(), false ) ||
+        // Any of the plus/minus widgets are active. To make sure we don't remove them while they're being edited.
+        isItemActive( getPlusName().c_str() ) || isItemActive( getMinusName().c_str() )
+    ;
+
+    float toggleSymButtonWidth = ImGui::CalcTextSize( "+/- " ).x;
+    float fullWidth = ImGui::CalcItemWidth();
+
+    // Draw the symmetry toggle first (and the label). This is because we want any `IsItemActive()` checks after this widget to act on the plus/minus
+    //   widgets (which we `BeginGroup()` together to get events at the same time).
+
+    // The label.
+    ImGui::GetWindowDrawList()->AddText(
+        ImVec2( ImGui::GetCursorScreenPos().x + fullWidth + ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetCursorScreenPos().y + ImGui::GetStyle().FramePadding.y ),
+        ImGui::GetColorU32( ImGuiCol_Text ),
+        label
+    );
+
+    bool markEditedBecauseOfEnableSymmetry = false;
+
+    ImVec2 baseCursorPos = ImGui::GetCursorPos();
+
+    // The symmetry toggle.
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + fullWidth - toggleSymButtonWidth );
+    if ( ( buttonEx )( fmt::format( "{}###toggleSymmetry:{}", isAsym ? "\xC2\xB1"/*U+00B1 PLUS-MINUS SIGN*/ : "+/-", label ).c_str(), ImVec2( toggleSymButtonWidth, ImGui::GetFrameHeight() ), { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) )
+    {
+        isAsym = !isAsym;
+
+        StateStorage::writeBool( getStateKeyIsAsym(), isAsym );
+
+        // If enabling symmetry, make the values equal.
+        if ( !isAsym )
+        {
+            if ( !( plus == -minus ) ) // Not using `!=` to hopefully support NaNs a bit better, but this wasn't tested.
+            {
+                minus = -plus;
+                markEditedBecauseOfEnableSymmetry = true; // Can't mark now, because we don't know which ID the `EndGroup()` will generate yet.
+            }
+        }
+    }
+
+    setTooltipIfHovered( isAsym ? "Make symmetric" : "Make asymmetric", scale() );
+
+    // Restore cursor position.
+    ImGui::SameLine(); // Just in case?
+    ImGui::SetCursorPos( baseCursorPos );
+
+    float widthWithoutButton = std::round( fullWidth - toggleSymButtonWidth - ImGui::GetStyle().ItemInnerSpacing.x );
+
+    bool ret = markEditedBecauseOfEnableSymmetry;
+
+    if ( isAsym )
+    {
+        // Two separate widths to avoid rounding errors. Should be almost equal.
+        float halfWidth1 = std::round( ( widthWithoutButton - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
+        float halfWidth2 = std::round( widthWithoutButton - ImGui::GetStyle().ItemInnerSpacing.x - halfWidth1 );
+
+        { // The group with two inputs.
+            ImGui::BeginGroup();
+            MR_FINALLY{ ImGui::EndGroup(); };
+
+            // Adjust the unit params for plus.
+            unitToStringParams.plusSign = true;
+
+            { // The plus half.
+                ImGui::PushItemWidth( halfWidth1 ); // This instead of `SetNextItemWidth()` just in case, in case the lambda uses it multiple times somehow.
+                MR_FINALLY{ ImGui::PopItemWidth(); };
+                if ( func( getPlusName().c_str(), plus, unitToStringParams ) )
+                    ret = true;
+            }
+
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+
+            // Adjust the unit params for minus.
+            unitToStringParams.zeroMode = ZeroMode::alwaysNegative;
+
+            { // The minus half.
+                ImGui::PushItemWidth( halfWidth2 ); // This instead of `SetNextItemWidth()` just in case, in case the lambda uses it multiple times somehow.
+                MR_FINALLY{ ImGui::PopItemWidth(); };
+                if ( func( getMinusName().c_str(), minus, std::move( unitToStringParams ) ) ) // Move the params on the last usage, in case the lambda decides to take them by value for some reason.
+                    ret = true;
+            }
+        }
+    }
+    else
+    {
+        ImGui::PushItemWidth( widthWithoutButton ); // This instead of `SetNextItemWidth()` just in case, in case the lambda uses it multiple times somehow.
+        MR_FINALLY{ ImGui::PopItemWidth(); };
+
+        // Adjust the unit params.
+
+        // Prepend plus-minus to the decoration format string.
+        std::string decorationFormatStringStorage;
+        if ( hasFormatPlaceholders( unitToStringParams.decorationFormatString ) )
+        {
+            decorationFormatStringStorage = "\xC2\xB1"; // U+00B1 PLUS-MINUS SIGN
+            decorationFormatStringStorage += unitToStringParams.decorationFormatString;
+            unitToStringParams.decorationFormatString = decorationFormatStringStorage; // This is a `string_view`! D:
+        }
+
+        // This name can't match the plus/minus names, because we check if those are active above.
+        if ( func( fmt::format( "###sym:{}", label ).c_str(), plus, std::move( unitToStringParams ) ) ) // Move the params on the last usage, in case the lambda decides to take them by value for some reason.
+        {
+            minus = -plus;
+            ret = true;
+        }
+    }
+
+    if ( markEditedBecauseOfEnableSymmetry )
+        detail::markItemEdited( ImGui::GetItemID() );
+
+    return ret;
+}
+
+template <UnitEnum E, detail::Scalar T, detail::ValidDragSpeedForTargetType<T> SpeedType, typename F>
+bool dragPlusMinus( const char* label, T& plus, T& minus, SpeedType speed, T plusMin, T plusMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, F&& wrapFunc )
+{
+    return plusMinusGeneric(
+        label, plus, minus, std::move( unitParams ),
+        [&]( const char* subLabel, T& value, const UnitToStringParams<E>& subUnitParams ) -> bool
+        {
+            return wrapFunc(
+                subLabel,
+                value,
+                [&]() -> bool
+                {
+                    bool isPlus = &value == &plus;
+                    return (drag)( subLabel, value, speed, isPlus ? plusMin : -plusMax, isPlus ? plusMax : -plusMin, subUnitParams, flags );
+                }
+            );
+        }
+    );
+}
+
+template <UnitEnum E, detail::Scalar T, typename F>
+bool inputPlusMinus( const char* label, T& plus, T& minus, T plusMin, T plusMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, F&& wrapFunc )
+{
+    return plusMinusGeneric(
+        label, plus, minus, std::move( unitParams ),
+        [&]( const char* subLabel, T& value, const UnitToStringParams<E>& subUnitParams ) -> bool
+        {
+            return wrapFunc(
+                subLabel,
+                value,
+                [&]() -> bool
+                {
+                    bool isPlus = &value == &plus;
+                    return (input)( subLabel, value, isPlus ? plusMin : -plusMax, isPlus ? plusMax : -plusMin, subUnitParams, flags );
+                }
+            );
+        }
+    );
+}
 
 }

@@ -13,7 +13,6 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 IF(APPLE)
-  find_package(GTest REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
@@ -21,7 +20,7 @@ IF(APPLE)
     jsoncpp
     cpr
     fmt
-    GTest::gtest
+    gtest
     spdlog
     OpenVDB
     tbb
@@ -95,9 +94,7 @@ IF(MESHLIB_PYTHON_SUPPORT)
     MREmbeddedPython
     pybind11nonlimitedapi_stubs
   )
-  IF(APPLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::module)
-  ELSEIF(NOT WIN32)
+  IF(NOT WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
   ENDIF()
 ELSE()

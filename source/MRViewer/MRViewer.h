@@ -747,7 +747,4 @@ private:
 // starts default viewer with given params and setup
 MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 
-// call this function to load MRViewer.dll
-MRVIEWER_API void loadMRViewerDll();
-
 } // end namespace

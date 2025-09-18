@@ -388,10 +388,6 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     return res;
 }
 
-void loadMRViewerDll()
-{
-}
-
 void filterReservedCmdArgs( std::vector<std::string>& args )
 {
     if ( args.empty() )

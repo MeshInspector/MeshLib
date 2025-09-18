@@ -2510,8 +2510,4 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
     return true;
 }
 
-void loadMeshDll()
-{
-}
-
 } //namespace MR

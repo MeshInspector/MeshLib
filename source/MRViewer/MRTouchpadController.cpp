@@ -148,6 +148,10 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
         glfwGetCursorPos( viewer.window, &pos.x, &pos.y );
         pos += Vector2d( deltaX, deltaY ) / (double)viewer.pixelRatio;
         glfwSetCursorPos( viewer.window, pos.x, pos.y );
+#if defined( __APPLE__ )
+        // on macOS glfwSetCursorPos may not immediately emit a mouse move; update internal state to avoid a jump
+        viewer.mouseMove( int( std::round( pos.x * viewer.pixelRatio ) ), int( std::round( pos.y * viewer.pixelRatio ) ) );
+#endif
 
         return true;
     }

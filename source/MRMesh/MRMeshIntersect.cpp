@@ -64,11 +64,28 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                     const Vector3<T> vC = Vector3<T>( m.points[c] ) - line.p;
                     if ( auto triIsect = rayTriangleIntersect( vA, vB, vC, prec ) )
                     {
-                        if ( triIsect->t < rayEnd && triIsect->t > rayStart )
+                        const T t( triIsect->t );
+                        if ( t < rayEnd && t > rayStart )
                         {
                             faceId = face;
                             triP = triIsect->bary;
-                            rayEnd = triIsect->t;
+                            if ( t == 0 )
+                            {
+                                rayStart = rayEnd = 0;
+                                break; // intersection exactly at ray origin
+                            }
+                            if ( t < 0 )
+                            {
+                                assert( rayStart < 0 );
+                                rayStart = t;
+                                rayEnd = std::min( rayEnd, -t );
+                            }
+                            else
+                            {
+                                assert( rayEnd > 0 );
+                                rayEnd = t;
+                                rayStart = std::max( rayStart, -t );
+                            }
                         }
                     }
                 }

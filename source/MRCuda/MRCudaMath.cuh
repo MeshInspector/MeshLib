@@ -354,7 +354,23 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
                     faceId = face;
                     baryA = tri.a;
                     baryB = tri.b;
-                    rayEnd = tri.t;
+                    if ( tri.t == 0 )
+                    {
+                        rayStart = rayEnd = 0;
+                        break; // intersection exactly at ray origin
+                    }
+                    if ( tri.t < 0 )
+                    {
+                        assert( rayStart < 0 );
+                        rayStart = tri.t;
+                        rayEnd = min( rayEnd, -tri.t );
+                    }
+                    else
+                    {
+                        assert( rayEnd > 0 );
+                        rayEnd = tri.t;
+                        rayStart = max( rayStart, -tri.t );
+                    }
                 }
             }
             else

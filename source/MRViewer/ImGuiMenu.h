@@ -266,10 +266,10 @@ public:
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
                             std::function<Vector4f( const ObjectT* )> getter,
                             std::function<void( ObjectT*, const Vector4f& )> setter );
-  template<typename ObjType>
+  template<typename ObjType,typename ValueT>
   void make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-                   std::function<float( const ObjType* )> getter,
-                   std::function<void( ObjType*, const float& )> setter );
+                   std::function<ValueT( const ObjType* )> getter,
+                   std::function<void( ObjType*, const ValueT& )> setter );
 
   void make_light_strength( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<float( const VisualObject* )> getter,

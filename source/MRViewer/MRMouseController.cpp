@@ -129,6 +129,21 @@ void MouseController::connect()
 void MouseController::cursorEntrance_( bool entered )
 {
     isCursorInside_ = entered;
+
+    if ( entered )
+    {
+        // resync internal mouse position with the actual OS cursor when re-entering the window
+        MR::Viewer& viewer = getViewerInstance();
+        if ( viewer.window )
+        {
+            prevMousePos_ = currentMousePos_;
+
+            Vector2d pos;
+            glfwGetCursorPos( viewer.window, &pos.x, &pos.y );
+            pos *= viewer.pixelRatio;
+            currentMousePos_ = Vector2i( pos );
+        }
+    }
 }
 
 int MouseController::getMouseConflicts()

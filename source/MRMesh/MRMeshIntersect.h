@@ -33,7 +33,8 @@ struct MeshIntersectionResult
 /// \p rayStart and \p rayEnd define the interval on the ray to detect an intersection.
 /// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
 /// \p vadidFaces if given then all faces for which false is returned will be skipped
-/// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
+/// Finds the closest intersection to ray origin (line param=0)
+/// or any intersection for better performance if \p !closestIntersect.
 [[nodiscard]] MRMESH_API MeshIntersectionResult rayMeshIntersect( const MeshPart& meshPart, const Line3f& line,
     float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {} );
@@ -42,7 +43,8 @@ struct MeshIntersectionResult
 /// \p rayStart and \p rayEnd define the interval on the ray to detect an intersection.
 /// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
 /// \p vadidFaces if given then all faces for which false is returned will be skipped
-/// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
+/// Finds the closest intersection to ray origin (line param=0)
+/// or any intersection for better performance if \p !closestIntersect.
 [[nodiscard]] MRMESH_API MeshIntersectionResult rayMeshIntersect( const MeshPart& meshPart, const Line3d& line,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {} );
@@ -68,7 +70,7 @@ MRMESH_API void multiRayMeshIntersect(
     const MultiRayMeshIntersectResult& result, ///< output data for every ray
     // advanced options:
     float rayStart = 0.0f, float rayEnd = FLT_MAX,
-    bool closestIntersect = true, ///< finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect)
+    bool closestIntersect = true, ///< whether to search for the closest intersection to ray origin (line param=0), or any intersection
     const FacePredicate & validFaces = {} ///< if given then all faces for which false is returned will be skipped
 );
 

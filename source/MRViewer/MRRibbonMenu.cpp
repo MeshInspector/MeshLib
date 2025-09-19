@@ -694,29 +694,59 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize, float menuScaling )
     bool needActive = hasAnyActiveItem() && toolbar_->getCurrentToolbarWidth() == 0.0f;
     float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
 
-    // 40 - active button size (optional)
-    // 40 - help button size
-    // 40 - search button size
+    int numBtns = 1;
     // 40 - collapse button size
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f ) * menuScaling;
+    auto availWidth = ImGui::GetContentRegionAvail().x - 40.0f * menuScaling;
+    
+    // 40 - help button size
+    if ( !menuUIConfig_.helpLink.empty() )
+    {
+        availWidth -= 40.0f * menuScaling;
+        ++numBtns;
+    }
+    // 40 - search button size
+    if ( menuUIConfig_.drawSearchBar )
+    {
+        ++numBtns;
+    }
+    // 40 - active button size (optional)
+    if ( needActive )
+    {
+        availWidth -= 40.0f * menuScaling;
+        ++numBtns;
+    }
     searcher_.setSmallUI( availWidth - requiredTabSize < searcher_.getSearchStringWidth() * menuScaling );
     auto searcherWidth = searcher_.getWidthMenuUI();
+    if ( !menuUIConfig_.drawSearchBar )
+        searcherWidth = 0.0f;
     availWidth -= searcherWidth * menuScaling;
 
     if ( needActive )
     {
-        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) -
-            ( 110 + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
+        float offset = ( ( numBtns - ( menuUIConfig_.drawSearchBar ? 1 : 0 ) ) * 40 - 10 + searcherWidth ) * menuScaling;
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * menuScaling ) );
         drawActiveListButton_( activeBtnSize );
+        --numBtns; // drawn already
     }
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - ( 70.f + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
-    drawSearchButton_();
+    if ( menuUIConfig_.drawSearchBar )
+    {
+        float offset = ( ( numBtns - 1 ) * 40 - 10 + searcherWidth ) * menuScaling;
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * menuScaling ) );
+        drawSearchButton_();
+        --numBtns;
+    }
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset * menuScaling ) );
-    drawHelpButton_( "https://meshinspector.com/inapphelp/" );
+    if ( !menuUIConfig_.helpLink.empty() )
+    {
+        float offset = ( numBtns * 40 - 10 ) * menuScaling;
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * menuScaling ) );
+        drawHelpButton_( menuUIConfig_.helpLink );
+        --numBtns;
+    }
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
+    float offset = ( numBtns * 40 - 10 ) * menuScaling;
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * menuScaling ) );
     drawCollapseButton_();
 
     return availWidth;
@@ -2076,7 +2106,8 @@ void RibbonMenu::setupShortcuts_()
     } } );
     shortcutManager_->setShortcut( { GLFW_KEY_F, getGlfwModPrimaryCtrl() }, {ShortcutManager::Category::Info, "Search plugin by name or description",[this] ()
     {
-        searcher_.activate();
+        if ( menuUIConfig_.drawSearchBar )
+            searcher_.activate();
     } } );
     shortcutManager_->setShortcut( { GLFW_KEY_I,0 }, { ShortcutManager::Category::View, "Invert normals of selected objects",[] ()
     {

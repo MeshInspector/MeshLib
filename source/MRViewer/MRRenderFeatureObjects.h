@@ -228,7 +228,6 @@ public:
     MRVIEWER_API RenderPointFeatureObject( const VisualObject& object );
 
     MRVIEWER_API ImGuiMeasurementIndicators::Text getObjectNameText( const VisualObject& object, ViewportId viewportId ) const override;
-    MRVIEWER_API ImGuiMeasurementIndicators::Text getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const override;
 };
 
 class RenderLineFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderResetDirtyComponent>

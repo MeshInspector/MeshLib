@@ -180,7 +180,17 @@ public:
         Value data;
 
         template<typename T>
-        Cell( T value ) : data( value ) {}
+        Cell( const T& value ) : data( value ) {}
+        
+        template<typename T>
+        Cell( const std::optional<T>& valueOpt )
+        {
+            if ( valueOpt.has_value() )
+                data = *valueOpt;
+            else
+                data = EmptyCell();
+        }
+
 
         // get strang from contained value
         // \param fmtStr format string like fmt::format

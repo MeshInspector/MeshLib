@@ -13,7 +13,7 @@ def test_mesh_to_distance_map_to_mesh(tmp_path):
     Load mesh, convert to distance map, save to image, load from image, convert to mesh, compare with reference
     """
     #  Load input point
-    case_name = f"mesh-to-dm-to-mesh"
+    case_name = f"mesh-to-dm-to-mesh-v2"
     input_folder = Path(test_files_path) / "algorithms" / "distance_map"
     mesh = mrmeshpy.loadMesh(input_folder / "input.ctm")
 

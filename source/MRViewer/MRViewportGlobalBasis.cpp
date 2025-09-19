@@ -1,6 +1,7 @@
 #include "MRViewportGlobalBasis.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRMesh/MRMesh.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
@@ -39,11 +40,11 @@ ViewportGlobalBasis::ViewportGlobalBasis()
         child->setMesh( cylinder ); // same mesh for all objects (not really needed to keep it)
         child->setAncillary( true );
         child->setVisualizePropertyMask( MeshVisualizePropertyType::EnableShading, ViewportMask() );
-        
+
         auto label = std::make_shared<ObjectLabel>();
         label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
         label->setLabel( PositionedText( ( i == 0 ? "X" : ( i == 1 ? "Y" : "Z" ) ), Vector3f( 0, 0, 1.05f ) ) );
-        label->setFontHeight( menu ? 20 * menu->menu_scaling() : 20.0f );
+        label->setFontHeight( menu ? 20 * UI::scale() : 20.0f );
         label->setAncillary( true );
         child->addChild( label );
 
@@ -72,7 +73,7 @@ ViewportGlobalBasis::ViewportGlobalBasis()
         for ( const auto& child : axes_ )
             for ( const auto& label : child->children() )
                 if ( auto* visLabel = label->asType<ObjectLabel>() )
-                    visLabel->setFontHeight( 20.0f * menu->menu_scaling() );
+                    visLabel->setFontHeight( 20.0f * UI::scale() );
     } ) );
 
     creteGrids_();

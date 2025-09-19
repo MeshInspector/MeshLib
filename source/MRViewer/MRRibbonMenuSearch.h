@@ -26,7 +26,6 @@ public:
         RibbonButtonDrawer& btnDrawer;
         RibbonFontManager& fontManager;
         std::function<void( int )> changeTabFunc;
-        float scaling;
     };
     // draws search elements and window with its logic
     MRVIEWER_API void drawMenuUI( const Parameters& params );
@@ -35,7 +34,7 @@ public:
     void setSmallUI( bool on ) { isSmallUI_ = on; }
 
     // get width ui element in top panel
-    // return unscaled value 
+    // return unscaled value
     MRVIEWER_API float getWidthMenuUI() const;
 
     // get search string width (+ item spacing)

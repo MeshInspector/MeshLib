@@ -107,7 +107,7 @@ public:
     RibbonNotifier& getRibbonNotifier() { return notifier_; };
 
     void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
-    
+
     /// set active plugins list showed
     void showActiveList() { activeListPressed_ = true; };
 
@@ -218,7 +218,7 @@ protected:
 
     // updates viewport sizes with respect to ribbon top and left panels
     MRVIEWER_API virtual void fixViewportsSize_( int w, int h );
-    
+
     // need to be called if you override windows pipeline and use ActiveListPlugin
     MRVIEWER_API void drawActiveList_();
 
@@ -229,7 +229,7 @@ protected:
     MRVIEWER_API virtual void updateTopPanelSize_( bool drawTabs );
 
     // draw quick access bar at header level
-    MRVIEWER_API virtual void drawHeaderQuickAccess_( float menuScaling );
+    MRVIEWER_API virtual void drawHeaderQuickAccess_();
 
     // this functions draws header helpers:
     //  1. Active tools list
@@ -237,11 +237,11 @@ protected:
     //  3. Help button
     //  4. Ribbon pin/unpin button
     // returns width available for drawing tabs
-    MRVIEWER_API virtual float drawHeaderHelpers_( float requiredTabSize, float menuScaling );
+    MRVIEWER_API virtual float drawHeaderHelpers_( float requiredTabSize );
 
     // helper list of active tools
     MRVIEWER_API virtual void drawActiveListButton_( float btnSize );
-    // header helper search bar at panel 
+    // header helper search bar at panel
     MRVIEWER_API virtual void drawSearchButton_();
     // header helper button to pin/unpin ribbon
     MRVIEWER_API virtual void drawCollapseButton_();

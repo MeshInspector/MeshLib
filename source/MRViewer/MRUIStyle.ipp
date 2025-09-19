@@ -527,7 +527,7 @@ bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<
         }
     }
 
-    setTooltipIfHovered( isAsym ? "Make symmetric" : "Make asymmetric", scale() );
+    setTooltipIfHovered( isAsym ? "Make symmetric" : "Make asymmetric" );
 
     // Restore cursor position.
     ImGui::SameLine(); // Just in case?

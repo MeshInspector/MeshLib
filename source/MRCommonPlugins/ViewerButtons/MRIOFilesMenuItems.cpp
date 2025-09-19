@@ -317,11 +317,9 @@ void OpenFilesMenuItem::preDraw_()
 
     bool addAreaHovered = false;
 
-    float scaling = 1.0f;
     auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
     if ( menu )
     {
-        scaling = menu->menu_scaling();
         auto sceneBoxSize = menu->getSceneSize();
         auto headerHeight = getViewerInstance().framebufferSize.y - sceneBoxSize.y;
         if ( dragPos_.x <= sceneBoxSize.x && dragPos_.y >= headerHeight )
@@ -331,13 +329,13 @@ void OpenFilesMenuItem::preDraw_()
     auto mainColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     auto secondColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
 
-    ImVec2 min = ImVec2( 10.0f * scaling, 10.0f * scaling );
+    ImVec2 min = ImVec2( 10.0f * UI::scale(), 10.0f * UI::scale() );
     ImVec2 max = ImVec2( Vector2f( getViewerInstance().framebufferSize ) );
     max.x -= min.x;
     max.y -= min.y;
-    drawList->AddRectFilled( min, max, 
-        ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * scaling );
-    drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * scaling, 0, 2.0f * scaling );
+    drawList->AddRectFilled( min, max,
+        ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
+    drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 
     auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
     if ( bigFont )
@@ -352,8 +350,8 @@ void OpenFilesMenuItem::preDraw_()
         auto sceneBoxSize = menu->getSceneSize();
         min.y += ( getViewerInstance().framebufferSize.y - sceneBoxSize.y );
         max.x = sceneBoxSize.x - min.x;
-        drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * scaling );
-        drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * scaling, 0, 2.0f * scaling );
+        drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
+        drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 
         textSize = ImGui::CalcTextSize( "Add Files" );
         textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
@@ -847,10 +845,10 @@ CaptureScreenshotMenuItem::CaptureScreenshotMenuItem():
     }, CommandLoop::StartPosition::AfterWindowAppear );
 }
 
-void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
+void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 200.0f * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 200.0f * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
     UI::drag<PixelSizeUnit>( "Width", resolution_.x, 1, 256 );

@@ -4,6 +4,7 @@
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRMouseController.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewportCornerController.h"
 #include "MRViewportGlobalBasis.h"
 #include <MRMesh/MRMesh.h>
@@ -650,7 +651,7 @@ void Viewport::initBaseAxes()
     // find relative points for axes
     auto scaling = 1.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        scaling = menu->menu_scaling();
+        scaling = menu->menu_scaling(); // Note! This function gets called early, so `UI::scale()` isn't yet set at this point.
     float axesX, axesY;
     if(pixelXoffset_ < 0)
         axesX = width( viewportRect_ ) + pixelXoffset_ * scaling;
@@ -728,11 +729,7 @@ void Viewport::drawGlobalBasis() const
     if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
         length = params_.objectScale * 0.5f;
 
-    float scaling = 1.0f;
-    if ( auto menu = viewer.getMenuPlugin() )
-        scaling = menu->menu_scaling();
-
-    viewer.globalBasis->setAxesProps( length, scaling * getPixelSizeAtPoint( Vector3f() ) * 2.0f, id );
+    viewer.globalBasis->setAxesProps( length, UI::scale() * getPixelSizeAtPoint( Vector3f() ) * 2.0f, id );
     viewer.globalBasis->draw( *this );
 }
 

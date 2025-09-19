@@ -15,14 +15,14 @@ ModalDialog::ModalDialog( std::string label, ModalDialogSettings settings )
 {
 }
 
-bool ModalDialog::beginPopup( float menuScaling )
+bool ModalDialog::beginPopup()
 {
-    const auto windowWidth = settings_.windowWidth > 0.f ? settings_.windowWidth : cModalWindowWidth * menuScaling;
+    const auto windowWidth = settings_.windowWidth > 0.f ? settings_.windowWidth : cModalWindowWidth * UI::scale();
     const ImVec2 windowSize { windowWidth, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImGui::SetNextWindowPos( Vector2f( getViewerInstance().framebufferSize ) * 0.5f, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
 
-    setStyle_( menuScaling );
+    setStyle_();
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar;
     if ( !ImGui::BeginModalNoAnimation( label_.c_str(), nullptr, flags ) )
@@ -47,9 +47,9 @@ bool ModalDialog::beginPopup( float menuScaling )
 
     if ( settings_.closeButton )
     {
-        const auto closeButtonWidth = StyleConsts::Modal::exitBtnSize * menuScaling;
+        const auto closeButtonWidth = StyleConsts::Modal::exitBtnSize * UI::scale();
         ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - closeButtonWidth );
-        if ( ImGui::ModalExitButton( menuScaling ) )
+        if ( ImGui::ModalExitButton() )
         {
             ImGui::CloseCurrentPopup();
             if ( settings_.onWindowClose )
@@ -60,7 +60,7 @@ bool ModalDialog::beginPopup( float menuScaling )
     if ( const auto& text = settings_.text; !text.empty() )
     {
         const auto textWidth = ImGui::CalcTextSize( text.c_str() ).x;
-        if ( textWidth < ( windowSize.x - cModalWindowPaddingX * menuScaling * 2.f ) )
+        if ( textWidth < ( windowSize.x - cModalWindowPaddingX * UI::scale() * 2.f ) )
         {
             ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
             ImGui::Text( "%s", text.c_str() );
@@ -86,7 +86,7 @@ bool ModalDialog::beginPopup( float menuScaling )
     return true;
 }
 
-void ModalDialog::endPopup( float )
+void ModalDialog::endPopup()
 {
     if ( settings_.closeOnClickOutside )
     {
@@ -109,11 +109,11 @@ float ModalDialog::windowWidth()
     return ImGui::GetCurrentWindow()->Size.x;
 }
 
-void ModalDialog::setStyle_( float menuScaling )
+void ModalDialog::setStyle_()
 {
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding,    { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,      { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding,    { cModalWindowPaddingX * UI::scale(), cModalWindowPaddingY * UI::scale() } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,      { 2.0f * cDefaultItemSpacing * UI::scale(), 3.0f * cDefaultItemSpacing * UI::scale() } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * UI::scale(), cDefaultInnerSpacing * UI::scale() } );
 }
 
 void ModalDialog::unsetStyle_()

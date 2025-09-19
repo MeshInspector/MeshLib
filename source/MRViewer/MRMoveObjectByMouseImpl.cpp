@@ -1,5 +1,6 @@
 #include "MRMoveObjectByMouseImpl.h"
 #include "MRViewer/MRMouse.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewport.h"
@@ -20,7 +21,7 @@
 namespace MR
 {
 
-void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
+void MoveObjectByMouseImpl::onDrawDialog() const
 {
     if ( deadZonePixelRadius_ > 0.0f )
     {
@@ -58,10 +59,10 @@ void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
             auto screenPos = getViewerInstance().viewportToScreen( vp.projectToViewportSpace( centerPoint ), vpId );
 
             auto drawList = ImGui::GetBackgroundDrawList();
-            drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), menuScaling * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
+            drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), UI::scale() * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
             if ( deadZonePixelRadius_ * 0.5f > 4.0f )
             {
-                drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), menuScaling * 4.0f, Color::red().getUInt32() );
+                drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), UI::scale() * 4.0f, Color::red().getUInt32() );
             }
         }
     }
@@ -110,9 +111,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
 
         if ( deadZonePixelRadius_ > 0.0f )
         {
-            float realDeadZone = deadZonePixelRadius_;
-            if ( const auto& menu = viewer.getMenuPlugin() )
-                realDeadZone *= menu->menu_scaling();
+            float realDeadZone = deadZonePixelRadius_ * UI::scale();
             if ( to2dim( viewportStartPoint - viewportCenterPoint ).lengthSq() <= sqr( realDeadZone ) )
             {
                 clear_();

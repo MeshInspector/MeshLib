@@ -173,25 +173,17 @@ public:
     
 
     // Table part
-    struct EmptyCell {};
     // class to convert values to string with set format
     struct Cell {
-        using Value = std::variant<int, float, bool, std::string, EmptyCell>;
+        struct Empty {};
+        using Value = std::variant<int, float, bool, std::string, Empty>;
         Value data;
+
+        Cell() : data( Empty() ) {}
 
         template<typename T>
         Cell( const T& value ) : data( value ) {}
         
-        template<typename T>
-        Cell( const std::optional<T>& valueOpt )
-        {
-            if ( valueOpt.has_value() )
-                data = *valueOpt;
-            else
-                data = EmptyCell();
-        }
-
-
         // get strang from contained value
         // \param fmtStr format string like fmt::format
         MRIOEXTRAS_API std::string toString( const std::string& fmtStr = "{}" ) const;

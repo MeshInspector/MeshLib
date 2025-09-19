@@ -1758,12 +1758,24 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
     if ( allIsObjMesh )
     {
         make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
-        make_width<ObjectMeshHolder>( selectedObjs, "Point size", [&] ( const ObjectMeshHolder* objMesh )
+        make_width<ObjectMeshHolder, float>( selectedObjs, "Point size", [&] ( const ObjectMeshHolder* objMesh )
         {
             return objMesh->getPointSize();
         }, [&] ( ObjectMeshHolder* objMesh, float value )
         {
             objMesh->setPointSize( value );
+        } );
+    }
+
+    bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
+    if ( allIsObjLines )
+    {
+        make_width<ObjectLinesHolder, DashPattern>( selectedObjs, "Dash", [&] ( const ObjectLinesHolder* objLine )
+        {
+            return objLine->getDashPattern();
+        }, [&] ( ObjectLinesHolder* objLine, const DashPattern& value )
+        {
+            objLine->setDashPattern( value );
         } );
     }
 
@@ -1936,14 +1948,14 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", LinesVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Smooth corners", LinesVisualizePropertyType::Smooth, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Dashed", LinesVisualizePropertyType::Dashed, viewportid );
-        make_width<ObjectLinesHolder>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
+        make_width<ObjectLinesHolder, float>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getLineWidth();
         }, [&] ( ObjectLinesHolder* objLines, float value )
         {
             objLines->setLineWidth( value );
         } );
-        make_width<ObjectLinesHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
+        make_width<ObjectLinesHolder, float>( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getPointSize();
         }, [&] ( ObjectLinesHolder* objLines, float value )
@@ -1954,7 +1966,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     if ( allIsObjPoints )
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Points", PointsVisualizePropertyType::SelectedVertices, viewportid );
-        make_width<ObjectPointsHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectPointsHolder* objPoints )
+        make_width<ObjectPointsHolder, float>( selectedVisualObjs, "Point size", [&] ( const ObjectPointsHolder* objPoints )
         {
             return objPoints->getPointSize();
         }, [&] ( ObjectPointsHolder* objPoints, float value )
@@ -2730,10 +2742,10 @@ void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVi
             setter( data.get(), T( value ) );
 }
 
-template<typename ObjType>
+template<typename ObjType, typename ValueT>
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-    std::function<float( const ObjType* )> getter,
-    std::function<void( ObjType*, const float& )> setter )
+    std::function<ValueT( const ObjType* )> getter,
+    std::function<void( ObjType*, const ValueT& )> setter )
 {
     auto objLines = selectedVisualObjs[0]->asType<ObjType>();
     auto value = getter( objLines );
@@ -2747,13 +2759,21 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
     if ( !isAllTheSame )
     {
-        value = 0.f;
+        value = ValueT{};
         ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 50 * menu_scaling() );
-    UI::drag<PixelSizeUnit>( label, value, 0.02f, 0.5f, 30.0f );
+    if constexpr ( std::is_same_v<ValueT, float> )
+    {
+        ImGui::PushItemWidth( 50 * menu_scaling() );
+        UI::drag<PixelSizeUnit>( label, value, 0.02f, 0.5f, 30.0f );
+    }
+    else
+    {
+        ImGui::PushItemWidth( 150 * menu_scaling() );
+        UI::drag<PixelSizeUnit>( label, value, 0.02f, uint8_t( 0 ), uint8_t( 50 ) );
+    }
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )

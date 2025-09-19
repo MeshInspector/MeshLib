@@ -65,6 +65,7 @@ std::string getLinesShaderHeaderBlock()
 std::string getLinesFragmentShaderDashArgumentsBlock()
 {
     return R"(
+  uniform int dashPattern;
   uniform bool dashed;
   in float scnLength;
 )";
@@ -96,8 +97,18 @@ std::string getLinesFragmentShaderArgumentsBlock()
 std::string getLinesFragmentShaderDashBlock()
 {
     return R"(
-    if ( dashed && ( int(scnLength / 20.0) % 2 == 1 ) )
-        discard;
+    if ( dashed )
+    {
+        int dash0  =  dashPattern & 0x000000ff;
+        int space0 = (dashPattern & 0x0000ff00)>>8;
+        int dash1  = (dashPattern & 0x00ff0000)>>16;
+        int space1 = (dashPattern & 0xff000000)>>24;
+        float retain = mod( scnLength, float( dash0 + space0 + dash1 + space1 ) );
+        if ( retain > float( dash0 ) && retain < float( dash0 + space0 ) )
+            discard;
+        else if ( retain > float( dash0 + space0 + dash1 ) )
+            discard;
+    }
 )";
 }
 

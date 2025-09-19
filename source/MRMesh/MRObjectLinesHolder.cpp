@@ -76,6 +76,14 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     }
 }
 
+void ObjectLinesHolder::setDashPattern( const DashPattern& pattern, ViewportId id /*= {} */ )
+{
+    if ( dashPattern_.get( id ) == pattern )
+        return;
+    dashPattern_.set( pattern, id );
+    needRedraw_ = true;
+}
+
 void ObjectLinesHolder::setLineWidth( float width )
 {
     if ( width == lineWidth_ )

@@ -273,6 +273,8 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), false ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), false ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dashed" ), false ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dashPattern" ), 0 ) );
+
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),

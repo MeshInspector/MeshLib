@@ -96,6 +96,7 @@
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRString.h"
+#include "MRUIQualityControl.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -412,6 +413,8 @@ void ImGuiMenu::reload_font(int font_size)
   io.Fonts->Clear();
 
   load_font(font_size);
+
+  UI::detail::setScale( menu_scaling() ); // Send the menu scale to the UI.
 }
 
 void ImGuiMenu::shutdown()
@@ -1662,24 +1665,12 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
         }
     }
 
-    // Width for half-width widgets.
-    // There are two separate variables to prevent rounding from messing up the alignment.
-    const float halfWidth1 = std::round( ( fullWidth - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
-    const float halfWidth2 = fullWidth - halfWidth1 - ImGui::GetStyle().ItemInnerSpacing.x;
-
     // Tolerances.
     const std::size_t numTols = object.numComparableProperties();
     for ( std::size_t i = 0; i < numTols; i++ )
     {
-        bool hasTol = false;
-        ObjectComparableWithReference::ComparisonTolerance tol;
-        if ( auto opt = object.getComparisonTolerence( i ) )
-        {
-            hasTol = true;
-            tol = *opt;
-        }
+        auto tolOpt = object.getComparisonTolerence( i );
 
-        ImGui::SetNextItemWidth( fullWidth );
 
         std::string name;
         if ( numTols == 1 )
@@ -1687,55 +1678,12 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
         else
             name = fmt::format( "{} tolerance", object.getComparablePropertyName( i ) );
 
-        std::string inputNamePositive = fmt::format( "###positive:{}", name );
-        std::string inputNameNegative = fmt::format( "{}###negative", name );
-
-        const bool onlyPositive = object.comparisonToleranceIsAlwaysOnlyPositive( i );
-
-        bool asymmetric = true;
-
-        if (
-            // Object says only positive tolerance is needed. Or...
-            onlyPositive ||
-            (
-                // The tolerance is actually symmetric, and...
-                tol.positive == -tol.negative &&
-                // Asymmetric tolerance is disabled in settings, and...
-                !asymmetric &&
-                // The asymmetric input widgets are not currently enabled. This is to make sure the user has to remove the focus before the symmetry is forced.
-                ImGui::GetActiveID() != ImGui::GetID( inputNamePositive.c_str() ) &&
-                ImGui::GetActiveID() != ImGui::GetID( inputNameNegative.c_str() )
-            )
-        )
-        {
-            ImGui::SetNextItemWidth( fullWidth );
-            if ( UI::input<LengthUnit>( name.c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
-            {
-                // If the reason why we're only showing one input is NOT the fact that this tolerance is always only positive,
-                //   then make sure we're setting it symmetrically.
-                if ( !onlyPositive )
-                    tol.negative = -tol.positive;
-
-                object.setComparisonTolerance( i, tol );
-            }
-        }
-        else
-        {
-            ImGui::SetNextItemWidth( halfWidth1 );
-
-            if ( UI::input<LengthUnit>( inputNamePositive.c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
-                object.setComparisonTolerance( i, tol );
-
-            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-
-            ImGui::SetNextItemWidth( halfWidth2 );
-
-            if ( UI::input<LengthUnit>( inputNameNegative.c_str(), tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
-                object.setComparisonTolerance( i, tol );
-        }
+        ImGui::SetNextItemWidth( fullWidth );
+        if ( QualityControl::inputTolerance( name.c_str(), tolOpt ) )
+            object.setComparisonTolerance( i, tolOpt );
 
         // The button to remove tolerance.
-        if ( hasTol )
+        if ( tolOpt )
         {
             ImGui::SameLine();
 
@@ -1987,6 +1935,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", LinesVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Smooth corners", LinesVisualizePropertyType::Smooth, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Dashed", LinesVisualizePropertyType::Dashed, viewportid );
         make_width<ObjectLinesHolder>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getLineWidth();

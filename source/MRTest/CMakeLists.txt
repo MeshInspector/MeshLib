@@ -13,14 +13,14 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 IF(APPLE)
-  find_package(GTest REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
     MRViewer
     jsoncpp
+    cpr
     fmt
-    GTest::gtest
+    gtest
     spdlog
     OpenVDB
     tbb
@@ -44,10 +44,12 @@ ELSE()
   ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(GTest REQUIRED)
     find_package(OpenVDB REQUIRED)
+    find_package(cpr REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
       MRViewer
+      cpr::cpr
       JsonCpp::JsonCpp
       fmt::fmt
       GTest::gtest
@@ -62,6 +64,7 @@ ELSE()
       MRIOExtras
       MRViewer
       JsonCpp::JsonCpp
+      cpr
       fmt
       gtest
       spdlog
@@ -91,9 +94,7 @@ IF(MESHLIB_PYTHON_SUPPORT)
     MREmbeddedPython
     pybind11nonlimitedapi_stubs
   )
-  IF(APPLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::module)
-  ELSEIF(NOT WIN32)
+  IF(NOT WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
   ENDIF()
 ELSE()

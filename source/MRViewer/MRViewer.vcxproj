@@ -141,7 +141,6 @@
     <ClCompile Include="MRUIRectAllocator.cpp" />
     <ClCompile Include="MRUINonOverlappingLabels.cpp" />
     <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
-    <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRSceneOperations.cpp" />
     <ClCompile Include="MRSceneReorder.cpp" />
     <ClCompile Include="MRModalDialog.cpp" />
@@ -149,6 +148,7 @@
     <ClCompile Include="MRRenderToImage.cpp" />
     <ClCompile Include="MRVisualObjectTag.cpp" />
     <ClCompile Include="MRRenderClickableRect.cpp" />
+    <ClCompile Include="MRUIQualityControl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -312,6 +312,7 @@
     <ClInclude Include="MRRenderToImage.h" />
     <ClInclude Include="MRVisualObjectTag.h" />
     <ClInclude Include="MRRenderClickableRect.h" />
+    <ClInclude Include="MRUIQualityControl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

@@ -272,6 +272,7 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), false ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), false ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dashed" ), false ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
@@ -647,6 +648,14 @@ void RenderMeshObject::bindEmptyTextures_(GLuint shaderId)
         emptyLinesColorTexture_.gen();
     emptyLinesColorTexture_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "lineColors" ), 2 ) );
+
+    // Screen Length
+    GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
+    // bind empty texture
+    if ( !emptyScnLengthColorTexture_.valid() )
+        emptyScnLengthColorTexture_.gen();
+    emptyScnLengthColorTexture_.bind();
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "accumScnLength" ), 3 ) );
 }
 
 void RenderMeshObject::bindPoints_( bool alphaSort )

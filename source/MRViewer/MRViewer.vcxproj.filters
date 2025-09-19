@@ -421,9 +421,6 @@
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
-    <ClCompile Include="MRCPRTests.cpp">
-      <Filter>Requests</Filter>
-    </ClCompile>
     <ClCompile Include="MRClipboard.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -489,6 +486,9 @@
     </ClCompile>
     <ClCompile Include="MRRenderClickableRect.cpp">
       <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUIQualityControl.cpp">
+      <Filter>UIStyle</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -953,6 +953,9 @@
     </ClInclude>
     <ClInclude Include="MRRenderClickableRect.h">
       <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUIQualityControl.h">
+      <Filter>UIStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

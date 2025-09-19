@@ -70,11 +70,24 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                             faceId = face;
                             triP = triIsect->bary;
                             if ( t == 0 )
-                                break;
+                            {
+                                rayStart = rayEnd = 0;
+                                break; // intersection exactly at ray origin
+                            }
                             if ( t < 0 )
-                                rayStart = t;
+                            {
+                                if ( rayStart < 0 )
+                                    rayStart = t;
+                                if ( rayEnd > 0 )
+                                    rayEnd = std::min( rayEnd, -t );
+                            }
                             else
-                                rayEnd = t;
+                            {
+                                if ( rayEnd > 0 )
+                                    rayEnd = t;
+                                if ( rayStart < 0 )
+                                    rayStart = std::max( rayStart, -t );
+                            }
                         }
                     }
                 }

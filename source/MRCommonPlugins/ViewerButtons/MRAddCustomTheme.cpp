@@ -36,16 +36,16 @@ AddCustomThemePlugin::AddCustomThemePlugin():
 {
 }
 
-void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
+void AddCustomThemePlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 450.0f * menuScaling;
-    auto menuHeight = 600.0f * menuScaling;
+    auto menuWidth = 450.0f * UI::scale();
+    auto menuHeight = 600.0f * UI::scale();
 
-    if ( !ImGuiBeginWindow_( { .width = menuWidth,.height = menuHeight, .menuScaling = menuScaling, .flags = 0 } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth,.height = menuHeight, .flags = 0 } ) )
         return;
 
     int selectedUserIdxBackup = selectedUserPreset_;
-    ImGui::PushItemWidth( 220.0f * menuScaling );
+    ImGui::PushItemWidth( 220.0f * UI::scale() );
     UI::combo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
     if ( selectedUserPreset_ != selectedUserIdxBackup )
         update_();
@@ -78,7 +78,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::Separator();
     UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
-    ImGui::SetNextItemWidth( 150.0f * menuScaling );
+    ImGui::SetNextItemWidth( 150.0f * UI::scale() );
     UI::inputText( "Theme name", themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
     if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
@@ -101,17 +101,17 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         UI::setTooltipIfHovered( themeName_.empty() ?
             "Cannot save theme with empty name" :
-            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
+            "Please do not any of these symbols: \? * / \\ \" < >" );
     }
 
     ModalDialog modalDialog( "File already exists", {
         .headline = "File already exists",
         .text = "Theme with name " + themeName_ + " already exists, override it?",
     } );
-    if ( modalDialog.beginPopup( menuScaling ) )
+    if ( modalDialog.beginPopup() )
     {
         const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
         const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
@@ -132,7 +132,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         ImGui::PopStyleVar();
 
-        modalDialog.endPopup( menuScaling );
+        modalDialog.endPopup();
     }
 
     ImGui::PopItemWidth();

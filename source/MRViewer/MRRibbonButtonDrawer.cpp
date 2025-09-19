@@ -14,14 +14,6 @@
 namespace MR
 {
 
-float getScaling()
-{
-    const auto menu = ImGuiMenu::instance();
-    if ( menu )
-        return menu->menu_scaling();
-    return 1.f;
-}
-
 std::vector<std::unique_ptr<MR::ImGuiImage>> RibbonButtonDrawer::textures_ = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( RibbonButtonDrawer::TextureType::Count ) );
 
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
@@ -98,7 +90,7 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
     ImGui::SameLine( 0.f, spacing );
     const float height = ImGui::GetTextLineHeight();
-    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / scaling_,
+    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / UI::scale(),
                                            .rootType = DrawButtonParams::RootType::Toolbar } );
     ImGui::SameLine( 0.f, spacing );
     std::string name = item.caption.empty() ? item.item->name() : item.caption;
@@ -200,17 +192,17 @@ RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const Men
     ButtonItemWidth res;
     if ( sizeType == DrawButtonParams::SizeType::Big )
     {
-        const float cMinItemSize = cRibbonItemMinWidth * scaling_;
+        const float cMinItemSize = cRibbonItemMinWidth * UI::scale();
 
         float maxTextWidth = 0.f;
         for ( const auto& i : item.captionSize.splitInfo )
             maxTextWidth = std::max( maxTextWidth, i.second );
 
-        res.baseWidth = maxTextWidth + 2 * cRibbonButtonWindowPaddingX * scaling_;
+        res.baseWidth = maxTextWidth + 2 * cRibbonButtonWindowPaddingX * UI::scale();
 
         if ( item.item->type() == RibbonItemType::ButtonWithDrop )
         {
-            auto additionalSize = 3 * cSmallIconSize * scaling_;
+            auto additionalSize = 3 * cSmallIconSize * UI::scale();
             if ( cMinItemSize - res.baseWidth < additionalSize )
                 res.baseWidth += additionalSize;
         }
@@ -223,15 +215,15 @@ RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const Men
     {
         res.baseWidth = ( cSmallIconSize +
                           2.0f * cRibbonButtonWindowPaddingX +
-                          2.0f * cRibbonItemInterval ) * scaling_ +
+                          2.0f * cRibbonItemInterval ) * UI::scale() +
             item.captionSize.baseSize;
 
         if ( item.item->type() == RibbonItemType::ButtonWithDrop )
-            res.additionalWidth = cSmallItemDropSizeModifier * ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * scaling_;
+            res.additionalWidth = cSmallItemDropSizeModifier * ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * UI::scale();
     }
     else
     {
-        res.baseWidth = ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * scaling_;
+        res.baseWidth = ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * UI::scale();
 
         if ( item.item->type() == RibbonItemType::ButtonWithDrop )
             res.additionalWidth = cSmallItemDropSizeModifier * res.baseWidth;
@@ -283,7 +275,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         ImGui::PushFont( font );
     }
 
-    auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
+    auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needTextColor = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon;
     bool needChangeColor = needTextColor || monochrome_.has_value();
@@ -311,9 +303,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     else
     {
         if ( !imageIcon )
-            ImGui::SetCursorPosY( 3 * scaling_ + 2.0f * ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * UI::scale() + 2.0f * ImGui::GetStyle().WindowPadding.y );
         else
-            ImGui::SetCursorPosY( 3 * scaling_ + ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * UI::scale() + ImGui::GetStyle().WindowPadding.y );
     }
 
     if ( !imageIcon )
@@ -347,9 +339,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         const float textHeight = numLines * ImGui::GetTextLineHeight() + ( numLines - 1 ) * ImGui::GetStyle().ItemSpacing.y;
 
         if ( !imageIcon )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f + 3 * scaling_ );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f + 3 * UI::scale() );
         else
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * scaling_ );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * UI::scale() );
 
         for ( const auto& i : item.captionSize.splitInfo )
         {
@@ -404,7 +396,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
         ImGui::PushFont( font );
     }
 
-    auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
+    auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needTextColor = params.rootType != DrawButtonParams::Ribbon;
     bool needChangeColor = needTextColor || monochrome_.has_value();
@@ -422,8 +414,8 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 
     if ( !imageIcon )
     {
-        ( !needTextColor && monochrome_.has_value() ) ? 
-            ImGui::TextColored( ImVec4( Vector4f( *monochrome_ ) ), "%s", item.icon.c_str() ) : 
+        ( !needTextColor && monochrome_.has_value() ) ?
+            ImGui::TextColored( ImVec4( Vector4f( *monochrome_ ) ), "%s", item.icon.c_str() ) :
             ImGui::Text( "%s", item.icon.c_str() );
     }
     else
@@ -571,7 +563,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         }
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    ImGui::SetNextWindowSizeConstraints( ImVec2(), ImVec2( -1, 200 * scaling_ ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2(), ImVec2( -1, 200 * UI::scale() ) );
     ImGui::Begin( nameWindow.c_str(), NULL, window_flags );
     if ( menuOpened )
     {
@@ -615,14 +607,14 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
             if ( !item.caption.empty() )
                 caption = item.caption;
 
-            const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling_;
+            const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * UI::scale();
             const auto width = calcItemWidth( item, DrawButtonParams::SizeType::SmallText );
 
             DrawButtonParams params;
             params.sizeType = DrawButtonParams::SizeType::SmallText;
             params.iconSize = cSmallIconSize;
             params.itemSize.y = ySize;
-            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling_;
+            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * UI::scale();
             drawButtonItem( item, params );
         }
 
@@ -645,7 +637,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
     if ( sFont )
         ImGui::PushFont( sFont );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * scaling_, cRibbonButtonWindowPaddingY * scaling_ ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * UI::scale(), cRibbonButtonWindowPaddingY * UI::scale() ) );
     std::string tooltip = item.item->getDynamicTooltip();
     if ( tooltip.empty() )
         tooltip = item.tooltip;

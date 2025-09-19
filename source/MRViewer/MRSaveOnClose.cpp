@@ -29,10 +29,6 @@ void SaveOnClosePlugin::preDraw_()
     if ( !initialized_ )
         return;
 
-    float scaling = 1.0f;    
-    if ( auto menuInstance = getViewerInstance().getMenuPlugin() )
-        scaling = menuInstance->menu_scaling();
-
     if ( showCloseModal_ )
     {
         auto* modal = ImGui::GetTopMostPopupModal();
@@ -48,9 +44,9 @@ void SaveOnClosePlugin::preDraw_()
         {
             if ( int( activeModalHighlightTimer_ / 0.2f ) % 2 == 1 )
                 ImGui::GetForegroundDrawList()->AddRect(
-                    ImVec2( modal->Pos.x - 2.0f * scaling, modal->Pos.y - 2.0f * scaling ), 
-                    ImVec2( modal->Pos.x + modal->Size.x + 2.0f * scaling, modal->Pos.y + modal->Size.y + 2.0f * scaling ),
-                    Color::yellow().getUInt32(), 0.0f, 0, 2.0f * scaling );
+                    ImVec2( modal->Pos.x - 2.0f * UI::scale(), modal->Pos.y - 2.0f * UI::scale() ),
+                    ImVec2( modal->Pos.x + modal->Size.x + 2.0f * UI::scale(), modal->Pos.y + modal->Size.y + 2.0f * UI::scale() ),
+                    Color::yellow().getUInt32(), 0.0f, 0, 2.0f * UI::scale() );
             getViewerInstance().incrementForceRedrawFrames();
             activeModalHighlightTimer_ -= ImGui::GetIO().DeltaTime;
             if ( activeModalHighlightTimer_ < 0.0f )
@@ -68,7 +64,6 @@ void SaveOnClosePlugin::preDraw_()
     }
 
     UI::SaveChangesPopupSettings settings;
-    settings.scaling = scaling;
     settings.header = "Application Close";
     settings.saveTooltip = "Save the current scene and close the application";
     settings.dontSaveTooltip = "Close the application without saving";
@@ -78,7 +73,7 @@ void SaveOnClosePlugin::preDraw_()
         glfwSetWindowShouldClose( Viewer::instance()->window, true );
         shouldClose_ = true;
     };
-    UI::saveChangesPopup( 
+    UI::saveChangesPopup(
         "Application Close##modal",
         settings );
 }

@@ -83,23 +83,17 @@ void ResetSceneMenuItem::preDraw_()
     if ( !globalHistory )
         return;
 
-    auto menuInstance = getViewerInstance().getMenuPlugin();
-    if ( !menuInstance )
-        return;
-    const auto scaling = menuInstance->menu_scaling();
-
     if ( openPopup_ )
     {
         ImGui::OpenPopup( popupId_ );
         openPopup_ = false;
     }
 
-    const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
+    const ImVec2 windowSize{ cModalWindowWidth * UI::scale(), -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
     UI::SaveChangesPopupSettings settings;
-    settings.scaling = scaling;
     settings.header = "New Scene";
     settings.shortCloseText = "New";
     settings.saveTooltip = "Save current scene and then remove all objects";

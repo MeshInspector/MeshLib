@@ -154,9 +154,9 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
 // draw dash with text along the horizontal axis
-MRVIEWER_API void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis );
+MRVIEWER_API void drawPoltHorizontalAxis( const PlotAxis& plotAxis );
 // draw dash with text along the vertical axis
-MRVIEWER_API void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis );
+MRVIEWER_API void drawPoltVerticalAxis( const PlotAxis& plotAxis );
 
 // draw a button with an icon and text under it
 MRVIEWER_API bool buttonIconEx(
@@ -443,17 +443,17 @@ bool inputPlusMinus( const char* label, T& plus, T& minus, T plusMin = T{}, T pl
 MRVIEWER_API const std::pair<const char*, ImU32>& notificationChar( NotificationType type );
 
 /// draws hint with corresponding mouse btn icon
-MRVIEWER_API void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scaling );
+MRVIEWER_API void mouseControlHint( ImGuiMouseButton btn, const std::string& hint );
 
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but also have styled background and notification type indicator
-MRVIEWER_API void notificationFrame( NotificationType type, const std::string& str, float scaling );
+MRVIEWER_API void notificationFrame( NotificationType type, const std::string& str );
 
 /// draw tooltip only if current item is hovered
-MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
+MRVIEWER_API void setTooltipIfHovered( const std::string& text );
 
 /// Parameters for drawing custom separator
 struct SeparatorParams
@@ -476,31 +476,33 @@ struct SeparatorParams
     /// if set - use default spacing from ImGui::GetStyle()
     /// otherwise overrides it with ribbon constants
     bool forceImGuiSpacing = false;
+
+    /// The spacing is multiplied by this.
+    float extraScale = 1;
 };
 
 /// separator line with customizations
-MRVIEWER_API void separator( float scaling, const SeparatorParams& params );
+MRVIEWER_API void separator( const SeparatorParams& params );
 
 /// add text with separator line
 /// if issueCount is greater than zero, this number will be displayed in red color after the text.
 /// If it equals zero - in green color
 /// Otherwise it will not be displayed
-MRVIEWER_API void separator( float scaling, const std::string& text = "", int issueCount = -1 );
+MRVIEWER_API void separator( const std::string& text = "", int issueCount = -1 );
 MRVIEWER_API void separator(
-    float scaling,
     const std::string& text,
     const ImVec4& color,
     const std::string& issueCount );
 // separator line with icon and text
 // iconSize icon size without scaling
-MRVIEWER_API void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
-MRVIEWER_API void separator( float scaling, const std::string& iconName, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
+MRVIEWER_API void separator( const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
+MRVIEWER_API void separator( const std::string& iconName, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
 
 /// draws progress bar
 /// note that even while scaling is given by argument size should still respect it
 /// size: x(y)  < 0 - take all available width(height)
 ///       x(y) == 0 - use default width(height)
-MRVIEWER_API void progressBar( float scaling, float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
+MRVIEWER_API void progressBar( float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
 
 // create and append items into a TabBar: see corresponding ImGui:: functions
 MRVIEWER_API bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags = 0 );
@@ -523,16 +525,16 @@ MRVIEWER_API void alignTextToFramePadding( float padding );
 /// Can be used, for example, for \ref UI::button with nondefault height
 MRVIEWER_API void alignTextToControl( float controlHeight );
 /// Specialization of \ref alignTextToFramePadding for \ref UI::radioButton
-MRVIEWER_API void alignTextToRadioButton( float scaling );
+MRVIEWER_API void alignTextToRadioButton();
 /// Specialization of \ref alignTextToFramePadding for \ref UI::checkbox
-MRVIEWER_API void alignTextToCheckBox( float scaling );
+MRVIEWER_API void alignTextToCheckBox();
 /// Specialization of \ref alignTextToFramePadding for \ref UI::button with default height
-MRVIEWER_API void alignTextToButton( float scaling );
+MRVIEWER_API void alignTextToButton();
 
 /// Select the background of the part of the current window from min to max.
 /// If the min is not set, then the current position is taken.If max is not set, then the end of the window is taken.
 /// Added some indentation if min or max is not set.
-MRVIEWER_API void highlightWindowArea( float scaling, const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
+MRVIEWER_API void highlightWindowArea( const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
 
 // While this exists, it temporarily disables antialiasing for the lines drawn to this list.
 class LineAntialiasingDisabler

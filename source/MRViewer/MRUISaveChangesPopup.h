@@ -13,8 +13,6 @@ namespace UI
 
 struct SaveChangesPopupSettings
 {
-    // menu scaling
-    float scaling = 1.0f;
     // text that is shown if we have nothing to save
     std::string shortCloseText = "Close";
     // text that is shown if we have changes but don't want to save them

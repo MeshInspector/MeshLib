@@ -46,10 +46,10 @@ const std::vector<std::string> operationTooltips = {
     "Compute a / b per voxel"
 };
 
-void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
+void BinaryOperations::drawDialog( ImGuiContext*)
 {
-    auto menuWidth = 300 * menuScaling;
-    if (!ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling }))
+    auto menuWidth = 300 * UI::scale();
+    if (!ImGuiBeginWindow_( { .width = menuWidth }))
         return;
 
     const auto& style = ImGui::GetStyle();
@@ -65,7 +65,7 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
             doOperation_( operation_, true );
     }
 
-    UI::separator(menuScaling, "Operations");
+    UI::separator( "Operations");
 
     if ( UI::checkbox( "Enable preview", &previewMode_ ) )
     {

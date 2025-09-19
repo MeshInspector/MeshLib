@@ -22,10 +22,10 @@ void RenderNameObject::Task::renderPass()
 
     const float
         // Button rounding.
-        rounding = 4 * params->scale,
-        lineWidth = 2 * params->scale,
-        lineOutlineWidth = 1 * params->scale,
-        buttonOutlineWidth = 1 * params->scale;
+        rounding = 4 * UI::scale(),
+        lineWidth = 2 * UI::scale(),
+        lineOutlineWidth = 1 * UI::scale(),
+        buttonOutlineWidth = 1 * UI::scale();
 
     const ImU32 colorOutline = ImGui::ColorConvertFloat4ToU32( ImVec4( 0, 0, 0, 0.5f ) );
 
@@ -81,12 +81,12 @@ void RenderNameObject::Task::renderPass()
     drawList.AddRectFilled( textPos - paddingA, textPos + text.computedSize + paddingB, isHovered && !isActive ? colorHovered : colorMain, rounding );
 
     // The text.
-    text.draw( drawList, params->scale, textPos, colorText );
+    text.draw( drawList, textPos, colorText );
 
     // The extra text.
     if ( !textExtra.isEmpty() )
     {
-        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params->scale, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, {}, ImVec2( 0, 0 ) );
+        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, {}, ImVec2( 0, 0 ) );
     }
 }
 
@@ -107,11 +107,11 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     const float
         // When offsetting the button relative to a point, this is the gap to the point (or rather to an imaginary line passing through the point,
         //   perpendicular to the offset direction).
-        buttonSpacingToPoint = 30 * params.scale;
+        buttonSpacingToPoint = 30 * UI::scale();
 
 
-    task_.paddingA = ImGuiMath::round( ImVec2( 4, 2 ) * params.scale ),
-    task_.paddingB = ImGuiMath::round( ImVec2( 4, 4 ) * params.scale );
+    task_.paddingA = ImGuiMath::round( ImVec2( 4, 2 ) * UI::scale() ),
+    task_.paddingB = ImGuiMath::round( ImVec2( 4, 4 ) * UI::scale() );
 
     auto xf = task_.object->worldXf();
 
@@ -126,12 +126,12 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
 
     Vector3f worldPoint = xf( localPoint );
     Vector3f worldPoint2 = xf( localPoint + nameUiLocalOffset );
-    ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * params.scale;
+    ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * UI::scale();
 
     task_.text = getObjectNameText( *task_.object, params.viewportId );
 
     task_.textExtra = getObjectNameExtraText( *task_.object, params.viewportId );
-    task_.textToExtraTextSpacing = std::round( 11 * params.scale );
+    task_.textToExtraTextSpacing = std::round( 11 * UI::scale() );
 
     Viewport& viewportRef = Viewport::get( params.viewportId );
 

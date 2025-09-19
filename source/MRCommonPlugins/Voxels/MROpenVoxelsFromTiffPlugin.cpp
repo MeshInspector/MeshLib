@@ -33,7 +33,7 @@ public:
 
     virtual bool onEnable_() override;
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
 };
 
 bool OpenVoxelsFromTiffPlugin::onEnable_()
@@ -43,21 +43,21 @@ bool OpenVoxelsFromTiffPlugin::onEnable_()
     return true;
 }
 
-void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
+void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
 {
-    const float menuWidth = 280.0f * menuScaling;
+    const float menuWidth = 280.0f * UI::scale();
 
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
 
     UI::drag<LengthUnit>( "Voxel Size", voxelSize_, 1e-3f, 1e-3f, 1000.f );
 
     UI::checkbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
     UI::setTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume,"
-                                "invert to have iso-surface oriented from smaller value to bigger to represent distances volume", menuScaling );
+                                "invert to have iso-surface oriented from smaller value to bigger to represent distances volume" );
     if ( UI::button( "Open Directory", { -1, 0 } ) )
     {
         auto directory = openFolderDialog();

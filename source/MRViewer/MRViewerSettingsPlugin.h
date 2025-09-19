@@ -28,7 +28,7 @@ public:
 
     ViewerSettingsPlugin();
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
+    virtual void drawDialog( ImGuiContext* ctx ) override;
 
     virtual bool blocking() const override { return false; }
 
@@ -43,7 +43,7 @@ public:
         // returns the name of the setting, which is a unique value
         virtual const std::string& getName() const = 0;
         // the function of drawing the configuration UI
-        virtual void draw( float menuScaling ) = 0;
+        virtual void draw() = 0;
         // restore the settings to their default values
         virtual void reset() {}
         // if not overriden this setting will be drawn in tools block
@@ -66,32 +66,32 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
-    void drawTab_( float menuWidth, float menuScaling );
+    void drawTab_( float menuWidth );
 
-    void drawQuickTab_( float menuWidth, float menuScaling );
-    void drawApplicationTab_( float menuWidth, float menuScaling );
-    void drawControlTab_( float menuWidth, float menuScaling );
-    void drawViewportTab_( float menuWidth, float menuScaling );
-    void drawMeasurementUnitsTab_( float menuScaling );
-    void drawFeaturesTab_( float menuScaling );
+    void drawQuickTab_( float menuWidth );
+    void drawApplicationTab_( float menuWidth );
+    void drawControlTab_( float menuWidth );
+    void drawViewportTab_( float menuWidth );
+    void drawMeasurementUnitsTab_();
+    void drawFeaturesTab_();
 
-    void drawThemeSelector_( float menuScaling );
-    void drawResetDialog_( bool activated, float menuScaling );
-    void drawShadingModeCombo_( bool inGroup, float menuScaling, float toolWidth );
-    void drawProjectionModeSelector_( float menuScaling, float toolWidth );
+    void drawThemeSelector_();
+    void drawResetDialog_( bool activated );
+    void drawShadingModeCombo_( bool inGroup, float toolWidth );
+    void drawProjectionModeSelector_( float toolWidth );
     void drawUpDirectionSelector_();
     void drawBackgroundButton_( bool allViewports );
-    void drawRenderOptions_( float menuScaling );
-    void drawShadowsOptions_( float menuWidth, float menuScaling );
-    void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
-    void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
-    void drawTouchpadSettings_( float menuScaling );
+    void drawRenderOptions_();
+    void drawShadowsOptions_( float menuWidth );
+    void drawMouseSceneControlsSettings_( float menuWidth );
+    void drawSpaceMouseSettings_( float menuWidth );
+    void drawTouchpadSettings_();
 
-    void drawMruInnerFormats_( float menuWidth, float menuScaling );
+    void drawMruInnerFormats_( float menuWidth );
 
-    void drawGlobalSettings_( float buttonWidth, float menuScaling );
-    void drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling );
-    void drawSeparator_( const std::string& separatorName, float menuScaling );
+    void drawGlobalSettings_( float buttonWidth );
+    void drawCustomSettings_( const std::string& separatorName, bool needSeparator );
+    void drawSeparator_( const std::string& separatorName );
 
 
     void updateDialog_();

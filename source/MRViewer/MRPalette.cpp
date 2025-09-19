@@ -2,6 +2,7 @@
 #include "ImGuiMenu.h"
 #include "MRMesh/MRFinally.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"

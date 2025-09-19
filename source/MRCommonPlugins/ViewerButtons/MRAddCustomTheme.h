@@ -13,7 +13,7 @@ class AddCustomThemePlugin : public StatePlugin
 public:
     AddCustomThemePlugin();
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
 
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
 private:

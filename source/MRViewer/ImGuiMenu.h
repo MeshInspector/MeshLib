@@ -329,7 +329,7 @@ public:
   // This version uses the currently held keyboard modifiers instead of a custom `mode`.
   MRVIEWER_API bool simulateNameTagClickWithKeyboardModifiers( Object& object );
 
-  using DrawSceneUiSignal = boost::signals2::signal<void( float menuScaling, ViewportId viewportId, UiRenderParams::UiTaskList& tasks )>;
+  using DrawSceneUiSignal = boost::signals2::signal<void( ViewportId viewportId, UiRenderParams::UiTaskList& tasks )>;
   // This is called every frame for every viewport. Use this to draw UI bits on top of the scene.
   DrawSceneUiSignal drawSceneUiSignal;
 

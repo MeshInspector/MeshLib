@@ -105,9 +105,6 @@ struct BasicUiRenderTask
 
 struct UiRenderParams : BaseRenderParams
 {
-    /// Multiply all your hardcoded sizes by this amount.
-    float scale = 1;
-
     using UiTaskList = std::vector<std::shared_ptr<BasicUiRenderTask>>;
 
     // Those are Z-sorted and then executed.

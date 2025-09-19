@@ -40,7 +40,7 @@ public:
     MRVIEWER_API RibbonFontManager();
 
     /// load all fonts using in ribbon menu
-    MRVIEWER_API void loadAllFonts( ImWchar* charRanges, float scaling );
+    MRVIEWER_API void loadAllFonts( ImWchar* charRanges );
 
     /// get font by font type
     MRVIEWER_API ImFont* getFontByType( FontType type ) const;
@@ -79,15 +79,15 @@ private:
     static RibbonFontManager*& getFontManagerInstance_();
 
     /// calculates font glyph shift
-    void updateFontsScaledOffset_( float scaling );
+    void updateFontsScaledOffset_();
 
-    void loadFont_( FontType type, const ImWchar* ranges, float scaling );
+    void loadFont_( FontType type, const ImWchar* ranges );
 
     struct CustomGlyph
     {
         std::function<void( unsigned char* texData, int texW )> render;
     };
-    void addCustomGlyphs_( FontType font, float scaling, std::vector<CustomGlyph>& glyphs );
+    void addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs );
     void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
 };
 

@@ -18,7 +18,7 @@ namespace MR::ImGuiMeasurementIndicators
 struct Stipple
 {
     // This is the period of the stipple pattern, in pixels.
-    // This is automatically multiplied by `menuScaling`.
+    // This is automatically multiplied by `UI::scale()`.
     float patternLength = 16;
 
     struct Segment
@@ -103,7 +103,7 @@ enum class Element
 MR_MAKE_FLAG_OPERATORS( Element )
 
 // Draws a point.
-MRVIEWER_API void point( Element elem, float menuScaling, const Params& params, ImVec2 point );
+MRVIEWER_API void point( Element elem, const Params& params, ImVec2 point );
 
 enum class TextIcon
 {
@@ -248,7 +248,7 @@ struct Text
 
     // Draws the text to the specified draw list. Automatically calls `update()`.
     // If `defaultTextColor` is not specified, takes it from ImGui.
-    MRVIEWER_API DrawResult draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor = {} ) const;
+    MRVIEWER_API DrawResult draw( ImDrawList& list, ImVec2 pos, const TextColor& defaultTextColor = {} ) const;
 };
 
 struct TextParams
@@ -280,13 +280,13 @@ struct TextResult
 // If `pivot` is specified, the bubble is positioned according to its size (like in ImGui::SetNextWindowPos):
 // { 0, 0 } for top left corner, { 0.5f, 0.5f } for center (default), { 1, 1 } for bottom right corner.
 MRVIEWER_API std::optional<TextResult> text(
-    Element elem, float menuScaling, const Params& params, ImVec2 pos,
+    Element elem, const Params& params, ImVec2 pos,
     const Text& text, const TextParams& textParams = {},
     ImVec2 push = {}, ImVec2 pivot = { 0.5f, 0.5f }
 );
 
 // Draws a triangle from an arrow.
-MRVIEWER_API void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir );
+MRVIEWER_API void arrowTriangle( Element elem, const Params& params, ImVec2 point, ImVec2 dir );
 
 struct LineCap
 {
@@ -329,7 +329,7 @@ struct LineResult
 };
 
 // Draws a line or an arrow.
-MRVIEWER_API std::optional<LineResult> line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
+MRVIEWER_API std::optional<LineResult> line( Element elem, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
 
 struct DistanceParams
 {
@@ -347,7 +347,7 @@ struct DistanceResult
 
 // Draws a distance arrow between two points, automatically selecting the best visual style.
 // The `string` is optional.
-MRVIEWER_API std::optional<DistanceResult> distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams = {} );
+MRVIEWER_API std::optional<DistanceResult> distance( Element elem, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams = {} );
 
 struct CurveParams
 {
@@ -356,7 +356,7 @@ struct CurveParams
     // A curve is always subdivided at least this many times.
     int minSubdivisionDepth = 1;
     // If a curve segment is longer than this, it gets divided in two.
-    // You probably don't want to multiply this by `menuScaling`, and we don't do it automatically.
+    // You probably don't want to multiply this by `UI::scale()`, and we don't do it automatically.
     float subdivisionStepPixels = 4;
 };
 

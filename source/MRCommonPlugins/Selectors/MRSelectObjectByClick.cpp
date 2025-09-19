@@ -18,7 +18,7 @@ SelectObjectByClick::SelectObjectByClick() :
 {
 }
 
-void SelectObjectByClick::drawDialog( float, ImGuiContext* )
+void SelectObjectByClick::drawDialog( ImGuiContext* )
 {
     if ( !picked_ )
         return;

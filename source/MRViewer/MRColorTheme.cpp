@@ -467,12 +467,8 @@ void ColorTheme::resetImGuiStyle()
 
     style.WindowBorderSize = 1.0f;
 
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-    {
-        auto scaling = menu->menu_scaling();
-        ImGui::GetStyle().ScaleAllSizes( scaling );
-        style.ScrollbarSize = 4.0f * scaling + 6.0f; // 6 - is scroll background area, independent of scaling
-    }
+    ImGui::GetStyle().ScaleAllSizes( UI::scale() );
+    style.ScrollbarSize = 4.0f * UI::scale() + 6.0f; // 6 - is scroll background area, independent of scaling
 }
 
 void ColorTheme::updateUserThemesList()

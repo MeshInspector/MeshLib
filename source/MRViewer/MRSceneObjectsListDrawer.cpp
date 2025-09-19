@@ -47,7 +47,7 @@ public:
         {
             if ( skipedCursorPosY > cursorPosY )
                 ImGui::Dummy( ImVec2( 0, skipedCursorPosY - cursorPosY - lastSpacingY ) );
-            
+
             drawFunc();
 
             cursorPosY = ImGui::GetCursorPosY();
@@ -77,10 +77,8 @@ private:
 
 ////////////////////////////////////////////////////
 
-void SceneObjectsListDrawer::draw( float height, float scaling )
+void SceneObjectsListDrawer::draw( float height )
 {
-    menuScaling_ = scaling;
-
     ImGui::BeginChild( "SceneObjectsList", ImVec2( -1, height ), false );
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
@@ -391,6 +389,11 @@ void SceneObjectsListDrawer::drawObjectsList_()
     skippableRenderer.endDraw();
 }
 
+float SceneObjectsListDrawer::getDrawDropTargetHeight_() const
+{
+    return 4.f * UI::scale();
+}
+
 bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int /*depth*/ )
 {
     const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
@@ -416,7 +419,7 @@ void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, cons
     assert( ctx );
     auto window = ctx->CurrentWindow;
     assert( window );
-    auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menuScaling_;
+    auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * UI::scale();
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
     if ( UI::checkbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
     {
@@ -447,9 +450,9 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-    const ImGuiTreeNodeFlags flags = 
-        ImGuiTreeNodeFlags_SpanAvailWidth | 
-        ImGuiTreeNodeFlags_Framed | 
+    const ImGuiTreeNodeFlags flags =
+        ImGuiTreeNodeFlags_SpanAvailWidth |
+        ImGuiTreeNodeFlags_Framed |
         ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
@@ -462,7 +465,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     makeDragDropTarget_( object, false, false, uniqueStr );
 
     if ( ImGui::IsItemHovered() )
-        processItemClick_( object, selected );    
+        processItemClick_( object, selected );
 
     return isOpen;
 }
@@ -537,7 +540,7 @@ void SceneObjectsListDrawer::makeDragDropTarget_( Object& target, bool before, b
         auto width = ImGui::GetContentRegionAvail().x;
         ImGui::ColorButton( ( "##InternalDragDropArea" + uniqueStr ).c_str(),
             ImVec4( 0, 0, 0, 0 ),
-            0, ImVec2( width, 4 * menuScaling_ ) );
+            0, ImVec2( width, 4 * UI::scale() ) );
     }
     if ( ImGui::BeginDragDropTarget() )
     {
@@ -547,7 +550,7 @@ void SceneObjectsListDrawer::makeDragDropTarget_( Object& target, bool before, b
             auto width = ImGui::GetContentRegionAvail().x;
             ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + uniqueStr ).c_str(),
                 ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
-                0, ImVec2( width, 4 * menuScaling_ ) );
+                0, ImVec2( width, 4 * UI::scale() ) );
         }
         if ( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "_TREENODE" ) )
         {

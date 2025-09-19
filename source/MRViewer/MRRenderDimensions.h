@@ -52,7 +52,6 @@ struct RadiusParams
 
 class RadiusTask : public BasicClickableRectUiRenderTask
 {
-    float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
     Color color_;
     RadiusParams params_;
@@ -88,7 +87,6 @@ struct AngleParams
 
 class AngleTask : public BasicClickableRectUiRenderTask
 {
-    float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
     Color color_;
     AngleParams params_;
@@ -130,7 +128,6 @@ struct LengthParams
 
 class LengthTask : public BasicClickableRectUiRenderTask
 {
-    float menuScaling_ = 1;
     Viewport* viewport_ = nullptr;
     Color color_;
     LengthParams params_;

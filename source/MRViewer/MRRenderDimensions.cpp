@@ -7,6 +7,7 @@
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
@@ -66,7 +67,7 @@ static ImGuiMeasurementIndicators::TextParams makeTextParams( ViewportId viewpor
 }
 
 RadiusTask::RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const RadiusParams& params )
-    : menuScaling_( uiParams.scale ), viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ), params_( params )
+    : viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ), params_( params )
 {
     params_.center = xf( params_.center );
     params_.radiusAsVector = xf.A * params_.radiusAsVector;
@@ -115,7 +116,7 @@ void RadiusTask::renderPass()
     float lengthMultiplier = params_.visualLengthMultiplier;
     ImVec2 farPoint = toScreenCoords( *viewport_, params_.center + worldRadiusVec * ( 1 + lengthMultiplier ) );
 
-    float minRadiusLen = 32 * menuScaling_;
+    float minRadiusLen = 32 * UI::scale();
 
     if ( ImGuiMath::lengthSq( farPoint - point ) < minRadiusLen * minRadiusLen )
         farPoint = point + ImGuiMath::normalize( point - center ) * minRadiusLen;
@@ -138,7 +139,7 @@ void RadiusTask::renderPass()
     text.addText( " " );
     text.addText( lengthToString( radiusValue * ( params_.drawAsDiameter ? 2 : 1 ) ) );
 
-    auto lineResult = ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams,
+    auto lineResult = ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, indicatorParams,
         farPoint, point, {
             .capA = { .text = text, .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) },
             .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow },
@@ -158,7 +159,7 @@ void RadiusTask::onClick()
 }
 
 AngleTask::AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const AngleParams& params )
-    : menuScaling_( uiParams.scale ), viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ),params_( params )
+    : viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ),params_( params )
 {
     params_.center = xf( params_.center );
     for ( std::size_t i = 0; i < 2; i++ )
@@ -200,9 +201,9 @@ void AngleTask::renderPass()
         indicatorParams.colorMain = color_;
         const ImGuiMeasurementIndicators::CurveParams curveParams{ .maxSubdivisionDepth = cCurveMaxSubdivisionDepth };
 
-        float totalLenThreshold = indicatorParams.totalLenThreshold * menuScaling_;
-        float invertedOverhang = indicatorParams.invertedOverhang * menuScaling_;
-        float notchHalfLen = indicatorParams.notchHalfLen * menuScaling_;
+        float totalLenThreshold = indicatorParams.totalLenThreshold * UI::scale();
+        float invertedOverhang = indicatorParams.invertedOverhang * UI::scale();
+        float notchHalfLen = indicatorParams.notchHalfLen * UI::scale();
 
         // Tweak the rays for cones to make them face the camera.
         if ( params_.isConical )
@@ -386,14 +387,14 @@ void AngleTask::renderPass()
         auto drawElem = [&]( ImGuiMeasurementIndicators::Element elem )
         {
             // The main curve.
-            ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, curve.a, curve.b, lineParams );
+            ImGuiMeasurementIndicators::line( elem, indicatorParams, curve.a, curve.b, lineParams );
 
             // Inverted arrows.
             if ( useInvertedStyle )
             {
                 ImGuiMeasurementIndicators::LineParams invArrowParams{ .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow } };
-                ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, invertedStartA, curve.a, invArrowParams );
-                ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, invertedStartB, curve.b, invArrowParams );
+                ImGuiMeasurementIndicators::line( elem, indicatorParams, invertedStartA, curve.a, invArrowParams );
+                ImGuiMeasurementIndicators::line( elem, indicatorParams, invertedStartB, curve.b, invArrowParams );
             }
 
             { // The notches at the arrow tips, optionally extended to the center point.
@@ -415,13 +416,13 @@ void AngleTask::renderPass()
 
                 if ( params_.shouldVisualizeRay[0] && params_.shouldVisualizeRay[1] )
                 {
-                    ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, curve.a + offsets[0], curve.b + offsets[1], { .midPoints = { &screenCenterPoint, 1 } } );
+                    ImGuiMeasurementIndicators::line( elem, indicatorParams, curve.a + offsets[0], curve.b + offsets[1], { .midPoints = { &screenCenterPoint, 1 } } );
                 }
                 else
                 {
                     for ( bool index : { false, true } )
                     {
-                        ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams,
+                        ImGuiMeasurementIndicators::line( elem, indicatorParams,
                             curve.endPoint( index ) + offsets[index],
                             params_.shouldVisualizeRay[index] ? screenCenterPoint : curve.endPoint( index ) - offsets[index]
                         );
@@ -435,7 +436,7 @@ void AngleTask::renderPass()
 
         // The text.
         // This is intentionally outside of the `drawElem()` lambda, to be completely on top of the angle indicator.
-        auto textResult = ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.common.objectToSelect, *this ), normal );
+        auto textResult = ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.common.objectToSelect, *this ), normal );
         if ( textResult && objectIsSelectable( params_.common.objectToSelect ) )
         {
             clickableCornerA_ = textResult->bgCornerA;
@@ -461,7 +462,7 @@ Vector3f LengthTask::computeCornerPoint()
 }
 
 LengthTask::LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const LengthParams& params )
-    : menuScaling_( uiParams.scale ), viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ), params_( params )
+    : viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ), params_( params )
 {
     for ( std::size_t i = 0; i < 2; i++ )
         params_.points[i] = xf( params_.points[i] );
@@ -547,8 +548,8 @@ void LengthTask::renderPass()
 
         for ( auto elem : { ImGuiMeasurementIndicators::Element::outline, ImGuiMeasurementIndicators::Element::main } )
         {
-            distanceResult = ImGuiMeasurementIndicators::distance( elem, menuScaling_, indicatorParams, a, cornerPointScreen, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
-            ImGuiMeasurementIndicators::line( elem, menuScaling_, indicatorParams, cornerPointScreen, b, {
+            distanceResult = ImGuiMeasurementIndicators::distance( elem, indicatorParams, a, cornerPointScreen, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
+            ImGuiMeasurementIndicators::line( elem, indicatorParams, cornerPointScreen, b, {
                 .flags = ImGuiMeasurementIndicators::LineFlags::narrow,
                 .capA = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::extend },
                 .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::point },
@@ -558,7 +559,7 @@ void LengthTask::renderPass()
     }
     else
     {
-        distanceResult = ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
+        distanceResult = ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, indicatorParams, a, b, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
     }
 
     if ( distanceResult && distanceResult->text && objectIsSelectable( params_.common.objectToSelect ) )

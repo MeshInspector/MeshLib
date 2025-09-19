@@ -102,7 +102,7 @@ bool GcodeToolsLibrary::drawInterface()
     const float btnWidth = ImGui::CalcTextSize( "Remove" ).x + ImGui::GetStyle().FramePadding.x * 2.f;
     const float btnHeight = ImGui::GetTextLineHeight() + StyleConsts::CustomCombo::framePadding.y * 2.f;
     const float btnPosX = ImGui::GetContentRegionAvail().x - btnWidth;
-    
+
     ImGui::SameLine( btnPosX );
     if ( UI::button( "Remove", selectedFileName_ != defaultName, {btnWidth, btnHeight}) )
     {
@@ -113,21 +113,20 @@ bool GcodeToolsLibrary::drawInterface()
     return result;
 }
 
-bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
+bool GcodeToolsLibrary::drawCreateToolDialog()
 {
     if ( !createToolDialogIsOpen_ )
         return false;
 
-    const auto menuWidth = 220.f * menuScaling;
+    const auto menuWidth = 220.f * UI::scale();
     if ( !ImGui::BeginCustomStatePlugin( "Create Tool", &createToolDialogIsOpen_, {
         .width = menuWidth,
-        .menuScaling = menuScaling,
     } ) )
         return false;
 
     bool result = false;
 
-    const auto itemWidth = 160.f * menuScaling;
+    const auto itemWidth = 160.f * UI::scale();
 
     UI::inputTextCentered( "Name", createToolName_, itemWidth );
 
@@ -141,9 +140,9 @@ bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
     ImGui::SetNextItemWidth( itemWidth );
     UI::combo( "Type", &createToolType_, cToolTypeNames );
 
-    UI::separator( menuScaling, "Specifications" );
+    UI::separator( "Specifications" );
 
-    ImGui::PushItemWidth( 115.f * menuScaling );
+    ImGui::PushItemWidth( 115.f * UI::scale() );
     UI::drag<LengthUnit>( "Length", createToolLength_, 1e-3f, 1e-3f, 1e+3f );
     UI::drag<LengthUnit>( "Diameter", createToolDiameter_, 1e-3f, 1e-3f, 1e+3f );
     if ( createToolType_ == (int)EndMillCutter::Type::Ball )
@@ -223,7 +222,7 @@ std::filesystem::path GcodeToolsLibrary::getFolder_()
         return path;
     else if ( std::filesystem::create_directory( path, ec ) )
         return path;
-    
+
     return {};
 }
 

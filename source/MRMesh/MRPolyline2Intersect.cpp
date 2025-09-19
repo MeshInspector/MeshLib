@@ -119,7 +119,7 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
                 if ( doSegmentLineIntersect( LineSegm2<T>{ segm }, line, &segmPos, &rayPos )
                     && rayPos < rayEnd && rayPos > rayStart )
                 {
-                    if ( callback( EdgePoint{ edge, float( segmPos ) }, rayPos, rayEnd ) == Processing::Stop )
+                    if ( callback( EdgePoint{ edge, float( segmPos ) }, rayPos, rayStart, rayEnd ) == Processing::Stop )
                         return;
                 }
             }
@@ -192,10 +192,26 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline
     T rayStart, T rayEnd, const IntersectionPrecomputes2<T>& prec, bool closestIntersect )
 {
     std::optional<PolylineIntersectionResult2> res;
-    rayPolylineIntersectAll_<T>( polyline, line, [&res, closestIntersect]( const EdgePoint & polylinePoint, T rayPos, T & currRayEnd )
+    rayPolylineIntersectAll_<T>( polyline, line, [&res, closestIntersect]( const EdgePoint & polylinePoint, T rayPos, T & currRayStart, T & currRayEnd )
     {
         res = { .edgePoint = polylinePoint, .distanceAlongLine = float( rayPos ) };
-        currRayEnd = rayPos;
+        if ( rayPos == 0 )
+        {
+            currRayStart = currRayEnd = 0;
+            return Processing::Stop; // intersection exactly at ray origin
+        }
+        if ( rayPos < 0 )
+        {
+            assert( currRayStart < 0 );
+            currRayStart = rayPos;
+            currRayEnd = std::min( currRayEnd, -rayPos );
+        }
+        else
+        {
+            assert( currRayEnd > 0 );
+            currRayEnd = rayPos;
+            currRayStart = std::max( currRayStart, -rayPos );
+        }
         // stop searching if any intersection is ok
         return closestIntersect ? Processing::Continue : Processing::Stop;
     }, rayStart, rayEnd, prec );

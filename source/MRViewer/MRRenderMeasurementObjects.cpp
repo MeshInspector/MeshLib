@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRVisualObject.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {

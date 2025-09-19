@@ -3,6 +3,8 @@
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 
+#include "MRPch/MRJson.h"
+
 namespace MR
 {
 

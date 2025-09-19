@@ -16,6 +16,8 @@ RibbonConfig createRibbonConfigFromJson( const Json::Value& root )
     {
         const auto& layout = root["MenuLayout"];
         config.menuUIConfig = RibbonMenuUIConfig();
+        if ( auto ribbonMenu = RibbonMenu::instance() )
+            config.menuUIConfig = ribbonMenu->getMenuUIConfig();
         auto& menuConfig = *config.menuUIConfig;
         if ( layout["drawTabs"].isBool() )
             menuConfig.topLayout = layout["drawTabs"].asBool() ? RibbonTopPanelLayoutMode::RibbonWithTabs : RibbonTopPanelLayoutMode::RibbonNoTabs;
@@ -29,6 +31,10 @@ RibbonConfig createRibbonConfigFromJson( const Json::Value& root )
             menuConfig.drawViewportTags = layout["drawViewportTags"].asBool();
         if ( layout["drawNotifications"].isBool() )
             menuConfig.drawNotifications = layout["drawNotifications"].asBool();
+        if ( layout["drawSearchBar"].isBool() )
+            menuConfig.drawSearchBar = layout["drawSearchBar"].asBool();
+        if ( layout["helpLink"].isString() )
+            menuConfig.helpLink = layout["helpLink"].asString();
     }
 
     Color monochrome( 0, 0, 0, 0 );

@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 namespace MR
 {
@@ -19,6 +20,8 @@ struct RibbonMenuUIConfig
     bool drawToolbar{ true }; ///< if false - toolbar will be hidden (ignored if top panel is hidden)
     bool drawViewportTags{ true }; ///< if false - window with viewport label and id will be hidden
     bool drawNotifications{ true }; ///< if false - no notifications are drawn on screen
+    bool drawSearchBar{ true }; ///< if false - hides search bar at the header panel of ribbon
+    std::string helpLink = "https://meshinspector.com/inapphelp/"; ///< help btn leads to this page, if empty - no help btn is drawn
 
     bool operator==( const RibbonMenuUIConfig& ) const = default;
 };

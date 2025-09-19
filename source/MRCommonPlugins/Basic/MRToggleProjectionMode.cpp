@@ -9,7 +9,7 @@
 namespace MR
 {
 
-class ToggleProjectionModeItem : public ItemEnabledPerViewport, public ProvidesViewportWidget
+class ToggleProjectionModeItem : public RibbonMenuItem, public ItemEnabledPerViewport, public ProvidesViewportWidget
 {
 public:
     ToggleProjectionModeItem();

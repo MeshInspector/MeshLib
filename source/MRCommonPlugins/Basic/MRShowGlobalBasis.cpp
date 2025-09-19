@@ -8,7 +8,7 @@
 
 namespace MR
 {
-class ShowGlobalBasisMenuItem : public ItemEnabledPerViewport, public ProvidesViewportWidget
+class ShowGlobalBasisMenuItem : public RibbonMenuItem, public ItemEnabledPerViewport, public ProvidesViewportWidget
 {
 public:
     ShowGlobalBasisMenuItem();

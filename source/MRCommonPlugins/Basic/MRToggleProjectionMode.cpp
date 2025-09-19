@@ -1,3 +1,4 @@
+#include "MRViewer/MRItemEnabledPerViewport.h"
 #include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
@@ -8,7 +9,7 @@
 namespace MR
 {
 
-class ToggleProjectionModeItem : public RibbonMenuItem, public ProvidesViewportWidget
+class ToggleProjectionModeItem : public ItemEnabledPerViewport, public ProvidesViewportWidget
 {
 public:
     ToggleProjectionModeItem();
@@ -26,7 +27,7 @@ ToggleProjectionModeItem::ToggleProjectionModeItem() :
 void ToggleProjectionModeItem::providedViewportWidgets( ViewportWidgetInterface& in )
 {
     auto id = in.viewportId();
-    if ( !showButtonInViewports.contains( id ) )
+    if ( !getEnabledViewports().contains( id ) || !showButtonInViewports.contains( id ) )
         return;
 
     bool isOrtho = getViewerInstance().viewport( id ).getParameters().orthographic;

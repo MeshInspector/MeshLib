@@ -76,17 +76,15 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                             }
                             if ( t < 0 )
                             {
-                                if ( rayStart < 0 )
-                                    rayStart = t;
-                                if ( rayEnd > 0 )
-                                    rayEnd = std::min( rayEnd, -t );
+                                assert( rayStart < 0 );
+                                rayStart = t;
+                                rayEnd = std::min( rayEnd, -t );
                             }
                             else
                             {
-                                if ( rayEnd > 0 )
-                                    rayEnd = t;
-                                if ( rayStart < 0 )
-                                    rayStart = std::max( rayStart, -t );
+                                assert( rayEnd > 0 );
+                                rayEnd = t;
+                                rayStart = std::max( rayStart, -t );
                             }
                         }
                     }

@@ -228,7 +228,7 @@ std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
     return std::visit( [&] ( const auto& val ) -> std::string
     {
         using T = std::decay_t<decltype( val )>;
-        if constexpr ( std::is_same_v<T, EmptyCell> )
+        if constexpr ( std::is_same_v<T, Empty> )
             return "";
         else
             return fmt::format( runtimeFmt( fmtStr ), val );

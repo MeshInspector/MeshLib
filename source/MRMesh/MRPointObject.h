@@ -10,7 +10,7 @@ namespace MR
 
 /// Object to show point feature
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS PointObject : public FeatureObject, public ObjectComparableWithReference
+class MRMESH_CLASS PointObject : public FeatureObject
 {
 public:
     /// Creates simple point object with zero position
@@ -46,20 +46,6 @@ public:
 
     [[nodiscard]] MRMESH_API FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/, ViewportId id = {} ) const override;
 
-    // Implement `ObjectComparableWithReference`:
-    [[nodiscard]] MRMESH_API std::size_t numComparableProperties() const override;
-    [[nodiscard]] MRMESH_API std::string_view getComparablePropertyName( std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API std::optional<ComparableProperty> computeComparableProperty( std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API std::optional<ComparisonTolerance> getComparisonTolerence( std::size_t i ) const override;
-    MRMESH_API void setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance ) override;
-    [[nodiscard]] MRMESH_API bool comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const override;
-    // This returns 2: the point, and the optional normal direction. The normal doesn't need to be normalized, its length doesn't affect calculations.
-    // If the normal isn't specified, the euclidean distance gets used.
-    [[nodiscard]] MRMESH_API std::size_t numComparisonReferenceValues() const override;
-    [[nodiscard]] MRMESH_API std::string_view getComparisonReferenceValueName( std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const override;
-    MRMESH_API void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) override;
-
 protected:
     PointObject( const PointObject& other ) = default;
 
@@ -75,11 +61,6 @@ protected:
         { return {}; }
 
     MRMESH_API void setupRenderObject_() const override;
-
-    // Quality control:
-    std::optional<Vector3f> referencePos_;
-    std::optional<Vector3f> referenceNormal_; // Not necessarily normalized.
-    std::optional<ComparisonTolerance> tolerance_;
 };
 
 }

@@ -34,11 +34,6 @@ static std::string lengthToString( float value )
 {
     return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
 }
-// `dir == 0` - symmetric, `dir > 0` - positive, `dir < 0` - negative.
-static std::string lengthToleranceToString( float value, int dir )
-{
-    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .plusSign = dir != 0, .zeroMode = dir >= 0 ? ZeroMode::alwaysPositive : ZeroMode::alwaysNegative, .stripTrailingZeroes = dir != 0 } );
-}
 
 // Extracts subfeatures from `sourceObject` and writes them out `outputPoints` and `outputLines`.
 // `sourceObject` must point to a temporary object of the desired type, with identity xf.
@@ -171,69 +166,6 @@ ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameText( co
     {
         return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
-}
-
-ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const
-{
-    (void)viewportId;
-
-    ImGuiMeasurementIndicators::Text ret;
-
-    const auto& comp = dynamic_cast<const ObjectComparableWithReference&>( object );
-    if ( auto prop = comp.computeComparableProperty( 0 ) )
-    {
-        assert( !prop->referenceValue || *prop->referenceValue == 0 );
-
-        auto tol = comp.getComparisonTolerence( 0 );
-
-        const bool passOrFail = bool( tol );
-        const bool pass = passOrFail && prop->value >= tol->negative && prop->value <= tol->positive;
-
-        ret.addElem( { .var = "Deviation: ", .columnId = 0 } );
-
-        // Style customization for value if we're in pass/fail mode.
-        if ( passOrFail )
-        {
-            ret.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
-        }
-        // The value itself.
-        ret.addElem( { .var = lengthToString( prop->value ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
-        if ( passOrFail )
-        {
-            ret.add( ImGuiMeasurementIndicators::TextColor{} );
-        }
-
-        if ( prop->referenceValue && tol )
-        {
-            bool haveNormal = comp.getComparisonReferenceValue( 1 ).isSet;
-
-            ret.addLine();
-
-            if ( haveNormal )
-            {
-                if ( tol->positive == -tol->negative )
-                {
-                    ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
-                    ret.addElem( { .var = "\xC2\xB1" + lengthToleranceToString( tol->positive, 0 ), .columnId = 1 } ); // U+00B1 PLUS-MINUS SIGN
-
-                }
-                else
-                {
-                    ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
-
-                    // No column ID on this one, it won't line up well anyway.
-                    ret.addElem( { .var = fmt::format( "{}/{}", lengthToleranceToString( tol->positive, 1 ), lengthToleranceToString( tol->negative, -1 ) ) } );
-                }
-            }
-            else
-            {
-                ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
-                ret.addElem( { .var = lengthToleranceToString( tol->positive, 0 ), .columnId = 1 } );
-            }
-        }
-    }
-
-    return ret;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( LineObject, RenderLineFeatureObject )

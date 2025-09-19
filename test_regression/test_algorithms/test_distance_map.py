@@ -21,9 +21,9 @@ def test_mesh_to_distance_map_to_mesh(tmp_path):
     params = mrmeshpy.MeshToDistanceMapParams()
     params.direction = mrmeshpy.Vector3f(x=0, y=1, z=0)
     params.resolution = mrmeshpy.Vector2i(x=1000, y=1000)
-    params.orgPoint = mrmeshpy.Vector3f(x=0, y=-125, z=-20)
-    params.xRange = mrmeshpy.Vector3f(x=150, y=150, z=0)
-    params.yRange = mrmeshpy.Vector3f(x=0, y=150, z=150)
+    params.orgPoint = mrmeshpy.Vector3f(x=0, y=25, z=-20)
+    params.xRange = mrmeshpy.Vector3f(x=150, y=0, z=0)
+    params.yRange = mrmeshpy.Vector3f(x=0, y=0, z=150)
 
     dm = mrmeshpy.computeDistanceMapD(mp=mesh, params=params)
     mrmeshpy.saveDistanceMapToImage(distMap=dm, filename=tmp_path / "a.png")

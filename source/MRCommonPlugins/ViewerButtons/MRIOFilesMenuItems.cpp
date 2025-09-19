@@ -798,14 +798,23 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 
 void SaveSceneAsMenuItem::saveSceneAs_()
 {
-    std::string defFileName;
-    if ( auto obj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        defFileName = obj->name();
+    FileParameters params{ .filters = SceneSave::getFilters() };
+    auto savePath = SceneRoot::getScenePath();
+    if ( savePath.empty() )
+    {
+        if ( auto obj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+            params.fileName = obj->name();
+    }
+    else
+    {
+        params.baseFolder = savePath.parent_path();
+        params.fileName = utf8string( savePath.stem() );
+    }
     saveFileDialogAsync( [&] ( const std::filesystem::path& savePath )
     {
         if ( !savePath.empty() )
             saveScene_( savePath );
-    }, { .fileName = defFileName, .filters = SceneSave::getFilters() } );
+    }, params );
 }
 
 bool SaveSceneAsMenuItem::action()

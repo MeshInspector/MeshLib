@@ -556,8 +556,8 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
     std::vector<std::future<Expected<void>>> res;
 
     // the key must be unique among all children of same parent
-    constexpr int maxFileNameLen = 12; /// keep file names not too long to avoid hitting limit in some OSes
-    std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ ).substr( 0, maxFileNameLen );
+    constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
+    std::string key = std::to_string( childId ) + "_" + utf8substr( replaceProhibitedChars( name_ ).c_str(), 0, maxFileNameLen );
 
     auto model = serializeModel_( path / pathFromUtf8( key ) );
     if ( !model.has_value() )

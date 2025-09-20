@@ -87,6 +87,16 @@ std::string utf8ToSystem( const std::string & utf8 )
 #endif
 }
 
+std::string utf8substr( const char * s, size_t pos, size_t count )
+{
+    if ( !s )
+    {
+        assert( false );
+        return {};
+    }
+    return wideToUtf8( utf8ToWide( s ).substr( pos, count ).c_str() );
+}
+
 std::string bytesString( size_t size )
 {
     if ( size < 1024 )

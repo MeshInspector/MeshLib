@@ -65,6 +65,10 @@ namespace MR
     { return asString( path.u8string() ); }
 #endif
 
+/// given on input a valid utf8-encoded string, returns its substring starting at \p pos unicode symbol,
+/// and containing at most \p count unicode symbols (but res.size() can be more than \p count since a unicode symbol can be represented by more than 1 byte)
+[[nodiscard]] MRMESH_API std::string utf8substr( const char * s, size_t pos, size_t count );
+
 /// \}
 
 /// converts given size in string:

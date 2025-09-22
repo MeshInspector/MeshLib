@@ -32,7 +32,7 @@ struct ComputeSweptVolumeParameters
     const EndMillTool* toolSpec = nullptr;
     /// voxel size for internal voxel volumes
     // TODO: replace with tolerance and make the voxel size implementation-specific
-    float voxelSize;
+    float voxelSize{ 0.0f };
     /// (distance volume) max memory amount used for the distance volume, zero for no limits
     size_t memoryLimit = 0;
     /// progress callback

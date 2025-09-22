@@ -232,6 +232,11 @@ Box3i computeGridBox( const Box3f& workArea, float voxelSize )
 
 Expected<Mesh> computeSweptVolumeWithMeshMovement( const ComputeSweptVolumeParameters& params )
 {
+    if ( params.voxelSize <= 0.0f )
+    {
+        assert( false );
+        return unexpected( "Incorrect voxel size" );
+    }
     FloatGrid grid = std::make_shared<OpenVdbFloatGrid>();
     setLevelSetType( grid );
     openvdb::tools::changeBackground( grid->tree(), 9999.f );
@@ -285,6 +290,12 @@ Expected<Mesh> computeSweptVolumeWithMeshMovement( const ComputeSweptVolumeParam
 Expected<Mesh> computeSweptVolumeWithDistanceVolume( const ComputeSweptVolumeParameters& params, const Box2f& toolBox, auto&& posToDistFunc )
 {
     MR_TIMER;
+
+    if ( params.voxelSize <= 0.0f )
+    {
+        assert( false );
+        return unexpected( "Incorrect voxel size" );
+    }
 
     const auto workArea = computeWorkArea( params.path, toolBox );
     const auto gridBox = computeGridBox( workArea, params.voxelSize );

@@ -181,20 +181,22 @@ template <typename T>
 Matrix3<T> Matrix4<T>::submatrix3( int i, int j ) const noexcept
 {
     Matrix3<T> res;
-    auto* resM = (T*) &res.x;
-    int cur = 0;
+    int nrow = 0;
     for ( int m = 0; m < 4; m++ )
     {
         if ( m == i )
             continue;
+        auto & row = res[nrow++];
+        int ncol = 0;
         for ( int n = 0; n < 4; n++ )
         {
             if ( n == j )
                 continue;
-            resM[cur++] = (*this)[m][n];
+            row[ncol++] = (*this)[m][n];
         }
+        assert( ncol == 3 );
     }
-    assert( cur == 9 );
+    assert( nrow == 3 );
     return res;
 }
 

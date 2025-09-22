@@ -1,3 +1,4 @@
+#include "MRViewer/MRItemEnabledPerViewport.h"
 #include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
@@ -7,7 +8,7 @@
 
 namespace MR
 {
-class ShowGlobalBasisMenuItem : public RibbonMenuItem, public ProvidesViewportWidget
+class ShowGlobalBasisMenuItem : public ItemEnabledPerViewport, public ProvidesViewportWidget
 {
 public:
     ShowGlobalBasisMenuItem();
@@ -80,7 +81,7 @@ public:
     void providedViewportWidgets( ViewportWidgetInterface& in ) override
     {
         auto id = in.viewportId();
-        if ( !showButtonInViewports.contains( id ) )
+        if ( !getEnabledViewports().contains( id ) || !showButtonInViewports.contains( id ) )
             return;
 
         State state = getCurrentState( id );

@@ -43,24 +43,24 @@ OpenRawVoxelsPlugin::OpenRawVoxelsPlugin():
     parameters_.voxelSize = { 1.0f, 1.0f, 1.0f };
 }
 
-void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
+void OpenRawVoxelsPlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 350.0f * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 350.0f * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
     UI::checkbox( "Auto parameters", &autoMode_ );
     ImGui::PopStyleVar();
-    UI::setTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
+    UI::setTooltipIfHovered( "Use this flag to parse RAW parameters from filename." );
     ImGui::Separator();
 
     if ( !autoMode_ )
     {
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
-        ImGui::PushItemWidth( menuScaling * 200.0f );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * UI::scale() } );
+        ImGui::PushItemWidth( UI::scale() * 200.0f );
         UI::drag<NoUnit>( "Dimensions", parameters_.dimensions, 1, 0, std::numeric_limits<int>::max() );
         UI::drag<LengthUnit>( "Voxel size", parameters_.voxelSize, 1e-3f, 0.0f );
         ImGui::PopItemWidth();

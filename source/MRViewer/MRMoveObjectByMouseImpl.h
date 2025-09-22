@@ -27,7 +27,7 @@ public:
 
     /// Drawing callback to draw lines and tooltips
     /// Should be called from `drawDialog`
-    MRVIEWER_API void onDrawDialog( float menuScaling ) const;
+    MRVIEWER_API void onDrawDialog() const;
 
     /// These functions should be called from corresponding mouse handlers
     /// Or mouse drag handlers, making it work together with mouseClick signal
@@ -66,7 +66,7 @@ protected:
     };
 
     /// if this value is > 0.0f, then Rotation and Scale will be blocked in this zone around xf center
-    /// (this value IS automatically modified by menuScaling)
+    /// (this value IS automatically modified by `UI::scale()`)
     float deadZonePixelRadius_{ 20.0f };
 
     /// This function is called from `onMouseMove` to update current active objects

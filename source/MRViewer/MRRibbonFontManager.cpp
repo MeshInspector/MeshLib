@@ -1,4 +1,5 @@
 #include "MRRibbonFontManager.h"
+#include "MRViewer/MRUIStyle.h"
 #include "misc/freetype/imgui_freetype.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
@@ -41,7 +42,7 @@ RibbonFontManager::RibbonFontManager()
     };
 }
 
-void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
+void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
 {
     fonts_ = {
         FontData{.fontFile = FontFile::Regular},
@@ -54,7 +55,7 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
         FontData{.fontFile = FontFile::Monospace}
     };
 
-    updateFontsScaledOffset_( scaling );
+    updateFontsScaledOffset_();
 
     const ImWchar iconRanges[] = { 0xe005, 0xf8ff, 0 };
 
@@ -63,11 +64,11 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
     for ( int i = 0; i< int( FontType::Count ); ++i )
     {
         if ( i == int( FontType::Icons ) )
-            loadFont_( FontType::Icons, iconRanges, scaling );
+            loadFont_( FontType::Icons, iconRanges );
         else
-            loadFont_( FontType( i ), charRanges, scaling );
+            loadFont_( FontType( i ), charRanges );
 
-        addCustomGlyphs_( FontType( i ), scaling, customGlyphs );
+        addCustomGlyphs_( FontType( i ), customGlyphs );
     }
     ImGui::GetIO().Fonts->Build();
 
@@ -141,7 +142,7 @@ MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
     return instance;
 }
 
-void RibbonFontManager::updateFontsScaledOffset_( float scaling )
+void RibbonFontManager::updateFontsScaledOffset_()
 {
     ImGuiIO& io = ImGui::GetIO();
     const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
@@ -155,7 +156,7 @@ void RibbonFontManager::updateFontsScaledOffset_( float scaling )
         if ( i != int( FontType::Icons ) )
             config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
 
-        auto fontSize = getFontSizeByType( FontType( i ) ) * scaling;
+        auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
         localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
     }
     io.Fonts->Build();
@@ -169,7 +170,7 @@ void RibbonFontManager::updateFontsScaledOffset_( float scaling )
         const auto& glyph = lFont->Glyphs.back();
 
         auto& fontRef = fonts_[int( i )];
-        auto fontSize = getFontSizeByType( FontType( i ) ) * scaling;
+        auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
         Box2f box;
         box.include( Vector2f( glyph.X0, glyph.Y0 ) );
         box.include( Vector2f( glyph.X1, glyph.Y1 ) );
@@ -180,9 +181,9 @@ void RibbonFontManager::updateFontsScaledOffset_( float scaling )
     io.Fonts->Clear();
 }
 
-void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float scaling )
+void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
 {
-    float fontSize = getFontSizeByType( type ) * scaling;
+    float fontSize = getFontSizeByType( type ) * UI::scale();
     auto& font = fonts_[int( type )];
     auto fontPath = fontPaths_[int( font.fontFile )];
 
@@ -202,7 +203,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         &config, ranges );
 }
 
-void RibbonFontManager::addCustomGlyphs_( FontType font, float scaling, std::vector<CustomGlyph>& glyphs )
+void RibbonFontManager::addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs )
 {
     // `font->FontSize` is null at this point, so we must pass `fontSize` manually.
 
@@ -211,7 +212,7 @@ void RibbonFontManager::addCustomGlyphs_( FontType font, float scaling, std::vec
         std::function<void( unsigned char* texture, int stride, int rectW, int rectH )> render
     )
     {
-        int height = int( std::floor( getFontSizeByType( font ) * scaling ) );
+        int height = int( std::floor( getFontSizeByType( font ) * UI::scale() ) );
         int width = int( std::round( height * relWidth ) );
 
         int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )].fontPtr, ch, width, height, float( width ) );

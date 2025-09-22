@@ -110,6 +110,12 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
             if ( data_.vertColors.size() < data_.vertColors.capacity() )
                 res.back() += " / " + std::to_string( data_.vertColors.capacity() ) + " capacity";
         }
+        if ( !data_.texturePerFace.empty() )
+        {
+            res.push_back( "texture-per-face: " + std::to_string( data_.texturePerFace.size() ) );
+            if ( data_.texturePerFace.size() < data_.texturePerFace.capacity() )
+                res.back() += " / " + std::to_string( data_.texturePerFace.capacity() ) + " capacity";
+        }
 
         res.push_back( "holes: " + std::to_string( numHoles() ) );
 

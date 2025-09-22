@@ -41,7 +41,7 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     tab_ = tab;
 }
 
-void StateBasePlugin::drawDialog( float, ImGuiContext* )
+void StateBasePlugin::drawDialog( ImGuiContext* )
 {
 }
 

@@ -17,7 +17,6 @@ public:
     struct Params
     {
         // Mandatory:
-        float menuScaling = 1;
         ViewportId viewportId;
         Vector3f worldPos;
         std::string id; // Must not repeat per frame per viewport, isn't displayed anywhere.

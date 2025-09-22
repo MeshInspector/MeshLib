@@ -41,7 +41,7 @@ void NonOverlappingLabelTask::renderPass()
     if ( !indParams )
         indParams = &indParamsStorage.emplace();
 
-    ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params_.menuScaling, *indParams, finalScreenPos_, params_.text );
+    ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, *indParams, finalScreenPos_, params_.text );
 }
 
 }

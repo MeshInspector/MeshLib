@@ -49,10 +49,10 @@ bool MoveObjectByMouse::onDisable_()
     return true;
 }
 
-void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
+void MoveObjectByMouse::drawDialog( ImGuiContext*)
 {
-    auto menuWidth = 400.f * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 400.f * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
     if ( int( moveByMouse_.modXfMode ) == int( XfMode::Scale ) )
@@ -103,8 +103,7 @@ bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 
 void MoveObjectByMouse::postDraw_()
 {
-    if ( const auto& menu = getViewerInstance().getMenuPlugin() )
-        moveByMouse_.onDrawDialog( menu->menu_scaling() );
+    moveByMouse_.onDrawDialog();
 }
 
 ObjAndPick MoveObjectByMouse::MoveObjectByMouseWithSelected::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers ) const

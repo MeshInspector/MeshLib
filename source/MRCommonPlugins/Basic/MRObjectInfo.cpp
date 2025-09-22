@@ -14,7 +14,7 @@ class ObjectInfo : public StatePlugin
 public:
     ObjectInfo();
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
     virtual bool blocking() const override { return false; }
 };
 
@@ -23,10 +23,10 @@ ObjectInfo::ObjectInfo():
 {
 }
 
-void ObjectInfo::drawDialog( float menuScaling, ImGuiContext* )
+void ObjectInfo::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 300 * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 300 * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
     if ( auto obj = getDepthFirstObject<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )

@@ -1,5 +1,6 @@
 #include "MRViewerSettingsManager.h"
 #include "MRUnitSettings.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
@@ -390,7 +391,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( cfg.hasJsonValue( cRibbonNotificationAllowedTags ) )
             ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTagMask( cfg.getJsonValue( cRibbonNotificationAllowedTags ).asUInt() );
 
-        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * ribbonMenu->menu_scaling() ), 0 } );
+        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * UI::scale() ), 0 } );
         // it is important to be called after `cMainWindowMaximized` block
         // as far as scene size is clamped by window size in each frame
         CommandLoop::appendCommand( [ribbonMenu, sceneSize]

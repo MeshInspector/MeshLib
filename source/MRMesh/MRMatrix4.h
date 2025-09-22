@@ -181,30 +181,22 @@ template <typename T>
 Matrix3<T> Matrix4<T>::submatrix3( int i, int j ) const noexcept
 {
     Matrix3<T> res;
-    auto* resM = (T*) &res.x;
-    int cur = 0;
+    int nrow = 0;
     for ( int m = 0; m < 4; m++ )
     {
         if ( m == i )
             continue;
+        auto & row = res[nrow++];
+        int ncol = 0;
         for ( int n = 0; n < 4; n++ )
         {
             if ( n == j )
                 continue;
-
-            // GCC warns about this for `T == unsigned char`, which I assume to be a false positive,
-            //   because `[unsigned] char` are about the only types for which this hackery is legal.
-            #if defined(__GNUC__) && !defined(__clang__)
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wstringop-overflow"
-            #endif
-            resM[cur++] = (*this)[m][n];
-            #if defined(__GNUC__) && !defined(__clang__)
-            #pragma GCC diagnostic pop
-            #endif
+            row[ncol++] = (*this)[m][n];
         }
+        assert( ncol == 3 );
     }
-    assert( cur == 9 );
+    assert( nrow == 3 );
     return res;
 }
 

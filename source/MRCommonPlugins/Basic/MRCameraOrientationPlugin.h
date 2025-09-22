@@ -12,7 +12,7 @@ class CameraOrientation : public MR::StatePlugin
 public:
     CameraOrientation();
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
 
     virtual bool blocking() const override { return false; }
 private:
@@ -24,7 +24,7 @@ private:
 
     virtual bool onEnable_() override;
 
-    void drawCameraPresets_( float scaling );
+    void drawCameraPresets_();
 
     void autofit_();
     void getCamera_();

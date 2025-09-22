@@ -149,6 +149,7 @@
     <ClCompile Include="MRVisualObjectTag.cpp" />
     <ClCompile Include="MRRenderClickableRect.cpp" />
     <ClCompile Include="MRUIQualityControl.cpp" />
+    <ClCompile Include="MRItemEnabledPerViewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -313,6 +314,7 @@
     <ClInclude Include="MRVisualObjectTag.h" />
     <ClInclude Include="MRRenderClickableRect.h" />
     <ClInclude Include="MRUIQualityControl.h" />
+    <ClInclude Include="MRItemEnabledPerViewport.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

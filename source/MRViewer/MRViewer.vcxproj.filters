@@ -490,6 +490,9 @@
     <ClCompile Include="MRUIQualityControl.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRItemEnabledPerViewport.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -956,6 +959,9 @@
     </ClInclude>
     <ClInclude Include="MRUIQualityControl.h">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRItemEnabledPerViewport.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

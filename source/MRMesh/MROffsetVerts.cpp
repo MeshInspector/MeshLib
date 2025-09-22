@@ -106,4 +106,25 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
     return res;
 }
 
+bool zCompensate( Mesh& mesh, const ZCompensateParams& params )
+{
+    MR_TIMER;
+
+    mesh.invalidateCaches();
+
+    // prepare all shifts before modifying the points
+    VertScalars zShifts( mesh.topology.vertSize() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        const auto n = mesh.pseudonormal( v );
+        if ( n.z < 0 )
+            zShifts[v] = -params.maxShift * n.z;
+    } );
+
+    return BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v].z += zShifts[v];
+    }, params.progress );
+}
+
 } //namespace MR

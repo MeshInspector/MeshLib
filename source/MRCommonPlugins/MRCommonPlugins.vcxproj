@@ -27,6 +27,8 @@
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp" />
+    <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp" />
+    <ClCompile Include="Basic\MRToggleProjectionMode.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
     <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
@@ -44,6 +46,7 @@
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />
+    <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h" />
     <ClInclude Include="Selectors\MRSelectObjectByClick.h" />
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h" />
     <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />
@@ -289,6 +292,16 @@
     <Image Include="resource\icons\X3\Top View.png" />
     <Image Include="resource\icons\X3\Vertical Viewports.png" />
     <Image Include="resource\icons\X3\Viewer settings.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis off.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis and grid.png" />
+    <Image Include="resource\independent_icons\X1\Viewport projection orthographic.png" />
+    <Image Include="resource\independent_icons\X1\Viewport projection perspective.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis off.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis and grid.png" />
+    <Image Include="resource\independent_icons\X3\Viewport projection orthographic.png" />
+    <Image Include="resource\independent_icons\X3\Viewport projection perspective.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

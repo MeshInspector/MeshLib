@@ -50,7 +50,7 @@ void Config::writeToFile()
     std::stringstream strStream;
     strStream << config_;
     std::string str = strStream.str();
-#pragma GCC diagnostic push 
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM({ localStorage.setItem( 'config', UTF8ToString( $0 ) ) }, str.c_str() );
 #pragma GCC diagnostic pop
@@ -164,7 +164,7 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
         return res;
     }
     if ( loggerHandle_ )
-        loggerHandle_->debug( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key, 
+        loggerHandle_->debug( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key,
             defaultValue.r, defaultValue.g, defaultValue.b, defaultValue.a );
     return defaultValue;
 }
@@ -244,6 +244,24 @@ int MR::Config::getEnum( const Enum& enumeration, const std::string& key, int de
 void MR::Config::setEnum( const Enum& enumeration, const std::string& key, int keyValue )
 {
     config_[key] = enumeration[keyValue];
+}
+
+bool Config::hasViewportMask( const std::string& key ) const
+{
+    return config_[key].isInt();
+}
+
+ViewportMask Config::getViewportMask( const std::string& key, ViewportMask defaultValue ) const
+{
+    if ( hasViewportMask( key ) )
+        return ViewportMask( config_[key].asInt() );
+    else
+        return defaultValue;
+}
+
+void Config::setViewportMask( const std::string& key, ViewportMask newValue )
+{
+    config_[key] = newValue.value();
 }
 
 bool Config::hasJsonValue( const std::string& key )

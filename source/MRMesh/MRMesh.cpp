@@ -27,6 +27,7 @@
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
 #include "MRDipole.h"
+#include "MRPartMappingAdapters.h"
 
 namespace MR
 {

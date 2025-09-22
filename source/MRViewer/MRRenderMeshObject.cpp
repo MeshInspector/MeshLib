@@ -104,7 +104,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objMesh_->getColoringType() == ColoringType::VertsColorMap ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perFaceColoring" ), objMesh_->getColoringType() == ColoringType::FacesColorMap ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
@@ -189,7 +189,7 @@ void RenderMeshObject::renderPicker( const ModelBaseRenderParams& parameters, un
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 3 ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, parameters.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( parameters.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         parameters.clipPlane.n.x, parameters.clipPlane.n.y, parameters.clipPlane.n.z, parameters.clipPlane.d ) );
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
@@ -272,8 +272,9 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), false ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), false ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dashed" ), false ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y, renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
@@ -322,7 +323,7 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), false ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), false ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y, renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
@@ -358,7 +359,7 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "invertNormals" ), objMesh_->getVisualizeProperty( VisualizeMaskType::InvertedNormals, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objMesh_->getColoringType() == ColoringType::VertsColorMap ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
@@ -647,6 +648,14 @@ void RenderMeshObject::bindEmptyTextures_(GLuint shaderId)
         emptyLinesColorTexture_.gen();
     emptyLinesColorTexture_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "lineColors" ), 2 ) );
+
+    // Screen Length
+    GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
+    // bind empty texture
+    if ( !emptyScnLengthColorTexture_.valid() )
+        emptyScnLengthColorTexture_.gen();
+    emptyScnLengthColorTexture_.bind();
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "accumScnLength" ), 3 ) );
 }
 
 void RenderMeshObject::bindPoints_( bool alphaSort )
@@ -981,11 +990,8 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     auto numV = topology.lastValidVert() + 1;
 
     const auto& uvCoords = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryUVCoords() : objMesh_->getUVCoords();
-    if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
-    {
-        assert( uvCoords.size() >= numV );
-    }
-    if ( uvCoords.size() >= numV )
+    bool textureEnabled = objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) || objMesh_->hasAncillaryTexture();
+    if ( textureEnabled )
     {
         if ( cornerMode )
         {
@@ -1010,7 +1016,10 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
         else
         {
             auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = numV );
-            std::copy( MR::begin( uvCoords ), MR::begin( uvCoords ) + numV, buffer.data() );
+            std::copy( uvCoords.data(), uvCoords.data() + std::min( (size_t)numV, uvCoords.size() ), buffer.data() );
+            // even if some plugin incorrectly made too short uvCoords, fill remaining elements with zeros
+            if ( uvCoords.size() < numV )
+                std::fill( buffer.data() + uvCoords.size(), buffer.data() + numV, UVCoord{} );
             return buffer;
         }
     }

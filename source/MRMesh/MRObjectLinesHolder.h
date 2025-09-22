@@ -9,6 +9,7 @@ enum class MRMESH_CLASS LinesVisualizePropertyType
 {
     Points,
     Smooth,
+    Dashed,
     _count [[maybe_unused]],
 };
 template <> struct IsVisualizeMaskEnum<LinesVisualizePropertyType> : std::true_type {};
@@ -130,6 +131,7 @@ protected:
 
     ViewportMask showPoints_;
     ViewportMask smoothConnections_;
+    ViewportMask dashed_;
 
     /// width on lines on screen in pixels
     float lineWidth_{ 1.0f };

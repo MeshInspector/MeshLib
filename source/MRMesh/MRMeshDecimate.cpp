@@ -7,17 +7,19 @@
 #include "MRRingIterator.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
-#include "MRCylinder.h"
-#include "MRGTest.h"
 #include "MRMeshDelone.h"
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
 #include "MRPriorityQueue.h"
-#include "MRMakeSphereMesh.h"
 #include "MRBuffer.h"
 #include "MRTbbThreadMutex.h"
 #include "MRMeshFixer.h"
+#include "MRObjectMeshData.h"
+#include "MRMeshAttributesToUpdate.h"
+#include "MRMeshDecimateCallbacks.h"
+#include "MRMapEdge.h"
+#include "MRObjectMesh.h"
 
 namespace MR
 {
@@ -528,9 +530,19 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     // cannot collapse internal edge if its left and right faces share another edge
     if ( vl && vr )
     {
+        bool oDegree2 = false;
         if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
-            return { .status =  CollapseStatus::SharedEdge };
+            oDegree2 = true; // (pe) is shared between left and right faces of edgeToCollapse
+
+        bool dDegree2 = false;
         if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
+            dDegree2 = true; // (pe) is shared between left and right faces of edgeToCollapse
+        
+        // if both oDegree2 and dDegree2 are true, then vl == vr
+        assert( !oDegree2 || !dDegree2 || vl == vr );
+
+        // but can collapse if left and right faces of edgeToCollapse share all 3 edges
+        if ( oDegree2 != dDegree2 )
             return { .status =  CollapseStatus::SharedEdge };
     }
     const bool collapsingFlippable = !settings_.notFlippable || !settings_.notFlippable->test( edgeToCollapse );
@@ -1228,6 +1240,112 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
     return res;
 }
 
+DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & set0 )
+{
+    MR_TIMER;
+    DecimateResult res;
+    if ( !data.mesh )
+    {
+        assert( false );
+        return res;
+    }
+
+    DecimateSettings settings = set0;
+
+    const bool finalMeshPack = settings.packMesh;
+    settings.packMesh = false;
+
+    assert( !settings.region );
+    settings.region = data.selectedFaces.any() ? &data.selectedFaces : nullptr;
+
+    if ( settings.subdivideParts > 1 )
+        settings.progressCallback = subprogress( set0.progressCallback, 0.2f, 1.0f );
+
+    const bool updateUV = data.mesh->topology.lastValidVert() < data.uvCoordinates.size();
+    const bool updateColorMap = data.mesh->topology.lastValidVert() < data.vertColors.size();
+
+    if ( updateUV || updateColorMap )
+    {
+        MeshAttributesToUpdate meshParams;
+        if ( updateUV )
+            meshParams.uvCoords = &data.uvCoordinates;
+        if ( updateColorMap )
+            meshParams.colorMap = &data.vertColors;
+        settings.preCollapse = meshPreCollapseVertAttribute( *data.mesh, meshParams );
+    }
+
+    std::shared_ptr<UndirectedEdgeBMap> emap;
+    if ( settings.subdivideParts > 1 )
+    {
+        auto packMapping = data.mesh->packOptimally( false );
+        if ( updateUV )
+            data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
+        if ( updateColorMap )
+            data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( settings.region )
+            *settings.region = settings.region->getMapping( packMapping.f );
+        emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+        if ( !reportProgress( set0.progressCallback, .2f ) )
+            return res;
+    }
+
+    res = decimateMesh( *data.mesh, settings );
+    if ( res.cancelled )
+        return res;
+
+    if ( finalMeshPack )
+    {
+        auto packMapping = data.mesh->packOptimally( false );
+        if ( updateUV )
+            data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
+        if ( updateColorMap )
+            data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( settings.region )
+            *settings.region = settings.region->getMapping( packMapping.f );
+        if ( emap )
+            *emap = compose( packMapping.e, *emap );
+        else
+            emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+
+        packMapping = {}; //free memory
+        data.mesh->shrinkToFit();
+    }
+
+    if ( emap && emap->tsize > 0 )
+    {
+        data.selectedEdges = mapEdges( *emap, data.selectedEdges );
+        data.creases = mapEdges( *emap, data.creases );
+    }
+    else
+    {
+        data.mesh->topology.excludeLoneEdges( data.selectedEdges );
+        data.mesh->topology.excludeLoneEdges( data.creases );
+    }
+
+    return res;
+}
+
+MRMESH_API std::optional<ObjectMeshData> makeDecimatedObjectMeshData( const ObjectMesh & obj, const DecimateSettings & settings,
+    DecimateResult * outRes )
+{
+    MR_TIMER;
+
+    ObjectMeshData data = obj.data();
+    if ( !data.mesh )
+    {
+        assert( false );
+        return {};
+    }
+    // clone mesh as well
+    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    auto res = decimateObjectMeshData( data, settings );
+    if ( outRes )
+        *outRes = res;
+    if ( res.cancelled )
+        return {};
+    return data;
+}
+
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 {
     MR_TIMER;
@@ -1311,45 +1429,6 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     }
 
     return reportProgress( settings.progressCallback, 1.0f );
-}
-
-// check if Decimator updates region
-TEST( MRMesh, MeshDecimate )
-{
-    Mesh meshCylinder = makeCylinderAdvanced(0.5f, 0.5f, 0.0f, 20.0f / 180.0f * PI_F, 1.0f, 16);
-
-    // select all faces
-    MR::FaceBitSet regionForDecimation = meshCylinder.topology.getValidFaces();
-    MR::FaceBitSet regionSaved(regionForDecimation);
-
-    // setup and run decimator
-    DecimateSettings decimateSettings;
-    decimateSettings.maxError = 0.001f;
-    decimateSettings.region = &regionForDecimation;
-    decimateSettings.maxTriangleAspectRatio = 80.0f;
-
-    auto decimateResults = decimateMesh(meshCylinder, decimateSettings);
-
-    // compare regions and deleted vertices and faces
-    ASSERT_NE(regionSaved, regionForDecimation);
-    ASSERT_GT(decimateResults.vertsDeleted, 0);
-    ASSERT_GT(decimateResults.facesDeleted, 0);
-}
-
-TEST( MRMesh, MeshDecimateParallel )
-{
-    const int cNumVerts = 400;
-    auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
-    mesh.packOptimally();
-    DecimateSettings settings
-    {
-        .maxError = 1000000, // no actual limit
-        .maxDeletedVertices = cNumVerts - 1, // also no limit, but tests limitedDeletion mode
-        .subdivideParts = 8
-    };
-    decimateMesh( mesh, settings );
-    ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
-    ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
 }
 
 } //namespace MR

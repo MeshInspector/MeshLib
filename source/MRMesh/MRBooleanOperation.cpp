@@ -7,6 +7,7 @@
 #include "MRMeshCollide.h"
 #include "MRAffineXf3.h"
 #include "MRMapEdge.h"
+#include "MRPartMappingAdapters.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -351,6 +352,22 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
     if ( maps[int( obj )].old2newEdges.empty() )
         return {};
     EdgeBitSet res;
+    for ( auto e : oldBS )
+    {
+        auto en = mapEdge( maps[int( obj )].old2newEdges, e );
+        if ( en.valid() )
+            res.autoResizeSet( en );
+    }
+    return res;
+}
+
+UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS, MapObject obj ) const
+{
+    if ( maps[int( obj )].identity )
+        return oldBS;
+    if ( maps[int( obj )].old2newEdges.empty() )
+        return {};
+    UndirectedEdgeBitSet res;
     for ( auto e : oldBS )
     {
         auto en = mapEdge( maps[int( obj )].old2newEdges, e );

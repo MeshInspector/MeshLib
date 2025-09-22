@@ -25,7 +25,7 @@
 
 #ifdef __EMSCRIPTEN__
 
-extern "C" 
+extern "C"
 {
 // 0 - dark
 // 1 - light
@@ -369,7 +369,9 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "GradBtnSecStyleActiveStart",
         "GradBtnSecStyleEnd",
         "GradBtnSecStyleHoverEnd",
-        "GradBtnSecStyleActiveEnd"
+        "GradBtnSecStyleActiveEnd",
+
+        "Grid",
     };
     return colorNames[int( type )];
 }
@@ -391,7 +393,10 @@ const char* ColorTheme::getViewportColorTypeName( ViewportColorsType type )
     constexpr std::array<const char*, size_t( ViewportColorsType::Count )> colorNames
     {
         "Background",
-        "Borders"
+        "Borders",
+        "AxisX",
+        "AxisY",
+        "AxisZ"
     };
     return colorNames[int( type )];
 }
@@ -459,16 +464,11 @@ void ColorTheme::resetImGuiStyle()
     style.ItemSpacing.y = 6.0f;
 
     style.FrameBorderSize = 1.0f;
-    style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
-    
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-    {
-        auto scaling = menu->menu_scaling();
-        ImGui::GetStyle().ScaleAllSizes( scaling );
-        style.ScrollbarSize = 4.0f * scaling + 6.0f; // 6 - is scroll background area, independent of scaling
-    }
+
+    ImGui::GetStyle().ScaleAllSizes( UI::scale() );
+    style.ScrollbarSize = 4.0f * UI::scale() + 6.0f; // 6 - is scroll background area, independent of scaling
 }
 
 void ColorTheme::updateUserThemesList()

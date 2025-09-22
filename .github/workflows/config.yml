@@ -38,12 +38,15 @@ on:
       ubuntu_x64_config_matrix:
         description: "Config matrix for Ubuntu x64 builds"
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
+      windows_x64_config_matrix:
+        description: "Config matrix for Windows builds"
+        value: ${{ jobs.prepare-config.outputs.windows_x64_config_matrix }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
-        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-upload-binaries == 'true' }}
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
@@ -56,6 +59,9 @@ on:
       test_pip_build:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+      build-release-win:
+        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       # flags for disabling builds for different systems
       build_enable_ubuntu_arm64:
         description:
@@ -85,6 +91,7 @@ jobs:
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
       linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
       # please list the required tags here
@@ -93,36 +100,38 @@ jobs:
       tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
       tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
       tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
+      tag-upload-binaries:       ${{ contains( github.event.pull_request.labels.*.name, 'upload-binaries' ) }}
       tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
       tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
       # tags for disabling builds for different systems
+      tag-build-release-windows: ${{ contains( github.event.pull_request.labels.*.name, 'build-release-windows' ) }}
       tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
-      tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
-      tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
-      tag-disable-linux-vcpkg:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
-      tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
-      tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
+      tag-disable-ubuntu-x64:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
+      tag-disable-ubuntu-arm64:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
+      tag-disable-linux-vcpkg:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
+      tag-disable-macos:          ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
+      tag-disable-emscripten:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 
     runs-on: aws-micro
 
     env:
       # duplicate output values here since they cannot be accessed from steps
       full_config_build: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      upload_artifacts: ${{ github.event_name == 'push' || github.event_name == 'schedule' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
+      upload_artifacts: ${{ github.event_name == 'push' || github.event_name == 'schedule' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) || contains( github.event.pull_request.labels.*.name, 'upload-binaries' ) }}
+      version_namespace: ${{ ( contains( github.event.pull_request.labels.*.name, 'full-ci' ) || contains( github.event.pull_request.labels.*.name, 'upload-binaries' ) ) && github.event_name != 'push' && 'pr-test' || '' }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6
+        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6
 
       - name: Check for errors
-        run: uvx pre-commit run --all-files --hook-stage manual
+        run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
@@ -184,7 +193,7 @@ jobs:
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -206,7 +215,7 @@ jobs:
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
           echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
 
-      - name: Set matrix for ubuntu-arm64 builds
+      - name: Set matrix for ubuntu-x64 builds
         id: set-ubuntu-x64-matrix
         run: |
           if [[ "${{ env.full_config_build }}" == "true" ]]; then
@@ -214,3 +223,23 @@ jobs:
           else
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set matrix for windows-x64 builds
+        id: set-windows-x64-matrix
+        run: |
+          if [[ "${{ env.full_config_build }}" == "true" || github.event_name == 'schedule' ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-full-config.json"
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'build-release-windows') }}" == "true" ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-standard-config.json"
+          else
+            MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
+          fi
+
+          jq \
+            --arg vs19 "2024.10.21" \
+            --arg vs22 "2025.04.09" \
+            '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
+            | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
+            "$MATRIX_FILE" > tmp.json
+
+          echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

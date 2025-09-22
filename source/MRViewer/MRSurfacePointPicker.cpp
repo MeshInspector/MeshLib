@@ -1,4 +1,5 @@
 #include "MRSurfacePointPicker.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRMesh/MRObjectMesh.h"
@@ -144,14 +145,18 @@ void SurfacePointWidget::setHovered( bool on )
     }
 }
 
-void SurfacePointWidget::startDragging()
+bool SurfacePointWidget::startDragging()
 {
     assert( !isOnMove_ );
+    if ( canMove_ && !canMove_( *this, currentPos_ ) )
+        return false;
+
     pickSphere_->setPickable( false );
     isOnMove_ = true;
     setSphereColor_();
     if ( startMove_ )
         startMove_( *this, currentPos_ );
+    return true;
 }
 
 bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
@@ -163,8 +168,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( ( mod != 0 ) && ( ( mod & params_.customModifiers ) != mod ) )
         return false;
 
-    startDragging();
-    return true;
+    return startDragging();
 }
 
 bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
@@ -305,8 +309,7 @@ void SurfacePointWidget::setPointRadius_()
 
             radius *= cameraScale / baseObjectScale;
 
-            if ( auto menu = getViewerInstance().getMenuPlugin().get() )
-                radius *= menu->menu_scaling();
+            radius *= UI::scale();
         }
             break;
     }

@@ -38,7 +38,7 @@ void DemoPlugin::preDraw_()
     if ( showCloseModal_ )
     {
         ImGui::OpenPopup( "Close##sureClose" );
-        ImGui::SetNextWindowSize( ImVec2( 200 * menuInstance->menu_scaling(), -1 ), ImGuiCond_Always );
+        ImGui::SetNextWindowSize( ImVec2( 200 * UI::scale(), -1 ), ImGuiCond_Always );
         ImGui::BeginModalNoAnimation( "Close##sureClose", nullptr, ImGuiWindowFlags_NoResize );
 
         ImGui::Text( "Are you sure?" );

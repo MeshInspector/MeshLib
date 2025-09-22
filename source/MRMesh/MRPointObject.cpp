@@ -3,6 +3,8 @@
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
 
+#include <cassert>
+
 namespace MR
 {
 
@@ -51,7 +53,7 @@ std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() 
 
 FeatureObjectProjectPointResult PointObject::projectPoint( const Vector3f& /*point*/, ViewportId id /*= {}*/ ) const
 {
-    return { getPoint( id ) , std::nullopt };
+    return { getPoint( id ), std::nullopt };
 }
 
 void PointObject::swapBase_( Object& other )

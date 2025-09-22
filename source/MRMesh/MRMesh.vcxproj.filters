@@ -1041,6 +1041,9 @@
     <ClInclude Include="MRAngleMeasurementObject.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointMeasurementObject.h">
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClInclude>
     <ClInclude Include="MRUnorientedTriangle.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
@@ -1353,6 +1356,12 @@
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectTagEventDispatcher.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPartMappingAdapters.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectComparableWithReference.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2002,6 +2011,9 @@
     <ClCompile Include="MRAngleMeasurementObject.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointMeasurementObject.cpp">
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointsComponents.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
@@ -2212,6 +2224,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectTagEventDispatcher.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPartMappingAdapters.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -12,6 +12,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRGridSettings.h"
 #include "MRIOParsing.h"
+#include "MRPartMappingAdapters.h"
 #include <atomic>
 #include <initializer_list>
 
@@ -2507,10 +2508,6 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
     CHECK( numValidFaces_ == realValidFaces );
 
     return true;
-}
-
-void loadMeshDll()
-{
 }
 
 } //namespace MR

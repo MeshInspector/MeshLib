@@ -316,10 +316,14 @@ public:
 
         enum class RotationCenterMode
         {
-            Static, // scene is always rotated around its center
+            Static, // scene is always rotated around its center or another manually set point
             DynamicStatic, // scene is rotated around picked point on object, or around center, if miss pick
             Dynamic // scene is rotated around picked point on object, or around last rotation pivot, if miss pick
         } rotationMode{ RotationCenterMode::Dynamic };
+
+        // in Static RotationMode, this world space point is used as rotation pivot
+        // if it is not set, scene box center is used instead
+        std::optional<Vector3f> staticRotationPivot;
 
         // if it is true, while rotation is enabled camera can be moved along forward axis
         // in order to keep constant distance to scene center
@@ -492,10 +496,18 @@ public:
     // note: this can make camera clip objects (as far as distance to scene center is not fixed)
     MRVIEWER_API void cameraRotateAround( const Line3f& axis, float angle );
 
-    // Get current rotation pivot in world space
-    MRVIEWER_API Vector3f getRotationPivot() const;
+    /// returns current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    Vector3f getRotationPivot() const { return rotationPivot_; }
 
+    /// sets world point to be used as rotation pivot in static mode
+    /// this should appear static on a screen during rotation by the user
+    /// if nullopt - scene box center is used
+    /// please note that this point should be set *before rotation starts*
+    MRVIEWER_API void resetStaticRotationPivot( const std::optional<Vector3f>& pivot = std::nullopt );
 private:
+    /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`
+    void setRotationPivot_( const Vector3f& point ) { rotationPivot_ = point; }
     // initializes view matrix based on camera position
     void setupViewMatrix_();
     // returns world space to camera space transformation
@@ -522,7 +534,7 @@ private:
     void draw_border() const;
     void draw_rotation_center() const;
     void draw_clipping_plane() const;
-    void draw_global_basis() const;
+    void drawGlobalBasis() const;
 
     // init basis axis in the corner
     void initBaseAxes();
@@ -537,11 +549,9 @@ private:
 
     // basis axis params
     int pixelXoffset_{ -100 };
-    int pixelYoffset_{ -100 };
+    int pixelYoffset_{ -128 };
     int axisPixSize_{ 70 };
 
-    // Receives point in scene coordinates, that should appear static on a screen, while rotation
-    void setRotationPivot_( const Vector3f& point );
     void updateSceneBox_();
     void rotateView_();
 

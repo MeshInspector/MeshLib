@@ -30,6 +30,7 @@
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
     <ClCompile Include="MRDragDropWin32Handler.cpp" />
+    <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
@@ -121,6 +122,7 @@
     <ClCompile Include="MRViewportCornerController.cpp" />
     <ClCompile Include="MRViewportDraw.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
+    <ClCompile Include="MRViewportGlobalBasis.cpp" />
     <ClCompile Include="MRVolumeShader.cpp" />
     <ClCompile Include="MRWebRequest.cpp" />
     <ClCompile Include="MRTouchpadController.cpp" />
@@ -139,13 +141,15 @@
     <ClCompile Include="MRUIRectAllocator.cpp" />
     <ClCompile Include="MRUINonOverlappingLabels.cpp" />
     <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
-    <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRSceneOperations.cpp" />
     <ClCompile Include="MRSceneReorder.cpp" />
     <ClCompile Include="MRModalDialog.cpp" />
     <ClCompile Include="MRRenderImGui.cpp" />
     <ClCompile Include="MRRenderToImage.cpp" />
     <ClCompile Include="MRVisualObjectTag.cpp" />
+    <ClCompile Include="MRRenderClickableRect.cpp" />
+    <ClCompile Include="MRUIQualityControl.cpp" />
+    <ClCompile Include="MRItemEnabledPerViewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -274,6 +278,7 @@
     <ClInclude Include="MRViewerSettingsManager.h" />
     <ClInclude Include="MRViewportCornerController.h" />
     <ClInclude Include="MRViewportGL.h" />
+    <ClInclude Include="MRViewportGlobalBasis.h" />
     <ClInclude Include="MRViewportParametersAction.h" />
     <ClInclude Include="MRVolumeShader.h" />
     <ClInclude Include="MRWebRequest.h" />
@@ -307,6 +312,9 @@
     <ClInclude Include="MRRenderImGui.h" />
     <ClInclude Include="MRRenderToImage.h" />
     <ClInclude Include="MRVisualObjectTag.h" />
+    <ClInclude Include="MRRenderClickableRect.h" />
+    <ClInclude Include="MRUIQualityControl.h" />
+    <ClInclude Include="MRItemEnabledPerViewport.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

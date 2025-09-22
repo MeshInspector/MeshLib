@@ -21,7 +21,7 @@ jobs:
             file-path-end: _ubuntu22-dev.deb
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get latests release
         id: get_release
@@ -31,7 +31,7 @@ jobs:
           latest: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}

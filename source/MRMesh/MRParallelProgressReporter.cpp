@@ -1,5 +1,5 @@
 #include "MRParallelProgressReporter.h"
-
+#include <cassert>
 
 namespace MR
 {
@@ -14,7 +14,8 @@ ParallelProgressReporter::PerTaskReporter ParallelProgressReporter::newTask( flo
 {
     std::lock_guard lock( mutex_ );
     const float totalWeight = totalWeight_;
-    progress_ = progress_ * totalWeight / ( totalWeight + weight );
+    if ( totalWeight + weight > 0 )
+        progress_ = progress_ * totalWeight / ( totalWeight + weight );
     totalWeight_ += weight;
     return PerTaskReporter{ .reporter_ = this,
                             .task_ = &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) };
@@ -29,7 +30,9 @@ bool ParallelProgressReporter::operator()()
 bool ParallelProgressReporter::updateTask_( float delta )
 {
     std::lock_guard lock( mutex_ );
-    progress_ = std::min( progress_ + delta / static_cast< float >( totalWeight_ ), 1.0f ); // due to float errors it be 1 + eps, which is asserted in ProgressBar
+    assert( delta <= totalWeight_ );
+    if ( totalWeight_ > 0 )
+        progress_ = std::min( progress_ + delta / static_cast< float >( totalWeight_ ), 1.0f ); // due to float errors it can be 1 + eps, which is asserted in ProgressBar
     if ( mainThreadId_ == std::this_thread::get_id() )
         return continue_ = cb_( progress_ ); // avoid recursive lock here
     return continue_;

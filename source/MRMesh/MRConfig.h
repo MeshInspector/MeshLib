@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMesh/MRViewportId.h"
 #include "MRMeshFwd.h"
 #include "MRColor.h"
 #include "MRSerializer.h"
@@ -79,6 +80,10 @@ public:
     MRMESH_API int getEnum( const Enum& enumeration, const std::string& key, int defaultValue = 0 ) const;
     // sets custom enumeration value
     MRMESH_API void setEnum( const Enum& enumeration, const std::string& key, int keyValue );
+
+    MRMESH_API bool hasViewportMask( const std::string& key ) const;
+    MRMESH_API ViewportMask getViewportMask( const std::string& key, ViewportMask defaultValue = {} ) const;
+    MRMESH_API void setViewportMask( const std::string& key, ViewportMask newValue );
 
     // returns true if json value with this key exists
     MRMESH_API bool hasJsonValue( const std::string& key );

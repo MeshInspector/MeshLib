@@ -388,6 +388,16 @@ void Object::setAncillary( bool ancillary )
     ancillary_ = ancillary;
 }
 
+bool Object::isGlobalAncillary() const
+{
+    if ( isAncillary() )
+        return true;
+    for ( auto* parent = Object::parent(); parent != nullptr; parent = parent->parent() )
+        if ( parent->isAncillary() )
+            return true;
+    return false;
+}
+
 void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
 {
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )
@@ -528,7 +538,7 @@ std::vector<std::string> Object::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type: " + getClassName() );
+    res.push_back( "class: " + className() );
     res.push_back( "mem: " + bytesString( heapBytes() ) );
     res.push_back( fmt::format( "tags: {}", tags_.size() ) );
     for ( const auto& tag : tags_ )
@@ -546,7 +556,8 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
     std::vector<std::future<Expected<void>>> res;
 
     // the key must be unique among all children of same parent
-    std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );
+    constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
+    std::string key = std::to_string( childId ) + "_" + utf8substr( replaceProhibitedChars( name_ ).c_str(), 0, maxFileNameLen );
 
     auto model = serializeModel_( path / pathFromUtf8( key ) );
     if ( !model.has_value() )

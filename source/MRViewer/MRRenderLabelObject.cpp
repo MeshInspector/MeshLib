@@ -60,7 +60,7 @@ bool RenderLabelObject::render( const ModelRenderParams& renderParams )
 
     update_();
 
-    if ( objLabel_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) )
+    if ( objLabel_->globalClippedByPlane( renderParams.viewportId ) )
     {
         Vector3f pos = renderParams.modelMatrix( objLabel_->getLabel().position );
         if ( dot( pos, renderParams.clipPlane.n ) > renderParams.clipPlane.d )

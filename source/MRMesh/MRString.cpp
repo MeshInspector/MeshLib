@@ -4,6 +4,7 @@
 
 namespace
 {
+
 enum class PatchType : int
 {
     None = -1,
@@ -13,6 +14,7 @@ enum class PatchType : int
     Transposition,
     Count
 };
+
 struct SumPatchWeight
 {
     PatchType type{ PatchType::None };
@@ -20,7 +22,13 @@ struct SumPatchWeight
     int prevJ{ 0 };
     int w{ 0 };
 };
+
+bool isAscii( char ch )
+{
+    return (unsigned char)ch <= 127;
 }
+
+} // namespace
 
 namespace MR
 {
@@ -192,7 +200,7 @@ std::string_view trim( std::string_view str )
 std::string_view trimLeft( std::string_view str )
 {
     size_t pos = 0;
-    while ( pos < str.size() && std::isspace( str[pos] ) )
+    while ( pos < str.size() && isAscii( str[pos] ) && std::isspace( str[pos] ) )
         ++pos;
     return str.substr( pos );
 }
@@ -200,9 +208,28 @@ std::string_view trimLeft( std::string_view str )
 std::string_view trimRight( std::string_view str )
 {
     auto l = str.size();
-    while ( l > 0 && std::isspace( str[l - 1] ) )
+    while ( l > 0 && isAscii( str[l - 1] ) && std::isspace( str[l - 1] ) )
         --l;
     return str.substr( 0, l );
+}
+
+bool hasFormatPlaceholders( std::string_view str )
+{
+    for ( std::size_t i = 0; i < str.size(); i++ )
+    {
+        if ( str[i] == '{' )
+        {
+            if ( i + 1 < str.size() && str[i + 1] == '{' )
+            {
+                i++;
+                continue; // Escaped.
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }

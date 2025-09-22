@@ -105,9 +105,6 @@ struct BasicUiRenderTask
 
 struct UiRenderParams : BaseRenderParams
 {
-    /// Multiply all your hardcoded sizes by this amount.
-    float scale = 1;
-
     using UiTaskList = std::vector<std::shared_ptr<BasicUiRenderTask>>;
 
     // Those are Z-sorted and then executed.
@@ -127,7 +124,7 @@ struct UiRenderManager
     // This will be called exactly once per viewport, each time the UI in it is rendered.
     virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks ) { (void)viewport; (void)tasks; return {}; }
     // After the backward pass is performed, the parameters should be passed back into this function.
-    virtual void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) { (void)params; }
+    virtual void finishBackwardPass( ViewportId viewport, const BasicUiRenderTask::BackwardPassParams& params ) { (void)viewport, (void)params; }
 };
 
 class IRenderObject
@@ -208,6 +205,10 @@ class RegisterRenderObjectConstructor
 {
 public:
     MRMESH_API RegisterRenderObjectConstructor( const std::type_index& type, IRenderObjectConstructorLambda lambda );
+    MRMESH_API ~RegisterRenderObjectConstructor();
+
+private:
+    std::type_index type_;
 };
 
 #define MR_REGISTER_RENDER_OBJECT_IMPL(objectType, .../*rendObjectType*/)\

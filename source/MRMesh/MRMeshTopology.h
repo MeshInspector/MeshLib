@@ -662,6 +662,4 @@ template<typename T, typename I>
     return newVector;
 }
 
-MRMESH_API void loadMeshDll();
-
 } // namespace MR

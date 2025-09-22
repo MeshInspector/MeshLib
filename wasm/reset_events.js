@@ -4,6 +4,41 @@ var touchId = [-1, -1];
 var reinterpretEvent = false;
 var pointerSize = 0;
 
+var overrideKeyDown = function (event) {
+    GLFW.onKeydown(event);
+    // suppress some browser hotkeys
+    if (event.key == "F1" || event.key == "F2" || event.key == "F3" || event.key == "F4" || event.ctrlKey || event.metaKey)
+        event.preventDefault();
+}
+
+var updateKeyEvents = function () {
+    window.removeEventListener("keydown", GLFW.onKeydown, true);
+    window.addEventListener("keydown", overrideKeyDown, true);
+}
+
+var keyboardEventsArePresent = true;
+
+var removeKeyboardEvents = function () {
+    if (keyboardEventsArePresent) {
+        window.removeEventListener("keydown", overrideKeyDown, true);
+        window.removeEventListener("keypress", GLFW.onKeyPress, true);
+        window.removeEventListener("keyup", GLFW.onKeyup, true);
+        keyboardEventsArePresent = false;
+    }
+};
+
+var addKeyboardEvents = function () {
+    if (!keyboardEventsArePresent) {
+        window.addEventListener("keydown", overrideKeyDown, true);
+        window.addEventListener("keypress", GLFW.onKeyPress, true);
+        window.addEventListener("keyup", GLFW.onKeyup, true);
+        keyboardEventsArePresent = true;
+    }
+    // enforce several frames to toggle animation when popup closed
+    for (var i = 0; i < 500; i += 100)
+        setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+};
+
 var getPointerSize = function () {
     if (!pointerSize) {
         pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);

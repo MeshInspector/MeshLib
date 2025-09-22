@@ -34,19 +34,18 @@ void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, co
     laplacian.apply();
 }
 
-void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
+void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams& params )
 {
     mesh.invalidateCaches();
-    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, verts, vertShifts, vertStabilizers );
+    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, params );
 }
 
-void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
+void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params )
 {
     MR_TIMER;
-    assert( vertStabilizers || !MeshComponents::hasFullySelectedComponent( topology, verts ) );
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
 
+    const auto & verts = topology.getVertIds( params.region );
     const auto sz = verts.count();
     if ( sz <= 0 )
         return;
@@ -65,26 +64,34 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
         Vector3d sumFixed;
         for ( auto e : orgRing( topology, v ) )
         {
-            sumW += 1;
+            const double edgeW = params.edgeWeights ? params.edgeWeights( e ) : 1;
+            sumW += edgeW;
             auto d = topology.dest( e );
             if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
             {
                 // free neighbor
                 int di = it->second;
                 if ( n > di ) // row > col: fill only lower left part of matrix
-                    mTriplets.emplace_back( n, di, -1 );
+                    mTriplets.emplace_back( n, di, -edgeW );
             }
             else
             {
                 // fixed neighbor
-                sumFixed += Vector3d( points[d] );
+                sumFixed += edgeW * Vector3d( points[d] );
             }
         }
-        if ( vertShifts )
-            sumFixed += sumW * Vector3d( (*vertShifts)[v] );
-        if ( vertStabilizers )
+        if ( params.vertShifts )
+            sumFixed += sumW * Vector3d( (*params.vertShifts)[v] );
+        if ( params.vertStabilizers )
         {
-            const auto s = (*vertStabilizers)[v];
+            const auto s = params.vertStabilizers( v ); //for VertexMass::Unit only
+            assert( s >= 0 );
+            sumW += s;
+            sumFixed += Vector3d( s * points[v] );
+        }
+        else if ( params.stabilizer != 0 )
+        {
+            const auto s = params.stabilizer; //for VertexMass::Unit only
             sumW += s;
             sumFixed += Vector3d( s * points[v] );
         }
@@ -300,6 +307,11 @@ void positionVertsWithSpacing( const MeshTopology& topology, VertCoords& points,
     }
 }
 
+void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts )
+{
+    positionVertsSmoothlySharpBd( mesh, { .region = &verts } );
+}
+
 void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
 {
     mesh.invalidateCaches();
@@ -312,7 +324,7 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
     if ( !verts.any() )
         return;
     if ( settings.preSmooth )
-        positionVertsSmoothlySharpBd( topology, points, verts );
+        positionVertsSmoothlySharpBd( topology, points, { .region = &verts } );
     if ( settings.iterations <= 0 || settings.pressure == 0 )
         return;
 
@@ -327,7 +339,7 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
 void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, float pressure )
 {
     if ( pressure == 0 )
-        return positionVertsSmoothlySharpBd( topology, points, verts );
+        return positionVertsSmoothlySharpBd( topology, points, { .region = &verts } );
 
     MR_TIMER;
     auto vertShifts = dirDblAreas( topology, points, &verts );
@@ -349,7 +361,7 @@ void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSe
         vertShifts[v] *= k;
     } );
     // sum( abs( vertShifts[v] ) ) = currPressure
-    positionVertsSmoothlySharpBd( topology, points, verts, &vertShifts );
+    positionVertsSmoothlySharpBd( topology, points, { .region = &verts, .vertShifts = &vertShifts } );
 }
 
 } //namespace MR

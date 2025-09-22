@@ -71,7 +71,7 @@ jobs:
           echo $AWS_INSTANCE_TYPE
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

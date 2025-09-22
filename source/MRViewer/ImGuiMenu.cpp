@@ -85,6 +85,7 @@
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRUIStyle.h"
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenu.h"
@@ -92,6 +93,10 @@
 #include "MRSceneCache.h"
 #include "MRSceneObjectsListDrawer.h"
 #include "MRUIRectAllocator.h"
+#include "MRVisualObjectTag.h"
+#include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRString.h"
+#include "MRUIQualityControl.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -310,9 +315,7 @@ std::filesystem::path ImGuiMenu::getMenuFontPath() const
 {
 #ifdef _WIN32
     // get windows font
-    wchar_t winDir[MAX_PATH];
-    GetWindowsDirectoryW( winDir, MAX_PATH );
-    std::filesystem::path winDirPath( winDir );
+    std::filesystem::path winDirPath = GetWindowsInstallDirectory();
     winDirPath /= "Fonts";
     winDirPath /= "Consola.ttf";
     return winDirPath;
@@ -347,12 +350,13 @@ static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR:
 void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
+    builder.AddChar( 0x2014 ); // EM DASH
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
-    builder.AddChar( 0x2212 ); // MINUS SIGN
-    builder.AddChar( 0x222A ); // UNION
-    builder.AddChar( 0x2229 ); // INTERSECTION
     builder.AddChar( 0x2208 ); // INSIDE
     builder.AddChar( 0x2209 ); // OUTSIDE
+    builder.AddChar( 0x2212 ); // MINUS SIGN
+    builder.AddChar( 0x2229 ); // INTERSECTION
+    builder.AddChar( 0x222A ); // UNION
     // Characters not in the font, with custom glyphs added in `addCustomGlyphs_`:
     // 0x207B SUPERSCRIPT MINUS
 #ifndef __EMSCRIPTEN__
@@ -375,7 +379,7 @@ void ImGuiMenu::load_font(int font_size)
         builder.BuildRanges( &ranges );
 
         if ( !io.Fonts->AddFontFromFileTTF(
-            utf8string( fontPath ).c_str(), font_size * menu_scaling(),
+            utf8string( fontPath ).c_str(), font_size * UI::scale(),
             nullptr, ranges.Data ) )
         {
             assert( false && "Failed to load font!" );
@@ -403,10 +407,13 @@ void ImGuiMenu::reload_font(int font_size)
 {
   hidpi_scaling_ = hidpi_scaling();
   pixel_ratio_ = pixel_ratio();
+  UI::detail::setScale( menu_scaling() ); // Send the menu scale to the UI.
+
   ImGuiIO& io = ImGui::GetIO();
   io.Fonts->Clear();
 
   load_font(font_size);
+
 }
 
 void ImGuiMenu::shutdown()
@@ -631,7 +638,7 @@ void ImGuiMenu::draw_menu()
 
 void ImGuiMenu::draw_viewer_window()
 {
-  float menu_width = 180.f * menu_scaling();
+  float menu_width = 180.f * UI::scale();
   ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSizeConstraints(ImVec2(menu_width, -1.0f), ImVec2(menu_width, -1.0f));
@@ -663,45 +670,10 @@ void ImGuiMenu::draw_labels_window()
       | ImGuiWindowFlags_NoCollapse
       | ImGuiWindowFlags_NoSavedSettings
       | ImGuiWindowFlags_NoInputs);
-  for ( const auto& data : SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Any>() )
-  {
-      draw_labels( *data );
-  }
 
-  // separate block for basis axes
-  for ( const auto& viewport : viewer->viewport_list )
-  {
-      if ( !viewer->globalBasisAxes->isVisible( viewport.id ) )
-          continue;
-  }
   ImGui::End();
   ImGui::PopStyleColor();
   ImGui::PopStyleVar();
-}
-
-void ImGuiMenu::draw_labels( const VisualObject& obj )
-{
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    const auto& labels = obj.getLabels();
-
-    for ( const auto& viewport : viewer->viewport_list )
-    {
-        if ( !obj.globalVisibility( viewport.id ) )
-            continue;
-        AffineXf3f xf = obj.worldXf();
-        bool clip = obj.getVisualizeProperty( VisualizeMaskType::CropLabelsByViewportRect, viewport.id );
-        if ( obj.getVisualizeProperty( VisualizeMaskType::Labels, viewport.id ) )
-            for ( int i = 0; i < labels.size(); ++i )
-                draw_text(
-                    viewport,
-                    xf( labels[i].position ),
-                    Vector3f( 0.0f, 0.0f, 0.0f ),
-                    labels[i].text,
-                    obj.getLabelsColor(),
-                    clip );
-    }
-MR_SUPPRESS_WARNING_POP
 }
 
 void ImGuiMenu::draw_text(
@@ -779,7 +751,8 @@ void ImGuiMenu::setUserScaling( float scaling )
     userScaling_ = scaling;
     CommandLoop::appendCommand( [&] ()
     {
-        postRescale_( 1.0f, 1.0f ); // actual values does not matter
+        auto scaling = menu_scaling();
+        getViewerInstance().postRescale( scaling, scaling );
     } );
 }
 
@@ -798,7 +771,7 @@ void ImGuiMenu::draw_helpers()
     if ( showStatistics_ )
     {
         const auto style = ImGui::GetStyle();
-        const float fpsWindowWidth = 300 * menu_scaling();
+        const float fpsWindowWidth = 300 * UI::scale();
         int numLines = 5 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 5 - for: GL buffer size, prev frame time, swapped frames, total frames, fps;
         // TextHeight +1 for button, ItemSpacing +2 for separators
         const float fpsWindowHeight = ( style.WindowPadding.y * 2 +
@@ -847,12 +820,11 @@ void ImGuiMenu::draw_helpers()
         popUpRenameBuffer_ = renameBuffer_;
     }
 
-    const auto menuScaling = menu_scaling();
     ModalDialog renameDialog( "Rename object", {
         .headline = "Rename Object",
         .closeOnClickOutside = true,
     } );
-    if ( renameDialog.beginPopup( menuScaling ) )
+    if ( renameDialog.beginPopup() )
     {
         const auto& obj = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>().front();
         if ( !obj )
@@ -863,13 +835,13 @@ void ImGuiMenu::draw_helpers()
             ImGui::SetKeyboardFocusHere();
 
         const auto& style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * UI::scale() } );
         ImGui::SetNextItemWidth( renameDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
         UI::inputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopStyleVar();
 
-        const float btnWidth = cModalButtonWidth * menuScaling;
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        const float btnWidth = cModalButtonWidth * UI::scale();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
         if ( UI::button( "Ok", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object from modal dialog", obj ) );
@@ -884,7 +856,106 @@ void ImGuiMenu::draw_helpers()
         }
         ImGui::PopStyleVar();
 
-        renameDialog.endPopup( menuScaling );
+        renameDialog.endPopup();
+    }
+
+    if ( showEditTag_ )
+    {
+        ImGui::OpenPopup( "Edit tag" );
+        showEditTag_ = false;
+    }
+
+    ModalDialog editTagDialog( "Edit tag", {
+        .headline = "Edit Tag",
+        .closeButton = true,
+        //.closeOnClickOutside = true, // FIXME: color picker closes the modal dialog on exit
+    } );
+    if ( editTagDialog.beginPopup() )
+    {
+        if ( ImGui::IsWindowAppearing() )
+            ImGui::SetKeyboardFocusHere();
+
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * UI::scale() } );
+        ImGui::SetNextItemWidth( editTagDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+        UI::inputText( "Name", tagEditorState_.name, ImGuiInputTextFlags_AutoSelectAll );
+        ImGui::PopStyleVar();
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cCheckboxPadding * UI::scale() } );
+        UI::checkbox( "Assign Color", &tagEditorState_.hasFrontColor );
+        ImGui::PopStyleVar();
+
+        if ( tagEditorState_.hasFrontColor )
+        {
+            ImGui::ColorEdit4( "Selected Color", (float*)&tagEditorState_.selectedColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
+            ImGui::ColorEdit4( "Unselected Color", (float*)&tagEditorState_.unselectedColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
+        }
+
+        const float btnWidth = cModalButtonWidth * UI::scale();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+        if ( UI::button( "Save", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
+        {
+            if ( const auto name = std::string{ trim( tagEditorState_.name ) }; !name.empty() && name != tagEditorState_.initName )
+            {
+                if ( tagEditorState_.hasFrontColor )
+                {
+                    VisualObjectTagManager::unregisterTag( tagEditorState_.initName );
+                    VisualObjectTagManager::registerTag( name, {
+                        .selectedColor = tagEditorState_.selectedColor,
+                        .unselectedColor = tagEditorState_.unselectedColor,
+                    } );
+                }
+
+                for ( auto obj : getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+                {
+                    if ( obj->tags().contains( tagEditorState_.initName ) )
+                    {
+                        obj->removeTag( tagEditorState_.initName );
+                        obj->addTag( name );
+                    }
+                }
+            }
+
+            if ( tagEditorState_.hasFrontColor != tagEditorState_.initHasFrontColor )
+            {
+                if ( tagEditorState_.hasFrontColor )
+                {
+                    VisualObjectTagManager::registerTag( tagEditorState_.name, {
+                        .selectedColor = tagEditorState_.selectedColor,
+                        .unselectedColor = tagEditorState_.unselectedColor,
+                    } );
+                }
+                else
+                {
+                    VisualObjectTagManager::unregisterTag( tagEditorState_.name );
+                }
+            }
+            else if ( tagEditorState_.hasFrontColor )
+            {
+                VisualObjectTagManager::updateTag( tagEditorState_.name, {
+                    .selectedColor = tagEditorState_.selectedColor,
+                    .unselectedColor = tagEditorState_.unselectedColor,
+                } );
+            }
+
+            if ( tagEditorState_.hasFrontColor || tagEditorState_.initHasFrontColor )
+            {
+                for ( auto& visObj : getAllObjectsInTree<VisualObject>( &SceneRoot::get() ) )
+                    if ( visObj->tags().contains( tagEditorState_.name ) )
+                        VisualObjectTagManager::update( *visObj, tagEditorState_.name );
+            }
+
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        ImGui::SetCursorPosX( editTagDialog.windowWidth() - btnWidth - style.WindowPadding.x );
+        if ( UI::button( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleVar();
+
+        editTagDialog.endPopup();
     }
 
     drawModalMessage_();
@@ -923,6 +994,11 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
     return true;
 }
 
+bool ImGuiMenu::simulateNameTagClickWithKeyboardModifiers( Object& object )
+{
+    return simulateNameTagClick( object, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne );
+}
+
 bool ImGuiMenu::anyImGuiWindowIsHovered() const
 {
     return ImGui::GetIO().WantCaptureMouse;
@@ -954,21 +1030,20 @@ void ImGuiMenu::drawModalMessage_()
         showInfoModal_ = false;
     }
 
-    const auto menuScaling = menu_scaling();
     ModalDialog modal( titleImGui, {
         .headline = title,
         .text = storedModalMessage_,
         .closeOnClickOutside = true,
     } );
-    if ( modal.beginPopup( menuScaling ) )
+    if ( modal.beginPopup() )
     {
         const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
         if ( UI::button( "Okay", Vector2f( -1, 0 ), ImGuiKey_Enter ) )
             ImGui::CloseCurrentPopup();
         ImGui::PopStyleVar();
 
-        modal.endPopup( menuScaling );
+        modal.endPopup();
         needModalBgChange_ = true;
     }
     else
@@ -1015,12 +1090,12 @@ void ImGuiMenu::draw_scene_list()
 {
     const auto& selectedObjs = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     // Define next window position + size
-    ImGui::SetNextWindowPos( ImVec2( 180 * menu_scaling(), 0 ), ImGuiCond_FirstUseEver );
-    ImGui::SetNextWindowSize( ImVec2( 230 * menu_scaling(), 300 * menu_scaling() ), ImGuiCond_FirstUseEver );
+    ImGui::SetNextWindowPos( ImVec2( 180 * UI::scale(), 0 ), ImGuiCond_FirstUseEver );
+    ImGui::SetNextWindowSize( ImVec2( 230 * UI::scale(), 300 * UI::scale() ), ImGuiCond_FirstUseEver );
     ImGui::Begin(
         "Scene", nullptr
     );
-    sceneObjectsList_->draw( -1, menu_scaling() );
+    sceneObjectsList_->draw( -1 );
 
     sceneWindowPos_ = ImGui::GetWindowPos();
     sceneWindowSize_ = ImGui::GetWindowSize();
@@ -1222,7 +1297,7 @@ float ImGuiMenu::drawSelectionInformation_()
     ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    const float smallItemSpacingY = std::round( 0.25f * cDefaultItemSpacing * menu_scaling() );
+    const float smallItemSpacingY = std::round( 0.25f * cDefaultItemSpacing * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
@@ -1304,8 +1379,12 @@ float ImGuiMenu::drawSelectionInformation_()
         editedFeatureObject_.reset();
     }
 
+    drawTagInformation_( selectedObjs );
+
     // customize input text widget design
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * menu_scaling() );
+    const ImVec4 originalFrameBgColor = ImGui::GetStyleColorVec4( ImGuiCol_FrameBg );
+    const float originalFrameBorderSize = ImGui::GetStyle().FrameBorderSize;
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
     MR_FINALLY { ImGui::PopStyleVar( 2 ); ImGui::PopStyleColor( 1 ); };
@@ -1328,7 +1407,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
             UI::inputTextCenteredReadOnly( label, valueStr, itemWidth, selected ? selectedTextColor : textColor, labelColor );
             if ( selected )
-                UI::setTooltipIfHovered( "Selected / Total", menu_scaling() );
+                UI::setTooltipIfHovered( "Selected / Total" );
         }
     };
 
@@ -1346,7 +1425,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
     if ( selectedObjs.size() == 1 )
     {
-        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->getClassName(), itemWidth, textColor, labelColor );
+        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->className(), itemWidth, textColor, labelColor );
     }
     else if ( selectedObjs.size() > 1 )
     {
@@ -1390,12 +1469,12 @@ float ImGuiMenu::drawSelectionInformation_()
         {
             UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
                 { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
-            UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
+            UI::setTooltipIfHovered( "Selected / Total surface area" );
         }
         else
         {
             UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
-            UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
+            UI::setTooltipIfHovered( "Total surface area" );
         }
     }
 
@@ -1405,8 +1484,8 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( selectedObjs.size() == 1 && avgEdgeLen > 0 )
         drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 
-     drawPrimitivesInfo( "Holes", holes );
-     drawPrimitivesInfo( "Components", components );
+    drawPrimitivesInfo( "Holes", holes );
+    drawPrimitivesInfo( "Components", components );
 
 #ifndef MRVIEWER_NO_VOXELS
     if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<ObjectVoxels>() )
@@ -1442,7 +1521,8 @@ float ImGuiMenu::drawSelectionInformation_()
         auto* obj = selectedObjs.front().get();
         if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
         {
-            drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+            // This is named either `Distance` or `Distance X`/Y/Z.
+            drawUnitInfo( std::string( distance->getComparablePropertyName( 0 ) ).c_str(), distance->computeDistance(), LengthUnit{} );
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
         }
@@ -1450,6 +1530,32 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
         else if ( auto* radius = obj->asType<RadiusMeasurementObject>() )
             drawUnitInfo( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter(), LengthUnit{} );
+    }
+
+    drawCustomSelectionInformation_( selectedObjs, {
+        .textColor = textColor,
+        .labelColor = labelColor,
+        .selectedTextColor = selectedTextColor,
+        .itemWidth = itemWidth,
+        .item2Width = getSceneInfoItemWidth_( 2 ),
+        .item3Width = getSceneInfoItemWidth_( 3 ),
+    } );
+
+    if ( selectedObjs.size() == 1 )
+    {
+        if ( auto comp = selectedObjs.front()->asType<ObjectComparableWithReference>() )
+        {
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            // Restore the original frame style for this.
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
+            MR_FINALLY{ ImGui::PopStyleColor(); };
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
+            MR_FINALLY{ ImGui::PopStyleVar(); };
+
+            drawComparablePropertiesEditor_( *comp );
+        }
     }
 
     // This looks a bit better.
@@ -1526,6 +1632,64 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
     if ( !anyActive )
         editedFeatureObject_.reset();
+}
+
+void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& object )
+{
+    const float fullWidth = getSceneInfoItemWidth_( 1 );
+    const ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
+
+    const std::string_view notSpecifiedStr = "\xE2\x80\x94"; // U+2014 EM DASH
+
+    // Reference values.
+    const std::size_t numRefs = object.numComparisonReferenceValues();
+    for ( std::size_t i = 0; i < numRefs; i++ )
+    {
+        auto nominalValue = object.getComparisonReferenceValue( i );
+
+        ImGui::SetNextItemWidth( fullWidth );
+
+        if ( std::visit( [&]( auto& elem ){ return UI::input<LengthUnit>( std::string( object.getComparisonReferenceValueName( i ) ).c_str(), elem, -FLT_MAX, FLT_MAX, { .decorationFormatString = nominalValue.isSet ? "{}" : notSpecifiedStr } ); }, nominalValue.var ) )
+            object.setComparisonReferenceValue( i, nominalValue.var );
+
+        if ( nominalValue.isSet )
+        {
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+            if ( UI::buttonEx( fmt::format( "\xC3\x97###removeNominal:{}", object.getComparisonReferenceValueName( i ) ).c_str(), buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                object.setComparisonReferenceValue( i, {} );
+        }
+    }
+
+    // Tolerances.
+    const std::size_t numTols = object.numComparableProperties();
+    for ( std::size_t i = 0; i < numTols; i++ )
+    {
+        auto tolOpt = object.getComparisonTolerence( i );
+
+
+        std::string name;
+        if ( numTols == 1 )
+            name = "Tolerance";
+        else
+            name = fmt::format( "{} tolerance", object.getComparablePropertyName( i ) );
+
+        ImGui::SetNextItemWidth( fullWidth );
+        if ( QualityControl::inputTolerance( name.c_str(), tolOpt ) )
+            object.setComparisonTolerance( i, tolOpt );
+
+        // The button to remove tolerance.
+        if ( tolOpt )
+        {
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+
+            if ( UI::buttonEx( fmt::format( "\xC3\x97###removeTolerance:{}", name ).c_str(), buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                object.setComparisonTolerance( i, {} );
+        }
+    }
 }
 
 bool ImGuiMenu::drawGeneralOptions( const std::vector<std::shared_ptr<Object>>& selectedObjs )
@@ -1768,6 +1932,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", LinesVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Smooth corners", LinesVisualizePropertyType::Smooth, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Dashed", LinesVisualizePropertyType::Dashed, viewportid );
         make_width<ObjectLinesHolder>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getLineWidth();
@@ -1810,7 +1975,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
     if ( allIsFeatureObj )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );
-    someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
     if ( viewer->experimentalFeatures )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
 
@@ -1867,7 +2031,7 @@ bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualO
 
     if ( getViewerInstance().viewport_list.size() > 1 )
     {
-        ImGui::SetNextItemWidth( 75.0f * menu_scaling() );
+        ImGui::SetNextItemWidth( 75.0f * UI::scale() );
 
         if (ImGui::BeginCombo( "Viewport Id",
             selectedViewport_.value() == 0 ? "Default" :
@@ -1906,19 +2070,6 @@ bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualO
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
         data->setBackColor( Color( color ), selectedViewport_ );
-    } );
-    make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
-    {
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-        return Vector4f( data->getLabelsColor( selectedViewport_ ) );
-MR_SUPPRESS_WARNING_POP
-    }, [&] ( VisualObject* data, const Vector4f& color )
-    {
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-        data->setLabelsColor( Color( color ), selectedViewport_ );
-MR_SUPPRESS_WARNING_POP
     } );
 
     if ( !selectedMeshObjs.empty() )
@@ -2027,14 +2178,282 @@ MR_SUPPRESS_WARNING_POP
     return someChanges;
 }
 
+void ImGuiMenu::drawCustomSelectionInformation_( const std::vector<std::shared_ptr<Object>>&, const SelectionInformationStyle& )
+{
+}
+
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}
+
+void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    const auto initWidth = ImGui::GetContentRegionAvail().x;
+    const auto initCursorScreenPos = ImGui::GetCursorScreenPos();
+    const auto itemWidth = getSceneInfoItemWidth_();
+
+    static const auto setIntersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    {
+        std::set<T> result;
+        std::set_intersection( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
+        return result;
+    };
+    static const auto setUnion = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    {
+        std::set<T> result;
+        std::set_union( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
+        return result;
+    };
+
+    assert( !selected.empty() );
+    auto allTags = selected.front()->tags();
+    auto commonTags = allTags;
+    for ( auto i = 1; i < selected.size(); ++i )
+    {
+        const auto& selObj = selected[i];
+        allTags = setUnion( allTags, selObj->tags() );
+        commonTags = setIntersect( commonTags, selObj->tags() );
+    }
+
+    static const auto hiddenTagPred = [] ( const std::string& tag )
+    {
+        // hide service tags starting with a dot
+        return tag.starts_with( '.' );
+    };
+    std::erase_if( allTags, hiddenTagPred );
+    std::erase_if( commonTags, hiddenTagPred );
+
+    std::ostringstream oss;
+    size_t tagCount = 0;
+    for ( const auto& tag : commonTags )
+    {
+        if ( tagCount++ != 0 )
+            oss << ", ";
+        oss << tag;
+    }
+    auto text = oss.str();
+    if ( const auto uncommonTagCount = allTags.size() - commonTags.size() )
+        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( "{} uncommon tag{}", uncommonTagCount, uncommonTagCount != 1 ? "s" : "" );
+    if ( text.empty() )
+        text = "–";
+
+    auto textSize = ImGui::CalcTextSize( text.c_str() );
+    if ( itemWidth < textSize.x )
+    {
+        // TODO: cache
+        const auto ellipsisSize = ImGui::CalcTextSize( "..." );
+        auto textLen = text.size();
+        for ( --textLen; textLen > 0; --textLen )
+        {
+            textSize = ImGui::CalcTextSize( text.data(), text.data() + textLen );
+            if ( textSize.x + ellipsisSize.x <= itemWidth )
+                break;
+        }
+        text = text.substr( 0, textLen ) + "...";
+        textSize = ImGui::CalcTextSize( text.c_str() );
+    }
+
+    const auto initCursorPos = ImGui::GetCursorPos();
+    ImGui::SetNextItemAllowOverlap();
+    UI::inputTextCentered( "Tags", text, itemWidth );
+
+    ImGui::SetCursorPos( initCursorPos );
+    if ( ImGui::InvisibleButton( "##EnterTagsWindow", { itemWidth, ImGui::GetFrameHeight() } ) )
+        ImGui::OpenPopup( "TagsPopup" );
+
+    static const auto BeginPopup2 = [] ( const char* name, ImVec2 size, const ImVec2* pos = nullptr )
+    {
+        // https://github.com/ocornut/imgui/issues/6443#issuecomment-1556039133
+        auto& g = *GImGui;
+        if ( g.OpenPopupStack.Size <= g.BeginPopupStack.Size )
+        {
+            g.NextWindowData.ClearFlags();
+            return false;
+        }
+
+        auto* window = ImGui::FindWindowByName( name );
+        const auto [initialWindowPos, haveSavedWindowPos] = ImGui::LoadSavedWindowPos( name, window, size.y, pos );
+        UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( name, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, ImVec2( 0, 0 ) );
+        MR_FINALLY {
+            ImGui::SaveWindowPosition( name, window );
+        };
+
+        ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
+        return ImGui::BeginPopupEx( g.CurrentWindow->GetID( name ), ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings );
+    };
+
+    ImGui::PushStyleColor( ImGuiCol_PopupBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
+    if ( BeginPopup2( "TagsPopup", { initWidth, -1 }, &initCursorScreenPos ) )
+    {
+        if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+            ImGui::CloseCurrentPopup();
+
+        const auto& style = ImGui::GetStyle();
+
+        auto* iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+        if ( iconsFont )
+            iconsFont->Scale = cDefaultFontSize / cBigIconSize;
+
+        const auto buttonWidth = [&] ( const char* label )
+        {
+            return style.FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
+        };
+        if ( iconsFont )
+            ImGui::PushFont( iconsFont );
+        const auto* removeButtonText = iconsFont ? "\xef\x80\x8d" : "X";
+        const auto* addButtonText = iconsFont ? "\xef\x81\x95" : "+";
+        const auto removeButtonWidth = buttonWidth( removeButtonText );
+        const auto addButtonWidth = buttonWidth( addButtonText );
+        if ( iconsFont )
+            ImGui::PopFont();
+
+        const auto& allVisTags = VisualObjectTagManager::tags();
+        auto allKnownTags = allTags;
+        for ( const auto& [tag, _] : allVisTags )
+            allKnownTags.emplace( tag );
+
+        for ( const auto& tag : commonTags )
+        {
+            const auto tagButtonWidth = buttonWidth( tag.c_str() ) + removeButtonWidth;
+            if ( ImGui::GetContentRegionAvail().x < tagButtonWidth )
+                ImGui::NewLine();
+
+            const auto initCursorPosX = ImGui::GetCursorPosX();
+
+            if ( allVisTags.contains( tag ) )
+            {
+                const auto color = allVisTags.at( tag ).selectedColor;
+                ImGui::PushStyleColor( ImGuiCol_Button, color );
+                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::getLuminance( color ) > 0.5f ? Color::black() : Color::white() );
+            }
+
+            ImGui::PushStyleVar( ImGuiStyleVar_ButtonTextAlign, { 0.0f, 0.5f } );
+            ImGui::SetNextItemAllowOverlap();
+            if ( ImGui::Button( tag.c_str(), { tagButtonWidth, 0 } ) )
+            {
+                std::optional<VisualObjectTag> visTag;
+                if ( auto it = allVisTags.find( tag ); it != allVisTags.end() )
+                    visTag = it->second;
+
+                tagEditorState_ = {
+                    .initName = tag,
+                    .name = tag,
+                    .initHasFrontColor = bool( visTag ),
+                    .hasFrontColor = bool( visTag ),
+                };
+                if ( visTag )
+                {
+                    tagEditorState_.selectedColor = visTag->selectedColor;
+                    tagEditorState_.unselectedColor = visTag->unselectedColor;
+                }
+                else
+                {
+                    tagEditorState_.selectedColor = SceneColors::get( SceneColors::SelectedObjectMesh );
+                    tagEditorState_.unselectedColor = SceneColors::get( SceneColors::UnselectedObjectMesh );
+                }
+
+                showEditTag_ = true;
+            }
+            ImGui::PopStyleVar();
+
+            if ( allVisTags.contains( tag ) )
+                ImGui::PopStyleColor( 2 );
+
+            ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
+            if ( iconsFont )
+                ImGui::PushFont( iconsFont );
+            ImGui::PushStyleColor( ImGuiCol_Button, Color{ 0xff, 0xff, 0xff, 0x00 } );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color{ 0xff, 0x5f, 0x5f } );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::red() );
+            const auto closeButtonLabel = removeButtonText + fmt::format( "##{}", tag );
+            if ( ImGui::Button( closeButtonLabel.c_str() ) )
+            {
+                for ( const auto& selObj : selected )
+                    selObj->removeTag( tag );
+            }
+            ImGui::PopStyleColor( 3 );
+            if ( iconsFont )
+                ImGui::PopFont();
+
+            ImGui::SameLine();
+        }
+
+        if ( tagCount != 0 )
+        {
+            ImGui::NewLine();
+            ImGui::Spacing();
+        }
+
+        if ( ImGui::IsWindowAppearing() )
+        {
+            ImGui::SetKeyboardFocusHere();
+            tagNewName_.clear();
+        }
+
+        // completion callback for ImGui
+        // called every time user presses the Tab key
+        // completes the existing tag name if its prefix is typed
+        static const auto tagCompletion = [] ( ImGuiInputTextCallbackData* data ) -> int
+        {
+            if ( data->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
+            {
+                std::string_view text{ data->Buf, (size_t)data->BufTextLen };
+                const auto& allKnownTags = *(std::set<std::string>*)data->UserData;
+                std::string_view candidate;
+                for ( const auto& tag : allKnownTags )
+                {
+                    if ( tag.starts_with( text ) )
+                    {
+                        if ( candidate.empty() )
+                        {
+                            candidate = tag;
+                        }
+                        else
+                        {
+                            candidate = {};
+                            break;
+                        }
+                    }
+                }
+                if ( !candidate.empty() )
+                {
+                    data->InsertChars( data->CursorPos, candidate.substr( text.length() ).data() );
+                    data->ClearSelection();
+                    data->SelectionStart = (int)text.length();
+                }
+            }
+            return 0;
+        };
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - style.ItemInnerSpacing.x - addButtonWidth );
+        if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion, tagCompletion, &allKnownTags ) )
+        {
+            if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
+                for ( const auto& selObj : selected )
+                    selObj->addTag( name );
+            tagNewName_.clear();
+        }
+
+        if ( iconsFont )
+            ImGui::PushFont( iconsFont );
+        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+        if ( ImGui::Button( addButtonText ) )
+        {
+            if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
+                for ( const auto& selObj : selected )
+                    selObj->addTag( name );
+            tagNewName_.clear();
+        }
+        if ( iconsFont )
+            ImGui::PopFont();
+
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleColor();
+}
 
 float ImGuiMenu::drawTransform_()
 {
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 
-    const auto scaling = menu_scaling();
     auto& style = ImGui::GetStyle();
 
     float resultHeight_ = 0.f;
@@ -2093,11 +2512,11 @@ float ImGuiMenu::drawTransform_()
             assert( ctx );
             auto window = ctx->CurrentWindow;
             assert( window );
-            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * UI::scale();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
             UI::checkbox( "Uni-scale", &uniformScale_ );
             window->DC.CursorPosPrevLine.y -= diff;
-            UI::setTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
+            UI::setTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis" );
             ImGui::PopItemWidth();
 
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
@@ -2225,7 +2644,7 @@ void ImGuiMenu::make_color_selector( std::vector<std::shared_ptr<ObjectT>> selec
 
     const auto colorConstForComparation = color;
     color = getStoredColor_( storedName, Color( color ) );
-    ImGui::PushItemWidth( 40 * menu_scaling() );
+    ImGui::PushItemWidth( 40 * UI::scale() );
     if ( ImGui::ColorEdit4( label, &color.x,
         ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
         storedColor_ = { storedName,color };
@@ -2262,7 +2681,7 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 50 * menu_scaling() );
+    ImGui::PushItemWidth( 50 * UI::scale() );
     UI::drag<NoUnit>( label, value, 0.01f, -99.0f, 99.0f );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
@@ -2297,7 +2716,7 @@ void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVi
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 100 * menu_scaling() );
+    ImGui::PushItemWidth( 100 * UI::scale() );
     UI::slider<NoUnit>( label, value, min, max );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
@@ -2329,7 +2748,7 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 50 * menu_scaling() );
+    ImGui::PushItemWidth( 50 * UI::scale() );
     UI::drag<PixelSizeUnit>( label, value, 0.02f, 0.5f, 30.0f );
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
@@ -2358,7 +2777,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     }
     const auto valueConstForComparation = value;
 
-    ImGui::SetNextItemWidth( 50 * menu_scaling() );
+    ImGui::SetNextItemWidth( 50 * UI::scale() );
     UI::drag<NoUnit>( label, value, 0.1f, 1, 9999, {}, UI::defaultSliderFlags, 0, 0 );
 
     if ( value != valueConstForComparation )
@@ -2378,12 +2797,12 @@ void ImGuiMenu::draw_custom_plugins()
     pluginsCache_.validate( viewer->plugins );
     StateBasePlugin* enabled = pluginsCache_.findEnabled();
 
-    float availibleWidth = 200.0f * menu_scaling();
+    float availibleWidth = 200.0f * UI::scale();
 
     const auto& selectedObjects = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     const auto& selectedVisObjects = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
 
-    ImGui::SetNextWindowPos( ImVec2( 410.0f * menu_scaling(), 0 ), ImGuiCond_FirstUseEver );
+    ImGui::SetNextWindowPos( ImVec2( 410.0f * UI::scale(), 0 ), ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowSize( ImVec2( 0.0f, 0.0f ), ImGuiCond_FirstUseEver );
     ImGui::Begin( "Plugins", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
 
@@ -2523,7 +2942,7 @@ void ImGuiMenu::draw_custom_plugins()
     {
         if ( allowRemoval_ )
             allowRemoval_ = false;
-        enabled->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
+        enabled->drawDialog( ImGui::GetCurrentContext() );
         if ( !enabled->dialogIsOpen() )
             enabled->enable( false );
     }
@@ -2537,7 +2956,7 @@ void ImGuiMenu::draw_custom_plugins()
 void ImGuiMenu::draw_mr_menu()
 {
     // Mesh
-    ProgressBar::setup( menu_scaling() );
+    ProgressBar::setup();
     const auto& viewportParameters = viewer->viewport().getParameters();
     if ( drawCollapsingHeader_( "Main", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
@@ -2621,12 +3040,12 @@ void ImGuiMenu::draw_mr_menu()
     // Viewing options
     if ( drawCollapsingHeader_( "Viewing Options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
-        ImGui::PushItemWidth( 80 * menu_scaling() );
+        ImGui::PushItemWidth( 80 * UI::scale() );
         auto fov = viewportParameters.cameraViewAngle;
         UI::drag<AngleUnit>( "Camera FOV", fov, 0.001f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } );
         viewer->viewport().setCameraViewAngle( fov );
 
-        bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
+        bool showGlobalBasis = viewer->globalBasis->isVisible( viewer->viewport().id );
         ImGui::Checkbox( "Show Global Basis", &showGlobalBasis );
         viewer->viewport().showGlobalBasis( showGlobalBasis );
 
@@ -2641,7 +3060,7 @@ void ImGuiMenu::draw_mr_menu()
 
         static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
         SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
-        ImGui::SetNextItemWidth( 120.0f * menu_scaling() );
+        ImGui::SetNextItemWidth( 120.0f * UI::scale() );
         UI::combo( "Default Shading Mode", ( int* )&shadingMode, shadingModes );
         if ( shadingMode != SceneSettings::getDefaultShadingMode() )
             SceneSettings::setDefaultShadingMode( shadingMode );
@@ -2893,7 +3312,7 @@ void ImGuiMenu::draw_open_recent_button_()
 void ImGuiMenu::drawShortcutsWindow_()
 {
     const auto& style = ImGui::GetStyle();
-    const float hotkeysWindowWidth = 300 * menu_scaling();
+    const float hotkeysWindowWidth = 300 * UI::scale();
     size_t numLines = 2;
 
     if ( shortcutManager_ )
@@ -2984,7 +3403,7 @@ float ImGuiMenu::getSceneInfoItemWidth_( int itemCount )
     if ( itemCount == 0 )
         return 0;
     /// 100 is the widest label's size
-    return ( ImGui::GetContentRegionAvail().x - 100.0f * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float( itemCount );
+    return ( ImGui::GetContentRegionAvail().x - 100.0f * UI::scale() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float( itemCount );
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )
@@ -3092,14 +3511,25 @@ void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
 BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks )
 {
     const auto& menuPlugin = getViewerInstance().getMenuPlugin();
-    menuPlugin->drawSceneUiSignal( menuPlugin->menu_scaling(), viewport, tasks );
+    menuPlugin->drawSceneUiSignal( viewport, tasks );
 
-    return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
+    return {
+        .consumedInteractions = ( ImGui::GetIO().WantCaptureMouse || getViewerInstance().getHoveredViewportIdOrInvalid() != viewport ) * BasicUiRenderTask::InteractionMask::mouseHover,
+    };
 }
 
-void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
+void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( ViewportId viewport, const BasicUiRenderTask::BackwardPassParams& params )
 {
-    if ( ImGui::GetIO().WantCaptureMouse )
+    auto hoveredViewport = getViewerInstance().getHoveredViewportIdOrInvalid();
+
+    if ( hoveredViewport != viewport )
+    {
+        if ( !hoveredViewport.valid() )
+            consumedInteractions = {}; // No viewports are hovered, just zero this.
+
+        // Otherwise we have some hovered viewport, but it's not this one, so we let that one viewport set `consumedInteractions`.
+    }
+    else if ( ImGui::GetIO().WantCaptureMouse )
     {
         // Some other UI is hovered, but not ours.
         consumedInteractions = {};

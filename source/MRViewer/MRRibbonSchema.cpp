@@ -12,6 +12,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneCache.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -104,7 +105,7 @@ bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
 std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, const SearchParams& params )
 {
     std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
-    
+
     if ( searchStr.empty() )
         return {};
     auto words = split( searchStr, " " );
@@ -113,7 +114,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     {
         if ( sourceStr.empty() )
             return { 1.0f, 1.f };
-        
+
         auto sourceWords = split( sourceStr, " " );
         std::erase_if( sourceWords, [] ( const auto& str ) { return str.empty(); } );
         if ( sourceWords.empty() )
@@ -244,7 +245,12 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     // clear duplicated results
     std::sort( rawResult.begin(), rawResult.end(), [] ( const auto& a, const auto& b )
     {
-        return intptr_t( a.first.item ) < intptr_t( b.first.item );
+        // tab order sorting has been added to stabilize results for similar queries (i.e. "c" / "cl" / "clo" / "clone", i6438 )
+        const auto ptrA = intptr_t( a.first.item );
+        const auto ptrB = intptr_t( b.first.item );
+        const auto& tabIndexA = a.first.tabIndex;
+        const auto& tabIndexB = b.first.tabIndex;
+        return ptrA < ptrB || ( ptrA == ptrB && tabIndexA < tabIndexB );
     } );
     rawResult.erase(
         std::unique( rawResult.begin(), rawResult.end(),
@@ -286,7 +292,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         return std::tuple( aWeight, aOrderWeight ) < std::tuple( bWeight, bOrderWeight );
     } );
 
-    // filter results with error threshold as 3x minimum caption error 
+    // filter results with error threshold as 3x minimum caption error
     if ( !rawResult.empty() && rawResult[0].second.captionWeight < maxWeight / 3.f )
     {
         const float maxWeightNew = rawResult[0].second.captionWeight * 3.f;
@@ -489,9 +495,9 @@ void RibbonSchemaLoader::recalcItemSizes()
     if ( !font )
         return;
 
-    const float cMaxTextWidth = 
-        RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) * 
-        4 * menu->menu_scaling();
+    const float cMaxTextWidth =
+        RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) *
+        4 * UI::scale();
 
     auto& schema = RibbonSchemaHolder::schema();
     for ( auto& item : schema.items )
@@ -582,12 +588,16 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
 #endif
             continue;
         }
+        auto& [_, menuItem] = *findIt;
+
         auto& itemCaption = item["Caption"];
         if ( itemCaption.isString() )
-            findIt->second.caption = itemCaption.asString();
+            menuItem.caption = itemCaption.asString();
+
         auto& itemHelpLink = item["HelpLink"];
         if ( itemHelpLink.isString() )
-            findIt->second.helpLink = itemHelpLink.asString();
+            menuItem.helpLink = itemHelpLink.asString();
+
         auto itemIcon = item["Icon"];
         if ( !itemIcon.isString() )
         {
@@ -595,7 +605,8 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
             assert( false );
         }
         else
-            findIt->second.icon = itemIcon.asString();
+            menuItem.icon = itemIcon.asString();
+
         auto itemTooltip = item["Tooltip"];
         if ( !itemTooltip.isString() )
         {
@@ -603,25 +614,30 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
             assert( false );
         }
         else
-            findIt->second.tooltip = itemTooltip.asString();
+            menuItem.tooltip = itemTooltip.asString();
+
         auto itemDropList = item["DropList"];
-        if ( !itemDropList.isArray() )
-            continue;
-        MenuItemsList dropList;
-        auto itemDropListSize = int( itemDropList.size() );
-        for ( int j = 0; j < itemDropListSize; ++j )
+        if ( itemDropList.isArray() && menuItem.item )
         {
-            auto dropItemName = itemDropList[j]["Name"];
-            if ( !dropItemName.isString() )
+            MenuItemsList dropList;
+            auto itemDropListSize = int( itemDropList.size() );
+            for ( int j = 0; j < itemDropListSize; ++j )
             {
-                spdlog::warn( "\"Name\" field is not valid or not present in drop list of item: \"{}\"", itemName.asString() );
-                assert( false );
-                continue;
+                auto dropItemName = itemDropList[j]["Name"];
+                if ( !dropItemName.isString() )
+                {
+                    spdlog::warn( "\"Name\" field is not valid or not present in drop list of item: \"{}\"", itemName.asString() );
+                    assert( false );
+                    continue;
+                }
+                dropList.push_back( dropItemName.asString() );
             }
-            dropList.push_back( dropItemName.asString() );
+            if ( !dropList.empty() )
+                menuItem.item->setDropItemsFromItemList( dropList );
         }
-        if ( !dropList.empty() && findIt->second.item )
-            findIt->second.item->setDropItemsFromItemList( dropList );
+
+        if ( auto loadListener = std::dynamic_pointer_cast<RibbonSchemaLoadListener>( menuItem.item ) )
+            loadListener->onRibbonSchemaLoad_();
     }
 }
 
@@ -720,8 +736,8 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
         }
         else
         {
-            auto it = std::find_if( 
-                RibbonSchemaHolder::schema().tabsOrder.begin(), 
+            auto it = std::find_if(
+                RibbonSchemaHolder::schema().tabsOrder.begin(),
                 RibbonSchemaHolder::schema().tabsOrder.end(),
                 [&] ( const RibbonTab& tnp ) { return tnp.name == tabName.asString(); } );
 

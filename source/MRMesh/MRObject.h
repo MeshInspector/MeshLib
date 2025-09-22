@@ -12,7 +12,7 @@
 #include <filesystem>
 #include <future>
 #include <memory>
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 namespace Json
@@ -69,6 +69,14 @@ public:
     // return name of subtype for serialization purposes
     constexpr static const char* TypeName() noexcept { return "Object"; }
     virtual const char* typeName() const { return TypeName(); }
+
+    /// return human readable name of subclass
+    constexpr static const char* ClassName() noexcept { return "Object"; }
+    virtual std::string className() const { return ClassName(); }
+
+    /// return human readable name of subclass in plural form
+    constexpr static const char* ClassNameInPlural() noexcept { return "Objects"; }
+    virtual std::string classNameInPlural() const { return ClassNameInPlural(); }
 
     template <typename T>
     T * asType() { return dynamic_cast<T*>( this ); }
@@ -186,6 +194,8 @@ public:
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
     MRMESH_API virtual void setAncillary( bool ancillary );
     bool isAncillary() const { return ancillary_; }
+    /// returns true if the object or any of its ancestors are ancillary
+    MRMESH_API bool isGlobalAncillary() const;
 
     /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );
@@ -213,12 +223,6 @@ public:
 
     /// return several info lines that can better describe object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const;
-
-    /// return human readable name of subclass
-    virtual std::string getClassName() const { return "Object"; }
-
-    /// return human readable name of subclass in plural form
-    virtual std::string getClassNameInPlural() const { return "Objects"; }
 
     /// creates futures that save this object subtree:
     ///   models in the folder by given path and
@@ -254,9 +258,10 @@ public:
 
     /// provides read-only access to the tag storage
     /// the storage is a set of unique strings
-    const std::unordered_set<std::string>& tags() const { return tags_; }
+    const std::set<std::string>& tags() const { return tags_; }
     /// adds tag to the object's tag storage
     /// additionally calls ObjectTagManager::tagAddedSignal
+    /// NOTE: tags starting with a dot are considered as service ones and might be hidden from UI
     MRMESH_API bool addTag( std::string tag );
     /// removes tag from the object's tag storage
     /// additionally calls ObjectTagManager::tagRemovedSignal
@@ -309,7 +314,7 @@ protected:
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
-    std::unordered_set<std::string> tags_;
+    std::set<std::string> tags_;
 
     // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
     // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children

@@ -11,7 +11,7 @@ namespace MR
 TEST( MRMesh, Pdf )
 {
     UniqueTemporaryFolder pathFolder( {} );
-    Pdf pdfTest( pathFolder / std::filesystem::path( "test.pdf" ) );
+    Pdf pdfTest;
     pdfTest.addText( "Test Title", true );
     pdfTest.addText( "Test text"
         "\nstring 1"
@@ -40,8 +40,8 @@ TEST( MRMesh, Pdf )
     auto colorMapPath = pathFolder / std::filesystem::path( "color_map.png" );
     auto res = ImageSave::toAnySupportedFormat( { pixels, Vector2i( colorMapSizeX, colorMapSizeY ) }, colorMapPath );
 
-    pdfTest.addImageFromFile( colorMapPath, { {-1, 0}, "test image", true } );
-    pdfTest.close();
+    pdfTest.addImageFromFile( colorMapPath, { .size = {-1, 0}, .caption = "test image", .uniformScale = Pdf::ImageParams::UniformScale::FromWidth } );
+    pdfTest.saveToFile( pathFolder / std::filesystem::path( "test.pdf" ) );
 }
 
 } //namespace MR

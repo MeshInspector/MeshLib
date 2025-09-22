@@ -1,5 +1,6 @@
 #include "MRViewerSettingsManager.h"
 #include "MRUnitSettings.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
@@ -9,6 +10,7 @@
 #include "MRSpaceMouseParameters.h"
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
@@ -64,6 +66,7 @@ const std::string cUnitsPrecisionRatio = "units.precisionRatio";
 const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
 const std::string cGlobalBasisKey = "globalBasis";
 const std::string cGlobalBasisVisibleKey = "globalBasisVisible";
+const std::string cGlobalBasisGridVisibleKey = "globalBasisGridVisible";
 const std::string cGlobalBasisScaleKey = "globalBasusScale";
 const std::string cMruInnerMeshFormat = "mruInner.meshFormat";
 const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
@@ -147,8 +150,8 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 {
     viewer.resetSettingsFunction( &viewer );
 
-    if ( viewer.globalBasisAxes )
-        viewer.globalBasisAxes->setVisible( Defaults::globalBasisEnabled );
+    if ( viewer.globalBasis )
+        viewer.globalBasis->setVisible( Defaults::globalBasisEnabled );
 
     for ( ViewportId id : viewer.getPresentViewports() )
     {
@@ -213,13 +216,17 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
     }
 
-    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasisAxes )
+    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasis )
     {
         auto val = cfg.getJsonValue( cGlobalBasisKey );
         if ( val[cGlobalBasisVisibleKey].isBool() )
         {
             auto visible = val[cGlobalBasisVisibleKey].asBool();
-            viewer.globalBasisAxes->setVisible( visible );
+            viewer.globalBasis->setVisible( visible );
+            bool gridVisible = visible;
+            if ( val[cGlobalBasisGridVisibleKey].isBool() )
+                gridVisible = val[cGlobalBasisGridVisibleKey].asBool();
+            viewer.globalBasis->setGridVisible( gridVisible );
             if ( visible )
                 CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
         }
@@ -228,7 +235,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         else if ( val[cGlobalBasisScaleKey].isDouble() )
         {
             params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Fixed;
-            viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( val[cGlobalBasisScaleKey].asFloat() ) ) );
+            viewer.globalBasis->setAxesProps( val[cGlobalBasisScaleKey].asFloat(), viewer.globalBasis->getAxesWidth() );
         }
     }
     viewport.setParameters( params );
@@ -384,7 +391,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( cfg.hasJsonValue( cRibbonNotificationAllowedTags ) )
             ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTagMask( cfg.getJsonValue( cRibbonNotificationAllowedTags ).asUInt() );
 
-        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * ribbonMenu->menu_scaling() ), 0 } );
+        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * UI::scale() ), 0 } );
         // it is important to be called after `cMainWindowMaximized` block
         // as far as scene size is clamped by window size in each frame
         CommandLoop::appendCommand( [ribbonMenu, sceneSize]
@@ -545,14 +552,15 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
 
-    if ( viewer.globalBasisAxes )
+    if ( viewer.globalBasis )
     {
         Json::Value globalBasis;
-        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasisAxes->isVisible( viewport.id );
+        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasis->isVisible( viewport.id );
+        globalBasis[cGlobalBasisGridVisibleKey] = viewer.globalBasis->isGridVisible( viewport.id );
         if ( params.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto )
             globalBasis[cGlobalBasisScaleKey] = "Auto";
         else
-            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasisAxes->xf( viewport.id ).A.x.x;
+            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasis->getAxesLength( viewport.id );
         cfg.setJsonValue( cGlobalBasisKey, globalBasis );
     }
 

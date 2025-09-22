@@ -164,6 +164,7 @@
     <ClInclude Include="MRParallel.h" />
     <ClInclude Include="MRParallelMinMax.h" />
     <ClInclude Include="MRPartialChangeMeshAction.h" />
+    <ClInclude Include="MRPartMappingAdapters.h" />
     <ClInclude Include="MRPly.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
@@ -430,6 +431,8 @@
     <ClInclude Include="MREndMill.h" />
     <ClInclude Include="MRSolidOfRevolution.h" />
     <ClInclude Include="MRObjectTagEventDispatcher.h" />
+    <ClInclude Include="MRObjectComparableWithReference.h" />
+    <ClInclude Include="MRPointMeasurementObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
@@ -557,6 +560,7 @@
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPartMappingAdapters.cpp" />
     <ClCompile Include="MRPly.cpp" />
     <ClCompile Include="MRPointCloudDistance.cpp" />
     <ClCompile Include="MRClosestWeightedPoint.cpp" />
@@ -718,6 +722,7 @@
     <ClCompile Include="MRCylinderApproximator.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRObjectTagEventDispatcher.cpp" />
+    <ClCompile Include="MRPointMeasurementObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

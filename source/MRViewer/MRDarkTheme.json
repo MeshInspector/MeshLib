@@ -24,6 +24,18 @@
 		"g": 255,
 		"r": 255
 	},
+	"LabelsGood": {
+		"a": 255,
+		"b": 0,
+		"g": 255,
+		"r": 0
+	},
+	"LabelsBad": {
+		"a": 255,
+		"b": 128,
+		"g": 128,
+		"r": 255
+	},
 	"Ribbon Colors": {
 		"Background": {
 			"a": 255,
@@ -367,6 +379,12 @@
 			"b": 0,
 			"g": 171,
 			"r": 46
+		},
+		"Grid": {
+			"a": 220,
+			"b": 255,
+			"g": 255,
+			"r": 255
 		}
 	},
 	"Viewport Colors": {
@@ -381,6 +399,24 @@
 			"b": 0,
 			"g": 0,
 			"r": 0
+		},
+		"AxisX": {
+			"a": 255,
+			"b": 107,
+			"g": 107,
+			"r": 255
+		},
+		"AxisY": {
+			"a": 255,
+			"b": 119,
+			"g": 203,
+			"r": 107
+		},
+		"AxisZ": {
+			"a": 255,
+			"b": 255,
+			"g": 150,
+			"r": 77
 		}
 	},
 	"SelectedEdges": {
@@ -433,15 +469,33 @@
 	},
 	"SelectedMeasurements": {
 		"a": 255,
-		"b": 240,
-		"g": 255,
-		"r": 50
+		"b": 107,
+		"g": 40,
+		"r": 193
 	},
 	"UnselectedMeasurements": {
 		"a": 255,
 		"b": 255,
 		"g": 255,
 		"r": 255
+	},
+	"UnselectedMeasurementsX": {
+		"a": 255,
+		"b": 100,
+		"g": 100,
+		"r": 255
+	},
+	"UnselectedMeasurementsY": {
+		"a": 255,
+		"b": 100,
+		"g": 255,
+		"r": 100
+	},
+	"UnselectedMeasurementsZ": {
+		"a": 255,
+		"b": 255,
+		"g": 100,
+		"r": 100
 	},
 	"SelectedTemporaryMeasurements": {
 		"a": 255,
@@ -451,9 +505,9 @@
 	},
 	"UnselectedTemporaryMeasurements": {
 		"a": 255,
-		"b": 0,
+		"b": 255,
 		"g": 255,
-		"r": 27
+		"r": 0
 	},
 	"SelectedObjectMesh": {
 		"a": 255,

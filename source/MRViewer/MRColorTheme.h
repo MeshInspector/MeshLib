@@ -140,6 +140,8 @@ public:
         GradBtnSecStyleHoverEnd,
         GradBtnSecStyleActiveEnd,
 
+        Grid,
+
         Count
     };
     // Getter and setter for ribbon colors
@@ -151,6 +153,9 @@ public:
     {
         Background,
         Borders,
+        AxisX,
+        AxisY,
+        AxisZ,
         Count
     };
 

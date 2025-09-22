@@ -31,14 +31,16 @@ struct [[nodiscard]] PolylineIntersectionResult2
 /// Finds ray and polyline intersection in float-precision.
 /// \p rayStart and \p rayEnd define the interval on the ray to detect an intersection.
 /// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
-/// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
+/// Finds the closest intersection to ray origin (line param=0)
+/// or any intersection for better performance if \p !closestIntersect.
 [[nodiscard]] MRMESH_API std::optional<PolylineIntersectionResult2> rayPolylineIntersect( const Polyline2& polyline, const Line2f& line,
     float rayStart = 0, float rayEnd = FLT_MAX, const IntersectionPrecomputes2<float>* prec = nullptr, bool closestIntersect = true );
 
 /// Finds ray and polyline intersection in double-precision.
 /// \p rayStart and \p rayEnd define the interval on the ray to detect an intersection.
 /// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
-/// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
+/// Finds the closest intersection to ray origin (line param=0)
+/// or any intersection for better performance if \p !closestIntersect.
 [[nodiscard]] MRMESH_API std::optional<PolylineIntersectionResult2> rayPolylineIntersect( const Polyline2& polyline, const Line2d& line,
     double rayStart = 0, double rayEnd = DBL_MAX, const IntersectionPrecomputes2<double>* prec = nullptr, bool closestIntersect = true );
 
@@ -46,7 +48,7 @@ struct [[nodiscard]] PolylineIntersectionResult2
 /// if it returns Processing::Stop, then the search immediately terminates;
 /// the callback can reduce rayEnd affecting the following search, but it shall not increase rayEnd
 template<typename T>
-using PolylineIntersectionCallback2 = std::function<Processing(const EdgePoint & polylinePoint, T rayPos, T & rayEnd)>;
+using PolylineIntersectionCallback2 = std::function<Processing(const EdgePoint & polylinePoint, T rayPos, T & rayStart, T & rayEnd)>;
 using PolylineIntersectionCallback2f = PolylineIntersectionCallback2<float>;
 using PolylineIntersectionCallback2d = PolylineIntersectionCallback2<double>;
 

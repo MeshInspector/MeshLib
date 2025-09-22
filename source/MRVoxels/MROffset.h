@@ -3,6 +3,7 @@
 #include "MRMesh/MRMeshPart.h"
 #include "MRMesh/MRSignDetectionMode.h"
 #include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRPartMapping.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MREnums.h"
 #include <optional>
@@ -112,7 +113,8 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
 /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get open mesh (with several components) on output
 /// if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output;
-[[nodiscard]] MRVOXELS_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {},
+    const PartMapping & map = {} ); ///< mapping between original mesh and thicken result
 
 /// offsets given MeshPart in one direction only (positive or negative)
 /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned

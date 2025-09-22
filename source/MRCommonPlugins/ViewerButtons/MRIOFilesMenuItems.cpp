@@ -288,7 +288,9 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         auto mousePos = viewerRef.mouseController().getMousePos();
         auto headerHeight = viewerRef.framebufferSize.y - sceneBoxSize.y;
         if ( mousePos.x > sceneBoxSize.x || mousePos.y < headerHeight )
-            options.forceReplaceScene = true;
+            options.replaceMode = FileLoadOptions::ReplaceMode::ForceReplace;
+        else
+            options.replaceMode = FileLoadOptions::ReplaceMode::ForceAdd;
     }
 
     if ( viewerRef.getSortDroppedFiles() )
@@ -315,11 +317,9 @@ void OpenFilesMenuItem::preDraw_()
 
     bool addAreaHovered = false;
 
-    float scaling = 1.0f;
     auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
     if ( menu )
     {
-        scaling = menu->menu_scaling();
         auto sceneBoxSize = menu->getSceneSize();
         auto headerHeight = getViewerInstance().framebufferSize.y - sceneBoxSize.y;
         if ( dragPos_.x <= sceneBoxSize.x && dragPos_.y >= headerHeight )
@@ -329,13 +329,13 @@ void OpenFilesMenuItem::preDraw_()
     auto mainColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     auto secondColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
 
-    ImVec2 min = ImVec2( 10.0f * scaling, 10.0f * scaling );
+    ImVec2 min = ImVec2( 10.0f * UI::scale(), 10.0f * UI::scale() );
     ImVec2 max = ImVec2( Vector2f( getViewerInstance().framebufferSize ) );
     max.x -= min.x;
     max.y -= min.y;
-    drawList->AddRectFilled( min, max, 
-        ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * scaling );
-    drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * scaling, 0, 2.0f * scaling );
+    drawList->AddRectFilled( min, max,
+        ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
+    drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 
     auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
     if ( bigFont )
@@ -350,8 +350,8 @@ void OpenFilesMenuItem::preDraw_()
         auto sceneBoxSize = menu->getSceneSize();
         min.y += ( getViewerInstance().framebufferSize.y - sceneBoxSize.y );
         max.x = sceneBoxSize.x - min.x;
-        drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * scaling );
-        drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * scaling, 0, 2.0f * scaling );
+        drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
+        drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 
         textSize = ImGui::CalcTextSize( "Add Files" );
         textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
@@ -798,14 +798,23 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 
 void SaveSceneAsMenuItem::saveSceneAs_()
 {
-    std::string defFileName;
-    if ( auto obj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        defFileName = obj->name();
+    FileParameters params{ .filters = SceneSave::getFilters() };
+    auto savePath = SceneRoot::getScenePath();
+    if ( savePath.empty() )
+    {
+        if ( auto obj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+            params.fileName = obj->name();
+    }
+    else
+    {
+        params.baseFolder = savePath.parent_path();
+        params.fileName = utf8string( savePath.stem() );
+    }
     saveFileDialogAsync( [&] ( const std::filesystem::path& savePath )
     {
         if ( !savePath.empty() )
             saveScene_( savePath );
-    }, { .fileName = defFileName, .filters = SceneSave::getFilters() } );
+    }, params );
 }
 
 bool SaveSceneAsMenuItem::action()
@@ -845,10 +854,10 @@ CaptureScreenshotMenuItem::CaptureScreenshotMenuItem():
     }, CommandLoop::StartPosition::AfterWindowAppear );
 }
 
-void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
+void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 200.0f * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 200.0f * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
     UI::drag<PixelSizeUnit>( "Width", resolution_.x, 1, 256 );

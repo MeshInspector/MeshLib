@@ -62,10 +62,16 @@ struct BooleanResultMapper
 
     /// Returns faces bitset of result mesh corresponding input one
     MRMESH_API FaceBitSet map( const FaceBitSet& oldBS, MapObject obj ) const;
+
     /// Returns vertices bitset of result mesh corresponding input one
     MRMESH_API VertBitSet map( const VertBitSet& oldBS, MapObject obj ) const;
+
     /// Returns edges bitset of result mesh corresponding input one
     MRMESH_API EdgeBitSet map( const EdgeBitSet& oldBS, MapObject obj ) const;
+
+    /// Returns undirected edges bitset of result mesh corresponding input one
+    MRMESH_API UndirectedEdgeBitSet map( const UndirectedEdgeBitSet& oldBS, MapObject obj ) const;
+
     /// Returns only new faces that are created during boolean operation
     MRMESH_API FaceBitSet newFaces() const;
 

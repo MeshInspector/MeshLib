@@ -15,36 +15,18 @@ struct NoModelCheck {};
 template<typename ObjectT>
 std::string getNObjectsLine( unsigned n )
 {
-    std::string typeName = ObjectT::TypeName();
-    if ( typeName.starts_with( "Object" ) && !typeName.ends_with( "Object" ) )
-        typeName = typeName.substr( 6 );
-    if ( typeName == "Points" )
-        typeName = "Point Cloud";
-    else if ( typeName == "Lines" )
-        typeName = "Polyline";
-    else if ( typeName == "Voxels" )
-        typeName = "Volume";
-
-    if ( n != 1 )
-    {
-        if ( typeName.ends_with( "s" ) || typeName.ends_with( "sh" ) )
-            typeName += "es";
-        else
-            typeName += "s";
-    }
-
     switch ( n )
     {
     case 1:
-        return "one " + typeName;
+        return std::string( "one " ) + ObjectT::ClassName();
     case 2:
-        return "two " + typeName;
+        return std::string( "two " ) + ObjectT::ClassNameInPlural();
     case 3:
-        return "three " + typeName;
+        return std::string( "three " ) + ObjectT::ClassNameInPlural();
     case 4:
-        return "four " + typeName;
+        return std::string( "four " ) + ObjectT::ClassNameInPlural();
     default:
-        return std::to_string( n ) + " " + typeName;
+        return std::to_string( n ) + " " + ObjectT::ClassNameInPlural();
     }    
 }
 
@@ -59,7 +41,7 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
     {
         auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
-            return std::string( "Selected object(s) must have type: " ) + ObjectT::TypeName();
+            return std::string( "Selected object(s) must be " ) + ObjectT::ClassName();
 
         if constexpr ( modelCheck )
             if ( !tObj->hasModel() )

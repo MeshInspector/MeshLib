@@ -2,6 +2,7 @@
 #include "MROnInit.h"
 #include "MRDirectory.h"
 #include "MRStringConvert.h"
+#include "MRPch/MRWasm.h"
 #include <algorithm>
 #include <map>
 
@@ -97,7 +98,22 @@ namespace MR
 Expected<std::filesystem::path> SystemPath::getExecutablePath()
 {
 #if defined( __EMSCRIPTEN__ )
-    return unexpected( "Not supported on Wasm" );
+    auto *jsStr = (char *)EM_ASM_PTR({
+        var wasmStr = findWasmBinary();
+        if ( wasmStr == null )
+            wasmStr = "";
+        var lengthBytes = lengthBytesUTF8( wasmStr ) + 1;
+        var stringOnWasmHeap = _malloc( lengthBytes );
+        stringToUTF8( wasmStr, stringOnWasmHeap, lengthBytes );
+        return stringOnWasmHeap;
+    });
+    std::string wasmStr;
+    if ( jsStr )
+    {
+        wasmStr = std::string( jsStr );
+        free(jsStr);
+    }
+    return std::filesystem::path { wasmStr };
 #elif defined( _WIN32 )
     wchar_t path[MAX_PATH];
     if ( auto size = GetModuleFileNameW( NULL, path, MAX_PATH ); size == 0 )

@@ -29,6 +29,7 @@ class ShortcutManager;
 class MeshModifier;
 struct UiRenderManager;
 class SceneObjectsListDrawer;
+class ObjectComparableWithReference;
 
 enum class SelectedTypesMask
 {
@@ -154,6 +155,22 @@ protected:
   // When editing feature properties, this is the original xf of the target object, for history purposes.
   AffineXf3f editedFeatureObjectOldXf_;
 
+    // state for the Edit Tag modal dialog
+    struct TagEditorState
+    {
+        std::string initName;
+        std::string name;
+        bool initHasFrontColor = false;
+        bool hasFrontColor = false;
+        ImVec4 selectedColor;
+        ImVec4 unselectedColor;
+    };
+    TagEditorState tagEditorState_;
+    // whether to open the Edit Tag modal dialog
+    bool showEditTag_ = false;
+    // buffer string for the tag name input widget
+    std::string tagNewName_;
+
 public:
   MRVIEWER_API static const std::shared_ptr<ImGuiMenu>& instance();
 
@@ -194,8 +211,6 @@ public:
   std::function<void(void)> callback_draw_custom_window;
 
   void draw_labels_window();
-
-  void draw_labels( const VisualObject& obj );
 
   MRVIEWER_API void draw_text(
       const Viewport& viewport,
@@ -311,8 +326,10 @@ public:
   NameTagClickSignal nameTagClickSignal;
   // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
+  // This version uses the currently held keyboard modifiers instead of a custom `mode`.
+  MRVIEWER_API bool simulateNameTagClickWithKeyboardModifiers( Object& object );
 
-  using DrawSceneUiSignal = boost::signals2::signal<void( float menuScaling, ViewportId viewportId, UiRenderParams::UiTaskList& tasks )>;
+  using DrawSceneUiSignal = boost::signals2::signal<void( ViewportId viewportId, UiRenderParams::UiTaskList& tasks )>;
   // This is called every frame for every viewport. Use this to draw UI bits on top of the scene.
   DrawSceneUiSignal drawSceneUiSignal;
 
@@ -329,6 +346,24 @@ public:
     MRVIEWER_API bool drawRemoveButton( const std::vector<std::shared_ptr<Object>>& selectedObjs );
     MRVIEWER_API bool drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
     MRVIEWER_API bool drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+
+    /// style constants used for the information panel
+    struct SelectionInformationStyle
+    {
+        /// value text color
+        Color textColor;
+        /// property label color
+        Color labelColor;
+        /// selected value text color
+        Color selectedTextColor;
+        /// value item width
+        float itemWidth {};
+        /// value item width for two-segment field
+        float item2Width {};
+        /// value item width for three-segment field
+        float item3Width {};
+    };
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -370,8 +405,14 @@ protected:
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
 
+    MRVIEWER_API void drawComparablePropertiesEditor_( ObjectComparableWithReference& object );
+
+    /// draw additional selection information (e.g. for custom objects)
+    MRVIEWER_API virtual void drawCustomSelectionInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
+
+    MRVIEWER_API void drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API float drawTransform_();
 
@@ -392,7 +433,7 @@ protected:
         MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks ) override;
-        MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
+        MRVIEWER_API void finishBackwardPass( ViewportId viewport, const BasicUiRenderTask::BackwardPassParams& params ) override;
 
         // Which things are blocked by our `renderUi()` calls.
         BasicUiRenderTask::InteractionMask consumedInteractions{};

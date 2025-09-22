@@ -2,9 +2,12 @@
 #include "ImGuiMenu.h"
 #include "MRMesh/MRFinally.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
+#include "MRUIRectAllocator.h"
+#include "MRMesh/MRConfig.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSystem.h"
@@ -376,9 +379,6 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const auto menu = ImGuiMenu::instance();
     const auto& viewportSize = Viewport::get().getViewportRect();
 
-    ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
-
     const auto style = getStyleVariables_( menu->menu_scaling() );
     const auto maxLabelWidth = getMaxLabelWidth_( onlyTopHalf );
     const ImVec2 windowSizeMin {
@@ -421,9 +421,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             prevMaxLabelWidth_ = maxLabelWidth;
         }
     }
-
-    ImGui::Begin( windowName.c_str(), &isWindowOpen_,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
+    ImGui::BeginSavedWindowPos( windowName, &isWindowOpen_, { size, &pose, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground } );
 
     MR_FINALLY{ ImGui::End(); };
 
@@ -724,13 +722,12 @@ Color Palette::getColor( float val ) const
     if ( val == 1.f )
         return colors.back();
 
-    float dIdx = val * ( colors.size() - 1 );
-
     if ( texture_.filter == FilterType::Discrete )
-        return colors[int( std::round( dIdx ) )];
+        return colors[int( val * colors.size() )];
 
     if ( texture_.filter == FilterType::Linear )
     {
+        float dIdx = val * ( colors.size() - 1 );
         int dId = int( trunc( dIdx ) );
         float c = dIdx - dId;
         return  ( 1 - c ) * colors[dId] + c * colors[dId + 1];

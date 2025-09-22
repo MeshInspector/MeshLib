@@ -177,7 +177,7 @@ struct CustomStatePluginWindowParameters
     /// current collapsed state of window
     /// in/out parameter, owned outside of `BeginCustomStatePlugin` function
     bool* collapsed{ nullptr };
-    /// window width (should be already scaled with menuScaling)
+    /// window width (should be already scaled with `UI::scale()`)
     float width{ 0.0f };
     /// window height, usually calculated internally (if value is zero)
     float height{ 0.0f };
@@ -187,8 +187,6 @@ struct CustomStatePluginWindowParameters
     ImVec2* position{ nullptr };
     /// the position of the starting point of the window
     ImVec2 pivot{ 0.0f, 0.0f };
-    /// menu scaling, needed to proper scaling of internal window parts
-    float menuScaling{ 1.0f };
     /// window flags, ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced inside `BeginCustomStatePlugin` function
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
     /// outside owned parameter for windows with resize option
@@ -205,8 +203,43 @@ struct CustomStatePluginWindowParameters
 /// for a value pivot = ( 0.0f, 1.0f )
 MRVIEWER_API ImVec2 GetDownPosition( const float width );
 
-// Calculate and return the height of the window title
-MRVIEWER_API float GetTitleBarHeght( float menuScaling );
+/// Calculate and return the height of the window title
+MRVIEWER_API float GetTitleBarHeght();
+
+/// Load saved window position, if possible
+/// \details if can't load - get \p position (if setted) or default (upper-right viewport corner)
+/// see also \ref SaveWindowPosition
+/// \param label window label
+/// \param width window width
+/// \param position (optional) preliminary window position
+/// \return pair of the final position of the window and flag whether the position was loaded
+MRVIEWER_API std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, ImGuiWindow* window, float width, const ImVec2* position = nullptr );
+inline std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, float width, const ImVec2* position = nullptr )
+{
+    return LoadSavedWindowPos( label, FindWindowByName( label ), width, position );
+}
+/// Save window position
+/// \details saved only if window exist
+/// see also \ref LoadSavedWindowPos
+MRVIEWER_API void SaveWindowPosition( const char* label, ImGuiWindow* window );
+inline void SaveWindowPosition( const char* label )
+{
+    SaveWindowPosition( label, FindWindowByName( label ) );
+}
+
+/// Parameters drawing classic ImGui::Begin with loading / saving window position
+struct SavedWindowPosParams
+{
+    /// window size
+    ImVec2 size = { -1, -1 };
+    /// (optional) preliminary window position
+    const ImVec2* pos = 0;
+    ImGuiWindowFlags flags = 0;
+};
+/// Same as ImGui::Begin, but with loading and saving the window position
+/// \details see also \ref LoadSavedWindowPos and \ref SaveWindowPosition
+MRVIEWER_API bool BeginSavedWindowPos( const std::string& name, bool* open, const SavedWindowPosParams& params );
+
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
 MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params = {} );
@@ -260,7 +293,6 @@ MRVIEWER_API PaletteChanges Palette(
     MR::Palette& palette,
     std::string& presetName,
     float width,
-    float menuScaling,
     bool* fixZero = nullptr,
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
@@ -278,7 +310,7 @@ MR_MAKE_FLAG_OPERATORS( PlaneWidgetFlags )
 /// Helper plane widget, allows to draw specified plain in the scene \n
 /// can import plane from the scene, draw it with mouse or adjust with controls
 /// planeWidget stores the plane widget params
-MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags flags = {} );
+MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags = {} );
 
 /// Shows 3 edit boxes for editing of world direction coordinates;
 /// \param editDragging must be initialized with zero, used to append only one history action on start dragging;
@@ -295,16 +327,22 @@ MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, con
 
 
 /// draw spinner in given place, radius with respect to scaling
-MRVIEWER_API void Spinner( float radius, float scaling );
+MRVIEWER_API void Spinner( float radius );
 
 /// draw big title with close cross (i.e. for settings modal popup )
-MRVIEWER_API bool ModalBigTitle( const char* title, float scaling );
+MRVIEWER_API bool ModalBigTitle( const char* title );
 
 /// draw exit button with close cross (i.e. for settings modal popup )
-MRVIEWER_API bool ModalExitButton( float scaling );
+MRVIEWER_API bool ModalExitButton();
 
 /// get exponential speed for this value
 inline float getExpSpeed( float val, float frac = 0.01f, float min = 1e-5f )
     { return std::max( val * frac, min ); }
+
+/// A crude conversion to grayscale. Good enough for our purposes.
+inline float getLuminance( const ImVec4& col )
+{
+    return 0.2126f * col.x + 0.7152f * col.y + 0.0722f * col.z;
+}
 
 } // namespace ImGui

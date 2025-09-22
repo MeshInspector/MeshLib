@@ -1,4 +1,6 @@
 #include "MRRenderFeatureObjects.h"
+#include "MRViewer/MRRibbonFontManager.h"
+#include "MRViewer/MRUnits.h"
 #include "MRVisualSubfeatures.h"
 
 #include "MRMesh/MRArrow.h"
@@ -26,7 +28,12 @@ static constexpr int numCircleSegments = 128;
 static constexpr int sphereDetailLevel = 2048;
 
 // Separator between object name and extra information.
-static constexpr std::string_view nameExtrasSeparator = "   |   ";
+static constexpr std::string_view nameExtrasSeparator = "  |  ";
+
+static std::string lengthToString( float value )
+{
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
+}
 
 // Extracts subfeatures from `sourceObject` and writes them out `outputPoints` and `outputLines`.
 // `sourceObject` must point to a temporary object of the desired type, with identity xf.
@@ -143,19 +150,21 @@ RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
-std::string RenderPointFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
         Vector3f point = object.xf().b;
         if ( object.parent() )
             point = object.parent()->worldXf()( point );
-        constexpr int precision = 2;
-        return fmt::format( "{}{}{:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, point.x, precision, point.y, precision, point.z, precision );
+
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}{}; {}; {}", nameExtrasSeparator, lengthToString( point.x ), lengthToString( point.y ), lengthToString( point.z ) ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 
@@ -176,7 +185,7 @@ RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
     nameUiRotateLocalOffset90Degrees = true;
 }
 
-std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderLineFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -186,11 +195,13 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
         dir = dir.normalized();
         constexpr int precision = 2;
 
-        return fmt::format( "{}{}dir {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}dir {:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 
@@ -266,7 +277,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
-std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderPlaneFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -275,11 +286,13 @@ std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& o
             normal = object.parent()->worldXf().A * normal;
         constexpr int precision = 2;
 
-        return fmt::format( "{}{}N {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}N {:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 

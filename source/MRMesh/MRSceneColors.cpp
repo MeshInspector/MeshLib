@@ -35,6 +35,8 @@ const char* SceneColors::getName( Type type )
         case UnselectedObjectDistanceMap:     return "UnselectedObjectDistanceMap";
         case BackFaces:                       return "BackFaces";
         case Labels:                          return "Labels";
+        case LabelsGood:                      return "LabelsGood";
+        case LabelsBad:                       return "LabelsBad";
         case Edges:                           return "Edges";
         case Points:                          return "Points";
         case SelectedFaces:                   return "SelectedFaces";
@@ -47,6 +49,9 @@ const char* SceneColors::getName( Type type )
         case UnselectedFeatureDecorations:    return "UnselectedFeatureDecorations";
         case SelectedMeasurements:            return "SelectedMeasurements";
         case UnselectedMeasurements:          return "UnselectedMeasurements";
+        case UnselectedMeasurementsX:         return "UnselectedMeasurementsX";
+        case UnselectedMeasurementsY:         return "UnselectedMeasurementsY";
+        case UnselectedMeasurementsZ:         return "UnselectedMeasurementsZ";
         case SelectedTemporaryMeasurements:   return "SelectedTemporaryMeasurements";
         case UnselectedTemporaryMeasurements: return "UnselectedTemporaryMeasurements";
         case Count:                           break;

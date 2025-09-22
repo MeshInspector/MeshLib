@@ -31,6 +31,18 @@ struct MenuItemInfo
     std::string helpLink; // link to help page
 };
 
+/// interface for plugins that should be notified when their information is loaded from the schema json file
+/// allows to alternate behavior depending on whether the plugin is available in the app
+class MRVIEWER_CLASS RibbonSchemaLoadListener
+{
+public:
+    virtual ~RibbonSchemaLoadListener() = default;
+
+protected:
+    friend class RibbonSchemaLoader;
+    virtual void onRibbonSchemaLoad_() = 0;
+};
+
 using ItemMap = HashMap<std::string, MenuItemInfo>;
 using TabsGroupsMap = HashMap<std::string, std::vector<std::string>>;
 using GroupsItemsMap = TabsGroupsMap;

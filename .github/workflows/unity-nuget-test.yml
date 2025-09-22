@@ -31,7 +31,7 @@ jobs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     steps:
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
@@ -52,7 +52,7 @@ jobs:
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
@@ -65,14 +65,14 @@ jobs:
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\ProjectSettings\Packages\com.github-glitchenzo.nugetforunity" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
-          Remove-Item -Path "C:\work\nuget_repo\MeshLib.*.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib*.nupkg" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
         env:
           GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
       
       - name: Move nuget package to repo folder
         shell: powershell
@@ -127,7 +127,7 @@ jobs:
     steps:
       - name: Configure AWS Credentials (OIDC)
         if: always()
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1

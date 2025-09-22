@@ -28,6 +28,9 @@ struct ObjectMeshData
     VertUVCoords uvCoordinates; ///< vertices coordinates in texture
     TexturePerFace texturePerFace;
 
+    /// returns copy of this object with mesh cloned
+    [[nodiscard]] MRMESH_API ObjectMeshData clone() const;
+
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 };

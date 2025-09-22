@@ -4,7 +4,6 @@
 #include "MRMeshTexture.h"
 #include "MRVector.h"
 #include "MRColor.h"
-#include "MRPositionedText.h"
 #include "MRIRenderObject.h"
 #include "MRUniquePtr.h"
 #include "MREnums.h"
@@ -23,8 +22,6 @@ enum class MRMESH_CLASS VisualizeMaskType
     Visibility,
     InvertedNormals,
     Name,
-    Labels,
-    CropLabelsByViewportRect,
     ClippedByPlane,
     DepthTest,
     _count [[maybe_unused]],
@@ -130,8 +127,11 @@ public:
     constexpr static const char* TypeName() noexcept { return "VisualObject"; }
     virtual const char* typeName() const override { return TypeName(); }
 
-    std::string getClassName() const override { return "Visual Object"; }
-    std::string getClassNameInPlural() const override { return "Visual Objects"; }
+    constexpr static const char* ClassName() noexcept { return "Visual Object"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Visual Objects"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
     [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;
@@ -155,11 +155,14 @@ public:
         setAllVisualizeProperties_( properties, counter );
     }
 
-    /// shows/hides labels
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MR_BIND_IGNORE void showLabels( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Labels, ViewportMask::all() ); }
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MR_BIND_IGNORE bool showLabels() const { return getVisualizeProperty( VisualizeMaskType::Labels, ViewportMask::any() ); }
+    /// returns all viewports where this object or any of its parents is clipped by plane
+    [[nodiscard]] MRMESH_API ViewportMask globalClippedByPlaneMask() const;
+
+    /// returns true if this object or any of its parents is clipped by plane in any of given viewports
+    [[nodiscard]] bool globalClippedByPlane( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalClippedByPlaneMask() & viewportMask ).empty(); }
+
+    /// if false deactivates clipped-by-plane for this object and all of its parents, otherwise sets clipped-by-plane for this this object only
+    MRMESH_API void setGlobalClippedByPlane( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
     /// shows/hides object name in all viewports
     void showName( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Name, ViewportMask::all() ); }
@@ -195,17 +198,6 @@ public:
     MRMESH_API virtual const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const;
     /// sets global transparency alpha of object in all viewports
     MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API MR_BIND_IGNORE const Color& getLabelsColor( ViewportId viewportId = {} ) const;
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API MR_BIND_IGNORE virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API MR_BIND_IGNORE const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API MR_BIND_IGNORE virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
 
     /// sets some dirty flags for the object (to force its visual update)
     /// \param mask is a union of DirtyFlags flags
@@ -256,11 +248,6 @@ public:
     float getAmbientStrength() const { return ambientStrength_; }
     /// sets intensity of non-directional light
     virtual void setAmbientStrength( float ambientStrength ) { ambientStrength_ = ambientStrength; needRedraw_ = true; }
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MR_BIND_IGNORE const std::vector<PositionedText>& getLabels() const { return labels_; }
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MR_BIND_IGNORE virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
     /// clones this object only, without its children,
     /// making new object the owner of all copied resources
@@ -314,14 +301,10 @@ protected:
     /// Each option is a binary mask specifying on which viewport each option is set.
     /// When using a single viewport, standard boolean can still be used for simplicity.
     ViewportMask clipByPlane_;
-    ViewportMask showLabels_;
     ViewportMask showName_;
-    ViewportMask cropLabels_ = ViewportMask::all();
     ViewportMask pickable_ = ViewportMask::all(); ///< enable picking by gl
     ViewportMask invertNormals_; ///< invert mesh normals
     ViewportMask depthTest_ = ViewportMask::all();
-
-    ViewportProperty<Color> labelsColor_ = {};
 
     float shininess_{35.0f}; ///< specular exponent
     float specularStrength_{ 0.5f }; // reflection intensity
@@ -333,8 +316,6 @@ protected:
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;
     ViewportProperty<uint8_t> globalAlpha_{ 255 };
-
-    std::vector<PositionedText> labels_;
 
     bool useDefaultScenePropertiesOnDeserialization_{ false };
 

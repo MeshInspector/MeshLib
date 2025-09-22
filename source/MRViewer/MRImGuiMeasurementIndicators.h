@@ -6,11 +6,34 @@
 
 #include <imgui.h>
 
+#include <cassert>
 #include <optional>
 #include <span>
+#include <variant>
 
 namespace MR::ImGuiMeasurementIndicators
 {
+
+// Parameters for drawing dotted lines.
+struct Stipple
+{
+    // This is the period of the stipple pattern, in pixels.
+    // This is automatically multiplied by `UI::scale()`.
+    float patternLength = 16;
+
+    struct Segment
+    {
+        // This is the start and end positions of this segment, from 0 to 1. This is automatically multiplied by `patternLength`.
+        // You must ensure `0 <= a < b <= 1`, and if there are multiple segments, that `segments[i].b < segments[i + 1].a`.
+        // The only exception to this is that the `b` of the last segment can be less than the `a` of the last segment,
+        //   as long as it's also less than the `a` of the first segment. This can help with pattern wraparound.
+        float a = 0;
+        float b = 0;
+
+        [[nodiscard]] float get( bool end ) const { return end ? b : a; }
+    };
+    std::span<const Segment> segments;
+};
 
 struct Params
 {
@@ -19,6 +42,8 @@ struct Params
     Color colorOutline;
     Color colorText;
     Color colorTextOutline;
+    Color colorTextOutlineHovered;
+    Color colorTextOutlineActive;
 
     float pointDiameter = 6;
 
@@ -27,6 +52,10 @@ struct Params
     float outlineWidth = 1.5f;
     float textOutlineWidth = 4.f;
     float textOutlineRounding = 3.f;
+
+    float clickableLabelLineWidth = 1.f;
+    float clickableLabelLineWidthSelected = 2.f;
+    float clickableLabelOutlineWidth = 1.f;
 
     float arrowLen = 12;
     float arrowHalfWidth = 4;
@@ -37,7 +66,7 @@ struct Params
 
     // The spacing box around the text is extended by this amount.
     ImVec2 textToLineSpacingA = ImVec2( 0, 0 ); // Top-left corner.
-    ImVec2 textToLineSpacingB = ImVec2( 0, 2 ); // Bottom-right corner.
+    ImVec2 textToLineSpacingB = ImVec2( 0, 0 ); // Bottom-right corner.
     // Further, the lines around the text are shortened by this amount.
     float textToLineSpacingRadius = 8;
 
@@ -54,6 +83,13 @@ struct Params
     // A small perpendicular line at the end of some arrows.
     float notchHalfLen = 8;
 
+    // We don't use those directly, but you can pass them to `LineParams::stipple` if you want:
+    // [
+
+    // ---   ---   ---
+    Stipple stippleDashed;
+    // ]
+
     // This picks the colors based on the current color theme.
     MRVIEWER_API Params();
 };
@@ -67,40 +103,175 @@ enum class Element
 MR_MAKE_FLAG_OPERATORS( Element )
 
 // Draws a point.
-MRVIEWER_API void point( Element elem, float menuScaling, const Params& params, ImVec2 point );
+MRVIEWER_API void point( Element elem, const Params& params, ImVec2 point );
 
-enum class StringIcon
+enum class TextIcon
 {
-    none,
     diameter,
 };
 
-// A string with an optional custom icon inserted in the middle.
-struct StringWithIcon
+struct TextColor
 {
-    StringIcon icon{};
-    std::size_t iconPos = 0;
+    // If null, resets the color.
+    std::optional<ImU32> color;
 
-    std::string string;
+    TextColor() {}
+    TextColor( ImVec4 color ) : color( ImGui::ColorConvertFloat4ToU32( color ) ) {}
+    TextColor( ImU32 color ) : color( color ) {}
+};
 
-    StringWithIcon() {}
+struct TextFont
+{
+    // If null, resets the font to the default.
+    ImFont* font = nullptr;
+};
 
-    // Need a bunch of constructors to allow implicit conversions when this is used as a function parameter.
-    StringWithIcon( const char* string ) : string( string ) {}
-    StringWithIcon( std::string string ) : string( std::move( string ) ) {}
+// Represents an arbitrary block of text, possibly with icons, colors, etc.
+struct Text
+{
+    using ElemVar = std::variant<std::string, TextIcon, TextColor, TextFont>;
 
-    StringWithIcon( StringIcon icon, std::size_t iconPos, std::string string )
-        : icon( icon ), iconPos( iconPos ), string( std::move( string ) )
-    {}
+    struct Elem
+    {
+        ElemVar var;
 
-    [[nodiscard]] bool isEmpty() const { return icon == StringIcon::none && string.empty(); }
+        // The minimum element size. Has no effect if smaller than `computedSize`.
+        // Here if Y is negative, inherits the line height.
+        ImVec2 size = ImVec2( 0, -1 );
 
-    // Returns the icon width, already scaled to the current scale.
-    [[nodiscard]] MRVIEWER_API float getIconWidth() const;
-    // Calculates the text size with the icon, using the current font.
-    [[nodiscard]] MRVIEWER_API ImVec2 calcTextSize() const;
-    // Draws the text with an icon to the specified draw list.
-    MRVIEWER_API void draw( ImDrawList& list, float menuScaling, ImVec2 pos, ImU32 color );
+        // Alignment. Only makes sense if `size` is set.
+        // [0,0] = top-left, [1,1] = bottom-right.
+        ImVec2 align;
+
+        // If set, will increase width to the maximum of all elements with the same column id.
+        // This affects how `computedSizeWithPadding` is computed.
+        int columnId = -1;
+
+        // The computed content size. Read-only. Don't set manually, `update()` sets this.
+        mutable ImVec2 computedSize;
+
+        // Read-only, don't set manually. This is typically `max( size, computedSize )`, with additional adjustments.
+        mutable ImVec2 computedSizeWithPadding;
+
+        [[nodiscard]] bool hasDefaultParams() const
+        {
+            return size == ImVec2( 0, -1 ) && align == ImVec2() && columnId == -1;
+        }
+    };
+
+    struct Line
+    {
+        std::vector<Elem> elems;
+
+        // The minimum element size. Has no effect if smaller than `computedSize`.
+        // Here if X is negative, inherits the text width.
+        ImVec2 size = ImVec2( -1, 0 );
+
+        // Alignment. Only makes sense if `size` is set.
+        // [0,0] = top-left, [1,1] = bottom-right.
+        ImVec2 align;
+
+        // The computed content size. Read-only. Don't set manually, `update()` sets this.
+        mutable ImVec2 computedSize;
+
+        // Read-only, don't set manually. This is typically `max( size, computedSize )`, with additional adjustments.
+        mutable ImVec2 computedSizeWithPadding;
+    };
+
+    std::vector<Line> lines;
+
+    // The text size for alignment. Unlike `size` in other elements below, this isn't the minimum size.
+    // If this is zero, `align` will pivot the text around a point, as opposed to in a box (the math for this just happens to work automatically).
+    ImVec2 size;
+
+    // Alignment. [0,0] = top-left, [1,1] = bottom-right.
+    ImVec2 align;
+
+    using FontFunc = std::function<ImFont* ()>;
+    // Get the default value for `.defaultFont`. This can be null to default to null, which means the current font.
+    [[nodiscard]] MRVIEWER_API static const FontFunc& getStaticDefaultFontFunc();
+    MRVIEWER_API static void setStaticDefaultFontFunc( FontFunc func );
+
+    // If null, uses the current font. Currently this defaults to a monospaced font.
+    // This is here because `update()` needs to know the font too.
+    ImFont* defaultFont = getStaticDefaultFontFunc()();
+
+    // The computed content size. Read-only. Don't set manually, `update()` sets this.
+    mutable ImVec2 computedSize;
+
+    // No `computedSizeWithPadding`, because for the entire `Text` we use `size` exactly, without `max( size, computedSize )`.
+
+    mutable bool dirty = false;
+
+    Text() {}
+    Text( const std::string& text ) { addText( text ); }
+    Text( std::string_view text ) { addText( text ); }
+    Text( const char* text ) { addText( text ); }
+
+    [[nodiscard]] bool isEmpty() const { return lines.empty(); }
+
+    void addLine()
+    {
+        dirty = true;
+        lines.emplace_back();
+        lines.back().elems.emplace_back().var = std::string(); // Add an empty string to force some vertical size on empty lines.
+    }
+
+    // Adds some string to the text. Automatically splits by newlines.
+    MRVIEWER_API void addText( std::string_view text );
+
+    // A low-level function for adding layout elements.
+    // For strings prefer `addText()`. This function doesn't automatically split them by newlines, and so on.
+    void addElem( Elem elem )
+    {
+        dirty = true;
+        if ( lines.empty() )
+            addLine();
+        lines.back().elems.emplace_back( std::move( elem ) );
+    }
+
+    // Adds any element type of `ElemVar`.
+    void add( auto&& elem )
+    {
+        addElem( { .var = decltype(elem)(elem) } );
+    }
+
+    // Recalculate `computedSize` in various places in this class.
+    // If `force == false`, only acts if `dirty == true`. In any case, resets the dirty flag.
+    MRVIEWER_API void update( bool force = false ) const;
+
+    struct DrawResult
+    {
+        ImVec2 cornerA;
+        ImVec2 cornerB;
+    };
+
+    // Draws the text to the specified draw list. Automatically calls `update()`.
+    // If `defaultTextColor` is not specified, takes it from ImGui.
+    MRVIEWER_API DrawResult draw( ImDrawList& list, ImVec2 pos, const TextColor& defaultTextColor = {} ) const;
+};
+
+struct TextParams
+{
+    // Optional. The convention is that this should only be set if the text is possible to hover.
+    // The border is drawn only if the alpha of this isn't zero.
+    Color borderColor = Color::transparent();
+
+    // Should imply `borderColor`.
+    bool isHovered = false;
+    // Should imply `isHovered`.
+    bool isActive = false;
+
+    // This is independent from the bools above, but currently requires `borderColor` to be meaningful.
+    bool isSelected = false;
+};
+
+struct TextResult
+{
+    ImVec2 textCornerA; // The narrow rect right around the text.
+    ImVec2 textCornerB;
+    ImVec2 bgCornerA; // The padded rect of the text background.
+    ImVec2 bgCornerB;
 };
 
 // Draws a floating text bubble.
@@ -108,22 +279,28 @@ struct StringWithIcon
 // by the amount necessarily to clear a perpendicular going through the center point.
 // If `pivot` is specified, the bubble is positioned according to its size (like in ImGui::SetNextWindowPos):
 // { 0, 0 } for top left corner, { 0.5f, 0.5f } for center (default), { 1, 1 } for bottom right corner.
-MRVIEWER_API void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, StringWithIcon string,
-                        ImVec2 push = {}, ImVec2 pivot = { 0.5f, 0.5f } );
+MRVIEWER_API std::optional<TextResult> text(
+    Element elem, const Params& params, ImVec2 pos,
+    const Text& text, const TextParams& textParams = {},
+    ImVec2 push = {}, ImVec2 pivot = { 0.5f, 0.5f }
+);
 
 // Draws a triangle from an arrow.
-MRVIEWER_API void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir );
+MRVIEWER_API void arrowTriangle( Element elem, const Params& params, ImVec2 point, ImVec2 dir );
 
 struct LineCap
 {
     enum class Decoration
     {
         none,
+        extend, // No special decoration, but the line extends a bit longer than the target point.
         arrow,
+        point, // A small circle.
     };
     Decoration decoration{};
 
-    StringWithIcon text;
+    Text text;
+    TextParams textParams;
 };
 
 enum class LineFlags
@@ -141,20 +318,36 @@ struct LineParams
     LineCap capB{};
 
     std::span<const ImVec2> midPoints;
+
+    // For drawing dotted lines. You can get presets for this parameter from `ImGuiMeasurementIndicators::Params::stipple___`.
+    std::optional<Stipple> stipple;
+};
+
+struct LineResult
+{
+    std::optional<TextResult> capA, capB;
 };
 
 // Draws a line or an arrow.
-MRVIEWER_API void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
+MRVIEWER_API std::optional<LineResult> line( Element elem, const Params& params, ImVec2 a, ImVec2 b, const LineParams& lineParams = {} );
 
 struct DistanceParams
 {
     // If this is set, the text is moved from the middle of the line to one of the line ends (false = A, true = B).
     std::optional<bool> moveTextToLineEndIndex;
+
+    TextParams textParams;
+};
+
+struct DistanceResult
+{
+    std::optional<LineResult> line;
+    std::optional<TextResult> text;
 };
 
 // Draws a distance arrow between two points, automatically selecting the best visual style.
 // The `string` is optional.
-MRVIEWER_API void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, StringWithIcon string, const DistanceParams& distanceParams = {} );
+MRVIEWER_API std::optional<DistanceResult> distance( Element elem, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams = {} );
 
 struct CurveParams
 {
@@ -163,7 +356,7 @@ struct CurveParams
     // A curve is always subdivided at least this many times.
     int minSubdivisionDepth = 1;
     // If a curve segment is longer than this, it gets divided in two.
-    // You probably don't want to multiply this by `menuScaling`, and we don't do it automatically.
+    // You probably don't want to multiply this by `UI::scale()`, and we don't do it automatically.
     float subdivisionStepPixels = 4;
 };
 

@@ -7,18 +7,60 @@
 #include "MRRibbonFontManager.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
-#include "imgui_internal.h"
+#include "MRViewer/MRViewer.h"
 #include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRMesh/MRString.h"
+
+#include <imgui_internal.h>
 
 
 namespace MR
 {
 
-
 namespace UI
 {
+
+namespace detail
+{
+    static float sScale =
+        #ifdef NDEBUG
+        1;
+        #else
+        -1; // Use an invalid value to catch missing `setScale()`.
+        #endif
+}
+
+float scale()
+{
+    assert( detail::sScale > 0 );
+    return detail::sScale;
+}
+
+void detail::setScale( float newScale )
+{
+    detail::sScale = newScale;
+}
+
+bool isItemActive( const char* name )
+{
+    return ImGui::GetActiveID() == ImGui::GetID( name );
+}
+
+[[nodiscard]] static ImGuiID stringToId( std::string_view key )
+{
+    return ImGui::GetID( key.data(), key.data() + key.size() );
+}
+
+bool StateStorage::readBool( std::string_view key, bool defaultValue )
+{
+    return ImGui::GetStateStorage()->GetBool( stringToId( key ), defaultValue );
+}
+
+void StateStorage::writeBool( std::string_view key, bool value )
+{
+    ImGui::GetStateStorage()->SetBool( stringToId( key ), value );
+}
 
 std::vector<std::unique_ptr<MR::ImGuiImage>> textures = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( TextureType::Count ) );
 
@@ -68,7 +110,7 @@ bool checkKey( ImGuiKey passedKey )
     if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
         return false;
 
-    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true, 
+    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true,
     // so use special case for modals
     bool isAnyOpen = bool( ImGui::GetTopMostPopupModal() );
     if ( ( isAnyOpen && ImGui::IsAnyItemActive() ) || ( !isAnyOpen && ImGui::GetIO().WantCaptureKeyboard ) )
@@ -187,6 +229,14 @@ void init()
     textureR->update( data );
 }
 
+ImGuiKey getImGuiModPrimaryCtrl()
+{
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
+        return ImGuiMod_Ctrl;
+    else
+        return ImGuiMod_Super;
+}
+
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
     bool simulateClick = customParams.enableTestEngine && TestEngine::createButton( customParams.testEngineName.empty() ? label : customParams.testEngineName );
@@ -292,9 +342,8 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
 {
     const ImGuiStyle& style = ImGui::GetStyle();
     const auto menu = ImGuiMenu::instance();
-    const float scaling = menu ? menu->menu_scaling() : 1.f;
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
+    sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * UI::scale() ) );
 
     bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
     return buttonEx( label, size, { .enabled = active, .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
@@ -309,15 +358,14 @@ bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
 {
     const auto menu = ImGuiMenu::instance();
-    const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
 
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_FramePadding, { ( cButtonPadding + 1 ) * scaling, cButtonPadding * scaling } );
-    sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
+    sh.addVar( ImGuiStyleVar_FramePadding, { ( cButtonPadding + 1 ) * UI::scale(), cButtonPadding * UI::scale() } );
+    sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * UI::scale() } );
 
     sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
     sh.addColor( ImGuiCol_Text, *value == ownValue ? Color::white() : textColor );
@@ -334,7 +382,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     return res;
 }
 
-void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
+void drawPoltHorizontalAxis( const PlotAxis& plotAxis )
 {
     auto drawList = ImGui::GetWindowDrawList();
 
@@ -345,16 +393,16 @@ void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
     const float scrollY = ImGui::GetScrollY();
 
     float length = plotAxis.maxValue - plotAxis.minValue;
-    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * menuScaling ) ) ) + 1;
+    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * UI::scale() ) ) ) + 1;
     float axisStep = std::max( 1.0f, float( int( length / ( numDashes - 1 ) ) ) );
     numDashes = int( length / axisStep + 1 );
     float step = plotAxis.size / length * axisStep;
 
     float len = 0;
 
-    float padding = plotAxis.textPadding * menuScaling;
-    float lenDash = plotAxis.lenDash * menuScaling;
-    float lenDashWithText = plotAxis.lenDashWithText * menuScaling;
+    float padding = plotAxis.textPadding * UI::scale();
+    float lenDash = plotAxis.lenDash * UI::scale();
+    float lenDashWithText = plotAxis.lenDashWithText * UI::scale();
 
     for ( size_t i = 0; i < numDashes; i++ )
     {
@@ -384,7 +432,7 @@ void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
     }
 }
 
-void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis )
+void drawPoltVerticalAxis( const PlotAxis& plotAxis )
 {
     auto drawList = ImGui::GetWindowDrawList();
 
@@ -393,15 +441,15 @@ void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis )
     const auto fontSize = ImGui::GetFontSize();
 
     float length = plotAxis.maxValue - plotAxis.minValue;
-    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * menuScaling ) ) ) + 1;
+    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * UI::scale() ) ) ) + 1;
     float axisStep = float( length / ( numDashes - 1 ) );
     float step = plotAxis.size / length * axisStep;
 
     float len = 0;
 
-    float padding = plotAxis.textPadding * menuScaling;
-    float lenDash = plotAxis.lenDash * menuScaling;
-    float lenDashWithText = plotAxis.lenDashWithText * menuScaling;
+    float padding = plotAxis.textPadding * UI::scale();
+    float lenDash = plotAxis.lenDash * UI::scale();
+    float lenDashWithText = plotAxis.lenDashWithText * UI::scale();
 
     for ( size_t i = 0; i < numDashes; i++ )
     {
@@ -646,10 +694,9 @@ bool toggle( const char* label, bool* value )
     const ImGuiStyle& style = ImGui::GetStyle();
 
     const auto menu = ImGuiMenu::instance();
-    const float scaling = menu ? menu->menu_scaling() : 1.f;
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * scaling, style.ItemInnerSpacing.y * scaling ) );
-    sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
+    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
+    sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
 
 
     const ImGuiID id = window->GetID( label );
@@ -685,7 +732,7 @@ bool toggle( const char* label, bool* value )
     auto drawList = window->DrawList;
     const float radius = height * 0.5f;
     drawList->AddRectFilled( check_bb.Min, check_bb.Max, bgColor.getUInt32(), radius );
-    drawList->AddCircleFilled( pos + ImVec2( *value ? width - radius : radius, radius ), radius - 2 * scaling, toggleColor.getUInt32() );
+    drawList->AddCircleFilled( pos + ImVec2( *value ? width - radius : radius, radius ), radius - 2 * UI::scale(), toggleColor.getUInt32() );
 
     ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y );
     if ( g.LogEnabled )
@@ -702,10 +749,9 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
     const ImGuiStyle& style = ImGui::GetStyle();
 
     const auto menu = ImGuiMenu::instance();
-    const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * scaling, style.ItemInnerSpacing.y * scaling ) );
+    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
     auto& texture = getTexture( TextureType::Gradient );
     if ( !texture )
         return ImGui::Checkbox( label, value );
@@ -714,7 +760,7 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
         sh.addColor( ImGuiCol_FrameBg, Color::transparent() );
     sh.addColor( ImGuiCol_CheckMark, Color::white() );
     sh.addVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
-    sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
+    sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const float clickSize = ImGui::GetFrameHeight();
@@ -887,8 +933,9 @@ static std::string modifiersToString( int modifiers )
     std::string modsText;
     for ( const auto& [bit, name] : {
         std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+        std::pair( ImGuiMod_Super, getSuperModName() ),
         std::pair( ImGuiMod_Shift, "Shift" ),
-        std::pair( ImGuiMod_Alt, "Alt" ),
+        std::pair( ImGuiMod_Alt, getAltModName() ),
     } )
     {
         if ( modifiers & bit )
@@ -946,10 +993,9 @@ bool radioButton( const char* label, int* value, int valButton )
     const ImGuiStyle& style = ImGui::GetStyle();
 
     const auto menu = ImGuiMenu::instance();
-    const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * scaling, style.ItemInnerSpacing.y * scaling ) );
+    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
 
     auto& texture = getTexture( TextureType::Gradient );
     if ( !texture )
@@ -964,7 +1010,7 @@ bool radioButton( const char* label, int* value, int valButton )
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
 
-    const float clickSize = cRadioButtonSize * scaling;
+    const float clickSize = cRadioButtonSize * UI::scale();
 
     ImVec2 pos = window->DC.CursorPos;
     const ImRect bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
@@ -977,7 +1023,7 @@ bool radioButton( const char* label, int* value, int valButton )
             Color::white().getUInt32(), clickSize * 0.5f );
 
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
-    auto drawCustomRadioButton = [scaling, clickSize, &style] ( const char* label, int* v, int v_button )
+    auto drawCustomRadioButton = [clickSize, &style] ( const char* label, int* v, int v_button )
     {
         if ( !ImGui::GetCurrentContext() || !v )
             return false;
@@ -1023,7 +1069,7 @@ bool radioButton( const char* label, int* value, int valButton )
             window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
             if ( style.FrameBorderSize > 0.0f )
             {
-                const float thickness = 1.5f * scaling;
+                const float thickness = 1.5f * UI::scale();
                 window->DrawList->AddCircle( center, radius, ImGui::GetColorU32( ImGuiCol_Border ), 16, style.FrameBorderSize * thickness );
             }
         }
@@ -1417,8 +1463,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     }
 
     StyleParamHolder sh;
-    const float menuScaling = ImGuiMenu::instance()->menu_scaling();
-    sh.addVar( ImGuiStyleVar_FramePadding, menuScaling * StyleConsts::CustomCombo::framePadding );
+    sh.addVar( ImGuiStyleVar_FramePadding, UI::scale() * StyleConsts::CustomCombo::framePadding );
 
     auto context = ImGui::GetCurrentContext();
     ImGuiWindow* window = context->CurrentWindow;
@@ -1466,7 +1511,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
         }
 
         if ( !tooltips.empty() )
-            UI::setTooltipIfHovered( tooltips[i], menuScaling );
+            UI::setTooltipIfHovered( tooltips[i] );
 
         ImGui::PopID();
     }
@@ -1668,20 +1713,13 @@ static void drawDragCursor()
 
 void detail::drawDragTooltip( std::string rangeText )
 {
-    static bool inputMode = false;
-    if ( ImGui::IsItemActivated() )
-        inputMode = ( ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().KeyCtrl ) || ImGui::GetIO().MouseDoubleClicked[0];
-
-    if ( ImGui::IsItemActive() )
+    if ( ImGui::IsItemActive() && !ImGui::TempInputIsActive( ImGui::GetItemID() ) )
     {
-        if ( !inputMode )
-        {
-            ImGui::SetMouseCursor( ImGuiMouseCursor_None );
-            drawDragCursor();
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted( "Drag with Shift - faster, Alt - slower" );
-            ImGui::EndTooltip();
-        }
+        ImGui::SetMouseCursor( ImGuiMouseCursor_None );
+        drawDragCursor();
+        ImGui::BeginTooltip();
+        ImGui::Text( "Drag with Shift - faster, %s - slower", getAltModName() );
+        ImGui::EndTooltip();
 
         if ( !rangeText.empty() )
         {
@@ -1697,11 +1735,6 @@ void detail::markItemEdited( ImGuiID id )
     ImGui::MarkItemEdited( id );
 }
 
-bool detail::isItemActive( const char* name )
-{
-    return ImGui::GetActiveID() == ImGui::GetID( name );
-}
-
 static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 {
     return !bool( flags & ( ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password ) );
@@ -1709,7 +1742,7 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 
 static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    if ( detail::isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
+    if ( isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
         ImGui::ClearActiveID();
 
     bool ret = func();
@@ -1823,10 +1856,8 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
     ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= nullptr*/, void* user_data /*= nullptr */ )
 {
     const auto& style = ImGui::GetStyle();
-    const auto& menu = ImGuiMenu::instance();
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
-    const float scaling = menu ? menu->menu_scaling() : 1.0f;
-    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const ImVec2 padding{ 2 * style.FramePadding.x * UI::scale() , 2 * style.FramePadding.y * UI::scale() };
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     ImGui::SetNextItemWidth( actualWidth );
@@ -1887,7 +1918,7 @@ const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
     return notificationParams[int( type )];
 }
 
-void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scaling )
+void mouseControlHint( ImGuiMouseButton btn, const std::string& hint )
 {
     std::string btnIconName;
     switch ( btn )
@@ -1903,7 +1934,7 @@ void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scal
         btnIconName = "mouse scroll";
         break;
     }
-    ImVec2 iconSize = ImVec2( 24, 24 ) * scaling;
+    ImVec2 iconSize = ImVec2( 24, 24 ) * UI::scale();
     auto icon = RibbonIcons::findByName( btnIconName, iconSize.x, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
     if ( icon )
     {
@@ -1916,7 +1947,7 @@ void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scal
     }
 
     ImGui::SameLine();
-    ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x + 8 * scaling );
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x + 8 * UI::scale() );
     UI::alignTextToControl( iconSize.y );
     UI::transparentText( "%s", hint.c_str() );
 }
@@ -1945,7 +1976,7 @@ void transparentTextWrapped( const char* fmt, ... )
     ImGui::PopStyleColor();
 }
 
-void notificationFrame( NotificationType type, const std::string& str, float scaling )
+void notificationFrame( NotificationType type, const std::string& str )
 {
     auto drawList = ImGui::GetWindowDrawList();
     if ( !drawList )
@@ -1953,13 +1984,13 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
 
     auto width = ImGui::GetContentRegionAvail().x;
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
-    auto textSize = ImGui::CalcTextSize( str.c_str(), nullptr, false, width - StyleConsts::Notification::cTextFramePadding.x * scaling );
+    auto textSize = ImGui::CalcTextSize( str.c_str(), nullptr, false, width - StyleConsts::Notification::cTextFramePadding.x * UI::scale() );
 
     auto pos = ImGui::GetCursorPos();
     auto sPos = ImGui::GetCursorScreenPos();
-    drawList->AddRectFilled( sPos, sPos + ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * scaling ), bgColor.getUInt32(),
-        scaling * StyleConsts::Notification::cTextFrameRounding );
-    ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * scaling );
+    drawList->AddRectFilled( sPos, sPos + ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * UI::scale() ), bgColor.getUInt32(),
+        UI::scale() * StyleConsts::Notification::cTextFrameRounding );
+    ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * UI::scale() );
     transparentTextWrapped( "%s", str.c_str() );
 
     auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
@@ -1969,7 +2000,7 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
         ImGui::PushFont( iconsFont );
     }
 
-    ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * scaling, StyleConsts::Notification::cTextFramePadding.y * scaling ) );
+    ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * UI::scale(), StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
     ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
     ImGui::Text( "%s", UI::notificationChar( type ).first );
     ImGui::PopStyleColor();
@@ -1981,23 +2012,22 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
     }
 
     ImGui::SetCursorPos( pos );
-    ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * scaling ) );
+    ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
 }
 
-void setTooltipIfHovered( const std::string& text, float scaling )
+void setTooltipIfHovered( const std::string& text )
 {
     if ( !ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) || ImGui::IsItemActive() )
         return;
-    assert( scaling > 0.f );
 
     // default ImGui values
     StyleParamHolder sh;
-    sh.addVar( ImGuiStyleVar_FramePadding, { 4.0f * scaling, 5.0f * scaling } );
-    sh.addVar( ImGuiStyleVar_WindowPadding, { 8.0f * scaling, 8.0f * scaling } );
+    sh.addVar( ImGuiStyleVar_FramePadding, { 4.0f * UI::scale(), 5.0f * UI::scale() } );
+    sh.addVar( ImGuiStyleVar_WindowPadding, { 8.0f * UI::scale(), 8.0f * UI::scale() } );
 
     constexpr float cMaxWidth = 400.f;
     const auto& style = ImGui::GetStyle();
-    auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * scaling - style.WindowPadding.x * 2 );
+    auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * UI::scale() - style.WindowPadding.x * 2 );
     ImGui::SetNextWindowSize( ImVec2{ textSize.x + style.WindowPadding.x * 2, 0 } );
 
     ImGui::BeginTooltip();
@@ -2005,41 +2035,41 @@ void setTooltipIfHovered( const std::string& text, float scaling )
     ImGui::EndTooltip();
 }
 
-void separator( float scaling, const std::string& text /*= ""*/, int issueCount /*= -1 */ )
+void separator( const std::string& text /*= ""*/, int issueCount /*= -1 */ )
 {
     separator(
-        scaling,
         text,
         issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f } : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f },
         issueCount >= 0 ? std::to_string( issueCount ) : "");
 }
 
 void separator(
-    float scaling,
     const std::string& text,
     const ImVec4& color,
     const std::string& issue )
 {
-    return separator( scaling, SeparatorParams{ .label = text,.suffix = issue,.suffixFrameColor = Color( color.x,color.y,color.z,color.w ) } );
+    return separator( SeparatorParams{ .label = text,.suffix = issue,.suffixFrameColor = Color( color.x,color.y,color.z,color.w ) } );
 }
 
-void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f } */ )
+void separator( const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f } */ )
 {
-    return separator( scaling, SeparatorParams{ .icon = &icon,.iconSize = iconSize,.label = text } );
+    return separator( SeparatorParams{ .icon = &icon,.iconSize = iconSize,.label = text } );
 }
 
-void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
+void separator( const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
 {
-    const auto icon = RibbonIcons::findByName( textureName, iconSize.x * scaling, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+    const auto icon = RibbonIcons::findByName( textureName, iconSize.x * UI::scale(), RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
     assert( icon );
     if ( icon )
-        separator( scaling, *icon, text, iconSize );
+        separator( *icon, text, iconSize );
     else
-        separator( scaling, text );
+        separator( text );
 }
 
-void separator( float scaling, const SeparatorParams& params )
+void separator( const SeparatorParams& params )
 {
+    float scaling = UI::scale() * params.extraScale;
+
     const auto& style = ImGui::GetStyle();
     if ( !params.forceImGuiSpacing && style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
     {
@@ -2106,7 +2136,7 @@ void separator( float scaling, const SeparatorParams& params )
     ImGui::Dummy( ImVec2( 0, 0 ) );
 }
 
-void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )
+void progressBar( float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )
 {
     auto& textureG = getTexture( TextureType::Gradient );
     if ( !textureG )
@@ -2133,10 +2163,10 @@ void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vec
 
     auto textWidth = ImGui::CalcTextSize( "65%" ).x; // text given for reference in design
 
-    auto pgWidth = size.x - textWidth - StyleConsts::ProgressBar::internalSpacing * scaling;
+    auto pgWidth = size.x - textWidth - StyleConsts::ProgressBar::internalSpacing * UI::scale();
 
     const auto& bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ProgressBarBackground );
-    drawList->AddRectFilled( bb.Min, ImVec2( bb.Min.x + pgWidth, bb.Max.y ), bgColor.getUInt32(), StyleConsts::ProgressBar::rounding * scaling );
+    drawList->AddRectFilled( bb.Min, ImVec2( bb.Min.x + pgWidth, bb.Max.y ), bgColor.getUInt32(), StyleConsts::ProgressBar::rounding * UI::scale() );
     if ( fraction > 0.0f )
     {
         drawList->AddImageRounded(
@@ -2144,7 +2174,7 @@ void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vec
             bb.Min,
             ImVec2( bb.Min.x + pgWidth * std::clamp( fraction, 0.0f, 1.0f ), bb.Max.y ),
             ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-            Color::white().getUInt32(), StyleConsts::ProgressBar::rounding * scaling );
+            Color::white().getUInt32(), StyleConsts::ProgressBar::rounding * UI::scale() );
     }
     // Default displaying the fraction as percentage string, but user can override it
     char textBuf[8];
@@ -2226,24 +2256,24 @@ void alignTextToControl( float controlHeight )
     alignTextToFramePadding( std::floor( ( controlHeight - GImGui->FontSize ) * 0.5f ) );
 }
 
-void alignTextToRadioButton( float scaling )
+void alignTextToRadioButton()
 {
     // Radio button text position is rounded up
-    alignTextToFramePadding( std::ceil( ( cRadioButtonSize * scaling - GImGui->FontSize ) * 0.5f ) );
+    alignTextToFramePadding( std::ceil( ( cRadioButtonSize * UI::scale() - GImGui->FontSize ) * 0.5f ) );
 }
 
-void alignTextToCheckBox( float scaling )
+void alignTextToCheckBox()
 {
-    alignTextToFramePadding( cCheckboxPadding * scaling );
+    alignTextToFramePadding( cCheckboxPadding * UI::scale() );
 }
 
-void alignTextToButton( float scaling )
+void alignTextToButton()
 {
-    alignTextToFramePadding( cGradientButtonFramePadding * scaling );
+    alignTextToFramePadding( cGradientButtonFramePadding * UI::scale() );
 }
 
 
-void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
+void highlightWindowArea( const ImVec2& min, const ImVec2& max )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
     ImVec2 boxMin;
@@ -2273,7 +2303,7 @@ void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
         boxMax.y -= ImGui::GetScrollY();
     }
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * UI::scale() );
     ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, Color( ImGui::GetStyleColorVec4( ImGuiCol_Header ) ).getUInt32() );
 }
 

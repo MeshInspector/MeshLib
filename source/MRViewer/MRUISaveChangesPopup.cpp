@@ -32,10 +32,10 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
         .text = showSave ? "Save your changes?" : "",
         .closeOnClickOutside = true,
     } );
-    if ( dialog.beginPopup( settings.scaling ) )
+    if ( dialog.beginPopup() )
     {
         const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * settings.scaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
         const Vector2f btnSize{ showSave ? ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f : ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
@@ -68,7 +68,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                 } );
             }
             if( !settings.saveTooltip.empty() )
-                UI::setTooltipIfHovered( settings.saveTooltip.c_str(), settings.scaling );
+                UI::setTooltipIfHovered( settings.saveTooltip.c_str() );
             ImGui::SameLine();
         }
 
@@ -79,16 +79,16 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                 settings.onOk();
         }
         if ( !settings.dontSaveTooltip.empty() )
-            UI::setTooltipIfHovered( settings.dontSaveTooltip.c_str(), settings.scaling );
+            UI::setTooltipIfHovered( settings.dontSaveTooltip.c_str() );
 
         ImGui::SameLine();
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
         if ( !settings.cancelTooltip.empty() )
-            UI::setTooltipIfHovered( settings.cancelTooltip.c_str(), settings.scaling );
+            UI::setTooltipIfHovered( settings.cancelTooltip.c_str() );
 
         ImGui::PopStyleVar(); // ImGuiStyleVar_FramePadding
-        dialog.endPopup( settings.scaling );
+        dialog.endPopup();
     }
 }
 

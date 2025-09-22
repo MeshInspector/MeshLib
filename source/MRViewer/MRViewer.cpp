@@ -53,7 +53,6 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRMesh/MRGTest.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
@@ -63,6 +62,7 @@
 #include "MRSceneCache.h"
 #include "MRViewerTitle.h"
 #include "MRViewportCornerController.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRWebRequest.h"
 #include "MRMesh/MRCube.h"
 
@@ -386,10 +386,6 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     return res;
-}
-
-void loadMRViewerDll()
-{
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
@@ -990,7 +986,7 @@ void Viewer::launchShut()
     basisAxes.reset();
     rotationSphere.reset();
     clippingPlaneObject.reset();
-    globalBasisAxes.reset();
+    globalBasis.reset();
     globalHistoryStore_.reset();
     basisViewController.reset();
 
@@ -1262,15 +1258,15 @@ static std::optional<std::string> commonClassName( const std::vector<std::shared
     if ( objs.empty() )
         return {};
 
-    auto cn = objs[0]->getClassName();
+    auto cn = objs[0]->className();
     if ( objs.size() == 1 )
         return cn;
 
     for ( int i = 1; i < objs.size(); ++i )
-        if ( cn != objs[i]->getClassName() )
+        if ( cn != objs[i]->className() )
             return {};
 
-    return objs[0]->getClassNameInPlural();
+    return objs[0]->classNameInPlural();
 }
 
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
@@ -1289,7 +1285,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             if ( auto cn = commonClassName( result.scene->children() ) )
                 undoName += " as " + *cn;
 
-            if ( options.forceReplaceScene || wasEmptyScene )
+            bool singleSceneFile = result.loadedFiles.size() == 1 && !result.isSceneConstructed;
+            bool forceReplace = options.replaceMode == FileLoadOptions::ReplaceMode::ForceReplace;
+            bool forceAdd = options.replaceMode == FileLoadOptions::ReplaceMode::ForceAdd;
+
+            if ( forceReplace || wasEmptyScene || ( !forceAdd && singleSceneFile ) )
             {
                 {
                     // the scene is taken as is from a single file, replace the current scene with it
@@ -1664,7 +1664,7 @@ bool Viewer::needRedraw_() const
         if ( viewport.getRedrawFlag() )
             return true;
 
-    if ( globalBasisAxes && globalBasisAxes->getRedrawFlag( presentViewportsMask_ ) )
+    if ( globalBasis && globalBasis->getRedrawFlag( presentViewportsMask_ ) )
         return true;
 
     if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
@@ -1683,8 +1683,8 @@ void Viewer::resetRedraw_()
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
 
-    if ( globalBasisAxes )
-        globalBasisAxes->resetRedrawFlag();
+    if ( globalBasis )
+        globalBasis->resetRedrawFlag();
 
     if ( basisAxes )
         basisAxes->resetRedrawFlag();
@@ -1783,7 +1783,6 @@ void Viewer::drawUiRenderObjects_()
     for ( Viewport& viewport : getViewerInstance().viewport_list )
     {
         UiRenderParams renderParams{ viewport.getBaseRenderParams() };
-        renderParams.scale = menuPlugin_->menu_scaling();
 
         uiRenderManager.preRenderViewport( viewport.id );
         MR_FINALLY{ uiRenderManager.postRenderViewport( viewport.id ); };
@@ -1813,7 +1812,7 @@ void Viewer::drawUiRenderObjects_()
             --it;
             ( *it )->earlyBackwardPass( backwardPassParams );
         }
-        uiRenderManager.finishBackwardPass( backwardPassParams );
+        uiRenderManager.finishBackwardPass( viewport.id, backwardPassParams );
 
         for ( const auto& task : tasks )
             task->renderPass();
@@ -1902,6 +1901,7 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
+    preSetupViewSignal();
     for ( auto& viewport : viewport_list )
         viewport.setupView();
 }
@@ -2037,61 +2037,7 @@ void Viewer::set_root( SceneRootObject& newRoot )
 
 void Viewer::initGlobalBasisAxesObject_()
 {
-    constexpr Vector3f PlusAxis[3] = {
-        Vector3f( 1.0f, 0.0f, 0.0f ),
-        Vector3f( 0.0f, 1.0f, 0.0f ),
-        Vector3f( 0.0f, 0.0f, 1.0f )};
-
-    Mesh mesh;
-    globalBasisAxes = std::make_shared<ObjectMesh>();
-    globalBasisAxes->setName( "World Global Basis" );
-    std::vector<Color> vertsColors;
-    auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
-    for ( int i = 0; i < 3; ++i )
-    {
-        auto basis = makeCylinder( 0.01f, 0.9f );
-        auto cone = makeCone( 0.04f, 0.1f );
-        AffineXf3f rotTramsform;
-        if ( i != 2 )
-        {
-            rotTramsform = AffineXf3f::linear(
-                Matrix3f::rotation( i == 0 ? PlusAxis[1] : -1.0f * PlusAxis[0], PI_F * 0.5f )
-            );
-        }
-        basis.transform( rotTramsform );
-        cone.transform( rotTramsform * translate );
-        mesh.addMesh( basis );
-        mesh.addMesh( cone );
-        std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
-        std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
-        vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
-        vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
-    }
-    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX(), true );
-    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY(), true );
-    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ(), true );
-
-    globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
-    globalBasisAxes->setAncillary( true );
-    globalBasisAxes->setVisible( false );
-    globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
-    globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
-    globalBasisAxes->setFlatShading( true );
-
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
-    {
-        if ( !globalBasisAxes )
-            return;
-
-        const Color& color = SceneColors::get( SceneColors::Type::Labels );
-
-        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
-        for ( const auto& label : labels )
-        {
-            label->setFrontColor( color, true );
-            label->setFrontColor( color, false );
-        }
-    } ) );
+    globalBasis = std::make_unique<ViewportGlobalBasis>();
 }
 
 void Viewer::initBasisAxesObject_()
@@ -2110,9 +2056,9 @@ void Viewer::initBasisAxesObject_()
 
     auto numF = basisAxesMesh->topology.edgePerFace().size();
     // setting color to faces
-    const Color colorX = Color::red();
-    const Color colorY = Color::green();
-    const Color colorZ = Color::blue();
+    const Color colorX = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX );
+    const Color colorY = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisY );
+    const Color colorZ = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisZ );
     FaceColors colorMap( numF );
     const auto arrowSize = numF / 3;
     for (int i = 0; i < arrowSize; i++)
@@ -2131,10 +2077,24 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
+    uiUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this, numF] ()
     {
         if ( !basisAxes )
             return;
+
+        const Color colorX = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX );
+        const Color colorY = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisY );
+        const Color colorZ = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisZ );
+        FaceColors colorMap;
+        basisAxes->updateFacesColorMap( colorMap ); // swap with empty with real
+        const auto arrowSize = numF / 3;
+        for ( int i = 0; i < arrowSize; i++ ) // update real
+        {
+            colorMap[FaceId( i )] = colorX;
+            colorMap[FaceId( i + arrowSize )] = colorY;
+            colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
+        }
+        basisAxes->updateFacesColorMap( colorMap ); // swap updated real with empty
 
         const Color& color = SceneColors::get( SceneColors::Type::Labels );
 
@@ -2144,6 +2104,14 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
+    } ) );
+    uiUpdateConnections_.push_back( postRescaleSignal.connect( [this] ( float, float )
+    {
+        if ( !menuPlugin_ )
+            return;
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+            label->setFontHeight( 20.0f * menuPlugin_->menu_scaling() );
     } ) );
 }
 
@@ -2341,6 +2309,14 @@ int Viewer::viewport_index( const ViewportId id ) const
 
 ViewportId Viewer::getHoveredViewportId() const
 {
+    if ( auto id = getHoveredViewportIdOrInvalid() )
+        return id;
+    else
+        return viewport_list[selected_viewport_index].id;
+}
+
+ViewportId Viewer::getHoveredViewportIdOrInvalid() const
+{
     const auto& currentPos = mouseController_->getMousePos();
     for ( int i = 0; i < viewport_list.size(); i++ )
     {
@@ -2358,7 +2334,7 @@ ViewportId Viewer::getHoveredViewportId() const
         }
     }
 
-    return viewport_list[selected_viewport_index].id;
+    return {}; // No viewport is hovered, return an invalid ID.
 }
 
 void Viewer::select_hovered_viewport()
@@ -2801,7 +2777,7 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
     }
     if ( sceneTextureOn && !forSceneTexture )
         return 1; // disable msaa for main framebuffer if scene texture is used
-    
+
     int cDefaultMSAA = 8;
 #if defined(__EMSCRIPTEN__)
     cDefaultMSAA = 4;
@@ -2826,13 +2802,5 @@ void Viewer::GLPrimitivesCounter::reset()
     for ( size_t i = 0; i < size_t( GLPrimitivesType::Count ); ++i )
         counter[i] = 0;
 }
-
-// simple test to make sure this dll was linked and loaded to test project
-TEST( MRViewer, LoadTest )
-{
-    bool load = true;
-    ASSERT_EQ( load, true );
-}
-
 
 }

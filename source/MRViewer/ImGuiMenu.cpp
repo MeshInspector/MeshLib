@@ -315,9 +315,7 @@ std::filesystem::path ImGuiMenu::getMenuFontPath() const
 {
 #ifdef _WIN32
     // get windows font
-    wchar_t winDir[MAX_PATH];
-    GetWindowsDirectoryW( winDir, MAX_PATH );
-    std::filesystem::path winDirPath( winDir );
+    std::filesystem::path winDirPath = GetWindowsInstallDirectory();
     winDirPath /= "Fonts";
     winDirPath /= "Consola.ttf";
     return winDirPath;

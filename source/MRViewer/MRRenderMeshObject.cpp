@@ -993,9 +993,6 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );
-    }
-    if ( uvCoords.size() >= numV )
-    {
         if ( cornerMode )
         {
             auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
@@ -1019,7 +1016,10 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
         else
         {
             auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = numV );
-            std::copy( MR::begin( uvCoords ), MR::begin( uvCoords ) + numV, buffer.data() );
+            std::copy( uvCoords.data(), uvCoords.data() + std::min( (size_t)numV, uvCoords.size() ), buffer.data() );
+            // even if some plugin incorrectly made too short uvCoords, fill remaining elements with zeros
+            if ( uvCoords.size() < numV )
+                std::fill( buffer.data() + uvCoords.size(), buffer.data() + numV, UVCoord{} );
             return buffer;
         }
     }

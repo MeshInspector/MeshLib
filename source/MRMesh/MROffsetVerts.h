@@ -38,5 +38,6 @@ struct ZCompensateParams
 /// For 3D printers: shifts every vertex with normal having negative projection on Z-axis, along Z-axis
 /// @return false if cancelled.
 MRMESH_API bool zCompensate( Mesh& mesh, const ZCompensateParams& params );
+MRMESH_API bool zCompensate( const MeshTopology& topology, VertCoords& points, const ZCompensateParams& params );
 
 } //namespace MR

@@ -993,39 +993,35 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );
-        if ( cornerMode )
-        {
-            auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
+    }
+    if ( cornerMode )
+    {
+        auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
 
-            tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        {
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
             {
-                for ( FaceId f = range.begin(); f < range.end(); ++f )
-                {
-                    if ( !mesh->topology.hasFace( f ) )
-                        continue;
-                    auto ind = 3 * f;
-                    VertId v[3];
-                    topology.getTriVerts( f, v );
-                    for ( int i = 0; i < 3; ++i )
-                        buffer[ind + i] = getAt( uvCoords, v[i] );
-                }
-            } );
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
+                auto ind = 3 * f;
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = getAt( uvCoords, v[i] );
+            }
+        } );
 
-            return buffer;
-        }
-        else
-        {
-            auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = numV );
-            std::copy( uvCoords.data(), uvCoords.data() + std::min( (size_t)numV, uvCoords.size() ), buffer.data() );
-            // even if some plugin incorrectly made too short uvCoords, fill remaining elements with zeros
-            if ( uvCoords.size() < numV )
-                std::fill( buffer.data() + uvCoords.size(), buffer.data() + numV, UVCoord{} );
-            return buffer;
-        }
+        return buffer;
     }
     else
     {
-        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
+        auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = numV );
+        std::copy( uvCoords.data(), uvCoords.data() + std::min( ( size_t )numV, uvCoords.size() ), buffer.data() );
+        // even if some plugin incorrectly made too short uvCoords, fill remaining elements with zeros
+        if ( uvCoords.size() < numV )
+            std::fill( buffer.data() + uvCoords.size(), buffer.data() + numV, UVCoord{} );
+        return buffer;
     }
 }
 

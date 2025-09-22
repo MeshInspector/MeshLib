@@ -8,6 +8,7 @@
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRVoxelsFwd.h"
+#include "MRVoxels/MRSweptVolume.h"
 #endif
 
 namespace MR
@@ -30,6 +31,8 @@ public:
 #ifndef MRVIEWER_NO_VOXELS
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
     using CudaPointsToDistanceVolumeByPartsCallback = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )>;
+    /// Returns specific implementation of IComputeToolDistance interface that computes on GPU
+    using CudaComputeToolDistanceConstructor = std::function<std::unique_ptr<IComputeToolDistance>()>;
 #endif
 
     // setup functions
@@ -42,6 +45,7 @@ public:
 #ifndef MRVIEWER_NO_VOXELS
     MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
     MRVIEWER_API static void setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDistanceVolumeByPartsCallback callback );
+    MRVIEWER_API static void setCudaComputeToolDistanceConstructor( CudaComputeToolDistanceConstructor ctdCtor );
 #endif
 
     // Returns true if CUDA is available on this computer
@@ -77,6 +81,9 @@ public:
 
     // Returns cuda implementation of PointsToDistanceVolumeByPartsCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeByPartsCallback getCudaPointsToDistanceVolumeByPartsCallback();
+
+    /// Returns CUDA implementation of IComputeToolDistance
+    [[nodiscard]] MRVIEWER_API static std::unique_ptr<IComputeToolDistance> getCudaComputeToolDistance();
 #endif
 
     /// returns amount of required GPU memory for CudaFastWindingNumber internal data,
@@ -123,6 +130,7 @@ private:
 #ifndef MRVIEWER_NO_VOXELS
     CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
     CudaPointsToDistanceVolumeByPartsCallback pointsToDistanceVolumeByPartsCallback_;
+    CudaComputeToolDistanceConstructor ctdCtor_;
 #endif
 };
 

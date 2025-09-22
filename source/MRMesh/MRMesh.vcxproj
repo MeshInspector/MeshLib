@@ -350,6 +350,7 @@
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
     <ClInclude Include="MRUnorientedTriangle.h" />
+    <ClInclude Include="MRUnsigned.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertCoordsDiff.h" />

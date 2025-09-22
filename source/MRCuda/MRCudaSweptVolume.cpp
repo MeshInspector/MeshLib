@@ -9,7 +9,6 @@
 #include "MRCudaPolyline.h"
 
 #include "MRMesh/MRAABBTreePolyline.h"
-#include "MRMesh/MREndMill.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRTimer.h"
 

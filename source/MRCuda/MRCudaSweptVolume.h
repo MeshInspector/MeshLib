@@ -4,6 +4,7 @@
 #ifndef MRCUDA_NO_VOXELS
 #include "exports.h"
 
+#include "MRMesh/MREndMill.h"
 #include "MRVoxels/MRSweptVolume.h"
 
 #include <vector>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
 #include "MRPch/MRBindingMacros.h"
@@ -44,9 +45,9 @@ struct Vector3
     static constexpr Vector3 plusX() noexcept { return Vector3( 1, 0, 0 ); }
     static constexpr Vector3 plusY() noexcept { return Vector3( 0, 1, 0 ); }
     static constexpr Vector3 plusZ() noexcept { return Vector3( 0, 0, 1 ); }
-    static constexpr Vector3 minusX() noexcept { return Vector3( -1, 0, 0 ); }
-    static constexpr Vector3 minusY() noexcept { return Vector3( 0, -1, 0 ); }
-    static constexpr Vector3 minusZ() noexcept { return Vector3( 0, 0, -1 ); }
+    static constexpr Vector3 minusX() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( -1, 0, 0 ); }
+    static constexpr Vector3 minusY() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( 0, -1, 0 ); }
+    static constexpr Vector3 minusZ() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( 0, 0, -1 ); }
 
     // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
     //   when generating the bindings, and looks out of place there.
@@ -211,6 +212,7 @@ template <typename T>
 inline Vector3<T> Vector3<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
     using std::abs; // This should allow boost.multiprecision numbers here.
+    using Unsigned::abs; // This silences warnings on unsigned integers.
     if ( abs( x ) < abs( y ) )
         return ( abs( x ) < abs( z ) ) ? Vector3( 1, 0, 0 ) : Vector3( 0, 0, 1 );
     else

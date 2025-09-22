@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cmath>
@@ -42,8 +43,8 @@ struct Vector2
     static constexpr Vector2 diagonal( T a ) noexcept { return Vector2( a, a ); }
     static constexpr Vector2 plusX() noexcept { return Vector2( 1, 0 ); }
     static constexpr Vector2 plusY() noexcept { return Vector2( 0, 1 ); }
-    static constexpr Vector2 minusX() noexcept { return Vector2( -1, 0 ); }
-    static constexpr Vector2 minusY() noexcept { return Vector2( 0, -1 ); }
+    static constexpr Vector2 minusX() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector2( -1, 0 ); }
+    static constexpr Vector2 minusY() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector2( 0, -1 ); }
 
     // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
     //   when generating the bindings, and looks out of place there.
@@ -178,6 +179,7 @@ template <typename T>
 inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
     using std::abs; // This allows boost.multiprecision numbers.
+    using Unsigned::abs; // This silences warnings on unsigned integers.
     if ( abs( x ) < abs( y ) )
         return Vector2( 1, 0 );
     else

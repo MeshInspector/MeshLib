@@ -192,7 +192,16 @@ Matrix3<T> Matrix4<T>::submatrix3( int i, int j ) const noexcept
         {
             if ( n == j )
                 continue;
-            row[ncol++] = (*this)[m][n];
+// GCC warns about this for `T == unsigned char`, which I assume to be a false positive,
+//   because `[unsigned] char` are about the only types for which this hackery is legal.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+            row[ncol++] = ( *this )[m][n];
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
         }
         assert( ncol == 3 );
     }

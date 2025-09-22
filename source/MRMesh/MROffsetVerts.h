@@ -25,4 +25,18 @@ struct ThickenParams
 /// if original mesh was open then stitches corresponding boundaries of two parts
 MRMESH_API Mesh makeThickMesh( const Mesh & m, const ThickenParams & params );
 
+struct ZCompensateParams
+{
+    /// shift of mesh parts orthogonal to Z-axis with normal against Z-axis;
+    /// for other mesh parts the shift will be less and will depend on the angle between point pseudo-normal and Z-axis
+    float maxShift = 0;
+
+    /// to report progress and cancel processing
+    ProgressCallback progress;
+};
+
+/// For 3D printers: shifts every vertex with normal having negative projection on Z-axis, along Z-axis
+/// @return false if cancelled.
+MRMESH_API bool zCompensate( Mesh& mesh, const ZCompensateParams& params );
+
 } //namespace MR

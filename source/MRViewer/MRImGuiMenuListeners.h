@@ -24,7 +24,7 @@ struct MRVIEWER_CLASS DrawSceneUiListener : ConnectionHolder
     virtual ~DrawSceneUiListener() = default;
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
-    virtual void onDrawSceneUi_( float menuScaling, ViewportId viewportId, UiRenderParams::UiTaskList& tasks ) = 0;
+    virtual void onDrawSceneUi_( ViewportId viewportId, UiRenderParams::UiTaskList& tasks ) = 0;
 };
 
 }

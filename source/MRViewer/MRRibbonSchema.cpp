@@ -12,6 +12,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneCache.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -104,7 +105,7 @@ bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
 std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, const SearchParams& params )
 {
     std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
-    
+
     if ( searchStr.empty() )
         return {};
     auto words = split( searchStr, " " );
@@ -113,7 +114,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     {
         if ( sourceStr.empty() )
             return { 1.0f, 1.f };
-        
+
         auto sourceWords = split( sourceStr, " " );
         std::erase_if( sourceWords, [] ( const auto& str ) { return str.empty(); } );
         if ( sourceWords.empty() )
@@ -291,7 +292,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         return std::tuple( aWeight, aOrderWeight ) < std::tuple( bWeight, bOrderWeight );
     } );
 
-    // filter results with error threshold as 3x minimum caption error 
+    // filter results with error threshold as 3x minimum caption error
     if ( !rawResult.empty() && rawResult[0].second.captionWeight < maxWeight / 3.f )
     {
         const float maxWeightNew = rawResult[0].second.captionWeight * 3.f;
@@ -494,9 +495,9 @@ void RibbonSchemaLoader::recalcItemSizes()
     if ( !font )
         return;
 
-    const float cMaxTextWidth = 
-        RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) * 
-        4 * menu->menu_scaling();
+    const float cMaxTextWidth =
+        RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) *
+        4 * UI::scale();
 
     auto& schema = RibbonSchemaHolder::schema();
     for ( auto& item : schema.items )
@@ -735,8 +736,8 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
         }
         else
         {
-            auto it = std::find_if( 
-                RibbonSchemaHolder::schema().tabsOrder.begin(), 
+            auto it = std::find_if(
+                RibbonSchemaHolder::schema().tabsOrder.begin(),
                 RibbonSchemaHolder::schema().tabsOrder.end(),
                 [&] ( const RibbonTab& tnp ) { return tnp.name == tabName.asString(); } );
 

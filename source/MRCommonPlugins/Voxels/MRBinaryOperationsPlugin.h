@@ -16,7 +16,7 @@ class BinaryOperations : public StatePlugin, public SceneStateExactCheck<2, Obje
 public:
     BinaryOperations();
 
-    virtual void drawDialog(float menuScaling, ImGuiContext*) override;
+    virtual void drawDialog( ImGuiContext*) override;
 
 private:
 

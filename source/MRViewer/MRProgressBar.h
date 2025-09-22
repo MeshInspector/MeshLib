@@ -15,7 +15,7 @@ namespace ProgressBar
 using TaskWithMainThreadPostProcessing = std::function< std::function<void()>() >;
 
 /// this function should be called only once for each frame (it is called in MR::Menu (MR::RibbonMenu))
-MRVIEWER_API  void setup( float scaling );
+MRVIEWER_API  void setup();
 
 /// call this function on frame end
 MRVIEWER_API  void onFrameEnd();

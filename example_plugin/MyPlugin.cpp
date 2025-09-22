@@ -23,9 +23,9 @@ class MyStateTool : public StatePlugin
 public:
     MyStateTool() : StatePlugin( "My State Tool" ) {}
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override
+    virtual void drawDialog( ImGuiContext* ) override
     {
-        if ( !ImGuiBeginWindow_( { .width = 200 * menuScaling } ) )
+        if ( !ImGuiBeginWindow_( { .width = 200 * UI::scale() } ) )
             return;
         UI::transparentTextWrapped( "Hello World!" );
         ImGui::EndCustomStatePlugin();

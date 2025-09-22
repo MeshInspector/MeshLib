@@ -1783,7 +1783,6 @@ void Viewer::drawUiRenderObjects_()
     for ( Viewport& viewport : getViewerInstance().viewport_list )
     {
         UiRenderParams renderParams{ viewport.getBaseRenderParams() };
-        renderParams.scale = menuPlugin_->menu_scaling();
 
         uiRenderManager.preRenderViewport( viewport.id );
         MR_FINALLY{ uiRenderManager.postRenderViewport( viewport.id ); };

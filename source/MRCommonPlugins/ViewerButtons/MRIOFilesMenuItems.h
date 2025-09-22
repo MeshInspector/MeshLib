@@ -96,7 +96,7 @@ class CaptureScreenshotMenuItem : public StatePlugin
 {
 public:
     CaptureScreenshotMenuItem();
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
     virtual bool blocking() const override { return false; }
 private:
     Vector2i resolution_;

@@ -1,4 +1,5 @@
 #include "MRSurfacePointPicker.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRMesh/MRObjectMesh.h"
@@ -308,8 +309,7 @@ void SurfacePointWidget::setPointRadius_()
 
             radius *= cameraScale / baseObjectScale;
 
-            if ( auto menu = getViewerInstance().getMenuPlugin().get() )
-                radius *= menu->menu_scaling();
+            radius *= UI::scale();
         }
             break;
     }

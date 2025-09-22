@@ -26,9 +26,9 @@ It has base functions:
 \code
     MRVIEWER_API virtual bool onDisable_();
 \endcode
-\b Draw \b Dialog \b function - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI. 
+\b Draw \b Dialog \b function - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI.
 \code
-    MRVIEWER_API virtual void drawDialog( float menuScaling, ImGuiContext* ctx );
+    MRVIEWER_API virtual void drawDialog( ImGuiContext* ctx );
 \endcode
 
 ## How to make your first plugin
@@ -45,10 +45,10 @@ public:
 		    return "";
 		return "Exactly one object should be selected";
 	}
-	virtual void drawDialog( float menuScaling, ImGuiContext* ctx) override
+	virtual void drawDialog( ImGuiContext* ctx) override
 	{
 		auto windowSize = viewer->viewport().getViewportRect();
-    	auto menuWidth = 280.0f * menuScaling;
+    	auto menuWidth = 280.0f * UI::scale();
 
     	ImGui::SetCurrentContext( ctx );
     	ImGui::SetNextWindowPos( ImVec2( windowSize.width - menuWidth, 0 ), ImGuiCond_FirstUseEver );

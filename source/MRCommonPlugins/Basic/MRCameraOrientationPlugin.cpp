@@ -15,28 +15,28 @@ CameraOrientation::CameraOrientation():
 
 }
 
-void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
+void CameraOrientation::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 340 * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 340 * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
     if ( viewer->viewport_list.size() > 1 )
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 
     UI::drag<LengthUnit>( "Position", position_ );
-    UI::setTooltipIfHovered( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated.", menuScaling );
+    UI::setTooltipIfHovered( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated." );
 
     UI::drag<NoUnit>( "Direction", direction_ );
-    UI::setTooltipIfHovered( "Forward direction of the camera in world space.", menuScaling );
+    UI::setTooltipIfHovered( "Forward direction of the camera in world space." );
 
     UI::drag<NoUnit>( "Up", upDir_ );
-    UI::setTooltipIfHovered( "Up direction of the camera in world space.", menuScaling );
+    UI::setTooltipIfHovered( "Up direction of the camera in world space." );
 
     if ( UI::button( "Orthonormalize", Vector2f( -1, 0 ) ) )
         upDir_ = cross( cross( direction_, upDir_ ), direction_ ).normalized();
     UI::setTooltipIfHovered( "Recalculate vector to orthonormal\n"
-                                "saving plane (direction, up)", menuScaling );
+                                "saving plane (direction, up)" );
 
     float w = ImGui::GetContentRegionAvail().x;
     float p = ImGui::GetStyle().FramePadding.x;
@@ -56,9 +56,9 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
 
     if ( UI::checkbox( "Autofit", &isAutofit_ ) )
         autofit_();
-    UI::setTooltipIfHovered( "If enabled, it automatically selects best camera location to see whole scene in the viewport.", menuScaling );
+    UI::setTooltipIfHovered( "If enabled, it automatically selects best camera location to see whole scene in the viewport." );
 
-    ImGui::PushItemWidth( 80 * menuScaling );
+    ImGui::PushItemWidth( 80 * UI::scale() );
     auto params = viewer->viewport().getParameters();
     auto fov = params.cameraViewAngle;
     UI::drag<AngleUnit>( "Camera FOV", fov, 0.1f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } ); // `fov` is stored in degrees?!
@@ -70,7 +70,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
     viewer->viewport().setOrthographic( orth );
     ImGui::PopItemWidth();
 
-    drawCameraPresets_( menuScaling );
+    drawCameraPresets_();
 
     ImGui::EndCustomStatePlugin();
 }
@@ -89,12 +89,12 @@ bool CameraOrientation::onEnable_()
     return true;
 }
 
-void CameraOrientation::drawCameraPresets_( float scaling )
+void CameraOrientation::drawCameraPresets_()
 {
     if ( !RibbonButtonDrawer::CustomCollapsingHeader( "Camera Presets" ) )
         return;
 
-    const Vector2f buttonSize( 60.f * scaling, 0.f );
+    const Vector2f buttonSize( 60.f * UI::scale(), 0.f );
     const float centerButtonShift = buttonSize.x + ImGui::GetStyle().ItemSpacing.x;
     auto width = ImGui::GetContentRegionAvail().x + ImGui::GetStyle().WindowPadding.x;
     const float backPosition = width - buttonSize.x;
@@ -125,9 +125,9 @@ void CameraOrientation::drawCameraPresets_( float scaling )
     if ( UI::button( "Bottom", buttonSize ) )
         applyQuaternion( Quaternionf( Vector3f::plusX(),   PI_F ) );
 
-    const float isometricPos = width - ( buttonSize.x + 20.f * scaling );
+    const float isometricPos = width - ( buttonSize.x + 20.f * UI::scale() );
     ImGui::SameLine( isometricPos );
-    if ( UI::button( "Isometric", Vector2f( buttonSize.x + 20.f * scaling, buttonSize.y ) ) )
+    if ( UI::button( "Isometric", Vector2f( buttonSize.x + 20.f * UI::scale(), buttonSize.y ) ) )
     {
         Viewer::instanceRef().viewport().cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
         autofit_();

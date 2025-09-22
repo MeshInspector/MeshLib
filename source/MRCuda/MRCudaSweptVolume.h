@@ -6,7 +6,7 @@
 
 #include "MRVoxels/MRSweptVolume.h"
 
-#include <span>
+#include <vector>
 
 namespace MR::Cuda
 {
@@ -23,7 +23,7 @@ public:
     MRCUDA_API Expected<Vector3i> prepare( const Vector3i& dims, const Polyline3& toolpath,
         const Polyline2& toolProfile ) override;
 
-    MRCUDA_API Expected<void> computeToolDistance( std::span<float> output, const Vector3i& dims,
+    MRCUDA_API Expected<void> computeToolDistance( std::vector<float>& output, const Vector3i& dims,
         float voxelSize, const Vector3f& origin, float padding ) const override;
 
 private:

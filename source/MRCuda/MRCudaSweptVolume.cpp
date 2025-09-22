@@ -112,7 +112,7 @@ Expected<Vector3i> ComputeToolDistance::prepare( const Vector3i& dims, const Pol
     return Vector3i { dims.x, dims.y, int( bufferSize / layerSize ) };
 }
 
-Expected<void> ComputeToolDistance::computeToolDistance( std::span<float> output, const Vector3i& dims, float voxelSize,
+Expected<void> ComputeToolDistance::computeToolDistance( std::vector<float>& output, const Vector3i& dims, float voxelSize,
     const Vector3f& origin, float padding ) const
 {
     MR_TIMER;

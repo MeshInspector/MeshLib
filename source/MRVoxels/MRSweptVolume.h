@@ -6,7 +6,7 @@
 #include "MRMesh/MRMeshPart.h"
 #include "MRMesh/MRPolyline.h"
 
-#include <span>
+#include <vector>
 
 namespace MR
 {
@@ -62,7 +62,7 @@ public:
 
     /// Compute tool distance
     virtual Expected<void> computeToolDistance(
-        std::span<float> output,
+        std::vector<float>& output,
         const Vector3i& dims, float voxelSize, const Vector3f& origin,
         float padding
     ) const = 0;

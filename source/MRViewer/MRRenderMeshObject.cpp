@@ -990,9 +990,9 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     auto numV = topology.lastValidVert() + 1;
 
     const auto& uvCoords = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryUVCoords() : objMesh_->getUVCoords();
-    if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
+    bool textureEnabled = objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) || objMesh_->hasAncillaryTexture();
+    if ( textureEnabled )
     {
-        assert( uvCoords.size() >= numV );
         if ( cornerMode )
         {
             auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );

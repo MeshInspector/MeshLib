@@ -14,7 +14,7 @@ public:
     MRVIEWER_API void setEnabledViewports( ViewportMask newMask );
 
 protected:
-    ItemEnabledPerViewport() = default;
+    MRVIEWER_API ItemEnabledPerViewport();
 
 private:
     ViewportMask enabledViewports_ = ViewportMask::all();

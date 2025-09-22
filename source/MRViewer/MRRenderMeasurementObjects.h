@@ -3,6 +3,7 @@
 #include "MRMesh/MRAngleMeasurementObject.h"
 #include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRIRenderObject.h"
+#include "MRMesh/MRPointMeasurementObject.h"
 #include "MRMesh/MRRadiusMeasurementObject.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
@@ -38,6 +39,16 @@ class RenderAngleObject : public RenderDimensionObject
 public:
     MRVIEWER_API RenderAngleObject( const VisualObject& object );
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
+};
+
+// TODO: real render dimension object
+class RenderPointMeasurementObject : public RenderObjectCombinator<RenderNameObject>
+{
+public:
+    MRVIEWER_API RenderPointMeasurementObject( const VisualObject& object );
+
+    // RenderNameObject
+    MRVIEWER_API ImGuiMeasurementIndicators::Text getObjectNameText( const VisualObject& object, ViewportId viewportId ) const override;
 };
 
 }

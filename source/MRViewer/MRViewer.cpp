@@ -603,6 +603,8 @@ int Viewer::launch( const LaunchParams& params )
     if ( res != EXIT_SUCCESS )
         return res;
 
+    CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
+    CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
     if ( params.windowMode == LaunchParams::HideInit && window )

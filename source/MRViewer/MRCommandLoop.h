@@ -18,10 +18,11 @@ public:
     // Specify execution in specific time of application start
     enum class StartPosition
     {
-        AfterWindowInit, // executes right after window is initialized
-        AfterSplashAppear, // executes after splash appeared
-        AfterPluginInit, // executes during splash, after plugins init)
-        AfterWindowAppear // executes after window appeared to have valid opengl context
+        AfterWindowInit,    // executes right after window is initialized
+        AfterSplashAppear,  // executes after splash appeared
+        AfterPluginInit,    // executes during splash, after plugins init)
+        BeforeWindowAppear, // executes after splash is going to close, and just before main window is shown and have valid main window context
+        AfterWindowAppear   // executes after window appeared to have valid opengl context
     };
 
     // This function setups main thread id, it should be called before any command
@@ -33,7 +34,7 @@ public:
     // Adds command to the end of command loop, can be performed from any thread
     // do not block, so be careful with lambda captures
     // note: state - specify execution in specific time of application start
-    MRVIEWER_API static void appendCommand( CommandFunc func, StartPosition state = StartPosition::AfterWindowAppear );
+    MRVIEWER_API static void appendCommand( CommandFunc func, StartPosition state = StartPosition::BeforeWindowAppear );
 
     // If caller thread is main - instantly run command, otherwise add command to the end of loop with
     // StartPosition state = StartPosition::AfterSplash and blocks caller thread until command is done
@@ -60,7 +61,7 @@ private:
     struct Command
     {
         CommandFunc func;
-        StartPosition state{ StartPosition::AfterWindowAppear };
+        StartPosition state{ StartPosition::BeforeWindowAppear };
         std::condition_variable callerThreadCV;
         std::thread::id threadId;
     };

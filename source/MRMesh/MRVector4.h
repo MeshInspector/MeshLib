@@ -27,7 +27,11 @@ struct Vector4
 
     T x, y, z, w;
 
-    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 ) { }
+    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 ) 
+    {
+        static_assert( sizeof( Vector4<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 4, "Invalid number of elements" );
+    }
     explicit Vector4( NoInit ) noexcept { }
     constexpr Vector4( T x, T y, T z, T w ) noexcept : x( x ), y( y ), z( z ), w( w ) { }
     static constexpr Vector4 diagonal( T a ) noexcept
@@ -42,8 +46,8 @@ struct Vector4
     {
     }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType* )this + e ); }
 
     T lengthSq() const
     {

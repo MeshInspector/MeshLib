@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
 #include "MRPch/MRBindingMacros.h"
@@ -33,7 +34,11 @@ struct Vector3
 
     T x, y, z;
 
-    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) { }
+    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) 
+    {
+        static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 3, "Invalid number of elements" );
+    }
     explicit Vector3( NoInit ) noexcept { }
     constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
 
@@ -44,17 +49,17 @@ struct Vector3
     static constexpr Vector3 plusX() noexcept { return Vector3( 1, 0, 0 ); }
     static constexpr Vector3 plusY() noexcept { return Vector3( 0, 1, 0 ); }
     static constexpr Vector3 plusZ() noexcept { return Vector3( 0, 0, 1 ); }
-    static constexpr Vector3 minusX() noexcept { return Vector3( -1, 0, 0 ); }
-    static constexpr Vector3 minusY() noexcept { return Vector3( 0, -1, 0 ); }
-    static constexpr Vector3 minusZ() noexcept { return Vector3( 0, 0, -1 ); }
+    static constexpr Vector3 minusX() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( -1, 0, 0 ); }
+    static constexpr Vector3 minusY() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( 0, -1, 0 ); }
+    static constexpr Vector3 minusZ() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( 0, 0, -1 ); }
 
     // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
     //   when generating the bindings, and looks out of place there.
     template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector3( const Vector3<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ) { }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
     T lengthSq() const { return x * x + y * y + z * z; }
     auto length() const
@@ -211,6 +216,7 @@ template <typename T>
 inline Vector3<T> Vector3<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
     using std::abs; // This should allow boost.multiprecision numbers here.
+    using Unsigned::abs; // This silences warnings on unsigned integers.
     if ( abs( x ) < abs( y ) )
         return ( abs( x ) < abs( z ) ) ? Vector3( 1, 0, 0 ) : Vector3( 0, 0, 1 );
     else

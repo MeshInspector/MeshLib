@@ -397,7 +397,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 if ( action )
                 {
                     ret = true;
-                    elemVal += ( ImGui::GetIO().KeyCtrl ? *elemStepFast : *elemStep ) * action;
+                    elemVal += ElemType( ( ImGui::GetIO().KeyCtrl ? *elemStepFast : *elemStep ) * action );
                     if ( *elemMin <= *elemMax )
                         elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 

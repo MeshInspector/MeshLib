@@ -14,6 +14,13 @@ enum class MRMESH_CLASS LinesVisualizePropertyType
 };
 template <> struct IsVisualizeMaskEnum<LinesVisualizePropertyType> : std::true_type {};
 
+/// specify dash pattern in pixels
+/// [0] - dash
+/// [1] - space
+/// [2] - dash
+/// [3] - space
+using DashPattern = Vector4<uint8_t>;
+
 /// an object that stores a lines
 /// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectLinesHolder : public VisualObject
@@ -39,6 +46,14 @@ public:
     { return reinterpret_cast< const std::shared_ptr<const Polyline3>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
+
+    /// specify dash pattern in pixels
+    /// [0] - dash
+    /// [1] - space
+    /// [2] - dash
+    /// [3] - space
+    MRMESH_API virtual void setDashPattern( const DashPattern& pattern, ViewportId vpId = {} );
+    virtual const DashPattern& getDashPattern( ViewportId vpId = {}, bool* isDef = nullptr ) const { return dashPattern_.get( vpId, isDef ); }
 
     MRMESH_API virtual void setLineWidth( float width );
     virtual float getLineWidth() const { return lineWidth_; }
@@ -132,6 +147,7 @@ protected:
     ViewportMask showPoints_;
     ViewportMask smoothConnections_;
     ViewportMask dashed_;
+    ViewportProperty<DashPattern> dashPattern_ = DashPattern::diagonal( 20 );
 
     /// width on lines on screen in pixels
     float lineWidth_{ 1.0f };

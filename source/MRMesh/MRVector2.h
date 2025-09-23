@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cmath>
@@ -32,7 +33,11 @@ struct Vector2
 
     T x, y;
 
-    constexpr Vector2() noexcept : x( 0 ), y( 0 ) { }
+    constexpr Vector2() noexcept : x( 0 ), y( 0 ) 
+    {
+        static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 2, "Invalid number of elements" );
+    }
     explicit Vector2( NoInit ) noexcept { }
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
 
@@ -42,16 +47,16 @@ struct Vector2
     static constexpr Vector2 diagonal( T a ) noexcept { return Vector2( a, a ); }
     static constexpr Vector2 plusX() noexcept { return Vector2( 1, 0 ); }
     static constexpr Vector2 plusY() noexcept { return Vector2( 0, 1 ); }
-    static constexpr Vector2 minusX() noexcept { return Vector2( -1, 0 ); }
-    static constexpr Vector2 minusY() noexcept { return Vector2( 0, -1 ); }
+    static constexpr Vector2 minusX() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector2( -1, 0 ); }
+    static constexpr Vector2 minusY() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector2( 0, -1 ); }
 
     // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
     //   when generating the bindings, and looks out of place there.
     template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector2( const Vector2<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ) { }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
     T lengthSq() const { return x * x + y * y; }
     auto length() const
@@ -178,6 +183,7 @@ template <typename T>
 inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
     using std::abs; // This allows boost.multiprecision numbers.
+    using Unsigned::abs; // This silences warnings on unsigned integers.
     if ( abs( x ) < abs( y ) )
         return Vector2( 1, 0 );
     else

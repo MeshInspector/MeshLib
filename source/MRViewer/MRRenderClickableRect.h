@@ -27,9 +27,13 @@ public:
     // This is what ultimately calls `onClick()` if the certain conditions hold.
     MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& backParams ) override;
 
-    // Set those to set the clickable area. Zero both to disable the clicks.
-    ImVec2 clickableCornerA_;
-    ImVec2 clickableCornerB_;
+    // Set those to set the clickable area. Zero both to hovers and clicks.
+    ImVec2 clickableCornerA;
+    ImVec2 clickableCornerB;
+
+    // Set to false to disable hovers and clicks (`isHovered` will always be false),
+    //   but still consume the mouse hover to prevent other buttons below this one from being clicked.
+    bool enabled = true;
 
     // Read these to decide how to render.
     bool isHovered = false;

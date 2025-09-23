@@ -229,8 +229,9 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
 
     task_.textPos = ImGuiMath::round( task_.textPos );
 
-    task_.clickableCornerA_ = task_.textPos - task_.paddingA;
-    task_.clickableCornerB_ = task_.textPos + task_.text.computedSize + task_.paddingB;
+    task_.clickableCornerA = task_.textPos - task_.paddingA;
+    task_.clickableCornerB = task_.textPos + task_.text.computedSize + task_.paddingB;
+    task_.enabled = !task_.object->isGlobalAncillary();
 
     // A non-owning pointer to our task_.
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } );

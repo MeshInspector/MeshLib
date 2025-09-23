@@ -82,8 +82,9 @@ RadiusTask::RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Co
 void RadiusTask::renderPass()
 {
     // We set those after we're done drawing.
-    clickableCornerA_ = {};
-    clickableCornerB_ = {};
+    clickableCornerA = {};
+    clickableCornerB = {};
+    enabled = false;
 
     const Vector3f dirTowardsCamera = viewport_->getViewXf().A.z.normalized();
 
@@ -146,11 +147,13 @@ void RadiusTask::renderPass()
         }
     );
 
-    if ( lineResult && lineResult->capA && objectIsSelectable( params_.common.objectToSelect ) )
+    if ( lineResult && lineResult->capA )
     {
-        clickableCornerA_ = lineResult->capA->bgCornerA;
-        clickableCornerB_ = lineResult->capA->bgCornerB;
+        clickableCornerA = lineResult->capA->bgCornerA;
+        clickableCornerB = lineResult->capA->bgCornerB;
     }
+
+    enabled = objectIsSelectable( params_.common.objectToSelect );
 }
 
 void RadiusTask::onClick()
@@ -182,8 +185,9 @@ AngleTask::AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Colo
 void AngleTask::renderPass()
 {
     // We set those after we're done drawing.
-    clickableCornerA_ = {};
-    clickableCornerB_ = {};
+    clickableCornerA = {};
+    clickableCornerB = {};
+    enabled = false;
 
     // It would be nice to reuse this buffer between all the curves in the scene...
     std::vector<ImVec2> pointBuffer;
@@ -437,11 +441,13 @@ void AngleTask::renderPass()
         // The text.
         // This is intentionally outside of the `drawElem()` lambda, to be completely on top of the angle indicator.
         auto textResult = ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, indicatorParams, textPos, text, makeTextParams( viewport_->id, params_.common.objectToSelect, *this ), normal );
-        if ( textResult && objectIsSelectable( params_.common.objectToSelect ) )
+        if ( textResult )
         {
-            clickableCornerA_ = textResult->bgCornerA;
-            clickableCornerB_ = textResult->bgCornerB;
+            clickableCornerA = textResult->bgCornerA;
+            clickableCornerB = textResult->bgCornerB;
         }
+
+        enabled = objectIsSelectable( params_.common.objectToSelect );
     }
 }
 
@@ -474,8 +480,9 @@ LengthTask::LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Co
 void LengthTask::renderPass()
 {
     // We set those after we're done drawing.
-    clickableCornerA_ = {};
-    clickableCornerB_ = {};
+    clickableCornerA = {};
+    clickableCornerB = {};
+    enabled = false;
 
     float distanceValue = 0;
     if ( params_.onlyOneAxis )
@@ -562,11 +569,13 @@ void LengthTask::renderPass()
         distanceResult = ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, indicatorParams, a, b, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
     }
 
-    if ( distanceResult && distanceResult->text && objectIsSelectable( params_.common.objectToSelect ) )
+    if ( distanceResult && distanceResult->text )
     {
-        clickableCornerA_ = distanceResult->text->bgCornerA;
-        clickableCornerB_ = distanceResult->text->bgCornerB;
+        clickableCornerA = distanceResult->text->bgCornerA;
+        clickableCornerB = distanceResult->text->bgCornerB;
     }
+
+    enabled = objectIsSelectable( params_.common.objectToSelect );
 }
 
 void LengthTask::onClick()

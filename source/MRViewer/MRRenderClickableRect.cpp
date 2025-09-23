@@ -14,12 +14,12 @@ void BasicClickableRectUiRenderTask::earlyBackwardPass( const BackwardPassParams
     isActive = false;
 
     // If the rect has nonzero area...
-    if ( ImGuiMath::CompareAll( clickableCornerA_ ) < clickableCornerB_ )
+    if ( ImGuiMath::CompareAll( clickableCornerA ) < clickableCornerB )
     {
         // React to hover and possibly click.
-        if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= clickableCornerA_ && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < clickableCornerB_ )
+        if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= clickableCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < clickableCornerB )
         {
-            if ( backParams.tryConsumeMouseHover() )
+            if ( backParams.tryConsumeMouseHover() && enabled ) // In this order!
             {
                 nextIsHovered = true;
 

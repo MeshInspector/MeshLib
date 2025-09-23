@@ -14,6 +14,8 @@
 #include "MRSurfaceDistance.h"
 #include "MRExtractIsolines.h"
 #include "MRParallelFor.h"
+#include "MRMeshIntersect.h"
+#include "MRSurfacePath.h"
 #include "MRPch/MRSpdlog.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
@@ -1326,6 +1328,83 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
         return unexpected( "Cannot cut mesh because of contour self intersections" );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
     return sideFbv;
+}
+
+Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Contours3f& contours, const CutByProjectionSettings& settings )
+{
+    if ( settings.direction == Vector3f() )
+    {
+        assert( false );
+        return unexpected( "Invalid direction" );
+    }
+
+    OneMeshContours cutConts( contours.size() );
+    std::string error;
+    auto rayPrecomp = IntersectionPrecomputes<float>( settings.direction );
+    tbb::task_group_context ctx;
+    ParallelFor( contours, [&] ( size_t i )
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return; // fast exit before projecting
+        auto mtps = std::vector<MeshTriPoint>( contours[i].size() );
+        ParallelFor( mtps, [&] ( size_t j )
+        {
+            if ( ctx.is_group_execution_cancelled() )
+                return; // stop projecting if failed
+            auto intRes = rayMeshIntersect( mesh, Line3f( settings.cont2mesh ? ( *settings.cont2mesh )( contours[i][j] ) : contours[i][j], settings.direction ), 
+                0, FLT_MAX, &rayPrecomp );
+            if ( !intRes )
+            {
+                if ( ctx.cancel_group_execution() )
+                    error = "Some contour points have missed the mesh";
+                return;
+            }
+            mtps[j] = intRes.mtp;
+        } );
+        if ( ctx.is_group_execution_cancelled() )
+            return; // do not continue if projecting failed
+        auto cutContRes = convertMeshTriPointsToMeshContour( mesh, mtps,
+            [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int )->Expected<SurfacePath>
+        {
+            auto plPoint = mesh.triPoint( start ) - settings.direction;
+            auto ccwPath = trackSection( mesh, start, end, plPoint, true );
+            auto cwPath = trackSection( mesh, start, end, plPoint, false );
+            if ( ccwPath.has_value() && cwPath.has_value() )
+            {
+                auto ccwL = surfacePathLength( mesh, *ccwPath );
+                auto cwL = surfacePathLength( mesh, *cwPath );
+                if ( ccwL < cwL )
+                    return ccwPath;
+                else
+                    return cwPath;
+            }
+            else if ( ccwPath.has_value() )
+                return ccwPath;
+            else if ( cwPath.has_value() )
+                return cwPath;
+            else
+            {
+                auto locRes = computeGeodesicPath( mesh, start, end );
+                if ( !locRes.has_value() )
+                    return unexpected( toString( locRes.error() ) );
+                return *locRes;
+            }
+        } );
+        if ( !cutContRes.has_value() )
+        {
+            if ( ctx.cancel_group_execution() )
+                error = std::move( cutContRes.error() );
+            return;
+        }
+        cutConts[i] = std::move( *cutContRes );
+    } );
+    if ( ctx.is_group_execution_cancelled() )
+        return unexpected( std::move( error ) );
+
+    auto cutRes = cutMesh( mesh, cutConts );
+    if ( cutRes.fbsWithContourIntersections.any() )
+        return unexpected( "Some projected contours have self-intersections" );
+    return std::move( cutRes.resultCut );
 }
 
 } //namespace MR

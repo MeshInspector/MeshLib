@@ -1666,9 +1666,6 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
     const std::size_t numTols = object.numComparableProperties();
     for ( std::size_t i = 0; i < numTols; i++ )
     {
-        auto tolOpt = object.getComparisonTolerence( i );
-
-
         std::string name;
         if ( numTols == 1 )
             name = "Tolerance";
@@ -1676,11 +1673,10 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
             name = fmt::format( "{} tolerance", object.getComparablePropertyName( i ) );
 
         ImGui::SetNextItemWidth( fullWidth );
-        if ( QualityControl::inputTolerance( name.c_str(), tolOpt ) )
-            object.setComparisonTolerance( i, tolOpt );
+        QualityControl::inputTolerance( name.c_str(), object, i );
 
         // The button to remove tolerance.
-        if ( tolOpt )
+        if ( object.getComparisonTolerence( i ) )
         {
             ImGui::SameLine();
 

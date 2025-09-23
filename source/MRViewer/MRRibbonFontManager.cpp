@@ -13,15 +13,6 @@
 namespace MR
 {
 
-namespace
-{
-#ifndef __EMSCRIPTEN__
-constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::RegularSC;
-#else
-constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::Regular;
-#endif
-}
-
 static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr )
 {
     auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF( filename, size_pixels, font_cfg, glyph_ranges );
@@ -53,11 +44,11 @@ RibbonFontManager::RibbonFontManager()
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
 {
     fonts_ = {
-        FontData{.fontFile = FontFileRegular},
-        FontData{.fontFile = FontFileRegular},
+        FontData{.fontFile = cFontFileRegular_},
+        FontData{.fontFile = cFontFileRegular_},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Icons},
-        FontData{.fontFile = FontFileRegular},
+        FontData{.fontFile = cFontFileRegular_},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Monospace}
@@ -115,7 +106,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-    return fontPaths_[int( FontFileRegular )];
+    return fontPaths_[int( cFontFileRegular_ )];
 }
 
 void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )

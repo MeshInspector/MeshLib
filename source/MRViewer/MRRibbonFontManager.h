@@ -69,10 +69,17 @@ public:
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
 private:
+
+#ifndef __EMSCRIPTEN__
+    static constexpr RibbonFontManager::FontFile cFontFileRegular_ = RibbonFontManager::FontFile::RegularSC;
+#else
+    static constexpr RibbonFontManager::FontFile cFontFileRegular_ = RibbonFontManager::FontFile::Regular;
+#endif
+
     FontFilePaths fontPaths_;
     struct FontData
     {
-        FontFile fontFile{ FontFile::Regular }; // what file type to use for this font
+        FontFile fontFile{ cFontFileRegular_ }; // what file type to use for this font
         Vector2f scaledOffset; // offset that is used for each glyph while creating atlas (updates in `updateFontsScaledOffset_`), should respect font size with scaling
         ImFont* fontPtr{ nullptr }; // pointer to loaded font, nullptr means that font was not loaded
     };

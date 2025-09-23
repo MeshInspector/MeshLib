@@ -27,7 +27,10 @@ struct Matrix4
     Vector4<T> z{ 0, 0, 1, 0 };
     Vector4<T> w{ 0, 0, 0, 1 };
 
-    constexpr Matrix4() noexcept = default;
+    constexpr Matrix4() noexcept 
+    {
+        static_assert( sizeof( Matrix4<ValueType> ) == 4 * sizeof( VectorType ), "Struct size invalid" );
+    }
     /// initializes matrix from 4 row-vectors
     constexpr Matrix4( const Vector4<T>& x, const Vector4<T>& y, const Vector4<T>& z, const Vector4<T>& w ) : x( x ), y( y ), z( z ), w( w ) { }
 
@@ -151,12 +154,6 @@ struct Matrix4
             for ( int j = 0; j < 4; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
-    }
-
-    /// simple way to static assert correct size of the template struct
-    static auto _assertion()
-    {
-        static_assert( sizeof( Matrix4<ValueType> ) == 4 * sizeof( VectorType ), "Struct size invalid" );
     }
 };
 

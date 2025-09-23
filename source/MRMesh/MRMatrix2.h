@@ -24,7 +24,10 @@ struct Matrix2
     Vector2<T> x{ 1, 0 };
     Vector2<T> y{ 0, 1 };
 
-    constexpr Matrix2() noexcept = default;
+    constexpr Matrix2() noexcept
+    {
+        static_assert( sizeof( Matrix2<ValueType> ) == 2 * sizeof( VectorType ), "Struct size invalid" );
+    }
     /// initializes matrix from its 2 rows
     constexpr Matrix2( const Vector2<T> & x, const Vector2<T> & y ) : x( x ), y( y ) { }
     template <typename U>
@@ -113,12 +116,6 @@ struct Matrix2
             for ( int j = 0; j < 2; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
-    }
-
-    /// simple way to static assert correct size of the template struct
-    static auto _assertion()
-    {
-        static_assert( sizeof( Matrix2<ValueType> ) == 2 * sizeof( VectorType ), "Struct size invalid" );
     }
 };
 

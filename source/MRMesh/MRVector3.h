@@ -34,7 +34,11 @@ struct Vector3
 
     T x, y, z;
 
-    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) { }
+    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) 
+    {
+        static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 3, "Invalid number of elements" );
+    }
     explicit Vector3( NoInit ) noexcept { }
     constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
 
@@ -130,13 +134,6 @@ struct Vector3
             { a.x /= b; a.y /= b; a.z /= b; return a; }
         else
             return a *= ( 1 / b );
-    }
-
-    /// simple way to static assert correct size of the template struct
-    static auto _assertion()
-    {
-        static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
-        static_assert( elements == 3, "Invalid number of elements" );
     }
 };
 

@@ -25,7 +25,10 @@ struct Matrix3
     Vector3<T> y{ 0, 1, 0 };
     Vector3<T> z{ 0, 0, 1 };
 
-    constexpr Matrix3() noexcept = default;
+    constexpr Matrix3() noexcept
+    {
+        static_assert( sizeof( Matrix3<ValueType> ) == 3 * sizeof( VectorType ), "Struct size invalid" );
+    }
     /// initializes matrix from its 3 rows
     constexpr Matrix3( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) : x( x ), y( y ), z( z ) { }
     template <typename U>
@@ -128,12 +131,6 @@ struct Matrix3
             for ( int j = 0; j < 3; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
-    }
-
-    /// simple way to static assert correct size of the template struct
-    static auto _assertion()
-    {
-        static_assert( sizeof( Matrix3<ValueType> ) == 3 * sizeof( VectorType ), "Struct size invalid" );
     }
 };
 

@@ -33,7 +33,11 @@ struct Vector2
 
     T x, y;
 
-    constexpr Vector2() noexcept : x( 0 ), y( 0 ) { }
+    constexpr Vector2() noexcept : x( 0 ), y( 0 ) 
+    {
+        static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 2, "Invalid number of elements" );
+    }
     explicit Vector2( NoInit ) noexcept { }
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
 
@@ -111,13 +115,6 @@ struct Vector2
             { a.x /= b; a.y /= b; return a; }
         else
             return a *= ( 1 / b );
-    }
-
-    /// simple way to static assert correct size of the template struct
-    static auto _assertion()
-    {
-        static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
-        static_assert( elements == 2, "Invalid number of elements" );
     }
 };
 

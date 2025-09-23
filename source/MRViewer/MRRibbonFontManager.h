@@ -29,6 +29,9 @@ public:
     enum class FontFile
     {
         Regular,
+#ifndef __EMSCRIPTEN__
+        RegularSC, // Regular with Simple Chinese
+#endif
         SemiBold,
         Monospace,
         Icons,

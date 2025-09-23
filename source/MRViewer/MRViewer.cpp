@@ -860,9 +860,12 @@ int Viewer::launchInit_( const LaunchParams& params )
     CommandLoop::processCommands();
 
     // current time plus minimum delay splash screen to stay present
-    auto continueTime = std::chrono::steady_clock::now() + std::chrono::duration<float>( params.splashWindow->minimumTimeSec() );
+    decltype( std::chrono::steady_clock::now() + std::chrono::duration<float>( 0 ) ) continueTime;
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
+    {
         params.splashWindow->start();
+        continueTime = std::chrono::steady_clock::now() + std::chrono::duration<float>( params.splashWindow->minimumTimeSec() );
+    }
  
     CommandLoop::setState( CommandLoop::StartPosition::AfterSplashAppear );
     CommandLoop::processCommands();

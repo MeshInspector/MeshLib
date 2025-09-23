@@ -610,6 +610,10 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
 
+    // splash window must be hidden after main window appear, otherwise another application (e.g. Windows Explorer) is activated
+    if ( params.windowMode != LaunchParams::NoWindow && params.windowMode != LaunchParams::Hide && params.splashWindow )
+        params.splashWindow->stop();
+
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
     CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false
 
@@ -855,17 +859,11 @@ int Viewer::launchInit_( const LaunchParams& params )
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
     CommandLoop::processCommands();
 
-    std::future<void> splashMinTimer;
+    // current time plus minimum delay splash screen to stay present
+    auto continueTime = std::chrono::steady_clock::now() + std::chrono::duration<float>( params.splashWindow->minimumTimeSec() );
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
-    {
         params.splashWindow->start();
-        // minimum time splash screen to stay present
-        splashMinTimer = std::async( std::launch::async, [seconds = params.splashWindow->minimumTimeSec()] ()
-        {
-            std::this_thread::sleep_for( std::chrono::duration<float>( seconds ) );
-        } );
-    }
-
+ 
     CommandLoop::setState( CommandLoop::StartPosition::AfterSplashAppear );
     CommandLoop::processCommands();
 
@@ -890,8 +888,9 @@ int Viewer::launchInit_( const LaunchParams& params )
 
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
-        splashMinTimer.get();
-        params.splashWindow->stop();
+        spdlog::info( "Waiting for minimal splash screen time..." );
+        std::this_thread::sleep_until( continueTime );
+        spdlog::info( "Minimal splash screen time reached" );
     }
 
     // important to be after splash

@@ -81,15 +81,7 @@ std::optional<PointMeasurementObject::ComparisonTolerance> PointMeasurementObjec
 {
     (void)i;
     assert( i == 0 );
-    if ( comparisonToleranceIsAlwaysOnlyPositive( i ) )
-    {
-        assert( !tolerance_ || tolerance_->negative == 0 );
-        return tolerance_ ? std::optional( ComparisonTolerance{ .positive = tolerance_->positive } ) : std::nullopt;
-    }
-    else
-    {
-        return tolerance_;
-    }
+    return tolerance_;
 }
 
 void PointMeasurementObject::setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance )
@@ -103,7 +95,7 @@ bool PointMeasurementObject::comparisonToleranceIsAlwaysOnlyPositive( std::size_
 {
     (void)i;
     assert( i == 0 );
-    return !bool( referenceNormal_ ); // If we don't have a reference normal, we calculate the Euclidean distance, which can't be negative.
+    return false;
 }
 
 std::size_t PointMeasurementObject::numComparisonReferenceValues() const

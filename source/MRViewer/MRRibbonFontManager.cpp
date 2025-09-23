@@ -31,11 +31,9 @@ RibbonFontManager::RibbonFontManager()
 {
     fontPaths_ =
     {
+    SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf",
 #ifndef __EMSCRIPTEN__
     SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf",
-    SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf",
-#else
-    SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf",
 #endif
     SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf",
     SystemPath::getFontsDirectory() / "NotoSansMono-Regular.ttf",
@@ -46,11 +44,11 @@ RibbonFontManager::RibbonFontManager()
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
 {
     fonts_ = {
-        FontData{.fontFile = FontFile::Regular},
-        FontData{.fontFile = FontFile::Regular},
+        FontData{.fontFile = FontFileRegular},
+        FontData{.fontFile = FontFileRegular},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Icons},
-        FontData{.fontFile = FontFile::Regular},
+        FontData{.fontFile = FontFileRegular},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Monospace}
@@ -108,7 +106,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-    return fontPaths_[int( FontFile::Regular )];
+    return fontPaths_[int( FontFileRegular )];
 }
 
 void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )

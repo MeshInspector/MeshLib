@@ -30,7 +30,7 @@ public:
     {
         Regular,
 #ifndef __EMSCRIPTEN__
-        RegularPdf,
+        RegularSC, // Regular with Simple Chinese
 #endif
         SemiBold,
         Monospace,
@@ -93,5 +93,11 @@ private:
     void addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs );
     void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
 };
+
+#ifndef __EMSCRIPTEN__
+constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::RegularSC;
+#else
+constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::Regular;
+#endif
 
 }

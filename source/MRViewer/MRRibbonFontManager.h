@@ -94,10 +94,4 @@ private:
     void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
 };
 
-#ifndef __EMSCRIPTEN__
-constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::RegularSC;
-#else
-constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::Regular;
-#endif
-
 }

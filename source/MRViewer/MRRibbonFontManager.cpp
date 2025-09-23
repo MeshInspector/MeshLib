@@ -13,6 +13,15 @@
 namespace MR
 {
 
+namespace
+{
+#ifndef __EMSCRIPTEN__
+constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::RegularSC;
+#else
+constexpr RibbonFontManager::FontFile FontFileRegular = RibbonFontManager::FontFile::Regular;
+#endif
+}
+
 static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr )
 {
     auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF( filename, size_pixels, font_cfg, glyph_ranges );

@@ -25,6 +25,9 @@
     <CudaCompile Include="MRCudaPointsProject.cu">
       <Filter>PointsProject</Filter>
     </CudaCompile>
+    <CudaCompile Include="MRCudaSweptVolume.cu">
+      <Filter>SweptVolumes</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -62,6 +65,9 @@
     </ClCompile>
     <ClCompile Include="MRCudaPolyline.cpp">
       <Filter>Data Holders</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaSweptVolume.cpp">
+      <Filter>SweptVolumes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -165,6 +171,13 @@
     <ClInclude Include="MRCudaPolyline.h">
       <Filter>Data Holders</Filter>
     </ClInclude>
+    <ClInclude Include="MRCudaLineSegm.cuh" />
+    <ClInclude Include="MRCudaSweptVolume.cuh">
+      <Filter>SweptVolumes</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaSweptVolume.h">
+      <Filter>SweptVolumes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CudaTest">
@@ -199,6 +212,9 @@
     </Filter>
     <Filter Include="AABBTree">
       <UniqueIdentifier>{b86a22cb-6e10-4dbe-aa82-4eb80529e8d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SweptVolumes">
+      <UniqueIdentifier>{024adf05-a397-4261-b638-13f3fd9af9f1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -38,6 +38,7 @@
     <ClCompile Include="MRRebuildMesh.cpp" />
     <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRScanHelpers.cpp" />
+    <ClCompile Include="MRSweptVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
@@ -79,6 +80,7 @@
     <ClInclude Include="MRRebuildMesh.h" />
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRScanHelpers.h" />
+    <ClInclude Include="MRSweptVolume.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />

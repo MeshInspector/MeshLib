@@ -54,8 +54,8 @@ struct Vector3
     template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector3( const Vector3<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ) { }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
     T lengthSq() const { return x * x + y * y + z * z; }
     auto length() const
@@ -130,6 +130,13 @@ struct Vector3
             { a.x /= b; a.y /= b; a.z /= b; return a; }
         else
             return a *= ( 1 / b );
+    }
+
+    /// simple way to static assert correct size of the template struct
+    static auto _assertion()
+    {
+        static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 3, "Invalid number of elements" );
     }
 };
 

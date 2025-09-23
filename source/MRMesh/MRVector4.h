@@ -42,8 +42,8 @@ struct Vector4
     {
     }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType* )this + e ); }
 
     T lengthSq() const
     {
@@ -105,6 +105,13 @@ struct Vector4
             { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }
         else
             return a *= ( 1 / b );
+    }
+
+    /// simple way to static assert correct size of the template struct
+    static auto _assertion()
+    {
+        static_assert( sizeof( Vector4<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 4, "Invalid number of elements" );
     }
 };
 

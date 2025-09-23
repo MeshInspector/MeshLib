@@ -51,8 +51,8 @@ struct Vector2
     template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector2( const Vector2<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ) { }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
     T lengthSq() const { return x * x + y * y; }
     auto length() const
@@ -111,6 +111,13 @@ struct Vector2
             { a.x /= b; a.y /= b; return a; }
         else
             return a *= ( 1 / b );
+    }
+
+    /// simple way to static assert correct size of the template struct
+    static auto _assertion()
+    {
+        static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 2, "Invalid number of elements" );
     }
 };
 

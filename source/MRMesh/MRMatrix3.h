@@ -53,8 +53,8 @@ struct Matrix3
     static constexpr Matrix3 fromColumns( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ).transposed(); }
 
     /// row access
-    constexpr const Vector3<T> & operator []( int row ) const noexcept { return *( &x + row ); }
-    constexpr       Vector3<T> & operator []( int row )       noexcept { return *( &x + row ); }
+    constexpr const Vector3<T> & operator []( int row ) const noexcept { return *( ( VectorType* )this + row ); }
+    constexpr       Vector3<T> & operator []( int row )       noexcept { return *( ( VectorType* )this + row ); }
 
     /// column access
     constexpr Vector3<T> col( int i ) const noexcept { return { x[i], y[i], z[i] }; }
@@ -128,6 +128,12 @@ struct Matrix3
             for ( int j = 0; j < 3; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
+    }
+
+    /// simple way to static assert correct size of the template struct
+    static auto _assertion()
+    {
+        static_assert( sizeof( Matrix3<ValueType> ) == 3 * sizeof( VectorType ), "Struct size invalid" );
     }
 };
 

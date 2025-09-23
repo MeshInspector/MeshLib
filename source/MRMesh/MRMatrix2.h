@@ -47,8 +47,8 @@ struct Matrix2
     static constexpr Matrix2 fromColumns( const Vector2<T> & x, const Vector2<T> & y ) noexcept { return Matrix2( x, y ).transposed(); }
 
     /// row access
-    constexpr const Vector2<T> & operator []( int row ) const noexcept { return *( &x + row ); }
-    constexpr       Vector2<T> & operator []( int row )       noexcept { return *( &x + row ); }
+    constexpr const Vector2<T> & operator []( int row ) const noexcept { return *( ( VectorType* )this + row ); }
+    constexpr       Vector2<T> & operator []( int row )       noexcept { return *( ( VectorType* )this + row ); }
 
     /// column access
     constexpr Vector2<T> col( int i ) const noexcept { return { x[i], y[i] }; }
@@ -113,6 +113,12 @@ struct Matrix2
             for ( int j = 0; j < 2; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
+    }
+
+    /// simple way to static assert correct size of the template struct
+    static auto _assertion()
+    {
+        static_assert( sizeof( Matrix2<ValueType> ) == 2 * sizeof( VectorType ), "Struct size invalid" );
     }
 };
 

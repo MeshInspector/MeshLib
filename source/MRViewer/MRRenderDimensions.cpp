@@ -151,7 +151,7 @@ void PointTask::renderPass()
     for ( int i = 0; i < 3; i++ )
     {
         if ( axis == -1 || axis == i )
-            text.addElem( { .var = ( i == smallestAxis ? "" : " " ) + lengthToString( params_.point[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
+            text.addElem( { .var = std::string( i == smallestAxis ? "" : " " ) + lengthToString( params_.point[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
     }
 
     if ( passOrFail )
@@ -172,7 +172,7 @@ void PointTask::renderPass()
         for ( int i = 0; i < 3; i++ )
         {
             if ( axis == -1 || axis == i )
-                text.addElem( { .var = ( i == smallestAxis ? "" : " " ) + lengthToString( ( *params_.referencePoint )[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
+                text.addElem( { .var = std::string( i == smallestAxis ? "" : " " ) + lengthToString( ( *params_.referencePoint )[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
         }
 
         if ( params_.tolerance )

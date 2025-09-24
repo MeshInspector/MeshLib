@@ -524,7 +524,7 @@ public:
     // When dragging is active, dragSignal and dragEndSignal are emitted instead of mouseMove and mouseUp
     // mouseDown handler have priority over dragStart
     MouseUpDownSignal mouseClickSignal; // signal is called when mouse button is pressed and immediately released
-    MouseUpDownSignal dragStartSignal; // signal is called when mouse button is pressed (deterred if click behavior is on)
+    MouseUpDownSignal dragStartSignal; // signal is called when mouse button is pressed (deferred if click behavior is on)
     MouseUpDownSignal dragEndSignal; // signal is called when mouse button used to start drag is released
     MouseMoveSignal dragSignal; // signal is called when mouse is being dragged with button down
     // Cursor enters/leaves

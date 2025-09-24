@@ -133,7 +133,7 @@ void PlaneWidget::updateWidget_( bool updateCameraRotation )
     planeObj_->setXf( trans1 * rot2 * rot1 * scale1 );
 }
 
-bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
+bool PlaneWidget::onDragStart_( Viewer::MouseButton button, int mod )
 {
     if ( button != Viewer::MouseButton::Left || mod != 0 )
         return false;
@@ -185,7 +185,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     return true;
 }
 
-bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
+bool PlaneWidget::onDragEnd_( Viewer::MouseButton, int )
 {
     if ( !pressed_ )
         return false;
@@ -222,7 +222,7 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
     return true;
 }
 
-bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
+bool PlaneWidget::onDrag_( int mouse_x, int mouse_y )
 {
     if ( !pressed_ )
         return false;

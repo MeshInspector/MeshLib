@@ -10,7 +10,7 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
+        autoconf271 autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
         && \
     dnf clean all
 
@@ -24,6 +24,10 @@ RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --s
 
 WORKDIR /root/vcpkg
 
+# replace the original source URL with a faster mirror's one
+RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/vcpkg-make/portfile.cmake && \
+    sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
+
 # build vcpkg packages
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
@@ -31,7 +35,8 @@ COPY thirdparty/vcpkg/triplets MeshLib/triplets
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-RUN ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
+RUN source /opt/rh/autoconf271/enable && \
+    ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 

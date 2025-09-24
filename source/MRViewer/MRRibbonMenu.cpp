@@ -1006,7 +1006,7 @@ void RibbonMenu::pushNotification( const RibbonNotification& notification )
 
 void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects )
 {
-    const std::regex pattern( R"(.* Clone(?:| \([0-9]+\))$)" );
+    const std::regex pattern( R"(.*(?:| \([0-9]+\))$)" );
     SCOPED_HISTORY( "Clone" );
     for ( const auto& obj : selectedObjects )
     {
@@ -1014,7 +1014,6 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
             continue;
         auto cloneObj = obj->cloneTree();
         AppendHistory<ChangeObjectSelectedAction>( "unselect original", obj, false );
-        AppendHistory<ChangeObjectVisibilityAction>( "hide original", obj, ViewportMask() );
         auto name = obj->name();
         if ( std::regex_match( name, pattern ) )
         {
@@ -1033,7 +1032,7 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
         }
         else
         {
-            name += " Clone";
+            name += " (1)";
         }
         cloneObj->setName( name );
         AppendHistory<ChangeSceneAction>( "Add cloned obj", cloneObj, ChangeSceneAction::Type::AddObject );

@@ -119,7 +119,13 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
 
     auto touchPaddingX = style.TouchExtraPadding.x;
     if ( ( flags & ImGuiTreeNodeFlags_OpenOnArrow ) == 0 )
+    {
+        // Dear ImGui changes click behavior based on hitting the arrow:
+        //  arrow hit works on MouseDown
+        //  frame hit works on MouseUp
+        // for arrow hit test style.TouchExtraPadding.x is used, so we abuse it to imitate that whole frame is that arrow: to have same behavior
         style.TouchExtraPadding.x = FLT_MAX; // force all header be treated as arrow (e.g. react on MouseDown instead of default MouseRelease)
+    }
     bool res = ImGui::CollapsingHeader( label, flags );
     style.TouchExtraPadding.x = touchPaddingX; // restore hacked value
 

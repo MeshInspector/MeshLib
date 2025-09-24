@@ -25,7 +25,10 @@
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/dynamic_bitset.hpp>
+#if !defined( _MSC_VER ) || BOOST_VERSION != 108800
+// more info: https://github.com/boostorg/multiprecision/issues/677
 #include <boost/multiprecision/cpp_int.hpp>
+#endif
 #include <boost/signals2/signal.hpp>
 #include <boost/stacktrace.hpp>
 #pragma warning(pop)

@@ -82,8 +82,10 @@ ELSEIF(WIN32)
 
   # Patch IMath (a dependency of OpenVDB) to not include `/EHsc`. See the beginning of this file for explanation.
   get_target_property(TMP_PROP Imath::Imath INTERFACE_COMPILE_OPTIONS)
-  string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
-  set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
+  IF(TMP_PROP)
+    string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
+    set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
+  ENDIF()
 
   target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenVDB::openvdb

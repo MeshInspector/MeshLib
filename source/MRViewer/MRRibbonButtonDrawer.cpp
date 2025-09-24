@@ -101,7 +101,7 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
     const bool bulletMode = bool( flags & ImGuiTreeNodeFlags_Bullet );
-    const auto& style = ImGui::GetStyle();
+    auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
     pos.x += style.FramePadding.x;
     pos.y += style.FramePadding.y;
@@ -117,7 +117,11 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( auto forcedState = UI::TestEngine::createValueTentative<bool>( label ) )
         ImGui::SetNextItemOpen( *forcedState );
 
+    auto touchPaddingX = style.TouchExtraPadding.x;
+    if ( ( flags & ImGuiTreeNodeFlags_OpenOnArrow ) == 0 )
+        style.TouchExtraPadding.x = FLT_MAX; // force all header be treated as arrow (e.g. react on MouseDown instead of default MouseRelease)
     bool res = ImGui::CollapsingHeader( label, flags );
+    style.TouchExtraPadding.x = touchPaddingX; // restore hacked value
 
     (void)UI::TestEngine::createValue( label, res, false, true );
 

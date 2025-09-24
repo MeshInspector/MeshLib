@@ -235,7 +235,7 @@ std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& pri
             if ( sphere.radius == 0 )
             {
                 auto newPoint = std::make_shared<PointObject>();
-                newPoint->setPoint( sphere.center );
+                newPoint->setLocalPoint( sphere.center );
                 return newPoint;
             }
             else

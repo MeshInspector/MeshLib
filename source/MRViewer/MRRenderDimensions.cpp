@@ -46,17 +46,31 @@ static void selectObject( const VisualObject* object )
     RibbonMenu::instance()->simulateNameTagClickWithKeyboardModifiers( *const_cast<VisualObject*>( object ) );
 }
 
+static Color getBorderColorForObject( ViewportId viewportId, const VisualObject* object, float alpha )
+{
+    return object->getFrontColor( object->isSelected(), viewportId ).scaledAlpha( alpha );
+}
+
 static ImGuiMeasurementIndicators::TextParams makeTextParams( ViewportId viewportId, const VisualObject* object, const BasicClickableRectUiRenderTask& task )
 {
     if ( !objectIsSelectable( object ) )
         return {};
 
     return {
-        .borderColor = object->getFrontColor( object->isSelected(), viewportId ).scaledAlpha( 0.75f ), // Arbitrary alpha factor to make the borders less visible.
+        .borderColor = getBorderColorForObject( viewportId, object, 0.75f ), // Arbitrary alpha factor to make the borders less visible.
         .isHovered = task.isHovered,
         .isActive = task.isActive,
         .isSelected = object->isSelected(),
     };
+}
+
+static void beginPassFailTextStyle( ImGuiMeasurementIndicators::Text& text, bool pass )
+{
+    text.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
+}
+static void endPassFailTextStyle( ImGuiMeasurementIndicators::Text& text )
+{
+    text.add( ImGuiMeasurementIndicators::TextColor{} );
 }
 
 [[nodiscard]] static ImVec2 toScreenCoords( const Viewport& viewport, const Vector3f& point )
@@ -64,6 +78,144 @@ static ImGuiMeasurementIndicators::TextParams makeTextParams( ViewportId viewpor
     auto rect = viewport.getViewportRect();
     Vector3f result = viewport.projectToViewportSpace( point );
     return ImVec2( result.x, result.y ) + ImVec2( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y );
+}
+
+PointTask::PointTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const PointParams& params )
+    : viewport_( &getViewerInstance().viewport( uiParams.viewportId ) ), color_( color ), params_( params )
+{
+    params_.point = xf( params_.point );
+    renderTaskDepth = viewport_->projectToViewportSpace( params_.point ).z;
+}
+
+void PointTask::renderPass()
+{
+    // We set those after we're done drawing.
+    clickableCornerA = {};
+    clickableCornerB = {};
+    enabled = false;
+
+    ImGuiMeasurementIndicators::Text text;
+    if ( !params_.common.objectName.empty() )
+    {
+        text.addLine();
+        text.addText( params_.common.objectName );
+    }
+
+    float deviation = 0;
+    bool passOrFail = false;
+    bool pass = false;
+
+    if ( params_.referencePoint && params_.tolerance )
+    {
+        passOrFail = true;
+        if ( params_.referenceNormal == Vector3f{} )
+        {
+            deviation = ( params_.point - *params_.referencePoint ).length();
+            pass = deviation >= params_.tolerance->negative && deviation <= params_.tolerance->positive;
+        }
+        else
+        {
+            deviation = dot( params_.point - *params_.referencePoint, params_.referenceNormal ) / params_.referenceNormal.length();
+            pass = deviation <= params_.tolerance->positive;
+        }
+    }
+
+    int axis = -1;
+    if ( params_.referencePoint && params_.referenceNormal != Vector3f{} )
+    {
+        if ( params_.referenceNormal.y == 0 && params_.referenceNormal.z == 0 )
+            axis = 0;
+        else if ( params_.referenceNormal.z == 0 && params_.referenceNormal.x == 0 )
+            axis = 1;
+        else if ( params_.referenceNormal.x == 0 && params_.referenceNormal.y == 0 )
+            axis = 2;
+    }
+    int smallestAxis = axis == -1 ? 0 : axis;
+
+    text.addLine();
+    if ( params_.referencePoint && params_.tolerance )
+    {
+        text.addElem( {
+            .var =
+                axis == 0 ? "Measured X: " :
+                axis == 1 ? "Measured Y: " :
+                axis == 2 ? "Measured Z: " :
+                "Measured: ",
+            .columnId = 0,
+        } );
+    }
+
+    if ( passOrFail )
+        beginPassFailTextStyle( text, pass );
+
+    for ( int i = 0; i < 3; i++ )
+    {
+        if ( axis == -1 || axis == i )
+            text.addElem( { .var = ( i == smallestAxis ? "" : " " ) + lengthToString( params_.point[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
+    }
+
+    if ( passOrFail )
+        endPassFailTextStyle( text );
+
+    if ( params_.referencePoint && params_.tolerance )
+    {
+        text.addLine();
+        text.addElem( {
+            .var =
+                axis == 0 ? "Nominal X: " :
+                axis == 1 ? "Nominal Y: " :
+                axis == 2 ? "Nominal Z: " :
+                "Nominal: ",
+            .columnId = 0
+        } );
+
+        for ( int i = 0; i < 3; i++ )
+        {
+            if ( axis == -1 || axis == i )
+                text.addElem( { .var = ( i == smallestAxis ? "" : " " ) + lengthToString( ( *params_.referencePoint )[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
+        }
+
+        if ( params_.tolerance )
+        {
+            if ( params_.referenceNormal == Vector3f{} )
+                text.addText( fmt::format( " {}", lengthToleranceToString( params_.tolerance->positive, 0 ) ) );
+            else if ( params_.tolerance->positive == -params_.tolerance->negative )
+                text.addText( fmt::format( " \xC2\xB1{}", lengthToleranceToString( params_.tolerance->positive, 0 ) ) ); // U+00B1 PLUS-MINUS SIGN
+            else
+                text.addText( fmt::format( " {}/{}", lengthToleranceToString( params_.tolerance->positive, 1 ), lengthToleranceToString( params_.tolerance->negative, -1 ) ) );
+        }
+    }
+
+    ImGuiMeasurementIndicators::Params indicatorParams;
+    indicatorParams.colorMain = color_;
+
+    ImVec2 screenPoint = toScreenCoords( *viewport_, params_.point );
+    text.update();
+    ImVec2 screenTextPos = screenPoint + ( std::min( text.computedSize.x, text.computedSize.y ) + ImVec2( 24, 24 ) * UI::scale() ) * params_.align;
+
+    auto textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this );
+    textParams.line = {
+        .point = screenPoint,
+        .capDecoration = ImGuiMeasurementIndicators::LineCapDecoration::point,
+        .body = {
+            .colorOverride = getBorderColorForObject( viewport_->id, params_.common.objectToSelect, 1.f ),
+        },
+    };
+
+    auto textResult = ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, indicatorParams, screenTextPos, text, textParams );
+
+    if ( textResult )
+    {
+        clickableCornerA = textResult->bgCornerA;
+        clickableCornerB = textResult->bgCornerB;
+    }
+
+    enabled = objectIsSelectable( params_.common.objectToSelect );
+}
+
+void PointTask::onClick()
+{
+    selectObject( params_.common.objectToSelect );
 }
 
 RadiusTask::RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const RadiusParams& params )
@@ -143,7 +295,7 @@ void RadiusTask::renderPass()
     auto lineResult = ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, indicatorParams,
         farPoint, point, {
             .capA = { .text = text, .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) },
-            .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow },
+            .capB = { .decoration = ImGuiMeasurementIndicators::LineCapDecoration::arrow },
         }
     );
 
@@ -362,14 +514,14 @@ void AngleTask::renderPass()
             normal = -normal;
 
         ImGuiMeasurementIndicators::LineParams lineParams;
-        lineParams.capA.decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow;
-        lineParams.capB.decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow;
+        lineParams.capA.decoration = ImGuiMeasurementIndicators::LineCapDecoration::arrow;
+        lineParams.capB.decoration = ImGuiMeasurementIndicators::LineCapDecoration::arrow;
         lineParams.midPoints = curve.midPoints;
 
         ImVec2 invertedStartA, invertedStartB;
         if ( useInvertedStyle )
         {
-            lineParams.flags |= ImGuiMeasurementIndicators::LineFlags::narrow;
+            lineParams.body.flags |= ImGuiMeasurementIndicators::LineFlags::narrow;
             lineParams.capA.decoration = {};
             lineParams.capB.decoration = {};
 
@@ -396,7 +548,7 @@ void AngleTask::renderPass()
             // Inverted arrows.
             if ( useInvertedStyle )
             {
-                ImGuiMeasurementIndicators::LineParams invArrowParams{ .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::arrow } };
+                ImGuiMeasurementIndicators::LineParams invArrowParams{ .capB = { .decoration = ImGuiMeasurementIndicators::LineCapDecoration::arrow } };
                 ImGuiMeasurementIndicators::line( elem, indicatorParams, invertedStartA, curve.a, invArrowParams );
                 ImGuiMeasurementIndicators::line( elem, indicatorParams, invertedStartB, curve.b, invArrowParams );
             }
@@ -516,15 +668,11 @@ void LengthTask::renderPass()
 
     // Style customization for value if we're in pass/fail mode.
     if ( passOrFail )
-    {
-        text.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
-    }
+        beginPassFailTextStyle( text, pass );
     // The value itself.
     text.addElem( { .var = lengthToString( distanceValue ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
     if ( passOrFail )
-    {
-        text.add( ImGuiMeasurementIndicators::TextColor{} );
-    }
+        endPassFailTextStyle( text );
 
     // Nominal value.
     if ( params_.referenceValue )
@@ -557,10 +705,9 @@ void LengthTask::renderPass()
         {
             distanceResult = ImGuiMeasurementIndicators::distance( elem, indicatorParams, a, cornerPointScreen, text, { .textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this ) } );
             ImGuiMeasurementIndicators::line( elem, indicatorParams, cornerPointScreen, b, {
-                .flags = ImGuiMeasurementIndicators::LineFlags::narrow,
-                .capA = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::extend },
-                .capB = { .decoration = ImGuiMeasurementIndicators::LineCap::Decoration::point },
-                .stipple = indicatorParams.stippleDashed,
+                .body = { .flags = ImGuiMeasurementIndicators::LineFlags::narrow, .stipple = indicatorParams.stippleDashed },
+                .capA = { .decoration = ImGuiMeasurementIndicators::LineCapDecoration::extend },
+                .capB = { .decoration = ImGuiMeasurementIndicators::LineCapDecoration::point },
             } );
         }
     }

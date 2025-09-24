@@ -16,6 +16,12 @@ class Viewport;
 namespace MR::RenderDimensions
 {
 
+struct Tolerance
+{
+    float positive = 0; // Should be positive or zero.
+    float negative = 0; // Should be negative or zero.
+};
+
 struct CommonParams
 {
     // What object to select when the label is clicked.
@@ -24,6 +30,45 @@ struct CommonParams
 
     // Optional. If specified, this name is drawn above the measurement.
     std::string objectName;
+};
+
+struct PointParams
+{
+    CommonParams common;
+
+    Vector3f point; // The world point.
+
+    // [1,1] to display the text to the bottom-right of the point, [-1,-1] to display it to the top-left.
+    // Typically either X or Y here should be 1 or -1.
+    ImVec2 align = ImVec2( 1, 1 );
+
+    // If specified, we're comparing `point` against this position.
+    std::optional<Vector3f> referencePoint;
+
+    // Only makes sense if `referencePoint` is set.
+    // If specified, we're measuring along this normal. Otherwise we're using eucledian distance.
+    // This doesn't need to be normalized.
+    Vector3f referenceNormal;
+
+    // Tolerances. Only make sense if `referencePoint` is set.
+    // The `.negative` here only makes sense if `referenceNormal` is also set.
+    std::optional<Tolerance> tolerance;
+};
+
+class PointTask : public BasicClickableRectUiRenderTask
+{
+    Viewport* viewport_ = nullptr;
+    Color color_;
+    PointParams params_;
+
+public:
+    PointTask() {}
+
+    MRVIEWER_API PointTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const PointParams& params );
+    MRVIEWER_API void renderPass() override;
+
+    // Implement `BasicClickableRectUiRenderTask`:
+    MRVIEWER_API void onClick() override;
 };
 
 struct RadiusParams
@@ -59,7 +104,6 @@ class RadiusTask : public BasicClickableRectUiRenderTask
 public:
     RadiusTask() {}
 
-    // Here `objectToSelect` is optional, and the label will not be clickable if this is null.
     MRVIEWER_API RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const RadiusParams& params );
     MRVIEWER_API void renderPass() override;
 
@@ -117,12 +161,7 @@ struct LengthParams
     // If set, we're comparing the distance with a reference value.
     std::optional<float> referenceValue;
 
-    struct Tolerance
-    {
-        // Tolerances. Only make sense if `referenceValue` is set.
-        float positive = 0; // Should be positive or zero.
-        float negative = 0; // Should be negative or zero.
-    };
+    // Tolerances. Only make sense if `referenceValue` is set.
     std::optional<Tolerance> tolerance;
 };
 

@@ -237,98 +237,72 @@ namespace
                 throw std::runtime_error( fmt::format( "writeValue {}: no such entry: `{}`. Known entries are: {}.", pathString, path.back(), listKeys( group ) ) );
             const auto& entry = *MR::expectedValueOrThrow( iter->second.getAs<TestEngine::ValueEntry>( path.back() ) );
 
-            T simulatedValue{};
+            auto writeValueOfCorrectType = [&entry, &pathString]( auto fixedValue )
+            {
+                using U = decltype( fixedValue );
+                auto &target = std::get<TestEngine::ValueEntry::Value<U>>( entry.value );
+
+                // Validate the value.
+                if constexpr ( std::is_same_v<U, std::string> )
+                {
+                    if ( target.allowedValues && std::find( target.allowedValues->begin(), target.allowedValues->end(), fixedValue ) == target.allowedValues->end() )
+                        throw std::runtime_error( fmt::format( "writeValue {}: this string is not in the allowed list.", pathString ) );
+                }
+                else
+                {
+                    if ( fixedValue < target.min )
+                        throw std::runtime_error( fmt::format( "writeValue {}: the specified value {} is less than the min bound {}.", pathString, fixedValue, target.min ) );
+                    if ( fixedValue > target.max )
+                        throw std::runtime_error( fmt::format( "writeValue {}: the specified value {} is more than the max bound {}.", pathString, fixedValue, target.max ) );
+                }
+
+                std::get<TestEngine::ValueEntry::Value<U>>( entry.value ).simulatedValue = std::move( fixedValue );
+            };
 
             if constexpr ( std::is_same_v<T, std::string> )
             {
-                auto opt = std::get_if<TestEngine::ValueEntry::Value<T>>( &entry.value );
-                if ( !opt )
-                    throw std::runtime_error( fmt::format( "writeValue {}: this isn't a string.", pathString ) );
-
-                if ( opt->allowedValues && std::find( opt->allowedValues->begin(), opt->allowedValues->end(), value ) == opt->allowedValues->end() )
-                    throw std::runtime_error( fmt::format( "writeValue {}: this string is not in the allowed list.", pathString ) );
-
-                simulatedValue = std::move( value );
+                if ( std::holds_alternative<TestEngine::ValueEntry::Value<std::string>>( entry.value ) )
+                    writeValueOfCorrectType( std::move( value ) );
+                else
+                    throw std::runtime_error( fmt::format( "writeValue: `{}` is a number, but received a string.", pathString ) );
             }
-            else
+            else if constexpr ( std::is_same_v<T, double> )
             {
-                bool usedDifferentSignedness = false;
-                T min{};
-                T max{};
-
-                // Try using the wrong signedness first.
-                if constexpr ( std::is_same_v<T, std::int64_t> )
-                {
-                    if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::uint64_t>>( &entry.value ) )
-                    {
-                        // Allow if at least the min bound fits inside the input range.
-                        if ( val->min > std::uint64_t( std::numeric_limits<std::int64_t>::max() ) )
-                            throw std::runtime_error( fmt::format( "writeValue {}: attempt to write an int64_t into an uint64_t, but the min allowed value is larger than the max representable int64_t. Write as uint64_t instead.", pathString ) );
-
-                        usedDifferentSignedness = true;
-                        min = std::int64_t( val->min );
-                        max = std::int64_t( std::min( val->max, std::uint64_t( std::numeric_limits<std::int64_t>::max() ) ) );
-                    }
-                }
-                else if constexpr ( std::is_same_v<T, std::uint64_t> )
-                {
-                    if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::int64_t>>( &entry.value ) )
-                    {
-                        // Allow if at least the max bound is nonnegative.
-                        if ( val->max >= 0 )
-                            throw std::runtime_error( fmt::format( "writeValue {}: attempt to write an uint64_t into an int64_t, but the max allowed value is negative. Write as uint64_t instead.", pathString ) );
-
-                        usedDifferentSignedness = true;
-                        min = std::uint64_t( std::max( val->min, std::int64_t( 0 ) ) );
-                        max = std::uint64_t( val->max );
-                    }
-                }
-
-                // Use the exact type.
-                if ( !usedDifferentSignedness )
-                {
-                    auto opt = std::get_if<TestEngine::ValueEntry::Value<T>>( &entry.value );
-                    if ( !opt )
-                    {
-                        throw std::runtime_error( std::is_floating_point_v<T>
-                            ? fmt::format( "writeValue {}: this isn't a floating-point value.", pathString )
-                            : fmt::format( "writeValue {}: this isn't an integer value.", pathString )
-                        );
-                    }
-
-                    if constexpr ( !std::is_same_v<T, std::string> )
-                    {
-                        min = opt->min;
-                        max = opt->max;
-                    }
-                }
-
-                if ( value < min )
-                    throw std::runtime_error( fmt::format( "writeValue {}: the specified value {} is less than the min bound {}.", pathString, value, min ) );
-                if ( value > max )
-                    throw std::runtime_error( fmt::format( "writeValue {}: the specified value {} is more than the max bound {}.", pathString, value, max ) );
-                simulatedValue = value;
-
-                // Write the value back.
-                if constexpr ( std::is_same_v<T, std::int64_t> )
-                {
-                    if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::uint64_t>>( &entry.value ) )
-                    {
-                        val->simulatedValue = std::uint64_t( simulatedValue );
-                        return;
-                    }
-                }
-                else if constexpr ( std::is_same_v<T, std::uint64_t> )
-                {
-                    if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::int64_t>>( &entry.value ) )
-                    {
-                        val->simulatedValue = std::int64_t( simulatedValue );
-                        return;
-                    }
-                }
+                std::visit( MR::overloaded{
+                    [&]( const TestEngine::ValueEntry::Value<std::string  >& ){ throw std::runtime_error( fmt::format( "writeValue: `{}` is a string, but received a number.", pathString ) ); },
+                    [&]( const TestEngine::ValueEntry::Value<double       >& ){ writeValueOfCorrectType( value ); },
+                    [&]( const TestEngine::ValueEntry::Value<std::int64_t >& ){ throw std::runtime_error( fmt::format( "writeValue: `{}` is an integer, but received a fractional number.", pathString ) ); },
+                    [&]( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ throw std::runtime_error( fmt::format( "writeValue: `{}` is an integer, but received a fractional number.", pathString ) ); },
+                }, entry.value );
             }
-
-            std::get<TestEngine::ValueEntry::Value<T>>( entry.value ).simulatedValue = simulatedValue;
+            else if constexpr ( std::is_same_v<T, std::int64_t> )
+            {
+                std::visit( MR::overloaded{
+                    [&]( const TestEngine::ValueEntry::Value<std::string  >& ){ throw std::runtime_error( fmt::format( "writeValue: `{}` is a string, but received a number.", pathString ) ); },
+                    [&]( const TestEngine::ValueEntry::Value<double       >& ){ writeValueOfCorrectType( double( value ) ); },
+                    [&]( const TestEngine::ValueEntry::Value<std::int64_t >& ){ writeValueOfCorrectType( value ); },
+                    [&]( const TestEngine::ValueEntry::Value<std::uint64_t>& )
+                    {
+                        if ( value < 0 )
+                            throw std::runtime_error( fmt::format( "writeValue: `{}` is unsigned, but received a negative number.", pathString ) );
+                        writeValueOfCorrectType( std::uint64_t( value ) );
+                    },
+                }, entry.value );
+            }
+            else if constexpr ( std::is_same_v<T, std::uint64_t> )
+            {
+                std::visit( MR::overloaded{
+                    [&]( const TestEngine::ValueEntry::Value<std::string  >& ){ throw std::runtime_error( fmt::format( "writeValue: `{}` is a string, but received a number.", pathString ) ); },
+                    [&]( const TestEngine::ValueEntry::Value<double       >& ){ writeValueOfCorrectType( double( value ) ); },
+                    [&]( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ writeValueOfCorrectType( value ); },
+                    [&]( const TestEngine::ValueEntry::Value<std::int64_t >& )
+                    {
+                        if ( value > std::uint64_t( std::numeric_limits<std::int64_t>::max() ) )
+                            throw std::runtime_error( fmt::format( "writeValue: `{}` is signed, but received an unsigned integer large enough to not be representable as `int64_t`.", pathString ) );
+                        writeValueOfCorrectType( std::int64_t( value ) );
+                    },
+                }, entry.value );
+            }
         } );
     }
 }
@@ -392,27 +366,27 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton, pressButton,
 )
 
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueInt, readValue<std::int64_t>,
-    "Read a value from a drag/slider widget. This overload is for signed integers."
+    "Read a value from a drag/slider widget. This function is for signed integers."
 )
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueUint, readValue<std::uint64_t>,
-    "Read a value from a drag/slider widget. This overload is for unsigned integers."
+    "Read a value from a drag/slider widget. This function is for unsigned integers."
 )
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueReal, readValue<double>,
-    "Read a value from a drag/slider widget. This overload is for real numbers."
+    "Read a value from a drag/slider widget. This function is for real numbers."
 )
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueString, readValue<std::string>,
-    "Read a value from a drag/slider widget. This overload is for strings."
+    "Read a value from a drag/slider widget. This function is for strings."
 )
 
-MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueInt, writeValue<std::int64_t>,
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValue, writeValue<std::int64_t>,
     "Write a value to a drag/slider widget. This overload is for signed integers."
 )
-MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueUint, writeValue<std::uint64_t>,
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValue, writeValue<std::uint64_t>,
     "Write a value to a drag/slider widget. This overload is for unsigned integers."
 )
-MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueReal, writeValue<double>,
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValue, writeValue<double>,
     "Write a value to a drag/slider widget. This overload is for real numbers."
 )
-MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueString, writeValue<std::string>,
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValue, writeValue<std::string>,
     "Write a value to a drag/slider widget. This overload is for strings."
 )

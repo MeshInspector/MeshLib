@@ -9,7 +9,7 @@ namespace MR
 {
 // Visual widget to draw a plane
 // present in scene (ancillary), subscribes to viewer events
-class MRVIEWER_CLASS PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
+class MRVIEWER_CLASS PlaneWidget : public MultiListener<DragStartListener, DragListener, DragEndListener>
 {
     std::shared_ptr<ObjectMesh> planeObj_;
     Plane3f plane_;
@@ -33,7 +33,7 @@ class MRVIEWER_CLASS PlaneWidget : public MultiListener<MouseDownListener, Mouse
     bool importPlaneMode_ = false;
 public:
     
-    // updates plane, triggers callback if it is specidied
+    // updates plane, triggers callback if it is specified
     // if updateCameraRotation is true, plane transform will be updated with respect of camera up direction
     MRVIEWER_API void updatePlane( const Plane3f& plane, bool updateCameraRotation = true );
     // updates box which is used to calculate size and position of the visualized plane part
@@ -74,8 +74,8 @@ public:
 private:
     MRVIEWER_API void updateWidget_( bool updateCameraRotation = true );
 
-    MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
+    MRVIEWER_API virtual bool onDragStart_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onDragEnd_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onDrag_( int mouse_x, int mouse_y ) override;
 };
 }

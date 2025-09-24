@@ -33,9 +33,10 @@ public:
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates point from xf
-    [[nodiscard]] MRMESH_API Vector3f getPoint( ViewportId id = {} ) const;
+    [[nodiscard]] MRMESH_API Vector3f getLocalPoint( ViewportId id = {} ) const;
+    [[nodiscard]] MRMESH_API Vector3f getWorldPoint( ViewportId id = {} ) const;
     /// updates xf to fit given point
-    MRMESH_API void setPoint( const Vector3f& point, ViewportId id = {} );
+    MRMESH_API void setLocalPoint( const Vector3f& point, ViewportId id = {} );
 
     // Implement `ObjectComparableWithReference`:
     [[nodiscard]] MRMESH_API std::size_t numComparableProperties() const override;

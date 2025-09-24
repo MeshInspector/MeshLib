@@ -20,12 +20,20 @@ std::shared_ptr<Object> PointMeasurementObject::shallowClone() const
     return std::make_shared<PointMeasurementObject>( ProtectedStruct{}, *this );
 }
 
-Vector3f PointMeasurementObject::getPoint( ViewportId id ) const
+Vector3f PointMeasurementObject::getLocalPoint( ViewportId id ) const
 {
     return xf( id ).b;
 }
 
-void PointMeasurementObject::setPoint( const Vector3f& point, ViewportId id )
+Vector3f PointMeasurementObject::getWorldPoint( ViewportId id ) const
+{
+    Vector3f ret = getLocalPoint( id );
+    if ( parent() )
+        ret = parent()->worldXf( id )( ret );
+    return ret;
+}
+
+void PointMeasurementObject::setLocalPoint( const Vector3f& point, ViewportId id )
 {
     setXf( AffineXf3f::translation( point ), id );
 }

@@ -15,9 +15,9 @@ class MRVIEWER_CLASS BasicClickableRectUiRenderTask : public BasicUiRenderTask
 public:
     BasicClickableRectUiRenderTask() = default;
 
-    // No-op the assignments, because we want to preserve the state across frames.
-    BasicClickableRectUiRenderTask( const BasicClickableRectUiRenderTask& ) {}
-    BasicClickableRectUiRenderTask& operator=( const BasicClickableRectUiRenderTask& ) { return *this; }
+    // Don't assign the memebers (except the base), because we want to preserve the state across frames.
+    BasicClickableRectUiRenderTask( const BasicClickableRectUiRenderTask& other ) : BasicUiRenderTask( other ) {}
+    BasicClickableRectUiRenderTask& operator=( const BasicClickableRectUiRenderTask& other ) { BasicUiRenderTask::operator=( other ); return *this; }
 
     virtual ~BasicClickableRectUiRenderTask() = default;
 

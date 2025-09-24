@@ -40,7 +40,7 @@ public:
     /// calculates point from xf
     [[nodiscard]] MRMESH_API Vector3f getPoint( ViewportId id = {} ) const;
     /// updates xf to fit given point
-    MRMESH_API void setPoint( const Vector3f& point, ViewportId id = {} );
+    MRMESH_API void setLocalPoint( const Vector3f& point, ViewportId id = {} );
 
     MRMESH_API virtual std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 

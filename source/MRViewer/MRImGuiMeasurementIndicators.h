@@ -251,11 +251,47 @@ struct Text
     MRVIEWER_API DrawResult draw( ImDrawList& list, ImVec2 pos, const TextColor& defaultTextColor = {} ) const;
 };
 
+enum class LineCapDecoration
+{
+    none,
+    noOutline, // Almost exactly like `none`, but don't draw the tiny bit of outline at the end. This can look better in some scenarios.
+    extend, // No special decoration, but the line extends a bit after the target point.
+    arrow,
+    point, // A small circle.
+};
+
+enum class LineFlags
+{
+    narrow = 1 << 0,
+    noBackwardArrowTipOffset = 1 << 1, // Overrides `params.arrowTipBackwardOffset` to zero.
+    onlyOutline = 1 << 2, // Only draw a thin line of the outline color, don't use the normal color at all.
+};
+MR_MAKE_FLAG_OPERATORS( LineFlags )
+
+struct LineBodyParams
+{
+    LineFlags flags{};
+
+    std::optional<Color> colorOverride;
+
+    // For drawing dotted lines. You can get presets for this parameter from `ImGuiMeasurementIndicators::Params::stipple___`.
+    std::optional<Stipple> stipple;
+};
+
 struct TextParams
 {
     // Optional. The convention is that this should only be set if the text is possible to hover.
     // The border is drawn only if the alpha of this isn't zero.
     Color borderColor = Color::transparent();
+
+    struct Line
+    {
+        ImVec2 point;
+        LineCapDecoration capDecoration{};
+        LineBodyParams body;
+    };
+    // Optional. Draw a line to this point from the text bubble.
+    std::optional<Line> line;
 
     // Should imply `borderColor`.
     bool isHovered = false;
@@ -290,37 +326,19 @@ MRVIEWER_API void arrowTriangle( Element elem, const Params& params, ImVec2 poin
 
 struct LineCap
 {
-    enum class Decoration
-    {
-        none,
-        extend, // No special decoration, but the line extends a bit longer than the target point.
-        arrow,
-        point, // A small circle.
-    };
-    Decoration decoration{};
+    LineCapDecoration decoration{};
 
     Text text;
     TextParams textParams;
 };
 
-enum class LineFlags
-{
-    narrow = 1 << 0,
-    noBackwardArrowTipOffset = 1 << 1, // Overrides `params.arrowTipBackwardOffset` to zero.
-};
-MR_MAKE_FLAG_OPERATORS( LineFlags )
-
 struct LineParams
 {
-    LineFlags flags{};
-
+    LineBodyParams body;
     LineCap capA{};
     LineCap capB{};
 
     std::span<const ImVec2> midPoints;
-
-    // For drawing dotted lines. You can get presets for this parameter from `ImGuiMeasurementIndicators::Params::stipple___`.
-    std::optional<Stipple> stipple;
 };
 
 struct LineResult

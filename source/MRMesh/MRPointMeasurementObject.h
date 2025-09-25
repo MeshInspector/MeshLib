@@ -6,6 +6,13 @@
 namespace MR
 {
 
+enum class MRMESH_CLASS PointMeasurementVisualizePropertyType
+{
+    CapVisibility,
+    _count [[maybe_unused]],
+};
+template <> struct IsVisualizeMaskEnum<PointMeasurementVisualizePropertyType> : std::true_type {};
+
 class MRMESH_CLASS PointMeasurementObject
     : public MeasurementObject
     , public ObjectComparableWithReference
@@ -31,6 +38,10 @@ public:
 
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;
+
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     /// calculates point from xf
     [[nodiscard]] MRMESH_API Vector3f getLocalPoint( ViewportId id = {} ) const;
@@ -68,6 +79,8 @@ protected:
     std::optional<Vector3f> referencePos_;
     std::optional<Vector3f> referenceNormal_; // Not necessarily normalized.
     std::optional<ComparisonTolerance> tolerance_;
+
+    ViewportMask capVisibility_ = ViewportMask::all();
 };
 
 } // namespace MR

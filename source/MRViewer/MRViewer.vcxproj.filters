@@ -963,6 +963,9 @@
     <ClInclude Include="MRItemEnabledPerViewport.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
+    <ClInclude Include="MRWebResponseCallback.h">
+      <Filter>Requests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

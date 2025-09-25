@@ -315,6 +315,7 @@
     <ClInclude Include="MRRenderClickableRect.h" />
     <ClInclude Include="MRUIQualityControl.h" />
     <ClInclude Include="MRItemEnabledPerViewport.h" />
+    <ClInclude Include="MRWebResponseCallback.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

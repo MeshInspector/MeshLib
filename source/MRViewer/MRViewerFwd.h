@@ -3,7 +3,6 @@
 #include "config.h"
 #include "exports.h"
 #include <MRMesh/MRMeshFwd.h>
-#include <json/forwards.h>
 #include <functional>
 
 namespace MR
@@ -70,7 +69,6 @@ class HistoryStore;
 using ViewerEventCallback = std::function<void()>;
 
 class MRVIEWER_CLASS WebRequest;
-using WebResponseCallback = std::function<void( const Json::Value& response )>;
 
 struct PointOnObject;
 

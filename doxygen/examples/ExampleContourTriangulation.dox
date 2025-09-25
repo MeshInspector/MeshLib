@@ -11,6 +11,9 @@ Example of generating a triangulation from a contour.
 - <b class="tab-title">Python</b>
 \include ContourTriangulation.dox.py
 
+- <b class="tab-title">C</b>
+\include ContourTriangulation.dox.c
+
 </div>
 
  */

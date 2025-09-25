@@ -114,7 +114,9 @@ void ViewerSetup::setupExtendedLibraries() const
     // sort by ascending priority
     std::sort( lib2priority.begin(), lib2priority.end(), []( auto& lhv, auto& rhv) { return lhv.second < rhv.second; } );
 
-    for (const auto& [libName, priority] : lib2priority) {
+    for (const auto& [libName, priority] : lib2priority)
+    {
+        Timer t( "load " + libName );
         std::filesystem::path pluginPath = SystemPath::getPluginsDirectory();
 #if _WIN32
         pluginPath /= libName + ".dll" ;
@@ -125,7 +127,7 @@ void ViewerSetup::setupExtendedLibraries() const
 #endif
         if ( exists( pluginPath, ec ) )
         {
-            spdlog::info( "Loading library {} with priority {}", utf8string( libName ), priority );
+            spdlog::info( "Loading library {} with priority {}", libName, priority );
             bool success = true;
             LoadedModule lm{ libName };
 #if _WIN32
@@ -147,7 +149,7 @@ void ViewerSetup::setupExtendedLibraries() const
 #endif
             if ( success )
             {
-                spdlog::info( "Load library {} was successful", utf8string( libName ) );
+                spdlog::info( "Load library {} was successful", libName );
                 loadedModules_.push_back( lm );
             }
         }
@@ -162,6 +164,7 @@ void ViewerSetup::unloadExtendedLibraries() const
     // unload in reverse order
     while ( !loadedModules_.empty() )
     {
+        Timer t( "unload " + utf8string( loadedModules_.back().filename.stem() ) );
         spdlog::info( "Unloading library {}", utf8string( loadedModules_.back().filename ) );
 #if _WIN32
         FreeLibrary( loadedModules_.back().module );

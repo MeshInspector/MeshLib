@@ -57,7 +57,22 @@ std::string methodToString( MR::WebRequest::Method method )
 }
 #endif
 
+using AsyncThreads = std::unordered_map<std::thread::id, std::thread>;
+AsyncThreads& getWaitingMap_()
+{
+    static AsyncThreads waitingMap;
+    return waitingMap;
 }
+
+#ifndef __EMSCRIPTEN__
+void putIntoWaitingMap_( std::thread&& thread )
+{
+    auto& asyncMap = getWaitingMap_();
+    asyncMap[thread.get_id()] = std::move( thread );
+}
+#endif //!__EMSCRIPTEN__
+
+} // anonymous namespace
 
 #ifdef __EMSCRIPTEN__
 extern "C"
@@ -466,20 +481,6 @@ void WebRequest::waitRemainingAsync()
         if ( thread.joinable() )
             thread.join();
 }
-
-MR::WebRequest::AsyncThreads& WebRequest::getWaitingMap_()
-{
-    static AsyncThreads waitingMap;
-    return waitingMap;
-}
-
-#ifndef __EMSCRIPTEN__
-void WebRequest::putIntoWaitingMap_( std::thread&& thread )
-{
-    auto& asyncMap = getWaitingMap_();
-    asyncMap[thread.get_id()] = std::move( thread );
-}
-#endif
 
 Expected<Json::Value> parseResponse( const Json::Value& response )
 {

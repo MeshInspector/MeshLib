@@ -54,13 +54,13 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     switch ( dir )
     {
         case Directory::Resources:
-            return libDir / ".." / "Resources";
+            return libDir.parent_path() / "Resources";
         case Directory::Fonts:
-            return libDir / ".." / "Resources" / "fonts";
+            return libDir.parent_path() / "Resources" / "fonts";
         case Directory::Plugins:
             return libDir;
         case Directory::PythonModules:
-            return libDir / ".." / "Frameworks";
+            return libDir.parent_path() / "Frameworks";
         case Directory::Count:
             MR_UNREACHABLE
     }
@@ -72,7 +72,7 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 
     const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
     // assuming libMRMesh.so is located at ${CMAKE_INSTALL_PREFIX}/lib/MeshLib/
-    const auto installDir = libDir / ".." / "..";
+    const auto installDir = libDir.parent_path().parent_path();
     using Directory = SystemPath::Directory;
     switch ( dir )
     {

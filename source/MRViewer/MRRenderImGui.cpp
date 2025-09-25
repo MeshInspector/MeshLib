@@ -19,11 +19,11 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
     // backup ImGui context
     auto* backupCtx = ImGui::GetCurrentContext();
     auto* ctx = ImGui::CreateContext( backupCtx->IO.Fonts );
+    ctx->IO.BackendRendererUserData = ImGui::GetIO().BackendRendererUserData;
     ctx->Style = backupCtx->Style;
     ImGui::SetCurrentContext( ctx );
 
     // configure ImGui context
-    ImGui_ImplOpenGL3_Init( MR_GLSL_VERSION_LINE );
     ImGui::GetIO().DisplaySize = { (float)resolution.x, (float)resolution.y };
     if ( viewer.hasScaledFramebuffer() )
         ImGui::GetIO().DisplayFramebufferScale = { 1.f, 1.f };

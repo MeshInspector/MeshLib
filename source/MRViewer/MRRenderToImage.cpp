@@ -27,6 +27,8 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     if ( !viewer.isGLInitialized() )
         return {};
 
+    bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
+
     FramebufferData fd;
     fd.gen( resolution, getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
@@ -60,7 +62,8 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
 
     fd.del();
 
-    viewer.bindSceneTexture( true );
+    if ( needBindSceneTexture )
+        viewer.bindSceneTexture( true );
 
     return result;
 }

@@ -1,7 +1,6 @@
 #pragma once
 #ifdef _WIN32
 #include "MRDragDropHandler.h"
-#include <windef.h>
 
 namespace MR
 {

@@ -53,6 +53,9 @@ struct PointParams
     // Tolerances. Only make sense if `referencePoint` is set.
     // The `.negative` here only makes sense if `referenceNormal` is also set.
     std::optional<Tolerance> tolerance;
+
+    // Whether the object is ancillary or not.
+    bool isAncillary = false;
 };
 
 class PointTask : public BasicClickableRectUiRenderTask

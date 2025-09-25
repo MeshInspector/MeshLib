@@ -1,9 +1,8 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #if defined( __EMSCRIPTEN__ ) || !defined( MRMESH_NO_CPR )
-#include "MRViewerFwd.h"
+#include "MRWebResponseCallback.h"
 #include "MRMesh/MRExpected.h"
-#include <json/forwards.h>
 #include <unordered_map>
 #include <string>
 #include <functional>
@@ -76,7 +75,7 @@ public:
     // set log name
     MRVIEWER_API void setLogName( std::string logName );
 
-    using ResponseCallback = std::function<void( const Json::Value& response )>;
+    using ResponseCallback = MR::WebResponseCallback;
 
     /// send request, calling callback on answer,
     /// if async then callback is called in next frame after getting response

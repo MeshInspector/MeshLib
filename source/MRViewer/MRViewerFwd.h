@@ -68,6 +68,8 @@ class HistoryStore;
 
 using ViewerEventCallback = std::function<void()>;
 
+class MRVIEWER_CLASS WebRequest;
+
 struct PointOnObject;
 
 using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnObject>;

@@ -4,15 +4,25 @@
 #include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRPointMeasurementObject.h"
+#include "MRMesh/MRPointMeasurementObject.h"
 #include "MRMesh/MRRadiusMeasurementObject.h"
+#include "MRViewer/exports.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
-#include "MRViewer/exports.h"
 
 namespace MR
 {
 
 using RenderDimensionObject = RenderObjectCombinator<RenderDefaultUiObject, RenderResetDirtyComponent>;
+
+class RenderPointObject : public RenderDimensionObject
+{
+    const PointMeasurementObject* object_ = nullptr;
+    RenderDimensions::PointTask task_;
+public:
+    MRVIEWER_API RenderPointObject( const VisualObject& object );
+    MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
+};
 
 class RenderDistanceObject : public RenderDimensionObject
 {
@@ -39,16 +49,6 @@ class RenderAngleObject : public RenderDimensionObject
 public:
     MRVIEWER_API RenderAngleObject( const VisualObject& object );
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
-};
-
-// TODO: real render dimension object
-class RenderPointMeasurementObject : public RenderObjectCombinator<RenderNameObject>
-{
-public:
-    MRVIEWER_API RenderPointMeasurementObject( const VisualObject& object );
-
-    // RenderNameObject
-    MRVIEWER_API ImGuiMeasurementIndicators::Text getObjectNameText( const VisualObject& object, ViewportId viewportId ) const override;
 };
 
 }

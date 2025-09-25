@@ -54,8 +54,8 @@ struct PointParams
     // The `.negative` here only makes sense if `referenceNormal` is also set.
     std::optional<Tolerance> tolerance;
 
-    // Whether the object is ancillary or not.
-    bool isAncillary = false;
+    // Whether to draw the cap or not.
+    bool capIsVisible = true;
 };
 
 class PointTask : public BasicClickableRectUiRenderTask

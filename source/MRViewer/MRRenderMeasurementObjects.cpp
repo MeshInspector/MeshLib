@@ -42,7 +42,7 @@ void RenderPointObject::renderUi( const UiRenderParams& params )
         .referencePoint = refPoint.isSet ? std::optional( std::get<Vector3f>( refPoint.var ) ) : std::nullopt,
         .referenceNormal = refNormal.isSet ? std::get<Vector3f>( refNormal.var ) : Vector3f{},
         .tolerance = tol ? std::optional( RenderDimensions::Tolerance{ .positive = tol->positive, .negative = tol->negative } ) : std::nullopt,
-        .isAncillary = object_->isAncillary(),
+        .capIsVisible = object_->getVisualizeProperty( PointMeasurementVisualizePropertyType::CapVisibility, params.viewportId ),
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }

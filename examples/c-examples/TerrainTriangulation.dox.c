@@ -22,8 +22,9 @@ int main( void )
     int rc = EXIT_FAILURE;
     // load points
     MR_VertColors* colors = MR_VertColors_DefaultConstruct();
-    MR_PointsLoadSettings* pls = MR_PointsLoadSettings_ConstructFrom( colors, NULL, MR_PassBy_DefaultArgument, NULL );
-    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "logo.jpg", NULL, pls );
+    MR_PointsLoadSettings* pls = MR_PointsLoadSettings_DefaultConstruct();
+    MR_PointsLoadSettings_Set_colors( pls, colors );
+    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "TerrainPoints.ply", NULL, pls );
     MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_GetMutableValue( loadRes );
     if ( !pc )
     {

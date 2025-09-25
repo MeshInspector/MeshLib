@@ -27,7 +27,6 @@ set(EXAMPLES
   MeshOffset
   MeshOffsetWeighted
   MeshStitchHole
-  MRBasedMainFunc
   NoiseDenoise
   PointsToMesh
   SignedDistance

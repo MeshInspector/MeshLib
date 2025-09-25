@@ -18,8 +18,8 @@ int main( int argc, char** argv )
     }
 
     MR_SymbolMeshParams* params = MR_SymbolMeshParams_DefaultConstruct();
-    MR_SymbolMeshParams_Set_text( params, argv[1], NULL );
-    MR_SymbolMeshParams_Set_pathToFontFile( params, argv[2], NULL );
+    MR_SymbolMeshParams_Set_text( params, argv[2], NULL );
+    MR_SymbolMeshParams_Set_pathToFontFile( params, argv[1], NULL );
 
     MR_expected_MR_Mesh_std_string* convRes = MR_createSymbolsMesh( params );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( convRes );

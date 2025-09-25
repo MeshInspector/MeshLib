@@ -13,6 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef max
+#undef max
+#endif
 #define max(a,b) a > b ? a : b
 
 int main( void )

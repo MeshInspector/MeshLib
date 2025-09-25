@@ -12,6 +12,7 @@
 #include "MRPybind11.h"
 
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRMacros.h"
 #include <functional>
 #include <filesystem>
 #include <unordered_map>
@@ -30,7 +31,7 @@ PYBIND11_MODULE( moduleName, m )\
 static MR::PythonFunctionAdder moduleName##_init_( #moduleName, &PyInit_##moduleName );
 
 #define MR_ADD_PYTHON_FUNCTION( moduleName , name , func , description ) \
-    static MR::PythonFunctionAdder name##_adder_( #moduleName, [](pybind11::module_& m){ m.def(#name, func, description);} );
+    static MR::PythonFunctionAdder MR_CONCAT3(name, _adder_, __LINE__)( #moduleName, [](pybind11::module_& m){ m.def(#name, func, description);} );
 
 #define MR_ADD_PYTHON_CUSTOM_DEF( moduleName , name , ... ) \
 _Pragma("warning(push)") \

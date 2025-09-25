@@ -15,7 +15,10 @@
 
 // Concat strings
 #define MR_CONCAT( a, b ) MR_CONCAT_( a, b )
-#define MR_CONCAT_( a, b ) a ## b
+#define MR_CONCAT_( a, b ) a##b
+
+#define MR_CONCAT3( a, b, c ) MR_CONCAT3_( a, b, c )
+#define MR_CONCAT3_( a, b, c ) a##b##c
 
 // If the compiler supports `requires`, expands to `requires(...)`. Otherwise to nothing.
 // This is primarily useful for code that must be usable in Cuda, since everywhere else we're free to use C++20 and newer.

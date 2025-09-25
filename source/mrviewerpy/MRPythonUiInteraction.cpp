@@ -220,9 +220,12 @@ namespace
         return ret;
     }
 
-    template <typename T>
+    template <typename T, bool WarnDeprecated = false>
     void writeValue( const std::vector<std::string>& path, T value )
     {
+        if constexpr ( WarnDeprecated )
+            std::fprintf(stderr, "This function is deprecated, please use the overloaded `uiWriteValue()` instead.");
+
         if ( path.empty() )
             throw std::runtime_error( "writeValue: empty path not allowed here." );
 
@@ -390,3 +393,18 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValue, writeValue<double>,
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValue, writeValue<std::string>,
     "Write a value to a drag/slider widget. This overload is for strings."
 )
+
+// Those are deprecated and print a warning when called. Prefer the overlaoded `uiWriteValue()` above.
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueInt, (writeValue<std::int64_t, true>),
+    "Write a value to a drag/slider widget. This overload is for signed integers."
+)
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueUint, (writeValue<std::uint64_t, true>),
+    "Write a value to a drag/slider widget. This overload is for unsigned integers."
+)
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueReal, (writeValue<double, true>),
+    "Write a value to a drag/slider widget. This overload is for real numbers."
+)
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueString, (writeValue<std::string, true>),
+    "Write a value to a drag/slider widget. This overload is for strings."
+)
+// ] end deprecated

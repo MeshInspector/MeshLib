@@ -44,7 +44,6 @@ const ViewportMask& PointMeasurementObject::getVisualizePropertyMask( AnyVisuali
             MR_UNREACHABLE_NO_RETURN
         }
         MR_UNREACHABLE_NO_RETURN
-        return visibilityMask_;
     }
     else
     {

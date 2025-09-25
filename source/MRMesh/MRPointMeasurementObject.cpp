@@ -20,6 +20,38 @@ std::shared_ptr<Object> PointMeasurementObject::shallowClone() const
     return std::make_shared<PointMeasurementObject>( ProtectedStruct{}, *this );
 }
 
+bool PointMeasurementObject::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<PointMeasurementVisualizePropertyType>().has_value();
+}
+
+AllVisualizeProperties PointMeasurementObject::getAllVisualizeProperties() const
+{
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<PointMeasurementVisualizePropertyType>( ret );
+    return ret;
+}
+
+const ViewportMask& PointMeasurementObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<PointMeasurementVisualizePropertyType>() )
+    {
+        switch ( *value )
+        {
+        case PointMeasurementVisualizePropertyType::CapVisibility:
+            return capVisibility_;
+        case PointMeasurementVisualizePropertyType::_count:
+            MR_UNREACHABLE_NO_RETURN
+        }
+        MR_UNREACHABLE_NO_RETURN
+        return visibilityMask_;
+    }
+    else
+    {
+        return VisualObject::getVisualizePropertyMask( type );
+    }
+}
+
 Vector3f PointMeasurementObject::getLocalPoint( ViewportId id ) const
 {
     return xf( id ).b;

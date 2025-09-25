@@ -53,6 +53,9 @@ struct PointParams
     // Tolerances. Only make sense if `referencePoint` is set.
     // The `.negative` here only makes sense if `referenceNormal` is also set.
     std::optional<Tolerance> tolerance;
+
+    // Whether to draw the cap or not.
+    bool capIsVisible = true;
 };
 
 class PointTask : public BasicClickableRectUiRenderTask

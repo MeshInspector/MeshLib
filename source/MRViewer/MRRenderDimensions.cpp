@@ -196,7 +196,7 @@ void PointTask::renderPass()
     auto textParams = makeTextParams( viewport_->id, params_.common.objectToSelect, *this );
     textParams.line = {
         .point = screenPoint,
-        .capDecoration = ImGuiMeasurementIndicators::LineCapDecoration::point,
+        .capDecoration = params_.capIsVisible ? ImGuiMeasurementIndicators::LineCapDecoration::point : ImGuiMeasurementIndicators::LineCapDecoration::noOutline,
         .body = {
             .colorOverride = getBorderColorForObject( viewport_->id, params_.common.objectToSelect, 1.f ),
         },

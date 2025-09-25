@@ -5,7 +5,6 @@
 #include "MRMesh/MRExpected.h"
 #include <json/forwards.h>
 #include <unordered_map>
-#include <thread>
 #include <string>
 #include <functional>
 
@@ -102,12 +101,6 @@ private:
     std::string outputPath_;
     ProgressCallback uploadCallback_;
     ProgressCallback downloadCallback_;
-
-    using AsyncThreads = std::unordered_map<std::thread::id, std::thread>;
-    static AsyncThreads& getWaitingMap_();
-#ifndef __EMSCRIPTEN__
-    void putIntoWaitingMap_( std::thread&& thread );
-#endif
 };
 
 }

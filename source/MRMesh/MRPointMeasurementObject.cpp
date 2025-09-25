@@ -38,6 +38,11 @@ void PointMeasurementObject::setLocalPoint( const Vector3f& point, ViewportId id
     setXf( AffineXf3f::translation( point ), id );
 }
 
+void PointMeasurementObject::setWorldPoint( const Vector3f& point, ViewportId id )
+{
+    setWorldXf( AffineXf3f::translation( point ), id );
+}
+
 std::size_t PointMeasurementObject::numComparableProperties() const
 {
     return 1;

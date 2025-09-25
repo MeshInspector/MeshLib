@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define max(a,b) a > b ? a : b
+
 int main( void )
 {
     int rc = EXIT_FAILURE;
@@ -30,7 +32,8 @@ int main( void )
     MR_Box3f box = MR_PointCloud_computeBoundingBox_1( pc, NULL );
     float voxelSize = MR_Box3f_diagonal( &box ) * 1e-2f;
     MR_PointsToMeshParameters_Set_voxelSize( params, voxelSize );
-    float sigma = max( voxelSize, MR_findAvgPointsRadius( pc, 50, NULL ) );
+    float avgRadius = MR_findAvgPointsRadius( pc, 50, NULL );
+    float sigma = max( voxelSize, avgRadius );
     MR_PointsToMeshParameters_Set_sigma( params, sigma );
     MR_PointsToMeshParameters_Set_minWeight( params, 1.0f );
 

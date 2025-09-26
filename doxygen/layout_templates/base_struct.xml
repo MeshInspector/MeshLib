@@ -16,8 +16,10 @@
       <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__" title="Examples">
-      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#GeneralExamples" title="General Samples">
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#CppApplication" title="C++ Application Based on MeshLib">
         <tab type="user" url="__BEGIN_URL__BasedApplication__END_URL__" title="Application Based on MeshLib"/>
+      </tab>
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#GeneralExamples" title="General Samples">
         <tab type="user" url="__BEGIN_URL__ExampleMeshLoadSave__END_URL__" title="Mesh Load and Save"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshExport__END_URL__" title="Export Raw Triangles"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshModification__END_URL__" title="Mesh Modification"/>
@@ -44,8 +46,14 @@
         <tab type="user" url="__BEGIN_URL__ExampleFusion__END_URL__" title="Fusion"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFromText__END_URL__" title="Text to Mesh"/>
       </tab>
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#Collisions" title="Collisions">
+        <tab type="user" url="__BEGIN_URL__ExampleDetectCollisions__END_URL__" title="Detect Collisions"/>
+        <tab type="user" url="__BEGIN_URL__ExampleDetectCollisionsPrecise__END_URL__" title="Detect Collisions Precise"/>
+        <tab type="user" url="__BEGIN_URL__ExampleDetectSelfIntersections__END_URL__" title="Detect Self-Intersections"/>
+      </tab>
       <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#PythonSpecificExamples" title="Python Specific Samples">
         <tab type="user" url="__BEGIN_URL__ExampleViewer__END_URL__" title="Viewer"/>
+        <tab type="user" url="__BEGIN_URL__ExampleViewerVolumeRender__END_URL__" title="Volume Rendering"/>
         <tab type="user" url="__BEGIN_URL__ExamplePlotly__END_URL__" title="Plotly Visualization"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpy__END_URL__" title="Using Numpy"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpyTriangulation__END_URL__" title="Numpy Triangulation"/>

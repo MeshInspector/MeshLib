@@ -243,7 +243,7 @@ private:
     // calculate the width of the lines, taking into account automatic hyphenation
     std::vector<float> calcTextLineWidths_( const std::string& text, float width, const TextParams& params );
 
-    //
+    // base method to add hpdf image in current cursor position.
     void addImage_( HPDF_Image image, const ImageParams& params );
 
     struct State;

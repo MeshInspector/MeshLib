@@ -620,6 +620,7 @@ public:
     /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
     MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
 
+    /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
 private:
     Viewer();

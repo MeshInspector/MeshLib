@@ -51,7 +51,7 @@ Other options are:
 
   `--ignore` is most useful with regular expressions, e.g. to skip all specializations of a certain template: `--ignore '/MR::Blah<.*>/'`.
 
-* Base classes can't be marked with `MR_BIND_IGNORE`, but you can add `--skip-base` to [`scripts/mrbind/mrbind_flags.txt`](./mrbind_flags.txt) to skip them. This is useful when you inherit from library classes that can't be parsed for some reason.
+* Base classes can't be marked with `MR_BIND_IGNORE`, but you can add `--skip-mentions-of` to [`scripts/mrbind/mrbind_flags.txt`](./mrbind_flags.txt) to skip them. This is useful when you inherit from library classes that can't be parsed for some reason.
 
 * If you wish to ignore e.g. all fields with of certain type, or all functions with a certain parameter type, you can write complex rules using templates in [`scripts/mrbind/mrbind_target_pybind11.h`](./mrbind_target_pybind11.h).
 

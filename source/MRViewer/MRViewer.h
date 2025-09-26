@@ -620,6 +620,7 @@ public:
     /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
     MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
 
+    MRVIEWER_API void drawUiRenderObjects();
 private:
     Viewer();
     ~Viewer();
@@ -648,8 +649,6 @@ private:
 #endif
     // returns true if was swapped
     bool draw_( bool force );
-
-    void drawUiRenderObjects_();
 
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };

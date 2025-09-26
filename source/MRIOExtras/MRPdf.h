@@ -7,6 +7,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRImage.h"
 #include "MRMesh/MRExpected.h"
 
 #include <filesystem>
@@ -135,7 +136,8 @@ public:
         {
             None,
             FromWidth,
-            FromHeight
+            FromHeight,
+            Auto,
         } uniformScale = UniformScale::None;
         enum class AlignmentVertical
         {
@@ -151,6 +153,7 @@ public:
      * Move cursor.
      */
     MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params );
+    MRIOEXTRAS_API void addImage( const Image& image, const ImageParams& params );
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();
@@ -238,6 +241,10 @@ private:
     // calculate the width of the lines, taking into account automatic hyphenation
     std::vector<float> calcTextLineWidths_( const std::string& text, float width, const TextParams& params );
 
+    struct HPDF_Image_Wraper;
+    // base method to add hpdf image in current cursor position.
+    void addImage_( const HPDF_Image_Wraper& image, const ImageParams& params );
+
     struct State;
     std::unique_ptr<State> state_;
 
@@ -249,7 +256,8 @@ private:
     float cursorY_ = 0;
 
     bool checkDocument_( const std::string& logAction );
-    void moveCursorToNewLine();
+    void moveCursorToNewLine_();
+    void checkAndCreateNewPageIfNeed_( float height );
 
     // table parts
     int rowCounter_ = 0;

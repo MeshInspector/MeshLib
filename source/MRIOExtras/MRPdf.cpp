@@ -6,6 +6,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRImageSave.h"
+#include "MRPng.h"
 #include "MRPch/MRFmt.h"
 
 
@@ -35,6 +36,7 @@ void pdfPrintError( const char* funcName, HPDF_Doc doc, HPDF_STATUS status )
             spdlog::warn( "Error detail: {} {}", status, std::strerror( status ) );
     }
     assert( false );
+    HPDF_ResetError( doc );
 }
 
 #define MR_HPDF_CHECK_RES_STATUS( ... ) \
@@ -223,6 +225,12 @@ float getTextHeight( float fontSize, int lineCount = 1 )
 
 }
 
+struct Pdf::HPDF_Image_Wraper
+{
+    HPDF_Image image;
+    HPDF_Image_Wraper( HPDF_Image image_ ) : image( image_ ) {}
+};
+
 std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
 {
     return std::visit( [&] ( const auto& val ) -> std::string
@@ -355,8 +363,7 @@ void Pdf::addText(const std::string& text, const TextParams& params )
     const auto textHeight = static_cast< HPDF_REAL >( getTextHeight( params.fontSize, strNum ) );
 
     // TODO need add the ability to transfer text between pages
-    if ( cursorY_ - textHeight < borderFieldBottom )
-        newPage();
+    checkAndCreateNewPageIfNeed_( textHeight );
 
     Box2f rect;
     rect.include( { cursorX_, cursorY_ } );
@@ -364,7 +371,7 @@ void Pdf::addText(const std::string& text, const TextParams& params )
     drawTextInRect( text, rect, params );
 
     cursorY_ -= textHeight;
-    moveCursorToNewLine();
+    moveCursorToNewLine_();
 }
 
 float Pdf::getTextWidth( const std::string& text, const TextParams& params )
@@ -434,66 +441,46 @@ void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats
     const auto textHeight = static_cast< HPDF_REAL >( params_.textSize * lineSpacingScale );
     const float cellHeight = textHeight + tableCellPaddingY * 2.f;
 
-    if ( cursorY_ - cellHeight * paletteStats.size() < borderFieldBottom )
-        newPage();
+    TextCellParams cellParams;
+    cellParams.colorBorder = Color::black();
+    cellParams.textParams.fontName = params_.tableFontBold;
+    cellParams.textParams.fontSize = params_.textSize;
+    cellParams.textParams.alignment = AlignmentHorizontal::Center;
 
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params_.textSize * lineSpacingScale ) );
+    cellParams.rect = { { bordersX[0], cursorY_ - cellHeight }, { bordersX[1], cursorY_ } };
+    drawTextCell( "Color", cellParams );
+    cellParams.rect = { { bordersX[1], cursorY_ - cellHeight }, { bordersX[2], cursorY_ } };
+    drawTextCell( "Range Min", cellParams );
+    cellParams.rect = { { bordersX[2], cursorY_ - cellHeight }, { bordersX[3], cursorY_ } };
+    drawTextCell( "Range Max", cellParams );
+    cellParams.rect = { { bordersX[3], cursorY_ - cellHeight }, { bordersX[4], cursorY_ } };
+    drawTextCell( "% of All", cellParams );
 
-    auto drawCellBorders = [&] ()
-    {
-        for ( int i = 0; i < 4; ++i )
-        {
-            MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Rectangle( state_->activePage, bordersX[i], cursorY_ - cellHeight, bordersX[i + 1] - bordersX[i], cellHeight ) );
-            MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Stroke( state_->activePage ) );
-        }
-    };
-
-    drawCellBorders();
-
-    auto drawTextInCell = [&] ( int cellIndex, const std::string& text, bool alignCenter = false )
-    {
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, bordersX[cellIndex] + tableCellPaddingX, cursorY_ - tableCellPaddingY,
-            bordersX[cellIndex + 1] - tableCellPaddingX, cursorY_ - textHeight - tableCellPaddingY,
-            text.c_str(), alignCenter ? HPDF_TALIGN_CENTER : HPDF_TALIGN_RIGHT, nullptr ) );
-    };
-
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
-    drawTextInCell( 0, "Color", true );
-    drawTextInCell( 1, "Range Min", true );
-    drawTextInCell( 2, "Range Max", true );
-    drawTextInCell( 3, "% of All", true );
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
     cursorY_ -= cellHeight;
 
-    UniqueTemporaryFolder pathFolder( {} );
-    std::filesystem::path imageCellPath = pathFolder / "pdf_palette_cell.png";
-    Image mrImage;
-    mrImage.resolution = { int( std::floor( bordersX[1] - bordersX[0] ) ), int( cellHeight ) };
+    cellParams.textParams.fontName = params_.tableFont;
+    cellParams.textParams.alignment = AlignmentHorizontal::Right;
     for ( int i = 0; i < paletteStats.size(); ++i )
     {
-        drawCellBorders();
-
-        mrImage.pixels = std::vector<Color>( mrImage.resolution.x * mrImage.resolution.y, paletteStats[i].color );
-        std::ignore = ImageSave::toAnySupportedFormat( mrImage, imageCellPath );
-        HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromFile( state_->document, utf8string( imageCellPath ).c_str() ) ); // TODO FIX need rework without using filesystem
-        if ( pdfImage )
-            MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, pdfImage, bordersX[0], cursorY_ - cellHeight, std::floor( bordersX[1] - bordersX[0] ), cellHeight ) );
+        drawRect_( { { bordersX[0], cursorY_ - cellHeight }, { bordersX[1], cursorY_ } }, paletteStats[i].color, Color::black() );
         
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
-        drawTextInCell( 1, paletteStats[i].rangeMin );
-        drawTextInCell( 2, paletteStats[i].rangeMax );
-        drawTextInCell( 3, paletteStats[i].percent );
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
+        cellParams.rect = { { bordersX[1], cursorY_ - cellHeight }, { bordersX[2], cursorY_ } };
+        drawTextCell( paletteStats[i].rangeMin + " ", cellParams);
+        cellParams.rect = { { bordersX[2], cursorY_ - cellHeight }, { bordersX[3], cursorY_ } };
+        drawTextCell( paletteStats[i].rangeMax + " ", cellParams );
+        cellParams.rect = { { bordersX[3], cursorY_ - cellHeight }, { bordersX[4], cursorY_ } };
+        drawTextCell( paletteStats[i].percent + " ", cellParams );
+
         cursorY_ -= cellHeight;
     }
 
-    moveCursorToNewLine();
+    moveCursorToNewLine_();
 }
 
 
 void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params )
 {
-    if ( !checkDocument_( "add image" ) )
+    if ( !checkDocument_( "add image from file" ) )
         return;
 
     if ( imagePath.empty() )
@@ -503,66 +490,32 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageP
     }
 
     HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromFile( state_->document, utf8string( imagePath ).c_str() ) );
-    if ( !pdfImage )
+    addImage_( { pdfImage }, params );
+}
+
+void Pdf::addImage( const Image& image, const ImageParams& params )
+{
+    if ( !checkDocument_( "add image" ) )
+        return;
+
+    const size_t size = image.resolution.x * image.resolution.y;
+    if ( !size || size != image.pixels.size() )
     {
-        spdlog::warn( "Pdf: Failed to load image from file \"{}\"", utf8string( imagePath ) );
+        spdlog::warn( "Pdf: can't add image from file: wrong image size" );
         return;
     }
 
-    const HPDF_REAL additionalHeight = labelHeight * !params.caption.empty();
-    HPDF_REAL width = params.size.x;
-    HPDF_REAL height = params.size.y;
-    HPDF_REAL realWidth = (HPDF_REAL) MR_HPDF_CHECK_ERROR( HPDF_Image_GetWidth( pdfImage ) );
-    HPDF_REAL realHeight = ( HPDF_REAL )MR_HPDF_CHECK_ERROR( HPDF_Image_GetHeight( pdfImage ) );
-
-    if ( width <= 0.f )
-        width = borderFieldRight - cursorX_;
-    if ( height<= 0.f )
-        height = cursorY_ - borderFieldBottom - additionalHeight;
-
-    HPDF_REAL imageWidth = width;
-    HPDF_REAL imageHeight = height;
-
-    float shiftPosX = 0;
-    float shiftPosY = 0;
-    if ( params.uniformScale == ImageParams::UniformScale::FromWidth )
+    std::ostringstream oss;
+    auto toPngRes = ImageSave::toPng( image, oss );
+    if ( !toPngRes.has_value() )
     {
-        imageHeight = realHeight / realWidth * imageWidth;
-        if ( params.alignmentVertical == ImageParams::AlignmentVertical::Top )
-            shiftPosY = imageHeight;
-        else if ( params.alignmentVertical == ImageParams::AlignmentVertical::Bottom )
-            shiftPosY = height;
-        else
-            shiftPosY = height / 2.f + imageHeight / 2.f;
-    }
-    else 
-        shiftPosY = imageHeight;
-    if ( params.uniformScale == ImageParams::UniformScale::FromHeight )
-    {
-        imageWidth = realWidth / realHeight * imageHeight;
-        if ( params.alignmentHorizontal == AlignmentHorizontal::Right )
-            shiftPosX = width - imageWidth;
-        else if ( params.alignmentHorizontal == AlignmentHorizontal::Center )
-            shiftPosX = width / 2.f - imageWidth / 2.f;
+        spdlog::warn( "Pdf: Failed to load image in memory" );
+        return;
     }
 
-    if ( cursorY_ - imageHeight - additionalHeight < borderFieldBottom )
-        newPage();
-
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, pdfImage, cursorX_ + shiftPosX, cursorY_ - shiftPosY, imageWidth, imageHeight ) );
-    cursorY_ -= shiftPosY;
-
-    if ( !params.caption.empty() )
-    {
-        cursorY_ -= textSpacing / 2.;
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + imageWidth, cursorY_ - labelHeight, params.caption.c_str(), HPDF_TALIGN_CENTER, nullptr ) );
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
-        cursorY_ -= labelHeight;
-    }
-
-    moveCursorToNewLine();
+    std::string str = oss.str();
+    HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromMem( state_->document, (const HPDF_BYTE*) str.data(), (HPDF_UINT) str.size() ) );
+    addImage_( { pdfImage }, params );
 }
 
 void Pdf::newPage()
@@ -694,8 +647,7 @@ Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
 
     const auto cellHeight = params.textParams.fontSize * 1.6f;
     
-    if ( cursorY_ - cellHeight < borderFieldBottom )
-        newPage();
+    checkAndCreateNewPageIfNeed_( cellHeight );
 
     float posX = borderFieldLeft;
     for ( int i = 0; i < titles.size(); ++i )
@@ -734,8 +686,7 @@ Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
 
     const auto cellHeight = params.textParams.fontSize * 1.6f;
 
-    if ( cursorY_ - cellHeight < borderFieldBottom )
-        newPage();
+    checkAndCreateNewPageIfNeed_( cellHeight );
 
     float posX = borderFieldLeft;
     for ( int i = 0; i < cells.size(); ++i )
@@ -813,7 +764,6 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
 
     if ( params.underline )
     {
-
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetLineWidth( state_->activePage, params.fontSize / 10.f ) );
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBStroke( state_->activePage, c.x, c.y, c.z ) );
 
@@ -846,6 +796,7 @@ void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& str
     }
     if ( strokeColor.a )
     {
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetLineWidth( state_->activePage, 1.f ) );
         Vector4f c = Vector4f( strokeColor );
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBStroke( state_->activePage, c.x, c.y, c.z ) );
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Rectangle( state_->activePage, rect.min.x, rect.min.y, rect.size().x, rect.size().y ) );
@@ -886,6 +837,89 @@ std::vector<float> Pdf::calcTextLineWidths_( const std::string& text, float widt
     return widths;
 }
 
+void Pdf::addImage_( const HPDF_Image_Wraper& wrapedImage, const ImageParams& params )
+{
+    HPDF_Image image = wrapedImage.image;
+    if ( !image )
+    {
+        spdlog::warn( "Pdf: Failed to load image from memory" );
+        return;
+    }
+
+    const HPDF_REAL additionalHeight = labelHeight * !params.caption.empty();
+    HPDF_REAL width = params.size.x;
+    HPDF_REAL height = params.size.y;
+    HPDF_REAL realWidth = (HPDF_REAL) MR_HPDF_CHECK_ERROR( HPDF_Image_GetWidth( image ) );
+    HPDF_REAL realHeight = (HPDF_REAL) MR_HPDF_CHECK_ERROR( HPDF_Image_GetHeight( image ) );
+
+    if ( width <= 0.f )
+        width = borderFieldRight - cursorX_;
+    if ( height <= 0.f )
+        height = cursorY_ - borderFieldBottom - additionalHeight;
+
+    HPDF_REAL imageWidth = width;
+    HPDF_REAL imageHeight = height;
+
+    float shiftPosX = 0;
+    float shiftPosY = 0;
+    if ( params.uniformScale == ImageParams::UniformScale::FromWidth )
+    {
+        imageHeight = realHeight / realWidth * imageWidth;
+        if ( params.alignmentVertical == ImageParams::AlignmentVertical::Top )
+            shiftPosY = imageHeight;
+        else if ( params.alignmentVertical == ImageParams::AlignmentVertical::Bottom )
+            shiftPosY = height;
+        else
+            shiftPosY = height / 2.f + imageHeight / 2.f;
+    }
+    else
+        shiftPosY = imageHeight;
+    if ( params.uniformScale == ImageParams::UniformScale::FromHeight )
+    {
+        imageWidth = realWidth / realHeight * imageHeight;
+        if ( params.alignmentHorizontal == AlignmentHorizontal::Right )
+            shiftPosX = width - imageWidth;
+        else if ( params.alignmentHorizontal == AlignmentHorizontal::Center )
+            shiftPosX = width / 2.f - imageWidth / 2.f;
+    }
+    if ( params.uniformScale == ImageParams::UniformScale::Auto )
+    {
+        const float heightScale = imageHeight / realHeight;
+        const float widthScale = imageWidth / realWidth;
+        const float scale = std::min( heightScale, widthScale );
+        imageHeight = realHeight * scale;
+        imageWidth = realWidth * scale;
+
+        shiftPosY = imageHeight;
+        if ( params.alignmentVertical == ImageParams::AlignmentVertical::Bottom )
+            shiftPosY = height;
+        else if ( params.alignmentVertical == ImageParams::AlignmentVertical::Center )
+            shiftPosY = height / 2.f + imageHeight / 2.f;
+
+        if ( params.alignmentHorizontal == AlignmentHorizontal::Right )
+            shiftPosX = width - imageWidth;
+        else if ( params.alignmentHorizontal == AlignmentHorizontal::Center )
+            shiftPosX = width / 2.f - imageWidth / 2.f;
+    }
+
+    checkAndCreateNewPageIfNeed_( imageHeight + additionalHeight );
+
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_DrawImage( state_->activePage, image, cursorX_ + shiftPosX, cursorY_ - shiftPosY, imageWidth, imageHeight ) );
+    cursorY_ -= shiftPosY;
+
+    if ( !params.caption.empty() )
+    {
+        cursorY_ -= textSpacing / 2.;
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + imageWidth, cursorY_ - labelHeight, params.caption.c_str(), HPDF_TALIGN_CENTER, nullptr ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
+        cursorY_ -= labelHeight;
+    }
+
+    moveCursorToNewLine_();
+}
+
 bool Pdf::checkDocument_( const std::string& logAction )
 {
     if ( !state_->document )
@@ -904,15 +938,16 @@ bool Pdf::checkDocument_( const std::string& logAction )
     return true;
 }
 
-void Pdf::moveCursorToNewLine()
+void Pdf::moveCursorToNewLine_()
 {
-    if ( cursorY_ - spacing < borderFieldBottom )
+    cursorX_ = borderFieldLeft;
+    cursorY_ -= spacing;
+}
+
+void Pdf::checkAndCreateNewPageIfNeed_( float height )
+{
+    if ( cursorY_ - height < borderFieldBottom )
         newPage();
-    else
-    {
-        cursorX_ = borderFieldLeft;
-        cursorY_ -= spacing;
-    }
 }
 
 }

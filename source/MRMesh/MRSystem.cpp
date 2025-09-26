@@ -237,6 +237,8 @@ std::filesystem::path GetHomeDirectory()
 
 std::string GetMRVersionString()
 {
+    static std::string res = []
+    {
 #ifndef __EMSCRIPTEN__
     MR_SUPPRESS_WARNING_PUSH
     MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
@@ -280,6 +282,8 @@ std::string GetMRVersionString()
     free( jsStr );
     return version;
 #endif
+    }();
+    return res;
 }
 
 void OpenLink( const std::string& url )

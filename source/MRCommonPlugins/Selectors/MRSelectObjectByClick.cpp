@@ -9,6 +9,8 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRGladGlfw.h"
+#include <thread>
+#include <chrono>
 
 namespace MR
 {
@@ -16,6 +18,7 @@ namespace MR
 SelectObjectByClick::SelectObjectByClick() :
     PluginParent( "Select objects", StatePluginTabs::Selection )
 {
+    std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
 }
 
 void SelectObjectByClick::drawDialog( ImGuiContext* )

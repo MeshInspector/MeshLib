@@ -15,8 +15,6 @@
 #include <variant>
 #include <optional>
 
-typedef void* HPDF_Image;
-
 namespace MR
 {
 
@@ -243,8 +241,9 @@ private:
     // calculate the width of the lines, taking into account automatic hyphenation
     std::vector<float> calcTextLineWidths_( const std::string& text, float width, const TextParams& params );
 
+    struct HPDF_Image_Wraper;
     // base method to add hpdf image in current cursor position.
-    void addImage_( HPDF_Image image, const ImageParams& params );
+    void addImage_( const HPDF_Image_Wraper& image, const ImageParams& params );
 
     struct State;
     std::unique_ptr<State> state_;

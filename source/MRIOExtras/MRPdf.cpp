@@ -225,6 +225,12 @@ float getTextHeight( float fontSize, int lineCount = 1 )
 
 }
 
+struct Pdf::HPDF_Image_Wraper
+{
+    HPDF_Image image;
+    HPDF_Image_Wraper( HPDF_Image image_ ) : image( image_ ) {}
+};
+
 std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
 {
     return std::visit( [&] ( const auto& val ) -> std::string
@@ -484,7 +490,7 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageP
     }
 
     HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromFile( state_->document, utf8string( imagePath ).c_str() ) );
-    addImage_( pdfImage, params );
+    addImage_( { pdfImage }, params );
 }
 
 void Pdf::addImage( const Image& image, const ImageParams& params )
@@ -509,7 +515,7 @@ void Pdf::addImage( const Image& image, const ImageParams& params )
 
     std::string str = oss.str();
     HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromMem( state_->document, (const HPDF_BYTE*) str.data(), (HPDF_UINT) str.size() ) );
-    addImage_( pdfImage, params );
+    addImage_( { pdfImage }, params );
 }
 
 void Pdf::newPage()
@@ -831,8 +837,9 @@ std::vector<float> Pdf::calcTextLineWidths_( const std::string& text, float widt
     return widths;
 }
 
-void Pdf::addImage_( HPDF_Image image, const ImageParams& params )
+void Pdf::addImage_( const HPDF_Image_Wraper& wrapedImage, const ImageParams& params )
 {
+    HPDF_Image image = wrapedImage.image;
     if ( !image )
     {
         spdlog::warn( "Pdf: Failed to load image from memory" );

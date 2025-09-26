@@ -191,6 +191,8 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
                     continue; // Ignore ImGui tooltips.
                 if ( std::strcmp( win->Name, expectedWindowName ) == 0 )
                     continue; // Skip the target window itself.
+                if ( auto iter = windows_.find( win->Name ); iter != windows_.end() && iter->second.state_ == AllocationState::Requested )
+                    continue; // Skip half-baked windows that already exist, but didn't have their position properly selected yet.
                 func( win->Name, Box2f::fromMinAndSize( win->Pos, win->Size ) );
             }
         }, ImVec2( 5, 1 ) );

@@ -11,6 +11,9 @@ Example of Fusion.
 - <b class="tab-title">Python</b>
 \include Fusion.dox.py
 
+- <b class="tab-title">C</b>
+\include Fusion.dox.c
+
 </div>
 
  */

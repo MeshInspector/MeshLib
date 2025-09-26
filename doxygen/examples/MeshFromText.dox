@@ -12,6 +12,9 @@ Following code presents example of converting text to mesh
 - <b class="tab-title">Python</b>
 \include MeshFromText.dox.py
 
+- <b class="tab-title">C</b>
+\include MeshFromText.dox.c
+
 </div>
 
  */

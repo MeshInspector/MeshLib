@@ -1,4 +1,5 @@
 #include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshMeshDistance.h"
 #include <iostream>
 

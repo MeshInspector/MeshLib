@@ -43,7 +43,7 @@ const ViewportMask& PointMeasurementObject::getVisualizePropertyMask( AnyVisuali
         case PointMeasurementVisualizePropertyType::_count:
             MR_UNREACHABLE_NO_RETURN
         }
-        MR_UNREACHABLE_NO_RETURN
+        assert( false && "Invalid enum." );
         return visibilityMask_;
     }
     else

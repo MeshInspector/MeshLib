@@ -5,6 +5,9 @@ project(cmake-c-examples C)
 find_package(MeshLib CONFIG REQUIRED)
 
 set(EXAMPLES
+  Collision
+  CollisionPrecise
+  CollisionSelf
   ContourTriangulation
   FreeFormDeformation
   Fusion

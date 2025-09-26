@@ -9,6 +9,9 @@ find_package(TBB REQUIRED)
 find_package(Threads)
 
 set(EXAMPLES
+  Collision
+  CollisionPrecise
+  CollisionSelf
   ContourTriangulation
   FreeFormDeformation
   Fusion

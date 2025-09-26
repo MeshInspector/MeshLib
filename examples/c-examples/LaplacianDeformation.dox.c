@@ -40,7 +40,7 @@ int main( void )
     MR_BitSet_set_2( MR_VertBitSet_MutableUpcastTo_MR_BitSet( freeVerts ), ancV0.id_, true );
     MR_BitSet_set_2( MR_VertBitSet_MutableUpcastTo_MR_BitSet( freeVerts ), ancV1.id_, true );
     // Expand the free area
-    MR_expand_MR_VertBitSet( MR_Mesh_Get_topology( mesh ), freeVerts, &(int32_t){5} );
+    MR_expand_MR_VertBitSet( MR_Mesh_Get_topology( mesh ), freeVerts, &(int){5} );
 
     // Initialize laplacian
     MR_Laplacian_init( lDeformer, freeVerts, MR_EdgeWeights_Cotan, &(MR_VertexMass){MR_VertexMass_NeiArea}, NULL );

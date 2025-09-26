@@ -17,8 +17,8 @@ int main( void )
 
     // First, create a unit sphere.
     float radius = 1.f; // Set radius for the test
-    int32_t horizontalResolution = 64; // Increase horizontal resolution
-    int32_t verticalResolution = 64; // Increase vertical resolution
+    int horizontalResolution = 64; // Increase horizontal resolution
+    int verticalResolution = 64; // Increase vertical resolution
 
     MR_Mesh* sphere1 = MR_makeUVSphere( &radius, &horizontalResolution, &verticalResolution );
 

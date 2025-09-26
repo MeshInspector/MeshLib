@@ -2,6 +2,7 @@
 
 #include "exports.h"
 #include "MRRibbonMenuItem.h"
+#include <MRMesh/MRTimer.h>
 
 namespace MR
 {
@@ -26,8 +27,15 @@ public:
     static_assert( std::is_base_of_v<RibbonMenuItem, T> );
 
     template<typename... Args>
-    RibbonMenuItemAdderT( Args&&... args ) : RibbonMenuItemAdder( std::make_shared<T>( std::forward<Args>( args )... ) )
+    RibbonMenuItemAdderT( Args&&... args ) : RibbonMenuItemAdder( makeT_( std::forward<Args>( args )... ) )
     {
+    }
+private:
+    template<typename... Args>
+    static auto makeT_( Args&&... args )
+    {
+        MR_TIMER;
+        return std::make_shared<T>( std::forward<Args>( args )... );
     }
 };
 

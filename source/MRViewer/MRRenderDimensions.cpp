@@ -22,9 +22,9 @@ static std::string lengthToString( float value )
     return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
 }
 // `dir == 0` - symmetric, `dir > 0` - positive, `dir < 0` - negative.
-static std::string lengthToleranceToString( float value, int dir )
+static std::string lengthToleranceToString( float value, int dir, bool keepTrailingZeroes = false )
 {
-    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .plusSign = dir != 0, .zeroMode = dir >= 0 ? ZeroMode::alwaysPositive : ZeroMode::alwaysNegative, .stripTrailingZeroes = true } );
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .plusSign = dir != 0, .zeroMode = dir >= 0 ? ZeroMode::alwaysPositive : ZeroMode::alwaysNegative, .stripTrailingZeroes = !keepTrailingZeroes } );
 }
 static std::string angleToString( float value )
 {
@@ -105,23 +105,30 @@ void PointTask::renderPass()
     bool passOrFail = false;
     bool pass = false;
 
-    if ( params_.referencePoint && params_.tolerance )
+    if ( params_.referencePoint )
     {
-        passOrFail = true;
         if ( params_.referenceNormal == Vector3f{} )
         {
             deviation = ( params_.point - *params_.referencePoint ).length();
-            pass = deviation >= params_.tolerance->negative && deviation <= params_.tolerance->positive;
+            if ( params_.tolerance )
+            {
+                passOrFail = true;
+                pass = deviation >= params_.tolerance->negative && deviation <= params_.tolerance->positive;
+            }
         }
         else
         {
             deviation = dot( params_.point - *params_.referencePoint, params_.referenceNormal ) / params_.referenceNormal.length();
-            pass = deviation <= params_.tolerance->positive;
+            if ( params_.tolerance )
+            {
+                passOrFail = true;
+                pass = deviation <= params_.tolerance->positive;
+            }
         }
     }
 
     int axis = -1;
-    if ( params_.referencePoint && params_.referenceNormal != Vector3f{} )
+    if ( params_.referenceNormal != Vector3f{} )
     {
         if ( params_.referenceNormal.y == 0 && params_.referenceNormal.z == 0 )
             axis = 0;
@@ -133,57 +140,61 @@ void PointTask::renderPass()
     int smallestAxis = axis == -1 ? 0 : axis;
 
     text.addLine();
-    if ( params_.referencePoint && params_.tolerance )
+    if ( params_.referencePoint )
     {
         text.addElem( {
             .var =
-                axis == 0 ? "Measured X: " :
-                axis == 1 ? "Measured Y: " :
-                axis == 2 ? "Measured Z: " :
-                "Measured: ",
+                axis == 0 ? "Deviation X: " :
+                axis == 1 ? "Deviation Y: " :
+                axis == 2 ? "Deviation Z: " :
+                "Deviation 3D: ",
+            .columnId = 0,
+        } );
+    }
+    else if ( axis != -1 )
+    {
+        text.addElem( {
+            .var =
+                axis == 0 ? "X: " :
+                axis == 1 ? "Y: " :
+                            "Z: ",
             .columnId = 0,
         } );
     }
 
-    if ( passOrFail )
-        beginPassFailTextStyle( text, pass );
-
-    for ( int i = 0; i < 3; i++ )
+    if ( params_.referencePoint )
     {
-        if ( axis == -1 || axis == i )
-            text.addElem( { .var = std::string( i == smallestAxis ? "" : " " ) + lengthToString( params_.point[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
+        if ( passOrFail )
+            beginPassFailTextStyle( text, pass );
+        text.addElem( { .var = lengthToString( deviation ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
+        if ( passOrFail )
+                endPassFailTextStyle( text );
     }
-
-    if ( passOrFail )
-        endPassFailTextStyle( text );
+    else
+    {
+        for ( int i = 0; i < 3; i++ )
+        {
+            if ( axis == -1 || axis == i )
+                text.addElem( { .var = std::string( i == smallestAxis ? "" : " " ) + lengthToString( params_.point[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
+        }
+    }
 
     if ( params_.referencePoint && params_.tolerance )
     {
         text.addLine();
         text.addElem( {
-            .var =
-                axis == 0 ? "Nominal X: " :
-                axis == 1 ? "Nominal Y: " :
-                axis == 2 ? "Nominal Z: " :
-                "Nominal: ",
+            .var = "Tolerance: ",
             .columnId = 0
         } );
 
-        for ( int i = 0; i < 3; i++ )
-        {
-            if ( axis == -1 || axis == i )
-                text.addElem( { .var = std::string( i == smallestAxis ? "" : " " ) + lengthToString( ( *params_.referencePoint )[i] ), .align = ImVec2( 1, 0 ), .columnId = i + 1 } );
-        }
-
-        if ( params_.tolerance )
-        {
-            if ( params_.referenceNormal == Vector3f{} )
-                text.addText( fmt::format( " {}", lengthToleranceToString( params_.tolerance->positive, 0 ) ) );
-            else if ( params_.tolerance->positive == -params_.tolerance->negative )
-                text.addText( fmt::format( " \xC2\xB1{}", lengthToleranceToString( params_.tolerance->positive, 0 ) ) ); // U+00B1 PLUS-MINUS SIGN
-            else
-                text.addText( fmt::format( " {}/{}", lengthToleranceToString( params_.tolerance->positive, 1 ), lengthToleranceToString( params_.tolerance->negative, -1 ) ) );
-        }
+        text.addElem( {
+            .var =
+                params_.referenceNormal == Vector3f{} ? fmt::format( "{}", lengthToleranceToString( params_.tolerance->positive, 0, true ) ) :
+                params_.tolerance->positive == -params_.tolerance->negative ? fmt::format( "\xC2\xB1{}", lengthToleranceToString( params_.tolerance->positive, 0, true ) ) : // U+00B1 PLUS-MINUS SIGN
+                fmt::format( "{}/{}", lengthToleranceToString( params_.tolerance->positive, 1 ), lengthToleranceToString( params_.tolerance->negative, -1 ) ),
+            .align = ImVec2( 1, 0 ),
+            .columnId = 1,
+        } );
     }
 
     ImGuiMeasurementIndicators::Params indicatorParams;

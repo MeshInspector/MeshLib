@@ -54,7 +54,7 @@ MRMESH_API void SetCurrentThreadName( const char * name );
 #endif //_WIN32
 
 // returns version of MR
-[[nodiscard]] MRMESH_API std::string GetMRVersionString();
+[[nodiscard]] MRMESH_API const char * GetMRVersionString();
 
 // Opens given link in default browser
 MRMESH_API void OpenLink( const std::string& url );

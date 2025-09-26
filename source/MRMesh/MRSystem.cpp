@@ -235,9 +235,9 @@ std::filesystem::path GetHomeDirectory()
     return {};
 }
 
-std::string GetMRVersionString()
+const char * GetMRVersionString()
 {
-    static std::string res = []
+    static const std::string res = []
     {
 #ifndef __EMSCRIPTEN__
     MR_SUPPRESS_WARNING_PUSH
@@ -283,7 +283,7 @@ std::string GetMRVersionString()
     return version;
 #endif
     }();
-    return res;
+    return res.c_str();
 }
 
 void OpenLink( const std::string& url )

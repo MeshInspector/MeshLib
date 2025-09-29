@@ -376,6 +376,14 @@ void Palette::setFilterType( FilterType type )
 
 void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf )
 {
+    if ( drawDelayFrames_ > 0 )
+    {
+        drawDelayFrames_--;
+        // Make sure we don't sleep until the draw delay passes.
+        getViewerInstance().incrementForceRedrawFrames();
+        return;
+    }
+
     const auto menu = ImGuiMenu::instance();
     const auto& viewportSize = Viewport::get().getViewportRect();
 
@@ -1134,6 +1142,12 @@ Palette::Label::Label( float val, std::string text_ )
 {
     value = val;
     text = std::move( text_ );
+}
+
+void Palette::setDrawDelayFrames( int numFrames )
+{
+    if ( numFrames > drawDelayFrames_ )
+        drawDelayFrames_ = numFrames;
 }
 
 const std::vector<std::string>& PalettePresets::getPresetNames()

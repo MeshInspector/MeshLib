@@ -360,7 +360,7 @@ void Pdf::addText(const std::string& text, const TextParams& params )
         return;
 
     int strNum = int( calcTextLineWidths_( text, borderFieldRight - cursorX_, params ).size() );
-    const auto textHeight = static_cast< HPDF_REAL >( getTextHeight( params.fontSize, strNum ) );
+    const auto textHeight = getTextHeight( params.fontSize, strNum );
 
     // TODO need add the ability to transfer text between pages
     checkAndCreateNewPageIfNeed_( textHeight );
@@ -737,7 +737,7 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
     auto widths = calcTextLineWidths_( text, rect.size().x, params );
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->getFont( params.fontName ), params.fontSize ) );
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize * lineSpacingScale ) );
 
     const float verticalOffset = ( rect.size().y - getTextHeight( params.fontSize, int( widths.size() ) ) ) / 2.f;
 
@@ -759,7 +759,7 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
     else
         textAlignment = HPDF_TALIGN_CENTER;
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y - verticalOffset + fontGlyphShift,
-        rect.max.x, rect.min.y + verticalOffset + fontGlyphShift, text.c_str(), textAlignment, nullptr ) );
+        rect.max.x, rect.min.y - verticalOffset + fontGlyphShift - params.fontSize * lineSpacingScale, text.c_str(), textAlignment, nullptr ) ); // TODO FIX replace - params.fontSize * lineSpacingScale to true calculated value
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
 
     if ( params.underline )

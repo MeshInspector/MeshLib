@@ -15,5 +15,5 @@ rm -rf build
 # Guess the number of build threads.
 [[ ${JOBS:=} ]] || JOBS=$(nproc)
 
-CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build -j$JOBS

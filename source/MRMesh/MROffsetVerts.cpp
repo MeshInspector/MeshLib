@@ -8,6 +8,8 @@
 #include "MRMapOrHashMap.h"
 #include "MRBuffer.h"
 #include "MRRingIterator.h"
+#include "MRIntersectionPrecomputes.h"
+#include "MRMeshIntersect.h"
 
 namespace MR
 {
@@ -106,29 +108,45 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
     return res;
 }
 
-bool zCompensate( const MeshTopology& topology, VertCoords& points, const ZCompensateParams& params )
+bool zCompensate( Mesh& mesh, const ZCompensateParams& params )
 {
     MR_TIMER;
 
     // prepare all shifts before modifying the points
-    VertScalars zShifts( topology.vertSize() );
-    BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
+    VertScalars zShifts( mesh.topology.vertSize() );
+    (void)mesh.getAABBTree();
+    const Vector3f zDir( 0, 0, 1 );
+    const IntersectionPrecomputes prec( zDir );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
-        const auto n = pseudonormal( topology, points, v );
-        if ( n.z < 0 )
-            zShifts[v] = -params.maxShift * n.z;
+        const auto n = mesh.pseudonormal( v );
+        if ( n.z >= 0 )
+            return;
+
+        auto vShift = params.maxShift * -n.z;
+
+        auto validFaces = [&mesh, v]( FaceId f )
+        {
+            VertId a, b, c;
+            mesh.topology.getTriVerts( f, a, b, c );
+            // skip incident faces
+            if ( v == a || v == b || v == c )
+                return false;
+            // skip down- or side- looking faces
+            return mesh.normal( f ).z > 0;
+        };
+
+        if ( auto rm = rayMeshIntersect( mesh, { mesh.points[v], zDir }, 0.0f, vShift, nullptr, true, validFaces ) )
+            vShift = std::max( 0.0f, rm.distanceAlongLine - 0.01f ); ///!param
+
+        zShifts[v] = vShift;
     } );
 
-    return BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
-    {
-        points[v].z += zShifts[v];
-    }, params.progress );
-}
-
-bool zCompensate( Mesh& mesh, const ZCompensateParams& params )
-{
     mesh.invalidateCaches();
-    return zCompensate( mesh.topology, mesh.points, params );
+    return BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v].z += zShifts[v];
+    }, params.progress );
 }
 
 } //namespace MR

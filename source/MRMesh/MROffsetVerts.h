@@ -35,9 +35,9 @@ struct ZCompensateParams
     ProgressCallback progress;
 };
 
-/// For 3D printers: shifts every vertex with normal having negative projection on Z-axis, along Z-axis
+/// For 3D printers: shifts every vertex with normal having negative projection on Z-axis, along Z-axis;
+/// mesh's topology is preserved unchanged
 /// @return false if cancelled.
 MRMESH_API bool zCompensate( Mesh& mesh, const ZCompensateParams& params );
-MRMESH_API bool zCompensate( const MeshTopology& topology, VertCoords& points, const ZCompensateParams& params );
 
 } //namespace MR

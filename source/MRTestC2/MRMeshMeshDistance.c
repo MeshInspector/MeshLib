@@ -12,8 +12,8 @@
 void testMeshMeshDistance( void )
 {
     float radius = 1.f;
-    int32_t horizontalResolution = 8;
-    int32_t verticalResolution = 8;
+    int horizontalResolution = 8;
+    int verticalResolution = 8;
 
     MR_Mesh* sphere1 = MR_makeUVSphere( &radius, &horizontalResolution, &verticalResolution );
 

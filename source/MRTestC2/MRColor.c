@@ -17,7 +17,7 @@ void testMrColorNew( void )
 void testMrColorFromComponents( void )
 {
     // Test if mrColorFromComponents correctly initializes the color.
-    MR_Color color = MR_Color_Construct_4_int32_t(128, 64, 32, 200);
+    MR_Color color = MR_Color_Construct_4_int(128, 64, 32, 200);
     TEST_ASSERT_INT_EQUAL(color.r, 128);
     TEST_ASSERT_INT_EQUAL(color.g, 64);
     TEST_ASSERT_INT_EQUAL(color.b, 32);
@@ -38,7 +38,7 @@ void testMrColorFromFloatComponents( void )
 void testMrColorGetUInt32( void )
 {
     // Test if mrColorGetUInt32 correctly converts a color to a 32-bit integer.
-    MR_Color color = MR_Color_Construct_4_int32_t(128, 64, 32, 200);
+    MR_Color color = MR_Color_Construct_4_int(128, 64, 32, 200);
     unsigned int colorValue = MR_Color_getUInt32(&color);
     TEST_ASSERT_INT_EQUAL(colorValue, 0xC8204080);
 }

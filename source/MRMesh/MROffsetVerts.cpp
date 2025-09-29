@@ -9,7 +9,9 @@
 #include "MRBuffer.h"
 #include "MRRingIterator.h"
 #include "MRIntersectionPrecomputes.h"
-#include "MRMeshIntersect.h"
+//#include "MRMeshIntersect.h"
+#include "MRMeshProject.h"
+#include "MRBall.h"
 
 namespace MR
 {
@@ -136,8 +138,20 @@ bool zCompensate( Mesh& mesh, const ZCompensateParams& params )
             return mesh.normal( f ).z > 0;
         };
 
-        if ( auto rm = rayMeshIntersect( mesh, { mesh.points[v], zDir }, 0.0f, vShift, nullptr, true, validFaces ) )
-            vShift = std::max( 0.0f, rm.distanceAlongLine - 0.01f ); ///!param
+//        if ( auto rm = rayMeshIntersect( mesh, { mesh.points[v], zDir }, 0.0f, vShift, nullptr, true, validFaces ) )
+//            vShift = std::max( 0.0f, rm.distanceAlongLine - 0.01f ); ///!param
+
+        findTrisInBall( mesh, Ball3f{ mesh.points[v], sqr( vShift ) },
+            [&]( const MeshProjectionResult & found, Ball3f & ball )
+            {
+                float minThickness = 0.01f;
+                float dist = std::sqrt( found.distSq );
+                float newShift = std::max( 0.0f, dist - minThickness );
+                assert( newShift < vShift );
+                vShift = newShift;
+                ball = Ball3f{ mesh.points[v], sqr( vShift ) };
+                return Processing::Continue;
+            }, validFaces );
 
         zShifts[v] = vShift;
     } );

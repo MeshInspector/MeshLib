@@ -53,5 +53,4 @@ MRMESH_API bool zCompensate( Mesh& mesh, const ZCompensateParams& params );
 /// finds vertices positions of the mesh after z-compensation without modifying the mesh
 [[nodiscard]] MRMESH_API std::optional<VertCoords> findZcompensatedPositions( const Mesh& mesh, const ZCompensateParams& params );
 
-
 } //namespace MR

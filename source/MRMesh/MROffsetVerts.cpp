@@ -8,7 +8,6 @@
 #include "MRMapOrHashMap.h"
 #include "MRBuffer.h"
 #include "MRRingIterator.h"
-#include "MRIntersectionPrecomputes.h"
 #include "MRMeshProject.h"
 #include "MRBall.h"
 
@@ -144,6 +143,31 @@ std::optional<VertScalars> findZcompensationShifts( const Mesh& mesh, const ZCom
                     ball = Ball3f{ mesh.points[v], sqr( vShift ) };
                     return Processing::Continue;
                 }, notIncidentFaces );
+
+            // assuming that only this vertex shifts, verify that no incident triangle flips its normal
+            constexpr int maxTries = 10;
+            for ( int it = 0; it < maxTries; ++it )
+            {
+                bool flipDetected = false;
+                for ( EdgeId e : orgRing( mesh.topology, v ) )
+                {
+                    if ( !mesh.topology.left( e ) )
+                        continue;
+                    auto ps = mesh.getLeftTriPoints( e );
+                    const auto c0 = cross( ps[1] - ps[0], ps[2] - ps[0] );
+                    ps[0].z += vShift;
+                    const auto c1 = cross( ps[1] - ps[0], ps[2] - ps[0] );
+                    if ( dot( c0, c1 ) < 0 )
+                    {
+                        flipDetected = true;
+                        break;
+                    }
+                }
+                if ( !flipDetected )
+                    break;
+                // flip detected, reduce shift amount twofold
+                vShift *= 0.5;
+            }
         }
         zShifts[v] = vShift;
     }, params.progress ) )

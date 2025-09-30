@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
+#include <optional>
 
 namespace MR
 {
@@ -31,6 +32,12 @@ struct ZCompensateParams
     /// for other mesh parts the shift will be less and will depend on the angle between point pseudo-normal and Z-axis
     float maxShift = 0;
 
+    /// if true, limits the movement of each vertex to reduce self-intersections in the mesh
+    bool reduceSelfIntersections = false;
+
+    /// only if (reduceSelfIntersections = true), avoids moving a vertex closer than this distance to another triangle
+    float minThickness = 0;
+
     /// to report progress and cancel processing
     ProgressCallback progress;
 };
@@ -39,5 +46,12 @@ struct ZCompensateParams
 /// mesh's topology is preserved unchanged
 /// @return false if cancelled.
 MRMESH_API bool zCompensate( Mesh& mesh, const ZCompensateParams& params );
+
+/// finds the shift along z-axis for each vertex without modifying the mesh
+[[nodiscard]] MRMESH_API std::optional<VertScalars> findZcompensationShifts( const Mesh& mesh, const ZCompensateParams& params );
+
+/// finds vertices positions of the mesh after z-compensation without modifying the mesh
+[[nodiscard]] MRMESH_API std::optional<VertCoords> findZcompensatedPositions( const Mesh& mesh, const ZCompensateParams& params );
+
 
 } //namespace MR

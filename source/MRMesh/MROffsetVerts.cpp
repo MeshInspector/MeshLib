@@ -9,7 +9,6 @@
 #include "MRBuffer.h"
 #include "MRRingIterator.h"
 #include "MRIntersectionPrecomputes.h"
-//#include "MRMeshIntersect.h"
 #include "MRMeshProject.h"
 #include "MRBall.h"
 
@@ -110,57 +109,89 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
     return res;
 }
 
-bool zCompensate( Mesh& mesh, const ZCompensateParams& params )
+std::optional<VertScalars> findZcompensationShifts( const Mesh& mesh, const ZCompensateParams& params )
 {
     MR_TIMER;
+    assert( !params.reduceSelfIntersections || params.minThickness >= 0 );
 
-    // prepare all shifts before modifying the points
     VertScalars zShifts( mesh.topology.vertSize() );
-    (void)mesh.getAABBTree();
-    const Vector3f zDir( 0, 0, 1 );
-    const IntersectionPrecomputes prec( zDir );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    (void)mesh.getAABBTree(); //prepare for findTrisInBall
+    if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         const auto n = mesh.pseudonormal( v );
         if ( n.z >= 0 )
             return;
 
         auto vShift = params.maxShift * -n.z;
-
-        auto validFaces = [&mesh, v]( FaceId f )
+        if ( params.reduceSelfIntersections )
         {
-            VertId a, b, c;
-            mesh.topology.getTriVerts( f, a, b, c );
-            // skip incident faces
-            if ( v == a || v == b || v == c )
-                return false;
-            // skip down- or side- looking faces
-            return mesh.normal( f ).z > 0;
-        };
-
-//        if ( auto rm = rayMeshIntersect( mesh, { mesh.points[v], zDir }, 0.0f, vShift, nullptr, true, validFaces ) )
-//            vShift = std::max( 0.0f, rm.distanceAlongLine - 0.01f ); ///!param
-
-        findTrisInBall( mesh, Ball3f{ mesh.points[v], sqr( vShift ) },
-            [&]( const MeshProjectionResult & found, Ball3f & ball )
+            auto notIncidentFaces = [&mesh, v]( FaceId f )
             {
-                float minThickness = 0.01f;
-                float dist = std::sqrt( found.distSq );
-                float newShift = std::max( 0.0f, dist - minThickness );
-                assert( newShift < vShift );
-                vShift = newShift;
-                ball = Ball3f{ mesh.points[v], sqr( vShift ) };
-                return Processing::Continue;
-            }, validFaces );
+                VertId a, b, c;
+                mesh.topology.getTriVerts( f, a, b, c );
+                return v != a && v != b && v != c;
+            };
 
+            findTrisInBall( mesh, Ball3f{ mesh.points[v], sqr( vShift ) },
+                [&]( const MeshProjectionResult & found, Ball3f & ball )
+                {
+                    if ( found.proj.point.z < mesh.points[v].z )
+                        return Processing::Continue; // ignore triangles below point[v]
+                    float dist = std::sqrt( found.distSq );
+                    float newShift = std::max( 0.0f, dist - params.minThickness );
+                    assert( newShift < vShift );
+                    vShift = newShift;
+                    ball = Ball3f{ mesh.points[v], sqr( vShift ) };
+                    return Processing::Continue;
+                }, notIncidentFaces );
+        }
         zShifts[v] = vShift;
-    } );
+    }, params.progress ) )
+        return {};
+
+    return zShifts;
+}
+
+MRMESH_API std::optional<VertCoords> findZcompensatedPositions( const Mesh& mesh, const ZCompensateParams& params0 )
+{
+    MR_TIMER;
+
+    auto params = params0;
+    params.progress = subprogress( params0.progress, 0.0f, 0.5f );
+    auto maybeZShifts = findZcompensationShifts( mesh, params );
+    if ( !maybeZShifts )
+        return {};
+    const auto& zShifts = *maybeZShifts;
+
+    VertCoords res;
+    res.resizeNoInit( mesh.points.size() );
+    if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        auto p = mesh.points[v];
+        p.z += zShifts[v];
+        res[v] = p;
+    }, subprogress( params0.progress, 0.5f, 1.0f ) ) )
+        return {};
+    return res;
+}
+
+bool zCompensate( Mesh& mesh, const ZCompensateParams& params0 )
+{
+    MR_TIMER;
+
+    // prepare all shifts before modifying the points
+    auto params = params0;
+    params.progress = subprogress( params0.progress, 0.0f, 0.5f );
+    auto maybeZShifts = findZcompensationShifts( mesh, params );
+    if ( !maybeZShifts )
+        return false;
+    const auto& zShifts = *maybeZShifts;
 
     mesh.invalidateCaches();
     return BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         mesh.points[v].z += zShifts[v];
-    }, params.progress );
+    }, subprogress( params0.progress, 0.5f, 1.0f ) );
 }
 
 } //namespace MR

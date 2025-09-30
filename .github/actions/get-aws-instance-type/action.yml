@@ -6,7 +6,7 @@ runs:
   steps:
     - name: Get AWS instance type
       shell: bash
-        run: |
+      run: |
           # Get token and instance type from EC2 metadata service
           TOKEN=$(curl -fsS --max-time 2 --connect-timeout 1 \
             -X PUT "http://169.254.169.254/latest/api/token" \

@@ -37,6 +37,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.docker-image }}
+      options: --user root
     strategy:
       fail-fast: false
       matrix:

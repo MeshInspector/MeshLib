@@ -2463,7 +2463,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
         alphaSorter_->updateTransparencyTexturesSize( newRes.x, newRes.y );
 
 
-    std::vector<Color> pixels( newRes.x * newRes.x );
+    std::vector<Color> pixels( newRes.x * newRes.y );
 
     FramebufferData fd;
     fd.gen( newRes, true );

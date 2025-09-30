@@ -33,7 +33,7 @@ TEST(MRMesh, MeshIntersect)
 
     const auto isect2 = rayMeshIntersect( sphere, { Vector3f{ -0.1f, 0.f, 0.f }, Vector3f::plusX() }, -FLT_MAX, +FLT_MAX );
     EXPECT_TRUE( isect2 );
-    EXPECT_NEAR( isect2.distanceAlongLine, 0.9f, 0.05f );
+    EXPECT_NEAR( isect2.distanceAlongLine, -0.9f, 0.05f );
     EXPECT_NEAR( isect2.proj.point.x, -1.f, 0.05f );
 }
 

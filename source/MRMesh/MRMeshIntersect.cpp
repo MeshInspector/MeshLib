@@ -37,9 +37,8 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 
-    FaceId faceId;
     TriPointf triP;
-    while( currentNode >= 0 && ( closestIntersect || !faceId ) )
+    while( currentNode >= 0 && ( closestIntersect || !res.proj.face ) )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
         {
@@ -67,7 +66,8 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                         const T t( triIsect->t );
                         if ( t < rayEnd && t > rayStart )
                         {
-                            faceId = face;
+                            res.distanceAlongLine = triIsect->t;
+                            res.proj.face = face;
                             triP = triIsect->bary;
                             if ( t == 0 )
                             {
@@ -125,12 +125,10 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
         }
     }
 
-    if( faceId.valid() )
+    if( res.proj.face.valid() )
     {
-        res.proj.face = faceId;
-        res.proj.point = Vector3f( line.p + rayEnd * line.d );
-        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( faceId ), triP );
-        res.distanceAlongLine = float( rayEnd );
+        res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
+        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
     }
     return res;
 }

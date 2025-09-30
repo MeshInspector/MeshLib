@@ -25,6 +25,16 @@ TEST(MRMesh, MeshIntersect)
     {
         ASSERT_NEAR( found.proj.point.length(), 1.0f, 0.05f ); //our sphere is very approximate
     }
+
+    const auto isect1 = rayMeshIntersect( sphere, { Vector3f{ +0.1f, 0.f, 0.f }, Vector3f::plusX() }, -FLT_MAX, +FLT_MAX );
+    EXPECT_TRUE( isect1 );
+    EXPECT_NEAR( isect1.distanceAlongLine, 0.9f, 0.05f );
+    EXPECT_NEAR( isect1.proj.point.x, +1.f, 0.05f );
+
+    const auto isect2 = rayMeshIntersect( sphere, { Vector3f{ -0.1f, 0.f, 0.f }, Vector3f::plusX() }, -FLT_MAX, +FLT_MAX );
+    EXPECT_TRUE( isect2 );
+    EXPECT_NEAR( isect2.distanceAlongLine, -0.9f, 0.05f );
+    EXPECT_NEAR( isect2.proj.point.x, -1.f, 0.05f );
 }
 
 } //namespace MR

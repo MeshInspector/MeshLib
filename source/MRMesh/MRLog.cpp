@@ -35,26 +35,12 @@ void Logger::removeSink( const spdlog::sink_ptr& sink )
 
 std::filesystem::path Logger::getLogFileName() const
 {
-    if ( !logger_ )
-        return {};
+    return logFilePath_;
+}
 
-    for ( const auto& sink : logger_->sinks() )
-    {
-        if ( auto r = std::dynamic_pointer_cast<spdlog::sinks::rotating_file_sink_mt>( sink ) )
-            return r->filename();
-        if ( auto r = std::dynamic_pointer_cast<spdlog::sinks::rotating_file_sink_st>( sink ) )
-            return r->filename();
-        if ( auto r = std::dynamic_pointer_cast<spdlog::sinks::daily_file_sink_mt>( sink ) )
-            return r->filename();
-        if ( auto r = std::dynamic_pointer_cast<spdlog::sinks::daily_file_sink_st>( sink ) )
-            return r->filename();
-        if ( auto r = std::dynamic_pointer_cast<spdlog::sinks::basic_file_sink_mt>( sink ) )
-            return r->filename();
-        if ( auto r = std::dynamic_pointer_cast<spdlog::sinks::basic_file_sink_st>( sink ) )
-            return r->filename();
-    }
-
-    return {};
+void Logger::setLogFilePath( const std::filesystem::path& path )
+{
+    logFilePath_ = path;
 }
 
 Logger::Logger()

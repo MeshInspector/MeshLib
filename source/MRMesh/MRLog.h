@@ -36,9 +36,13 @@ public:
 
     /// return filename of first found file sink, if there is no one, returns {}
     MRMESH_API std::filesystem::path getLogFileName() const;
+
+    /// set the current log file path (used when file sink is created)
+    MRMESH_API void setLogFilePath( const std::filesystem::path& path );
 private:
     Logger();
     std::shared_ptr<spdlog::logger> logger_;
+    std::filesystem::path logFilePath_;
 };
 
 /// \}

@@ -51,11 +51,11 @@ jobs:
             mkdir ${GITHUB_WORKSPACE}
           fi
 
-      - name: Get AWS instance type
-        uses: ./.github/actions/get-aws-instance-type
-
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Get AWS instance type
+        uses: ./.github/actions/get-aws-instance-type
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

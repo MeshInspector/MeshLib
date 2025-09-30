@@ -90,12 +90,11 @@ jobs:
             echo "${VAR}=${!VAR}"
           done
 
-      # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
-      - name: Get AWS instance type
-        uses: ./.github/actions/get-aws-instance-type
-
       - name: Checkout
         uses: actions/checkout@v5
+  
+      - name: Get AWS instance type
+        uses: ./.github/actions/get-aws-instance-type
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

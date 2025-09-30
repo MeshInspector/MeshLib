@@ -1774,7 +1774,7 @@ bool Viewer::draw_( bool force )
     return ( window && swapped );
 }
 
-void Viewer::drawUiRenderObjects_()
+void Viewer::drawUiRenderObjects()
 {
     // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
     // That's why each viewport is being drawn separately.
@@ -1857,7 +1857,7 @@ void Viewer::drawFull( bool dirtyScene )
     }
     if ( menuPlugin_ )
     {
-        drawUiRenderObjects_();
+        drawUiRenderObjects();
         menuPlugin_->finishFrame();
     }
 }

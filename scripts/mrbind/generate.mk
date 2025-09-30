@@ -527,7 +527,9 @@ MRBIND_GEN_C_FLAGS := $(call load_file,$(makefile_dir)mrbind_gen_c_flags.txt)
 
 # Adjusting canonical types to fixed-size typedefs.
 ifeq ($(TARGET),c)
-MRBIND_FLAGS += --canonicalize-to-fixed-size-typedefs --canonicalize-size_t-to-uint64_t --implicit-enum-underlying-type-is-always-int
+# Here you can choose between `--canonicalize-to-fixed-size-typedefs` and `--canonicalize-64-to-fixed-size-typedefs` to control
+#   whether the integerl types smaller than 64 bits are replaced with the typedefs or not. The 64-bit ones always need to be replaced.
+MRBIND_FLAGS += --canonicalize-64-to-fixed-size-typedefs --canonicalize-size_t-to-uint64_t --implicit-enum-underlying-type-is-always-int
 MRBIND_GEN_C_FLAGS += --reject-long-and-long-long --use-size_t-typedef-for-uint64_t
 endif
 

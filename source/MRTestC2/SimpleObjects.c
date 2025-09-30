@@ -24,7 +24,7 @@ void testMrMakeCylinderAdvanced(void) {
     float startAngle = 0.0f;
     float arcSize = 2.0f * 3.1415f;
     float length = 1.0f;
-    int32_t resolution = 16;
+    int resolution = 16;
     MR_Mesh *cylinder = MR_makeCylinderAdvanced(&radius0, &radius1, &startAngle, &arcSize, &length, &resolution);
 
     TEST_ASSERT(cylinder != NULL);
@@ -39,8 +39,8 @@ void testMrMakeCylinderAdvanced(void) {
 void testMrMakeTorus(void) {
     float primaryRadius = 2.0f;
     float secondaryRadius = 0.5f;
-    int32_t primaryResolution = 32;
-    int32_t secondaryResolution = 32;
+    int primaryResolution = 32;
+    int secondaryResolution = 32;
     MR_Mesh* torus = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
 
     TEST_ASSERT(torus != NULL);
@@ -54,8 +54,8 @@ void testMrMakeTorus(void) {
 void testMrMakeTorusWithSelfIntersections(void) {
     float primaryRadius = 2.0f;
     float secondaryRadius = 0.5f;
-    int32_t primaryResolution = 16;
-    int32_t secondaryResolution = 16;
+    int primaryResolution = 16;
+    int secondaryResolution = 16;
     MR_Mesh* torus = MR_makeTorusWithSelfIntersections(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
 
     TEST_ASSERT(torus != NULL);
@@ -85,8 +85,8 @@ void testMrMakeSphere(void) {
 
 void testMrMakeUVSphere(void) {
     float radius = 1.5f; // Set radius for the test
-    int32_t horizontalResolution = 32; // Increase horizontal resolution
-    int32_t verticalResolution = 32; // Increase vertical resolution
+    int horizontalResolution = 32; // Increase horizontal resolution
+    int verticalResolution = 32; // Increase vertical resolution
 
     MR_Mesh *uvSphere = MR_makeUVSphere(&radius, &horizontalResolution, &verticalResolution);
     TEST_ASSERT(uvSphere != NULL);

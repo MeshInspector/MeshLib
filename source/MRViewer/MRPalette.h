@@ -224,6 +224,10 @@ public:
     // This one has the size matching `getParameters().discretization`. Only has meaningful values if enabled, check with `isDiscretizationPercentagesEnabled()`.
     [[nodiscard]] const Histogram &getDiscrHistogramValues() const { return histogramDiscr_; }
 
+    // `draw()` will do nothing the next time it's called this many times.
+    // This function does `n = max(n, numFrames);`, it can never decrease `n`.
+    MRVIEWER_API void setDrawDelayFrames( int numFrames );
+
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
 
@@ -301,6 +305,9 @@ private:
 
     // Whether we should actually update `histogramDiscr_`.
     bool enableHistogramDiscr_ = false;
+
+    // If positive, `draw()` will do nothing the next time it's called this many times.
+    int drawDelayFrames_ = 0;
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

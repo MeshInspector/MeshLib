@@ -22,8 +22,8 @@ void testMeshCollidePrecise( void )
 {
     float primaryRadius = 1.1f;
     float secondaryRadius = 0.5f;
-    int32_t primaryResolution = 8;
-    int32_t secondaryResolution = 8;
+    int primaryResolution = 8;
+    int secondaryResolution = 8;
     MR_Mesh* meshA = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
     MR_Mesh* meshB = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
 

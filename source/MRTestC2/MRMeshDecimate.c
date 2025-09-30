@@ -15,7 +15,7 @@ void testMeshDecimate( void )
     float startAngle = 0.0f;
     float arcSize = 20.0f / 180.0f * PI_F;
     float length = 1.0f;
-    int32_t resolution = 16;
+    int resolution = 16;
     MR_Mesh* meshCylinder = MR_makeCylinderAdvanced( &radius0, &radius1, &startAngle, &arcSize, &length, &resolution );
 
     // select all faces

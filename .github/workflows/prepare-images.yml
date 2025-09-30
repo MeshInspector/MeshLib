@@ -52,7 +52,7 @@ jobs:
             os: ubuntu-latest
           - arch: arm64
             image-suffix: '-arm64'
-            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
+            os: ubuntu-24.04-arm
     runs-on: ${{ matrix.os }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
@@ -113,7 +113,7 @@ jobs:
           - arch: x64
             runner: ubuntu-latest
           - arch: arm64
-            runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
+            runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     env:
       image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}

@@ -75,7 +75,7 @@ jobs:
           - platform: "aarch64"
             os: rockylinux8-vcpkg-arm64
             container-options: " " # empty
-            runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
+            runner: ubuntu-24.04-arm
             compiler: /usr/bin/clang++
 
     steps:
@@ -465,7 +465,7 @@ jobs:
             container-options: "--user root"
             container-prefix: " "
           - platform: "aarch64"
-            runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
+            runner: ubuntu-24.04-arm
             container-options: " " # empty
             container-prefix: "arm64v8/"
           - py-version: "3.8"

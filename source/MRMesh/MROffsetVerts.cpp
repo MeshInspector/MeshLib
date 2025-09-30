@@ -138,7 +138,7 @@ std::optional<VertScalars> findZcompensationShifts( const Mesh& mesh, const ZCom
                         return Processing::Continue; // ignore triangles below point[v]
                     float dist = std::sqrt( found.distSq );
                     float newShift = std::max( 0.0f, dist - params.minThickness );
-                    assert( newShift < vShift );
+                    assert( newShift <= vShift );
                     vShift = newShift;
                     ball = Ball3f{ mesh.points[v], sqr( vShift ) };
                     return Processing::Continue;

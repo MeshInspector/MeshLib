@@ -516,7 +516,7 @@ void WebRequest::initializeCertificateInfo()
     std::error_code ec;
     for ( const auto& path : cKnownCaInfoLocations )
     {
-        if ( std::filesystem::exists( path, ec ) )
+        if ( std::filesystem::is_regular_file( path, ec ) )
         {
             gCaInfoPath = path;
             break;

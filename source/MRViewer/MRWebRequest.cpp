@@ -319,7 +319,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         if ( url.starts_with( "https" ) && !gCaInfoPath.empty() )
         {
             session.SetSslOptions( cpr::Ssl(
-                cpr::ssl::CaInfo{ gCaInfoPath }
+                cpr::ssl::CaInfo{ std::string{ gCaInfoPath } }
             ) );
         }
 #endif

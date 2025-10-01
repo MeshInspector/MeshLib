@@ -68,10 +68,12 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
         {
             if ( verbose )
             {
-                spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}",
-                    vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );
+                spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}, name={}:{}",
+                    vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page,
+                    wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) );
                 if ( deviceSignal_ && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
-                    deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} found", vendorId, localDevicesIt->product_id ) );
+                    deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
+                        wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
             {

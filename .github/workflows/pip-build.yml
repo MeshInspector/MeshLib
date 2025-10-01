@@ -373,12 +373,11 @@ jobs:
         platform: ["x86", "arm64"]
         include:
           - platform: "x86"
-            # On 12.0 x86 `brew` doesn't have binary packages for Clang.
-            plat-name: macosx_15_0_x86_64
+            plat-name: macosx_12_0_x86_64
             instance: macos-15-intel
             brewpath: /usr/local
           - platform: "arm64"
-            plat-name: macosx_14_0_arm64
+            plat-name: macosx_12_0_arm64
             instance: macos-14
             brewpath: /opt/homebrew
     steps:
@@ -571,11 +570,10 @@ jobs:
         py-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.8 disabled on x86 macOS since 2024-10-14
         include:
           - platform: "x86"
-            # On 12.0 x86 `brew` doesn't have binary packages for Clang.
-            plat-name: macosx_15_0_x86_64
+            plat-name: macosx_12_0_x86_64
             instance: macos-15-intel
           - platform: "arm64"
-            plat-name: macosx_14_0_arm64
+            plat-name: macosx_12_0_arm64
             instance: macos-14
           - py-version: "3.9"
             py-cmd: "python3.9"

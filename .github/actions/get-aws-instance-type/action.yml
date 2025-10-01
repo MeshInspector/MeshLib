@@ -1,0 +1,25 @@
+name: 'Get AWS Linux Instance Type'
+description: 'Detects AWS EC2 instance type or sets fallback for self-hosted runners'
+# https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+runs:
+  using: 'composite'
+  steps:
+    - name: Get AWS instance type
+      shell: bash
+      run: |
+          # Get token and instance type from EC2 metadata service
+          TOKEN=$(curl -fsS --max-time 2 --connect-timeout 1 \
+            -X PUT "http://169.254.169.254/latest/api/token" \
+            -H "X-aws-ec2-metadata-token-ttl-seconds: 10" 2>/dev/null || true)
+          
+          AWS_INSTANCE_TYPE=$(curl -fsS --max-time 2 --connect-timeout 1 \
+            -H "X-aws-ec2-metadata-token: $TOKEN" \
+            "http://169.254.169.254/latest/meta-data/instance-type" 2>/dev/null || true)
+          
+          # if not EC2, set to self-hosted
+          if [ -z "$AWS_INSTANCE_TYPE" ]; then
+            AWS_INSTANCE_TYPE="self-hosted"
+          fi
+          
+          echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
+          echo $AWS_INSTANCE_TYPE

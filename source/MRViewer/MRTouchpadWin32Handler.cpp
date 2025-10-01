@@ -46,7 +46,7 @@ public:
             }
             else
             {
-                spdlog::warning( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
+                spdlog::warn( "{}:{}: {:08x} {}", file_, line_, (unsigned long)hr, (const char*)msg );
             }
         }
 #endif
@@ -364,14 +364,14 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 #pragma warning( pop )
     if ( glfwProc_ == 0 )
     {
-        spdlog::warning( "Failed to set the window procedure (code {:08x})", GetLastError() );
+        spdlog::warn( "Failed to set the window procedure (code {:08x})", GetLastError() );
         return;
     }
 
 #define CHECK( EXPR ) \
     if ( HRESULT hr = EXPR; !SUCCEEDED( hr ) ) \
     { \
-        spdlog::warning( "Failed to initialize touchpad event processing (code {:08x})", hr ); \
+        spdlog::warn( "Failed to initialize touchpad event processing (code {:08x})", hr ); \
         return; \
     }
 

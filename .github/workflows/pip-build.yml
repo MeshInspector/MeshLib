@@ -194,9 +194,11 @@ jobs:
 
       - name: Generate C bindings
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        env:
-          CXX: /usr/bin/clang++
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
+        run: |
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace \
+            CXX_FOR_ABI=${{ matrix.compiler }} \
+            CXX_FOR_BINDINGS=${{ matrix.compiler }} \
+            DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
 
       - name: Upload C bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}

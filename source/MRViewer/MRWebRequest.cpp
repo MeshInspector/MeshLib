@@ -70,6 +70,11 @@ void putIntoWaitingMap_( std::thread&& thread )
     auto& asyncMap = getWaitingMap_();
     asyncMap[thread.get_id()] = std::move( thread );
 }
+
+#ifdef __linux__
+// SSL certificate file path
+std::string gCaInfoPath;
+#endif
 #endif //!__EMSCRIPTEN__
 
 } // anonymous namespace
@@ -309,6 +314,16 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetParameters( params );
         session.SetTimeout( tm );
 
+#ifdef __linux__
+        // see initializeCertificateInfo() for more info
+        if ( url.starts_with( "https" ) && !gCaInfoPath.empty() )
+        {
+            session.SetSslOptions( cpr::Ssl(
+                cpr::ssl::CaInfo{ gCaInfoPath }
+            ) );
+        }
+#endif
+
         if ( ctx->input.has_value() )
         {
             // C++ Requests library doesn't support uploading from stream
@@ -480,6 +495,34 @@ void WebRequest::waitRemainingAsync()
     for ( auto& [_, thread] : asyncMap )
         if ( thread.joinable() )
             thread.join();
+}
+
+void WebRequest::initializeCertificateInfo()
+{
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
+    constexpr std::array cKnownCaInfoLocations {
+        // Debian, Ubuntu, Arch
+        "/etc/ssl/certs/ca-certificates.crt",
+        // Red Hat, Fedora
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        // some other known locations
+        "/etc/ssl/ca-bundle.pem",
+        "/etc/ssl/cert.pem",
+        "/etc/pki/tls/cert.pem",
+        "/etc/pki/tls/cacert.pem",
+        "/usr/share/ssl/certs/ca-bundle.crt",
+        "/usr/local/share/certs/ca-root-nss.crt",
+    };
+    std::error_code ec;
+    for ( const auto& path : cKnownCaInfoLocations )
+    {
+        if ( std::filesystem::exists( path, ec ) )
+        {
+            gCaInfoPath = path;
+            break;
+        }
+    }
+#endif
 }
 
 Expected<Json::Value> parseResponse( const Json::Value& response )

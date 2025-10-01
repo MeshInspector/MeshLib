@@ -24,11 +24,15 @@ namespace MR
 
 /// std::vector<bool> like container  (random-access, size_t - index type, bool - value type)
 /// with all bits after size() considered off during testing
-class BitSet : public boost::dynamic_bitset<std::uint64_t>
+class BitSet //: public boost::dynamic_bitset<std::uint64_t>
 {
 public:
-    using base = boost::dynamic_bitset<std::uint64_t>;
-    using base::base;
+    using Block = std::uint64_t;
+    inline static constexpr size_t bitsPerBlock = sizeof( Block ) * 8;
+
+    //using base = boost::dynamic_bitset<std::uint64_t>;
+    //using base::base;
+    using size_type = size_t;
     using IndexType = size_t;
 
     /// creates bitset of given size filled with given value
@@ -39,9 +43,18 @@ public:
     template<class T, std::enable_if_t<std::is_arithmetic<T>::value, std::nullptr_t> = nullptr>
     explicit BitSet( T, T ) = delete;
 
+    MRMESH_API void resize( size_type numBits, bool fillValue = false );
+
+    [[nodiscard]] size_type size() const noexcept { return numBits_; }
+    [[nodiscard]] size_type num_blocks() const noexcept { return blocks_.size(); }
+    [[nodiscard]] size_type capacity() const noexcept { return blocks_.capacity() * bitsPerBlock; }
+
+    [[nodiscard]] bool uncheckedTest( IndexType n ) const { assert( n < size() ); return blocks_[blockIndex( n )] & bitMask( n ); }
+    [[nodiscard]] bool uncheckedTestSet( IndexType n, bool val = true ) { assert( n < size() ); bool b = uncheckedTest( n ); if ( b != val ) set( n, val ); return b; }
+
     // all bits after size() we silently consider as not-set
-    [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
-    [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
+    [[nodiscard]] bool test( IndexType n ) const { return n < size() && uncheckedTest( n ); }
+    [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
     BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
     BitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
@@ -55,7 +68,7 @@ public:
     BitSet & flip() { base::flip(); return * this; }
 
     /// read-only access to all bits stored as a vector of uint64 blocks
-    const auto & bits() const { return m_bits; }
+    [[nodiscard]] const auto & bits() const { return blocks_; }
 
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );
@@ -129,9 +142,24 @@ public:
     #endif
 
 private:
-    using base::m_highest_block;
-    using base::m_bits;
-    using base::m_num_bits;
+    /// minimal number of blocks to store the given number of bits
+    [[nodiscard]] static size_type calcNumBlocks( size_type numBits ) noexcept { return ( numBits + bitsPerBlock - 1 ) / bitsPerBlock; }
+
+    /// the block containing the given bit
+    [[nodiscard]] static size_type blockIndex( IndexType n ) noexcept { return n / bitsPerBlock; }
+
+    /// the bit's shift within its block
+    [[nodiscard]] static size_type bitIndex( IndexType n ) noexcept { return n % bitsPerBlock; }
+
+    /// block's mask with 1 at given bit's position and 0 at all other positions
+    [[nodiscard]] static Block bitMask( IndexType n ) noexcept { return Block( 1 ) << bitIndex( n ); }
+
+    /// set all unused bits in the last block to zero
+    MRMESH_API void zeroUnusedBits();
+
+private:
+    std::vector<Block> blocks_;
+    size_type numBits_ = 0;
 };
 
 /// Vector<bool, I> like container (random-access, I - index type, bool - value type)

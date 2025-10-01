@@ -4,6 +4,18 @@
 namespace MR
 {
 
+void BitSet::zeroUnusedBits()
+{
+    assert ( num_blocks() == calcNumBlocks( numBits_ ) );
+    if ( auto extraBits = numBits_ % bitsPerBlock )
+        blocks_.back() &= bitMask( extraBits ) - 1;
+}
+
+void BitSet::resize( size_type numBits, bool fillValue )
+{
+    ...
+}
+
 BitSet & BitSet::operator &= ( const BitSet & rhs )
 {
     resize( std::min( size(), rhs.size() ) );

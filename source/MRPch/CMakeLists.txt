@@ -30,6 +30,7 @@ IF(MR_PCH)
     )
   ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(Boost COMPONENTS REQUIRED)
+    find_package(Eigen3 REQUIRED)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
@@ -37,6 +38,7 @@ IF(MR_PCH)
       fmt::fmt
       spdlog::spdlog
       Boost::boost
+      Eigen3::Eigen
       JsonCpp::JsonCpp
       TBB::tbb
     )

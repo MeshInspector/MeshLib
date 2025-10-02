@@ -101,7 +101,7 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
     {
         UI::setTooltipIfHovered( themeName_.empty() ?
             "Cannot save theme with empty name" :
-            "Please do not any of these symbols: \? * / \\ \" < >" );
+            "Please do not use any of these symbols: \? * / \\ \" < >" );
     }
 
     ModalDialog modalDialog( "File already exists", {

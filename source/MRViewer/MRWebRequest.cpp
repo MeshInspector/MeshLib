@@ -72,6 +72,58 @@ void putIntoWaitingMap_( std::thread&& thread )
 }
 #endif //!__EMSCRIPTEN__
 
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
+/// https://curl.se/mail/lib-2022-05/0039.html
+/// > curl searches for an appropriate CA bundle at compile time and hard-codes the one it finds.
+/// > [...] this doesn't work well for a portable binary. In that case, the application can search
+/// > for an appropriate bundle itself using whatever means it feels necessary and set it at run-time
+std::string getCaInfo( cpr::Session& session )
+{
+    std::error_code ec;
+
+    // check the default CA bundle path first
+    if ( auto curl = session.GetCurlHolder() )
+    {
+        char* caInfo = nullptr; // NOTE: the buffer should not be freed manually; see https://curl.se/libcurl/c/CURLINFO_CAINFO.html
+        curl_easy_getinfo( curl->handle, CURLINFO_CAINFO, &caInfo );
+        if ( caInfo )
+        {
+            if ( std::filesystem::is_regular_file( caInfo, ec ) )
+            {
+                // the default CA bundle path is valid, nothing to do
+                return {};
+            }
+        }
+    }
+
+    // trying to find a CA bundle in known locations
+    constexpr std::array cKnownCaInfoLocations {
+        // Debian, Ubuntu, Arch, Alpine, ...
+        "/etc/ssl/certs/ca-certificates.crt",
+        // Red Hat, Fedora
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        // some other known locations
+        "/etc/ssl/ca-bundle.pem",
+        "/etc/ssl/cert.pem",
+        "/etc/pki/tls/cert.pem",
+        "/etc/pki/tls/cacert.pem",
+        "/usr/share/ssl/certs/ca-bundle.crt",
+        "/usr/local/share/certs/ca-root-nss.crt",
+    };
+    for ( const auto& path : cKnownCaInfoLocations )
+    {
+        if ( std::filesystem::is_regular_file( path, ec ) )
+        {
+            // use the path as is, no additional check
+            return path;
+        }
+    }
+
+    // we did everything we could ¯\_(ツ)_/¯
+    return {};
+}
+#endif
+
 } // anonymous namespace
 
 #ifdef __EMSCRIPTEN__
@@ -308,6 +360,20 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
+
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
+        if ( url.starts_with( "https" ) )
+        {
+            // set the certificate info manually; see getCaInfo for more info
+            static const auto cCaInfo = getCaInfo( session );
+            if ( !cCaInfo.empty() )
+            {
+                session.SetSslOptions( cpr::Ssl(
+                    cpr::ssl::CaInfo{ std::string{ cCaInfo } }
+                ) );
+            }
+        }
+#endif
 
         if ( ctx->input.has_value() )
         {

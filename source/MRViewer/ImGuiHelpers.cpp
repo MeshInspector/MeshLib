@@ -1414,7 +1414,7 @@ PaletteChanges Palette(
         {
             UI::setTooltipIfHovered( currentPaletteName.empty() ?
                 "Cannot save palette with empty name" :
-                "Please do not any of these symbols: \? * / \\ \" < >" );
+                "Please do not use any of these symbols: \? * / \\ \" < >" );
         }
 
         bool closeTopPopup = false;

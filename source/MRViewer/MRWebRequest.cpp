@@ -72,8 +72,53 @@ void putIntoWaitingMap_( std::thread&& thread )
 }
 
 #ifdef __linux__
-// SSL certificate file path
-std::string gCaInfoPath;
+/// ...
+/// see also: https://curl.se/mail/lib-2022-05/0039.html
+std::string getCaInfo( cpr::Session& session )
+{
+    std::error_code ec;
+
+    // check the default CA bundle path first
+    if ( auto curl = session.GetCurlHolder() )
+    {
+        char* caInfo = nullptr; // NOTE: the buffer should not be freed manually; see https://curl.se/libcurl/c/CURLINFO_CAINFO.html
+        curl_easy_getinfo( curl->handle, CURLINFO_CAINFO, &caInfo );
+        if ( caInfo )
+        {
+            if ( std::filesystem::is_regular_file( caInfo, ec ) )
+            {
+                // the default CA bundle path is valid, nothing to do
+                return {};
+            }
+        }
+    }
+
+    // trying to find a CA bundle in known locations
+    constexpr std::array cKnownCaInfoLocations {
+        // Debian, Ubuntu, Arch, Alpine, ...
+        "/etc/ssl/certs/ca-certificates.crt",
+        // Red Hat, Fedora
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        // some other known locations
+        "/etc/ssl/ca-bundle.pem",
+        "/etc/ssl/cert.pem",
+        "/etc/pki/tls/cert.pem",
+        "/etc/pki/tls/cacert.pem",
+        "/usr/share/ssl/certs/ca-bundle.crt",
+        "/usr/local/share/certs/ca-root-nss.crt",
+    };
+    for ( const auto& path : cKnownCaInfoLocations )
+    {
+        if ( std::filesystem::is_regular_file( path, ec ) )
+        {
+            // use the path as is, no additional check
+            return path;
+        }
+    }
+
+    // we did everything we could ¯\_(ツ)_/¯
+    return {};
+}
 #endif
 #endif //!__EMSCRIPTEN__
 
@@ -315,12 +360,16 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetTimeout( tm );
 
 #ifdef __linux__
-        // see initializeCertificateInfo() for more info
-        if ( url.starts_with( "https" ) && !gCaInfoPath.empty() )
+        if ( url.starts_with( "https" ) )
         {
-            session.SetSslOptions( cpr::Ssl(
-                cpr::ssl::CaInfo{ std::string{ gCaInfoPath } }
-            ) );
+            // set the certificate info manually; see getCaInfo for more info
+            static const auto cCaInfo = getCaInfo( session );
+            if ( !cCaInfo.empty() )
+            {
+                session.SetSslOptions( cpr::Ssl(
+                    cpr::ssl::CaInfo{ std::string{ cCaInfo } }
+                ) );
+            }
         }
 #endif
 
@@ -495,34 +544,6 @@ void WebRequest::waitRemainingAsync()
     for ( auto& [_, thread] : asyncMap )
         if ( thread.joinable() )
             thread.join();
-}
-
-void WebRequest::initializeCertificateInfo()
-{
-#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
-    constexpr std::array cKnownCaInfoLocations {
-        // Debian, Ubuntu, Arch
-        "/etc/ssl/certs/ca-certificates.crt",
-        // Red Hat, Fedora
-        "/etc/pki/tls/certs/ca-bundle.crt",
-        // some other known locations
-        "/etc/ssl/ca-bundle.pem",
-        "/etc/ssl/cert.pem",
-        "/etc/pki/tls/cert.pem",
-        "/etc/pki/tls/cacert.pem",
-        "/usr/share/ssl/certs/ca-bundle.crt",
-        "/usr/local/share/certs/ca-root-nss.crt",
-    };
-    std::error_code ec;
-    for ( const auto& path : cKnownCaInfoLocations )
-    {
-        if ( std::filesystem::is_regular_file( path, ec ) )
-        {
-            gCaInfoPath = path;
-            break;
-        }
-    }
-#endif
 }
 
 Expected<Json::Value> parseResponse( const Json::Value& response )

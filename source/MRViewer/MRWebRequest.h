@@ -87,11 +87,6 @@ public:
     /// if any async request is still in progress, wait for it
     MRVIEWER_API static void waitRemainingAsync();
 
-    /// find SSL certificate bundle file for using with HTTPS requests
-    /// relevant for Linux systems only, does nothing on other platforms
-    /// call it if you want to make your binary portable (by default cURL uses a path defined during its compilation)
-    MRVIEWER_API static void initializeCertificateInfo();
-
 private:
     Method method_{ Method::Get };
     std::string url_;

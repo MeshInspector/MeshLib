@@ -21,8 +21,16 @@ void BitSet::zeroUnusedBits()
 
 BitSet & BitSet::set( IndexType n, size_type len )
 {
-    base::set( n, len, val );
-    return * this;
+    return rangeOp( n, len,
+        []( Block ){ return ~Block{}; },
+        []( Block b, size_t firstBit, size_t lastBit ){ return b | bitMask( firstBit, lastBit ); } );
+}
+
+BitSet & BitSet::reset( IndexType n, size_type len )
+{
+    return rangeOp( n, len,
+        []( Block ){ return Block{}; },
+        []( Block b, size_t firstBit, size_t lastBit ){ return b & ~bitMask( firstBit, lastBit ); } );
 }
 
 BitSet & BitSet::set()

@@ -165,8 +165,22 @@ private:
     /// block's mask with 1 at given bit's position and 0 at all other positions
     [[nodiscard]] static Block bitMask( IndexType n ) noexcept { return Block( 1 ) << bitIndex( n ); }
 
+    /// block's mask with 1 at [firstBit, lastBit) positions and 0 at all other positions
+    [[nodiscard]] static Block bitMask( IndexType firstBit, IndexType lastBit ) noexcept
+    {
+        return ( ( Block( 1 ) << firstBit ) - 1 ) // set all bits in [0, firstBit)
+            ^ //xor
+            ( lastBit == bitsPerBlock ? ~Block{} : ( ( Block( 1 ) << lastBit ) - 1 ) ); // set all bits in [0, lastBit)
+    }
+
     /// set all unused bits in the last block to zero
     MRMESH_API void zeroUnusedBits();
+
+    /// performes some operation on [n, n+len) bits;
+    /// calls block = FullBlock( block ) for every block fully in range;
+    /// calls block = PartialBlock( block, firstBit, lastBit ) function for all blocks with only [firstBit, lastBit) in range;
+    template<class FullBlock, class PartialBlock>
+    BitSet & rangeOp( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
 
 private:
     std::vector<Block> blocks_;

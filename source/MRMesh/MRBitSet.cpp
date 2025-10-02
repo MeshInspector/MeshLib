@@ -1,5 +1,6 @@
 #include "MRBitSet.h"
 #include "MRGTest.h"
+#include <bit>
 
 namespace MR
 {
@@ -10,6 +11,14 @@ bool BitSet::any() const
         if ( b )
             return true;
     return false;
+}
+
+auto BitSet::count() const noexcept -> size_type
+{
+    size_type res = 0;
+    for ( const auto b : blocks_ )
+        res += std::popcount( b );
+    return res;
 }
 
 void BitSet::setUnusedBits()

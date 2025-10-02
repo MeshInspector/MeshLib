@@ -29,8 +29,10 @@ public:
     using size_type = size_t;
     using IndexType = size_t;
 
+    BitSet() noexcept = default;
+
     /// creates bitset of given size filled with given value
-    explicit BitSet( size_t numBits, bool fillValue ) { resize( numBits, fillValue ); }
+    explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
 
     void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks( numBits ) ); }
     MRMESH_API void resize( size_type numBits, bool fillValue = false );
@@ -61,6 +63,9 @@ public:
     BitSet & flip( IndexType n ) { assert( n < size() ); blocks_[blockIndex( n )] ^= bitMask( n ); return * this; }
     MRMESH_API BitSet & flip();
 
+    /// adds one more bit with the given value in the container, increasing its size on 1
+    void push_back( bool val ) { auto n = numBits_++; if ( bitIndex( n ) == 0 ) blocks_.push_back( Block{} ); set( n, val ); }
+
     /// read-only access to all bits stored as a vector of uint64 blocks
     [[nodiscard]] const auto & bits() const { return blocks_; }
 
@@ -80,6 +85,9 @@ public:
 
     /// returns true if all bits in this container are reset
     [[nodiscard]] bool none() const { return !any(); }
+
+    /// computes the number of set bits in the whole set
+    [[nodiscard]] MRMESH_API size_type count() const noexcept;
 
     /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] IndexType find_first() const;

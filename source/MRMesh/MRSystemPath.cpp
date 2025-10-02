@@ -23,7 +23,7 @@ namespace
 
 using namespace MR;
 
-#ifdef __APPLE__
+#if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
 // If true, the resources should be loaded from the executable directory, rather than from the system directories.
 [[nodiscard]] bool resourcesAreNearExe()
 {
@@ -66,6 +66,10 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     }
     MR_UNREACHABLE
 #else
+    // TODO: use getLibraryDirectory()
+    if ( resourcesAreNearExe() )
+        return SystemPath::getExecutableDirectory().value_or( "/" );
+
     auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
     static const auto findResourceDir = [] ( std::filesystem::path libDir ) -> std::filesystem::path
     {

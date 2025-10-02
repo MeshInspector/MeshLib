@@ -4,9 +4,9 @@
 #ifndef MRIOEXTRAS_NO_TIFF
 #include "exports.h"
 
-#include <MRMesh/MRDistanceMap.h>
+#include <MRMesh/MRDistanceMapParams.h>
 #include <MRMesh/MRExpected.h>
-#include <MRMesh/MRImage.h>
+#include <MRMesh/MRMeshFwd.h>
 
 #include <filesystem>
 

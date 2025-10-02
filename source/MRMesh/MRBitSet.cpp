@@ -19,6 +19,39 @@ void BitSet::zeroUnusedBits()
         blocks_.back() &= bitMask( extraBits ) - 1;
 }
 
+template<class FullBlock, class PartialBlock>
+BitSet & BitSet::rangeOp( IndexType n, size_type len, FullBlock&& f, PartialBlock&& p )
+{
+    assert( n < size() );
+    assert( n + len <= size() );
+    if ( len == 0 )
+        return *this;
+
+    const auto firstBlock = blockIndex( n );
+    const auto firstBit = bitIndex( n );
+
+    const auto lastBlock = blockIndex( n + len );
+    const auto lastBit = bitIndex( n + len );
+
+    if ( firstBlock == lastBlock )
+    {
+        blocks_[firstBlock] = p( blocks_[firstBlock], firstBit, lastBit );
+        return *this;
+    }
+
+    if ( firstBit > 0 )
+        blocks_[firstBlock] = p( blocks_[firstBlock], firstBit, bitsPerBlock );
+
+    if ( lastBit > 0 )
+        blocks_[lastBlock] = p( blocks_[lastBlock], 0, lastBit );
+
+    const auto firstFullBlock = ( firstBit == 0 ) ? firstBlock : firstFullBlock + 1;
+    for ( auto i = firstFullBlock; i < lastBlock; ++i )
+        blocks_[i] = f( blocks_[i] );
+
+    return *this;
+}
+
 BitSet & BitSet::set( IndexType n, size_type len )
 {
     return rangeOp( n, len,

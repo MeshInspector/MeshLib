@@ -70,10 +70,13 @@ void putIntoWaitingMap_( std::thread&& thread )
     auto& asyncMap = getWaitingMap_();
     asyncMap[thread.get_id()] = std::move( thread );
 }
+#endif //!__EMSCRIPTEN__
 
-#ifdef __linux__
-/// ...
-/// see also: https://curl.se/mail/lib-2022-05/0039.html
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
+/// https://curl.se/mail/lib-2022-05/0039.html
+/// > curl searches for an appropriate CA bundle at compile time and hard-codes the one it finds.
+/// > [...] this doesn't work well for a portable binary. In that case, the application can search
+/// > for an appropriate bundle itself using whatever means it feels necessary and set it at run-time
 std::string getCaInfo( cpr::Session& session )
 {
     std::error_code ec;
@@ -120,7 +123,6 @@ std::string getCaInfo( cpr::Session& session )
     return {};
 }
 #endif
-#endif //!__EMSCRIPTEN__
 
 } // anonymous namespace
 
@@ -359,7 +361,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetParameters( params );
         session.SetTimeout( tm );
 
-#ifdef __linux__
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
         if ( url.starts_with( "https" ) )
         {
             // set the certificate info manually; see getCaInfo for more info

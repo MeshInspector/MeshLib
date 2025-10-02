@@ -113,6 +113,11 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   IF(NOT WIN32)
     find_package(clip CONFIG REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
+
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(curl REQUIRED IMPORTED_TARGET libcurl)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::curl)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_WITH_BUNDLED_CURL)
   ENDIF()
 ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
   find_package(GDCM CONFIG REQUIRED)

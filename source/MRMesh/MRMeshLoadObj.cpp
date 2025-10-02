@@ -462,6 +462,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) - firstVert;
+    else
+        --firstVert;
     if ( firstVert < 0 || firstVert >= points.size() )
         return unexpected( "Out of bounds Vertex ID in OBJ-file" );
     haveColors = firstVert < colors.size();

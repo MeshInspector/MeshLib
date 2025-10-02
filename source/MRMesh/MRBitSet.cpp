@@ -4,11 +4,48 @@
 namespace MR
 {
 
+bool BitSet::any() const
+{
+    for ( const auto b : blocks_ )
+        if ( b )
+            return true;
+    return false;
+}
+
 void BitSet::zeroUnusedBits()
 {
     assert ( num_blocks() == calcNumBlocks( numBits_ ) );
     if ( auto extraBits = numBits_ % bitsPerBlock )
         blocks_.back() &= bitMask( extraBits ) - 1;
+}
+
+BitSet & BitSet::set( IndexType n, size_type len )
+{
+    base::set( n, len, val );
+    return * this;
+}
+
+BitSet & BitSet::set()
+{
+    blocks_.clear();
+    blocks_.resize( calcNumBlocks( numBits_ ), ~Block{} );
+    zeroUnusedBits();
+    return * this;
+}
+
+BitSet & BitSet::reset()
+{
+    blocks_.clear();
+    blocks_.resize( calcNumBlocks( numBits_ ), Block{} );
+    return * this;
+}
+
+BitSet & BitSet::flip()
+{
+    for ( auto & b : blocks_ )
+        b = ~b;
+    zeroUnusedBits();
+    return * this;
 }
 
 void BitSet::resize( size_type numBits, bool fillValue )
@@ -78,13 +115,13 @@ bool operator == ( const BitSet & a, const BitSet & b )
 BitSet::IndexType BitSet::find_last() const
 {
     if ( !any() )
-        return base::npos;
+        return npos;
     for ( IndexType i = size(); i-- >= 1; )
     {
         if ( test( i ) )
             return i;
     }
-    return base::npos;
+    return npos;
 }
 
 size_t BitSet::nthSetBit( size_t n ) const

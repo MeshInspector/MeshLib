@@ -5,11 +5,6 @@
 #include "MRphmap.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
-#define BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS
-#pragma warning(push)
-#pragma warning(disable: 4643) //Forward declaring in namespace std is not permitted by the C++ Standard.
-#include <boost/dynamic_bitset.hpp>
-#pragma warning(pop)
 #include <iterator>
 #include <functional>
 
@@ -29,6 +24,7 @@ class BitSet //: public boost::dynamic_bitset<std::uint64_t>
 public:
     using Block = std::uint64_t;
     inline static constexpr size_t bitsPerBlock = sizeof( Block ) * 8;
+    inline static constexpr size_t npos = (size_t)-1;
 
     //using base = boost::dynamic_bitset<std::uint64_t>;
     //using base::base;
@@ -38,13 +34,10 @@ public:
     /// creates bitset of given size filled with given value
     explicit BitSet( size_t numBits, bool fillValue ) { resize( numBits, fillValue ); }
 
-    /// prohibit these constructors inherited from boost::dynamic_bitset, which can initialize only few initial bits
-    explicit BitSet( size_t, unsigned long ) = delete;
-    template<class T, std::enable_if_t<std::is_arithmetic<T>::value, std::nullptr_t> = nullptr>
-    explicit BitSet( T, T ) = delete;
-
+    void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks( numBits ) ); }
     MRMESH_API void resize( size_type numBits, bool fillValue = false );
 
+    [[nodiscard]] bool empty() const noexcept { return numBits_ == 0; }
     [[nodiscard]] size_type size() const noexcept { return numBits_; }
     [[nodiscard]] size_type num_blocks() const noexcept { return blocks_.size(); }
     [[nodiscard]] size_type capacity() const noexcept { return blocks_.capacity() * bitsPerBlock; }
@@ -56,16 +49,19 @@ public:
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && uncheckedTest( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
-    BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    BitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
-    BitSet & set( IndexType n ) { base::set( n ); return * this; }
-    BitSet & set() { base::set(); return * this; }
-    BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
-    BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
-    BitSet & reset() { base::reset(); return * this; }
-    BitSet & flip( IndexType n, size_type len ) { base::flip( n, len ); return * this; }
-    BitSet & flip( IndexType n ) { base::flip( n ); return * this; }
-    BitSet & flip() { base::flip(); return * this; }
+    BitSet & set( IndexType n, size_type len, bool val ) { return val ? set( n, len ) : reset( n, len ); }
+    MRMESH_API BitSet & set( IndexType n, size_type len );
+    BitSet & set( IndexType n, bool val ) { return val ? set( n ) : reset( n ); } // Not using a default argument for `val` to get better C bindings.
+    BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex( n )] |= bitMask( n ); return * this; }
+    MRMESH_API BitSet & set();
+
+    MRMESH_API BitSet & reset( IndexType n, size_type len );
+    BitSet & reset( IndexType n ) { if ( n < size() ) blocks_[blockIndex( n )] &= ~bitMask( n ); return * this; }
+    MRMESH_API BitSet & reset();
+
+    MRMESH_API BitSet & flip( IndexType n, size_type len );
+    BitSet & flip( IndexType n ) { assert( n < size() ); blocks_[blockIndex( n )] ^= bitMask( n ); return * this; }
+    MRMESH_API BitSet & flip();
 
     /// read-only access to all bits stored as a vector of uint64 blocks
     [[nodiscard]] const auto & bits() const { return blocks_; }
@@ -78,7 +74,22 @@ public:
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     MRMESH_API BitSet & subtract( const BitSet & b, int bShiftInBlocks );
 
-    /// return the highest index i such as bit i is set, or npos if *this has no on bits.
+    /// returns true if all bits in this container are set
+    [[nodiscard]] MRMESH_API bool all() const;
+
+    /// returns true if at least one bits in this container is set
+    [[nodiscard]] MRMESH_API bool any() const;
+
+    /// returns true if all bits in this container are reset
+    [[nodiscard]] bool none() const { return !any(); }
+
+    /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
+    [[nodiscard]] IndexType find_first() const;
+
+    /// return the smallest index i>n such that bit i is set, or npos if *this has no on bits.
+    [[nodiscard]] IndexType find_next( IndexType n ) const;
+
+    /// return the highest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
 
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
@@ -190,10 +201,6 @@ public:
     TypedBitSet & flip() { base::flip(); return * this; }
     [[nodiscard]] bool test( IndexType n ) const { return base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return base::test_set( n, val ); }
-
-    // Disable for python bindings, because MRBind chokes on `boost::dynamic_bitset::reference`.
-    [[nodiscard]] MR_BIND_IGNORE reference operator[]( IndexType pos ) { return base::operator[]( pos ); }
-    [[nodiscard]] bool operator[]( IndexType pos ) const { return base::operator[]( pos ); }
 
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }
     [[nodiscard]] IndexType find_next( IndexType pos ) const { return IndexType( base::find_next( pos ) ); }

@@ -630,6 +630,8 @@ jobs:
   upload-to-release:
     if: ${{ github.event_name == 'release' || inputs.publish }}
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
+    outputs:
+      uploaded: ${{ steps.check_upload.outputs.uploaded }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
@@ -657,6 +659,10 @@ jobs:
       - name: Upload to Production PyPi
         run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
+      - name: Mark Success
+        id: check_upload
+        run: echo "uploaded=true" >> $GITHUB_OUTPUT
+
   post-release-test:
     if: ${{ github.event_name == 'release' || inputs.publish }}
     needs: upload-to-release
@@ -669,6 +675,7 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
+        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: ManyLinux-*
@@ -690,12 +697,14 @@ jobs:
 
 
       - name: Delete all Windows
+        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Windows
           failOnError: false
 
       - name: Delete all Macos
+        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Macos-*

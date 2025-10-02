@@ -17,17 +17,15 @@ namespace MR
  * \{
  */
 
-/// std::vector<bool> like container  (random-access, size_t - index type, bool - value type)
+/// std::vector<bool> like container (random-access, size_t - index type, bool - value type)
 /// with all bits after size() considered off during testing
-class BitSet //: public boost::dynamic_bitset<std::uint64_t>
+class BitSet
 {
 public:
     using Block = std::uint64_t;
-    inline static constexpr size_t bitsPerBlock = sizeof( Block ) * 8;
+    inline static constexpr size_t bits_per_block = sizeof( Block ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 
-    //using base = boost::dynamic_bitset<std::uint64_t>;
-    //using base::base;
     using size_type = size_t;
     using IndexType = size_t;
 
@@ -40,7 +38,7 @@ public:
     [[nodiscard]] bool empty() const noexcept { return numBits_ == 0; }
     [[nodiscard]] size_type size() const noexcept { return numBits_; }
     [[nodiscard]] size_type num_blocks() const noexcept { return blocks_.size(); }
-    [[nodiscard]] size_type capacity() const noexcept { return blocks_.capacity() * bitsPerBlock; }
+    [[nodiscard]] size_type capacity() const noexcept { return blocks_.capacity() * bits_per_block; }
 
     [[nodiscard]] bool uncheckedTest( IndexType n ) const { assert( n < size() ); return blocks_[blockIndex( n )] & bitMask( n ); }
     [[nodiscard]] bool uncheckedTestSet( IndexType n, bool val = true ) { assert( n < size() ); bool b = uncheckedTest( n ); if ( b != val ) set( n, val ); return b; }
@@ -142,25 +140,15 @@ public:
     [[nodiscard]] static IndexType beginId() { return IndexType{ 0 }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 
-    // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
-    #if defined(MR_PARSING_FOR_ANY_BINDINGS) || defined(MR_COMPILING_ANY_BINDINGS)
-    std::size_t size() const { return dynamic_bitset::size(); }
-    std::size_t count() const { return dynamic_bitset::count(); }
-    void resize( std::size_t num_bits, bool value = false ) { dynamic_bitset::resize( num_bits, value ); }
-    void clear() { dynamic_bitset::clear(); }
-    void push_back( bool bit ) { dynamic_bitset::push_back( bit ); }
-    void pop_back() { dynamic_bitset::pop_back(); }
-    #endif
-
 private:
     /// minimal number of blocks to store the given number of bits
-    [[nodiscard]] static size_type calcNumBlocks( size_type numBits ) noexcept { return ( numBits + bitsPerBlock - 1 ) / bitsPerBlock; }
+    [[nodiscard]] static size_type calcNumBlocks( size_type numBits ) noexcept { return ( numBits + bits_per_block - 1 ) / bits_per_block; }
 
     /// the block containing the given bit
-    [[nodiscard]] static size_type blockIndex( IndexType n ) noexcept { return n / bitsPerBlock; }
+    [[nodiscard]] static size_type blockIndex( IndexType n ) noexcept { return n / bits_per_block; }
 
     /// the bit's shift within its block
-    [[nodiscard]] static size_type bitIndex( IndexType n ) noexcept { return n % bitsPerBlock; }
+    [[nodiscard]] static size_type bitIndex( IndexType n ) noexcept { return n % bits_per_block; }
 
     /// block's mask with 1 at given bit's position and 0 at all other positions
     [[nodiscard]] static Block bitMask( IndexType n ) noexcept { return Block( 1 ) << bitIndex( n ); }
@@ -170,11 +158,14 @@ private:
     {
         return ( ( Block( 1 ) << firstBit ) - 1 ) // set all bits in [0, firstBit)
             ^ //xor
-            ( lastBit == bitsPerBlock ? ~Block{} : ( ( Block( 1 ) << lastBit ) - 1 ) ); // set all bits in [0, lastBit)
+            ( lastBit == bits_per_block ? ~Block{} : ( ( Block( 1 ) << lastBit ) - 1 ) ); // set all bits in [0, lastBit)
     }
 
+    /// set all unused bits in the last block to one
+    MRMESH_API void setUnusedBits();
+
     /// set all unused bits in the last block to zero
-    MRMESH_API void zeroUnusedBits();
+    MRMESH_API void resetUnusedBits();
 
     /// performes some operation on [n, n+len) bits;
     /// calls block = FullBlock( block ) for every block fully in range;

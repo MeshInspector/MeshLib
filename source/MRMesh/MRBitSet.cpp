@@ -12,11 +12,18 @@ bool BitSet::any() const
     return false;
 }
 
-void BitSet::zeroUnusedBits()
+void BitSet::setUnusedBits()
 {
     assert ( num_blocks() == calcNumBlocks( numBits_ ) );
-    if ( auto extraBits = numBits_ % bitsPerBlock )
-        blocks_.back() &= bitMask( extraBits ) - 1;
+    if ( auto lastBit = bitIndex( numBits_ ) )
+        blocks_.back() |= ~( bitMask( lastBit ) - 1 );
+}
+
+void BitSet::resetUnusedBits()
+{
+    assert ( num_blocks() == calcNumBlocks( numBits_ ) );
+    if ( auto lastBit = bitIndex( numBits_ ) )
+        blocks_.back() &= bitMask( lastBit ) - 1;
 }
 
 template<class FullBlock, class PartialBlock>
@@ -40,12 +47,12 @@ BitSet & BitSet::rangeOp( IndexType n, size_type len, FullBlock&& f, PartialBloc
     }
 
     if ( firstBit > 0 )
-        blocks_[firstBlock] = p( blocks_[firstBlock], firstBit, bitsPerBlock );
+        blocks_[firstBlock] = p( blocks_[firstBlock], firstBit, bits_per_block );
 
     if ( lastBit > 0 )
         blocks_[lastBlock] = p( blocks_[lastBlock], 0, lastBit );
 
-    const auto firstFullBlock = ( firstBit == 0 ) ? firstBlock : firstFullBlock + 1;
+    const auto firstFullBlock = ( firstBit == 0 ) ? firstBlock : firstBlock + 1;
     for ( auto i = firstFullBlock; i < lastBlock; ++i )
         blocks_[i] = f( blocks_[i] );
 
@@ -70,7 +77,7 @@ BitSet & BitSet::set()
 {
     blocks_.clear();
     blocks_.resize( calcNumBlocks( numBits_ ), ~Block{} );
-    zeroUnusedBits();
+    resetUnusedBits();
     return * this;
 }
 
@@ -85,20 +92,28 @@ BitSet & BitSet::flip()
 {
     for ( auto & b : blocks_ )
         b = ~b;
-    zeroUnusedBits();
+    resetUnusedBits();
     return * this;
 }
 
 void BitSet::resize( size_type numBits, bool fillValue )
 {
-    ...
+    if ( fillValue )
+    {
+        setUnusedBits();
+        blocks_.resize( calcNumBlocks( numBits ), ~Block{} );
+    }
+    else
+        blocks_.resize( calcNumBlocks( numBits ), Block{} );
+    numBits_ = numBits;
+    resetUnusedBits();
 }
 
 BitSet & BitSet::operator &= ( const BitSet & rhs )
 {
     resize( std::min( size(), rhs.size() ) );
     for ( size_type i = 0; i < num_blocks(); ++i )
-        m_bits[i] &= rhs.m_bits[i];
+        blocks_[i] &= rhs.blocks_[i];
     return *this;
 }
 
@@ -106,7 +121,7 @@ BitSet & BitSet::operator |= ( const BitSet & rhs )
 {
     resize( std::max( size(), rhs.size() ) );
     for ( size_type i = 0; i < rhs.num_blocks(); ++i )
-        m_bits[i] |= rhs.m_bits[i];
+        blocks_[i] |= rhs.blocks_[i];
     return *this;
 }
 
@@ -114,7 +129,7 @@ BitSet & BitSet::operator ^= ( const BitSet & rhs )
 {
     resize( std::max( size(), rhs.size() ) );
     for ( size_type i = 0; i < rhs.num_blocks(); ++i )
-        m_bits[i] ^= rhs.m_bits[i];
+        blocks_[i] ^= rhs.blocks_[i];
     return *this;
 }
 
@@ -122,7 +137,7 @@ BitSet & BitSet::operator -= ( const BitSet & rhs )
 {
     const auto endBlock = std::min( num_blocks(), rhs.num_blocks() );
     for ( size_type i = 0; i < endBlock; ++i )
-        m_bits[i] &= ~rhs.m_bits[i];
+        blocks_[i] &= ~rhs.blocks_[i];
     return *this;
 }
 
@@ -131,14 +146,14 @@ BitSet & BitSet::subtract( const BitSet & b, int bShiftInBlocks )
     const auto beginBlock = std::max( 0, bShiftInBlocks );
     const auto endBlock = std::clamp( b.num_blocks() + bShiftInBlocks, size_t(0), num_blocks() );
     for ( size_type i = beginBlock; i < endBlock; ++i )
-        m_bits[i] &= ~b.m_bits[i - bShiftInBlocks];
+        blocks_[i] &= ~b.blocks_[i - bShiftInBlocks];
     return *this;
 }
 
 bool operator == ( const BitSet & a, const BitSet & b )
 {
     if ( a.size() == b.size() )
-        return static_cast<const BitSet::base &>( a ) == static_cast<const BitSet::base &>( b );
+        return a.bits() == b.bits();
 
     auto aBlocksNum = a.num_blocks();
     auto bBlocksNum = b.num_blocks();
@@ -178,7 +193,7 @@ bool BitSet::is_subset_of( const BitSet& a ) const
     // base implementation does not support bitsets of different sizes
     const auto commonBlocks = std::min( num_blocks(), a.num_blocks() );
     for ( size_type i = 0; i < commonBlocks; ++i )
-        if ( m_bits[i] & ~a.m_bits[i] )
+        if ( blocks_[i] & ~a.blocks_[i] )
             return false;
     // this is subset of (a) if consider common bits only
 

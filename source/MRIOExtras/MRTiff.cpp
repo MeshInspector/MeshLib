@@ -7,6 +7,7 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTiffIO.h"
 #include "MRPch/MRFmt.h"
 
 #include <tiffio.h>
@@ -290,13 +291,13 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
     {
         TIFFReadRGBAImageOriented( tiff, result.resolution.x, result.resolution.y, (uint32_t*)result.pixels.data(), ORIENTATION_TOPLEFT, 0 );
     }
-    else if ( params.valueType == TiffParameters::ValueType::RGB || params.valueType == TiffParameters::ValueType::RGBA )
+    else if ( params.valueType == ::TiffParameters::ValueType::RGB || params.valueType == ::TiffParameters::ValueType::RGBA )
     {
         readTiff( tiff, result.pixels.data(), result.pixels.size(), params );
     }
     else
     {
-        assert( params.valueType == TiffParameters::ValueType::Scalar );
+        assert( params.valueType == ::TiffParameters::ValueType::Scalar );
         visitTiffData( [&] <typename U> ( const U* )
         {
             Buffer<U> buffer;
@@ -361,6 +362,25 @@ MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff, -1
 MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff, -1 )
 
 } // namespace ImageSave
+
+namespace DistanceMapSave
+{
+
+Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings )
+{
+    // TODO: add xf support
+    (void)settings;
+    return writeRawTiff( (const uint8_t*)dmap.data(), path, {
+        .sampleType = BaseTiffParameters::SampleType::Float,
+        .valueType = BaseTiffParameters::ValueType::Scalar,
+        .bytesPerSample = sizeof( float ),
+        .imageSize = dmap.dims(),
+    } );
+}
+
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )
+
+} // namespace DistanceMapSave
 
 } // namespace MR
 #endif

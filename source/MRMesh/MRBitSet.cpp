@@ -16,12 +16,8 @@ bool BitSet::any() const
 bool BitSet::all() const
 {
     auto lastBlock = blockIndex( numBits_ );
-    if ( auto lastBit = bitIndex( numBits_ ); lastBit > 0 )
-    {
-        if ( blocks_[lastBlock - 1] != bitMask( lastBit ) - 1 )
-            return false;
-        --lastBlock;
-    }
+    if ( auto lastBit = bitIndex( numBits_ ); lastBit > 0 && blocks_[lastBlock] != bitMask( lastBit ) - 1 )
+        return false;
     for ( size_t i = 0; i < lastBlock; ++i )
         if ( blocks_[i] != ~block_type{} )
             return false;
@@ -53,7 +49,7 @@ void BitSet::resetUnusedBits()
 template<class FullBlock, class PartialBlock>
 BitSet & BitSet::rangeOp( IndexType n, size_type len, FullBlock&& f, PartialBlock&& p )
 {
-    assert( n < size() );
+    assert( n <= size() );
     assert( n + len <= size() );
     if ( len == 0 )
         return *this;

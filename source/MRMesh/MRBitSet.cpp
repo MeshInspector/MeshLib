@@ -13,6 +13,21 @@ bool BitSet::any() const
     return false;
 }
 
+bool BitSet::all() const
+{
+    auto lastBlock = blockIndex( numBits_ );
+    if ( auto lastBit = bitIndex( numBits_ ); lastBit > 0 )
+    {
+        if ( blocks_[lastBlock - 1] != bitMask( lastBit ) - 1 )
+            return false;
+        --lastBlock;
+    }
+    for ( size_t i = 0; i < lastBlock; ++i )
+        if ( blocks_[i] != ~block_type{} )
+            return false;
+    return true;
+}
+
 auto BitSet::count() const noexcept -> size_type
 {
     size_type res = 0;

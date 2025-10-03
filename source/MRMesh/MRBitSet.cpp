@@ -105,6 +105,22 @@ BitSet & BitSet::flip()
     return * this;
 }
 
+void BitSet::reverse()
+{
+    if ( size() <= 1 )
+        return;
+    IndexType i = 0, j = size() - 1;
+    while( i < j )
+    {
+        bool ti = test( i );
+        bool tj = test( j );
+        set( i, tj );
+        set( j, ti );
+        ++i;
+        --j;
+    }
+}
+
 void BitSet::resize( size_type numBits, bool fillValue )
 {
     if ( fillValue )

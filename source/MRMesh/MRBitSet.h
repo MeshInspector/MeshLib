@@ -65,6 +65,9 @@ public:
     BitSet & flip( IndexType n ) { assert( n < size() ); blocks_[blockIndex( n )] ^= bitMask( n ); return * this; }
     MRMESH_API BitSet & flip();
 
+    /// changes the order of bits on the opposite
+    MRMESH_API void reverse();
+
     /// adds one more bit with the given value in the container, increasing its size on 1
     void push_back( bool val ) { auto n = numBits_++; if ( bitIndex( n ) == 0 ) blocks_.push_back( block_type{} ); set( n, val ); }
 

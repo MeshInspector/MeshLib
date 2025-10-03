@@ -8,6 +8,7 @@
 #include "MRPly.h"
 #include "MRTimer.h"
 #include <fstream>
+#include <sstream>
 
 namespace MR
 {

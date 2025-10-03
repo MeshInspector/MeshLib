@@ -12,6 +12,8 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRTimer.h"
 
+#include <variant>
+
 namespace MR::Cuda
 {
 

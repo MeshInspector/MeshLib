@@ -58,8 +58,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     DynamicArray<float3> cudaSamples( samples.vec_ );
 
     std::vector<uint64_t> blocks;
-    boost::to_block_range( validSamples, std::back_inserter( blocks ) );
-    DynamicArray<uint64_t> cudaValidSamples( blocks );
+    DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
 
     const auto precs = calcPrecs( skyPatches );
     DynamicArray<IntersectionPrecomputes> cudaPrecs( precs );
@@ -100,9 +99,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation().vec_ );
     DynamicArray<float3> cudaSamples( samples.vec_ );
 
-    std::vector<uint64_t> cudaValidSamplesblocks;
-    boost::to_block_range( validSamples, std::back_inserter( cudaValidSamplesblocks ) );
-    DynamicArray<uint64_t> cudaValidSamples( cudaValidSamplesblocks );
+    DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
 
     const auto precs = calcPrecs( skyPatches );
     DynamicArray<IntersectionPrecomputes> cudaPrecs( precs );

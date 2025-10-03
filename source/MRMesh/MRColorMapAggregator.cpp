@@ -171,10 +171,17 @@ TEST( MRMesh, ColorMapAggregator )
     cma.setDefaultColor( cWhite );
 
     int size = 5;
-    FaceBitSet faces( 5, true );
-    cma.pushBack( { FaceColors( size, cRed ), FaceBitSet( std::string( "00110" ) ) }  );
-    cma.pushBack( { FaceColors( size, cGreen ), FaceBitSet( std::string( "01100" ) ) } );
+    FaceBitSet faces( size );
+    faces.set( 1_f );
+    faces.set( 2_f );
+    cma.pushBack( { FaceColors( size, cRed ), faces } );
+
+    faces.reset( 1_f );
+    faces.set( 3_f );
+    cma.pushBack( { FaceColors( size, cGreen ), faces } );
+
     cma.setMode( FaceColorMapAggregator::AggregateMode::Overlay );
+    faces.set();
     FaceColors res = cma.aggregate( faces );
 
     ASSERT_TRUE( res.size() == size );

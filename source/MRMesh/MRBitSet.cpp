@@ -15,8 +15,8 @@ bool BitSet::any() const
 
 bool BitSet::all() const
 {
-    auto lastBlock = blockIndex( numBits_ );
-    if ( auto lastBit = bitIndex( numBits_ ); lastBit > 0 && blocks_[lastBlock] != bitMask( lastBit ) - 1 )
+    auto lastBlock = blockIndex_( numBits_ );
+    if ( auto lastBit = bitIndex_( numBits_ ); lastBit > 0 && blocks_[lastBlock] != bitMask_( lastBit ) - 1 )
         return false;
     for ( size_t i = 0; i < lastBlock; ++i )
         if ( blocks_[i] != ~block_type{} )
@@ -32,33 +32,33 @@ auto BitSet::count() const noexcept -> size_type
     return res;
 }
 
-void BitSet::setUnusedBits()
+void BitSet::setUnusedBits_()
 {
-    assert ( num_blocks() == calcNumBlocks( numBits_ ) );
-    if ( auto lastBit = bitIndex( numBits_ ) )
-        blocks_.back() |= ~( bitMask( lastBit ) - 1 );
+    assert ( num_blocks() == calcNumBlocks_( numBits_ ) );
+    if ( auto lastBit = bitIndex_( numBits_ ) )
+        blocks_.back() |= ~( bitMask_( lastBit ) - 1 );
 }
 
-void BitSet::resetUnusedBits()
+void BitSet::resetUnusedBits_()
 {
-    assert ( num_blocks() == calcNumBlocks( numBits_ ) );
-    if ( auto lastBit = bitIndex( numBits_ ) )
-        blocks_.back() &= bitMask( lastBit ) - 1;
+    assert ( num_blocks() == calcNumBlocks_( numBits_ ) );
+    if ( auto lastBit = bitIndex_( numBits_ ) )
+        blocks_.back() &= bitMask_( lastBit ) - 1;
 }
 
 template<class FullBlock, class PartialBlock>
-BitSet & BitSet::rangeOp( IndexType n, size_type len, FullBlock&& f, PartialBlock&& p )
+BitSet & BitSet::rangeOp_( IndexType n, size_type len, FullBlock&& f, PartialBlock&& p )
 {
     assert( n <= size() );
     assert( n + len <= size() );
     if ( len == 0 )
         return *this;
 
-    const auto firstBlock = blockIndex( n );
-    const auto firstBit = bitIndex( n );
+    const auto firstBlock = blockIndex_( n );
+    const auto firstBit = bitIndex_( n );
 
-    const auto lastBlock = blockIndex( n + len );
-    const auto lastBit = bitIndex( n + len );
+    const auto lastBlock = blockIndex_( n + len );
+    const auto lastBit = bitIndex_( n + len );
 
     if ( firstBlock == lastBlock )
     {
@@ -79,32 +79,41 @@ BitSet & BitSet::rangeOp( IndexType n, size_type len, FullBlock&& f, PartialBloc
     return *this;
 }
 
-BitSet & BitSet::set( IndexType n, size_type len )
+BitSet & BitSet::set( IndexType n, size_type len, bool val )
 {
-    return rangeOp( n, len,
+    if ( !val )
+        return reset( n, len );
+    return rangeOp_( n, len,
         []( block_type ){ return ~block_type{}; },
-        []( block_type b, size_t firstBit, size_t lastBit ){ return b | bitMask( firstBit, lastBit ); } );
+        []( block_type b, size_t firstBit, size_t lastBit ){ return b | bitMask_( firstBit, lastBit ); } );
 }
 
 BitSet & BitSet::reset( IndexType n, size_type len )
 {
-    return rangeOp( n, len,
+    return rangeOp_( n, len,
         []( block_type ){ return block_type{}; },
-        []( block_type b, size_t firstBit, size_t lastBit ){ return b & ~bitMask( firstBit, lastBit ); } );
+        []( block_type b, size_t firstBit, size_t lastBit ){ return b & ~bitMask_( firstBit, lastBit ); } );
+}
+
+BitSet & BitSet::flip( IndexType n, size_type len )
+{
+    return rangeOp_( n, len,
+        []( block_type b ){ return ~b; },
+        []( block_type b, size_t firstBit, size_t lastBit ){ return b ^ bitMask_( firstBit, lastBit ); } );
 }
 
 BitSet & BitSet::set()
 {
     blocks_.clear();
-    blocks_.resize( calcNumBlocks( numBits_ ), ~block_type{} );
-    resetUnusedBits();
+    blocks_.resize( calcNumBlocks_( numBits_ ), ~block_type{} );
+    resetUnusedBits_();
     return * this;
 }
 
 BitSet & BitSet::reset()
 {
     blocks_.clear();
-    blocks_.resize( calcNumBlocks( numBits_ ), block_type{} );
+    blocks_.resize( calcNumBlocks_( numBits_ ), block_type{} );
     return * this;
 }
 
@@ -112,7 +121,7 @@ BitSet & BitSet::flip()
 {
     for ( auto & b : blocks_ )
         b = ~b;
-    resetUnusedBits();
+    resetUnusedBits_();
     return * this;
 }
 
@@ -136,13 +145,13 @@ void BitSet::resize( size_type numBits, bool fillValue )
 {
     if ( fillValue )
     {
-        setUnusedBits();
-        blocks_.resize( calcNumBlocks( numBits ), ~block_type{} );
+        setUnusedBits_();
+        blocks_.resize( calcNumBlocks_( numBits ), ~block_type{} );
     }
     else
-        blocks_.resize( calcNumBlocks( numBits ), block_type{} );
+        blocks_.resize( calcNumBlocks_( numBits ), block_type{} );
     numBits_ = numBits;
-    resetUnusedBits();
+    resetUnusedBits_();
 }
 
 BitSet & BitSet::operator &= ( const BitSet & rhs )
@@ -251,8 +260,8 @@ auto BitSet::findSetBitAfter_( IndexType n ) const -> IndexType
     if ( n >= size() )
         return npos;
 
-    auto blockId = blockIndex( n );
-    const auto firstBit = bitIndex( n );
+    auto blockId = blockIndex_( n );
+    const auto firstBit = bitIndex_( n );
     auto block0 = blocks_[blockId];
     block0 &= ~( ( block_type( 1 ) << firstBit ) - 1 ); // zero bits before firstBit
     if ( auto c = std::countr_zero( block0 ); c < bits_per_block )

@@ -44,7 +44,7 @@ public:
         return res;
     }
 
-    void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks( numBits ) ); }
+    void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks_( numBits ) ); }
     MRMESH_API void resize( size_type numBits, bool fillValue = false );
     void clear() { numBits_ = 0; blocks_.clear(); }
     void shrink_to_fit() { blocks_.shrink_to_fit(); }
@@ -54,35 +54,34 @@ public:
     [[nodiscard]] size_type num_blocks() const noexcept { return blocks_.size(); }
     [[nodiscard]] size_type capacity() const noexcept { return blocks_.capacity() * bits_per_block; }
 
-    [[nodiscard]] bool uncheckedTest( IndexType n ) const { assert( n < size() ); return blocks_[blockIndex( n )] & bitMask( n ); }
+    [[nodiscard]] bool uncheckedTest( IndexType n ) const { assert( n < size() ); return blocks_[blockIndex_( n )] & bitMask_( n ); }
     [[nodiscard]] bool uncheckedTestSet( IndexType n, bool val = true ) { assert( n < size() ); bool b = uncheckedTest( n ); if ( b != val ) set( n, val ); return b; }
 
     // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && uncheckedTest( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
-    BitSet & set( IndexType n, size_type len, bool val ) { return val ? set( n, len ) : reset( n, len ); }
-    MRMESH_API BitSet & set( IndexType n, size_type len );
+    MRMESH_API BitSet & set( IndexType n, size_type len, bool val );
     BitSet & set( IndexType n, bool val ) { return val ? set( n ) : reset( n ); } // Not using a default argument for `val` to get better C bindings.
-    BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex( n )] |= bitMask( n ); return * this; }
+    BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] |= bitMask_( n ); return * this; }
     MRMESH_API BitSet & set();
 
     MRMESH_API BitSet & reset( IndexType n, size_type len );
-    BitSet & reset( IndexType n ) { if ( n < size() ) blocks_[blockIndex( n )] &= ~bitMask( n ); return * this; }
+    BitSet & reset( IndexType n ) { if ( n < size() ) blocks_[blockIndex_( n )] &= ~bitMask_( n ); return * this; }
     MRMESH_API BitSet & reset();
 
     MRMESH_API BitSet & flip( IndexType n, size_type len );
-    BitSet & flip( IndexType n ) { assert( n < size() ); blocks_[blockIndex( n )] ^= bitMask( n ); return * this; }
+    BitSet & flip( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] ^= bitMask_( n ); return * this; }
     MRMESH_API BitSet & flip();
 
     /// changes the order of bits on the opposite
     MRMESH_API void reverse();
 
     /// adds one more bit with the given value in the container, increasing its size on 1
-    void push_back( bool val ) { auto n = numBits_++; if ( bitIndex( n ) == 0 ) blocks_.push_back( block_type{} ); set( n, val ); }
+    void push_back( bool val ) { auto n = numBits_++; if ( bitIndex_( n ) == 0 ) blocks_.push_back( block_type{} ); set( n, val ); }
 
     /// removes last bit from the container, decreasing its size on 1
-    void pop_back() { assert( numBits_ > 0 ); { if ( bitIndex( numBits_ ) == 1 ) blocks_.pop_back(); else reset( numBits_ - 1 ); } --numBits_; }
+    void pop_back() { assert( numBits_ > 0 ); { if ( bitIndex_( numBits_ ) == 1 ) blocks_.pop_back(); else reset( numBits_ - 1 ); } --numBits_; }
 
     /// read-only access to all bits stored as a vector of uint64 blocks
     [[nodiscard]] const auto & bits() const { return blocks_; }
@@ -168,19 +167,19 @@ public:
 
 private:
     /// minimal number of blocks to store the given number of bits
-    [[nodiscard]] static size_type calcNumBlocks( size_type numBits ) noexcept { return ( numBits + bits_per_block - 1 ) / bits_per_block; }
+    [[nodiscard]] static size_type calcNumBlocks_( size_type numBits ) noexcept { return ( numBits + bits_per_block - 1 ) / bits_per_block; }
 
     /// the block containing the given bit
-    [[nodiscard]] static size_type blockIndex( IndexType n ) noexcept { return n / bits_per_block; }
+    [[nodiscard]] static size_type blockIndex_( IndexType n ) noexcept { return n / bits_per_block; }
 
     /// the bit's shift within its block
-    [[nodiscard]] static size_type bitIndex( IndexType n ) noexcept { return n % bits_per_block; }
+    [[nodiscard]] static size_type bitIndex_( IndexType n ) noexcept { return n % bits_per_block; }
 
     /// block's mask with 1 at given bit's position and 0 at all other positions
-    [[nodiscard]] static block_type bitMask( IndexType n ) noexcept { return block_type( 1 ) << bitIndex( n ); }
+    [[nodiscard]] static block_type bitMask_( IndexType n ) noexcept { return block_type( 1 ) << bitIndex_( n ); }
 
     /// block's mask with 1 at [firstBit, lastBit) positions and 0 at all other positions
-    [[nodiscard]] static block_type bitMask( IndexType firstBit, IndexType lastBit ) noexcept
+    [[nodiscard]] static block_type bitMask_( IndexType firstBit, IndexType lastBit ) noexcept
     {
         return ( ( block_type( 1 ) << firstBit ) - 1 ) // set all bits in [0, firstBit)
             ^ //xor
@@ -188,16 +187,16 @@ private:
     }
 
     /// set all unused bits in the last block to one
-    MRMESH_API void setUnusedBits();
+    MRMESH_API void setUnusedBits_();
 
     /// set all unused bits in the last block to zero
-    MRMESH_API void resetUnusedBits();
+    MRMESH_API void resetUnusedBits_();
 
     /// performes some operation on [n, n+len) bits;
     /// calls block = FullBlock( block ) for every block fully in range;
     /// calls block = PartialBlock( block, firstBit, lastBit ) function for all blocks with only [firstBit, lastBit) in range;
     template<class FullBlock, class PartialBlock>
-    BitSet & rangeOp( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
+    BitSet & rangeOp_( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
 
     /// return the smallest index i>=n such that bit i is set, or npos if *this has no on bits.
     MRMESH_API IndexType findSetBitAfter_( IndexType n ) const;

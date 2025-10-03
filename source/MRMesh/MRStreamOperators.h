@@ -6,7 +6,6 @@
 #include "MRMatrix3.h"
 #include "MRMatrix4.h"
 #include "MRPlane3.h"
-#include "MRBitSet.h"
 #include "MRTriPoint.h"
 #include "MRAffineXf3.h"
 #include "MRPointOnFace.h"
@@ -171,6 +170,11 @@ namespace MR
     {
         return s >> box.min >> box.max;
     }
+
+    // =====================================================================
+    // BitSet, format compatible with boost::dynamic_bitset
+    MRMESH_API std::ostream& operator << ( std::ostream& s, const BitSet & bs );
+    MRMESH_API std::istream& operator >> ( std::istream& s, BitSet & bs );
 }
 
 /// \}

@@ -29,10 +29,14 @@ public:
     using size_type = size_t;
     using IndexType = size_t;
 
+    /// creates empty bitset
     BitSet() noexcept = default;
 
     /// creates bitset of given size filled with given value
     explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
+
+    /// creates bitset from the given blocks of bits
+    BitSet( std::vector<block_type> && blocks ) : blocks_( std::move( blocks ) ) { numBits_ = blocks_.size() * bits_per_block; }
 
     void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks( numBits ) ); }
     MRMESH_API void resize( size_type numBits, bool fillValue = false );

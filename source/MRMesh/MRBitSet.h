@@ -22,7 +22,7 @@ namespace MR
 class BitSet
 {
 public:
-    using block_type = std::uint64_t;
+    using block_type = Uint64;
     inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 
@@ -36,7 +36,13 @@ public:
     explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
 
     /// creates bitset from the given blocks of bits
-    BitSet( std::vector<block_type> && blocks ) : blocks_( std::move( blocks ) ) { numBits_ = blocks_.size() * bits_per_block; }
+    static BitSet fromBlocks( std::vector<block_type> && blocks )
+    {
+        BitSet res;
+        res.blocks_ = std::move( blocks );
+        res.numBits_ = res.blocks_.size() * bits_per_block;
+        return res;
+    }
 
     void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks( numBits ) ); }
     MRMESH_API void resize( size_type numBits, bool fillValue = false );

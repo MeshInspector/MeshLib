@@ -22,8 +22,8 @@ namespace MR
 class BitSet
 {
 public:
-    using Block = std::uint64_t;
-    inline static constexpr size_t bits_per_block = sizeof( Block ) * 8;
+    using block_type = std::uint64_t;
+    inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 
     using size_type = size_t;
@@ -36,6 +36,8 @@ public:
 
     void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks( numBits ) ); }
     MRMESH_API void resize( size_type numBits, bool fillValue = false );
+    void clear() { numBits_ = 0; blocks_.clear(); }
+    void shrink_to_fit() { blocks_.shrink_to_fit(); }
 
     [[nodiscard]] bool empty() const noexcept { return numBits_ == 0; }
     [[nodiscard]] size_type size() const noexcept { return numBits_; }
@@ -64,7 +66,10 @@ public:
     MRMESH_API BitSet & flip();
 
     /// adds one more bit with the given value in the container, increasing its size on 1
-    void push_back( bool val ) { auto n = numBits_++; if ( bitIndex( n ) == 0 ) blocks_.push_back( Block{} ); set( n, val ); }
+    void push_back( bool val ) { auto n = numBits_++; if ( bitIndex( n ) == 0 ) blocks_.push_back( block_type{} ); set( n, val ); }
+
+    /// removes last bit from the container, decreasing its size on 1
+    void pop_back() { assert( numBits_ > 0 ); { if ( bitIndex( numBits_ ) == 1 ) blocks_.pop_back(); else reset( numBits_ - 1 ); } --numBits_; }
 
     /// read-only access to all bits stored as a vector of uint64 blocks
     [[nodiscard]] const auto & bits() const { return blocks_; }
@@ -159,14 +164,14 @@ private:
     [[nodiscard]] static size_type bitIndex( IndexType n ) noexcept { return n % bits_per_block; }
 
     /// block's mask with 1 at given bit's position and 0 at all other positions
-    [[nodiscard]] static Block bitMask( IndexType n ) noexcept { return Block( 1 ) << bitIndex( n ); }
+    [[nodiscard]] static block_type bitMask( IndexType n ) noexcept { return block_type( 1 ) << bitIndex( n ); }
 
     /// block's mask with 1 at [firstBit, lastBit) positions and 0 at all other positions
-    [[nodiscard]] static Block bitMask( IndexType firstBit, IndexType lastBit ) noexcept
+    [[nodiscard]] static block_type bitMask( IndexType firstBit, IndexType lastBit ) noexcept
     {
-        return ( ( Block( 1 ) << firstBit ) - 1 ) // set all bits in [0, firstBit)
+        return ( ( block_type( 1 ) << firstBit ) - 1 ) // set all bits in [0, firstBit)
             ^ //xor
-            ( lastBit == bits_per_block ? ~Block{} : ( ( Block( 1 ) << lastBit ) - 1 ) ); // set all bits in [0, lastBit)
+            ( lastBit == bits_per_block ? ~block_type{} : ( ( block_type( 1 ) << lastBit ) - 1 ) ); // set all bits in [0, lastBit)
     }
 
     /// set all unused bits in the last block to one
@@ -182,7 +187,7 @@ private:
     BitSet & rangeOp( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
 
 private:
-    std::vector<Block> blocks_;
+    std::vector<block_type> blocks_;
     size_type numBits_ = 0;
 };
 

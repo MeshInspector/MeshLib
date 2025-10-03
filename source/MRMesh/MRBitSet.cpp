@@ -71,21 +71,21 @@ BitSet & BitSet::rangeOp( IndexType n, size_type len, FullBlock&& f, PartialBloc
 BitSet & BitSet::set( IndexType n, size_type len )
 {
     return rangeOp( n, len,
-        []( Block ){ return ~Block{}; },
-        []( Block b, size_t firstBit, size_t lastBit ){ return b | bitMask( firstBit, lastBit ); } );
+        []( block_type ){ return ~block_type{}; },
+        []( block_type b, size_t firstBit, size_t lastBit ){ return b | bitMask( firstBit, lastBit ); } );
 }
 
 BitSet & BitSet::reset( IndexType n, size_type len )
 {
     return rangeOp( n, len,
-        []( Block ){ return Block{}; },
-        []( Block b, size_t firstBit, size_t lastBit ){ return b & ~bitMask( firstBit, lastBit ); } );
+        []( block_type ){ return block_type{}; },
+        []( block_type b, size_t firstBit, size_t lastBit ){ return b & ~bitMask( firstBit, lastBit ); } );
 }
 
 BitSet & BitSet::set()
 {
     blocks_.clear();
-    blocks_.resize( calcNumBlocks( numBits_ ), ~Block{} );
+    blocks_.resize( calcNumBlocks( numBits_ ), ~block_type{} );
     resetUnusedBits();
     return * this;
 }
@@ -93,7 +93,7 @@ BitSet & BitSet::set()
 BitSet & BitSet::reset()
 {
     blocks_.clear();
-    blocks_.resize( calcNumBlocks( numBits_ ), Block{} );
+    blocks_.resize( calcNumBlocks( numBits_ ), block_type{} );
     return * this;
 }
 
@@ -110,10 +110,10 @@ void BitSet::resize( size_type numBits, bool fillValue )
     if ( fillValue )
     {
         setUnusedBits();
-        blocks_.resize( calcNumBlocks( numBits ), ~Block{} );
+        blocks_.resize( calcNumBlocks( numBits ), ~block_type{} );
     }
     else
-        blocks_.resize( calcNumBlocks( numBits ), Block{} );
+        blocks_.resize( calcNumBlocks( numBits ), block_type{} );
     numBits_ = numBits;
     resetUnusedBits();
 }

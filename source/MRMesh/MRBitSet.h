@@ -98,10 +98,10 @@ public:
     [[nodiscard]] MRMESH_API size_type count() const noexcept;
 
     /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
-    [[nodiscard]] IndexType find_first() const;
+    [[nodiscard]] IndexType find_first() const { return findSetBitAfter_( 0 ); }
 
     /// return the smallest index i>n such that bit i is set, or npos if *this has no on bits.
-    [[nodiscard]] IndexType find_next( IndexType n ) const;
+    [[nodiscard]] IndexType find_next( IndexType n ) const { return findSetBitAfter_( n + 1 ); }
 
     /// return the highest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
@@ -188,6 +188,9 @@ private:
     /// calls block = PartialBlock( block, firstBit, lastBit ) function for all blocks with only [firstBit, lastBit) in range;
     template<class FullBlock, class PartialBlock>
     BitSet & rangeOp( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
+
+    /// return the smallest index i>=n such that bit i is set, or npos if *this has no on bits.
+    MRMESH_API IndexType findSetBitAfter_( IndexType n ) const;
 
 private:
     std::vector<block_type> blocks_;

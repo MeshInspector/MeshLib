@@ -235,4 +235,21 @@ bool BitSet::intersects( const BitSet& a ) const
     return false;
 }
 
+auto BitSet::findSetBitAfter_( IndexType n ) const -> IndexType
+{
+    if ( n >= size() )
+        return npos;
+
+    auto blockId = blockIndex( n );
+    const auto firstBit = bitIndex( n );
+    auto block0 = blocks_[blockId];
+    block0 &= ~( ( block_type( 1 ) << firstBit ) - 1 ); // zero bits before firstBit
+    if ( auto c = std::countr_zero( block0 ); c < bits_per_block )
+        return blockId * bits_per_block + c;
+    for ( ++blockId; blockId < blocks_.size(); ++blockId )
+        if ( auto c = std::countr_zero( blocks_[blockId] ); c < bits_per_block )
+            return blockId * bits_per_block + c;
+    return npos;
+}
+
 } //namespace MR

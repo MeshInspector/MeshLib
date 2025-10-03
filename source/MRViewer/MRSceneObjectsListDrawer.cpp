@@ -619,7 +619,7 @@ void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()
     else if ( nextFrameFixScroll_ )
     {
         nextFrameFixScroll_ = false;
-        float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;// / window->Size.y;
+        float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;
         float addScroll = 0.0f;
         if ( absPos < 15 * UI::scale() )
             addScroll = absPos - 15 * UI::scale();

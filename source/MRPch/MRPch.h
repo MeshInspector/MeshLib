@@ -24,7 +24,6 @@
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
-#include <boost/dynamic_bitset.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/stacktrace.hpp>
@@ -59,6 +58,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cfloat>
 #include <chrono>
@@ -87,6 +87,7 @@
 #include <string>
 #include <thread>
 #include <tuple>
+#include <typeindex>
 #include <unordered_map>
 #include <variant>
 #include <vector>

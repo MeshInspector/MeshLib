@@ -109,8 +109,8 @@ public:
     /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
     [[nodiscard]] MRMESH_API bool is_subset_of( const BitSet& a ) const;
 
-    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
-    bool is_proper_subset_of( const BitSet& a ) const = delete; // base implementation does not support bitsets of different sizes
+    /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    [[nodiscard]] MRMESH_API bool intersects( const BitSet & a ) const;
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )

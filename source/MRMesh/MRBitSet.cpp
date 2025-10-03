@@ -199,7 +199,6 @@ size_t BitSet::nthSetBit( size_t n ) const
 
 bool BitSet::is_subset_of( const BitSet& a ) const
 {
-    // base implementation does not support bitsets of different sizes
     const auto commonBlocks = std::min( num_blocks(), a.num_blocks() );
     for ( size_type i = 0; i < commonBlocks; ++i )
         if ( blocks_[i] & ~a.blocks_[i] )
@@ -208,6 +207,16 @@ bool BitSet::is_subset_of( const BitSet& a ) const
 
     return size() <= a.size() // this has no more bits than (a)
         || find_next( a.size() - 1 ) > size(); // or all additional bits of this are off
+}
+
+bool BitSet::intersects( const BitSet& a ) const
+{
+    const auto commonBlocks = std::min( num_blocks(), a.num_blocks() );
+    for ( size_type i = 0; i < commonBlocks; ++i )
+        if ( blocks_[i] & a.blocks_[i] )
+            return true;
+
+    return false;
 }
 
 } //namespace MR

@@ -595,9 +595,9 @@ void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()
     scrollInfo.relativeMousePos = ImGui::GetMousePos().y - window->Pos.y;
     scrollInfo.absLinePosRatio = window->ContentSize.y == 0.0f ? 0.0f : ( scrollInfo.relativeMousePos + window->Scroll.y ) / window->ContentSize.y;
 
-    if ( nextFrameFixScroll_ )
+    if ( dragModeTrigger_ )
     {
-        nextFrameFixScroll_ = false;
+        dragModeTrigger_ = false;
         window->Scroll.y = std::clamp( prevScrollInfo_.absLinePosRatio * window->ContentSize.y - prevScrollInfo_.relativeMousePos, 0.0f, window->ScrollMax.y );
     }
     else if ( dragObjectsMode_ )
@@ -616,23 +616,39 @@ void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()
             getViewerInstance().incrementForceRedrawFrames();
         }
     }
+    else if ( nextFrameFixScroll_ )
+    {
+        nextFrameFixScroll_ = false;
+        float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;
+        float addScroll = 0.0f;
+        if ( absPos < 15 * UI::scale() )
+            addScroll = absPos - 15 * UI::scale();
+        else if ( absPos > window->Size.y - 15 * UI::scale() )
+            addScroll = absPos - ( window->Size.y - 15 * UI::scale() );
+        auto newScroll = std::clamp( window->Scroll.y + addScroll, 0.0f, window->ScrollMax.y );
+        if ( newScroll != window->Scroll.y )
+        {
+            window->Scroll.y = newScroll;
+            getViewerInstance().incrementForceRedrawFrames();
+        }
+    }
 
     const ImGuiPayload* payloadCheck = ImGui::GetDragDropPayload();
     bool dragModeNow = payloadCheck && std::string_view( payloadCheck->DataType ) == "_TREENODE";
     if ( dragModeNow && !dragObjectsMode_ )
     {
         dragObjectsMode_ = true;
-        nextFrameFixScroll_ = true;
+        dragModeTrigger_ = true;
         getViewerInstance().incrementForceRedrawFrames( 2, true );
     }
     else if ( !dragModeNow && dragObjectsMode_ )
     {
         dragObjectsMode_ = false;
-        nextFrameFixScroll_ = true;
+        dragModeTrigger_ = true;
         getViewerInstance().incrementForceRedrawFrames( 2, true );
     }
 
-    if ( !nextFrameFixScroll_ )
+    if ( !dragModeTrigger_ )
         prevScrollInfo_ = scrollInfo;
 }
 

@@ -144,6 +144,8 @@ private:
     bool nextFrameFixScroll_{ false };
     // flag to know if we are dragging objects now or not
     bool dragObjectsMode_{ false };
+    // dragging either just started, or just stopped
+    bool dragModeTrigger_{ false };
 
 protected:
     std::unordered_map<const Object*, bool> sceneOpenCommands_;

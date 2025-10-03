@@ -1,4 +1,5 @@
 #include "MRMultiwayAligningTransform.h"
+#include "MRphmap.h"
 #include "MRGTest.h"
 #include "MRTimer.h"
 

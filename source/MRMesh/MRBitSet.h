@@ -24,10 +24,10 @@ namespace MR
 
 /// std::vector<bool> like container  (random-access, size_t - index type, bool - value type)
 /// with all bits after size() considered off during testing
-class BitSet : public boost::dynamic_bitset<std::uint64_t>
+class BitSet : public boost::dynamic_bitset<Uint64>
 {
 public:
-    using base = boost::dynamic_bitset<std::uint64_t>;
+    using base = boost::dynamic_bitset<Uint64>;
     using base::base;
     using IndexType = size_t;
 

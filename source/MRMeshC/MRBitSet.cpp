@@ -19,7 +19,7 @@ MRBitSet* mrBitSetCopy( const MRBitSet* bs_ )
     RETURN_NEW( bs );
 }
 
-const uint64_t* mrBitSetBlocks( const MRBitSet* bs_ )
+const Uint64* mrBitSetBlocks( const MRBitSet* bs_ )
 {
     ARG( bs );
     return bs.bits().data();

@@ -54,4 +54,22 @@ typedef struct MRSaveSettings MRSaveSettings;
 
 typedef bool (*MRProgressCallback)( float );
 
+#ifdef __cplusplus
+#define MRSTD std::
+#else
+#define MRSTD
+#endif
+
+#ifdef __APPLE__
+typedef MRSTD ptrdiff_t Int64;
+typedef MRSTD size_t Uint64;
+#ifdef __cplusplus
+static_assert(sizeof(Int64) == 8);
+static_assert(sizeof(Uint64) == 8);
+#endif
+#else //!__APPLE__
+typedef MRSTD int64_t Int64;
+typedef MRSTD uint64_t Uint64;
+#endif
+
 MR_EXTERN_C_END

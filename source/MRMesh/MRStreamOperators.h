@@ -6,11 +6,11 @@
 #include "MRMatrix3.h"
 #include "MRMatrix4.h"
 #include "MRPlane3.h"
-#include "MRBitSet.h"
 #include "MRTriPoint.h"
 #include "MRAffineXf3.h"
 #include "MRPointOnFace.h"
-
+#include <istream>
+#include <ostream>
 
 /**
  * \brief Overloaded operators for IO base structures (Vector, Matrix, Plane, AffineXf, ...)

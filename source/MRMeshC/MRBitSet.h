@@ -11,7 +11,7 @@ MRMESHC_API MRBitSet* mrBitSetCopy( const MRBitSet* bs );
 MRMESHC_API MRBitSet* mrBitSetNew( size_t numBits, bool fillValue );
 
 /// gets read-only access to the underlying blocks of a bitset
-MRMESHC_API const uint64_t* mrBitSetBlocks( const MRBitSet* bs );
+MRMESHC_API const Uint64* mrBitSetBlocks( const MRBitSet* bs );
 
 /// gets count of the underlying blocks of a bitset
 MRMESHC_API size_t mrBitSetBlocksNum( const MRBitSet* bs );

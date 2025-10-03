@@ -20,6 +20,7 @@
 
 #include <array>
 #include <future>
+#include <sstream>
 
 namespace MR
 {

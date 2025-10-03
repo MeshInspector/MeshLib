@@ -1,5 +1,5 @@
 #include "MRMesh/MRChunkIterator.h"
-
+#include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRGTest.h"
 
 namespace MR

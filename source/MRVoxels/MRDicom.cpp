@@ -25,6 +25,7 @@
 #include <gdcmTagKeywords.h>
 #pragma warning(pop)
 
+#include <variant>
 
 namespace MR
 {

@@ -4,6 +4,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "exports.h"
 #include <unordered_map>
+#include <typeindex>
 
 namespace MR
 {

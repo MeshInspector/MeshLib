@@ -59,6 +59,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cfloat>
 #include <chrono>
@@ -87,6 +88,7 @@
 #include <string>
 #include <thread>
 #include <tuple>
+#include <typeindex>
 #include <unordered_map>
 #include <variant>
 #include <vector>

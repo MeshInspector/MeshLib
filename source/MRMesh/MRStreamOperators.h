@@ -9,7 +9,8 @@
 #include "MRTriPoint.h"
 #include "MRAffineXf3.h"
 #include "MRPointOnFace.h"
-
+#include <istream>
+#include <ostream>
 
 /**
  * \brief Overloaded operators for IO base structures (Vector, Matrix, Plane, AffineXf, ...)

@@ -75,7 +75,8 @@ NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) cons
     BitSetParallelForAll( res, [&]( NodeId nid )
     {
         auto & node = nodes_[nid];
-        res[nid] = node.leaf() && leaves.test( node.leafId() );
+        if ( node.leaf() && leaves.test( node.leafId() ) )
+            res.set( nid );
     } );
 
     // mark inner nodes marching from leaves to root
@@ -84,7 +85,8 @@ NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) cons
         auto & node = nodes_[nid];
         if ( node.leaf() )
             continue;
-        res[nid] = res.test( node.l ) || res.test( node.r );
+        if ( res.test( node.l ) || res.test( node.r ) )
+            res.set( nid );
     }
 
     return res;

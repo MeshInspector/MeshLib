@@ -117,6 +117,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( auto forcedState = UI::TestEngine::createValueTentative<bool>( label ) )
         ImGui::SetNextItemOpen( *forcedState );
 
+
     auto touchPaddingX = style.TouchExtraPadding.x;
     if ( ( flags & ImGuiTreeNodeFlags_OpenOnArrow ) == 0 )
     {
@@ -124,10 +125,18 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         //  arrow hit works on MouseDown
         //  frame hit works on MouseUp
         // for arrow hit test style.TouchExtraPadding.x is used, so we abuse it to imitate that whole frame is that arrow: to have same behavior
-        style.TouchExtraPadding.x = FLT_MAX; // force all header be treated as arrow (e.g. react on MouseDown instead of default MouseRelease)
+        ImRect frameRect;
+        frameRect.Min = ImGui::GetCursorScreenPos();
+        frameRect.Min.x -= style.WindowPadding.x * 0.5f;
+        frameRect.Max = frameRect.Min;
+        frameRect.Max.x += ImGui::GetContentRegionAvail().x + style.WindowPadding.x;
+        frameRect.Max.y += height + 2 * style.FramePadding.y;
+        if ( frameRect.Contains( ImGui::GetIO().MousePos ) ) // only do the hack if header is hovered
+            style.TouchExtraPadding.x = FLT_MAX; // force all header be treated as arrow (e.g. react on MouseDown instead of default MouseRelease)
     }
     bool res = ImGui::CollapsingHeader( label, flags );
     style.TouchExtraPadding.x = touchPaddingX; // restore hacked value
+
 
     (void)UI::TestEngine::createValue( label, res, false, true );
 

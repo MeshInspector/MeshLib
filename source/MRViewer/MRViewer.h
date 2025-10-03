@@ -341,8 +341,9 @@ public:
     /**
      * Captures 3d scene
      * @param resolution resolution of the image <= 0 means default
+     * @param transparentBg don't draw background / viewport borders
      */
-    MRVIEWER_API Image captureSceneScreenShot( const Vector2i& resolution = Vector2i() );
+    MRVIEWER_API Image captureSceneScreenShot( const Vector2i& resolution = Vector2i(), bool transparentBg = false );
 
     /**
      * Captures part of window in the beginning of next frame, capturing all that was drawn in this frame

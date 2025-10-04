@@ -37,26 +37,31 @@ jobs:
       matrix:
         arch: [ x64, arm64 ]
         config: [ Debug, Release ]
-        compiler: [ AppleClang ]
         exclude:
           - arch: x64
             config: Debug
         include:
-          - compiler: AppleClang
-            cxx-compiler: /usr/bin/clang++
-            c-compiler: /usr/bin/clang
           - arch: x64
             config: Release
             os: x64
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-13 # github hosted
           - arch: arm64
             config: Debug
             os: github-arm
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
             runner: macos-latest  # github hosted
           - arch: arm64
             config: Release
             os: arm
+            compiler: brew-llvm18
+            cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
+            c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -72,11 +77,23 @@ jobs:
           # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
           git submodule update --init --recursive --depth 1 thirdparty/mrbind
 
-      - name: Setup Homebrew prefix
-        id: brew
+      - name: Setup Homebrew prefix and resolve compiler paths
+        id: setup
         run: |
-          PREFIX=$(brew --prefix)
-          echo "BREW_PREFIX=$PREFIX" >> $GITHUB_ENV
+          BREW_PREFIX=$(brew --prefix)
+          echo "Brew prefix: $BREW_PREFIX"
+          echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
+          echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
+          
+          # Substitute BREW_PREFIX in templates and set actual compiler paths
+          CXX_COMPILER=$(echo "${{ matrix.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
+          C_COMPILER=$(echo "${{ matrix.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
+          
+          echo "CXX compiler: $CXX_COMPILER"
+          echo "C compiler: $C_COMPILER"
+          
+          echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
+          echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -85,14 +102,14 @@ jobs:
         with:
           target_os: macos
           target_arch: ${{ matrix.arch }}
-          cxx_compiler: ${{ matrix.cxx-compiler }}
+          cxx_compiler: ${{ steps.setup.outputs.cxx-compiler }}
           build_config: ${{ matrix.config }}
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
         env:
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
+          CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
@@ -115,7 +132,8 @@ jobs:
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
         env:
-          PATH: ${{ env.BREW_PREFIX }}/opt/make/libexec/gnubin:${{ env.BREW_PREFIX }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          PATH: ${{ steps.setup.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.setup.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.setup.outputs.cxx-compiler }}
         run: |
           make --version
           make -f scripts/mrbind/generate.mk -B --trace TARGET=c
@@ -125,7 +143,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_CMAKE_OPTIONS: >
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
@@ -135,7 +153,8 @@ jobs:
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
-          PATH: ${{ env.BREW_PREFIX }}/opt/make/libexec/gnubin:${{ env.BREW_PREFIX }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          PATH: ${{ steps.setup.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.setup.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.setup.outputs.cxx-compiler }}
         run: |
           make --version
           make -f scripts/mrbind/generate.mk \

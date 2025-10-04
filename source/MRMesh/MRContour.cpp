@@ -1,4 +1,5 @@
 #include "MRContour.h"
+#include "MRVector2.h"
 #include "MRGTest.h"
 
 namespace MR

@@ -1,5 +1,7 @@
 #include "MRMesh/MRConvexHull.h"
-
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRTorus.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MRGTest.h"
 
 namespace MR
@@ -84,6 +86,15 @@ TEST(MakeConvexHullTest, ComplexShape) {
 
     std::vector<Vector2f> expected_hull = {{0, 0}, {3, 1}, {4, 4}, {0, 3}};
     EXPECT_EQ(hull, expected_hull);
+}
+
+TEST( MakeConvexHullTest, Torus )
+{
+    Mesh torus = makeTorus( 1.0f, 0.3f, 16, 16 );
+    Mesh discus = makeConvexHull( torus );
+    EXPECT_EQ( discus.topology.numValidVerts(), 144 );
+    EXPECT_EQ( discus.topology.numValidFaces(), 284 );
+    EXPECT_EQ( discus.topology.lastNotLoneEdge(), EdgeId( 426 * 2 - 1 ) );
 }
 
 } // namespace MR

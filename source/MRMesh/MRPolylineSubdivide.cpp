@@ -4,6 +4,7 @@
 #include "MRBitSet.h"
 #include "MRTimer.h"
 #include "MRWriter.h"
+#include "MRVector2.h"
 #include "MRGTest.h"
 #include <queue>
 

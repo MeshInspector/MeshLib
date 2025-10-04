@@ -1,6 +1,6 @@
 #include "MRMesh/MRCylinder3.h"
 #include "MRMesh/MRCylinderApproximator.h"
-
+#include "MRMesh/MRStreamOperators.h"
 #include "MRMesh/MRGTest.h"
 
 namespace

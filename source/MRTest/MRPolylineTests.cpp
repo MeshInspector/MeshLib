@@ -1,4 +1,5 @@
 #include <MRMesh/MRPolyline.h>
+#include <MRMesh/MRVector2.h>
 #include <MRMesh/MRGTest.h>
 
 namespace MR

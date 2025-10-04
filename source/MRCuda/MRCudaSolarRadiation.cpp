@@ -77,7 +77,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
 
     std::vector<uint64_t> resBlocks;
     cudaRes.toVector( resBlocks );
-    return { resBlocks.begin(), resBlocks.end() };
+    return BitSet::fromBlocks( std::move( resBlocks ) );
 }
 
 VertScalars  computeSkyViewFactor( const Mesh& terrain,
@@ -117,7 +117,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     {
         std::vector<uint64_t> outSkyRaysBlocks;
         cudaOutSkyRays.toVector( outSkyRaysBlocks );
-        *outSkyRays = BitSet( outSkyRaysBlocks.begin(), outSkyRaysBlocks.end() );
+        *outSkyRays = BitSet::fromBlocks( std::move( outSkyRaysBlocks ) );
     }
 
     DynamicArray<float> cudaRes(samples.size());

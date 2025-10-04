@@ -90,6 +90,9 @@ jobs:
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
+        env:
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}

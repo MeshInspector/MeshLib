@@ -85,6 +85,15 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
+if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
+  if [ -n "${CMAKE_C_COMPILER}" ] ; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  fi
+  if [ -n "${CMAKE_CXX_COMPILER}" ] ; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+  fi
+fi
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi

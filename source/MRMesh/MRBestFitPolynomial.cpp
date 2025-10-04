@@ -255,21 +255,21 @@ T Polynomial<T, degree>::intervalMin( T l, T r ) const
     return mn;
 }
 
-template struct Polynomial<float, 0>;
-template struct Polynomial<float, 1>;
-template struct Polynomial<float, 2>;
-template struct Polynomial<float, 3>;
-template struct Polynomial<float, 4>;
-template struct Polynomial<float, 5>;
-template struct Polynomial<float, 6>;
+template MRMESH_API struct Polynomial<float, 0>;
+template MRMESH_API struct Polynomial<float, 1>;
+template MRMESH_API struct Polynomial<float, 2>;
+template MRMESH_API struct Polynomial<float, 3>;
+template MRMESH_API struct Polynomial<float, 4>;
+template MRMESH_API struct Polynomial<float, 5>;
+template MRMESH_API struct Polynomial<float, 6>;
 
-template struct Polynomial<double, 0>;
-template struct Polynomial<double, 1>;
-template struct Polynomial<double, 2>;
-template struct Polynomial<double, 3>;
-template struct Polynomial<double, 4>;
-template struct Polynomial<double, 5>;
-template struct Polynomial<double, 6>;
+template MRMESH_API struct Polynomial<double, 0>;
+template MRMESH_API struct Polynomial<double, 1>;
+template MRMESH_API struct Polynomial<double, 2>;
+template MRMESH_API struct Polynomial<double, 3>;
+template MRMESH_API struct Polynomial<double, 4>;
+template MRMESH_API struct Polynomial<double, 5>;
+template MRMESH_API struct Polynomial<double, 6>;
 
 
 template <typename T>

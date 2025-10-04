@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRPlane3.h>
 
 namespace MR
 {

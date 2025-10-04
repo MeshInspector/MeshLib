@@ -10,8 +10,7 @@
 #include "MRMeshFixer.h"
 #include "MRHeap.h"
 #include "MRTimer.h"
-#include "MRTorus.h"
-#include "MRGTest.h"
+#include "MRVector2.h"
 
 namespace MR
 {
@@ -325,15 +324,6 @@ Contour2f makeConvexHull( Contour2f points )
     points.erase( points.begin() + size, points.end() );
 
     return points;
-}
-
-TEST( MRMesh, ConvexHull )
-{
-    Mesh torus = makeTorus( 1.0f, 0.3f, 16, 16 );
-    Mesh discus = makeConvexHull( torus );
-    EXPECT_EQ( discus.topology.numValidVerts(), 144 );
-    EXPECT_EQ( discus.topology.numValidFaces(), 284 );
-    EXPECT_EQ( discus.topology.lastNotLoneEdge(), EdgeId( 426 * 2 - 1 ) );
 }
 
 } //namespace MR

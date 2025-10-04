@@ -4,6 +4,7 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRLineSegm.h>
+#include <MRMesh/MRPlane3.h>
 
 namespace MR
 {

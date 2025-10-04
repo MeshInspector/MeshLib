@@ -1,6 +1,7 @@
 #include <MRMesh/MRPolyline2Intersect.h>
 #include <MRMesh/MRPolyline.h>
 #include <MRMesh/MRLine.h>
+#include <MRMesh/MRVector2.h>
 #include <MRMesh/MRGTest.h>
 
 namespace MR

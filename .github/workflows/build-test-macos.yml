@@ -133,6 +133,7 @@ jobs:
         if: ${{ inputs.mrbind_c }}
         env:
           PATH: ${{ steps.setup.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.setup.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.setup.outputs.cxx-compiler }}
         run: |
           make --version
           make -f scripts/mrbind/generate.mk -B --trace TARGET=c
@@ -153,6 +154,7 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           PATH: ${{ steps.setup.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.setup.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.setup.outputs.cxx-compiler }}
         run: |
           make --version
           make -f scripts/mrbind/generate.mk \

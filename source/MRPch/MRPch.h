@@ -11,6 +11,7 @@
 
 #pragma warning(push)
 #pragma warning(disable: 4619) //#pragma warning: there is no warning number
+#pragma warning(disable: 4643) //Forward declaring in namespace std is not permitted by the C++ Standard.
 #pragma warning(disable: 5204) //class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
@@ -22,8 +23,10 @@
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/signals2/signal.hpp>
+#include <boost/signals2/connection.hpp>
 #include <boost/stacktrace.hpp>
 #pragma warning(pop)
 

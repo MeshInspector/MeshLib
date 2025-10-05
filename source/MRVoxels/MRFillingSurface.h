@@ -86,8 +86,16 @@ MRVOXELS_API float getMinimalResolution( Type type, float iso );
 namespace CellularSurface // Surface of cylinders in a grid
 {
 
+/// Type of cellular surface base element
+enum class Type
+{
+    Cylinder,
+    Rect
+};
+
 struct Params
 {
+    Type type = Type::Cylinder;                     ///< the type of the base element
     Vector3f period = Vector3f::diagonal( 1.f );    ///< the distance between consecutive cylinders in each direction
     Vector3f width = Vector3f::diagonal( 0.3f );    ///< the width of cylinders in each direction
     float r = 0.4f;         ///< the radius of uniting spheres

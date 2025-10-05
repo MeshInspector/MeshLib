@@ -9,6 +9,7 @@
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRBestFitPolynomial.h"
+#include "MRMesh/MRCube.h"
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRConstants.h>
@@ -477,6 +478,20 @@ std::vector<AbsentTip> getAbsentTips( const Vector3i& idx, const Vector3i& size 
     return res;
 }
 
+Mesh makeBarForBaseElement( Type type, float width, float length, int res )
+{
+    switch ( type )
+    {
+        case Type::Cylinder:
+            return makeCylinder( width / 2.f, length, res );
+        case Type::Rect:
+            return makeCube( { width, width, length }, Vector3f{ -width, -width, 0.f } / 2.f );
+        default:
+            assert( false );
+            return {};
+    }
+}
+
 constexpr float normalEps = 1e-5f;
 constexpr float decimateEps = 1e-3f;
 
@@ -507,19 +522,19 @@ Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTi
         }
 
         auto l = containsAxis ? params.period[ax] / 2.f : params.period[ax];
-        auto cyl = makeCylinder( params.width[ax] / 2.f, l, params.highRes ? 64 : 16 );
+        auto bar = makeBarForBaseElement( params.type, params.width[ax], l, params.highRes ? 64 : 16 );
 
         FaceBitSet cylToDel;
-        for ( auto f : cyl.topology.getValidFaces() )
+        for ( auto f : bar.topology.getValidFaces() )
         {
-            auto n =  cyl.normal( f );
+            auto n =  bar.normal( f );
             for ( float d : { 1, -1 } )
             {
                 if ( std::abs( n.z - d ) < normalEps && !( containsAxis && d == dir ) )
                     cylToDel.autoResizeSet( f, true );
             }
         }
-        cyl.deleteFaces( cylToDel );
+        bar.deleteFaces( cylToDel );
 
         AffineXf3f tr;
         if ( ax == 0 )
@@ -528,8 +543,8 @@ Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTi
             tr.A = Matrix3f::rotation( Vector3f::plusX(), -PI2_F );
 
         tr = AffineXf3f::translation( s ) * tr;
-        cyl.transform( tr );
-        auto r = boolean( baseElement, cyl, BooleanOperation::Union );
+        bar.transform( tr );
+        auto r = boolean( baseElement, bar, BooleanOperation::Union );
         if ( !r )
             return unexpected( r.errorString );
         baseElement = std::move( r.mesh );

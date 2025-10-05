@@ -98,7 +98,7 @@ struct Params
     Type type = Type::Cylinder;                     ///< the type of the base element
     Vector3f period = Vector3f::diagonal( 1.f );    ///< the distance between consecutive cylinders in each direction
     Vector3f width = Vector3f::diagonal( 0.3f );    ///< the width of cylinders in each direction
-    float r = 0.4f;         ///< the radius of uniting spheres
+    float r = 0.f;         ///< the radius of uniting spheres
 
     // used in tests in order to make surfaces close to their analytical expression
     // recommended to be false for real usage for better performance

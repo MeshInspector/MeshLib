@@ -104,6 +104,12 @@ struct Params
     // recommended to be false for real usage for better performance
     bool highRes = false;
 
+    // Used in tests for roughly the same purpose: the computations of density estimation are made under the assumption of an infinite surface.
+    // Thus, we must impose "boundary conditions" that inflict the "tips" of the bars (cylinders or cubes) to be preserved on the boundary of the
+    // generated filling surface. However, for the aesthetic reasons, it was requested that the tips must be cut in the UI. And here comes this flag.
+    // Note that for the estimation of density in UI the influence of "tips" is not significant (it tends to zero with growing size), however
+    // we cannot afford to run tests on too big surfaces as it takes too long.
+    bool preserveTips = false;
 };
 
 /// Build a cellular surface of size \p size

@@ -45,7 +45,7 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
             for ( float W = 0.1f; W < T; W += cStepSize )
             {
                 auto res = FillingSurface::CellularSurface::build( size,
-                               { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( W ), .r = R, .highRes = true } );
+                               { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( W ), .r = R, .highRes = true, .preserveTips = true } );
                 ASSERT_TRUE( res );
                 fillHoles( *res, res->topology.findHoleRepresentiveEdges() );
                 ASSERT_TRUE( res->topology.findNumHoles() == 0 );
@@ -68,7 +68,7 @@ TEST( MRMesh, CellularFillingSurfaceDensity )
 
                 // sometimes more than one solution exist, so we should not compare directly with W, but rather we have to rebuild the surface
                 auto res2 = FillingSurface::CellularSurface::build( size,
-                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( *maybePredictedWidth ), .r = R2use, .highRes = true } );
+                                { .period = Vector3f::diagonal( T ), .width = Vector3f::diagonal( *maybePredictedWidth ), .r = R2use, .highRes = true, .preserveTips = true } );
                 ASSERT_TRUE( res2 );
                 const auto predictedDensity2 = res2->volume() / res2->getBoundingBox().volume();
                 ASSERT_NEAR( realDensity, predictedDensity2, 0.01f );

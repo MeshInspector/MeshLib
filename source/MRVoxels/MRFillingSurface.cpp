@@ -563,18 +563,36 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
 
+    auto getAbsentTipsIfNeeded = [&params] ( const Vector3i& idx, const Vector3i& size ) -> AbsentTips
+    {
+        if ( params.preserveTips )
+            return {};
+        return getAbsentTips( idx, size );
+    };
+
     reportProgress( cb, 0.f );
     std::map<AbsentTips, Mesh> baseElements;
-    for ( int x = 0; x < 3; ++x )
-        for ( int y = 0; y < 3; ++y )
-            for ( int z = 0; z < 3; ++z )
-            {
-                auto absentTips = getAbsentTips( {x, y, z}, {2, 2, 2} );
-                if ( auto maybeBaseElement = makeBaseElement( params, absentTips ) )
-                    baseElements[absentTips] = ( *maybeBaseElement );
-                else
-                    return unexpected( maybeBaseElement.error() );
-            }
+    if ( params.preserveTips )
+    {
+        auto absentTips = getAbsentTips( {1, 1, 1}, {2, 2, 2} );
+        if ( auto maybeBaseElement = makeBaseElement( params, absentTips ) )
+            baseElements[absentTips] = ( *maybeBaseElement );
+        else
+            return unexpected( maybeBaseElement.error() );
+    }
+    else
+    {
+        for ( int x = 0; x < 3; ++x )
+            for ( int y = 0; y < 3; ++y )
+                for ( int z = 0; z < 3; ++z )
+                {
+                    auto absentTips = getAbsentTips( {x, y, z}, {2, 2, 2} );
+                    if ( auto maybeBaseElement = makeBaseElement( params, absentTips ) )
+                        baseElements[absentTips] = ( *maybeBaseElement );
+                    else
+                        return unexpected( maybeBaseElement.error() );
+                }
+    }
 
     if ( !reportProgress( cb, 0.2f ) )
         return unexpectedOperationCanceled();
@@ -588,7 +606,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
         {
             for ( int z = 0; z < dims.z; ++z )
             {
-                auto mesh = baseElements[getAbsentTips( {x, y, z}, dims - Vector3i::diagonal( 1 ) )];
+                auto mesh = baseElements[getAbsentTipsIfNeeded( {x, y, z}, dims - Vector3i::diagonal( 1 ) )];
                 mesh.transform( AffineXf3f::translation( mult( Vector3f( (float)x, (float)y, (float)z ), params.period ) ) );
                 result.addMesh( mesh, {}, true );
             }

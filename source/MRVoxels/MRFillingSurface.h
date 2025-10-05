@@ -87,9 +87,9 @@ namespace CellularSurface // Surface of cylinders in a grid
 {
 
 /// Type of cellular surface base element
-enum class Type
+enum class Type : int
 {
-    Cylinder,
+    Cylinder = 0,
     Rect
 };
 
@@ -111,6 +111,9 @@ struct Params
     // we cannot afford to run tests on too big surfaces as it takes too long.
     bool preserveTips = false;
 };
+/// Returns the names for each type of filling
+MRVOXELS_API std::vector<std::string> getTypeNames();
+
 
 /// Build a cellular surface of size \p size
 MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb = {} );

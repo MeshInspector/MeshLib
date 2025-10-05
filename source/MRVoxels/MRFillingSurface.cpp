@@ -453,6 +453,11 @@ float getMinimalResolution( Type type, float iso )
 namespace CellularSurface
 {
 
+std::vector<std::string> getTypeNames()
+{
+    return { "Cylinder", "Rectangle" };
+}
+
 namespace
 {
 

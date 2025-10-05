@@ -154,4 +154,23 @@ using ConstMeshParamsRef = std::variant
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb = {} );
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb = {} );
 
+
+/// A helper to access parameters common for different kind of surfaces.
+template <typename T>
+struct ParamsFacade
+{
+    T params;
+
+    Vector3f getPeriod() const
+    {
+        return std::visit( overloaded{
+            [] ( const TPMS::MeshParams& p ){ return Vector3f::diagonal( 1.f / p.frequency ); },
+            [] ( const CellularSurface::Params& p ) { return p.period; }
+        }, params );
+    }
+};
+
+ParamsFacade( MeshParamsRef ) -> ParamsFacade<MeshParamsRef>;
+ParamsFacade( ConstMeshParamsRef ) -> ParamsFacade<ConstMeshParamsRef>;
+
 } // namespace FillingSurface

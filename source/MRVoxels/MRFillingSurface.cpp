@@ -452,6 +452,94 @@ float getMinimalResolution( Type type, float iso )
 namespace CellularSurface
 {
 
+namespace
+{
+
+struct AbsentTip
+{
+    int dir = 1; int ax = 0;
+    bool operator==( const AbsentTip& ) const = default;
+    auto operator<=>( const AbsentTip& ) const = default;
+};
+using AbsentTips = std::vector<AbsentTip>;
+
+
+std::vector<AbsentTip> getAbsentTips( const Vector3i& idx, const Vector3i& size )
+{
+    std::vector<AbsentTip> res;
+    for ( int i = 0; i < 3; ++i )
+    {
+        if ( idx[i] == 0 )
+            res.push_back( { -1, i } );
+        else if ( idx[i] == size[i] )
+            res.push_back( { 1, i } );
+    }
+    return res;
+}
+
+constexpr float normalEps = 1e-5f;
+constexpr float decimateEps = 1e-3f;
+
+Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTips )
+{
+    Mesh baseElement;
+    if ( params.r > std::sqrt( 3.f ) * std::min( params.width.x, std::min( params.width.y, params.width.z ) ) / 2.f  )
+        baseElement.addMesh( makeSphere( { .radius = params.r, .numMeshVertices = params.highRes ? 500 : 100 } ) );
+
+    for ( int ax = 0; ax < 3; ++ax )
+    {
+        Vector3f s;
+        float dir = 1.f;
+        bool containsAxis = false;
+        s[ax] = -params.period[ax] / 2.f;
+        for ( const auto& tip : absentTips )
+        {
+            if ( tip.ax == ax )
+            {
+                containsAxis = true;
+                dir = tip.dir;
+                if ( tip.dir == -1 )
+                    s[ax] += params.period[ax] / 2.f;
+                if ( tip.dir == 1 )
+                    s[ax] -= decimateEps / 10.f; // should 0 but causes boolean failure when sphere radius is 0 !
+                break;
+            }
+        }
+
+        auto l = containsAxis ? params.period[ax] / 2.f : params.period[ax];
+        auto cyl = makeCylinder( params.width[ax] / 2.f, l, params.highRes ? 64 : 16 );
+
+        FaceBitSet cylToDel;
+        for ( auto f : cyl.topology.getValidFaces() )
+        {
+            auto n =  cyl.normal( f );
+            for ( float d : { 1, -1 } )
+            {
+                if ( std::abs( n.z - d ) < normalEps && !( containsAxis && d == dir ) )
+                    cylToDel.autoResizeSet( f, true );
+            }
+        }
+        cyl.deleteFaces( cylToDel );
+
+        AffineXf3f tr;
+        if ( ax == 0 )
+            tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
+        if ( ax == 1 )
+            tr.A = Matrix3f::rotation( Vector3f::plusX(), -PI2_F );
+
+        tr = AffineXf3f::translation( s ) * tr;
+        cyl.transform( tr );
+        auto r = boolean( baseElement, cyl, BooleanOperation::Union );
+        if ( !r )
+            return unexpected( r.errorString );
+        baseElement = std::move( r.mesh );
+    }
+
+    decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5f, .touchNearBdEdges = false, .touchBdVerts = false   } );
+    return baseElement;
+}
+}
+
 Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -460,65 +548,32 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
         return unexpected( "Period must be larger than width" );
 
-    constexpr float normalEps = 1e-5f;
-    constexpr float decimateEps = 1e-3f;
-
     reportProgress( cb, 0.f );
-    Mesh baseElement;
-    {
-        if ( params.r > std::sqrt( 3.f ) * std::min( params.width.x, std::min( params.width.y, params.width.z ) ) / 2.f  )
-        {
-            baseElement.addMesh( makeSphere( { .radius = params.r, .numMeshVertices = params.highRes ? 500 : 100 } ) );
-            baseElement.transform( AffineXf3f::translation( params.period / 2.f ) );
-        }
-
-        for ( int ax = 0; ax < 3; ++ax )
-        {
-            int ax1 = ( ax + 1 ) % 3;
-            int ax2 = ( ax + 2 ) % 3;
-            auto cyl = makeCylinder( params.width[ax] / 2.f, params.period[ax], params.highRes ? 64 : 16 );
-            FaceBitSet cylToDel;
-            for ( auto f : cyl.topology.getValidFaces() )
+    std::map<AbsentTips, Mesh> baseElements;
+    for ( int x = 0; x < 3; ++x )
+        for ( int y = 0; y < 3; ++y )
+            for ( int z = 0; z < 3; ++z )
             {
-                auto n =  cyl.normal( f );
-                if ( std::abs( std::abs( n.z ) - 1.f ) < normalEps )
-                    cylToDel.autoResizeSet( f, true );
-            }
-            cyl.deleteFaces( cylToDel );
-
-            AffineXf3f tr;
-            if ( ax == 0 )
-                tr.A = Matrix3f::rotation( Vector3f::plusY(), PI2_F );
-            if ( ax == 1 )
-            {
-                tr.A = Matrix3f::rotation( Vector3f::plusX(), PI2_F );
-                tr = AffineXf3f::translation( Vector3f::plusY() * params.period.y ) * tr;
+                auto absentTips = getAbsentTips( {x, y, z}, {2, 2, 2} );
+                if ( auto maybeBaseElement = makeBaseElement( params, absentTips ) )
+                    baseElements[absentTips] = ( *maybeBaseElement );
+                else
+                    return unexpected( maybeBaseElement.error() );
             }
 
-            Vector3f s;
-            s[ax1] = params.period[ax1] / 2.f;
-            s[ax2] = params.period[ax2] / 2.f;
-            cyl.transform( AffineXf3f::translation( s ) * tr );
-            auto r = boolean( baseElement, cyl, BooleanOperation::Union );
-            if ( !r )
-                return unexpected( r.errorString );
-            baseElement = std::move( r.mesh );
-        }
-
-        decimateMesh( baseElement, { .maxError = decimateEps, .stabilizer = 1e-5f, .touchNearBdEdges = false, .touchBdVerts = false   } );
-    }
     if ( !reportProgress( cb, 0.2f ) )
         return unexpectedOperationCanceled();
 
     auto sp = subprogress( cb, 0.2f, 1.f );
+    const Vector3i dims( size.x / params.period.x, size.y / params.period.y, size.z / params.period.z );
     Mesh result;
-    for ( int x = 0; x < size.x / params.period.x; ++x )
+    for ( int x = 0; x < dims.x; ++x )
     {
-        for ( int y = 0; y < size.y / params.period.y; ++y )
+        for ( int y = 0; y < dims.y; ++y )
         {
-            for ( int z = 0; z < size.z / params.period.z; ++z )
+            for ( int z = 0; z < dims.z; ++z )
             {
-                auto mesh = baseElement;
+                auto mesh = baseElements[getAbsentTips( {x, y, z}, dims - Vector3i::diagonal( 1 ) )];
                 mesh.transform( AffineXf3f::translation( mult( Vector3f( (float)x, (float)y, (float)z ), params.period ) ) );
                 result.addMesh( mesh, {}, true );
             }

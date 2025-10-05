@@ -46,7 +46,7 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     {
         // Back out from `<AppName>.app/Contents/MacOS`. This is only needed for apps that are MacOS bundles, but we do it unconditionally for simplicity.
         // It's easier to require all apps to be bundles (which is needed to package them anyway) than to make this conditional.
-        return SystemPath::getExecutableDirectory().value_or( "/" ) / "../../..";
+        return SystemPath::getExecutableDirectory().value_or( "/" ).parent_path().parent_path().parent_path();
     }
 
     const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );

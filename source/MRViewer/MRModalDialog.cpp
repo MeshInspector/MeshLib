@@ -48,7 +48,7 @@ bool ModalDialog::beginPopup()
     if ( settings_.closeButton )
     {
         const auto closeButtonWidth = StyleConsts::Modal::exitBtnSize * UI::scale();
-        ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - closeButtonWidth );
+        ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPos().x - closeButtonWidth );
         if ( ImGui::ModalExitButton() )
         {
             ImGui::CloseCurrentPopup();

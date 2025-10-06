@@ -1083,14 +1083,14 @@ bool DragInputInt( const char* label, int* value, float speed /*= 1*/, int min /
     DragInt( labelStr.c_str(), value, speed, min, max, format, flags );
     drawTooltip( min, max );
     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-    ImGui::PushButtonRepeat( true );
+    ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     if ( MR::UI::button( "-", MR::Vector2f( sizeSide, sizeSide ) ) )
         --valueRef;
     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
     if ( MR::UI::button( "+", MR::Vector2f( sizeSide, sizeSide ) ) )
         ++valueRef;
-    ImGui::PopButtonRepeat();
+    ImGui::PopItemFlag();
     valueRef = std::clamp( valueRef, min, max );
 
     PopID();
@@ -1543,7 +1543,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     UI::drag<NoUnit>( "Normal", plane.n, 0.001f );
-    ImGui::PushButtonRepeat( true );
+    ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * UI::scale() + ImGui::GetTextLineHeight();
     ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
@@ -1571,7 +1571,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     }
 
     ImGui::SameLine();
-    ImGui::PopButtonRepeat();
+    ImGui::PopItemFlag();
 
     ImGui::SetNextItemWidth( 80.0f * UI::scale() );
     UI::drag<LengthUnit>( "Shift", shift, dragspeed );
@@ -1671,7 +1671,7 @@ bool ModalBigTitle( const char* title )
         ImGui::PopFont();
 
     const float exitButtonSize = MR::StyleConsts::Modal::exitBtnSize * UI::scale();
-    ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - exitButtonSize );
+    ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPos().x - exitButtonSize );
     const bool shoudClose = ModalExitButton();
     ImGui::NewLine();
 

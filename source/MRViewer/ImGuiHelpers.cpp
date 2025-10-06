@@ -238,7 +238,7 @@ void PlotCustomHistogram( const char* str_id,
         const ImU32 col_hovered_top = GetColorU32(ImGuiCol_TabHovered);
         ImVec4 col{ 1.0f, 0.2f, 0.2f, 1.0f };
         const ImU32 col_selected = GetColorU32(col);
-        const ImU32 col_selected_top = GetColorU32(ImGuiCol_TabActive);
+        const ImU32 col_selected_top = GetColorU32( ImGuiCol_TabSelected );
         const ImU32 col_grid = GetColorU32(ImGuiCol_PlotLines, 0.5f);
         const ImU32 col_labels = GetColorU32(ImGuiCol_Text);
 

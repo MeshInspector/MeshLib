@@ -314,7 +314,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
 
         "TabHovered",
         "TabClicked",
-        "TabActive",
+        "TabActive", // TODO FIX update ImGui 1.90.9 ImGuiCol_TabActive -> ImGuiCol_TabSelected
         "TabActiveHovered",
         "TabActiveClicked",
         "TabText",
@@ -453,7 +453,7 @@ void ColorTheme::resetImGuiStyle()
     style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
     style.Colors[ImGuiCol_PopupBg] = ImVec4( popupBg.x, popupBg.y, popupBg.z, popupBg.w );
     style.Colors[ImGuiCol_Tab] = ImVec4( tabBg.x, tabBg.y, tabBg.z, tabBg.w );
-    style.Colors[ImGuiCol_TabActive] = ImVec4( tabBgActive.x, tabBgActive.y, tabBgActive.z, tabBgActive.w );
+    style.Colors[ImGuiCol_TabSelected] = ImVec4( tabBgActive.x, tabBgActive.y, tabBgActive.z, tabBgActive.w );
     style.Colors[ImGuiCol_TabHovered] = ImVec4( tabBgHovered.x, tabBgHovered.y, tabBgHovered.z, tabBgHovered.w );
 
     style.ScrollbarRounding = 4.0f;

@@ -14,7 +14,7 @@ class SystemPath
 public:
 #ifndef MR_PARSING_FOR_ANY_BINDINGS
     /// get the current executable's file path
-    MRMESH_API static Expected<std::filesystem::path> getExecutablePath();
+    MRMESH_API static const Expected<std::filesystem::path> & getExecutablePath();
 
     /// get the MRMesh binary's file path
     MRMESH_API static Expected<std::filesystem::path> getLibraryPath();
@@ -74,8 +74,6 @@ public:
 
 private:
     static SystemPath& instance_();
-
-    std::array<std::filesystem::path, (size_t)Directory::Count> directories_;
 };
 
 } // namespace MR

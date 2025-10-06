@@ -1601,7 +1601,7 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
     {
         // Tabbing or CTRL-clicking on Slider turns it into an input box
         const bool input_requested_by_tabbing = temp_input_allowed && ( g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing ) != 0;
-        const bool clicked = hovered && IsMouseClicked( 0, id );
+        const bool clicked = hovered && IsMouseClicked( 0, ImGuiInputFlags_None, id );
         const bool make_active = ( input_requested_by_tabbing || clicked || g.NavActivateId == id );
         if ( make_active && clicked )
             SetKeyOwner( ImGuiKey_MouseLeft, id );

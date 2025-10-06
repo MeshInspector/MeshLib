@@ -17,7 +17,7 @@ const float cStepSize = 0.5f;
 
 TEST( MRMesh, CellularFillingSurface )
 {
-    Vector3f size{ 1.f, 1.f, 1.f };
+    Vector3f size{ 2.f, 2.f, 2.f };
 
     for ( float T = 0.1f; T < 1.f; T += cStepSize )
     {

@@ -133,6 +133,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
+#include "MRMesh/MRSystemPath.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -584,6 +585,10 @@ int Viewer::launch( const LaunchParams& params )
         spdlog::error( "Viewer is already launched!" );
         return 1;
     }
+
+    spdlog::info( "ExecutablePath: {}", MR::utf8string( *MR::SystemPath::getExecutablePath() ) );
+    spdlog::info( "ExecutableDirectory: {}", MR::utf8string( *MR::SystemPath::getExecutableDirectory() ) );
+    spdlog::info( "ResourcesDirectory: {}", MR::utf8string( MR::SystemPath::getResourcesDirectory() ) );
 
     // log start line
     commandArgs.resize( params.argc );

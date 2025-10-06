@@ -157,7 +157,7 @@ MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshPara
 
 /// A helper to access parameters common for different kind of surfaces.
 template <typename T>
-struct ParamsFacade
+struct MR_BIND_IGNORE ParamsFacade
 {
     T params;
 

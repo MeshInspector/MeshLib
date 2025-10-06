@@ -587,7 +587,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
     };
 
     reportProgress( cb, 0.f );
-    const Vector3i dims( size.x / params.period.x, size.y / params.period.y, size.z / params.period.z );
+    const Vector3i dims( int( size.x / params.period.x ), int( size.y / params.period.y ), int( size.z / params.period.z ) );
     std::map<AbsentTips, Mesh> baseElements;
     if ( params.preserveTips )
     {

@@ -275,7 +275,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoTitleBar | ( settings.historyMode ? ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysUseWindowPadding : 0 ) |
+        ImGuiWindowFlags_NoTitleBar | ( settings.historyMode ? ImGuiWindowFlags_ChildWindow | ImGuiChildFlags_AlwaysUseWindowPadding : 0 ) |
         ImGuiWindowFlags_NoMove;
     std::string name = "##notification" + std::to_string( settings.index );
     ImGui::PushStyleVar( settings.historyMode ? ImGuiStyleVar_ChildBorderSize : ImGuiStyleVar_WindowBorderSize, 0.0f );

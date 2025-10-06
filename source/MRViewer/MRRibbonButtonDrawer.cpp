@@ -269,7 +269,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
-    ImGui::BeginChild( ( "##childGroup" + item.item->name() ).c_str(), itemSize, false,
+    ImGui::BeginChild( ( "##childGroup" + item.item->name() ).c_str(), itemSize, ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
     ImGui::PopStyleVar();
 

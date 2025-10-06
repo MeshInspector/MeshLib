@@ -30,12 +30,15 @@
 namespace ImGui
 {
 
-static auto vector_getter = [](void* vec, int idx, const char** out_text)
+static auto vector_getter = [] ( void* vec, int idx ) -> const char*
 {
-  auto& vector = *static_cast<std::vector<std::string>*>(vec);
-  if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
-  *out_text = vector.at(idx).c_str();
-  return true;
+    auto& vector = *static_cast< std::vector<std::string>* >( vec );
+    if ( idx < 0 || idx >= static_cast< int >( vector.size() ) )
+    {
+        assert( false && "Combo: vector_getter invalid index" );
+        return "";
+    }
+    return vector.at( idx ).c_str();
 };
 
 inline bool Combo(const char* label, int* idx, const std::vector<std::string>& values)
@@ -47,11 +50,17 @@ inline bool Combo(const char* label, int* idx, const std::vector<std::string>& v
 
 inline bool Combo(const char* label, int* idx, std::function<const char *(int)> getter, int items_count)
 {
-  auto func = [](void* data, int i, const char** out_text) {
+  auto func = [](void* data, int i) -> const char*
+  {
     auto &getter = *reinterpret_cast<std::function<const char *(int)> *>(data);
     const char *s = getter(i);
-    if (s) { *out_text = s; return true; }
-    else { return false; }
+    if ( s )
+        return s;
+    else
+    {
+        assert( false && "Combo: getter return nullptr" );
+        return "";
+    }
   };
   return Combo(label, idx, func, reinterpret_cast<void *>(&getter), items_count);
 }

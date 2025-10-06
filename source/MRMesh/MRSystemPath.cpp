@@ -3,6 +3,7 @@
 #include "MRDirectory.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRWasm.h"
+#include "MRPch/MRSpdlog.h"
 #include <algorithm>
 #include <map>
 

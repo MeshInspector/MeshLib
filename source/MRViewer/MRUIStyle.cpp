@@ -1823,7 +1823,7 @@ static bool basicTextInputMultilineFullyScrollable( CachedTextSize& cache, const
 
     // We could always enable the horizontal scrollbar, but then it flashes for 1 frame when you add enough lines
     //   to enable the VERTICAL scrollbar (both flash for 1 frame, then only the vertical one remains)
-    ImGui::BeginChild( label, size, false, ( cache.cachedSize->x > size.x ) * ImGuiWindowFlags_HorizontalScrollbar );
+    ImGui::BeginChild( label, size, ImGuiChildFlags_None, ( cache.cachedSize->x > size.x ) * ImGuiWindowFlags_HorizontalScrollbar );
     MR_FINALLY{ ImGui::EndChild(); };
 
     bool ret = func( ImGuiMath::max( *cache.cachedSize, ImGui::GetContentRegionAvail() ) );

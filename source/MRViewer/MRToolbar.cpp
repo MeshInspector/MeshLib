@@ -271,7 +271,7 @@ void Toolbar::drawCustomizeModal_()
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar };
 
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
-    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
+    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), ImGuiChildFlags_Borders );
     ImGui::PopStyleColor();
 
     ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 4 * UI::scale() ) + Vector2f( params.itemSize ) );
@@ -421,7 +421,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
 
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), true );
+    ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), ImGuiChildFlags_Borders );
     ImGui::PopStyleColor();
 
     drawCustomizeItemsList_();

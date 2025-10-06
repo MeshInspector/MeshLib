@@ -435,12 +435,12 @@ Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressC
             }
             else
             {
+                // need to clone in case of referencing existing objects:
                 auto cloneTree = nodePtr->obj->cloneTree();
                 cloneTree->setXf( transform );
                 obj->addChild( cloneTree );
             }
         }
-        return {};
     }
     else
     {
@@ -479,6 +479,18 @@ Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
         assert( objNode->obj );
 
         auto transformAttr = itemNode->Attribute( "transform" );
+        if ( objNode->obj->parent() )
+        {
+            // need to clone in case of referencing existing objects:
+            // 
+            // obj-1: mesh
+            // obj-2: mesh
+            // obj-3: group obj-1,obj-2
+            // 
+            // build: obj-3, obj-1
+            objNode->obj = objNode->obj->cloneTree();
+            // need to clone before setting XF
+        }
         if ( transformAttr )
         {
             auto resXf = parseAffineXf( std::string( transformAttr ) );
@@ -490,7 +502,6 @@ Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
 
             objNode->obj->setXf( *resXf );
         }
-
         loader->objectNodes_.push_back( objNode );
     }
 

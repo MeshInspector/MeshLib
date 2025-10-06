@@ -21,6 +21,14 @@
 #include <string>
 #include <map>
 
+
+// Question-mark operator for Expected, inspired from Rust.
+#define QME( __dest, __val_expr ) \
+    if ( auto __val = (__val_expr); !(__val) ) \
+        return unexpected( (__val).error() ); \
+    else \
+        (__dest) = std::move( __val.value() );
+
 namespace MR::FillingSurface
 {
 
@@ -477,7 +485,7 @@ std::vector<AbsentTip> getAbsentTips( const Vector3i& idx, const Vector3i& size 
     {
         if ( idx[i] == 0 )
             res.push_back( { -1, i } );
-        else if ( idx[i] == size[i] )
+        if ( idx[i] == size[i] )
             res.push_back( { 1, i } );
     }
     return res;
@@ -509,33 +517,36 @@ Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTi
     for ( int ax = 0; ax < 3; ++ax )
     {
         Vector3f s;
-        int dir = 1;
-        bool containsAxis = false;
+        std::vector<int> dirs{ -1, 1 };
         s[ax] = -params.period[ax] / 2.f;
         for ( const auto& tip : absentTips )
         {
             if ( tip.ax == ax )
             {
-                containsAxis = true;
-                dir = tip.dir;
+                erase_if( dirs, std::bind_front( std::equal_to{}, tip.dir ) );
                 if ( tip.dir == -1 )
                     s[ax] += params.period[ax] / 2.f;
                 if ( tip.dir == 1 )
                     s[ax] -= decimateEps / 10.f; // should 0 but causes boolean failure when sphere radius is 0 !
-                break;
             }
         }
 
-        auto l = containsAxis ? params.period[ax] / 2.f : params.period[ax];
+        float l;
+        if ( dirs.size() == 2 )
+            l = params.period[ax];
+        else if ( dirs.size() == 1 )
+            l = params.period[ax] / 2.f;
+        else
+            continue;
         auto bar = makeBarForBaseElement( params.type, params.width[ax], l, params.highRes ? 64 : 16 );
 
         FaceBitSet cylToDel;
         for ( auto f : bar.topology.getValidFaces() )
         {
             auto n =  bar.normal( f );
-            for ( float d : { 1.f, -1.f } )
+            for ( int d : dirs )
             {
-                if ( std::abs( n.z - d ) < normalEps && !( containsAxis && d == dir ) )
+                if ( std::abs( n.z - (float)d ) < normalEps )
                     cylToDel.autoResizeSet( f, true );
             }
         }
@@ -576,34 +587,43 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
     };
 
     reportProgress( cb, 0.f );
+    const Vector3i dims( size.x / params.period.x, size.y / params.period.y, size.z / params.period.z );
     std::map<AbsentTips, Mesh> baseElements;
     if ( params.preserveTips )
     {
         auto absentTips = getAbsentTips( {1, 1, 1}, {2, 2, 2} );
-        if ( auto maybeBaseElement = makeBaseElement( params, absentTips ) )
-            baseElements[absentTips] = ( *maybeBaseElement );
-        else
-            return unexpected( maybeBaseElement.error() );
+        QME( baseElements[absentTips], makeBaseElement( params, absentTips ) )
     }
     else
     {
-        for ( int x = 0; x < 3; ++x )
-            for ( int y = 0; y < 3; ++y )
-                for ( int z = 0; z < 3; ++z )
+        // find axes of dims that are 1
+        std::vector<int> flatAxes;
+        for ( int i = 0; i < 3; ++i )
+            if ( dims[i] == 1 )
+                flatAxes.push_back( i );
+
+        Vector3i baseDims{ 3, 3, 3 };
+        for ( int fax : flatAxes )
+            baseDims[fax] = 1;
+
+        for ( int x = 0; x < baseDims.x; ++x )
+            for ( int y = 0; y < baseDims.y; ++y )
+                for ( int z = 0; z < baseDims.z; ++z )
                 {
-                    auto absentTips = getAbsentTips( {x, y, z}, {2, 2, 2} );
-                    if ( auto maybeBaseElement = makeBaseElement( params, absentTips ) )
-                        baseElements[absentTips] = ( *maybeBaseElement );
-                    else
-                        return unexpected( maybeBaseElement.error() );
+                    auto absentTips = getAbsentTips( {x, y, z}, baseDims - Vector3i::diagonal( 1 ) );
+                    QME( baseElements[absentTips], makeBaseElement( params, absentTips ) )
                 }
+
+        assert( ( flatAxes.size() == 0 && baseElements.size() == 27 ) ||
+                ( flatAxes.size() == 1 && baseElements.size() == 9 )  ||
+                ( flatAxes.size() == 2 && baseElements.size() == 3 ) ||
+                ( flatAxes.size() == 3 && baseElements.size() == 1 ) );
     }
 
     if ( !reportProgress( cb, 0.2f ) )
         return unexpectedOperationCanceled();
 
     auto sp = subprogress( cb, 0.2f, 1.f );
-    const Vector3i dims( size.x / params.period.x, size.y / params.period.y, size.z / params.period.z );
     Mesh result;
     for ( int x = 0; x < dims.x; ++x )
     {
@@ -611,7 +631,9 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
         {
             for ( int z = 0; z < dims.z; ++z )
             {
-                auto mesh = baseElements[getAbsentTipsIfNeeded( {x, y, z}, dims - Vector3i::diagonal( 1 ) )];
+                auto key = getAbsentTipsIfNeeded( {x, y, z}, dims - Vector3i::diagonal( 1 ) );
+                assert( baseElements.contains( key ) );
+                auto mesh = baseElements[key];
                 mesh.transform( AffineXf3f::translation( mult( Vector3f( (float)x, (float)y, (float)z ), params.period ) ) );
                 result.addMesh( mesh, {}, true );
             }

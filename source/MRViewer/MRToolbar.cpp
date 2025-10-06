@@ -532,9 +532,9 @@ void Toolbar::drawCustomizeItemsList_()
     if ( tabIt == tabsMap.end() )
         return;
     auto& tab = tabIt->second;
-    float width = ImGui::GetWindowContentRegionMax().x;
+    float width = ImGui::GetContentRegionAvail().x + ImGui::GetCursorPos().x;
     int countInColumn = 11;
-    float heightStep = ImGui::GetWindowContentRegionMax().y / countInColumn;
+    float heightStep = ( ImGui::GetContentRegionAvail().y + ImGui::GetCursorPos().y ) / countInColumn;
     auto posShift = ImGui::GetCursorPos();
     posShift.y = heightStep / 2 - ImGui::GetTextLineHeight() / 2.f;
 

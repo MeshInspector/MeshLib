@@ -86,17 +86,34 @@ MRVOXELS_API float getMinimalResolution( Type type, float iso );
 namespace CellularSurface // Surface of cylinders in a grid
 {
 
+/// Type of cellular surface base element
+enum class Type : int
+{
+    Cylinder = 0,
+    Rect
+};
+
 struct Params
 {
+    Type type = Type::Cylinder;                     ///< the type of the base element
     Vector3f period = Vector3f::diagonal( 1.f );    ///< the distance between consecutive cylinders in each direction
     Vector3f width = Vector3f::diagonal( 0.3f );    ///< the width of cylinders in each direction
-    float r = 0.4f;         ///< the radius of uniting spheres
+    float r = 0.f;         ///< the radius of uniting spheres
 
     // used in tests in order to make surfaces close to their analytical expression
     // recommended to be false for real usage for better performance
     bool highRes = false;
 
+    // Used in tests for roughly the same purpose: the computations of density estimation are made under the assumption of an infinite surface.
+    // Thus, we must impose "boundary conditions" that inflict the "tips" of the bars (cylinders or cubes) to be preserved on the boundary of the
+    // generated filling surface. However, for the aesthetic reasons, it was requested that the tips must be cut in the UI. And here comes this flag.
+    // Note that for the estimation of density in UI the influence of "tips" is not significant (it tends to zero with growing size), however
+    // we cannot afford to run tests on too big surfaces as it takes too long.
+    bool preserveTips = false;
 };
+/// Returns the names for each type of filling
+MRVOXELS_API std::vector<std::string> getTypeNames();
+
 
 /// Build a cellular surface of size \p size
 MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const Params& params, const ProgressCallback& cb = {} );
@@ -136,5 +153,24 @@ using ConstMeshParamsRef = std::variant
 /// Unified functions to build and fill using the specified filling structures.
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> build( const Vector3f& size, ConstMeshParamsRef params, ProgressCallback cb = {} );
 MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, ConstMeshParamsRef params, ProgressCallback cb = {} );
+
+
+/// A helper to access parameters common for different kind of surfaces.
+template <typename T>
+struct MR_BIND_IGNORE ParamsFacade
+{
+    T params;
+
+    Vector3f getPeriod() const
+    {
+        return std::visit( overloaded{
+            [] ( const TPMS::MeshParams& p ){ return Vector3f::diagonal( 1.f / p.frequency ); },
+            [] ( const CellularSurface::Params& p ) { return p.period; }
+        }, params );
+    }
+};
+
+ParamsFacade( MeshParamsRef ) -> ParamsFacade<MeshParamsRef>;
+ParamsFacade( ConstMeshParamsRef ) -> ParamsFacade<ConstMeshParamsRef>;
 
 } // namespace FillingSurface

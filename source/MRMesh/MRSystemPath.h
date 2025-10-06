@@ -71,9 +71,6 @@ public:
     static std::filesystem::path getPythonModulesDirectory() { return getDirectory( Directory::PythonModules ); }
     /// get name all system fonts that have italics, bold, bold italics
     MRMESH_API static const std::vector<SystemFontPaths>& getSystemFonts();
-
-private:
-    static SystemPath& instance_();
 };
 
 } // namespace MR

@@ -233,12 +233,6 @@ Expected<std::filesystem::path> SystemPath::getLibraryDirectory()
     return getLibraryPath().transform( [] ( auto&& path ) { return path.parent_path(); } );
 }
 
-SystemPath& SystemPath::instance_()
-{
-    static SystemPath instance;
-    return instance;
-}
-
 std::filesystem::path SystemPath::getDirectory( SystemPath::Directory dir )
 {
     return directories_()[(size_t)dir];

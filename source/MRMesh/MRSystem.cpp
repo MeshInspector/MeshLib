@@ -596,6 +596,10 @@ ProccessMemoryInfo getProccessMemoryInfo()
 
 void setupLoggerByDefault()
 {
+    auto logger = Logger::instance().getSpdLogger();
+    if ( logger )
+        logger->sinks().clear(); // clear all sinks when setting default logger
+
 #ifndef __EMSCRIPTEN__
 #ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
     printStacktraceOnCrash();
@@ -635,8 +639,6 @@ void setupLoggerByDefault()
     msvc_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( msvc_sink );
 #endif
-
-    auto logger = Logger::instance().getSpdLogger();
 
     logger->set_level( minLevel );
 

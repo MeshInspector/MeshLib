@@ -509,7 +509,7 @@ Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTi
     for ( int ax = 0; ax < 3; ++ax )
     {
         Vector3f s;
-        float dir = 1.f;
+        int dir = 1;
         bool containsAxis = false;
         s[ax] = -params.period[ax] / 2.f;
         for ( const auto& tip : absentTips )
@@ -533,7 +533,7 @@ Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTi
         for ( auto f : bar.topology.getValidFaces() )
         {
             auto n =  bar.normal( f );
-            for ( float d : { 1, -1 } )
+            for ( float d : { 1.f, -1.f } )
             {
                 if ( std::abs( n.z - d ) < normalEps && !( containsAxis && d == dir ) )
                     cylToDel.autoResizeSet( f, true );

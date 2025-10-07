@@ -29,8 +29,9 @@ class PointCloudTriangulator
 public:
     PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
     PointCloudTriangulator( Mesh && targetMesh, const PointCloud& pointCloud, const TriangulationParameters& params );
-
+    bool addBdVerticesInCloud( PointCloud& extraPoints );
     std::optional<Mesh> triangulate( const ProgressCallback& progressCb );
+    Mesh takeTargetMesh() { return std::move( targetMesh_ ); }
 
 private:
     /// constructs mesh from given triangles
@@ -53,6 +54,32 @@ PointCloudTriangulator::PointCloudTriangulator( Mesh && targetMesh, const PointC
     pointCloud_{pointCloud},
     params_{params}
 {
+}
+
+bool PointCloudTriangulator::addBdVerticesInCloud( PointCloud& extraPoints )
+{
+    MR_TIMER;
+    auto nextPointId = extraPoints.points.endId();
+    assert( nextPointId == extraPoints.normals.endId() );
+    assert( nextPointId == extraPoints.validPoints.endId() );
+
+    auto bdVerts = targetMesh_.topology.findBdVerts();
+    if ( bdVerts.none() )
+        return false;
+
+    const auto totalPoints = extraPoints.points.size() + bdVerts.count();
+    extraPoints.points.reserve( totalPoints );
+    extraPoints.normals.reserve( totalPoints );
+    extraPoints.validPoints.resize( totalPoints, true );
+    for ( auto bdV : bdVerts )
+    {
+        assert( nextPointId == extraPoints.normals.endId() );
+        cloud2mesh_[nextPointId] = bdV;
+        extraPoints.points.push_back( targetMesh_.points[bdV] );
+        extraPoints.normals.push_back( targetMesh_.pseudonormal( bdV ) );
+    }
+
+    return true;
 }
 
 std::optional<Mesh> PointCloudTriangulator::triangulate( const ProgressCallback& progressCb )
@@ -166,8 +193,22 @@ std::optional<Mesh> fillHolesWithExtraPoints( Mesh && targetMesh, PointCloud& ex
         assert( false );
         return {};
     }
+    const auto szPoints = extraPoints.points.size();
+    extraPoints.normals.resize( szPoints );
+    extraPoints.validPoints.resize( szPoints );
+
     PointCloudTriangulator triangulator( std::move( targetMesh ), extraPoints, params );
-    return triangulator.triangulate( progressCb );
+    std::optional<Mesh> res;
+    if ( triangulator.addBdVerticesInCloud( extraPoints ) )
+        res = triangulator.triangulate( progressCb );
+    else
+        res = triangulator.takeTargetMesh(); // no holes in mesh
+
+    extraPoints.points.resize( szPoints );
+    extraPoints.normals.resize( szPoints );
+    extraPoints.validPoints.resize( szPoints );
+
+    return res;
 }
 
 } //namespace MR

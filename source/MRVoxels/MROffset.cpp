@@ -247,7 +247,7 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
     DistanceVolumeParams dvParams;
     dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
     auto absOffset = std::abs( offset );
-    const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( absOffset ) );
+    const auto box = mesh.computeBoundingBox( &region ).expanded( Vector3f::diagonal( absOffset ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
     dvParams.origin = origin;
     dvParams.voxelSize = Vector3f::diagonal( params.voxelSize );

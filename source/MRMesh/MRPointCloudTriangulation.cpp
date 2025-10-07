@@ -24,6 +24,9 @@
 namespace MR
 {
 
+namespace
+{
+
 class PointCloudTriangulator
 {
 public:
@@ -34,7 +37,7 @@ public:
     Mesh takeTargetMesh() { return std::move( targetMesh_ ); }
 
 private:
-    /// constructs targetMesh_ from given triangles
+    /// adds given triangles in targetMesh_
     bool makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb );
 
     Mesh targetMesh_;
@@ -208,6 +211,8 @@ bool PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2
 
     return true;
 }
+
+} // anonymous namespace
 
 std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */,
     const ProgressCallback& progressCb )

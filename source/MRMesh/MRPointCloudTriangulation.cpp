@@ -28,15 +28,18 @@ class PointCloudTriangulator
 {
 public:
     PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
+    PointCloudTriangulator( Mesh && targetMesh, const PointCloud& pointCloud, const TriangulationParameters& params );
 
-    std::optional<Mesh> triangulate( ProgressCallback progressCb );
+    std::optional<Mesh> triangulate( const ProgressCallback& progressCb );
 
 private:
     /// constructs mesh from given triangles
-    std::optional<Mesh> makeMesh_( Triangulation && t3, Triangulation && t2, ProgressCallback progressCb );
+    std::optional<Mesh> makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb );
 
+    Mesh targetMesh_;
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
+    VertHashMap cloud2mesh_; ///< mapping of boundary vertices: from pointCloud_ to targetMesh_
 };
 
 PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params ) :
@@ -45,7 +48,14 @@ PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, co
 {
 }
 
-std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progressCb )
+PointCloudTriangulator::PointCloudTriangulator( Mesh && targetMesh, const PointCloud& pointCloud, const TriangulationParameters& params ) :
+    targetMesh_{std::move( targetMesh )},
+    pointCloud_{pointCloud},
+    params_{params}
+{
+}
+
+std::optional<Mesh> PointCloudTriangulator::triangulate( const ProgressCallback& progressCb )
 {
     MR_TIMER;
     assert( ( params_.numNeighbours <= 0 && params_.radius > 0 )
@@ -74,11 +84,11 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
     return makeMesh_( std::move( t3 ), std::move( t2 ), subprogress( progressCb, 0.5f, 1.0f ) );
 }
 
-std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2, ProgressCallback progressCb )
+std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb )
 {
     MR_TIMER;
 
-    Mesh mesh;
+    Mesh mesh = std::move( targetMesh_ );
     mesh.points = pointCloud_.points;
 
     auto compare = [] ( const auto& l, const auto& r )->bool
@@ -140,10 +150,23 @@ std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Tria
 }
 
 std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */,
-    ProgressCallback progressCb )
+    const ProgressCallback& progressCb )
 {
     MR_TIMER;
     PointCloudTriangulator triangulator( pointCloud, params );
+    return triangulator.triangulate( progressCb );
+}
+
+std::optional<Mesh> fillHolesWithExtraPoints( Mesh && targetMesh, PointCloud& extraPoints,
+    const TriangulationParameters& params, const ProgressCallback& progressCb )
+{
+    MR_TIMER;
+    if ( !extraPoints.hasNormals() )
+    {
+        assert( false );
+        return {};
+    }
+    PointCloudTriangulator triangulator( std::move( targetMesh ), extraPoints, params );
     return triangulator.triangulate( progressCb );
 }
 

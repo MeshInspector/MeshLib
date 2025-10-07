@@ -128,10 +128,28 @@ std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Tria
     Mesh mesh = std::move( targetMesh_ );
     if ( mesh.points.empty() )
     {
+        assert( cloud2mesh_.empty() );
         mesh.points = pointCloud_.points;
     }
     else
     {
+        // translate t2 and t3 from pointCloud into mesh
+        ParallelFor( t3, [&]( FaceId f )
+        {
+            for ( int i = 0; i < 3; ++i )
+            {
+                assert( cloud2mesh_[t3[f][i]] );
+                t3[f][i] = cloud2mesh_[t3[f][i]];
+            }
+        } );
+        ParallelFor( t2, [&]( FaceId f )
+        {
+            for ( int i = 0; i < 3; ++i )
+            {
+                assert( cloud2mesh_[t2[f][i]] );
+                t2[f][i] = cloud2mesh_[t2[f][i]];
+            }
+        } );
     }
 
     auto compare = [] ( const auto& l, const auto& r )->bool

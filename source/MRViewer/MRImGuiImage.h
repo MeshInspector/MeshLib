@@ -19,8 +19,9 @@ public:
     // Sets image to texture
     MRVIEWER_API void update( const MeshTexture& texture );
 
-    // Returns void* for ImGui::Image( getImTextureId(), ... )
-    void* getImTextureId() const { return (void*) (intptr_t) glTex_.getId(); }
+    // Returns ImTextureID for ImGui::Image( getImTextureId(), ... )
+    // ImGui recommends using the intermediate cast intptr_t
+    ImTextureID getImTextureId() const { return (ImTextureID) (intptr_t) glTex_.getId(); }
 
     // Returns gl texture id
     unsigned getId() const { return glTex_.getId(); }

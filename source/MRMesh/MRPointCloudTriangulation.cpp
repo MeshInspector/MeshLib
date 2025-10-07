@@ -29,7 +29,7 @@ class PointCloudTriangulator
 public:
     PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
     PointCloudTriangulator( Mesh && targetMesh, const PointCloud& pointCloud, const TriangulationParameters& params );
-    bool addBdVerticesInCloud( PointCloud& extraPoints );
+    bool addPoints( PointCloud& extraPoints );
     std::optional<Mesh> triangulate( const ProgressCallback& progressCb );
     Mesh takeTargetMesh() { return std::move( targetMesh_ ); }
 
@@ -40,7 +40,7 @@ private:
     Mesh targetMesh_;
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
-    VertHashMap cloud2mesh_; ///< mapping of boundary vertices: from pointCloud_ to targetMesh_
+    VertMap cloud2mesh_; ///< from pointCloud_ to targetMesh_
 };
 
 PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params ) :
@@ -56,7 +56,7 @@ PointCloudTriangulator::PointCloudTriangulator( Mesh && targetMesh, const PointC
 {
 }
 
-bool PointCloudTriangulator::addBdVerticesInCloud( PointCloud& extraPoints )
+bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
 {
     MR_TIMER;
     auto nextPointId = extraPoints.points.endId();
@@ -67,7 +67,17 @@ bool PointCloudTriangulator::addBdVerticesInCloud( PointCloud& extraPoints )
     if ( bdVerts.none() )
         return false;
 
+    // add all extraPoints in targetMesh_
+    targetMesh_.points.reserve( targetMesh_.points.size() + extraPoints.validPoints.count() );
+    for ( VertId pid : extraPoints.validPoints )
+    {
+        cloud2mesh_[pid] = targetMesh_.points.endId();
+        targetMesh_.points.push_back( extraPoints.points[pid] );
+    }
+
+    // add boundary vertices of tagetMesh_ in extraPoints
     const auto totalPoints = extraPoints.points.size() + bdVerts.count();
+    cloud2mesh_.resizeNoInit( totalPoints );
     extraPoints.points.reserve( totalPoints );
     extraPoints.normals.reserve( totalPoints );
     extraPoints.validPoints.resize( totalPoints, true );
@@ -116,7 +126,13 @@ std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Tria
     MR_TIMER;
 
     Mesh mesh = std::move( targetMesh_ );
-    mesh.points = pointCloud_.points;
+    if ( mesh.points.empty() )
+    {
+        mesh.points = pointCloud_.points;
+    }
+    else
+    {
+    }
 
     auto compare = [] ( const auto& l, const auto& r )->bool
     {
@@ -199,7 +215,7 @@ std::optional<Mesh> fillHolesWithExtraPoints( Mesh && targetMesh, PointCloud& ex
 
     PointCloudTriangulator triangulator( std::move( targetMesh ), extraPoints, params );
     std::optional<Mesh> res;
-    if ( triangulator.addBdVerticesInCloud( extraPoints ) )
+    if ( triangulator.addPoints( extraPoints ) )
         res = triangulator.triangulate( progressCb );
     else
         res = triangulator.takeTargetMesh(); // no holes in mesh

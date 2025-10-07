@@ -1632,7 +1632,7 @@ void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& mu
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor )
 {
-    Image( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
+    ImageWithBg( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), ImVec4(0, 0, 0, 0), multColor );
 }
 
 MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos )

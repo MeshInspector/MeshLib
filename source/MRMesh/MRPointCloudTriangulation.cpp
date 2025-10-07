@@ -30,12 +30,12 @@ public:
     PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
     PointCloudTriangulator( Mesh && targetMesh, const PointCloud& pointCloud, const TriangulationParameters& params );
     bool addPoints( PointCloud& extraPoints );
-    std::optional<Mesh> triangulate( const ProgressCallback& progressCb );
+    bool triangulate( const ProgressCallback& progressCb );
     Mesh takeTargetMesh() { return std::move( targetMesh_ ); }
 
 private:
-    /// constructs mesh from given triangles
-    std::optional<Mesh> makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb );
+    /// constructs targetMesh_ from given triangles
+    bool makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb );
 
     Mesh targetMesh_;
     const PointCloud& pointCloud_;
@@ -92,7 +92,7 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
     return true;
 }
 
-std::optional<Mesh> PointCloudTriangulator::triangulate( const ProgressCallback& progressCb )
+bool PointCloudTriangulator::triangulate( const ProgressCallback& progressCb )
 {
     MR_TIMER;
     assert( ( params_.numNeighbours <= 0 && params_.radius > 0 )
@@ -121,19 +121,18 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( const ProgressCallback&
     return makeMesh_( std::move( t3 ), std::move( t2 ), subprogress( progressCb, 0.5f, 1.0f ) );
 }
 
-std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb )
+bool PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2, const ProgressCallback& progressCb )
 {
     MR_TIMER;
 
-    Mesh mesh = std::move( targetMesh_ );
-    if ( mesh.points.empty() )
+    if ( targetMesh_.points.empty() )
     {
         assert( cloud2mesh_.empty() );
-        mesh.points = pointCloud_.points;
+        targetMesh_.points = pointCloud_.points;
     }
     else
     {
-        // translate t2 and t3 from pointCloud into mesh
+        // translate t2 and t3 from pointCloud into targetMesh_
         ParallelFor( t3, [&]( FaceId f )
         {
             for ( int i = 0; i < 3; ++i )
@@ -175,22 +174,22 @@ std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Tria
     region2 -= region3;
 
     // create topology
-    MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region3, .allowNonManifoldEdge = false } );
+    MeshBuilder::addTriangles( targetMesh_.topology, t3, { .region = &region3, .allowNonManifoldEdge = false } );
     if ( !reportProgress( progressCb, 0.1f ) )
-        return {};
+        return false;
     region2 |= region3;
-    MeshBuilder::addTriangles( mesh.topology, t3, { .region = &region2, .allowNonManifoldEdge = false } );
+    MeshBuilder::addTriangles( targetMesh_.topology, t3, { .region = &region2, .allowNonManifoldEdge = false } );
     if ( !reportProgress( progressCb, 0.2f ) )
-        return {};
+        return false;
 
     // remove bad triangles
-    mesh.deleteFaces( findHoleComplicatingFaces( mesh ) );
+    targetMesh_.deleteFaces( findHoleComplicatingFaces( targetMesh_ ) );
 
     // fill small holes
     const auto maxHolePerimeterToFill = params_.critHoleLength >= 0.0f ?
         params_.critHoleLength :
         pointCloud_.getBoundingBox().diagonal() * 0.1f;
-    auto boundaries = findRightBoundary( mesh.topology );
+    auto boundaries = findRightBoundary( targetMesh_.topology );
     // setup parameters to prevent any appearance of multiple edges during hole filling
     FillHoleParams fillHoleParams;
     fillHoleParams.multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong;
@@ -200,14 +199,14 @@ std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Tria
     {
         const auto& boundary = boundaries[i];
 
-        if ( (float)calcPathLength( boundary, mesh ) <= maxHolePerimeterToFill )
-            fillHole( mesh, boundary.front(), fillHoleParams );
+        if ( (float)calcPathLength( boundary, targetMesh_ ) <= maxHolePerimeterToFill )
+            fillHole( targetMesh_, boundary.front(), fillHoleParams );
 
         if ( !reportProgress( progressCb, [&]{ return 0.3f + 0.7f * float( i + 1 ) / float( boundaries.size() ); } ) ) // 30% - 100%
-            return {};
+            return false;
     }
 
-    return mesh;
+    return true;
 }
 
 std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */,
@@ -215,33 +214,35 @@ std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const T
 {
     MR_TIMER;
     PointCloudTriangulator triangulator( pointCloud, params );
-    return triangulator.triangulate( progressCb );
+    if ( triangulator.triangulate( progressCb ) )
+        return triangulator.takeTargetMesh();
+    return {};
 }
 
-std::optional<Mesh> fillHolesWithExtraPoints( Mesh && targetMesh, PointCloud& extraPoints,
+bool fillHolesWithExtraPoints( Mesh & mesh, PointCloud& extraPoints,
     const TriangulationParameters& params, const ProgressCallback& progressCb )
 {
     MR_TIMER;
     if ( !extraPoints.hasNormals() )
     {
         assert( false );
-        return {};
+        return false;
     }
     const auto szPoints = extraPoints.points.size();
     extraPoints.normals.resize( szPoints );
     extraPoints.validPoints.resize( szPoints );
 
-    PointCloudTriangulator triangulator( std::move( targetMesh ), extraPoints, params );
-    std::optional<Mesh> res;
+    PointCloudTriangulator triangulator( std::move( mesh ), extraPoints, params );
+    bool res = true;
     if ( triangulator.addPoints( extraPoints ) )
         res = triangulator.triangulate( progressCb );
-    else
-        res = triangulator.takeTargetMesh(); // no holes in mesh
+    // else no holes in mesh and res = true
 
     extraPoints.points.resize( szPoints );
     extraPoints.normals.resize( szPoints );
     extraPoints.validPoints.resize( szPoints );
 
+    mesh = triangulator.takeTargetMesh();
     return res;
 }
 

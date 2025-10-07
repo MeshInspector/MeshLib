@@ -23,7 +23,7 @@ int main( void )
         fprintf( stderr, "Failed to load points: %s\n", MR_std_string_Data( MR_expected_MR_PointCloud_std_string_GetError( loadRes ) ) );
         goto fail_load; // error while loading file
     }
-    MR_std_optional_MR_Mesh* triangulationRes = MR_triangulatePointCloud( pointCloud, NULL, MR_PassBy_DefaultArgument, NULL );
+    MR_std_optional_MR_Mesh* triangulationRes = MR_triangulatePointCloud( pointCloud, NULL, NULL );
     MR_Mesh* mesh = MR_std_optional_MR_Mesh_MutableValue( triangulationRes );
     if ( !mesh )
     {

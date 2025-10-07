@@ -83,7 +83,7 @@ struct TriangulationParameters
         </tr>
     </table>
  */
-MRMESH_API std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params = {},
-    ProgressCallback progressCb = {} );
+[[nodiscard]] MRMESH_API std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud,
+    const TriangulationParameters& params = {}, const ProgressCallback& progressCb = {} );
 
 } //namespace MR

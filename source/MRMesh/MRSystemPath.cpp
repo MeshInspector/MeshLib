@@ -29,8 +29,14 @@ namespace
 // If true, the resources should be loaded from the executable directory, rather than from the system directories.
 [[nodiscard]] bool resourcesAreNearExe()
 {
-    auto opt = std::getenv( "MR_LOCAL_RESOURCES" );
-    return opt && std::string_view( opt ) == "1";
+    static const bool res = []
+    {
+        auto opt = std::getenv( "MR_LOCAL_RESOURCES" );
+        bool res = opt && std::string_view( opt ) == "1";
+        spdlog::info( "MR_LOCAL_RESOURCES={}", res ? "1" : "0" );
+        return res;
+    }();
+    return res;
 }
 #endif
 
@@ -188,9 +194,27 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
     return res;
 }
 
-Expected<std::filesystem::path> SystemPath::getLibraryPath()
+const Expected<std::filesystem::path>& SystemPath::getLibraryPath()
 {
-    return getLibraryPathForSymbol( (void*)MR::SystemPath::getLibraryPath );
+    static const Expected<std::filesystem::path> res = []
+    {
+        auto maybeRes = getLibraryPathForSymbol( (void*)MR::SystemPath::getLibraryPath );
+        if ( maybeRes )
+        {
+            spdlog::info( "Library path: {}", utf8string( *maybeRes ) );
+            std::error_code ec;
+            auto canonicalPath = canonical( *maybeRes, ec );
+            if ( ec )
+                spdlog::error( "Cannot make canonical library path: {}", ec.message() );
+            else if ( *maybeRes != canonicalPath )
+            {
+                *maybeRes = canonicalPath;
+                spdlog::info( "Library path in canonical form: {}", utf8string( *maybeRes ) );
+            }
+        }
+        return maybeRes;
+    }();
+    return res;
 }
 
 Expected<std::filesystem::path> SystemPath::getLibraryPathForSymbol( const void* symbol )

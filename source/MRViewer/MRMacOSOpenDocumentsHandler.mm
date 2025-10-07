@@ -5,6 +5,8 @@
 // accumulates file names until called with null, then handles the list
 extern "C" void handle_load_message(const char* filePath);
 
+// based on
+// https://github.com/glfw/glfw/issues/1024#issuecomment-522667555
 @implementation GLFWCustomDelegate
 
 + (void)load{
@@ -14,6 +16,12 @@ extern "C" void handle_load_message(const char* filePath);
     
         [GLFWCustomDelegate swizzle:class_ src:@selector(application:openFile:) tgt:@selector(swz_application:openFile:)];
         [GLFWCustomDelegate swizzle:class_ src:@selector(application:openFiles:) tgt:@selector(swz_application:openFiles:)];
+        // This call makes it so that application:openFile: doesn't get bogus calls
+        // from Cocoa doing its own parsing of the argument string. And yes, we need
+        // to use a string with a boolean value in it. That's just how it works.
+        [[NSUserDefaults standardUserDefaults]
+            setObject:@"NO"
+               forKey:@"NSTreatUnknownArgumentsAsOpen"];
     });
 }
 

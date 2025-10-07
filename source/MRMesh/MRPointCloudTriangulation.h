@@ -86,7 +86,7 @@ struct TriangulationParameters
 [[nodiscard]] MRMESH_API std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud,
     const TriangulationParameters& params = {}, const ProgressCallback& progressCb = {} );
 
-/// fill the holes in the mesh by adding triangles to it with the vertices in boundary vertices or extraPoints (in any combination)
+/// fills the holes in the mesh by adding triangles to it with the vertices in existing boundary vertices or given extra points (in any combination)
 /// \param extraPoints must have normals and it will be temporary modified during the call
 [[nodiscard]] MRMESH_API std::optional<Mesh> fillHolesWithExtraPoints( Mesh && targetMesh, PointCloud& extraPoints,
     const TriangulationParameters& params = {}, const ProgressCallback& progressCb = {} );

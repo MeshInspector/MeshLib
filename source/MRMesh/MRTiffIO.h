@@ -76,7 +76,7 @@ MRMESH_API Expected<void> readRawTiff( const std::filesystem::path& path, RawTif
 
 // writes bytes to tiff file
 MRMESH_API Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
-    const BaseTiffParameters& params );
+    const BaseTiffParameters& params, const AffineXf3f* xf = nullptr );
 
 }
 

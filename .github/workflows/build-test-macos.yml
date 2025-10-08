@@ -202,8 +202,10 @@ jobs:
       - name: Extract Pkg
         if: ${{ matrix.config == 'Release' }}
         run: |
-          # https://stackoverflow.com/a/50835954
-          pkgutil --extract-full meshlib_${{ matrix.os }}.pkg ./meshlib_install
+          # https://gist.github.com/ugultopu/1adf8e08acb87be649d69419cf7aca3c
+          pkgutil --expand meshlib_${{ matrix.os }}.pkg ./meshlib_install
+          cd ./meshlib_install/MeshLib.pkg
+          cat Payload | gunzip | cpio -i
 
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}
@@ -213,7 +215,7 @@ jobs:
           cmake \
             -S examples/cpp-examples \
             -B cpp-examples-build \
-            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Payload/Frameworks/
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Frameworks/
           cmake \
             --build cpp-examples-build \
             --parallel
@@ -226,7 +228,7 @@ jobs:
           cmake \
             -S examples/c-examples \
             -B c-examples-build \
-            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Payload/Frameworks/
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Frameworks/
           cmake \
             --build c-examples-build \
             --parallel

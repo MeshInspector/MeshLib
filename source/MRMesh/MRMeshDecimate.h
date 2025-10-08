@@ -264,7 +264,7 @@ struct RemeshSettings
     int maxEdgeSplits = 10'000'000;
     /// Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
-    /// Allows or disallows to split and/or collapse boundary edges
+    /// Allows or prohibits splitting and/or collapse boundary edges
     /// it recommended to keep default value here for better quality
     bool frozenBoundary = false;
     /// Maximal shift of a boundary during one edge collapse

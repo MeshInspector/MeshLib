@@ -206,6 +206,10 @@ jobs:
           pkgutil --expand meshlib_${{ matrix.os }}.pkg ./meshlib_install
           cd ./meshlib_install/MeshLib.pkg
           cat Payload | gunzip | cpio -i
+          # FIXME: correct path resolving
+          mkdir Library/
+          mv Frameworks Library/
+          ln -s $(pwd)/Library ../Library
 
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}
@@ -215,7 +219,7 @@ jobs:
           cmake \
             -S examples/cpp-examples \
             -B cpp-examples-build \
-            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Frameworks/
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Library/Frameworks/
           cmake \
             --build cpp-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
@@ -228,7 +232,7 @@ jobs:
           cmake \
             -S examples/c-examples \
             -B c-examples-build \
-            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Frameworks/
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Library/Frameworks/
           cmake \
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)

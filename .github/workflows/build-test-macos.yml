@@ -194,10 +194,42 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Pkg
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
+        if: ${{ matrix.config == 'Release' }}
         run: |
           ./scripts/distribution_apple.sh
           mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
+
+      - name: Extract Pkg
+        if: ${{ matrix.config == 'Release' }}
+        run: |
+          # https://stackoverflow.com/a/50835954
+          pkgutil --extract-full meshlib_${{ matrix.os }}.pkg ./meshlib_install
+
+      - name: Build C++ examples
+        if: ${{ matrix.config == 'Release' }}
+        env:
+          CXX: ${{ steps.setup.outputs.cxx-compiler }}
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Payload/Frameworks/
+          cmake \
+            --build cpp-examples-build \
+            --parallel
+
+      - name: Build C examples
+        if: ${{ matrix.config == 'Release' }}
+        env:
+          CC: ${{ steps.setup.outputs.c-compiler }}
+        run: |
+          cmake \
+            -S examples/c-examples \
+            -B c-examples-build \
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Payload/Frameworks/
+          cmake \
+            --build c-examples-build \
+            --parallel
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

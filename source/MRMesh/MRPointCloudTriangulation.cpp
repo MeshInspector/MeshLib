@@ -72,6 +72,7 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
 
     // add all extraPoints in targetMesh_
     targetMesh_.points.reserve( targetMesh_.points.size() + extraPoints.validPoints.count() );
+    cloud2mesh_.resizeNoInit( targetMesh_.points.size() );
     for ( VertId pid : extraPoints.validPoints )
     {
         cloud2mesh_[pid] = targetMesh_.points.endId();
@@ -90,6 +91,7 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
         cloud2mesh_[nextPointId] = bdV;
         extraPoints.points.push_back( targetMesh_.points[bdV] );
         extraPoints.normals.push_back( targetMesh_.pseudonormal( bdV ) );
+        ++nextPointId;
     }
 
     return true;
@@ -177,11 +179,17 @@ bool PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2
     region2 -= region3;
 
     // create topology
-    MeshBuilder::addTriangles( targetMesh_.topology, t3, { .region = &region3, .allowNonManifoldEdge = false } );
+    const MeshBuilder::BuildSettings bsettings
+    {
+        .region = &region3,
+        .shiftFaceId = targetMesh_.topology.getValidFaces().endId(),
+        .allowNonManifoldEdge = false
+    };
+    MeshBuilder::addTriangles( targetMesh_.topology, t3, bsettings );
     if ( !reportProgress( progressCb, 0.1f ) )
         return false;
-    region2 |= region3;
-    MeshBuilder::addTriangles( targetMesh_.topology, t3, { .region = &region2, .allowNonManifoldEdge = false } );
+    region3 |= region2;
+    MeshBuilder::addTriangles( targetMesh_.topology, t3, bsettings );
     if ( !reportProgress( progressCb, 0.2f ) )
         return false;
 

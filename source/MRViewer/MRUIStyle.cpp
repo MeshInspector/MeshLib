@@ -266,14 +266,14 @@ bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*
     if ( !ImGui::ItemAdd( bb, id ) )
         return simulateClick;
 
-    if ( g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat )
-        flags |= ImGuiButtonFlags_Repeat;
+    if ( g.LastItemData.ItemFlags & ImGuiItemFlags_ButtonRepeat )
+        flags |= ImGuiItemFlags_ButtonRepeat;
 
     bool hovered, held;
     bool pressed = ImGui::ButtonBehavior( bb, id, &hovered, &held, flags );
 
     // Render
-    ImGui::RenderNavHighlight( bb, id );
+    ImGui::RenderNavCursor( bb, id );
 
     // replaced part
     // potential fail. need check that customTexture is good
@@ -809,13 +809,13 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
         }
 
         const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
-        ImGui::RenderNavHighlight( total_bb, id );
+        ImGui::RenderNavCursor( total_bb, id );
 
         if ( !*v )
             ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding * 0.5f );
 
         ImU32 check_col = ImGui::GetColorU32( ImGuiCol_CheckMark );
-        bool mixed_value = ( g.LastItemData.InFlags & ImGuiItemFlags_MixedValue ) != 0;
+        bool mixed_value = ( g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue ) != 0;
         if ( mixed_value )
         {
             // Undocumented tristate/mixed/indeterminate checkbox (#2644)
@@ -1055,7 +1055,7 @@ bool radioButton( const char* label, int* value, int valButton )
             *v = v_button;
         }
 
-        ImGui::RenderNavHighlight( total_bb, id );
+        ImGui::RenderNavCursor( total_bb, id );
 
         const bool active = *v == v_button;
         if ( active )
@@ -1473,7 +1473,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     if ( !showPreview )
         ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
-    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+    float itemWidth = ( context->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
@@ -1535,7 +1535,7 @@ bool beginCombo( const char* label, const std::string& text /*= "Not selected" *
     if ( !showPreview )
         ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
-    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+    float itemWidth = ( context->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
@@ -1595,7 +1595,7 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
     if ( format == NULL )
         format = DataTypeGetInfo( data_type )->PrintFmt;
 
-    const bool hovered = ItemHoverable( frame_bb, id, g.LastItemData.InFlags );
+    const bool hovered = ItemHoverable( frame_bb, id, g.LastItemData.ItemFlags );
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive( id );
     if ( !temp_input_is_active )
     {
@@ -1627,7 +1627,7 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
 
     // Draw frame
     const ImU32 frame_col = GetColorU32( g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg );
-    RenderNavHighlight( frame_bb, id );
+    RenderNavCursor( frame_bb, id );
     RenderFrame( frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding );
 
     // Slider behavior

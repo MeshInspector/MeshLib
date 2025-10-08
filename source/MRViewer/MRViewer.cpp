@@ -607,12 +607,19 @@ int Viewer::launch( const LaunchParams& params )
     CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
+#ifdef _WIN32
+    // splash window must be hidden after main window appear, otherwise another application (e.g. Windows Explorer) is activated
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
+#endif
 
-    // splash window must be hidden after main window appear, otherwise another application (e.g. Windows Explorer) is activated
     if ( params.windowMode != LaunchParams::NoWindow && params.windowMode != LaunchParams::Hide && params.splashWindow )
         params.splashWindow->stop();
+
+#ifndef _WIN32
+    if ( params.windowMode == LaunchParams::HideInit && window )
+        glfwShowWindow( window );
+#endif
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
     CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false

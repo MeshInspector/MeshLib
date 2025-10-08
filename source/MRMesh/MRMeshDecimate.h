@@ -264,11 +264,19 @@ struct RemeshSettings
     int maxEdgeSplits = 10'000'000;
     /// Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
+    /// Allows or prohibits splitting and/or collapse boundary edges
+    /// it recommended to keep default value here for better quality
+    bool frozenBoundary = false;
     /// Maximal shift of a boundary during one edge collapse
+    /// only makes sense if `frozenBoundary=false`
     float maxBdShift = FLT_MAX;
     /// This option in subdivision works best for natural surfaces, where all triangles are close to equilateral and have similar area,
     /// and no sharp edges in between
     bool useCurvature = false;
+    /// An edge is subdivided only if both its left and right triangles have aspect ratio below or equal to this value.
+    /// So this is a maximum aspect ratio of a triangle that can be split on two before Delone optimization.
+    /// Please set it to a smaller value only if frozenBoundary==true, otherwise many narrow triangles can appear near border
+    float maxSplittableTriAspectRatio = FLT_MAX;
     /// the number of iterations of final relaxation of mesh vertices;
     /// few iterations can give almost perfect uniformity of the vertices and edge lengths but deviate from the original surface
     int finalRelaxIters = 0;

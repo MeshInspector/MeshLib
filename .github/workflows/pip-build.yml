@@ -459,7 +459,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"] # no Linux distribution yet with system Python 3.14
         include:
           - platform: "x86_64"
             runner: ubuntu-latest
@@ -480,8 +480,6 @@ jobs:
           - py-version: "3.12"
             os: "fedora:39"
           - py-version: "3.13"
-            os: "fedora:42"
-          - py-version: "3.14"
             os: "fedora:42"
     env:
       PYTHON_CMD: python${{ matrix.py-version }}

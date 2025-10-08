@@ -1185,7 +1185,7 @@ void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f );
 
-    buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,cBigIconSize } );
+    buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,15.f } );
 }
 
 void RibbonMenu::drawSmallButtonsSet_( const std::vector<std::string>& group, int setFrontIndex, int setLength, bool withText )

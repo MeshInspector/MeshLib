@@ -268,7 +268,7 @@ private:
     std::string transformClipboardText_;
 
     int currentTopPanelHeight_ = 113;
-    int topPanelOpenedHeight_ = 113;
+    int topPanelOpenedHeight_ = 91;
     int topPanelHiddenHeight_ = 33;
 
     ImVec2 sceneSize_{ 310, 0 };

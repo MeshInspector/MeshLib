@@ -820,12 +820,12 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
         {
             // Undocumented tristate/mixed/indeterminate checkbox (#2644)
             // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
-            ImVec2 pad( ImMax( 1.0f, IM_FLOOR( square_sz / 3.6f ) ), ImMax( 1.0f, IM_FLOOR( square_sz / 3.6f ) ) );
+            ImVec2 pad( ImMax( 1.0f, IM_TRUNC( square_sz / 3.6f ) ), ImMax( 1.0f, IM_TRUNC( square_sz / 3.6f ) ) );
             window->DrawList->AddRectFilled( { check_bb.Min.x + pad.x,  check_bb.Min.y + pad.y }, { check_bb.Max.x - pad.x, check_bb.Max.y - pad.y }, check_col, style.FrameRounding );
         }
         else if ( *v )
         {
-            const float pad = ImMax( 1.0f, IM_FLOOR( square_sz / 6.0f ) );
+            const float pad = ImMax( 1.0f, IM_TRUNC( square_sz / 6.0f ) );
             auto renderCustomCheckmark = [] ( ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz )
             {
                 const float thickness = ImMax( sz * 0.15f, 1.0f );
@@ -1061,7 +1061,7 @@ bool radioButton( const char* label, int* value, int valButton )
         if ( active )
         {
             window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
-            const float pad = ImMax( 1.0f, IM_FLOOR( clickSize * 0.3f ) );
+            const float pad = ImMax( 1.0f, IM_TRUNC( clickSize * 0.3f ) );
             window->DrawList->AddCircleFilled( center, radius - pad, ImGui::GetColorU32( ImGuiCol_CheckMark ), 16 );
         }
         else
@@ -1226,8 +1226,8 @@ bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /
     if ( ( flags & ( ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_DisplayHSV ) ) != 0 && ( flags & ImGuiColorEditFlags_NoInputs ) == 0 )
     {
         // RGB/HSV 0..255 Sliders
-        const float w_item_one = ImMax( 1.0f, IM_FLOOR( ( w_inputs - ( style.ItemInnerSpacing.x ) * ( components - 1 ) ) / ( float )components ) );
-        const float w_item_last = ImMax( 1.0f, IM_FLOOR( w_inputs - ( w_item_one + style.ItemInnerSpacing.x ) * ( components - 1 ) ) );
+        const float w_item_one = ImMax( 1.0f, IM_TRUNC( ( w_inputs - ( style.ItemInnerSpacing.x ) * ( components - 1 ) ) / ( float )components ) );
+        const float w_item_last = ImMax( 1.0f, IM_TRUNC( w_inputs - ( w_item_one + style.ItemInnerSpacing.x ) * ( components - 1 ) ) );
 
         const bool hide_prefix = ( w_item_one <= CalcTextSize( ( flags & ImGuiColorEditFlags_Float ) ? "M:0.000" : "M:000" ).x );
         static const char* ids[4] = { "##X", "##Y", "##Z", "##W" };

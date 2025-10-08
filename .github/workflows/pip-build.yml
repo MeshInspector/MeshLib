@@ -475,6 +475,14 @@ jobs:
             os: "debian:11-slim"
           - py-version: "3.10"
             os: "ubuntu:22.04"
+          - py-version: "3.11"
+            os: "fedora:37"
+          - py-version: "3.12"
+            os: "fedora:39"
+          - py-version: "3.13"
+            os: "fedora:42"
+          - py-version: "3.14"
+            os: "fedora:42"
     env:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:
@@ -490,6 +498,10 @@ jobs:
       - name: Debian/Ubuntu system setup
         if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' }}
         run: apt -y update && apt -y install curl libssl-dev python3-pip
+
+      - name: Fedora system setup
+        if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
+        run: dnf -y install python3-pip
 
       - name: Pip setup
         run: |
@@ -559,7 +571,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"] # python 3.8 disabled on x86 macOS since 2024-10-14
+        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.8 disabled on x86 macOS since 2024-10-14, python 3.14 was not available in brew on the day of writing this
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -577,8 +589,6 @@ jobs:
             py-cmd: "python3.12"
           - py-version: "3.13"
             py-cmd: "python3.13"
-          - py-version: "3.14"
-            py-cmd: "python3.14"
     steps:
       - name: Checkout
         uses: actions/checkout@v5

@@ -38,6 +38,10 @@ for ver in $PY_VERSIONS; do
         # python 3.8 disabled on x86 macOS since 2024-10-14 (according to our old pip-build file)
         continue
     fi
+    if [[ $HOMEBREW_DIR == /usr/local && $ver == 3.14 ]]; then
+        # python 3.14 was not available in brew on the day of writing this
+        continue
+    fi
 
     # ??
     # Note that Brew doesn't want to be ran in `sudo`.

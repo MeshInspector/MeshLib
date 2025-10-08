@@ -275,7 +275,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoTitleBar | ( settings.historyMode ? ImGuiWindowFlags_ChildWindow | ImGuiChildFlags_AlwaysUseWindowPadding : 0 ) |
+        ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoMove;
     std::string name = "##notification" + std::to_string( settings.index );
     ImGui::PushStyleVar( settings.historyMode ? ImGuiStyleVar_ChildBorderSize : ImGuiStyleVar_WindowBorderSize, 0.0f );
@@ -295,7 +295,12 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
 
     if ( !settings.historyMode && settings.index + 1 == cNotificationNumberLimit )
         ImGui::SetNextWindowBgAlpha( 0.5f );
-    ImGui::Begin( name.c_str(), nullptr, flags );
+    if ( settings.historyMode )
+    {
+        ImGui::BeginChild( name.c_str(), {}, ImGuiChildFlags_AlwaysUseWindowPadding, flags );
+    }
+    else
+        ImGui::Begin( name.c_str(), nullptr, flags );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
 

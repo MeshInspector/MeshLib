@@ -218,7 +218,7 @@ jobs:
             -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Frameworks/
           cmake \
             --build cpp-examples-build \
-            --parallel
+            --parallel $(sysctl -n hw.physicalcpu)
 
       - name: Build C examples
         if: ${{ matrix.config == 'Release' }}
@@ -231,7 +231,7 @@ jobs:
             -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Frameworks/
           cmake \
             --build c-examples-build \
-            --parallel
+            --parallel $(sysctl -n hw.physicalcpu)
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

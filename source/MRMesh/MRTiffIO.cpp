@@ -184,7 +184,7 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
         constexpr TIFFFieldInfo cFieldInfo[] = {
             { TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" },
         };
-        TIFFMergeFieldInfo( tif, cFieldInfo, std::size( cFieldInfo ) );
+        TIFFMergeFieldInfo( tif, cFieldInfo, (uint32_t)std::size( cFieldInfo ) );
 
         const Matrix4d matrix = AffineXf3d{ *xf };
         TIFFSetField( tif, TIFFTAG_ModelTransformationTag, 16, &matrix );

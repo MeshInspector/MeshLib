@@ -35,10 +35,11 @@ brew update
 
 for ver in $PY_VERSIONS; do
     if [[ $HOMEBREW_DIR == /usr/local && $ver == 3.8 ]]; then
+        # ($HOMEBREW_DIR == /usr/local) for mac x64 and (/opt/homebrew == /opt/homebrew) for mac Arm
         # python 3.8 disabled on x86 macOS since 2024-10-14 (according to our old pip-build file)
         continue
     fi
-    if [[ $HOMEBREW_DIR == /usr/local && $ver == 3.14 ]]; then
+    if [[ $ver == 3.14 ]]; then
         # python 3.14 was not available in brew on the day of writing this
         continue
     fi

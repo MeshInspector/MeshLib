@@ -569,10 +569,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.14 was not available in brew on the day of writing this
-        exclude:
-          - platform: "x86"
-            py-version: "3.8" # python 3.8 disabled on x86 macOS since 2024-10-14
+        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.8 disabled on macOS since 2024-10-14, python 3.14 was not available in brew on the day of writing this
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64

@@ -21,6 +21,11 @@ IF(NOT APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
   ENDIF()
+ELSE() # if APPLE
+  # add `-fno-assume-unique-vtables` to fix reinterpret cast of `spdlog::rotating_file_sink_mt`
+  # https://github.com/llvm/llvm-project/issues/120129
+  # https://stackoverflow.com/a/79378704/16680013
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
 ENDIF()
 
 # Warnings and misc compiler settings.
@@ -79,11 +84,6 @@ ELSE()
 
   IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-newline-eof")
-  ENDIF()
-  IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    # add `-fno-assume-unique-vtables` to fix reinterpret cast of `spdlog::rotating_file_sink_mt`
-    # https://stackoverflow.com/a/79378704/16680013
-    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
   ENDIF()
 ENDIF()
 

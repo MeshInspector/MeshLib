@@ -10,6 +10,16 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
 ENDIF()
 
+IF(APPLE)
+    # assume built-in pthreads on macOS
+    # https://stackoverflow.com/a/54606606/7325599
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")

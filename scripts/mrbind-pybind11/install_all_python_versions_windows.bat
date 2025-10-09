@@ -54,7 +54,7 @@ goto :eof
 rem --- Now some functions:
 
 :install_ver
-for /f %%y in ('findstr %1 %tempfile%2') do (
+for /f %%y in ('findstr %1\. %tempfile%2') do (
     if !done! == 0 (
         echo Trying version: %%y
         set installer=%tmp%\python-%%y-amd64.exe

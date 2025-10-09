@@ -25,7 +25,10 @@ ELSE() # if APPLE
   # add `-fno-assume-unique-vtables` to fix reinterpret cast of `spdlog::rotating_file_sink_mt`
   # https://github.com/llvm/llvm-project/issues/120129
   # https://stackoverflow.com/a/79378704/16680013
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
+  # the flag added in this commit https://github.com/llvm/llvm-project/commit/9d525bf94b255df89587db955b5fa2d3c03c2c3e
+  IF( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17 ) # ethier AppleClang or Clang
+    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
+  ENDIF()  
 ENDIF()
 
 # Warnings and misc compiler settings.

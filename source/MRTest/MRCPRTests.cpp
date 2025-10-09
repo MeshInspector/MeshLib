@@ -46,7 +46,17 @@ TEST( MRViewer, CPRTestGet )
 
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        const auto resp = cpr::Get( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, parameters );
+        cpr::Session session;
+        session.SetVerbose( cpr::Verbose( true ) );
+        session.SetDebugCallback( std::function{ []( cpr::DebugCallback::InfoType, std::string data, intptr_t )
+        {
+            spdlog::info( data );
+        } } );
+        //session.SetSslOptions( cpr::SslOptions{ .ssl_no_revoke = true } );
+        session.SetUrl( cpr::Url{ baseUrl } );
+        session.SetTimeout( cpr::Timeout{ 3000 } );
+        session.SetParameters( parameters );
+        const auto resp = session.Get();// cpr::Get( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, parameters );
         auto code = resp.status_code;
         if ( code == 200 )
             break;
@@ -77,7 +87,17 @@ TEST( MRViewer, CPRTestPost )
 
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        const auto resp = cpr::Post( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, payload );
+        cpr::Session session;
+        session.SetVerbose( cpr::Verbose( true ) );
+        session.SetDebugCallback( std::function{ []( cpr::DebugCallback::InfoType, std::string data, intptr_t )
+        {
+            spdlog::info( data );
+        } } );
+        //session.SetSslOptions( cpr::SslOptions{ .ssl_no_revoke = true } );
+        session.SetUrl( cpr::Url{ baseUrl } );
+        session.SetTimeout( cpr::Timeout{ 3000 } );
+        session.SetPayload( payload );
+        const auto resp = session.Post();// cpr::Post( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, payload );
         auto code = resp.status_code;
         if ( code == 200 )
             break;

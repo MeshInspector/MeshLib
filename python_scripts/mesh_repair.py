@@ -17,7 +17,7 @@ def unite_large_components(mesh : mm.Mesh, minAreaRatio : float ):
     uniteParams.fixDegenerations = True
     uniteParams.maxAllowedError = mesh.computeBoundingBox().diagonal()*1e-4
     uniteParams.nestedComponentsMode = mm.NestedComponenetsMode.Merge
-    # uniteParams.mergeOnFail = True # this will appear in next release
+    uniteParams.mergeOnFail = True
     mesh = mm.uniteManyMeshes(meshesPtrs,uniteParams)
 
 def close_small_holes(mesh : mm.Mesh, maxParimeter : float):
@@ -42,8 +42,7 @@ def fix_self_intersections(mesh:mm.Mesh):
     params.maxExpand = 2
     params.relaxIterations = 2
     params.method = mm.SelfIntersections.Settings.Method.CutAndFill
-    params.touchIsIntersection = False # required to disable subdivision on fixing self-intersections
-    print(params.subdivideEdgeLen)
+    #params.touchIsIntersection = False # required to disable subdivision on fixing self-intersections
     mm.SelfIntersections.fix(mesh,params)
 
 def fix_degeneracies( mesh : mm.Mesh, tolerance : float, force : bool ):
@@ -105,8 +104,8 @@ def has_big_holes(mesh : mm.Mesh, critHoleLength : float)->bool:
 def iterative_repair(mesh : mm.Mesh):
     diagonal = mesh.computeBoundingBox().diagonal()
     tolerance = 2.5*diagonal*1e-3
-    for i in range(4): # one more iteration then in MeshInspector
+    for i in range(3):
         if not has_issues(mesh,0.002,diagonal/3.0,tolerance):
             break
-        local_repair(mesh,tolerance,i > 2) # last iteration is forced
+        local_repair(mesh,tolerance,i > 1) # last iteration is forced
     return mesh

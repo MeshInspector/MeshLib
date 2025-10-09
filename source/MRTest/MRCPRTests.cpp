@@ -1,14 +1,42 @@
 #include "MRMesh/MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__)
-#include <cpr/cpr.h>
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRGTest.h"
+#include <curl/curl.h>
+#include <cpr/cpr.h>
 
 constexpr int MAX_RETRIES = 10;
 constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
 
+namespace
+{
+void logCurlInfo()
+{
+    // Initialize libcurl
+    curl_global_init( CURL_GLOBAL_DEFAULT );
+
+    // Get version information
+    const curl_version_info_data* data = curl_version_info( CURLVERSION_NOW );
+
+    // Check if data is valid and print the version string
+    if ( data )
+    {
+        spdlog::info( "libcurl Version: {}", data->version );
+    }
+    else
+    {
+        spdlog::error( "Failed to get libcurl version information." );
+    }
+
+    // Clean up libcurl
+    curl_global_cleanup();
+}
+}
+
 TEST( MRViewer, CPRTestGet )
 {
+    logCurlInfo();
+
     std::string baseUrl = "https://postman-echo.com/get";
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };
 
@@ -35,6 +63,8 @@ TEST( MRViewer, CPRTestGet )
 
 TEST( MRViewer, CPRTestPost )
 {
+    logCurlInfo();
+
     std::string baseUrl = "https://postman-echo.com/post";
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };
 

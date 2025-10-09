@@ -18,10 +18,13 @@ TEST( MRViewer, CPRTestGet )
 
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        auto code = cpr::Get( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, parameters ).status_code;
+        const auto resp = cpr::Get( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, parameters );
+        auto code = resp.status_code;
         if ( code == 200 )
             break;
         spdlog::warn( "status code {} after try #{}", code, i + 1 );
+        if ( resp.error )
+            spdlog::warn( "curl error {}: {}", (int32_t)resp.error.code, resp.error.message );
         if ( i + 1 == MAX_RETRIES )
         {
             EXPECT_EQ( code, 200 );
@@ -44,10 +47,13 @@ TEST( MRViewer, CPRTestPost )
 
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        auto code = cpr::Post( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, payload ).status_code;
+        const auto resp = cpr::Post( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, payload );
+        auto code = resp.status_code;
         if ( code == 200 )
             break;
         spdlog::warn( "status code {} after try #{}", code, i + 1 );
+        if ( resp.error )
+            spdlog::warn( "curl error {}: {}", (int32_t)resp.error.code, resp.error.message );
         if ( i + 1 == MAX_RETRIES )
         {
             EXPECT_EQ( code, 200 );

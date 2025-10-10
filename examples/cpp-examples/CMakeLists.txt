@@ -60,7 +60,7 @@ target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHL
 target_link_directories(MRBasedMainFunc PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
 target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)
 if(APPLE)
-  find_package(Boost REQUIRED)
+  find_package(Boost CONFIG REQUIRED)
   target_link_libraries(MRBasedMainFunc PRIVATE Boost::headers)
 endif()
 if(EMSCRIPTEN)

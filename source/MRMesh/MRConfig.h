@@ -109,10 +109,10 @@ public:
     MRMESH_API void setJsonValue( const std::string& key, const Json::Value& keyValue );
 
     /// returns json with content of this config
-    Json::Value getFullConfig() const { return config_; }
+    Json::Value toJson() const { return config_; }
 
     /// replace current config content with given one
-    void setFullConfig( const Json::Value& config ) { config_ = config; }
+    void fromJson( const Json::Value& config ) { config_ = config; }
 private:
     std::string appName_;
 

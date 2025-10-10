@@ -34,10 +34,17 @@ void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appNa
     assert( viewer );
 
     auto& cfg = MR::Config::instance();
+    // set filename
+    // reads config from it
+    //(needed even if `reset` flag is set because it is only way to set filename)
     cfg.reset( appName );
     if ( reset )
     {
-        cfg.setFullConfig( Json::Value() );
+        // clears content
+        cfg.fromJson( Json::Value() );
+        // save existing config(cleared) to old filename(set on first call of cfg.reset(appName))
+        // set new filename(same as old)
+        // reads config(cleared) from it
         cfg.reset( appName );
     }
 

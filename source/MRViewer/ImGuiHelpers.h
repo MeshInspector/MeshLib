@@ -354,4 +354,15 @@ inline float getLuminance( const ImVec4& col )
     return 0.2126f * col.x + 0.7152f * col.y + 0.0722f * col.z;
 }
 
+/// content boundaries max for the full window (roughly (0,0)+Size-Scroll) where Size can be overridden with SetNextWindowContentSize(), in window coordinates
+/// \note copied from imgui because imgui recommends against using this method
+MRVIEWER_API ImVec2 GetWindowContentRegionMax();
+
+/// current content boundaries (typically window boundaries including scrolling, or current column boundaries), in windows coordinates
+/// \note copied from imgui because imgui recommends against using this method
+inline ImVec2 GetContentRegionMax()
+{
+    return GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos();
+}
+
 } // namespace ImGui

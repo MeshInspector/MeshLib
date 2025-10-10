@@ -196,7 +196,7 @@ jobs:
       - name: Create Pkg
         if: ${{ matrix.config == 'Release' }}
         run: |
-          ./scripts/distribution_apple.sh
+          ./scripts/distribution_apple.sh ${{ inputs.app_version }}
           mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Extract Pkg

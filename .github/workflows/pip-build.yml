@@ -496,13 +496,13 @@ jobs:
         run: dnf -y install python38-pip
 
       - name: Debian/Ubuntu system setup
-        if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' }}
+        if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
         run: apt -y update && apt -y install curl libssl-dev python3-pip
 
       # TODO: replace with a distro with default target Python version
       - name: Ubuntu 25.10 system setup
         if: ${{ matrix.os == 'ubuntu:25.10' }}
-        run: apt -y update && apt -y install curl libssl-dev python${{ matrix.py-version }}
+        run: apt -y install python${{ matrix.py-version }}
 
       - name: Fedora system setup
         if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}

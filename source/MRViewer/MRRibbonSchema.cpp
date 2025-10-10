@@ -414,7 +414,7 @@ void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsLi
     recalcItemSizes();
 }
 
-float sCalcSize( const ImFont* font, const char* begin, const char* end )
+float sCalcSize( ImFont* font, const char* begin, const char* end )
 {
     float res = font->CalcTextSizeA( font->FontSize, FLT_MAX, -1.0f, begin, end ).x;
     // Round
@@ -425,7 +425,7 @@ float sCalcSize( const ImFont* font, const char* begin, const char* end )
     return float( int( res + +0.99999f ) );
 }
 
-SplitCaptionInfo sAutoSplit( const std::string& str, float maxWidth,const ImFont* font, float baseSize )
+SplitCaptionInfo sAutoSplit( const std::string& str, float maxWidth, ImFont* font, float baseSize )
 {
     if ( baseSize < maxWidth )
         return { { str, baseSize } };

@@ -14,6 +14,7 @@
 #include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRImGui.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 #include <misc/cpp/imgui_stdlib.h>
 #include <algorithm>
 #include <functional>

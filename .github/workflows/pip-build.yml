@@ -481,6 +481,7 @@ jobs:
             os: "fedora:39"
           - py-version: "3.13"
             os: "fedora:42"
+          # TODO: replace with a distro with default Python 3.14
           - py-version: "3.14"
             os: "ubuntu:25.10"
     env:
@@ -497,16 +498,18 @@ jobs:
 
       - name: Debian/Ubuntu system setup
         if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
-        run: apt -y update && apt -y install curl libssl-dev python3-pip
-
-      # TODO: replace with a distro with default target Python version
-      - name: Ubuntu 25.10 system setup
-        if: ${{ matrix.os == 'ubuntu:25.10' }}
-        run: apt -y install python${{ matrix.py-version }}
+        run: apt -y update && apt -y install curl libssl-dev python3-pip python${{ matrix.py-version }}-venv
 
       - name: Fedora system setup
         if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
         run: dnf -y install python3-pip
+
+      - name: Create virtualenv
+        run: |
+          ${{ env.PYTHON_CMD }} -m venv .venv
+          . .venv/bin/activate
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo $PATH >> $GITHUB_PATH
 
       - name: Pip setup
         run: |

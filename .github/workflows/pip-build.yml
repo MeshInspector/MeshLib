@@ -607,7 +607,7 @@ jobs:
 
       - name: Python setup
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
-        run: brew install python@${{matrix.py-version}}
+        run: brew update && brew install python@${{matrix.py-version}}
 
       - name: Create virtualenv
         run: |

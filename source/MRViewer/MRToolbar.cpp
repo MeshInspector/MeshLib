@@ -306,7 +306,6 @@ void Toolbar::drawCustomizeModal_()
         {
             ImGui::Dummy( tooltipSize );
             ImGui::SetCursorPos( { 0, 0 } );
-            spdlog::info( "{}, {}", ImGui::GetCurrentWindow()->Size.x, ImGui::GetCurrentWindow()->Size.y );
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );

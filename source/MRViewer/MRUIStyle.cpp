@@ -2292,7 +2292,7 @@ void highlightWindowArea( const ImVec2& min, const ImVec2& max )
     ImVec2 boxMax;
     if ( max.x < 0.0f || max.y < 0.0f )
     {
-        auto region = ImGui::GetContentRegionAvail() + ImGui::GetCursorScreenPos() - ImGui::GetWindowPos();
+        auto region = ImGui::GetContentRegionMax();
         boxMax = windowPos;
         boxMax.x += region.x + style.WindowPadding.x * 2.f;
         boxMax.y += region.y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;

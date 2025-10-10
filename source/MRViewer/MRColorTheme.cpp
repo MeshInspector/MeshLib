@@ -314,7 +314,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
 
         "TabHovered",
         "TabClicked",
-        "TabActive", // TODO FIX update ImGui 1.90.9 ImGuiCol_TabActive -> ImGuiCol_TabSelected
+        "TabActive", // in update ImGui 1.90.9 ImGuiCol_TabActive renamed to ImGuiCol_TabSelected, but we keep old name for backward compatibility with old color scheme files
         "TabActiveHovered",
         "TabActiveClicked",
         "TabText",

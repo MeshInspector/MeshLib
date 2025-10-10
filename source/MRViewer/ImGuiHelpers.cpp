@@ -1671,7 +1671,7 @@ bool ModalBigTitle( const char* title )
         ImGui::PopFont();
 
     const float exitButtonSize = MR::StyleConsts::Modal::exitBtnSize * UI::scale();
-    ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPos().x - exitButtonSize );
+    ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - exitButtonSize );
     const bool shoudClose = ModalExitButton();
     ImGui::NewLine();
 
@@ -1706,6 +1706,12 @@ bool ModalExitButton()
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar();
     return false;
+}
+
+ImVec2 GetWindowContentRegionMax()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ContentRegionRect.Max - window->Pos;
 }
 
 } // namespace ImGui

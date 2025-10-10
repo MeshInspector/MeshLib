@@ -299,12 +299,14 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SetNextItemAllowOverlap();
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
-        ImGui::SetNextWindowSize( tooltipSize );
 
         ImGui::PushStyleColor( ImGuiCol_Border, 0 );
         ImGui::PushStyleColor( ImGuiCol_WindowBg, 0 );
         if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
         {
+            ImGui::Dummy( tooltipSize );
+            ImGui::SetCursorPos( { 0, 0 } );
+            spdlog::info( "{}, {}", ImGui::GetCurrentWindow()->Size.x, ImGui::GetCurrentWindow()->Size.y );
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
@@ -384,7 +386,6 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
 
     float tabsListWidth = std::max( 130 * UI::scale(), ( itemsWindowWidth - childWindowPadding.x * 2 ) * 0.25f );
-    ImGui::SetNextWindowSize( ImVec2( tabsListWidth, -1 ) );
     ImGui::BeginChild( "###QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ), ImGuiChildFlags_Borders );
     drawCustomizeTabsList_();
     ImGui::EndChild();
@@ -533,9 +534,9 @@ void Toolbar::drawCustomizeItemsList_()
     if ( tabIt == tabsMap.end() )
         return;
     auto& tab = tabIt->second;
-    float width = ImGui::GetContentRegionAvail().x + ImGui::GetCursorPos().x;
+    float width = ImGui::GetWindowContentRegionMax().x;
     int countInColumn = 11;
-    float heightStep = ( ImGui::GetContentRegionAvail().y + ImGui::GetCursorPos().y ) / countInColumn;
+    float heightStep = ImGui::GetWindowContentRegionMax().y / countInColumn;
     auto posShift = ImGui::GetCursorPos();
     posShift.y = heightStep / 2 - ImGui::GetTextLineHeight() / 2.f;
 

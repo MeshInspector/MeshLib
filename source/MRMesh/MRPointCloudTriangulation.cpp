@@ -72,7 +72,8 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
 
     // add all extraPoints in targetMesh_
     targetMesh_.points.reserve( targetMesh_.points.size() + extraPoints.validPoints.count() );
-    cloud2mesh_.resizeNoInit( targetMesh_.points.size() );
+    const auto totalPoints = extraPoints.points.size() + bdVerts.count();
+    cloud2mesh_.resizeNoInit( totalPoints );
     for ( VertId pid : extraPoints.validPoints )
     {
         cloud2mesh_[pid] = targetMesh_.points.endId();
@@ -80,7 +81,6 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
     }
 
     // add boundary vertices of tagetMesh_ in extraPoints
-    const auto totalPoints = extraPoints.points.size() + bdVerts.count();
     cloud2mesh_.resizeNoInit( totalPoints );
     extraPoints.points.reserve( totalPoints );
     extraPoints.normals.reserve( totalPoints );

@@ -79,7 +79,7 @@ private:
 
 void SceneObjectsListDrawer::draw( float height )
 {
-    ImGui::BeginChild( "SceneObjectsList", ImVec2( -1, height ), false );
+    ImGui::BeginChild( "SceneObjectsList", ImVec2( -1, height ), ImGuiChildFlags_None );
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection

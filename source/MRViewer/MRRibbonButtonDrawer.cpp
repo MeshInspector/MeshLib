@@ -150,12 +150,12 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( bool( flags & ImGuiTreeNodeFlags_AllowOverlap ) )
     {
         setOverlap = true;
-        ImGui::GetCurrentContext()->LastItemData.InFlags |= ImGuiItemFlags_AllowOverlap;
+        ImGui::GetCurrentContext()->LastItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap;
     }
     const auto isHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
     if ( setOverlap )
     {
-        ImGui::GetCurrentContext()->LastItemData.InFlags &= ( ~ImGuiItemFlags_AllowOverlap );
+        ImGui::GetCurrentContext()->LastItemData.ItemFlags &= ( ~ImGuiItemFlags_AllowOverlap );
     }
 
     const auto windowBgColor = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
@@ -269,7 +269,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
-    ImGui::BeginChild( ( "##childGroup" + item.item->name() ).c_str(), itemSize, false,
+    ImGui::BeginChild( ( "##childGroup" + item.item->name() ).c_str(), itemSize, ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
     ImGui::PopStyleVar();
 

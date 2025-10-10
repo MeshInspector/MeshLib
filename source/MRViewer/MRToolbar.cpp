@@ -384,7 +384,8 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
 
     float tabsListWidth = std::max( 130 * UI::scale(), ( itemsWindowWidth - childWindowPadding.x * 2 ) * 0.25f );
-    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ) );
+    ImGui::SetNextWindowSize( ImVec2( tabsListWidth, -1 ) );
+    ImGui::BeginChild( "###QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ), ImGuiChildFlags_Borders );
     drawCustomizeTabsList_();
     ImGui::EndChild();
 

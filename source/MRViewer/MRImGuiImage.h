@@ -3,6 +3,7 @@
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRMeshTexture.h>
 #include "MRRenderGLHelpers.h"
+#include <imgui.h>
 
 namespace MR
 {

@@ -360,7 +360,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     setup.setupBasePlugins( &viewer );
     setup.setupCommonModifiers( &viewer );
     setup.setupCommonPlugins( &viewer );
-    setup.setupSettingsManager( &viewer, params.name );
+    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
     setup.setupConfiguration( &viewer );
     CommandLoop::appendCommand( [&] ()
     {
@@ -425,6 +425,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-tryHidden" ||
             flag == "-transparentBgOn" ||
             flag == "-transparentBgOff" ||
+            flag == "-resetConfig" ||
             flag == "-noSplash" ||
     #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
             flag == "-showSplash" ||
@@ -506,6 +507,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.enableTransparentBackground = true;
         else if ( flag == "-transparentBgOff" )
             params.enableTransparentBackground = false;
+        else if ( flag == "-resetConfig" )
+            params.resetConfig = true;
         else if ( flag == "-noSplash" )
             params.splashWindow.reset();
     #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)

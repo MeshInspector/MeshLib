@@ -206,10 +206,6 @@ jobs:
           pkgutil --expand meshlib_${{ matrix.os }}.pkg ./meshlib_install
           cd ./meshlib_install/MeshLib.pkg
           cat Payload | gunzip | cpio -i
-          # FIXME: correct path resolving
-          mkdir Library/
-          mv Frameworks Library/
-          ln -s $(pwd)/Library ../Library
 
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}

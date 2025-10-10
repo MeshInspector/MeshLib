@@ -2,38 +2,39 @@
 
 set -euxo pipefail
 
-if [ -d "./Library" ];
-  then rm -rf "./Library";
+if [ -d ./macos_distr ] ; then
+  rm -rf ./macos_distr
 fi
+mkdir ./macos_distr
 
-cd ./build/Release
-cmake --install . --prefix=../..
-cd -
-MR_VERSION=$(ls ./Library/Frameworks/MeshLib.framework/Versions/)
+FRAMEWORK_BASE_DIR="./macos_distr/Library/Frameworks/MeshLib.framework"
+FRAMEWORK_DIR="${FRAMEWORK_BASE_DIR}/Versions/${MR_VERSION}"
+
+cmake --install build/Release --prefix="${FRAMEWORK_DIR}"
 echo "version: ${MR_VERSION}"
-MR_PREFIX="./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}"
-echo "prefix: ${MR_PREFIX}"
+echo "prefix: ${FRAMEWORK_DIR}"
 
-cp -rL ./lib "${MR_PREFIX}/lib/"
-cp -rL ./include "${MR_PREFIX}/include/"
+cp -rL ./lib "${FRAMEWORK_DIR}/lib/"
+cp -rL ./include "${FRAMEWORK_DIR}/include/"
 
 cp ./LICENSE ./macos/Resources
-mkdir "${MR_PREFIX}"/requirements/
-cp ./requirements/macos.txt "${MR_PREFIX}"/requirements/
+mkdir "${FRAMEWORK_DIR}/requirements/"
+cp ./requirements/macos.txt "${FRAMEWORK_DIR}/requirements/"
 
-ln -s "/Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}" "./Library/Frameworks/MeshLib.framework/Versions/Current"
-ln -s "/Library/Frameworks/MeshLib.framework/Resources" "./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}/Resources"
+ln -s "/Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}" "${FRAMEWORK_BASE_DIR}/Versions/Current"
+ln -s "/Library/Frameworks/MeshLib.framework/Resources"              "${FRAMEWORK_BASE_DIR}/Versions/${MR_VERSION}/Resources"
 
-# be carefull with pkg names! The pkg can fail to build
+# be careful with pkg names! The pkg can fail to build
 pkgbuild \
-            --root Library \
-            --identifier com.MeshInspector.MeshLib \
-            --install-location  /Library \
-            MeshLib.pkg
-
+  --root macos_distr/Library \
+  --identifier com.MeshInspector.MeshLib \
+  --install-location /Library \
+  MeshLib.pkg
 
 productbuild \
-          --distribution ./macos/Distribution.xml \
-          --package-path ./MeshLib.pkg \
-          --resources ./macos/Resources \
-          MeshLib_.pkg
+  --distribution ./macos/Distribution.xml \
+  --package-path ./MeshLib.pkg \
+  --resources ./macos/Resources \
+  MeshLib_.pkg
+
+rm -r ./macos_distr

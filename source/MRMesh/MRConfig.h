@@ -22,76 +22,97 @@ public:
 
     MRMESH_API static Config& instance();
 
-    // looks up (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
-    // creates directory if not presented
+    /// looks up (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
+    /// creates directory if not presented
     MRMESH_API void reset( std::string appName );
 
     MRMESH_API const std::string& getAppName() const;
 
-    // writes current config to file. (implicitly called from destructor)
+    /// writes current config to file. (implicitly called from destructor)
     MRMESH_API void writeToFile();
 
 private:
     Config();
 
-    // looks for presented *.json file
+    /// looks for presented *.json file
     void reset( const std::filesystem::path& filePath );
 
 
-    // stores configuration depends on constructor call: (<filepath>) or
-    // (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
+    /// stores configuration depends on constructor call: (<filepath>) or
+    /// (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
     ~Config();
 
 public:
-    // returns true if MRColor with presented key exists
+    
+    /// returns true if MRColor with presented key exists
     MRMESH_API bool hasBool( const std::string& key ) const;
-    // returns MRColor with presented key
+    
+    /// returns MRColor with presented key
     MRMESH_API bool getBool( const std::string& key, bool defaultValue = false ) const;
-    // sets MRColor for presented key
+    
+    /// sets MRColor for presented key
     MRMESH_API void setBool( const std::string& key, bool keyValue );
 
-    // returns true if MRColor with presented key exists
+    
+    /// returns true if MRColor with presented key exists
     MRMESH_API bool hasColor( const std::string& key ) const;
-    // returns MRColor with presented key
+    
+    /// returns MRColor with presented key
     MRMESH_API Color getColor( const std::string& key, const Color& defaultValue = Color::black() ) const;
-    // sets MRColor for presented key
+    
+    /// sets MRColor for presented key
     MRMESH_API void setColor( const std::string& key, const Color& keyValue );
 
-    // returns true if 'recently used' files exist
+    /// returns true if 'recently used' files exist
     MRMESH_API bool hasFileStack( const std::string& key ) const;
-    // returns 'recently used' files list
+    
+    /// returns 'recently used' files list
     MRMESH_API FileNamesStack getFileStack( const std::string& key, const FileNamesStack& defaultValue = FileNamesStack() ) const;
-    // sets 'recently used' files list
+    
+    /// sets 'recently used' files list
     MRMESH_API void setFileStack( const std::string& key, const FileNamesStack& keyValue );
 
-    // returns true if Vector2i with presented key exists
+    
+    /// returns true if Vector2i with presented key exists
     MRMESH_API bool hasVector2i( const std::string& key ) const;
-    // returns Vector2i with presented key
+    
+    /// returns Vector2i with presented key
     MRMESH_API Vector2i getVector2i( const std::string& key, const Vector2i& defaultValue = Vector2i() ) const;
-    // sets Vector2i for presented key
+    
+    /// sets Vector2i for presented key
     MRMESH_API void setVector2i( const std::string& key, const Vector2i& keyValue );
 
-    // Decription of a enumeration as a map between [0...N) and N strings
+    /// Description of a enumeration as a map between [0...N) and N strings
     typedef std::vector<const char*> Enum;
 
-    // returns true if given enumeration value with this key exists and is correct
+    
+    /// returns true if given enumeration value with this key exists and is correct
     MRMESH_API bool hasEnum( const Enum &enumeration, const std::string& key ) const;
-    // returns custom enumeration value
+    
+    /// returns custom enumeration value
     MRMESH_API int getEnum( const Enum& enumeration, const std::string& key, int defaultValue = 0 ) const;
-    // sets custom enumeration value
+    
+    /// sets custom enumeration value
     MRMESH_API void setEnum( const Enum& enumeration, const std::string& key, int keyValue );
 
     MRMESH_API bool hasViewportMask( const std::string& key ) const;
     MRMESH_API ViewportMask getViewportMask( const std::string& key, ViewportMask defaultValue = {} ) const;
     MRMESH_API void setViewportMask( const std::string& key, ViewportMask newValue );
 
-    // returns true if json value with this key exists
+    /// returns true if json value with this key exists
     MRMESH_API bool hasJsonValue( const std::string& key );
-    // returns custom json value
+    
+    /// returns custom json value
     MRMESH_API Json::Value getJsonValue( const std::string& key, const Json::Value& defaultValue = {} );
-    // sets custom json value
+    
+    /// sets custom json value
     MRMESH_API void setJsonValue( const std::string& key, const Json::Value& keyValue );
 
+    /// returns json with content of this config
+    Json::Value getFullConfig() const { return config_; }
+
+    /// replace current config content with given one
+    void setFullConfig( const Json::Value& config ) { config_ = config; }
 private:
     std::string appName_;
 

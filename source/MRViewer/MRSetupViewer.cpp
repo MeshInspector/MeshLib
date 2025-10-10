@@ -29,13 +29,18 @@ void ViewerSetup::setupBasePlugins( Viewer* viewer ) const
     viewer->setMenuPlugin( menu );
 }
 
-void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appName ) const
+void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appName, bool reset ) const
 {
     assert( viewer );
 
     auto& cfg = MR::Config::instance();
-
     cfg.reset( appName );
+    if ( reset )
+    {
+        cfg.setFullConfig( Json::Value() );
+        cfg.reset( appName );
+    }
+
     std::unique_ptr<ViewerSettingsManager> mng = std::make_unique<ViewerSettingsManager>();
     viewer->setViewportSettingsManager( std::move( mng ) );
 }

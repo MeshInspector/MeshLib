@@ -367,7 +367,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
-    timeout-minutes: 100
+    timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false

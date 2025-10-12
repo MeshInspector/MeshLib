@@ -16,9 +16,18 @@ TEST( MRViewer, CPRTestGet )
     for ( const auto& [key, val] : params )
         parameters.Add( cpr::Parameter( key, val ) );
 
+    bool sslVerify = true;
+    if ( std::getenv( "MRTEST_NO_SSL_VERIFY" ) )
+        sslVerify = false;
+
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        const auto resp = cpr::Get( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, parameters );
+        const auto resp = cpr::Get(
+            cpr::Url{ baseUrl },
+            cpr::Timeout{ 3000 },
+            cpr::VerifySsl{ sslVerify },
+            parameters
+        );
         auto code = resp.status_code;
         if ( code == 200 )
             break;
@@ -45,9 +54,18 @@ TEST( MRViewer, CPRTestPost )
 
     cpr::Payload payload( pairs.begin(), pairs.end() );
 
+    bool sslVerify = true;
+    if ( std::getenv( "MRTEST_NO_SSL_VERIFY" ) )
+        sslVerify = false;
+
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        const auto resp = cpr::Post( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, payload );
+        const auto resp = cpr::Post(
+            cpr::Url{ baseUrl },
+            cpr::Timeout{ 3000 },
+            cpr::VerifySsl{ sslVerify },
+            payload
+        );
         auto code = resp.status_code;
         if ( code == 200 )
             break;

@@ -180,6 +180,10 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     // declare non-standard tags
     // http://geotiff.maptools.org/spec/geotiff2.6.html
     constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;
+#ifndef TIFFTAG_GDAL_NODATA
+    // https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
+    constexpr uint32_t TIFFTAG_GDAL_NODATA = 42113;
+#endif
     std::vector<TIFFFieldInfo> fieldInfo;
     if ( writeParams.xf )
     {
@@ -189,7 +193,6 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     }
     if ( writeParams.noData )
     {
-        // https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
         fieldInfo.emplace_back(
             TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue"
         );

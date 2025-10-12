@@ -188,13 +188,13 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     if ( writeParams.xf )
     {
         fieldInfo.emplace_back(
-            TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag"
+            TIFFFieldInfo{ TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" }
         );
     }
     if ( writeParams.noData )
     {
         fieldInfo.emplace_back(
-            TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue"
+            TIFFFieldInfo{ TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" }
         );
     }
 

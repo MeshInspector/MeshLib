@@ -608,7 +608,15 @@ jobs:
       # TODO: remove after GitHub runner update
       - name: Prepare Python 3.14 installation
         if: ${{ matrix.py-version == '3.14' }}
-        run: brew update && brew unlink python@3.13
+        run: |
+          brew update
+          brew unlink python@3.13 
+          # FIXME: hopefully this won't be required after runner update
+          if [[ ${{ matrix.platform }} == 'x86' ]] ; then
+            for $EXEC in idle3 pip3 pydoc3 python3 python3-config ; do
+              rm /usr/local/bin/$EXEC || true
+            done
+          fi
 
       - name: Python setup
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}

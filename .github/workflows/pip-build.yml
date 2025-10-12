@@ -56,6 +56,7 @@ jobs:
         id: get-latest-tag
 
   manylinux-pip-build:
+    if: false
     needs: setup
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
@@ -227,6 +228,7 @@ jobs:
     secrets: inherit
 
   windows-pip-build:
+    if: false
     needs: setup
     timeout-minutes: 90
     runs-on:  [windows-2022]
@@ -366,6 +368,7 @@ jobs:
           retention-days: 1
 
   macos-pip-build:
+    if: false
     needs: setup
     timeout-minutes: 120
     runs-on: ${{ matrix.instance }}

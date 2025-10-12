@@ -10,6 +10,9 @@ constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
 TEST( MRViewer, CPRTestGet )
 {
     std::string baseUrl = "https://postman-echo.com/get";
+    if ( const std::string overrideUrl = std::getenv( "MRTEST_OVERRIDE_ECHO_SERVER_URL" ); !overrideUrl.empty() )
+        baseUrl = overrideUrl;
+
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };
 
     cpr::Parameters parameters;
@@ -36,6 +39,9 @@ TEST( MRViewer, CPRTestGet )
 TEST( MRViewer, CPRTestPost )
 {
     std::string baseUrl = "https://postman-echo.com/post";
+    if ( const std::string overrideUrl = std::getenv( "MRTEST_OVERRIDE_ECHO_SERVER_URL" ); !overrideUrl.empty() )
+        baseUrl = overrideUrl;
+
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };
 
     std::vector<cpr::Pair> pairs;

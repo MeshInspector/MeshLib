@@ -373,7 +373,10 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
         .valueType = BaseTiffParameters::ValueType::Scalar,
         .bytesPerSample = sizeof( float ),
         .imageSize = dmap.dims(),
-    }, settings.xf );
+    }, {
+        .xf = settings.xf,
+        .noData = fmt::format( "{:.16e}", DistanceMap::NOT_VALID_VALUE ),
+    } );
 }
 
 MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )

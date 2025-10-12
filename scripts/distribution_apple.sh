@@ -24,8 +24,14 @@ cp ./LICENSE ./macos/Resources
 mkdir "${FRAMEWORK_DIR}/requirements/"
 cp ./requirements/macos.txt "${FRAMEWORK_DIR}/requirements/"
 
-ln -s "/Library/Frameworks/MeshLib.framework/Versions/${VERSION}" "${FRAMEWORK_BASE_DIR}/Versions/Current"
-ln -s "/Library/Frameworks/MeshLib.framework/Resources"           "${FRAMEWORK_BASE_DIR}/Versions/${VERSION}/Resources"
+# FIXME: this breaks CMake config
+#pushd "${FRAMEWORK_BASE_DIR}"
+#  ln -s "Versions/${VERSION}/Resources" Resources
+#popd
+
+pushd "${FRAMEWORK_BASE_DIR}/Versions"
+  ln -s "${VERSION}" Current
+popd
 
 # be careful with pkg names! The pkg can fail to build
 pkgbuild \

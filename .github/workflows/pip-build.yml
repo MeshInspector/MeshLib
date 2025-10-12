@@ -612,6 +612,8 @@ jobs:
       - name: Prepare Python 3.14 installation
         if: ${{ matrix.py-version == '3.14' }}
         run: |
+          # check when it's time to remove this step
+          [ -z $(brew list | grep python@3.13) ] || { echo "The runner has been updated and already contains Python 3.14; remove this step from the workflow"; exit 1 }
           brew update
           # more info: https://github.com/actions/runner-images/issues/9966
           if [[ ${{ matrix.platform }} == 'x86' ]] ; then

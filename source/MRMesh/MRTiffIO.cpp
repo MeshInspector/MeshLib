@@ -330,15 +330,16 @@ Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& ou
         constexpr uint32_t TIFFTAG_ModelTiePointTag = 33922;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;	/* GeoTIFF */
-        Matrix4d matrix;
-        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &matrix ) )
+        double* dataMatrix;
+        uint32_t count;
+        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &count, &dataMatrix ) && count == 16 )
         {
-            *output.p2wXf = AffineXf3f( Matrix4f( matrix ) );
+            auto* matrix = (Matrix4d*)dataMatrix;
+            *output.p2wXf = AffineXf3f( Matrix4f( *matrix ) );
         }
         else
         {
             double* dataTie;// will be freed with tiff
-            uint32_t count;
             auto statusT = TIFFGetField( tiff, TIFFTAG_ModelTiePointTag, &count, &dataTie );
             if ( statusT && count == 6 )
             {

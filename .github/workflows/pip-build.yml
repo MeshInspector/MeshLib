@@ -613,7 +613,7 @@ jobs:
         if: ${{ matrix.py-version == '3.14' }}
         run: |
           # check when it's time to remove this step
-          if [ $(brew list | grep python@3.13) ] ; then 
+          if [ $(brew list | grep python@3.14) ] ; then 
             echo "The runner has been updated and already contains Python 3.14; remove this step from the workflow"
             exit 1
           fi

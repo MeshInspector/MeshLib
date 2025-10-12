@@ -360,7 +360,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     setup.setupBasePlugins( &viewer );
     setup.setupCommonModifiers( &viewer );
     setup.setupCommonPlugins( &viewer );
-    setup.setupSettingsManager( &viewer, params.name );
+    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
     setup.setupConfiguration( &viewer );
     CommandLoop::appendCommand( [&] ()
     {
@@ -425,6 +425,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-tryHidden" ||
             flag == "-transparentBgOn" ||
             flag == "-transparentBgOff" ||
+            flag == "-resetConfig" ||
             flag == "-noSplash" ||
     #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
             flag == "-showSplash" ||
@@ -506,6 +507,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.enableTransparentBackground = true;
         else if ( flag == "-transparentBgOff" )
             params.enableTransparentBackground = false;
+        else if ( flag == "-resetConfig" )
+            params.resetConfig = true;
         else if ( flag == "-noSplash" )
             params.splashWindow.reset();
     #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
@@ -607,12 +610,19 @@ int Viewer::launch( const LaunchParams& params )
     CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
+#ifdef _WIN32
+    // splash window must be hidden after main window appear, otherwise another application (e.g. Windows Explorer) is activated
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
+#endif
 
-    // splash window must be hidden after main window appear, otherwise another application (e.g. Windows Explorer) is activated
     if ( params.windowMode != LaunchParams::NoWindow && params.windowMode != LaunchParams::Hide && params.splashWindow )
         params.splashWindow->stop();
+
+#ifndef _WIN32
+    if ( params.windowMode == LaunchParams::HideInit && window )
+        glfwShowWindow( window );
+#endif
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
     CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false

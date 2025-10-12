@@ -194,10 +194,48 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Pkg
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
+        if: ${{ matrix.config == 'Release' }}
         run: |
           ./scripts/distribution_apple.sh
           mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
+
+      - name: Extract Pkg
+        if: ${{ matrix.config == 'Release' }}
+        run: |
+          # https://gist.github.com/ugultopu/1adf8e08acb87be649d69419cf7aca3c
+          pkgutil --expand meshlib_${{ matrix.os }}.pkg ./meshlib_install
+          cd ./meshlib_install/MeshLib.pkg
+          cat Payload | gunzip | cpio -i
+          # FIXME: correct path resolving
+          mkdir Library/
+          mv Frameworks Library/
+          ln -s $(pwd)/Library ../Library
+
+      - name: Build C++ examples
+        if: ${{ matrix.config == 'Release' }}
+        env:
+          CXX: ${{ steps.setup.outputs.cxx-compiler }}
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Library/Frameworks/
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(sysctl -n hw.physicalcpu)
+
+      - name: Build C examples
+        if: ${{ matrix.config == 'Release' }}
+        env:
+          CC: ${{ steps.setup.outputs.c-compiler }}
+        run: |
+          cmake \
+            -S examples/c-examples \
+            -B c-examples-build \
+            -D CMAKE_FRAMEWORK_PATH=$(pwd)/meshlib_install/MeshLib.pkg/Library/Frameworks/
+          cmake \
+            --build c-examples-build \
+            --parallel $(sysctl -n hw.physicalcpu)
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

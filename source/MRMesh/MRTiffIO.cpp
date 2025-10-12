@@ -129,7 +129,7 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
     }
 }
 
-Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params )
+Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params, const AffineXf3f* xf )
 {
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
@@ -176,6 +176,19 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
 
     TIFFSetField( tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE );
+
+    if ( xf )
+    {
+        // http://geotiff.maptools.org/spec/geotiff2.6.html
+        constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;	/* GeoTIFF */
+        constexpr TIFFFieldInfo cFieldInfo[] = {
+            { TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" },
+        };
+        TIFFMergeFieldInfo( tif, cFieldInfo, (uint32_t)std::size( cFieldInfo ) );
+
+        const Matrix4d matrix = AffineXf3d{ *xf };
+        TIFFSetField( tif, TIFFTAG_ModelTransformationTag, 16, &matrix );
+    }
 
     for ( int row = 0; row < params.imageSize.y; row++ )
         TIFFWriteScanline( tif, ( void* )( bytes + row * params.imageSize.x * numSamples * params.bytesPerSample ), row );

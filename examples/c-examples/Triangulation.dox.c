@@ -61,7 +61,7 @@ int main( void )
     MR_PointCloud_invalidateCaches( pc );
 
     // Triangulate the point cloud
-    MR_std_optional_MR_Mesh* triangulatedOpt = MR_triangulatePointCloud( pc, NULL, MR_PassBy_DefaultArgument, NULL );
+    MR_std_optional_MR_Mesh* triangulatedOpt = MR_triangulatePointCloud( pc, NULL, NULL );
     MR_PointCloud_Destroy( pc );
 
     MR_Mesh* triangulated = MR_std_optional_MR_Mesh_MutableValue( triangulatedOpt );

@@ -368,14 +368,12 @@ namespace DistanceMapSave
 
 Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings )
 {
-    // TODO: add xf support
-    (void)settings;
     return writeRawTiff( (const uint8_t*)dmap.data(), path, {
         .sampleType = BaseTiffParameters::SampleType::Float,
         .valueType = BaseTiffParameters::ValueType::Scalar,
         .bytesPerSample = sizeof( float ),
         .imageSize = dmap.dims(),
-    } );
+    }, settings.xf );
 }
 
 MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )

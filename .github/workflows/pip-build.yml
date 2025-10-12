@@ -135,7 +135,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
 
       - name: Build Python shim libs
         run: |
@@ -459,7 +459,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"] # no Linux distribution yet with system Python 3.14
         include:
           - platform: "x86_64"
             runner: ubuntu-latest
@@ -528,7 +528,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -569,7 +569,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.8 disabled on x86 macOS since 2024-10-14
+        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.8 disabled on macOS since 2024-10-14, python 3.14 was not available in brew on the day of writing this
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -577,6 +577,8 @@ jobs:
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-14
+          - py-version: "3.8"
+            py-cmd: "python3.8"
           - py-version: "3.9"
             py-cmd: "python3.9"
           - py-version: "3.10"

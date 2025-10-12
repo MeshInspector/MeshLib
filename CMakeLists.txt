@@ -10,6 +10,16 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
 ENDIF()
 
+IF(APPLE)
+    # assume built-in pthreads on macOS
+    # https://stackoverflow.com/a/54606606/7325599
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
@@ -184,24 +194,25 @@ ELSE()
 ENDIF()
 message("version: ${MESHLIB_VERSION}")
 
+set(MESHLIB_LIB_SUBDIR "${MESHLIB_PROJECT_NAME}" CACHE STRING "Subdirectory in the library directory to place the MeshLib libraries at")
 IF(MESHLIB_USE_VCPKG)
   # use OS-agnostic directory structure for vcpkg
   set(MR_BIN_DIR bin)
   set(MR_INCLUDE_DIR include/MeshLib)
-  set(MR_MAIN_LIB_DIR lib/${MESHLIB_PROJECT_NAME})
-  set(MR_PY_LIB_DIR lib/${MESHLIB_PROJECT_NAME}/meshlib)
+  set(MR_MAIN_LIB_DIR lib/${MESHLIB_LIB_SUBDIR})
+  set(MR_PY_LIB_DIR lib/${MESHLIB_LIB_SUBDIR}/meshlib)
   set(MR_CONFIG_DIR lib/cmake/MeshLib)
   set(MR_RESOURCES_DIR share/${MESHLIB_PROJECT_NAME})
   set(MR_FONTS_DIR share/${MESHLIB_PROJECT_NAME}/fonts)
   # set rpath manually for both executables and shared libraries
   # related issue: https://gitlab.kitware.com/cmake/cmake/-/issues/23727
-  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_PROJECT_NAME}")
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_LIB_SUBDIR}")
 ELSEIF(NOT APPLE)
   include(GNUInstallDirs)
   set(MR_BIN_DIR "${CMAKE_INSTALL_BINDIR}")
   set(MR_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/MeshLib")
-  set(MR_MAIN_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_PROJECT_NAME}")
-  set(MR_PY_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_PROJECT_NAME}/meshlib")
+  set(MR_MAIN_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}")
+  set(MR_PY_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}/meshlib")
   set(MR_CONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/MeshLib")
   set(MR_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}")
   set(MR_FONTS_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}/fonts")

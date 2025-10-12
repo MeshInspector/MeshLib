@@ -23,7 +23,7 @@ void testTriangulation( void )
     MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
 
     MR_PointCloud* pc = MR_meshToPointCloud( mesh, &(bool){true}, NULL );
-    MR_std_optional_MR_Mesh* restored = MR_triangulatePointCloud( pc, NULL, MR_PassBy_DefaultArgument, NULL);
+    MR_std_optional_MR_Mesh* restored = MR_triangulatePointCloud( pc, NULL, NULL );
     TEST_ASSERT( MR_VertCoords_size( MR_Mesh_Get_points( MR_std_optional_MR_Mesh_Value( restored ) ) ) == 1024 );
     const MR_MeshTopology* top = MR_Mesh_Get_topology( MR_std_optional_MR_Mesh_Value( restored ) );
     TEST_ASSERT( MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( MR_MeshTopology_getValidVerts( top ) ) ) == 1024 );

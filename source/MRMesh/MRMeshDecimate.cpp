@@ -1366,6 +1366,8 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxEdgeLen = settings.targetEdgeLen;
     subs.maxEdgeSplits = settings.maxEdgeSplits;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
+    subs.subdivideBorder = !settings.frozenBoundary;
+    subs.maxSplittableTriAspectRatio = settings.maxSplittableTriAspectRatio;
     subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;
     subs.notFlippable = settings.notFlippable;
@@ -1389,6 +1391,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.maxError = FLT_MAX;
         decs.maxEdgeLen = 1.5f * settings.targetEdgeLen; // not to over-decimate when there are many notFlippable edges in the region
         decs.maxDeletedFaces = currNumTri - targetNumTri;
+        decs.touchBdVerts = !settings.frozenBoundary;
         decs.maxBdShift = settings.maxBdShift;
         decs.region = settings.region;
         decs.notFlippable = settings.notFlippable;

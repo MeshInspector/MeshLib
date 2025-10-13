@@ -146,6 +146,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
     ImGuiIO& io = ImGui::GetIO();
     const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
     std::array<ImFont*, int( FontType::Count )> localFonts;
+    spdlog::info( "---" );
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto& font = fonts_[int( i )];
@@ -156,10 +157,13 @@ void RibbonFontManager::updateFontsScaledOffset_()
         if ( i == int( FontType::Icons ) )
             continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
+        spdlog::info( "{} -", i );
         auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
         localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
+        spdlog::info( "{} +", i );
     }
     io.Fonts->Build();
+    spdlog::info( "io.Fonts->Build();" );
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto* lFont = localFonts[i];

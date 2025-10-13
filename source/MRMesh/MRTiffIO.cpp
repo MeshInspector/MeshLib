@@ -191,7 +191,7 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
             TIFFFieldInfo{ TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" }
         );
     }
-    if ( writeParams.noData )
+    if ( !writeParams.noData.empty() )
     {
         fieldInfo.emplace_back(
             TIFFFieldInfo{ TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" }
@@ -206,9 +206,9 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
         const Matrix4d matrix = AffineXf3d{ *writeParams.xf };
         TIFFSetField( tif, TIFFTAG_ModelTransformationTag, 16, &matrix );
     }
-    if ( writeParams.noData )
+    if ( !writeParams.noData.empty() )
     {
-        TIFFSetField( tif, TIFFTAG_GDAL_NODATA, writeParams.noData->c_str() );
+        TIFFSetField( tif, TIFFTAG_GDAL_NODATA, writeParams.noData.c_str() );
     }
 
     for ( int row = 0; row < params.imageSize.y; row++ )

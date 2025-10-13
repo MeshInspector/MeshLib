@@ -5,7 +5,6 @@
 #include "MRVector2.h"
 
 #include <filesystem>
-#include <optional>
 #include <string>
 
 namespace MR
@@ -81,7 +80,7 @@ struct WriteRawTiffParams
     // optional transformation data written to GeoTIFF's ModelTransformationTag
     const AffineXf3f* xf = nullptr;
     // optional NoData value written to GDAL_NODATA
-    std::optional<std::string> noData;
+    std::string noData;
 };
 
 // writes bytes to tiff file

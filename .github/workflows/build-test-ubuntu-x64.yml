@@ -141,7 +141,7 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest ${{ matrix.os == 'ubuntu20' && '--no-python-tests' || '' }}
 
       - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC

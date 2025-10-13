@@ -240,6 +240,9 @@ jobs:
         shell: cmd
 
       - name: Unit Tests
+        env:
+          # TODO: update certificates on the self-hosted runners
+          MRTEST_OVERRIDE_ECHO_SERVER_URL: 'http://echo.free.beeceptor.com/sample-request'
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests (old bindings)

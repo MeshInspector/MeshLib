@@ -131,15 +131,17 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
 
 Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const WriteRawTiffParams& params )
 {
+    const auto& baseParams = params.baseParams;
+
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
         return unexpected("Cannot write file: "+ utf8string( path ) );
 
-    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, params.imageSize.x );
-    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, params.imageSize.y );
-    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, params.bytesPerSample * 8 );
+    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, baseParams.imageSize.x );
+    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, baseParams.imageSize.y );
+    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, baseParams.bytesPerSample * 8 );
     int numSamples = 1;
-    switch ( params.valueType )
+    switch ( baseParams.valueType )
     {
     case BaseTiffParameters::ValueType::Scalar:
         numSamples = 1;
@@ -156,7 +158,7 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     TIFFSetField( tif, TIFFTAG_SAMPLESPERPIXEL, numSamples );
 
     int sampleType = 0;
-    switch ( params.sampleType )
+    switch ( baseParams.sampleType )
     {
     case BaseTiffParameters::SampleType::Float:
         sampleType = SAMPLEFORMAT_IEEEFP;
@@ -211,8 +213,8 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
         TIFFSetField( tif, TIFFTAG_GDAL_NODATA, params.noData.c_str() );
     }
 
-    for ( int row = 0; row < params.imageSize.y; row++ )
-        TIFFWriteScanline( tif, ( void* )( bytes + row * params.imageSize.x * numSamples * params.bytesPerSample ), row );
+    for ( int row = 0; row < baseParams.imageSize.y; row++ )
+        TIFFWriteScanline( tif, ( void* )( bytes + row * baseParams.imageSize.x * numSamples * baseParams.bytesPerSample ), row );
 
     TIFFClose( tif );
     return {};

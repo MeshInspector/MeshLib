@@ -75,15 +75,14 @@ struct RawTiffOutput
 // load values from tiff to ouput.data
 MRMESH_API Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& output );
 
-struct WriteRawTiffParamsBase
+struct WriteRawTiffParams
 {
+    BaseTiffParameters baseParams;
     // optional transformation data written to GeoTIFF's ModelTransformationTag
     const AffineXf3f* xf = nullptr;
     // optional NoData value written to GDAL_NODATA
     std::string noData;
 };
-
-struct WriteRawTiffParams : BaseTiffParameters, WriteRawTiffParamsBase {};
 
 // writes bytes to tiff file
 MRMESH_API Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
@@ -92,7 +91,7 @@ MRMESH_API Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesys
 inline Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
     const BaseTiffParameters& params, const AffineXf3f* xf )
 {
-    return writeRawTiff( bytes, path, { params, { .xf = xf } } );
+    return writeRawTiff( bytes, path, { .baseParams = params, .xf = xf } );
 }
 
 }

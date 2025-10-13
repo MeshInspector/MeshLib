@@ -129,7 +129,7 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
     }
 }
 
-Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params, const WriteRawTiffParams& writeParams )
+Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const WriteRawTiffParams& params )
 {
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
@@ -185,13 +185,13 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     constexpr uint32_t TIFFTAG_GDAL_NODATA = 42113;
 #endif
     std::vector<TIFFFieldInfo> fieldInfo;
-    if ( writeParams.xf )
+    if ( params.xf )
     {
         fieldInfo.emplace_back(
             TIFFFieldInfo{ TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" }
         );
     }
-    if ( !writeParams.noData.empty() )
+    if ( !params.noData.empty() )
     {
         fieldInfo.emplace_back(
             TIFFFieldInfo{ TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" }
@@ -201,14 +201,14 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     if ( !fieldInfo.empty() )
         TIFFMergeFieldInfo( tif, fieldInfo.data(), (uint32_t)fieldInfo.size() );
 
-    if ( writeParams.xf )
+    if ( params.xf )
     {
-        const Matrix4d matrix = AffineXf3d{ *writeParams.xf };
+        const Matrix4d matrix = AffineXf3d{ *params.xf };
         TIFFSetField( tif, TIFFTAG_ModelTransformationTag, 16, &matrix );
     }
-    if ( !writeParams.noData.empty() )
+    if ( !params.noData.empty() )
     {
-        TIFFSetField( tif, TIFFTAG_GDAL_NODATA, writeParams.noData.c_str() );
+        TIFFSetField( tif, TIFFTAG_GDAL_NODATA, params.noData.c_str() );
     }
 
     for ( int row = 0; row < params.imageSize.y; row++ )

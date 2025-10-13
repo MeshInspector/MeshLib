@@ -368,8 +368,8 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
 
     const float period = 1.f / params.frequency;
     const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
-    const float minVoxelSize = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) );
-    const float maxVoxelSize = std::max( voxelSize.x, std::max( voxelSize.y, voxelSize.z ) );
+    const float minVoxelSize = std::min( { voxelSize.x, voxelSize.y, voxelSize.z } );
+    const float maxVoxelSize = std::max( { voxelSize.x, voxelSize.y, voxelSize.z } );
 
     Mesh baseElement;
     QME( baseElement, marchingCubes( buildVolume( Vector3f::diagonal( period ) + voxelSize / 2.f, params ), { .cb = mcProgress, .iso = params.iso } ) )

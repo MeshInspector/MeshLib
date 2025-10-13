@@ -163,14 +163,14 @@ enum class InterpolateDensityAndIsoDirection
 };
 float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Type type, float key )
 {
-    static Polynomialf<1> iso2density[(int)Type::Count] =
+    static const Polynomialf<1> iso2density[(int)Type::Count] =
     {
         Polynomialf<1>{ { 0.5f, -0.286268f } }, // SchwartzP
         Polynomialf<1>{ { 0.f, 0.573504f } },   // ThickSchwartzP
         Polynomialf<1>{ { 0.441534f, -0.139001f } },   // DoubleGyroid
         Polynomialf<1>{ { 0.014612f, 0.719944f } },   // ThickGyroid
     };
-    static Polynomialf<1> density2iso[(int)Type::Count] =
+    static const Polynomialf<1> density2iso[(int)Type::Count] =
     {
         inverseLinearFunc( iso2density[0] ),
         inverseLinearFunc( iso2density[1] ),

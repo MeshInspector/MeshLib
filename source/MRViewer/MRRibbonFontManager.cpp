@@ -182,7 +182,9 @@ void RibbonFontManager::updateFontsScaledOffset_()
         fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
         fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
     }
+    spdlog::info( "scaledOffset" );
     io.Fonts->Clear();
+    spdlog::info( "io.Fonts->Clear();" );
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )

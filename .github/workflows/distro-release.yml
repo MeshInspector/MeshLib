@@ -28,7 +28,7 @@ jobs:
         id: set
         run: |
           TAG="${{ github.event.inputs.release_tag || github.ref_name }}"
-          APP_VERSION="${TAG#v}" # strip leading v
+          APP_VERSION="${TAG}"
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
           echo "release_tag=$TAG" >> $GITHUB_OUTPUT
 

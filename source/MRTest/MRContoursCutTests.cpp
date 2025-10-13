@@ -75,8 +75,10 @@ TEST( MRMesh, MeshCollidePrecise )
 
     const auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
     EXPECT_EQ( contours.size(), 4 );
-    EXPECT_EQ(   contours[0].size(), 71 );
-    EXPECT_EQ(   contours[1].size(), 7 );
+    EXPECT_TRUE( contours[0].size() == 69 || // Apple Debug
+                 contours[0].size() == 71 );
+    EXPECT_TRUE( contours[1].size() == 9 ||  // Apple Debug
+                 contours[1].size() == 7 );
     EXPECT_TRUE( contours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
                  contours[2].size() == 71 ); // with FMA instruction (modern compilers for ARM)
     EXPECT_TRUE( contours[3].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
@@ -164,12 +166,14 @@ TEST( MRMesh, MeshCollidePrecise )
             EXPECT_EQ( ei.edge, oi.edge.sym() );
         }
     }
-    EXPECT_EQ(   selfContours[0].size(), 71 );
+    EXPECT_TRUE( selfContours[0].size() == 69 || // Apple Debug
+                 selfContours[0].size() == 71 );
     EXPECT_TRUE( selfContours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
                  selfContours[2].size() == 71 ); // with FMA instruction (modern compilers for ARM)
     EXPECT_TRUE( selfContours[4].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
                  selfContours[4].size() == 7 );  // with FMA instruction (modern compilers for ARM)
-    EXPECT_EQ(   selfContours[6].size(), 7 );
+    EXPECT_TRUE( selfContours[6].size() == 9 ||  // Apple Debug
+                 selfContours[6].size() == 7 );
 
     for ( const auto & c : selfContours )
     {

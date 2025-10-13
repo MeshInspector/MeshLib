@@ -29,7 +29,8 @@ public:
     virtual void setupCommonPlugins( Viewer* /*viewer*/ ) const {}
 
     /// Sets custom viewer settings manager to viewer
-    MRVIEWER_API virtual void setupSettingsManager( Viewer* viewer, const std::string& appName ) const;
+    /// \param reset - flag indicates that user launched application with request for reseting config file
+    MRVIEWER_API virtual void setupSettingsManager( Viewer* viewer, const std::string& appName, bool reset = false ) const;
 
     /// Sets start configuration for viewer
     /// use to override default configuration of viewer

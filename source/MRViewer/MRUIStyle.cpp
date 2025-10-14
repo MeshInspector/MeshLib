@@ -266,14 +266,14 @@ bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*
     if ( !ImGui::ItemAdd( bb, id ) )
         return simulateClick;
 
-    if ( g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat )
-        flags |= ImGuiButtonFlags_Repeat;
+    if ( g.LastItemData.ItemFlags & ImGuiItemFlags_ButtonRepeat )
+        flags |= ImGuiItemFlags_ButtonRepeat;
 
     bool hovered, held;
     bool pressed = ImGui::ButtonBehavior( bb, id, &hovered, &held, flags );
 
     // Render
-    ImGui::RenderNavHighlight( bb, id );
+    ImGui::RenderNavCursor( bb, id );
 
     // replaced part
     // potential fail. need check that customTexture is good
@@ -809,23 +809,23 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
         }
 
         const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
-        ImGui::RenderNavHighlight( total_bb, id );
+        ImGui::RenderNavCursor( total_bb, id );
 
         if ( !*v )
             ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding * 0.5f );
 
         ImU32 check_col = ImGui::GetColorU32( ImGuiCol_CheckMark );
-        bool mixed_value = ( g.LastItemData.InFlags & ImGuiItemFlags_MixedValue ) != 0;
+        bool mixed_value = ( g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue ) != 0;
         if ( mixed_value )
         {
             // Undocumented tristate/mixed/indeterminate checkbox (#2644)
             // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
-            ImVec2 pad( ImMax( 1.0f, IM_FLOOR( square_sz / 3.6f ) ), ImMax( 1.0f, IM_FLOOR( square_sz / 3.6f ) ) );
+            ImVec2 pad( ImMax( 1.0f, IM_TRUNC( square_sz / 3.6f ) ), ImMax( 1.0f, IM_TRUNC( square_sz / 3.6f ) ) );
             window->DrawList->AddRectFilled( { check_bb.Min.x + pad.x,  check_bb.Min.y + pad.y }, { check_bb.Max.x - pad.x, check_bb.Max.y - pad.y }, check_col, style.FrameRounding );
         }
         else if ( *v )
         {
-            const float pad = ImMax( 1.0f, IM_FLOOR( square_sz / 6.0f ) );
+            const float pad = ImMax( 1.0f, IM_TRUNC( square_sz / 6.0f ) );
             auto renderCustomCheckmark = [] ( ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz )
             {
                 const float thickness = ImMax( sz * 0.15f, 1.0f );
@@ -1055,13 +1055,13 @@ bool radioButton( const char* label, int* value, int valButton )
             *v = v_button;
         }
 
-        ImGui::RenderNavHighlight( total_bb, id );
+        ImGui::RenderNavCursor( total_bb, id );
 
         const bool active = *v == v_button;
         if ( active )
         {
             window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
-            const float pad = ImMax( 1.0f, IM_FLOOR( clickSize * 0.3f ) );
+            const float pad = ImMax( 1.0f, IM_TRUNC( clickSize * 0.3f ) );
             window->DrawList->AddCircleFilled( center, radius - pad, ImGui::GetColorU32( ImGuiCol_CheckMark ), 16 );
         }
         else
@@ -1226,8 +1226,8 @@ bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /
     if ( ( flags & ( ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_DisplayHSV ) ) != 0 && ( flags & ImGuiColorEditFlags_NoInputs ) == 0 )
     {
         // RGB/HSV 0..255 Sliders
-        const float w_item_one = ImMax( 1.0f, IM_FLOOR( ( w_inputs - ( style.ItemInnerSpacing.x ) * ( components - 1 ) ) / ( float )components ) );
-        const float w_item_last = ImMax( 1.0f, IM_FLOOR( w_inputs - ( w_item_one + style.ItemInnerSpacing.x ) * ( components - 1 ) ) );
+        const float w_item_one = ImMax( 1.0f, IM_TRUNC( ( w_inputs - ( style.ItemInnerSpacing.x ) * ( components - 1 ) ) / ( float )components ) );
+        const float w_item_last = ImMax( 1.0f, IM_TRUNC( w_inputs - ( w_item_one + style.ItemInnerSpacing.x ) * ( components - 1 ) ) );
 
         const bool hide_prefix = ( w_item_one <= CalcTextSize( ( flags & ImGuiColorEditFlags_Float ) ? "M:0.000" : "M:000" ).x );
         static const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
@@ -1473,7 +1473,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     if ( !showPreview )
         ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
-    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+    float itemWidth = ( context->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
@@ -1535,7 +1535,7 @@ bool beginCombo( const char* label, const std::string& text /*= "Not selected" *
     if ( !showPreview )
         ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
-    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+    float itemWidth = ( context->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
@@ -1595,18 +1595,18 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
     if ( format == NULL )
         format = DataTypeGetInfo( data_type )->PrintFmt;
 
-    const bool hovered = ItemHoverable( frame_bb, id, g.LastItemData.InFlags );
+    const bool hovered = ItemHoverable( frame_bb, id, g.LastItemData.ItemFlags );
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive( id );
     if ( !temp_input_is_active )
     {
         // Tabbing or CTRL-clicking on Slider turns it into an input box
-        const bool input_requested_by_tabbing = temp_input_allowed && ( g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing ) != 0;
-        const bool clicked = hovered && IsMouseClicked( 0, id );
-        const bool make_active = ( input_requested_by_tabbing || clicked || g.NavActivateId == id );
+        // const bool input_requested_by_tabbing = temp_input_allowed && ( g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing ) != 0; // ImGuiItemStatusFlags_FocusedByTabbing removed in 1.90.1
+        const bool clicked = hovered && IsMouseClicked( 0, ImGuiInputFlags_None, id );
+        const bool make_active = ( clicked || g.NavActivateId == id );
         if ( make_active && clicked )
             SetKeyOwner( ImGuiKey_MouseLeft, id );
         if ( make_active && temp_input_allowed )
-            if ( input_requested_by_tabbing || ( clicked && g.IO.KeyCtrl ) || ( g.NavActivateId == id && ( g.NavActivateFlags & ImGuiActivateFlags_PreferInput ) ) )
+            if ( ( clicked && g.IO.KeyCtrl ) || ( g.NavActivateId == id && ( g.NavActivateFlags & ImGuiActivateFlags_PreferInput ) ) )
                 temp_input_is_active = true;
 
         if ( make_active && !temp_input_is_active )
@@ -1627,7 +1627,7 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
 
     // Draw frame
     const ImU32 frame_col = GetColorU32( g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg );
-    RenderNavHighlight( frame_bb, id );
+    RenderNavCursor( frame_bb, id );
     RenderFrame( frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding );
 
     // Slider behavior
@@ -1823,7 +1823,7 @@ static bool basicTextInputMultilineFullyScrollable( CachedTextSize& cache, const
 
     // We could always enable the horizontal scrollbar, but then it flashes for 1 frame when you add enough lines
     //   to enable the VERTICAL scrollbar (both flash for 1 frame, then only the vertical one remains)
-    ImGui::BeginChild( label, size, false, ( cache.cachedSize->x > size.x ) * ImGuiWindowFlags_HorizontalScrollbar );
+    ImGui::BeginChild( label, size, ImGuiChildFlags_None, ( cache.cachedSize->x > size.x ) * ImGuiWindowFlags_HorizontalScrollbar );
     MR_FINALLY{ ImGui::EndChild(); };
 
     bool ret = func( ImGuiMath::max( *cache.cachedSize, ImGui::GetContentRegionAvail() ) );

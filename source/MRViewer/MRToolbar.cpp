@@ -271,7 +271,7 @@ void Toolbar::drawCustomizeModal_()
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar };
 
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
-    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
+    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), ImGuiChildFlags_Borders );
     ImGui::PopStyleColor();
 
     ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 4 * UI::scale() ) + Vector2f( params.itemSize ) );
@@ -299,12 +299,13 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SetNextItemAllowOverlap();
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
-        ImGui::SetNextWindowSize( tooltipSize );
 
         ImGui::PushStyleColor( ImGuiCol_Border, 0 );
         ImGui::PushStyleColor( ImGuiCol_WindowBg, 0 );
         if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
         {
+            ImGui::Dummy( tooltipSize );
+            ImGui::SetCursorPos( { 0, 0 } );
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
@@ -384,7 +385,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
 
     float tabsListWidth = std::max( 130 * UI::scale(), ( itemsWindowWidth - childWindowPadding.x * 2 ) * 0.25f );
-    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ) );
+    ImGui::BeginChild( "###QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ), ImGuiChildFlags_Borders );
     drawCustomizeTabsList_();
     ImGui::EndChild();
 
@@ -421,7 +422,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
 
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), true );
+    ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), ImGuiChildFlags_Borders );
     ImGui::PopStyleColor();
 
     drawCustomizeItemsList_();

@@ -145,7 +145,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
 {
     ImGuiIO& io = ImGui::GetIO();
     const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
-    std::array<ImFont*, int( FontType::Count )> localFonts;
+    std::array<ImFont*, int( FontType::Count )> localFonts{};
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto& font = fonts_[int( i )];

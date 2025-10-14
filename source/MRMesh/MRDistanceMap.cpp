@@ -18,8 +18,6 @@
 namespace MR
 {
 
-static constexpr float NOT_VALID_VALUE = std::numeric_limits<float>::lowest();
-
 DistanceMap::DistanceMap( const MR::Matrix<float>& m )
     : RectIndexer( m )
     , data_( m.data() )
@@ -377,7 +375,7 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
         {
             if ( options.region && !options.region->test( PixelId( int( i ) ) ) )
             {
-                distMap.set( i, NOT_VALID_VALUE );
+                distMap.set( i, DistanceMap::NOT_VALID_VALUE );
                 continue;
             }
             size_t x = i % params.resolution.x;
@@ -600,7 +598,7 @@ SeparationPoint findSeparationPoint( const DistanceMap& dm, const Vector2i& p, N
     if ( p1.x >= dm.resX() || p1.y >= dm.resY() )
         return {};
     const auto v1 = dm.getValue( p1.x, p1.y );
-    if ( v0 == NOT_VALID_VALUE || v1 == NOT_VALID_VALUE )
+    if ( v0 == DistanceMap::NOT_VALID_VALUE || v1 == DistanceMap::NOT_VALID_VALUE )
         return {};
     const bool low0 = v0 < isoValue;
     const bool low1 = v1 < isoValue;
@@ -811,7 +809,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
                 {
                     auto pos = basePos + cPixelNeighbors[i];
                     float value = distMap.getValue( pos.x, pos.y );
-                    if ( value == NOT_VALID_VALUE )
+                    if ( value == DistanceMap::NOT_VALID_VALUE )
                     {
                         pixelValid = false;
                         break;

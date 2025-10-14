@@ -146,6 +146,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
     ImGuiIO& io = ImGui::GetIO();
     const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
     std::array<ImFont*, int( FontType::Count )> localFonts;
+    spdlog::info( "updateFontsScaledOffset_ 0" );
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto& font = fonts_[int( i )];
@@ -156,10 +157,13 @@ void RibbonFontManager::updateFontsScaledOffset_()
         if ( i == int( FontType::Icons ) )
             continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
+        spdlog::info( "updateFontsScaledOffset_ 0 + {}", i );
         auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
         localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
     }
+    spdlog::info( "updateFontsScaledOffset_ 1" );
     io.Fonts->Build();
+    spdlog::info( "updateFontsScaledOffset_ 2" );
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto* lFont = localFonts[i];
@@ -178,7 +182,9 @@ void RibbonFontManager::updateFontsScaledOffset_()
         fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
         fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
     }
+    spdlog::info( "updateFontsScaledOffset_ 3" );
     io.Fonts->Clear();
+    spdlog::info( "updateFontsScaledOffset_ 4" );
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )

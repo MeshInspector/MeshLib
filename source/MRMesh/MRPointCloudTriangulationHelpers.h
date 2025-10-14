@@ -117,7 +117,9 @@ struct Settings
     float boundaryAngle = 0.9f * PI_F;
 
     /// if oriented normals are known, they will be used for neighbor points selection
-    const VertCoords* trustedNormals = nullptr;
+    /// except for the ones indicated by untrustedNormals
+    const VertNormals* orientedNormals = nullptr;
+    const VertBitSet* untrustedNormals = nullptr;
 
     /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
     bool automaticRadiusIncrease = true;

@@ -33,7 +33,7 @@ public:
     PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
     PointCloudTriangulator( Mesh && targetMesh, const PointCloud& pointCloud, const TriangulationParameters& params );
     bool addPoints( PointCloud& extraPoints );
-    bool triangulate( const ProgressCallback& progressCb );
+    bool triangulate( const VertBitSet& cloudPointsToOrient, const ProgressCallback& progressCb );
     Mesh takeTargetMesh() { return std::move( targetMesh_ ); }
 
 private:
@@ -99,12 +99,13 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
     return true;
 }
 
-bool PointCloudTriangulator::triangulate( const ProgressCallback& progressCb )
+bool PointCloudTriangulator::triangulate( const VertBitSet& cloudPointsToOrient, const ProgressCallback& progressCb )
 {
     MR_TIMER;
     assert( ( params_.numNeighbours <= 0 && params_.radius > 0 )
          || ( params_.numNeighbours > 0 && params_.radius <= 0 ) );
 
+    const bool allTrustedNormals = cloudPointsToOrient.none();
     auto optLocalTriangulations = TriangulationHelpers::buildUnitedLocalTriangulations( pointCloud_,
         {
             .radius = params_.radius,
@@ -112,18 +113,19 @@ bool PointCloudTriangulator::triangulate( const ProgressCallback& progressCb )
             .critAngle = params_.critAngle,
             .boundaryAngle = params_.boundaryAngle,
             .orientedNormals = pointCloud_.hasNormals() ? &pointCloud_.normals : nullptr,
+            .untrustedNormals = allTrustedNormals ? nullptr : &cloudPointsToOrient,
             .automaticRadiusIncrease = params_.automaticRadiusIncrease,
             .searchNeighbors = params_.searchNeighbors
-        }, subprogress( progressCb, 0.0f, pointCloud_.hasNormals() ? 0.4f : 0.3f ) );
+        }, subprogress( progressCb, 0.0f, allTrustedNormals ? 0.4f : 0.3f ) );
     if ( !optLocalTriangulations )
         return {};
     auto & localTriangulations = *optLocalTriangulations;
 
     Triangulation t3, t2;
-    if ( pointCloud_.hasNormals() )
+    if ( allTrustedNormals )
         findRepeatedOrientedTriangles( localTriangulations, &t3, &t2 );
     else
-        autoOrientLocalTriangulations( pointCloud_, localTriangulations, pointCloud_.validPoints, subprogress( progressCb, 0.3f, 0.5f ), &t3, &t2 );
+        autoOrientLocalTriangulations( pointCloud_, localTriangulations, cloudPointsToOrient, subprogress( progressCb, 0.3f, 0.5f ), &t3, &t2 );
 
     return makeMesh_( std::move( t3 ), std::move( t2 ), subprogress( progressCb, 0.5f, 1.0f ) );
 }
@@ -229,7 +231,8 @@ std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const T
 {
     MR_TIMER;
     PointCloudTriangulator triangulator( pointCloud, params );
-    if ( triangulator.triangulate( progressCb ) )
+    const VertBitSet none;
+    if ( triangulator.triangulate( pointCloud.hasNormals() ? none : pointCloud.validPoints, progressCb ) )
         return triangulator.takeTargetMesh();
     return {};
 }
@@ -238,23 +241,22 @@ bool fillHolesWithExtraPoints( Mesh & mesh, PointCloud& extraPoints,
     const TriangulationParameters& params, const ProgressCallback& progressCb )
 {
     MR_TIMER;
-    if ( !extraPoints.hasNormals() )
-    {
-        assert( false );
-        return false;
-    }
+    const auto cloudPointsToOrient = extraPoints.hasNormals() ? VertBitSet{} : extraPoints.validPoints;
     const auto szPoints = extraPoints.points.size();
+    const auto szNormals = extraPoints.normals.size();
     extraPoints.normals.resize( szPoints );
     extraPoints.validPoints.resize( szPoints );
 
     PointCloudTriangulator triangulator( std::move( mesh ), extraPoints, params );
     bool res = true;
     if ( triangulator.addPoints( extraPoints ) )
-        res = triangulator.triangulate( progressCb );
+        res = triangulator.triangulate( cloudPointsToOrient, progressCb );
     // else no holes in mesh and res = true
 
+    // remove temporarily added boundary points from extraPoints
+    extraPoints.invalidateCaches();
     extraPoints.points.resize( szPoints );
-    extraPoints.normals.resize( szPoints );
+    extraPoints.normals.resize( szNormals );
     extraPoints.validPoints.resize( szPoints );
 
     mesh = triangulator.takeTargetMesh();

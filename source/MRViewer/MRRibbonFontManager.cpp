@@ -146,7 +146,6 @@ void RibbonFontManager::updateFontsScaledOffset_()
     ImGuiIO& io = ImGui::GetIO();
     const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
     std::array<ImFont*, int( FontType::Count )> localFonts;
-    spdlog::info( "updateFontsScaledOffset_ 0" );
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto& font = fonts_[int( i )];
@@ -161,9 +160,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
         auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
         localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
     }
-    spdlog::info( "updateFontsScaledOffset_ 1" );
     io.Fonts->Build();
-    spdlog::info( "updateFontsScaledOffset_ 2" );
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto* lFont = localFonts[i];
@@ -172,21 +169,22 @@ void RibbonFontManager::updateFontsScaledOffset_()
         if ( lFont->Glyphs.size() != 1 )
             continue;
 
-        spdlog::info( "updateFontsScaledOffset_ 2 + {}", i );
+        spdlog::info( "updateFontsScaledOffset_ 1 + {} + 0", i );
         const auto& glyph = lFont->Glyphs.back();
+        spdlog::info( "updateFontsScaledOffset_ 1 + {} + 1", i );
 
         auto& fontRef = fonts_[int( i )];
         auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
+        spdlog::info( "updateFontsScaledOffset_ 1 + {} + 2", i );
         Box2f box;
         box.include( Vector2f( glyph.X0, glyph.Y0 ) );
         box.include( Vector2f( glyph.X1, glyph.Y1 ) );
         fontRef.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
         fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
         fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
+        spdlog::info( "updateFontsScaledOffset_ 1 + {} + 3", i );
     }
-    spdlog::info( "updateFontsScaledOffset_ 3" );
     io.Fonts->Clear();
-    spdlog::info( "updateFontsScaledOffset_ 4" );
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )

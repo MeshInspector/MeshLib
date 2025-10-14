@@ -119,7 +119,9 @@ VertId PointCloud::addPoint(const Vector3f& point, const Vector3f& normal)
 
 const AABBTreePoints& PointCloud::getAABBTree() const
 {
-    return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
+    const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
+    assert( res.orderedPoints().size() == validPoints.count() );
+    return res;
 }
 
 size_t PointCloud::heapBytes() const

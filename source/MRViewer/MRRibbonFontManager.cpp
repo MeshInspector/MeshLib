@@ -171,6 +171,8 @@ void RibbonFontManager::updateFontsScaledOffset_()
             continue;
         if ( lFont->Glyphs.size() != 1 )
             continue;
+
+        spdlog::info( "updateFontsScaledOffset_ 2 + {}", i );
         const auto& glyph = lFont->Glyphs.back();
 
         auto& fontRef = fonts_[int( i )];

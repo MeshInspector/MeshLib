@@ -55,7 +55,8 @@ MRMESH_API std::optional<Vector3f> getPickedPointPosition( const VisualObject& o
 [[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API MR_BIND_IGNORE bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
 
 /// Returns object normal in local coordinates at given point,
+/// \param interpolated if true returns interpolated normal for mesh object, otherwise returns flat normal
 /// returns std::nullopt if object or point is invalid, or if it is ObjectLines or ObjectPoints without normals
-MRMESH_API std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point );
+MRMESH_API std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point, bool interpolated = true );
 
 } //namespace MR

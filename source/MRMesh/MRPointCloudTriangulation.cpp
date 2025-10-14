@@ -70,6 +70,8 @@ bool PointCloudTriangulator::addPoints( PointCloud& extraPoints )
     if ( bdVerts.none() )
         return false;
 
+    extraPoints.invalidateCaches();
+
     // add all extraPoints in targetMesh_
     targetMesh_.points.reserve( targetMesh_.points.size() + extraPoints.validPoints.count() );
     const auto totalPoints = extraPoints.points.size() + bdVerts.count();

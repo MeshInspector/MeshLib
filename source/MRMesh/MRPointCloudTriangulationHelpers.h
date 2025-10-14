@@ -49,7 +49,7 @@ MRMESH_API float findNumNeighbors( const PointCloud& pointCloud, VertId v, int n
  * \brief Filter neighbors with crossing normals
  * \ingroup TriangulationHelpersGroup
  */
-MRMESH_API void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors );
+MRMESH_API void filterNeighbors( const VertNormals& orientedNormals, const VertBitSet* untrustedNormals, VertId v, std::vector<VertId>& neighbors );
 
 struct FanOptimizerQueueElement
 {

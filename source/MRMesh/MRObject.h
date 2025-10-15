@@ -57,6 +57,14 @@ protected:
     std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic
 };
 
+struct KeyObjectModel;
+struct KeyObjectModelHasher;
+struct LinkData;
+// map for mapping Objects to relative path (link) to shared model (used while serialization)
+using MapSharedObjectModelToLinkData = std::unordered_map<KeyObjectModel, LinkData, KeyObjectModelHasher>;
+// map for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
+using MapLinkToSharedObjectModel = std::unordered_map<std::string, const Object*>;
+
 /// named object in the data model
 class MRMESH_CLASS Object : public ObjectChildrenHolder
 {
@@ -228,16 +236,18 @@ public:
     ///   models in the folder by given path and
     ///   fields in given JSON
     /// \param childId is its ordinal number within the parent
+    /// \param mapSharedObjectModelToLinkData for mapping objects to shared models
     // This would be automatically skipped in the bindings anyway because of the `Json::Value` parameter.
     // But skipping it here prevents the vector-of-futures type from being registered, which is helpful.
     // TODO: figure out how to automate this (add a flag to the parser to outright reject functions based on their parameter and return types).
-    MRMESH_API MR_BIND_IGNORE Expected<std::vector<std::future<Expected<void>>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
+    MRMESH_API MR_BIND_IGNORE Expected<std::vector<std::future<Expected<void>>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root,
+        int childId, const std::filesystem::path& rootFolder, MapSharedObjectModelToLinkData* mapSharedObjectModelToLinkData = nullptr ) const;
 
     /// loads subtree into this Object
     ///   models from the folder by given path and
     ///   fields from given JSON
-    MRMESH_API Expected<void> deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
-        ProgressCallback progressCb = {}, int* objCounter = nullptr );
+    MRMESH_API Expected<void> deserializeRecursive( const std::filesystem::path& path, const Json::Value& root, const std::filesystem::path& rootFolder,
+        ProgressCallback progressCb = {}, int* objCounter = nullptr, MapLinkToSharedObjectModel* mapLinkToSharedObjectModel = nullptr );
 
     /// swaps this object with other
     /// note: do not swap object signals, so listeners will get notifications from swapped object
@@ -270,6 +280,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
+    // return true if model of current object equals to model of other
+    MRMESH_API virtual bool isModelEqual( const Object& other ) const;
+    // return hash of model (or hash object pointer if object has no model)
+    MRMESH_API virtual size_t getModelHash() const;
+
     /// signal about xf changing
     /// triggered in setXf and setWorldXf, it is called for children too
     /// triggered in addChild and addChildBefore, it is called only for children object
@@ -301,6 +316,8 @@ protected:
 
     /// Reads model from file
     MRMESH_API virtual Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} );
+    /// reads model from oter object
+    MRMESH_API virtual Expected<void> setModelFromObject_( const Object& other );
 
     /// Reads parameters from json value
     /// \note if you override this method, please call Base::deserializeFields_(root) in the beginning
@@ -344,5 +361,30 @@ std::shared_ptr<const T> Object::find( const std::string_view & name ) const
 }
 
 /// \}
+
+struct KeyObjectModel
+{
+    const Object* object = nullptr;
+};
+
+// return true if model data of two Objects are equal
+inline bool operator==( const KeyObjectModel& a, const KeyObjectModel& b )
+{
+    if ( !a.object || !b.object )
+        return a.object == b.object;
+    return a.object->isModelEqual( *b.object );
+}
+
+// return hash for Object model data
+struct KeyObjectModelHasher
+{
+    MRMESH_API std::size_t operator()( const KeyObjectModel& k ) const;
+};
+
+struct LinkData
+{
+    std::string link; // relative path (link) to shared model file
+    bool serialized = false; // set true after first serialization to avoid other model copies
+};
 
 } ///namespace MR

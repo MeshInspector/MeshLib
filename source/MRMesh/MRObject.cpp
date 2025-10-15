@@ -460,6 +460,11 @@ Expected<void> Object::deserializeModel_( const std::filesystem::path&, Progress
     return{};
 }
 
+Expected<void> Object::setModelFromObject_( const Object& )
+{
+    return{};
+}
+
 void Object::deserializeFields_( const Json::Value& root )
 {
     if ( root["Name"].isString() )
@@ -546,7 +551,7 @@ std::vector<std::string> Object::getInfoLines() const
     return res;
 }
 
-Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
+Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId, const std::filesystem::path& rootFolder, MapSharedObjectModelToLinkData* mapSharedObjectModelToLinkData ) const
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
@@ -558,12 +563,38 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
     // the key must be unique among all children of same parent
     constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
     std::string key = std::to_string( childId ) + "_" + utf8substr( replaceProhibitedChars( name_ ).c_str(), 0, maxFileNameLen );
+    auto pathToSerializeModel = path / pathFromUtf8( key );
 
-    auto model = serializeModel_( path / pathFromUtf8( key ) );
-    if ( !model.has_value() )
-        return unexpected( model.error() );
-    if ( model.value().valid() )
-        res.push_back( std::move( model.value() ) );
+    if ( mapSharedObjectModelToLinkData )
+    {
+        auto& links = *mapSharedObjectModelToLinkData;
+        if ( auto it = links.find( KeyObjectModel{ this } ); it != links.end() )
+        {
+            if ( !it->second.link.empty() )
+            {
+                const auto& link = it->second.link;
+                // serialize shared model only one time
+                if ( !it->second.serialized )
+                {
+                    pathToSerializeModel = rootFolder / pathFromUtf8( link );
+                    it->second.serialized = true;
+                }
+                else
+                    pathToSerializeModel.clear();
+
+                root["Link"] = link;
+            }
+        }
+    }
+
+    if ( !pathToSerializeModel.empty() )
+    {
+        auto model = serializeModel_( pathToSerializeModel );
+        if ( !model.has_value() )
+            return unexpected( model.error() );
+        if ( model.value().valid() )
+            res.push_back( std::move( model.value() ) );
+    }
     serializeFields_( root );
 
     root["Key"] = key;
@@ -577,7 +608,7 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
             const auto& child = children_[i];
             if ( child->isAncillary() )
                 continue; // consider ancillary_ objects as temporary, not requiring saving
-            auto sub = child->serializeRecursive( childrenPath, childrenRoot[std::to_string( i )], i );
+            auto sub = child->serializeRecursive( childrenPath, childrenRoot[std::to_string( i )], i, rootFolder, mapSharedObjectModelToLinkData );
             if ( !sub.has_value() )
                 return unexpected( sub.error() );
             for ( auto & f : sub.value() )
@@ -590,14 +621,43 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
     return res;
 }
 
-Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
-        ProgressCallback progressCb, int* objCounter )
+Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root, const std::filesystem::path& rootFolder,
+        ProgressCallback progressCb, int* objCounter, MapLinkToSharedObjectModel* mapLinkToSharedObjectModel )
 {
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();
 
-    auto res = deserializeModel_( path / pathFromUtf8( key ), progressCb );
-    if ( !res.has_value() )
-        return res;
+    std::string link;
+    if ( !root["Link"].empty() )
+        link = root["Link"].asString();
+
+    auto pathToDeserializeModel = path / pathFromUtf8( key );
+    if ( !link.empty() )
+    {
+        pathToDeserializeModel = rootFolder / pathFromUtf8( link );
+        if ( mapLinkToSharedObjectModel )
+        {
+            auto& links = *mapLinkToSharedObjectModel;
+            auto it = links.find( link );
+            if ( it == links.end() )
+            {
+                links[link] = this;
+            }
+            else
+            {
+                // model already deserialized
+                const auto res = setModelFromObject_(*it->second);
+                if ( !res.has_value() )
+                    return res;
+                pathToDeserializeModel.clear();
+            }
+        }
+    }
+    if ( !pathToDeserializeModel.empty() )
+    {
+        const auto res = deserializeModel_( pathToDeserializeModel, progressCb );
+        if ( !res.has_value() )
+            return res;
+    }
 
     deserializeFields_( root );
     if ( objCounter )
@@ -652,7 +712,7 @@ Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, 
             if ( !childObj )
                 continue;
 
-            auto childRes = childObj->deserializeRecursive( path / pathFromUtf8( key ), child, progressCb, objCounter );
+            auto childRes = childObj->deserializeRecursive( path / pathFromUtf8( key ), child, rootFolder, progressCb, objCounter, mapLinkToSharedObjectModel );
             if ( !childRes.has_value() )
                 return childRes;
             addChild( childObj );
@@ -697,6 +757,23 @@ size_t Object::heapBytes() const
 {
     return ObjectChildrenHolder::heapBytes()
         + name_.capacity();
+}
+
+bool Object::isModelEqual( const Object& ) const
+{
+    return false;
+}
+
+size_t Object::getModelHash() const
+{
+    return std::hash<const MR::Object*>()( this );
+}
+
+std::size_t KeyObjectModelHasher::operator()( const KeyObjectModel& k ) const
+{
+    if ( !k.object )
+        return 0;
+    return k.object->getModelHash();
 }
 
 TEST( MRMesh, DataModelRemoveChild )

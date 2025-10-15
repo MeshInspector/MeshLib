@@ -143,6 +143,20 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectMeshHolder::TypeName() );
 }
 
+size_t ObjectMeshHolder::getModelHash() const
+{
+    return std::hash<std::shared_ptr<MR::Mesh>>()( data_.mesh );
+}
+bool ObjectMeshHolder::isModelEqual( const Object& other ) const
+{
+    if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
+    {
+        // can we compare vert colors ?
+        return data_.mesh == objectMeshHolder->data_.mesh && data_.vertColors == objectMeshHolder->data_.vertColors;
+    }
+    return false;
+}
+
 void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 {
     VisualObject::deserializeFields_( root );
@@ -260,6 +274,17 @@ Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path&
 
     data_.mesh = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
+}
+
+Expected<void> ObjectMeshHolder::setModelFromObject_( const Object& other )
+{
+    if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
+    {
+        data_.mesh = objectMeshHolder->data_.mesh;
+        data_.vertColors = objectMeshHolder->data_.vertColors;
+        return{};
+    }
+    return unexpected("Invalid object type");
 }
 
 Box3f ObjectMeshHolder::computeBoundingBox_() const

@@ -192,7 +192,6 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 #else
     ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::getPreset() ) );
 #endif
-    ColorTheme::apply();
 
     // lastExtentions_.clear();
 
@@ -412,7 +411,6 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         // setup default in this case
         ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::Preset::Default ) );
     }
-    ColorTheme::apply();
 
     Json::Value lastExtentions = cfg.getJsonValue( lastExtensionsParamKey );
     if ( lastExtentions.isArray() )

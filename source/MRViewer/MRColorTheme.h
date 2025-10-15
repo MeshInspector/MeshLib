@@ -57,11 +57,6 @@ public:
     // gets active viewport background color
     MRVIEWER_API static void serializeCurrentToJson( Json::Value& root );
 
-    // Applies colors stored in this struct to application
-    // really some colors of this theme are applied deferred on next frame because of ImGui::PushStyleColor problem
-    // note that struct should be initialized when apply is called
-    // initialized in this scope means that structure has it's own values for colors
-    MRVIEWER_API static void apply();
     // True if this structure is filled with colors, false if empty
     MRVIEWER_API static bool isInitialized();
 
@@ -182,8 +177,13 @@ private:
     ColorTheme() = default;
     ~ColorTheme() = default;
 
+    // Applies colors stored in this struct to application
+    // really some colors of this theme are applied deferred on next frame because of ImGui::PushStyleColor problem
+    // note that struct should be initialized when apply is called
+    // initialized in this scope means that structure has it's own values for colors
+    MRVIEWER_API static void apply_( const std::vector<Color>& sceneColors );
 
-    std::vector<Color> sceneColors_;
+    bool isInitialized_ = false;
     Preset themePreset_ = Preset::Dark;
     std::array<Color, size_t( RibbonColorsType::Count )> newUIColors_;
     std::array<Color, size_t( ViewportColorsType::Count )> viewportColors_;

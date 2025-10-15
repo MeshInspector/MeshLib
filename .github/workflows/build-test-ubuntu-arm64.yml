@@ -181,7 +181,7 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest ${{ matrix.os == 'ubuntu20' && '--no-python-tests' || '' }}
+        run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
@@ -191,13 +191,13 @@ jobs:
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
-        if: ${{ inputs.mrbind && matrix.os != 'ubuntu20' }}
+        if: ${{ inputs.mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Python Regression Tests
-        if: ${{ inputs.internal_build && ( inputs.mrbind && matrix.os != 'ubuntu20' ) }}
+        if: ${{ inputs.internal_build && inputs.mrbind }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}

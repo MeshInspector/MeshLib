@@ -36,7 +36,6 @@ EMSCRIPTEN_KEEPALIVE int emsChangeColorTheme( int theme )
         ColorTheme::setupDefaultDark();
     else
         ColorTheme::setupDefaultLight();
-    ColorTheme::apply();
     return 1;
 }
 

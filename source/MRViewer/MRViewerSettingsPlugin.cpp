@@ -888,7 +888,6 @@ void ViewerSettingsPlugin::drawThemeSelector_()
             showError( "This theme is not valid." );
         }
         backgroundColor_ = Vector4f( ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ) );
-        ColorTheme::apply();
     }
     auto item = RibbonSchemaHolder::schema().items.find( "Add custom theme" );
     if ( item != RibbonSchemaHolder::schema().items.end() )

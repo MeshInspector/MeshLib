@@ -277,7 +277,6 @@ std::string AddCustomThemePlugin::save_()
     }
 
     ColorTheme::setupUserTheme( themeName_ );
-    ColorTheme::apply();
     if ( !applyToNewObjectsOnly_ )
     {
         auto visualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get() );

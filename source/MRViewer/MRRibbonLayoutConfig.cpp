@@ -71,10 +71,7 @@ void applyRibbonConfig( const RibbonConfig& config )
         ribbonMenu->getRibbonButtonDrawer().setMonochrome( config.monochromeRibbonIcons );
 
     if ( config.colorTheme )
-    {
         ColorTheme::setupFromJson( *config.colorTheme );
-        ColorTheme::apply();
-    }
 
     if ( config.ribbonStructure || config.ribbonItemsOverrides )
     {

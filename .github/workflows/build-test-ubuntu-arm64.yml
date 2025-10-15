@@ -149,7 +149,7 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
       - name: Generate and build Python bindings
-        if: ${{ inputs.mrbind && matrix.os != 'ubuntu20' }}
+        if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin

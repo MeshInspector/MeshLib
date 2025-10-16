@@ -115,7 +115,6 @@ if args.pytest_args:
 
 failed = False
 venv_failed = False
-print( "DEBUG LOG 1" )
 for py_cmd in python_cmds:
     if platform.system() == "Darwin" and shutil.which(py_cmd) is None:
         continue; # Skip if no such command. Some python versions are not supported on some macs.
@@ -133,7 +132,6 @@ for py_cmd in python_cmds:
     else:
         py_cmd_fixed = py_cmd
 
-    print( "DEBUG LOG 2:" )
     print(py_cmd_fixed + " " + pytest_cmd)
     if os.system(py_cmd_fixed + " " + pytest_cmd) != 0:
         failed = True

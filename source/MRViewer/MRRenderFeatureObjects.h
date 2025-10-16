@@ -4,7 +4,6 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
-#include "MRMesh/MRSceneColors.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"

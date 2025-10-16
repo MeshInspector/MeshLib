@@ -238,7 +238,7 @@ jobs:
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
         if: always()
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer.app/Contents/MacOS/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
+        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
         if: always()

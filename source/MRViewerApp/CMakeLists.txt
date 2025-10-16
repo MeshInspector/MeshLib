@@ -4,9 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MeshViewer CXX)
 
-# We make this a `MACOSX_BUNDLE` even though we don't package it, solely to unify
-#   the `MR_LOCAL_RESOURCES=1` search path between this and our other apps that actually need to be bundles.
-add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE MRViewerApp.cpp)
+add_executable(${PROJECT_NAME} WIN32 MRViewerApp.cpp)
 
 file(GLOB PNGS "*.png")
 file(COPY ${PNGS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

@@ -31,11 +31,9 @@ def run_code_sample(code_path: str, args: list):
 @pytest.mark.parametrize("doc_case",
                          [
                              pytest.param({'sample': "FreeFormDeformation.dox.py", 'input_files': ['mesh.stl'],
-                                           'output_files': ['deformed_mesh.stl']}, id="FreeFormDeformation.dox.py",
-                                          marks=pytest.mark.bindingsV3),
+                                           'output_files': ['deformed_mesh.stl']}, id="FreeFormDeformation.dox.py"),
                              pytest.param({'sample': "LaplacianExample.dox.py", 'input_files': ['mesh.stl'],
-                                           'output_files': ['deformed_mesh.stl']}, id="LaplacianExample.dox.py",
-                                          marks=pytest.mark.bindingsV3),
+                                           'output_files': ['deformed_mesh.stl']}, id="LaplacianExample.dox.py"),
                              pytest.param({'sample': "MeshBoolean.dox.py", 'input_files': [],
                                            'output_files': ['out_boolean.stl']}, id="MeshBoolean.dox.py"),
                              pytest.param({'sample': "MeshDecimate.dox.py", 'input_files': ['mesh.stl'],
@@ -57,21 +55,15 @@ def run_code_sample(code_path: str, args: list):
                                            'output_files': ['stitchedMesh.stl']}, id="MeshStitchHole.dox.py"),
                              pytest.param({'sample': "NoiseDenoiseExample.dox.py", 'input_files': ['mesh.stl'],
                                            'output_files': ['noised_mesh.stl', 'denoised_mesh.stl']},
-                                          id="NoiseDenoiseExample.dox.py",
-                                          marks=pytest.mark.bindingsV3),
+                                          id="NoiseDenoiseExample.dox.py"),
                              pytest.param({'sample': "Numpy.dox.py", 'input_files': [], 'output_files': []},
                                           id="Numpy.dox.py"),
                              pytest.param(
                                  {'sample': "NumpyTriangulation.dox.py", 'input_files': [], 'output_files': []},
                                  id="NumpyTriangulation.dox.py"),
                              pytest.param(
-                                 {'sample': "Triangulation_v2.dox.py", 'input_files': [], 'output_files': []},
-                                 id="Triangulation_v2.dox.py",
-                                 marks=pytest.mark.bindingsV2),
-                             pytest.param(
                                  {'sample': "Triangulation_v3.dox.py", 'input_files': [], 'output_files': []},
-                                 id="Triangulation_v3.dox.py",
-                                 marks=pytest.mark.bindingsV3),
+                                 id="Triangulation_v3.dox.py"),
                              pytest.param(
                                  {'sample': "PointsToMesh.dox.py",
                                   'input_files': ['Points.ply'],
@@ -98,12 +90,10 @@ def run_code_sample(code_path: str, args: list):
                                   'args': ["cloud0.ply", "cloud1.ply", "cloud2.ply", "out.ply"],
                                   'verify': 'points'
                                   },
-                                 id="GlobalRegistration.dox.py",
-                                 marks=pytest.mark.bindingsV3,),
+                                 id="GlobalRegistration.dox.py"),
                              pytest.param(
                                  {'sample': "MeshOffsetWeighted.dox.py", 'input_files': [], 'output_files': ["offset_weighted.ctm"]},
-                                 id="MeshOffsetWeighted.dox.py",
-                                 marks=pytest.mark.bindingsV3),
+                                 id="MeshOffsetWeighted.dox.py"),
                          ])
 @pytest.mark.smoke
 def test_python_doc_samples(tmp_path, doc_case):

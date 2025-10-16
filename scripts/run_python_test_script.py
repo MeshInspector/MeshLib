@@ -104,11 +104,9 @@ os.environ["MeshLibPyModulesPath"] = os.getcwd()
 os.chdir(directory)
 
 #command line to start test
-pytest_cmd = '-m pytest -s -v --basetemp=../pytest_temp --durations 30  -m "not bindingsV2'
+pytest_cmd = "-m pytest -s -v --basetemp=../pytest_temp --durations 30"
 if args.smoke == "true":
-    pytest_cmd += f' and smoke"'
-else:
-    pytest_cmd += f'"'
+    pytest_cmd += f' -m "smoke"'
 
 if args.pytest_args:
     pytest_cmd += f' {args.pytest_args}'

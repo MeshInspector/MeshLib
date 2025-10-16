@@ -49,12 +49,9 @@ def test_numpy_points_mesh():
     # Create MeshLib PointCloud from np ndarray
     pc = mrmeshnumpy.pointCloudFromPoints(verts)
     # Remove duplicate points
-    if is_bindings_v3:
-        settings = mrmesh.UniformSamplingSettings()
-        settings.distance = 1e-3
-        pc.validPoints = mrmesh.pointUniformSampling(pc, settings)
-    else:
-        pc.validPoints = mrmesh.pointUniformSampling(pc, 1e-3)
+    settings = mrmesh.UniformSamplingSettings()
+    settings.distance = 1e-3
+    pc.validPoints = mrmesh.pointUniformSampling(pc, settings)
     pc.invalidateCaches()
 
     # Triangulate it

@@ -1708,7 +1708,7 @@ bool ModalExitButton()
     return false;
 }
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 ImVec2 GetWindowContentRegionMax()
 {

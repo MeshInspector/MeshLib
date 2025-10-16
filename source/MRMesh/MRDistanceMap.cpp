@@ -5,7 +5,7 @@
 #include "MRTriangleIntersection.h"
 #include "MRLine3.h"
 #include "MRTimer.h"
-#include "MRBox.h"
+#include "MRMesh.h"
 #include "MRRegularGridMesh.h"
 #include "MRPolyline2Project.h"
 #include "MRBitSetParallelFor.h"
@@ -13,7 +13,6 @@
 #include "MRPolyline2Intersect.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include <vector>
 
 namespace MR
 {

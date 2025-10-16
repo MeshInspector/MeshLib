@@ -1,6 +1,6 @@
 #pragma once
+
 #include "MRMeshFwd.h"
-#include "MRMesh.h"
 #include "MRPointCloud.h"
 #include "MRExpected.h"
 #include <filesystem>

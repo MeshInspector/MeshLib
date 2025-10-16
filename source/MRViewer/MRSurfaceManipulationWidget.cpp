@@ -681,7 +681,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         {
             if ( lastStableObjMesh_ && visualObjectsS[i] == obj_ )
                 visualObjectsP.push_back( lastStableObjMesh_.get() );
-            else if ( visualObjectsS[i]->isVisible( viewportId ) )
+            else if ( visualObjectsS[i]->globalVisibility( viewportId ) )
                 visualObjectsP.push_back( visualObjectsS[i].get() );
         }
         movedPosPick = getViewerInstance().viewport().multiPickObjects( visualObjectsP, viewportPoints );

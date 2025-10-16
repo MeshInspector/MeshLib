@@ -9,9 +9,6 @@ inputs:
     description: "Build config (Release, Debug)"
     required: true
     type: string
-  mrbind:
-    required: true
-    type: boolean
   pytest_args:
     description: "Additional pytest arguments"
     required: false
@@ -43,7 +40,6 @@ runs:
         echo << EOF
         autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}
         build_config: ${{ inputs.build_config }}
-        mrbind: ${{ inputs.mrbind }}
         pytest_args: ${{ inputs.pytest_args }}
         smoke: ${{ inputs.smoke }}
         test_artifacts_path: ${{ inputs.test_artifacts_path }}
@@ -57,7 +53,6 @@ runs:
       run: |
         Write-Output "autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}"
         Write-Output "build_config: ${{ inputs.build_config }}"
-        Write-Output "mrbind: ${{ inputs.mrbind }}"
         Write-Output "pytest_args: ${{ inputs.pytest_args }}"
         Write-Output "smoke: ${{ inputs.smoke }}"
         Write-Output "test_artifacts_path: ${{ inputs.test_artifacts_path }}"
@@ -97,7 +92,6 @@ runs:
         python3 ../../../scripts/run_python_test_script.py
         -d '../test_regression'
         -s ${{ inputs.smoke }}
-        -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
         
     - name: Python Regression Tests (Windows)
@@ -108,7 +102,6 @@ runs:
         py -3 ..\..\..\scripts\run_python_test_script.py
         -d '..\test_regression'
         -s ${{ inputs.smoke }}
-        -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
 
     - name: Copy test artifacts to S3

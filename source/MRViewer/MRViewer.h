@@ -56,6 +56,7 @@ struct LaunchParams
     bool render3dSceneInTexture{ true }; // If not set renders scene each frame
     bool developerFeatures{ false }; // If set shows some developer features useful for debugging
     std::string name{ "MRViewer" }; // Window name
+    bool resetConfig{ false }; // if true - resets config file on start of the application
     bool startEventLoop{ true }; // If false - does not start event loop
     bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
     bool console{ false }; // If true - shows developers console

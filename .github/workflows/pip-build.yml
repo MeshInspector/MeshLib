@@ -135,7 +135,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d
 
       - name: Build Python shim libs
         run: |
@@ -367,7 +367,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
-    timeout-minutes: 100
+    timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
@@ -459,7 +459,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
         include:
           - platform: "x86_64"
             runner: ubuntu-latest
@@ -481,6 +481,9 @@ jobs:
             os: "fedora:39"
           - py-version: "3.13"
             os: "fedora:42"
+          # TODO: replace with a distro with default Python 3.14
+          - py-version: "3.14"
+            os: "ubuntu:25.10"
     env:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:
@@ -494,12 +497,19 @@ jobs:
         run: dnf -y install python38-pip
 
       - name: Debian/Ubuntu system setup
-        if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' }}
-        run: apt -y update && apt -y install curl libssl-dev python3-pip
+        if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
+        run: apt -y update && apt -y install curl libssl-dev python3-pip python${{ matrix.py-version }}-venv
 
       - name: Fedora system setup
         if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
         run: dnf -y install python3-pip
+
+      - name: Create virtualenv
+        run: |
+          ${{ env.PYTHON_CMD }} -m venv .venv
+          . .venv/bin/activate
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo $PATH >> $GITHUB_PATH
 
       - name: Pip setup
         run: |
@@ -528,7 +538,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -569,7 +579,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # python 3.8 disabled on x86 macOS since 2024-10-14
+        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"] # python 3.8 disabled on macOS since 2024-10-14
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -587,11 +597,29 @@ jobs:
             py-cmd: "python3.12"
           - py-version: "3.13"
             py-cmd: "python3.13"
+          - py-version: "3.14"
+            py-cmd: "python3.14"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
+
+      # TODO: remove after GitHub runner update
+      - name: Prepare Python 3.14 installation
+        if: ${{ matrix.py-version == '3.14' }}
+        run: |
+          # check when it's time to remove this step
+          if [ $(brew list | grep python@3.14) ] ; then 
+            echo "The runner has been updated and already contains Python 3.14; remove this step from the workflow"
+            exit 1
+          fi
+          brew update
+          # more info: https://github.com/actions/runner-images/issues/9966
+          if [[ ${{ matrix.platform }} == 'x86' ]] ; then
+            brew unlink python@3.13 
+            brew link --overwrite python@3.13
+          fi
 
       - name: Python setup
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}

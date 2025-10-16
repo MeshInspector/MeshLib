@@ -125,23 +125,29 @@ float findNumNeighbors( const PointCloud& pointCloud, VertId v, int numNeis, std
     return maxDistSq;
 }
 
-void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>& neighbors )
+void filterNeighbors( const VertNormals& orientedNormals, const VertBitSet* untrustedNormals, VertId v, std::vector<VertId>& neighbors )
 {
-    const auto& vNorm = normals[v];
+    if ( untrustedNormals && untrustedNormals->test( v ) )
+        return;
+    const auto& vNorm = orientedNormals[v];
     neighbors.erase( std::remove_if( neighbors.begin(), neighbors.end(), [&] ( VertId nv )
     {
-        return dot( vNorm, normals[nv] ) < -0.3f;
+        if ( untrustedNormals && untrustedNormals->test( nv ) )
+            return false;
+        return dot( vNorm, orientedNormals[nv] ) < -0.3f;
     } ), neighbors.end() );
 }
 
 class FanOptimizer
 {
 public:
-    FanOptimizer( const VertCoords& points, const VertCoords* trustedNormals, TriangulatedFanData& fanData, VertId centerVert, const PointCloud * searchCloud, float maxEdgeLen ):
+    FanOptimizer( const VertCoords& points, const VertNormals* orientedNormals, const VertBitSet* untrustedNormals,
+        TriangulatedFanData& fanData, VertId centerVert, const PointCloud * searchCloud, float maxEdgeLen ):
         centerVert_{ centerVert },
         fanData_{ fanData },
         points_{ points },
-        trustedNormals_{ trustedNormals },
+        orientedNormals_{ orientedNormals },
+        untrustedNormals_{ untrustedNormals },
         searchCloud_{ searchCloud },
         maxEdgeLenSq_{ sqr( maxEdgeLen ) }
     {
@@ -156,7 +162,8 @@ private:
     VertId centerVert_;
     TriangulatedFanData& fanData_;
     const VertCoords& points_;
-    const VertCoords* trustedNormals_ = nullptr;
+    const VertNormals* orientedNormals_ = nullptr;
+    const VertBitSet* untrustedNormals_ = nullptr;
 
     const PointCloud * searchCloud_ = nullptr;
     float maxEdgeLenSq_ = 0;
@@ -168,6 +175,7 @@ private:
     FanOptimizerQueueElement calcQueueElement_( int i, float critAngle ) const;
 
     void updateBorderQueueElement_( FanOptimizerQueueElement& res, bool nextEl ) const;
+    bool trustOrientedNormalAt_( VertId v ) const { return orientedNormals_ && ( !untrustedNormals_ || !untrustedNormals_->test( v ) ); }
 };
 
 
@@ -227,7 +235,8 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
 
     // whether abc acd is allowed to be flipped to abd dbc
     bool flipPossibility = false;
-    if ( trustedNormals_ && ( dot( (*trustedNormals_)[centerVert_], (*trustedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f ) )
+    if ( trustOrientedNormalAt_( centerVert_ ) && trustOrientedNormalAt_( fanData_.neighbors[res.id] )
+        && ( dot( (*orientedNormals_)[centerVert_], (*orientedNormals_)[fanData_.neighbors[res.id]] ) < 0.0f ) )
         flipPossibility = true;
     else
         flipPossibility = isUnfoldQuadrangleConvex( a, b, c, d );
@@ -268,10 +277,10 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     float planeDist = std::abs( plane_.distance( c ) );
     res.weight += planeDist / normVal; // sin angle with plane
 
-    if ( trustedNormals_ )
+    if ( trustOrientedNormalAt_( centerVert_ ) && trustOrientedNormalAt_( fanData_.neighbors[res.id] ) )
     {
-        const auto cNorm = (*trustedNormals_)[fanData_.neighbors[res.id]];
-        res.weight += 5.0f * ( 1.0f - dot( (*trustedNormals_)[centerVert_], cNorm ) );
+        const auto cNorm = (*orientedNormals_)[fanData_.neighbors[res.id]];
+        res.weight += 5.0f * ( 1.0f - dot( (*orientedNormals_)[centerVert_], cNorm ) );
 
         auto abcNorm = cross( b - a, c - a );
         auto acdNorm = cross( c - a, d - a );
@@ -408,8 +417,8 @@ void FanOptimizer::init_()
 {
     const Vector3f centerProj = points_[centerVert_];
     Vector3f centerNorm;
-    if ( trustedNormals_ )
-        centerNorm = (*trustedNormals_)[centerVert_];
+    if ( trustOrientedNormalAt_( centerVert_ ) )
+        centerNorm = (*orientedNormals_)[centerVert_];
     else
     {
         PointAccumulator accum;
@@ -478,7 +487,7 @@ static void trianglulateFan( const VertCoords& points, VertId centerVert, Triang
 {
     if ( triangulationData.neighbors.empty() )
         return;
-    FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert,
+    FanOptimizer optimizer( points, settings.orientedNormals, settings.untrustedNormals, triangulationData, centerVert,
         settings.radius > 0 && !settings.automaticRadiusIncrease ? settings.searchNeighbors : nullptr,
         settings.radius );
     optimizer.optimize( settings.maxRemoves, settings.critAngle, settings.boundaryAngle );
@@ -499,8 +508,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
     else
         actualRadius = std::sqrt( findNumNeighbors( searchCloud, v, settings.numNeis, fanData.neighbors, fanData.nearesetPoints ) );
 
-    if ( settings.trustedNormals )
-        filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
+    if ( settings.orientedNormals )
+        filterNeighbors( *settings.orientedNormals, settings.untrustedNormals, v, fanData.neighbors );
     if ( settings.allNeighbors )
         *settings.allNeighbors = fanData.neighbors;
     trianglulateFan( cloud.points, v, fanData, settings );
@@ -525,8 +534,8 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
                     fanData.neighbors, fanData.nearesetPoints, sqr( maxRadius ) ) );
             }
 
-            if ( settings.trustedNormals )
-                filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
+            if ( settings.orientedNormals )
+                filterNeighbors( *settings.orientedNormals, settings.untrustedNormals, v, fanData.neighbors );
             if ( settings.allNeighbors )
                 *settings.allNeighbors = fanData.neighbors;
             trianglulateFan( cloud.points, v, fanData, settings );

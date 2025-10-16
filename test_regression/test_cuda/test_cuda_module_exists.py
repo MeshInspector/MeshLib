@@ -8,6 +8,5 @@ from module_helper import *
 
 
 @pytest.mark.smoke
-@pytest.mark.bindingsV3
 def test_cuda_module_exists():
     mrcudapy.isCudaAvailable(); # Check that the function exists, but ignore the return value.

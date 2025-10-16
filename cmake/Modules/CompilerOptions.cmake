@@ -21,6 +21,14 @@ IF(NOT APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
   ENDIF()
+ELSE() # if APPLE
+  # add `-fno-assume-unique-vtables` to fix reinterpret cast of `spdlog::rotating_file_sink_mt`
+  # https://github.com/llvm/llvm-project/issues/120129
+  # https://stackoverflow.com/a/79378704/16680013
+  # the flag added in this commit https://github.com/llvm/llvm-project/commit/9d525bf94b255df89587db955b5fa2d3c03c2c3e
+  IF( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17 ) # ethier AppleClang or Clang
+    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
+  ENDIF()
 ENDIF()
 
 # Warnings and misc compiler settings.
@@ -169,4 +177,16 @@ ENDIF()
 # Apple Clang 17 conflicts with OpenVDB 12.1
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++23-attribute-extensions")
+ENDIF()
+
+
+IF(WIN32)
+  # Disable incremental linking in debug modes, to avoid generating the large `.ilk` files.
+  # It already defaults to off in other configurations.
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO}")
 ENDIF()

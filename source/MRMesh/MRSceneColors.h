@@ -1,7 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRColor.h"
-#include "MRVector4.h"
 
 #include <array>
 

@@ -37,10 +37,7 @@ def test_thicken_mesh():
     cube.topology.deleteFaces(removeFaces)
     cube.invalidateCaches()
 
-    if is_bindings_v3:
-        params = mrmesh.GeneralOffsetParameters()
-    else:
-        params = mrmesh.OffsetParameters()
+    params = mrmesh.GeneralOffsetParameters()
     params.signDetectionMode = mrmesh.SignDetectionMode.Unsigned
     params.voxelSize = mrmesh.suggestVoxelSize(cube, 5e6)
     try:

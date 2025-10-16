@@ -29,13 +29,25 @@ void ViewerSetup::setupBasePlugins( Viewer* viewer ) const
     viewer->setMenuPlugin( menu );
 }
 
-void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appName ) const
+void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appName, bool reset ) const
 {
     assert( viewer );
 
     auto& cfg = MR::Config::instance();
-
+    // set filename
+    // reads config from it
+    //(needed even if `reset` flag is set because it is only way to set filename)
     cfg.reset( appName );
+    if ( reset )
+    {
+        // clears content
+        cfg.fromJson( Json::Value() );
+        // save existing config(cleared) to old filename(set on first call of cfg.reset(appName))
+        // set new filename(same as old)
+        // reads config(cleared) from it
+        cfg.reset( appName );
+    }
+
     std::unique_ptr<ViewerSettingsManager> mng = std::make_unique<ViewerSettingsManager>();
     viewer->setViewportSettingsManager( std::move( mng ) );
 }

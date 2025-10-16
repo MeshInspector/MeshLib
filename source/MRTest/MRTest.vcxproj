@@ -40,6 +40,7 @@
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
+    <ClCompile Include="MRStreamOperatorsTests.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />

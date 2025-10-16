@@ -10,6 +10,16 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
 ENDIF()
 
+IF(APPLE)
+    # assume built-in pthreads on macOS
+    # https://stackoverflow.com/a/54606606/7325599
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
@@ -210,14 +220,13 @@ ELSE()
   # TODO: correct directory structure for macOS
   # TODO: https://cmake.org/cmake/help/latest/prop_tgt/RESOURCE.html
   IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(MR_ROOT "./Library/Frameworks/MeshLib.framework/Versions/${MESHLIB_VERSION}")
-    set(MR_BIN_DIR "${MR_ROOT}/bin")
-    set(MR_INCLUDE_DIR "${MR_ROOT}/include")
-    set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib")
-    set(MR_PY_LIB_DIR "${MR_ROOT}/lib/meshlib")
-    set(MR_RESOURCES_DIR "${MR_ROOT}/Resources")
-    set(MR_FONTS_DIR "${MR_ROOT}/Resources/fonts")
-    set(MR_CONFIG_DIR "${MR_ROOT}/Resources/cmake")
+    set(MR_BIN_DIR       "bin")
+    set(MR_INCLUDE_DIR   "include")
+    set(MR_MAIN_LIB_DIR  "lib")
+    set(MR_PY_LIB_DIR    "lib/meshlib")
+    set(MR_RESOURCES_DIR "Resources")
+    set(MR_CONFIG_DIR    "Resources/cmake")
+    set(MR_FONTS_DIR     "Resources/fonts")
   ELSE()
     set(MESHLIB_MACOS_INSTALL_PATH "./usr/local" CACHE PATH "")
     set(MR_ROOT ${MESHLIB_MACOS_INSTALL_PATH})

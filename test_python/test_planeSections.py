@@ -20,12 +20,9 @@ def test_plane_sections():
     assert abs(area - 1) < 1e-5
 
     # actually trim the mesh, introducing new vertices and making invalid some old ones
-    if is_bindings_v3:
-        params = mrmesh.TrimWithPlaneParams()
-        params.plane = plane
-        mrmesh.trimWithPlane(cube, params)
-    else:
-        mrmesh.cutMeshWithPlane(cube, plane)
+    params = mrmesh.TrimWithPlaneParams()
+    params.plane = plane
+    mrmesh.trimWithPlane(cube, params)
 
     # check that all valid vertices are on not-negative side of the plane
     validVerts = cube.topology.getValidVerts()

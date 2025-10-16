@@ -150,26 +150,12 @@ DimsAndSize getDimsAndSize( const Vector3f& size, float frequency, float resolut
     return { dims, voxelSize };
 }
 
-
-std::map<float, float> reverseMap( const std::map<float, float>& other )
+Polynomialf<1> inverseLinearFunc( const Polynomialf<1>& f )
 {
-    std::map<float, float> res;
-    for ( auto [k, v] : other )
-        res[v] = k;
-    return res;
+    // y = a + b*x => x = ( y - a ) / b
+    assert( f.a[1] != 0 );
+    return { { -f.a[0] / f.a[1], 1.f / f.a[1] } };
 }
-
-
-float interpolateMap( const std::map<float, float>& map, float key )
-{
-    auto itUp = map.upper_bound( key );
-    if ( itUp == map.end() )
-        return map.rbegin()->second;
-    if ( itUp == map.begin() )
-        return map.begin()->second;
-    return ( std::prev( itUp )->second + itUp->second ) / 2.f;
-}
-
 
 enum class InterpolateDensityAndIsoDirection
 {
@@ -177,158 +163,22 @@ enum class InterpolateDensityAndIsoDirection
 };
 float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Type type, float key )
 {
-    static std::map<float, float> density2iso[(int)Type::Count] =
+    static const Polynomialf<1> iso2density[(int)Type::Count] =
     {
-        // SchwartzP
-        {
-            {0.788112, -1},
-            {0.77365, -0.95},
-            {0.759149, -0.9},
-            {0.744631, -0.85},
-            {0.730192, -0.8},
-            {0.715688, -0.75},
-            {0.701236, -0.7},
-            {0.686835, -0.65},
-            {0.672414, -0.6},
-            {0.657971, -0.55},
-            {0.643578, -0.5},
-            {0.629213, -0.45},
-            {0.614841, -0.4},
-            {0.600454, -0.35},
-            {0.586076, -0.3},
-            {0.57173, -0.25},
-            {0.557386, -0.2},
-            {0.543039, -0.15},
-            {0.528688, -0.1},
-            {0.514339, -0.05},
-            {0.499995, 0},
-            {0.485654, 0.05},
-            {0.471314, 0.1},
-            {0.456975, 0.15},
-            {0.442625, 0.2},
-            {0.42826, 0.25},
-            {0.413898, 0.3},
-            {0.399542, 0.35},
-            {0.385189, 0.4},
-            {0.370805, 0.45},
-            {0.356396, 0.5},
-            {0.341994, 0.55},
-            {0.327614, 0.6},
-            {0.313206, 0.65},
-            {0.298727, 0.7},
-            {0.284284, 0.75},
-            {0.269869, 0.8},
-            {0.255334, 0.85},
-            {0.240855, 0.9},
-            {0.226326, 0.95},
-            {0.211894, 1},
-        },
-        // ThickSchwartzP
-        {
-            {0, 0},
-            {0.000585522, 0.05},
-            {0.0102221, 0.1},
-            {0.0604986, 0.15},
-            {0.112434, 0.2},
-            {0.143471, 0.25},
-            {0.172179, 0.3},
-            {0.200912, 0.35},
-            {0.229652, 0.4},
-            {0.258408, 0.45},
-            {0.287183, 0.5},
-            {0.315977, 0.55},
-            {0.344799, 0.6},
-            {0.373628, 0.65},
-            {0.40251, 0.7},
-            {0.431404, 0.75},
-            {0.460324, 0.8},
-            {0.489297, 0.85},
-            {0.518295, 0.9},
-            {0.547325, 0.95},
-            {0.576218, 1},
-        },
-        // DoubleGyroid
-        {
-            {0.59417, -1},
-            {0.584924, -0.95},
-            {0.575915, -0.9},
-            {0.56694, -0.85},
-            {0.558064, -0.8},
-            {0.549413, -0.75},
-            {0.541021, -0.7},
-            {0.532707, -0.65},
-            {0.524562, -0.6},
-            {0.516584, -0.55},
-            {0.508716, -0.5},
-            {0.500908, -0.45},
-            {0.493201, -0.4},
-            {0.485642, -0.35},
-            {0.478079, -0.3},
-            {0.470608, -0.25},
-            {0.463317, -0.2},
-            {0.456122, -0.15},
-            {0.448956, -0.1},
-            {0.441967, -0.05},
-            {0.435017, 0},
-            {0.428076, 0.05},
-            {0.421149, 0.1},
-            {0.414261, 0.15},
-            {0.407567, 0.2},
-            {0.401135, 0.25},
-            {0.394467, 0.3},
-            {0.387791, 0.35},
-            {0.381257, 0.4},
-            {0.374834, 0.45},
-            {0.368415, 0.5},
-            {0.362159, 0.55},
-            {0.355885, 0.6},
-            {0.349656, 0.65},
-            {0.34338, 0.7},
-            {0.337281, 0.75},
-            {0.331181, 0.8},
-            {0.325112, 0.85},
-            {0.319143, 0.9},
-            {0.313066, 0.95},
-            {0.306966, 1},
-        },
-        // ThickGyroid
-        {
-            {0, 0},
-            {0.00715582, 0.05},
-            {0.0320288, 0.1},
-            {0.0854733, 0.15},
-            {0.145352, 0.2},
-            {0.194796, 0.25},
-            {0.236609, 0.3},
-            {0.275085, 0.35},
-            {0.312034, 0.4},
-            {0.348159, 0.45},
-            {0.384236, 0.5},
-            {0.419774, 0.55},
-            {0.455202, 0.6},
-            {0.490089, 0.65},
-            {0.524965, 0.7},
-            {0.559502, 0.75},
-            {0.593942, 0.8},
-            {0.628168, 0.85},
-            {0.662269, 0.9},
-            {0.696453, 0.95},
-            {0.730294, 1},
-        }
+        Polynomialf<1>{ { 0.5f, -0.286268f } }, // SchwartzP
+        Polynomialf<1>{ { 0.f, 0.573504f } },   // ThickSchwartzP
+        Polynomialf<1>{ { 0.441534f, -0.139001f } },   // DoubleGyroid
+        Polynomialf<1>{ { 0.014612f, 0.719944f } },   // ThickGyroid
+    };
+    static const Polynomialf<1> density2iso[(int)Type::Count] =
+    {
+        inverseLinearFunc( iso2density[0] ),
+        inverseLinearFunc( iso2density[1] ),
+        inverseLinearFunc( iso2density[2] ),
+        inverseLinearFunc( iso2density[3] ),
     };
 
-    static std::map<float, float> iso2density[(int)Type::Count] =
-    {
-        reverseMap( density2iso[0] ),
-        reverseMap( density2iso[1] ),
-        reverseMap( density2iso[2] ),
-        reverseMap( density2iso[3] ),
-    };
-
-    const auto& map = direction == InterpolateDensityAndIsoDirection::iso2density ? iso2density : density2iso;
-    const int itype = static_cast<int>( type );
-    assert( itype < (int)Type::Count );
-    return interpolateMap( map[itype], key );
+    return ( direction == InterpolateDensityAndIsoDirection::density2iso ? density2iso : iso2density )[(int)type]( key );
 }
 
 }

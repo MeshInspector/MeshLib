@@ -60,6 +60,10 @@ struct PointCloud
     /// computes bounding box and returns its center
     [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
 
+    /// applies given transformation to specified points and corresponding transformation to their normals if present;
+    /// if region is nullptr, all valid points are modified
+    MRMESH_API void transform( const AffineXf3f& xf, const VertBitSet* region = nullptr );
+
     /// returns all valid point ids sorted lexicographically by their coordinates (optimal for uniform sampling)
     [[nodiscard]] MRMESH_API std::vector<VertId> getLexicographicalOrder() const;
 

@@ -14,6 +14,7 @@
 #include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRImGui.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 #include <misc/cpp/imgui_stdlib.h>
 #include <algorithm>
 #include <functional>
@@ -30,12 +31,15 @@
 namespace ImGui
 {
 
-static auto vector_getter = [](void* vec, int idx, const char** out_text)
+static auto vector_getter = [] ( void* vec, int idx ) -> const char*
 {
-  auto& vector = *static_cast<std::vector<std::string>*>(vec);
-  if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
-  *out_text = vector.at(idx).c_str();
-  return true;
+    auto& vector = *static_cast< std::vector<std::string>* >( vec );
+    if ( idx < 0 || idx >= static_cast< int >( vector.size() ) )
+    {
+        assert( false && "Combo: vector_getter invalid index" );
+        return "";
+    }
+    return vector.at( idx ).c_str();
 };
 
 inline bool Combo(const char* label, int* idx, const std::vector<std::string>& values)
@@ -47,11 +51,17 @@ inline bool Combo(const char* label, int* idx, const std::vector<std::string>& v
 
 inline bool Combo(const char* label, int* idx, std::function<const char *(int)> getter, int items_count)
 {
-  auto func = [](void* data, int i, const char** out_text) {
+  auto func = [](void* data, int i) -> const char*
+  {
     auto &getter = *reinterpret_cast<std::function<const char *(int)> *>(data);
     const char *s = getter(i);
-    if (s) { *out_text = s; return true; }
-    else { return false; }
+    if ( s )
+        return s;
+    else
+    {
+        assert( false && "Combo: getter return nullptr" );
+        return "";
+    }
   };
   return Combo(label, idx, func, reinterpret_cast<void *>(&getter), items_count);
 }
@@ -343,6 +353,17 @@ inline float getExpSpeed( float val, float frac = 0.01f, float min = 1e-5f )
 inline float getLuminance( const ImVec4& col )
 {
     return 0.2126f * col.x + 0.7152f * col.y + 0.0722f * col.z;
+}
+
+/// content boundaries max for the full window (roughly (0,0)+Size-Scroll) where Size can be overridden with SetNextWindowContentSize(), in window coordinates
+/// \note copied from imgui because imgui recommends against using this method
+MRVIEWER_API ImVec2 GetWindowContentRegionMax();
+
+/// current content boundaries (typically window boundaries including scrolling, or current column boundaries), in windows coordinates
+/// \note copied from imgui because imgui recommends against using this method
+inline ImVec2 GetContentRegionMax()
+{
+    return GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos();
 }
 
 } // namespace ImGui

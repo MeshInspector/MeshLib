@@ -1,4 +1,5 @@
 #include <MRMesh/MRGTest.h>
+#include "MRMesh/MRLog.h"
 #include <MRPch/MRSpdlog.h>
 
 TEST( MRPch, Spdlog )
@@ -8,4 +9,7 @@ TEST( MRPch, Spdlog )
     auto sink = std::dynamic_pointer_cast<spdlog::sinks::sink>( consoleSink );
     auto castedSink = std::dynamic_pointer_cast<spdlog::sinks::stdout_color_sink_mt>( sink );
     EXPECT_TRUE( castedSink );
+
+    // check that log file is present
+    EXPECT_FALSE( MR::Logger::instance().getLogFileName().empty() );
 }

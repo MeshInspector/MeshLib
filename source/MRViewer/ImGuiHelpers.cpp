@@ -238,7 +238,7 @@ void PlotCustomHistogram( const char* str_id,
         const ImU32 col_hovered_top = GetColorU32(ImGuiCol_TabHovered);
         ImVec4 col{ 1.0f, 0.2f, 0.2f, 1.0f };
         const ImU32 col_selected = GetColorU32(col);
-        const ImU32 col_selected_top = GetColorU32(ImGuiCol_TabActive);
+        const ImU32 col_selected_top = GetColorU32( ImGuiCol_TabSelected );
         const ImU32 col_grid = GetColorU32(ImGuiCol_PlotLines, 0.5f);
         const ImU32 col_labels = GetColorU32(ImGuiCol_Text);
 
@@ -1083,14 +1083,14 @@ bool DragInputInt( const char* label, int* value, float speed /*= 1*/, int min /
     DragInt( labelStr.c_str(), value, speed, min, max, format, flags );
     drawTooltip( min, max );
     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-    ImGui::PushButtonRepeat( true );
+    ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     if ( MR::UI::button( "-", MR::Vector2f( sizeSide, sizeSide ) ) )
         --valueRef;
     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
     if ( MR::UI::button( "+", MR::Vector2f( sizeSide, sizeSide ) ) )
         ++valueRef;
-    ImGui::PopButtonRepeat();
+    ImGui::PopItemFlag();
     valueRef = std::clamp( valueRef, min, max );
 
     PopID();
@@ -1543,7 +1543,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     UI::drag<NoUnit>( "Normal", plane.n, 0.001f );
-    ImGui::PushButtonRepeat( true );
+    ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * UI::scale() + ImGui::GetTextLineHeight();
     ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
@@ -1571,7 +1571,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     }
 
     ImGui::SameLine();
-    ImGui::PopButtonRepeat();
+    ImGui::PopItemFlag();
 
     ImGui::SetNextItemWidth( 80.0f * UI::scale() );
     UI::drag<LengthUnit>( "Shift", shift, dragspeed );
@@ -1632,7 +1632,7 @@ void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& mu
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor )
 {
-    Image( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
+    ImageWithBg( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), ImVec4(0, 0, 0, 0), multColor );
 }
 
 MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos )
@@ -1706,6 +1706,12 @@ bool ModalExitButton()
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar();
     return false;
+}
+
+ImVec2 GetWindowContentRegionMax()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ContentRegionRect.Max - window->Pos;
 }
 
 } // namespace ImGui

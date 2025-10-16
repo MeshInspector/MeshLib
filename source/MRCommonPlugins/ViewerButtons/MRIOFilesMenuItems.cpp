@@ -1,5 +1,6 @@
 #include "MRIOFilesMenuItems.h"
 #include "MRMesh/MRChrono.h"
+#include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"

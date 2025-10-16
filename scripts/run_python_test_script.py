@@ -33,8 +33,6 @@ parser.add_argument('-multi-cmd', dest='multi_cmd', action='store_true', help='R
 parser.add_argument('-create-venv', dest='create_venv', action='store_true', help='Create a venv and install the dependencies in it. Can combine with `-multi-cmd`.')
 parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
 parser.add_argument("-s", dest="smoke", type=str, help='Run reduced smoke set')
-parser.add_argument("-bv", dest="bindings_vers", type=str,
-                    help='Version of bindings to run tests, "2" or "3"', default='3')
 parser.add_argument("-a", dest="pytest_args", type=str,
                     help='Args string to be added to pytest command', default='')
 
@@ -107,17 +105,8 @@ os.chdir(directory)
 
 #command line to start test
 pytest_cmd = "-m pytest -s -v --basetemp=../pytest_temp --durations 30"
-if args.bindings_vers == '2':
-    pytest_cmd += ' -m "not bindingsV3'
-elif args.bindings_vers == '3':
-    pytest_cmd += ' -m "not bindingsV2'
-else:
-    print("Error: Unknown version of bindings")
-    exit(5)
 if args.smoke == "true":
-    pytest_cmd += f' and smoke"'
-else:
-    pytest_cmd += f'"'
+    pytest_cmd += f' -m "smoke"'
 
 if args.pytest_args:
     pytest_cmd += f' {args.pytest_args}'

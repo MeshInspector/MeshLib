@@ -254,7 +254,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   test-distribution:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
     needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:

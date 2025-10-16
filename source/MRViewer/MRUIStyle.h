@@ -6,7 +6,6 @@
 #include "MRUnits.h"
 #include "MRVectorTraits.h"
 #include "MRImGui.h"
-#include "MRColorTheme.h"
 #include <span>
 #include <string>
 #include <optional>

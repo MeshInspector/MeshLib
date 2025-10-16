@@ -67,9 +67,9 @@ def copy_app():
 				os.remove(os.path.join(address,file))
 
 def copy_lib():
-	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_libs,dirs_exist_ok=True)
 	shutil.copytree(os.path.join(os.path.join(vcpkg_directory,'debug'),'lib'),os.path.join(it.path_to_libs,"Debug"),dirs_exist_ok=True)
 	shutil.copytree(os.path.join(vcpkg_directory,'lib'),os.path.join(it.path_to_libs,"Release"),dirs_exist_ok=True)
+	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_libs,dirs_exist_ok=True) # write ours as last to override possible collisions with vcpkg
 	folder = os.walk(it.path_to_libs)
 	for address, dirs, files in folder:
 		for file in files:

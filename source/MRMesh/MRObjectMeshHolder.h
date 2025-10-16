@@ -251,7 +251,7 @@ public:
     MRMESH_API void resetColors() override;
 
     MRMESH_API virtual size_t getModelHash() const override;
-    MRMESH_API virtual bool isModelEqual( const Object& other ) const override;
+    MRMESH_API virtual bool sameModels( const Object& other ) const override;
 
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;
@@ -294,7 +294,7 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
-    MRMESH_API virtual Expected<void> setModelFromObject_( const Object& other ) override;
+    MRMESH_API virtual Expected<void> setSharedModel_( const Object& other ) override;
 
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;

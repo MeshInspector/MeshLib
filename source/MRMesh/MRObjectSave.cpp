@@ -18,14 +18,11 @@
 #include "MRZip.h"
 
 #include "MRPch/MRJson.h"
-#include "MRPch/MRFmt.h"
 
 namespace
 {
 
 using namespace MR;
-
-constexpr char cSharedFolderName[] = "SharedModels";
 
 Mesh mergeToMesh( const Object& object )
 {
@@ -116,47 +113,6 @@ Polyline3 mergeToLines( const Object& object )
     return result;
 }
 
-// return shared models count
-int collectLinks( const Object& rootObject, const std::filesystem::path& scenePath, MapSharedObjectModelToLinkData& links, std::filesystem::path& sharedFolder )
-{
-    links.clear();
-
-    std::stack<const Object*> sceneGraphVisitedList;
-    sceneGraphVisitedList.push( &rootObject );
-
-    constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
-    int countSharedFiles = 0;
-    while ( !sceneGraphVisitedList.empty() )
-    {
-        auto node = sceneGraphVisitedList.top();
-        sceneGraphVisitedList.pop();
-
-        if ( node->isAncillary() )
-            continue; // consider ancillary_ objects as temporary, not requiring saving
-
-        auto it = links.find( { node } );
-        if ( it == links.end() )
-            links[{ node }] = {};
-        else
-        {
-            if ( it->second.link.empty() )
-            {
-                // relative path to model in shared folder
-                it->second.link = fmt::format(
-                    "{}/{}_{}", cSharedFolderName, ++countSharedFiles,
-                    MR::utf8substr( MR::replaceProhibitedChars( node->name() ).c_str(), 0, maxFileNameLen ) );
-            }
-        }
-        auto children = node->children();
-        for ( int i = int( children.size() ) - 1; i >= 0; --i )
-        {
-            sceneGraphVisitedList.push( children[i].get() );
-        }
-    }
-    sharedFolder = scenePath / cSharedFolderName;
-    return countSharedFiles;
-}
-
 } // namespace
 
 namespace MR
@@ -245,21 +201,9 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     if ( progressCb && !progressCb( 0.0f ) )
         return unexpected( "Canceled" );
 
-    // collect links to shared models
-    MapSharedObjectModelToLinkData links;
-    std::filesystem::path sharedFolder;
-    const auto countSharedFiles = collectLinks(object, scenePath, links, sharedFolder );
-    if ( countSharedFiles > 0 )
-    {
-        std::error_code ec;
-        if ( !std::filesystem::is_directory( sharedFolder, ec ) )
-            if ( !std::filesystem::create_directories( sharedFolder, ec ) )
-                return MR::unexpected( "Cannot create directories " + MR::utf8string( sharedFolder ) );
-    }
-
     Json::Value root;
     root["FormatVersion"] = "0.0";
-    auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0, scenePath, countSharedFiles > 0 ? &links : 0 );
+    auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0 );
     if ( !expectedSaveModelFutures.has_value() )
         return unexpected( expectedSaveModelFutures.error() );
     auto & saveModelFutures = expectedSaveModelFutures.value();

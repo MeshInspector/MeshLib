@@ -147,12 +147,14 @@ size_t ObjectMeshHolder::getModelHash() const
 {
     return std::hash<std::shared_ptr<MR::Mesh>>()( data_.mesh );
 }
-bool ObjectMeshHolder::isModelEqual( const Object& other ) const
+bool ObjectMeshHolder::sameModels( const Object& other ) const
 {
     if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
     {
-        // can we compare vert colors ?
-        return data_.mesh == objectMeshHolder->data_.mesh && data_.vertColors == objectMeshHolder->data_.vertColors;
+        const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
+        if ( meshSaver.capabilities.storesVertexColors )
+            return data_.mesh == objectMeshHolder->data_.mesh && data_.vertColors == objectMeshHolder->data_.vertColors;
+        return data_.mesh == objectMeshHolder->data_.mesh;
     }
     return false;
 }
@@ -276,10 +278,11 @@ Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path&
     return {};
 }
 
-Expected<void> ObjectMeshHolder::setModelFromObject_( const Object& other )
+Expected<void> ObjectMeshHolder::setSharedModel_( const Object& other )
 {
     if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
     {
+        // we don't use SetData() here because we set some fields of data_ from json, may be in future all model data saved to file move to separate struct ?
         data_.mesh = objectMeshHolder->data_.mesh;
         data_.vertColors = objectMeshHolder->data_.vertColors;
         return{};

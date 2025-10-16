@@ -600,8 +600,7 @@ Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::p
         };
     }
 
-    MapLinkToSharedObjectModel mapLinkToSharedObjectModel;
-    auto resDeser = res.obj->deserializeRecursive( folder, root, folder, cb, &modelCounter, &mapLinkToSharedObjectModel );
+    auto resDeser = res.obj->deserializeRecursive( folder, root, cb, &modelCounter );
     if ( !resDeser.has_value() )
     {
         std::string errorStr = resDeser.error();

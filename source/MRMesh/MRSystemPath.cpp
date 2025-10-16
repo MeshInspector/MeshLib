@@ -26,8 +26,8 @@ namespace
 {
 
 #if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-// If true, the resources should be loaded from the executable directory, rather than from the system directories.
-[[nodiscard]] bool resourcesAreNearExe()
+// If true, the resources should be loaded from the MRMesh.so/dylib directory, rather than from the system directories.
+[[nodiscard]] bool resourcesAreNearLib()
 {
     static const bool res = []
     {
@@ -49,15 +49,12 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     (void)dir;
     return SystemPath::getExecutableDirectory().value_or( "\\" );
 #elif defined( __APPLE__ )
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
+    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    if ( resourcesAreNearLib() )
     {
-        // Back out from `<AppName>.app/Contents/MacOS`. This is only needed for apps that are MacOS bundles, but we do it unconditionally for simplicity.
-        // It's easier to require all apps to be bundles (which is needed to package them anyway) than to make this conditional.
-        return SystemPath::getExecutableDirectory().value_or( "/" ).parent_path().parent_path().parent_path();
+        return libDir;
     }
 
-    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
     using Directory = SystemPath::Directory;
     switch ( dir )
     {
@@ -74,11 +71,10 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     }
     MR_UNREACHABLE
 #else
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return SystemPath::getExecutableDirectory().value_or( "/" );
-
     auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    if ( resourcesAreNearLib() )
+        return libDir;
+
     static const auto findResourceDir = [] ( std::filesystem::path libDir ) -> std::filesystem::path
     {
         std::error_code ec;

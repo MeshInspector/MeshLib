@@ -20,6 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.app_version }}
           submodules: true
 
       - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}

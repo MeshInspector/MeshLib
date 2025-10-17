@@ -1708,10 +1708,14 @@ bool ModalExitButton()
     return false;
 }
 
+#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
 ImVec2 GetWindowContentRegionMax()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.Max - window->Pos;
 }
+
+#endif
 
 } // namespace ImGui

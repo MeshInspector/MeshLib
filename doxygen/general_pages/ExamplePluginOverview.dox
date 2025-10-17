@@ -26,6 +26,7 @@ Lets have a closer look at each of these points:
 
 ### Project File
 `example_plugin.vcxproj` - This file is configured so project can work with MeshLib distribuiton \include{doc} CommonDistributionProperties.dox \n
+       - Define `IMGUI_DISABLE_OBSOLETE_FUNCTIONS`
        - Copy other files to target directory:
 \code{.xml}
    <ItemGroup>

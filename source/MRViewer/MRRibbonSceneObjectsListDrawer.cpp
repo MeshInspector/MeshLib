@@ -217,7 +217,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
 
     const ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_AllowOverlap |
-        ( !leaf ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet );
+        ( !leaf ? 0 : ImGuiTreeNodeFlags_Bullet );
 
 
     auto startScreenPos = ImGui::GetCursorScreenPos();

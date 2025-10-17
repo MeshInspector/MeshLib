@@ -683,7 +683,7 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( 
                 pathToSerializeModel.clear();
 
             // uses forward slashes
-            root["Link"] = utf8string( link );
+            root["Link"] = asString( link.generic_u8string() );
         }
     }
 

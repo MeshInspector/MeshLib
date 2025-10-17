@@ -9,7 +9,6 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include <filesystem>
-#include <unordered_set>
 
 namespace MR
 {
@@ -62,7 +61,7 @@ int collectLinks( const Object& rootObject, MapSharedObjects& links )
 {
     links.map.clear();
 
-    std::unordered_set<KeyObjectModel, KeyObjectModelHasher> uniqueObjectsModels;
+    HashSet<KeyObjectModel, KeyObjectModelHasher> uniqueObjectsModels;
 
     std::stack<const Object*> sceneGraphVisitedList;
     sceneGraphVisitedList.push( &rootObject );

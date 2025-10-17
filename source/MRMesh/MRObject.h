@@ -270,6 +270,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
+    // return true if model of current object equals to model (the same) of other
+    MRMESH_API virtual bool sameModels( const Object& other ) const;
+    // return hash of model (or hash object pointer if object has no model)
+    MRMESH_API virtual size_t getModelHash() const;
+
     /// signal about xf changing
     /// triggered in setXf and setWorldXf, it is called for children too
     /// triggered in addChild and addChildBefore, it is called only for children object
@@ -301,6 +306,8 @@ protected:
 
     /// Reads model from file
     MRMESH_API virtual Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} );
+    /// shares model from other object
+    MRMESH_API virtual Expected<void> setSharedModel_( const Object& other );
 
     /// Reads parameters from json value
     /// \note if you override this method, please call Base::deserializeFields_(root) in the beginning
@@ -322,6 +329,18 @@ protected:
     MRMESH_API void sendWorldXfChangedSignal_();
     // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
     MRMESH_API virtual void onWorldXfChanged_();
+private:
+
+    // map for mapping Objects to relative Objects (used while serialization)
+    using MapSharedObjects = std::unordered_map<const Object*, std::pair<const Object*, int>>;
+
+    /// \param mapSharedObjects for mapping objects to object with shared model
+    Expected<std::vector<std::future<Expected<void>>>> serializeRecursive_( const std::filesystem::path& path, Json::Value& root,
+        int childId, const std::filesystem::path& rootFolder, MapSharedObjects* mapSharedObjects ) const;
+
+    ///\ param mapLinkToSharedObjectModel for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
+    Expected<void> deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root, const std::filesystem::path& rootFolder,
+        int* objCounter, std::unordered_map<std::string, const Object*>& mapLinkToSharedObjectModel, ProgressCallback progressCb );
 };
 
 template <typename T>

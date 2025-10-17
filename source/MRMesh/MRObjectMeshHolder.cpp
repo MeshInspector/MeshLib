@@ -143,6 +143,22 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectMeshHolder::TypeName() );
 }
 
+size_t ObjectMeshHolder::getModelHash() const
+{
+    return std::hash<std::shared_ptr<MR::Mesh>>()( data_.mesh );
+}
+bool ObjectMeshHolder::sameModels( const Object& other ) const
+{
+    if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
+    {
+        const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
+        if ( meshSaver.capabilities.storesVertexColors )
+            return data_.mesh == objectMeshHolder->data_.mesh && data_.vertColors == objectMeshHolder->data_.vertColors;
+        return data_.mesh == objectMeshHolder->data_.mesh;
+    }
+    return false;
+}
+
 void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 {
     VisualObject::deserializeFields_( root );
@@ -260,6 +276,18 @@ Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path&
 
     data_.mesh = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
+}
+
+Expected<void> ObjectMeshHolder::setSharedModel_( const Object& other )
+{
+    if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
+    {
+        // we don't use SetData() here because we set some fields of data_ from json, may be in future all model data saved to file move to separate struct ?
+        data_.mesh = objectMeshHolder->data_.mesh;
+        data_.vertColors = objectMeshHolder->data_.vertColors;
+        return{};
+    }
+    return unexpected("Invalid object type");
 }
 
 Box3f ObjectMeshHolder::computeBoundingBox_() const

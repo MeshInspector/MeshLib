@@ -51,7 +51,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.app_version }}
           submodules: true
 
       - name: Checkout third-party submodules

@@ -325,22 +325,19 @@ protected:
 
     // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
     // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children
-    //   (it doesn't use a true recursion, instead imitiating one, presumably to save stack space, though this is unlikely to be an issue).
+    //   (it doesn't use a true recursion, instead imitating one, presumably to save stack space, though this is unlikely to be an issue).
     MRMESH_API void sendWorldXfChangedSignal_();
+
     // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
     MRMESH_API virtual void onWorldXfChanged_();
+
 private:
-
-    // map for mapping Objects to relative Objects (used while serialization)
-    using MapSharedObjects = std::unordered_map<const Object*, std::pair<const Object*, int>>;
-
-    /// \param mapSharedObjects for mapping objects to object with shared model
     Expected<std::vector<std::future<Expected<void>>>> serializeRecursive_( const std::filesystem::path& path, Json::Value& root,
-        int childId, const std::filesystem::path& rootFolder, MapSharedObjects* mapSharedObjects ) const;
+        int childId, MapSharedObjects* mapSharedObjects ) const;
 
     ///\ param mapLinkToSharedObjectModel for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
-    Expected<void> deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root, const std::filesystem::path& rootFolder,
-        int* objCounter, std::unordered_map<std::string, const Object*>& mapLinkToSharedObjectModel, ProgressCallback progressCb );
+    Expected<void> deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root,
+        int* objCounter, MapLinkToSharedObjectModel& mapLinkToSharedObjectModel, const ProgressCallback& progressCb );
 };
 
 template <typename T>

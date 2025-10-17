@@ -4,16 +4,17 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
+#include "MRMapSharedObjects.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include <filesystem>
-#include <unordered_set>
+
+namespace MR
+{
 
 namespace
 {
-
-using namespace MR;
 
 const std::filesystem::path cSharedFolder = "SharedModels";
 
@@ -56,12 +57,11 @@ struct KeyObjectModelHasher
 // <ObjectWithSharedModel2, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
 // <ObjectWithSharedModelN, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
 // return shared models count
-using MapSharedObjects = std::unordered_map<const Object*, std::pair<const Object*, int>>;
 int collectLinks( const Object& rootObject, MapSharedObjects& links )
 {
-    links.clear();
+    links.map.clear();
 
-    std::unordered_set<KeyObjectModel, KeyObjectModelHasher> uniqueObjectsModels;
+    HashSet<KeyObjectModel, KeyObjectModelHasher> uniqueObjectsModels;
 
     std::stack<const Object*> sceneGraphVisitedList;
     sceneGraphVisitedList.push( &rootObject );
@@ -80,14 +80,14 @@ int collectLinks( const Object& rootObject, MapSharedObjects& links )
         {
             // insert first met object
             int numFile = countSharedFiles + 1;
-            auto [itFirst, insertedFirst] = links.insert( { it->object, { it->object, numFile } } );
+            auto [itFirst, insertedFirst] = links.map.insert( { it->object, { it->object, numFile } } );
             if ( insertedFirst )
                 ++countSharedFiles;
             else
                 numFile = itFirst->second.second;
 
             // map current object to first met object
-            links.insert( { node, { it->object, numFile } } );
+            links.map.insert( { node, { it->object, numFile } } );
         }
         auto children = node->children();
         for ( int i = int( children.size() ) - 1; i >= 0; --i )
@@ -98,10 +98,7 @@ int collectLinks( const Object& rootObject, MapSharedObjects& links )
     return countSharedFiles;
 }
 
-}
-
-namespace MR
-{
+} // anonymous namespace
 
 MR_ADD_CLASS_FACTORY( Object )
 
@@ -645,7 +642,7 @@ std::vector<std::string> Object::getInfoLines() const
 Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
 {
     // collect links to shared models
-    MapSharedObjects links;
+    MapSharedObjects links{ .rootFolder = path };
     const auto countSharedFiles = collectLinks( *this, links );
     if ( countSharedFiles > 0 )
     {
@@ -656,11 +653,11 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
             if ( !std::filesystem::create_directories( sharedFolder, ec ) )
                 return unexpected( "Cannot create directories " + utf8string( sharedFolder ) );
     }
-    return serializeRecursive_( path, root, childId, path, countSharedFiles > 0 ? &links : 0 );
+    return serializeRecursive_( path, root, childId, countSharedFiles > 0 ? &links : nullptr );
 }
 
 Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( const std::filesystem::path& path, Json::Value& root, int childId,
-    const std::filesystem::path& rootFolder, MapSharedObjects* mapSharedObjects ) const
+    MapSharedObjects* mapSharedObjects ) const
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
@@ -675,18 +672,18 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( 
 
     if ( mapSharedObjects )
     {
-        if ( auto it = mapSharedObjects->find( this ); it != mapSharedObjects->end() )
+        if ( auto it = mapSharedObjects->map.find( this ); it != mapSharedObjects->map.end() )
         {
             const Object* firstSerializedObject = it->second.first;
             // we use name of first object as name of shared model
             const auto link = cSharedFolder / composeKey( firstSerializedObject->name(), it->second.second );
             if ( it->first == firstSerializedObject )
-                pathToSerializeModel = rootFolder / link; // serialize model only one time
+                pathToSerializeModel = mapSharedObjects->rootFolder / link; // serialize model only one time
             else
                 pathToSerializeModel.clear();
 
             // uses forward slashes
-            root["Link"] = link.generic_string();
+            root["Link"] = asString( link.generic_u8string() );
         }
     }
 
@@ -711,7 +708,7 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( 
             const auto& child = children_[i];
             if ( child->isAncillary() )
                 continue; // consider ancillary_ objects as temporary, not requiring saving
-            auto sub = child->serializeRecursive_( childrenPath, childrenRoot[std::to_string( i )], i, rootFolder, mapSharedObjects );
+            auto sub = child->serializeRecursive_( childrenPath, childrenRoot[std::to_string( i )], i, mapSharedObjects );
             if ( !sub.has_value() )
                 return unexpected( sub.error() );
             for ( auto & f : sub.value() )
@@ -727,12 +724,12 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( 
 Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root, ProgressCallback progressCb, int* objCounter )
 {
     // map for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
-    std::unordered_map<std::string, const Object*> mapLinkToSharedObjectModel;
-    return deserializeRecursive_( path, root, path, objCounter, mapLinkToSharedObjectModel, progressCb );
+    MapLinkToSharedObjectModel mapLinkToSharedObjectModel{ .rootFolder = path };
+    return deserializeRecursive_( path, root, objCounter, mapLinkToSharedObjectModel, progressCb );
 }
 
-Expected<void> Object::deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root, const std::filesystem::path& rootFolder,
-        int* objCounter, std::unordered_map<std::string, const Object*>& mapLinkToSharedObjectModel, ProgressCallback progressCb )
+Expected<void> Object::deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root,
+    int* objCounter, MapLinkToSharedObjectModel& mapLinkToSharedObjectModel, const ProgressCallback& progressCb )
 {
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();
 
@@ -743,13 +740,13 @@ Expected<void> Object::deserializeRecursive_( const std::filesystem::path& path,
     auto pathToDeserializeModel = path / pathFromUtf8( key );
     if ( !link.empty() )
     {
-        pathToDeserializeModel = rootFolder / pathFromUtf8( link );
+        pathToDeserializeModel = mapLinkToSharedObjectModel.rootFolder / pathFromUtf8( link );
 
-        const auto [it, inserted] = mapLinkToSharedObjectModel.insert( { link, this } );
+        const auto [it, inserted] = mapLinkToSharedObjectModel.map.insert( { link, this } );
         if (!inserted )
         {
             // model already deserialized
-            const auto res = setSharedModel_(*it->second);
+            const auto res = setSharedModel_( *it->second );
             if ( !res.has_value() )
                 return res;
             pathToDeserializeModel.clear();
@@ -816,7 +813,7 @@ Expected<void> Object::deserializeRecursive_( const std::filesystem::path& path,
             if ( !childObj )
                 continue;
 
-            auto childRes = childObj->deserializeRecursive_( path / pathFromUtf8( key ), child, rootFolder, objCounter, mapLinkToSharedObjectModel, progressCb );
+            auto childRes = childObj->deserializeRecursive_( path / pathFromUtf8( key ), child, objCounter, mapLinkToSharedObjectModel, progressCb );
             if ( !childRes.has_value() )
                 return childRes;
             addChild( childObj );

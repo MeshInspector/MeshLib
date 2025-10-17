@@ -783,6 +783,9 @@ class IFastWindingNumber;
 class IPointsToMeshProjector;
 class IPointsProjector;
 
+struct MapSharedObjects;
+struct MapLinkToSharedObjectModel;
+
 namespace MeshBuilder
 {
 

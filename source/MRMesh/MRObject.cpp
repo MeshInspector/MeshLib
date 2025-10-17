@@ -48,9 +48,15 @@ struct KeyObjectModelHasher
     }
 };
 
-using MapSharedObjects = std::unordered_map<const Object*, std::pair<const Object*, int>>;
-
+// collect map links to shared models
+// map Object with the same model to first object in tree with that model, first object maps to oneself
+// numberSharedFileInSharedFolder - unique number for all Objects with the same shared model to avoid name collision
+// <ObjectWithSharedModelFirst, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// <ObjectWithSharedModel1, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// <ObjectWithSharedModel2, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// <ObjectWithSharedModelN, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
 // return shared models count
+using MapSharedObjects = std::unordered_map<const Object*, std::pair<const Object*, int>>;
 int collectLinks( const Object& rootObject, MapSharedObjects& links )
 {
     links.clear();

@@ -61,7 +61,6 @@
     <ClInclude Include="MRLoadedObjects.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
-    <ClInclude Include="MRMapSharedObjects.h" />
     <ClInclude Include="MRMarkedContour.h" />
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />

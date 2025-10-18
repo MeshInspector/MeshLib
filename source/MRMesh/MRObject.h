@@ -332,10 +332,12 @@ protected:
     MRMESH_API virtual void onWorldXfChanged_();
 
 private:
+    struct MapSharedObjects;
     Expected<std::vector<std::future<Expected<void>>>> serializeRecursive_( const std::filesystem::path& path, Json::Value& root,
         int childId, MapSharedObjects* mapSharedObjects ) const;
 
     ///\ param mapLinkToSharedObjectModel for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
+    struct MapLinkToSharedObjectModel;
     Expected<void> deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root,
         int* objCounter, MapLinkToSharedObjectModel& mapLinkToSharedObjectModel, const ProgressCallback& progressCb );
 };

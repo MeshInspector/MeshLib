@@ -10,7 +10,7 @@ namespace MR
 
 TEST( MRMesh, Pdf )
 {
-    UniqueTemporaryFolder pathFolder( {} );
+    UniqueTemporaryFolder pathFolder;
     Pdf pdfTest;
     pdfTest.addText( "Test Title", true );
     pdfTest.addText( "Test text"

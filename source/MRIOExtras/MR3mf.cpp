@@ -1084,7 +1084,7 @@ Expected<void> Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
 
 Expected<LoadedObject> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, const ProgressCallback& callback )
 {
-    const auto tmpFolder = UniqueTemporaryFolder( {} );
+    const UniqueTemporaryFolder tmpFolder;
 
     auto resZip = decompressZip( path, tmpFolder );
     if ( !resZip )

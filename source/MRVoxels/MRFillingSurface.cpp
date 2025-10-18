@@ -13,6 +13,7 @@
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MRBuffer.h>
 #include <MRPch/MRFmt.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -20,6 +21,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <thread>
 
 
 // Question-mark operator for Expected, inspired from Rust.
@@ -206,24 +208,26 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
     ProgressCallback mcProgress, decProgress;
     if ( params.decimate )
     {
-        mcProgress = subprogress( cb, 0.f, 0.8f );
-        decProgress = subprogress( cb, 0.8f, 1.f );
+        mcProgress = subprogress( cb, 0.f, 0.5f );
+        decProgress = subprogress( cb, 0.5f, 1.f );
     }
     else
     {
         mcProgress = cb;
     }
 
-    auto res = marchingCubes( buildVolume( size, params ), { .cb = mcProgress, .iso = params.iso } );
+    auto res = marchingCubes( buildVolume( size, params ), { .cb = mcProgress, .iso = params.iso, .cachingMode = MarchingCubesParams::CachingMode::Normal } );
     if ( !res )
         return res;
     if ( isThick( params.type ) )
         res->topology.flipOrientation();
+    res->packOptimally( false );
 
     if ( params.decimate )
     {
         const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
-        decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ), .progressCallback = decProgress } );
+        decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ),
+                                              .progressCallback = decProgress, .subdivideParts = static_cast<int>( std::thread::hardware_concurrency() ) } );
     }
     return res;
 }

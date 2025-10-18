@@ -4,17 +4,18 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
-#include "MRMapSharedObjects.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
-#include <filesystem>
 
 namespace MR
 {
 
 namespace
 {
+
+/// maps object pointer to the pair (first object pointer with same model, its index in SharedModels)
+using Obj2FirstSharedObj = HashMap<const Object*, std::pair<const Object*, int>>;
 
 const std::filesystem::path cSharedFolder = "SharedModels";
 
@@ -57,9 +58,9 @@ struct KeyObjectModelHasher
 // <ObjectWithSharedModel2, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
 // <ObjectWithSharedModelN, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
 // return shared models count
-int collectLinks( const Object& rootObject, MapSharedObjects& links )
+int collectLinks( const Object& rootObject, Obj2FirstSharedObj& links )
 {
-    links.map.clear();
+    links.clear();
 
     HashSet<KeyObjectModel, KeyObjectModelHasher> uniqueObjectsModels;
 
@@ -80,14 +81,14 @@ int collectLinks( const Object& rootObject, MapSharedObjects& links )
         {
             // insert first met object
             int numFile = countSharedFiles + 1;
-            auto [itFirst, insertedFirst] = links.map.insert( { it->object, { it->object, numFile } } );
+            auto [itFirst, insertedFirst] = links.insert( { it->object, { it->object, numFile } } );
             if ( insertedFirst )
                 ++countSharedFiles;
             else
                 numFile = itFirst->second.second;
 
             // map current object to first met object
-            links.map.insert( { node, { it->object, numFile } } );
+            links.insert( { node, { it->object, numFile } } );
         }
         auto children = node->children();
         for ( int i = int( children.size() ) - 1; i >= 0; --i )
@@ -639,11 +640,20 @@ std::vector<std::string> Object::getInfoLines() const
     return res;
 }
 
+/// used during serialization to find objects with shared models and write only one model in each group
+struct Object::MapSharedObjects
+{
+    /// maps Objects to relative Objects
+    Obj2FirstSharedObj map;
+
+    const std::filesystem::path rootFolder;
+};
+
 Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
 {
     // collect links to shared models
     MapSharedObjects links{ .rootFolder = path };
-    const auto countSharedFiles = collectLinks( *this, links );
+    const auto countSharedFiles = collectLinks( *this, links.map );
     if ( countSharedFiles > 0 )
     {
         // create shared folder
@@ -720,6 +730,14 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( 
     }
     return res;
 }
+
+/// used during de-serialization to find objects with shared models (having same link-string)
+struct Object::MapLinkToSharedObjectModel
+{
+    HashMap<std::string, const Object*> map;
+
+    const std::filesystem::path rootFolder;
+};
 
 Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root, ProgressCallback progressCb, int* objCounter )
 {

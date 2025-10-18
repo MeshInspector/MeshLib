@@ -261,7 +261,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
     if ( !sponge )
         return sponge;
 
-    BooleanOperation booleanOp = isThick( params.type ) ? BooleanOperation::OutsideB : BooleanOperation::Union;
+    BooleanOperation booleanOp = BooleanOperation::Union;
     auto res = boolean( mesh, *sponge, booleanOp, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );

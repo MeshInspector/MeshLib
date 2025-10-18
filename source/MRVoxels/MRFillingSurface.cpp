@@ -203,52 +203,29 @@ FunctionVolume buildVolume( const Vector3f& size, const VolumeParams& params )
 Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCallback cb )
 {
     MR_TIMER;
-    ProgressCallback mcProgress, repProgress, decProgress;
+    ProgressCallback mcProgress, decProgress;
     if ( params.decimate )
     {
-        mcProgress = subprogress( cb, 0.f, 0.2f );
-        repProgress = subprogress( cb, 0.2f, 0.8f );
+        mcProgress = subprogress( cb, 0.f, 0.8f );
         decProgress = subprogress( cb, 0.8f, 1.f );
     }
     else
     {
-        mcProgress = subprogress( cb, 0.f, 0.3f );
-        repProgress = subprogress( cb, 0.3f, 1.f );
+        mcProgress = cb;
     }
 
-    const float period = 1.f / params.frequency;
-    const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
-    const float minVoxelSize = std::min( { voxelSize.x, voxelSize.y, voxelSize.z } );
-    const float maxVoxelSize = std::max( { voxelSize.x, voxelSize.y, voxelSize.z } );
-
-    Mesh baseElement;
-    QME( baseElement, marchingCubes( buildVolume( Vector3f::diagonal( period ) + voxelSize / 2.f, params ), { .cb = mcProgress, .iso = params.iso } ) )
+    auto res = marchingCubes( buildVolume( size, params ), { .cb = mcProgress, .iso = params.iso } );
+    if ( !res )
+        return res;
     if ( isThick( params.type ) )
-        baseElement.topology.flipOrientation();
+        res->topology.flipOrientation();
 
     if ( params.decimate )
-        decimateMesh( baseElement, { .maxError = minVoxelSize, .stabilizer = minVoxelSize / 100.f, .touchNearBdEdges = false, .touchBdVerts = false } );
-
-    Mesh result;
-    for ( int x = 0; x < size.x * params.frequency; ++x )
     {
-        for ( int y = 0; y < size.y * params.frequency; ++y )
-        {
-            for ( int z = 0; z < size.z * params.frequency; ++z )
-            {
-                auto mesh = baseElement;
-                mesh.transform( AffineXf3f::translation( Vector3f( (float)x, (float)y, (float)z ) * period ) );
-                result.addMesh( mesh, {}, true );
-            }
-        }
-        if ( !reportProgress( repProgress, (float)x * period / float( size.x ) ) )
-            return unexpectedOperationCanceled();
+        const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
+        decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ), .progressCallback = decProgress } );
     }
-
-    MeshBuilder::uniteCloseVertices( result, maxVoxelSize );
-    if ( params.decimate )
-        decimateMesh( result, DecimateSettings{ .maxError = minVoxelSize, .progressCallback = decProgress } );
-    return result;
+    return res;
 }
 
 Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallback cb )

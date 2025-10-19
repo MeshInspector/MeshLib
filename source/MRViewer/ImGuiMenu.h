@@ -16,6 +16,7 @@
 #include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
 #include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRBox.h"
+#include <optional>
 #include <unordered_map>
 
 // Forward declarations

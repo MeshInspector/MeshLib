@@ -13,6 +13,7 @@
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MRBuffer.h>
 #include <MRPch/MRFmt.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -20,6 +21,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <thread>
 
 
 // Question-mark operator for Expected, inspired from Rust.
@@ -206,8 +208,8 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
     ProgressCallback mcProgress, decProgress;
     if ( params.decimate )
     {
-        mcProgress = subprogress( cb, 0.f, 0.8f );
-        decProgress = subprogress( cb, 0.8f, 1.f );
+        mcProgress = subprogress( cb, 0.f, 0.5f );
+        decProgress = subprogress( cb, 0.5f, 1.f );
     }
     else
     {
@@ -219,11 +221,13 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
         return res;
     if ( isThick( params.type ) )
         res->topology.flipOrientation();
+    res->packOptimally( false );
 
     if ( params.decimate )
     {
         const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
-        decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ), .progressCallback = decProgress } );
+        decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ),
+                                              .progressCallback = decProgress, .subdivideParts = 32 } );
     }
     return res;
 }
@@ -238,7 +242,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
     if ( !sponge )
         return sponge;
 
-    BooleanOperation booleanOp = isThick( params.type ) ? BooleanOperation::OutsideB : BooleanOperation::Union;
+    BooleanOperation booleanOp = BooleanOperation::Union;
     auto res = boolean( mesh, *sponge, booleanOp, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );

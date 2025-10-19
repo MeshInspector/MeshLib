@@ -38,14 +38,14 @@ MRVOXELS_API bool isThick( Type type );
 
 struct VolumeParams
 {
-    Type type = Type::SchwartzP; // Type of the surface
+    Type type = Type::ThickGyroid; // Type of the surface
     float frequency = 1.f; // Frequency of oscillations (determines size of the "cells" in the "grid")
     float resolution = 5.f; // Ratio `n / T`, between the number of voxels and period of oscillations
 };
 
 struct MeshParams : VolumeParams
 {
-    float iso = 0.f;
+    float iso = 0.35f;
     bool decimate = false;
 };
 

@@ -208,7 +208,7 @@ namespace ProgressBar
 
 void setup()
 {
-    auto& instance = ProgressBarImpl::ProgressBarImpl::instance();
+    auto& instance = ProgressBarImpl::instance();
 
     if ( instance.deferredOpenPopup_ && instance.setupId_ != ImGuiID( -1 ) )
     {

@@ -15,7 +15,8 @@ class UniqueTemporaryFolder
 {
 public:
     /// creates new folder in temp directory
-    MRMESH_API UniqueTemporaryFolder( FolderCallback onPreTempFolderDelete );
+    MRMESH_API UniqueTemporaryFolder( FolderCallback onPreTempFolderDelete = {} );
+
     /// removes folder with all its content
     MRMESH_API ~UniqueTemporaryFolder();
 

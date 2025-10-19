@@ -121,18 +121,6 @@ protected:
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
 
-  mutable struct PluginsCache
-  {
-      // if cache is valid do nothing, otherwise accumulate all custom plugins in tab sections and sort them by special string
-      void validate( const std::vector<ViewerPlugin*>& viewerPlugins );
-      // finds enabled custom plugin, nullptr if none is
-      StateBasePlugin* findEnabled() const;
-      const std::vector<StateBasePlugin*>& getTabPlugins( StatePluginTabs tab ) const;
-  private:
-      std::array<std::vector<StateBasePlugin*>, size_t( StatePluginTabs::Count )> sortedCustomPlufins_;
-      std::vector<ViewerPlugin*> allPlugins_; // to validate
-  } pluginsCache_;
-
   std::string searchPluginsString_;
 
   std::vector<std::shared_ptr<MR::MeshModifier>> modifiers_;
@@ -196,11 +184,6 @@ public:
 
   // Can be overwritten by `callback_draw_viewer_window`
   MRVIEWER_API virtual void draw_viewer_window();
-
-  MRVIEWER_API void draw_mr_menu();
-
-  // Can be overwritten by `callback_draw_viewer_menu`
-  //virtual void draw_viewer_menu();
 
   // Can be overwritten by `callback_draw_custom_window`
   virtual void draw_custom_window() {}
@@ -283,8 +266,6 @@ public:
   void make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
   std::function<int( const ObjectPointsHolder* )> getter,
   std::function<void( ObjectPointsHolder*, const int& )> setter );
-
-  MRVIEWER_API void draw_custom_plugins();
 
   std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
 
@@ -417,10 +398,6 @@ protected:
     MRVIEWER_API float drawTransform_();
 
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
-
-    void draw_history_block_();
-
-    void draw_open_recent_button_();
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();

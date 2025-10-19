@@ -178,9 +178,6 @@
     <ClCompile Include="MRRibbonButtonDrawer.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
-    <ClCompile Include="MRMenu.cpp">
-      <Filter>Plugins</Filter>
-    </ClCompile>
     <ClCompile Include="MRDemoPlugin.cpp">
       <Filter>Plugins</Filter>
     </ClCompile>
@@ -503,9 +500,6 @@
     </ClInclude>
     <ClInclude Include="ImGuiMenu.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMenu.h">
-      <Filter>Plugins</Filter>
     </ClInclude>
     <ClInclude Include="MRViewer.h">
       <Filter>Viewer</Filter>

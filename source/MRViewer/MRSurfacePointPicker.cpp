@@ -15,7 +15,6 @@
 #include "MRMesh/MRPointOnObject.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRMatrix3Decompose.h"
-#include "MRViewer/MRMenu.h"
 
 #include <variant>
 

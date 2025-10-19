@@ -110,7 +110,6 @@
     <ClCompile Include="MRImGuiImage.cpp" />
     <ClCompile Include="MRPalette.cpp" />
     <ClCompile Include="MRGLStaticHolder.cpp" />
-    <ClCompile Include="MRMenu.cpp" />
     <ClCompile Include="MRMeshModifier.cpp" />
     <ClCompile Include="MRViewer.cpp" />
     <ClCompile Include="MRViewport.cpp" />
@@ -254,7 +253,6 @@
     <ClInclude Include="MRImGuiImage.h" />
     <ClInclude Include="MRPalette.h" />
     <ClInclude Include="MRGLStaticHolder.h" />
-    <ClInclude Include="MRMenu.h" />
     <ClInclude Include="MRMeshModifier.h" />
     <ClInclude Include="MRStatePluginUpdate.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />

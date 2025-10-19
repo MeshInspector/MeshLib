@@ -249,6 +249,7 @@
     <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRSystemPath.h" />
     <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
+    <ClInclude Include="MRTelemetry.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -629,6 +630,7 @@
     <ClCompile Include="MRStacktrace.cpp" />
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
+    <ClCompile Include="MRTelemetry.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />

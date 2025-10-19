@@ -1367,6 +1367,9 @@
     <ClInclude Include="MRUnsigned.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRTelemetry.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2230,6 +2233,9 @@
     </ClCompile>
     <ClCompile Include="MRPartMappingAdapters.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTelemetry.cpp">
+      <Filter>Source Files\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

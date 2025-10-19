@@ -14,7 +14,7 @@ TEST( MRMesh, SerializeObject )
 {
     Object o;
     o.setName( "123" );
-    UniqueTemporaryFolder f({});
+    UniqueTemporaryFolder f;
     auto mruPath = f / "123.mru";
     auto s = serializeObjectTree( o, mruPath );
     EXPECT_TRUE( s.has_value() );
@@ -36,7 +36,7 @@ TEST( MRMesh, SerializeObjectMesh )
     om->setMesh( cubeMesh );
     o.addChild( om );
     o.addChild( om->clone() );
-    UniqueTemporaryFolder f({});
+    UniqueTemporaryFolder f;
     auto mruPath = f / "2meshes.mru";
     auto s = serializeObjectTree( o, mruPath );
     EXPECT_TRUE( s.has_value() );
@@ -71,7 +71,7 @@ TEST( MRMesh, SerializeSharedObjectMesh )
         om->setMesh( cubeMesh );
         o.addChild( om );
     }
-    UniqueTemporaryFolder f({});
+    UniqueTemporaryFolder f;
     auto mruPath = f / "2sharedMeshes.mru";
     auto s = serializeObjectTree( o, mruPath );
     EXPECT_TRUE( s.has_value() );

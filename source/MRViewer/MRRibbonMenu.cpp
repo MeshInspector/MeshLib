@@ -20,12 +20,12 @@
 #include "MRClipboard.h"
 #include "MRSceneOperations.h"
 #include "MRToolbar.h"
+#include "MRStatePlugin.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRSerializer.h>
-#include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRChangeXfAction.h>
 #include <MRSymbolMesh/MRObjectLabel.h>
 #include <MRMesh/MRChangeSceneObjectsOrder.h>

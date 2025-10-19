@@ -4,6 +4,7 @@
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
+#include "ImGuiHelpers.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
 #include "MRUIRectAllocator.h"

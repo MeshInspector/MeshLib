@@ -29,6 +29,7 @@
 #include "MRColorTheme.h"
 #include "MRViewport.h"
 #include "MRImGuiImage.h"
+#include "ImGuiHelpers.h"
 #include "imgui_internal.h"
 
 #ifndef MRVIEWER_NO_VOXELS

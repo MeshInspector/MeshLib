@@ -9,10 +9,10 @@
 
 #include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
-#include "MRStatePlugin.h"
 #include "MRNotificationType.h"
 #include "MRSignalCombiners.h"
 #include "MRShowModal.h"
+#include "imgui.h"
 #include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
 #include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRBox.h"

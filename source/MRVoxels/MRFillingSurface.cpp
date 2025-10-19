@@ -216,7 +216,7 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
         mcProgress = cb;
     }
 
-    auto res = marchingCubes( buildVolume( size, params ), { .cb = mcProgress, .iso = params.iso, .cachingMode = MarchingCubesParams::CachingMode::Normal } );
+    auto res = marchingCubes( buildVolume( size, params ), { .cb = mcProgress, .iso = params.iso } );
     if ( !res )
         return res;
     if ( isThick( params.type ) )
@@ -227,7 +227,7 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
     {
         const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
         decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ),
-                                              .progressCallback = decProgress, .subdivideParts = static_cast<int>( std::thread::hardware_concurrency() ) } );
+                                              .progressCallback = decProgress, .subdivideParts = 32 } );
     }
     return res;
 }

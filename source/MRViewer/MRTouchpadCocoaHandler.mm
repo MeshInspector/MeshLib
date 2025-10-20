@@ -101,6 +101,7 @@ public:
     static void onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer );
     static void onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer );
     static void onScrollEvent( NSView* view, SEL cmd, NSEvent* event );
+    static void onTouchesEvent( NSView* view, SEL cmd, NSEvent* event );
 
 private:
     NSView* view_;
@@ -108,6 +109,8 @@ private:
     NSMagnificationGestureRecognizer* magnificationGestureRecognizer_;
     NSRotationGestureRecognizer* rotationGestureRecognizer_;
     IMP previousScrollWheelMethod_;
+
+    bool hasTouches_ = false;
 };
 
 TouchpadCocoaHandler::TouchpadCocoaHandler( GLFWwindow* window )
@@ -149,6 +152,9 @@ TouchpadCocoaHandler::Impl::Impl(GLFWwindow *window, TouchpadCocoaHandler *handl
     }
 
     TouchpadCocoaHandlerRegistry::instance().add( view_, handler );
+
+    view_.allowedTouchTypes = NSTouchTypeMaskIndirect;
+    class_addMethod( cls, @selector(touchesBeganWithEvent:), (IMP)Impl::onTouchesEvent, "v@:@" );
 }
 
 TouchpadCocoaHandler::Impl::~Impl()
@@ -196,6 +202,8 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
 
     if (
         [event subtype] == NSEventSubtypeMouseEvent ||
+        // detecting Magic Mouse
+        ( [event subtype] == NSEventSubtypeTabletPoint && !handler->impl_->hasTouches_ ) ||
         // We know exactly one Mac machine where mouse scroll events arrive with this subtype. Some sort of a bug?
         // We also have to filter by `phase == NSEventPhaseNone` here, because otherwise this incorrectly catches the "move two fingers in any direciton" event from the touchpad (!!),
         //   which is instead supposed to rotate the camera, not act as a scroll.
@@ -252,6 +260,15 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
             handler->swipe( deltaX, deltaY, kinetic, *state );
         }
     }
+}
+
+void TouchpadCocoaHandler::Impl::onTouchesEvent( NSView* view, SEL, NSEvent* )
+{
+    auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
+    if ( !handler )
+        return;
+
+    handler->impl_->hasTouches_ = true;
 }
 
 }

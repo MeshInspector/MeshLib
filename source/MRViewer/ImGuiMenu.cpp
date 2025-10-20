@@ -114,7 +114,7 @@
 namespace
 {
 // Reserved keys block
-using OrderedKeys = std::bitset<ImGuiKey_NamedKey_COUNT>;
+using OrderedKeys = std::bitset<ImGuiKey_NamedKey_END>;
 
 OrderedKeys& getOrderedKeys()
 {

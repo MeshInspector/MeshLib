@@ -151,4 +151,6 @@ protected:
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
 
-}
+constexpr inline int sDefaultGroupState = 0; // 0 means closed; the other option is ImGuiTreeNodeFlags_DefaultOpen
+
+} //namespace MR

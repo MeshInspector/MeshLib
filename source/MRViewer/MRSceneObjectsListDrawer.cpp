@@ -407,7 +407,7 @@ bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::stri
 {
     const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
     return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
-                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
+                    ( hasRealChildren ? sDefaultGroupState : 0 ) );
 }
 
 void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr )

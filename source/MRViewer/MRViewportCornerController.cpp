@@ -662,7 +662,7 @@ void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, 
         if ( !childern[i]->isVisible( vp.id ) )
             continue;
         if ( auto visObj = childern[i]->asType<VisualObject>() )
-            vp.draw( *visObj, xf, vp.getAxesProjectionMatrix(), DepthFunction::Always );
+            vp.drawOrthoFixedPos( *visObj, xf, DepthFunction::Always );
     }
     // second pass
     for ( const auto& child : childern )
@@ -670,7 +670,7 @@ void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, 
         if ( !child->isVisible( vp.id ) )
             continue;
         if ( auto visObj = child->asType<VisualObject>() )
-            vp.draw( *visObj, visObj->xf( vp.id ), vp.getAxesProjectionMatrix() );
+            vp.drawOrthoFixedPos( *visObj, visObj->xf( vp.id ) );
     }
 }
 
@@ -707,7 +707,7 @@ CornerControllerObject::PickedIds CornerControllerObject::pick_( const Vector2f&
         return {};
 
     const auto& children = rootObj_->children();
-    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
+    auto staticRenderParams = vp.getBaseRenderParamsOrthoFixedPos();
     auto [obj, pick] = vp.pickRenderObject( { {
             static_cast< VisualObject* >( children[0].get() ),
             static_cast< VisualObject* >( children[1].get() ),

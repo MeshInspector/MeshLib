@@ -407,7 +407,7 @@ bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::stri
 {
     const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
     return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
-                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
+                    ( hasRealChildren ? sDefaultGroupState : 0 ) );
 }
 
 void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr )
@@ -453,7 +453,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     const ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_SpanAvailWidth |
         ImGuiTreeNodeFlags_Framed |
-        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
+        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | sDefaultGroupState : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
     const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );

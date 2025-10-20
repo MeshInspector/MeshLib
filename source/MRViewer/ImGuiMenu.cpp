@@ -211,6 +211,7 @@ void ImGuiMenu::initBackend()
 
 void reserveKeyEvent( ImGuiKey key )
 {
+    assert( key < getOrderedKeys().size() );
     getOrderedKeys()[key] = true;
 }
 

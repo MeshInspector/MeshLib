@@ -114,7 +114,7 @@
 namespace
 {
 // Reserved keys block
-using OrderedKeys = std::bitset<ImGuiKey_NamedKey_COUNT>;
+using OrderedKeys = std::bitset<ImGuiKey_NamedKey_END>;
 
 OrderedKeys& getOrderedKeys()
 {
@@ -211,6 +211,7 @@ void ImGuiMenu::initBackend()
 
 void reserveKeyEvent( ImGuiKey key )
 {
+    assert( key < getOrderedKeys().size() );
     getOrderedKeys()[key] = true;
 }
 

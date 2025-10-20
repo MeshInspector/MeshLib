@@ -369,3 +369,11 @@ inline ImVec2 GetContentRegionMax()
 #endif
 
 } // namespace ImGui
+
+
+namespace ImGuiObsolete
+{
+
+inline void PushFont( ImFont* font ) { ImGui::PushFont( font, font ? font->LegacySize : 0.0f ); }
+
+} // ImGuiObsolete

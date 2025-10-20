@@ -746,7 +746,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( iconsFont )
     {
         iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
-        ImGui::PushFont( iconsFont );
+        ImGuiObsolete::PushFont( iconsFont );
     }
 
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
@@ -778,7 +778,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     auto cursorScreenPos = ImGui::GetCursorScreenPos();
     if ( titleFont )
     {
-        ImGui::PushFont( titleFont );
+        ImGuiObsolete::PushFont( titleFont );
         // "+ 5 * UI::scale()" eliminates shift of the font
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 5 * UI::scale() } );
     }
@@ -810,7 +810,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     {
         auto font = ImGui::GetFont();
         font->Scale = 0.9f;
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
 
         const auto btnHelpTextSize = ImGui::CalcTextSize( "HELP" );
         const float btnHelpWidth = btnHelpTextSize.x + 6.0f * UI::scale();
@@ -832,7 +832,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     }
 
     if ( iconsFont )
-        ImGui::PushFont( iconsFont );
+        ImGuiObsolete::PushFont( iconsFont );
 
     ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ), window->Rect().Min.y + buttonOffset } );
     bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
@@ -993,7 +993,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
 
     auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
     if ( font )
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
 
     const auto backupPos = ImGui::GetCursorPos();
 
@@ -1550,7 +1550,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     if ( iconsFont )
     {
         iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
-        ImGui::PushFont( iconsFont );
+        ImGuiObsolete::PushFont( iconsFont );
     }
 
     auto& shift = planeWidget.isInLocalMode() ? localShift : plane.d;
@@ -1665,7 +1665,7 @@ bool ModalBigTitle( const char* title )
 {
     auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Headline );
     if ( font )
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     ImGui::Text( "%s", title);
     if ( font )
         ImGui::PopFont();

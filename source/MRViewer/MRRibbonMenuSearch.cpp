@@ -129,7 +129,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             }
         }
 
-        ImGui::PushFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small ) );
+        ImGuiObsolete::PushFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small ) );
         auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * UI::scale();
         ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered,
@@ -331,7 +331,7 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
 
     float btnSize = UI::scale() * cTopPanelAditionalButtonSize;
     if ( font )
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     bool pressed = UI::buttonEx( "\xef\x80\x82", ImVec2( btnSize, btnSize ), { .forceImGuiBackground = true, .testEngineName = "ActivateSearchBtn" } );
     if ( font )
     {
@@ -369,7 +369,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
     if ( font )
         font->Scale = 0.7f;
     if ( font )
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     const float inputWidth = cSearchSize * UI::scale() - style.FramePadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "\xef\x80\x82" ).x;
     ImGui::SetCursorPos( ImVec2( cursorPos.x + inputWidth + style.ItemSpacing.x, cursorPos.y + style.FramePadding.y ) );
     ImGui::Text( "%s", "\xef\x80\x82" );

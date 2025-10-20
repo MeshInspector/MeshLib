@@ -108,7 +108,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
     if ( iconsFont )
     {
         iconsFont->Scale = 0.65f;
-        ImGui::PushFont( iconsFont );
+        ImGuiObsolete::PushFont( iconsFont );
     }
 
     auto fontSize = ImGui::GetFontSize();
@@ -333,7 +333,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     if ( !notification.header.empty() )
     {
         if ( boldFont )
-            ImGui::PushFont( boldFont );
+            ImGuiObsolete::PushFont( boldFont );
 
         ImGui::SetCursorPosX( contentShift.x );
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
@@ -433,7 +433,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     if ( hasCounter )
     {
         if ( boldFont )
-            ImGui::PushFont( boldFont );
+            ImGuiObsolete::PushFont( boldFont );
         auto countText = std::to_string( counter );
         const auto textSize = ImGui::CalcTextSize( countText.c_str() );
 

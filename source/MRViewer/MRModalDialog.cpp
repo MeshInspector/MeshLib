@@ -5,6 +5,7 @@
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include "ImGuiHelpers.h"
 
 namespace MR
 {
@@ -35,7 +36,7 @@ bool ModalDialog::beginPopup()
     {
         auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
         if ( headerFont )
-            ImGui::PushFont( headerFont );
+            ImGuiObsolete::PushFont( headerFont );
 
         const auto headlineWidth = ImGui::CalcTextSize( headline.c_str() ).x;
         ImGui::SetCursorPosX( ( windowSize.x - headlineWidth ) * 0.5f );

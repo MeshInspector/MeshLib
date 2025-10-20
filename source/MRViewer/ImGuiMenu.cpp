@@ -2306,7 +2306,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             return style.FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
         };
         if ( iconsFont )
-            ImGui::PushFont( iconsFont );
+            ImGuiObsolete::PushFont( iconsFont );
         const auto* removeButtonText = iconsFont ? "\xef\x80\x8d" : "X";
         const auto* addButtonText = iconsFont ? "\xef\x81\x95" : "+";
         const auto removeButtonWidth = buttonWidth( removeButtonText );
@@ -2368,7 +2368,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
             if ( iconsFont )
-                ImGui::PushFont( iconsFont );
+                ImGuiObsolete::PushFont( iconsFont );
             ImGui::PushStyleColor( ImGuiCol_Button, Color{ 0xff, 0xff, 0xff, 0x00 } );
             ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color{ 0xff, 0x5f, 0x5f } );
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::red() );
@@ -2441,7 +2441,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         }
 
         if ( iconsFont )
-            ImGui::PushFont( iconsFont );
+            ImGuiObsolete::PushFont( iconsFont );
         ImGui::SameLine( 0, style.ItemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
@@ -2834,7 +2834,7 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImFont font = *ImGui::GetFont();
 #pragma warning(pop)
     font.Scale = 1.2f;
-    ImGui::PushFont( &font );
+    ImGuiObsolete::PushFont( &font );
     ImGui::Text( "Hot Key List" );
     ImGui::PopFont();
     ImGui::NewLine();

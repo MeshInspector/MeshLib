@@ -73,7 +73,7 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
         auto font = fontManager.getFontByType( RibbonFontManager::FontType::Icons );
         font->Scale = fontManager.getFontSizeByType( RibbonFontManager::FontType::Default ) /
             fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
 
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( imageSize - ImGui::GetFontSize() ) * 0.5f );
         ImGui::Text( "%s", getSceneItemIconByTypeName_( obj.typeName() ) );

@@ -1997,7 +1997,7 @@ void notificationFrame( NotificationType type, const std::string& str )
     if ( iconsFont )
     {
         iconsFont->Scale = 0.7f;
-        ImGui::PushFont( iconsFont );
+        ImGuiObsolete::PushFont( iconsFont );
     }
 
     ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * UI::scale(), StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
@@ -2099,7 +2099,7 @@ void separator( const SeparatorParams& params )
             if ( !params.label.empty() || !params.suffix.empty() )
             {
                 ImGui::TableNextColumn();
-                ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+                ImGuiObsolete::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
                 if ( !params.label.empty() )
                     ImGui::Text( "%s", params.label.c_str() );
                 ImGui::SameLine();

@@ -291,7 +291,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         else if ( params.sizeType != DrawButtonParams::SizeType::Big )
             font->Scale = cSmallIconSize / cBigIconSize;
         fontScale = font->Scale;
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     }
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
@@ -412,7 +412,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
         else if ( params.sizeType != DrawButtonParams::SizeType::Big )
             font->Scale = cSmallIconSize / cBigIconSize;
         fontScale = font->Scale;
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     }
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
@@ -472,7 +472,7 @@ bool RibbonButtonDrawer::drawTabArrowButton( const char* icon, const ImVec2& siz
     if ( font )
     {
         font->Scale = iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     }
 
     bool pressed = ImGui::Button( icon, size );
@@ -504,7 +504,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
             font->Scale = iconSize / fontSize;
         else
             font->Scale = iconSize * 1.5f / fontSize;
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     }
     auto frameHeight = ImGui::GetFrameHeight();
     ImVec2 itemSize = ImVec2( frameHeight, frameHeight );
@@ -654,7 +654,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
 {
     auto sFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
     if ( sFont )
-        ImGui::PushFont( sFont );
+        ImGuiObsolete::PushFont( sFont );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * UI::scale(), cRibbonButtonWindowPaddingY * UI::scale() ) );
     std::string tooltip = item.item->getDynamicTooltip();

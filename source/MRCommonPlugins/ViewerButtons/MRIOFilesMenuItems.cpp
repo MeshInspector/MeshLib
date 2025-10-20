@@ -340,7 +340,7 @@ void OpenFilesMenuItem::preDraw_()
 
     auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
     if ( bigFont )
-        ImGui::PushFont( bigFont );
+        ImGuiObsolete::PushFont( bigFont );
 
     auto textSize = ImGui::CalcTextSize( "Load as Scene" );
     auto textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );

@@ -5,6 +5,7 @@
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRUIStyle.h"
+#include "ImGuiHelpers.h"
 
 namespace MR::ImGuiMeasurementIndicators
 {
@@ -151,7 +152,7 @@ void Text::update( bool force ) const
                 [&]( const std::string& str )
                 {
                     if ( curFont )
-                        ImGui::PushFont( curFont );
+                        ImGuiObsolete::PushFont( curFont );
                     MR_FINALLY{
                         if ( curFont )
                             ImGui::PopFont();
@@ -266,7 +267,7 @@ Text::DrawResult Text::draw( ImDrawList& list, ImVec2 pos, const TextColor& defa
                 [&]( const std::string& str )
                 {
                     if ( curFont )
-                        ImGui::PushFont( curFont );
+                        ImGuiObsolete::PushFont( curFont );
                     MR_FINALLY{
                         if ( curFont )
                             ImGui::PopFont();

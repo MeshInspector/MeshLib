@@ -236,7 +236,7 @@ void setup()
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         auto smallFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
         if ( smallFont )
-            ImGui::PushFont( smallFont );
+            ImGuiObsolete::PushFont( smallFont );
         ImGui::PushStyleColor( ImGuiCol_Text, StyleConsts::ProgressBar::textColor.getUInt32() );
         ImGui::SetCursorPos( ImVec2( 32.0f * UI::scale(), 20.0f * UI::scale() ) );
         {

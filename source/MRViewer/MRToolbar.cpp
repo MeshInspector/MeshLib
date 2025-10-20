@@ -97,7 +97,7 @@ void Toolbar::drawToolbar()
 
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
-    ImGui::PushFont( fontManager.getFontByType( RibbonFontManager::FontType::Small ) );
+    ImGuiObsolete::PushFont( fontManager.getFontByType( RibbonFontManager::FontType::Small ) );
     UI::TestEngine::pushTree( "Toolbar" );
     for ( const auto& item : itemsList_ )
     {
@@ -153,7 +153,7 @@ void Toolbar::drawToolbar()
     if ( font )
     {
         font->Scale = customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() );
-        ImGui::PushFont( font );
+        ImGuiObsolete::PushFont( font );
     }
 
     const char* text = "\xef\x85\x82";

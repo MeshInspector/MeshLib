@@ -482,7 +482,7 @@ void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vecto
     }
 
     bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
-    bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
+    bool released = isSelected && !needDragDropTarget_() && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
 
     if ( pressed )
         clickTrigger_ = true;
@@ -503,8 +503,6 @@ void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_
 
     if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect | ImGuiDragDropFlags_SourceNoDisableHover ) )
     {
-        dragTrigger_ = true;
-
         std::vector<Object*> vectorObjPtr;
         for ( auto& ptr : payload )
             vectorObjPtr.push_back( ptr.get() );
@@ -582,7 +580,6 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         }
     }
     sceneReorderCommand_ = {};
-    dragTrigger_ = false;
 }
 
 void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()

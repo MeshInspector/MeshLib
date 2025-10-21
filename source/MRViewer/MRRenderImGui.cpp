@@ -5,6 +5,7 @@
 #include "MRViewer.h"
 
 #include "backends/imgui_impl_opengl3.h"
+#include <imgui_internal.h>
 
 namespace MR
 {

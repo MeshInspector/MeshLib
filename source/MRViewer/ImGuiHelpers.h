@@ -23,6 +23,8 @@
 #include <vector>
 #include <optional>
 
+struct ImGuiWindow;
+
 // Extend ImGui by populating its namespace directly
 //
 // Code snippets taken from there:
@@ -223,18 +225,13 @@ MRVIEWER_API float GetTitleBarHeght();
 /// \param position (optional) preliminary window position
 /// \return pair of the final position of the window and flag whether the position was loaded
 MRVIEWER_API std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, ImGuiWindow* window, float width, const ImVec2* position = nullptr );
-inline std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, float width, const ImVec2* position = nullptr )
-{
-    return LoadSavedWindowPos( label, FindWindowByName( label ), width, position );
-}
+MRVIEWER_API std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, float width, const ImVec2* position = nullptr );
+
 /// Save window position
 /// \details saved only if window exist
 /// see also \ref LoadSavedWindowPos
 MRVIEWER_API void SaveWindowPosition( const char* label, ImGuiWindow* window );
-inline void SaveWindowPosition( const char* label )
-{
-    SaveWindowPosition( label, FindWindowByName( label ) );
-}
+MRVIEWER_API void SaveWindowPosition( const char* label );
 
 /// Parameters drawing classic ImGui::Begin with loading / saving window position
 struct SavedWindowPosParams

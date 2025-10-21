@@ -1,6 +1,6 @@
 #pragma once
+
 #include "MRMesh/MRFinally.h"
-#include "MRPch/MRFmt.h"
 #include "MRNotificationType.h"
 #include "exports.h"
 #include "MRUnits.h"

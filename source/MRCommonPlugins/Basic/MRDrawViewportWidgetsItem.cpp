@@ -6,15 +6,13 @@
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRImGuiImage.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
 #include <imgui.h>
-
+#include <imgui_internal.h>
 #include <span>
 
 

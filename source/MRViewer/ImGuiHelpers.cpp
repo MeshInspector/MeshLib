@@ -23,6 +23,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRSpdlog.h"
+#include <imgui_internal.h>
 
 namespace ImGui
 {
@@ -591,6 +592,11 @@ std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, ImGuiWindow* wind
     return { initialWindowPos, haveSavedWindowPos };
 }
 
+std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, float width, const ImVec2* position )
+{
+    return LoadSavedWindowPos( label, FindWindowByName( label ), width, position );
+}
+
 void SaveWindowPosition( const char* label, ImGuiWindow* window )
 {
     if ( window )
@@ -600,6 +606,11 @@ void SaveWindowPosition( const char* label, ImGuiWindow* window )
         serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[label] );
         config.setJsonValue( "DialogPositions", dpJson );
     }
+}
+
+void SaveWindowPosition( const char* label )
+{
+    SaveWindowPosition( label, FindWindowByName( label ) );
 }
 
 bool BeginSavedWindowPos( const std::string& name, bool* open, const SavedWindowPosParams& params )

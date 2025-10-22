@@ -231,10 +231,12 @@ void init()
 
 ImGuiKey getImGuiModPrimaryCtrl()
 {
-    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
+    // In new version of ImGui ImGuiMod_Ctrl is already swapped with ImGuiMod_Super internally, so we don't swap it on our end
+    
+    //if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
         return ImGuiMod_Ctrl;
-    else
-        return ImGuiMod_Super;
+    //else
+    //    return ImGuiMod_Super;
 }
 
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )

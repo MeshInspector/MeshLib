@@ -3,6 +3,7 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include <MRPch/MREigenCore.h>
+#include <Eigen/QR>
 #include <MRPch/MRJson.h>
 
 namespace MR

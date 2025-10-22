@@ -13,6 +13,9 @@ namespace MR
 template<class T, class E = std::string>
 using Expected = std::expected<T, E>;
 
+template<class E = std::string>
+using Unexpected = std::unexpected<E>;
+
 template <class E>
 MR_BIND_IGNORE inline auto unexpected( E &&e )
 {
@@ -23,6 +26,9 @@ MR_BIND_IGNORE inline auto unexpected( E &&e )
 
 template<class T, class E = std::string>
 using Expected = tl::expected<T, E>;
+
+template<class E = std::string>
+using Unexpected = tl::unexpected<E>;
 
 template <class E>
 MR_BIND_IGNORE inline auto unexpected( E &&e )

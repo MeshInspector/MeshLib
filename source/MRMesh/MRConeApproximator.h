@@ -5,6 +5,18 @@
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
 #include <MRPch/MREigenCore.h>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4244) // conversion from double to float
+#pragma warning(disable: 4464) // relative include path contains '..'
+#endif
+#include <unsupported/Eigen/NonLinearOptimization>
+#include <unsupported/Eigen/NumericalDiff>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 #include "MRPch/MRTBB.h"
 #include <algorithm>
 

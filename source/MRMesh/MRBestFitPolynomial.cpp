@@ -1,7 +1,7 @@
 #include "MRBestFitPolynomial.h"
 #include "MRGTest.h"
 
-#include <Eigen/Dense>
+#include <MRPch/MREigenCore.h>
 
 #include <cmath>
 #include <complex>

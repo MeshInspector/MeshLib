@@ -2,6 +2,7 @@
 #include "MRGTest.h"
 
 #include <MRPch/MREigenCore.h>
+#include <Eigen/LU>
 
 #include <cmath>
 #include <complex>

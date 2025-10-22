@@ -1,6 +1,6 @@
 #include "MRUIQualityControl.h"
 #include "MRViewer/MRUIStyle.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR::QualityControl
 {

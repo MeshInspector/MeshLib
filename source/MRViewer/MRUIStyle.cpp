@@ -231,8 +231,11 @@ void init()
 
 ImGuiKey getImGuiModPrimaryCtrl()
 {
-    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL || 
+        ( getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER && ImGui::GetIO().ConfigMacOSXBehaviors ) ) // In new version of ImGui ImGuiMod_Ctrl is already swapped with ImGuiMod_Super internally, so we don't swap it on our end
+    {
         return ImGuiMod_Ctrl;
+    }
     else
         return ImGuiMod_Super;
 }

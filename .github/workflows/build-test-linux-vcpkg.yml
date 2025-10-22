@@ -43,7 +43,7 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 11]
+        compiler: [Clang 19, GCC 14]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
@@ -51,25 +51,25 @@ jobs:
           - full_config_build: false
             compiler: Clang 19
             config: Debug
-          # Do not run Release GCC 11 build on every commit (but only once a day)
+          # Do not run Release GCC 14 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 11
+            compiler: GCC 14
             config: Release
         include:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
-          - compiler: GCC 11
-            cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
-            c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
-            cxx-standard: 20
+          - compiler: GCC 14
+            cxx-compiler: /usr/bin/g++-14
+            c-compiler: /usr/bin/gcc-14
+            cxx-standard: 23
           - arch: x64
             os: ubuntu-latest
           - arch: arm64
             os: ubuntu-24.04-arm
           - arch: arm64
-            compiler: GCC 11
+            compiler: GCC 14
             skip_mrbind: true # GCC + ARM64 build has unresolved problems
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -82,14 +82,6 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
-      - name: Enable GCC 11 toolset
-        run: |
-          source /opt/rh/gcc-toolset-11/enable
-          for VAR in PATH ; do
-            echo "${VAR}=${!VAR}" >> $GITHUB_ENV
-            echo "${VAR}=${!VAR}"
-          done
-
       - name: Checkout
         uses: actions/checkout@v5
   

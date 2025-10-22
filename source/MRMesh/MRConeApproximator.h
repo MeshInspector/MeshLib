@@ -5,6 +5,7 @@
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
 #include <MRPch/MREigenCore.h>
+#include <Eigen/SVD>
 
 #ifdef _MSC_VER
 #pragma warning(push)

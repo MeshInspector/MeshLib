@@ -6,6 +6,7 @@
 #include "MRConstants.h"
 #include "MRBestFit.h"
 #include <MRPch/MREigenCore.h>
+#include <Eigen/QR>
 
 namespace MR
 {

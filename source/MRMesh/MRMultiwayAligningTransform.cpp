@@ -3,7 +3,7 @@
 #include "MRGTest.h"
 #include "MRTimer.h"
 
-#include <MRPch/MREigenCore.h>
+#include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
 
 #include <cassert>

@@ -2,6 +2,7 @@
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRStatePlugin.h"
 
 namespace ExamplePlugin
 {

@@ -438,6 +438,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRChangeMeshDataAction.cpp" />
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
@@ -620,6 +621,7 @@
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProcessSelfTreeSubtasks.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
+    <ClCompile Include="MRProjectionMeshAttribute.cpp" />
     <ClCompile Include="MRRadiusCompensation.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />

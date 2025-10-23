@@ -436,9 +436,6 @@
     <ClCompile Include="MRSceneReorder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRProjectMeshAttributes.cpp">
-      <Filter>Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="MRViewerTitle.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
@@ -908,9 +905,6 @@
     </ClInclude>
     <ClInclude Include="MRSceneReorder.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MRProjectMeshAttributes.h">
-      <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MROpenObjects.h">
       <Filter>IO</Filter>

@@ -44,7 +44,6 @@
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
-    <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonLayoutConfig.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
@@ -190,7 +189,6 @@
     <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
-    <ClInclude Include="MRProjectMeshAttributes.h" />
     <ClInclude Include="MRRibbonLayoutConfig.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonRegisterItem.h" />

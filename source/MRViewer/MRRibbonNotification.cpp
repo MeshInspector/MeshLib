@@ -183,9 +183,7 @@ void RibbonNotifier::drawHistory_( const Box2i& limitFramebuffer )
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y + padding );
         drawNotification_( { .index = int( notificationsHistory_.size() ) - 1 - i, .width = notWidth, .historyMode = true, .currentPos = &currentPos } );
-        spdlog::info( "Cursor Pos Y = {}", ImGui::GetCursorPosY() );
     }
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y );
     ImGui::Dummy( ImVec2( notWidth, padding - ImGui::GetStyle().WindowPadding.y ) );  // to fix bootom window padding
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;

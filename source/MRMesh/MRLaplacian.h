@@ -5,6 +5,7 @@
 #include "MRVector3.h"
 #include "MREnums.h"
 
+#include <MRPch/MREigenCore.h>
 #pragma warning(push)
 #pragma warning(disable: 4068) // unknown pragmas
 #pragma warning(disable: 4127) // conditional expression is constant

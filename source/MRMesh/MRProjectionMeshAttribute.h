@@ -11,7 +11,7 @@
 namespace MR
 {
 
-/// this structure contains transformation for projection from one mesh to anther and progress callback
+/// this structure contains transformation for projection from one mesh to another and progress callback
 struct ProjectAttributeParams
 {
     MeshProjectionTransforms xfs;

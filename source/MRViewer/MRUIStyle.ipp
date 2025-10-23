@@ -106,8 +106,14 @@ namespace detail
                     ImGui::PushItemWidth( x - prevX );
                     MR_FINALLY{ ImGui::PopItemWidth(); };
                     prevX = x;
+                    std::string s;
+                    if ( i + 1 != VectorTraits<T>::size )
+                        s = "###";
+                    s += label;
+                    s += "##";
+                    s += std::to_string( i );
                     bool elemChanged = func(
-                        fmt::format( "{}{}##{}", i == VectorTraits<T>::size - 1 ? "" : "###", label, i ).c_str(),
+                        s.c_str(),
                         VectorTraits<T>::getElem( i, value ),
                         i
                     );
@@ -160,11 +166,11 @@ namespace detail
         std::string maxString = valueToString<E>( max, unitParams );
 
         if ( haveMin && haveMax )
-            return fmt::format( "Range: {} .. {}", minString, maxString );
+            return "Range: " + minString + " .. " + maxString;
         if ( haveMin )
-            return fmt::format( "Range: at least {}", minString );
+            return "Range: at least " + minString;
         if ( haveMax )
-            return fmt::format( "Range: at most {}", maxString );
+            return "Range: at most " + maxString;
         return "";
     }
 
@@ -464,20 +470,20 @@ bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<
     auto getStateKeyIsAsym = [&, ret = std::string{}]() mutable -> const std::string&
     {
         if ( ret.empty() )
-            ret = fmt::format( "MR::plusMinus:{}", label );
+            ret = std::string( "MR::plusMinus:" ) + label;
         return ret;
     };
 
     auto getPlusName = [&, ret = std::string{}]() mutable -> const std::string&
     {
         if ( ret.empty() )
-            ret = fmt::format( "###plus:{}", label );
+            ret = std::string( "###plus:" ) + label;
         return ret;
     };
     auto getMinusName = [&, ret = std::string{}]() mutable -> const std::string&
     {
         if ( ret.empty() )
-            ret = fmt::format( "###minus:{}", label );
+            ret = std::string( "###minus:" ) + label;
         return ret;
     };
 
@@ -510,7 +516,7 @@ bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<
 
     // The symmetry toggle.
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + fullWidth - toggleSymButtonWidth );
-    if ( ( buttonEx )( fmt::format( "{}###toggleSymmetry:{}", isAsym ? "\xC2\xB1"/*U+00B1 PLUS-MINUS SIGN*/ : "+/-", label ).c_str(), ImVec2( toggleSymButtonWidth, ImGui::GetFrameHeight() ), { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) )
+    if ( ( buttonEx )( ( ( isAsym ? "\xC2\xB1"/*U+00B1 PLUS-MINUS SIGN*/ : "+/-" ) + std::string( "###toggleSymmetry:" ) + label ).c_str(), ImVec2( toggleSymButtonWidth, ImGui::GetFrameHeight() ), { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) )
     {
         isAsym = !isAsym;
 
@@ -587,7 +593,7 @@ bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<
         }
 
         // This name can't match the plus/minus names, because we check if those are active above.
-        if ( func( fmt::format( "###sym:{}", label ).c_str(), plus, std::move( unitToStringParams ) ) ) // Move the params on the last usage, in case the lambda decides to take them by value for some reason.
+        if ( func( ( std::string( "###sym:" ) + label ).c_str(), plus, std::move( unitToStringParams ) ) ) // Move the params on the last usage, in case the lambda decides to take them by value for some reason.
         {
             minus = -plus;
             ret = true;

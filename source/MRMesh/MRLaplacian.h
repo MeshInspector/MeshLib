@@ -4,9 +4,7 @@
 #include "MRVector.h"
 #include "MRVector3.h"
 #include "MREnums.h"
-
-#include <MRPch/MREigenCore.h>
-#include <Eigen/SparseCore>
+#include <MRPch/MREigenSparseCore.h>
 
 namespace MR
 {

@@ -2,8 +2,7 @@
 #include "MRTimer.h"
 #include "MRGTest.h"
 
-#include <MRPch/MREigenCore.h>
-#include <Eigen/SparseCore>
+#include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
 
 namespace MR

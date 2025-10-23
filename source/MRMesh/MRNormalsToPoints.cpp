@@ -7,8 +7,7 @@
 #include "MRRelaxParams.h" //getLimitedPos
 #include <limits>
 
-#include <MRPch/MREigenCore.h>
-#include <Eigen/SparseCore>
+#include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
 
 namespace MR

@@ -30,17 +30,12 @@
 #pragma warning(pop)
 
 #include "MRJson.h"
-#include "MRSpdlog.h"
 #include "MRSuppressWarning.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
 #include <commdlg.h>
-#endif
-
-#ifndef __EMSCRIPTEN__
-#include <fmt/chrono.h>
 #endif
 
 #include <gtest/gtest.h>

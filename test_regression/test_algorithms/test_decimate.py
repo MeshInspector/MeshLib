@@ -109,8 +109,10 @@ def test_decimate(tmp_path, dec_params):
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
     #  check meshes similarity (for extra details on fail)
     with check:
+        # Previously we had thresholds here equal to 0.01, but compare_meshes_similarity failed on Arm computers,
+        # if MeshLib was built with Clang 12 (but not with Clang >= 14) or with GCC 14
         compare_meshes_similarity(mesh, ref_mesh,
-                                  verts_thresh=0.02, edges_thresh=0.02)  # increase thresholds from 0.01 for GCC14 Release Arm build
+                                  verts_thresh=0.02, edges_thresh=0.02)
     with check:
         self_col_tri = mrmeshpy.findSelfCollidingTriangles(mesh).size()
         assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"

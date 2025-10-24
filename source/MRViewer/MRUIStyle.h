@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 #include <optional>
+#include <filesystem>
 
 namespace MR
 {
@@ -534,6 +535,29 @@ MRVIEWER_API void alignTextToButton();
 /// If the min is not set, then the current position is taken.If max is not set, then the end of the window is taken.
 /// Added some indentation if min or max is not set.
 MRVIEWER_API void highlightWindowArea( const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
+
+/// Settings required for `UI::saveCustomConfigModal`
+struct CustomConfigModalSettings
+{
+    /// Name of desired config type 
+    std::string configName;
+    /// Optional string added at the end of popup name to have unique names
+    std::string imGuiIdKey;
+    /// Directory where to save config
+    std::filesystem::path configDirectory;
+    /// String used by input 
+    std::string* inputName{ nullptr };
+    /// If true - warns user before overriding existing file, otherwise override without warning
+    bool warnExisting = true;
+    /// Callback that is called when save is requested->returns true if file saved successfully (to close modal)
+    std::function<bool( const std::string& name )> onSave;
+    
+    /// returns accumulated name of the popup
+    MRVIEWER_API std::string popupName() const;
+};
+
+/// Draw modal window to save user configs (for example Palettes)
+MRVIEWER_API void saveCustomConfigModal(const CustomConfigModalSettings& settings );
 
 // While this exists, it temporarily disables antialiasing for the lines drawn to this list.
 class LineAntialiasingDisabler

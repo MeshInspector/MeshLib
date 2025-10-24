@@ -6,10 +6,10 @@
 #include "MRMesh/MRVector.h"
 #include "MRColorTheme.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRViewport.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRMeshTexture.h"
-#include "MRMesh/MRVector.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
@@ -617,7 +617,7 @@ void CornerControllerObject::initDefault()
         }
     } ) );
 
-    connections_.push_back( getViewerInstance().preDrawSignal.connect( [this] ()
+    connections_.push_back( getViewerInstance().signals().preDrawSignal.connect( [this] ()
     {
         if ( !rootObj_ )
             return;
@@ -626,7 +626,7 @@ void CornerControllerObject::initDefault()
     } ) );
 
     // 5th group: we want cornerControllerMouseDown_ signal be caught before tools but after menu
-    connections_.push_back( getViewerInstance().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
+    connections_.push_back( getViewerInstance().signals().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
     {
         if ( !rootObj_ )
             return false;

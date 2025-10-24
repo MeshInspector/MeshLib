@@ -29,6 +29,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerSignals.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
@@ -500,7 +501,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
                     SceneRoot::get().addChild( obj );
                     getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     getViewerInstance().recentFilesStore().storeFile( directory );
-                    getViewerInstance().objectsLoadedSignal( { obj }, {}, warnings );
+                    getViewerInstance().signals().objectsLoadedSignal( { obj }, {}, warnings );
                     if ( !warnings.empty() )
                         pushNotification( { .text = warnings, .type = NotificationType::Warning } );
                 };

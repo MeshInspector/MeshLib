@@ -1,16 +1,17 @@
 #include "MRViewportGlobalBasis.h"
+#include "MRViewport.h"
+#include "MRUIStyle.h"
+#include "MRColorTheme.h"
+#include "MRViewer.h"
+#include "MRViewerSignals.h"
+#include "ImGuiMenu.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRViewer/MRUIStyle.h"
-#include "MRViewport.h"
 #include "MRMesh/MRMesh.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPositionedText.h"
 #include "MRMesh/MRSceneColors.h"
-#include "MRColorTheme.h"
-#include "MRViewer.h"
-#include "ImGuiMenu.h"
 
 namespace
 {
@@ -65,7 +66,7 @@ ViewportGlobalBasis::ViewportGlobalBasis()
     updateColors();
 
     connections_.emplace_back( ColorTheme::onChanged( updateColors ) );
-    connections_.emplace_back( getViewerInstance().postRescaleSignal.connect( [this] ( float, float )
+    connections_.emplace_back( getViewerInstance().signals().postRescaleSignal.connect( [this] ( float, float )
     {
         auto menu = getViewerInstance().getMenuPlugin();
         if ( !menu )

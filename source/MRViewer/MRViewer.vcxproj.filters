@@ -954,6 +954,9 @@
     <ClInclude Include="MRWebResponseCallback.h">
       <Filter>Requests</Filter>
     </ClInclude>
+    <ClInclude Include="MRViewerSignals.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

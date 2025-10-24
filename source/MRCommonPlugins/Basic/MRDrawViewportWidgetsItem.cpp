@@ -2,14 +2,15 @@
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSceneColors.h"
-#include "MRPch/MRFmt.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRImGuiImage.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerSignals.h"
 #include "MRViewer/MRViewport.h"
+#include "MRPch/MRFmt.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -36,7 +37,7 @@ ProvidesViewportWidget::ProvidesViewportWidget()
 DrawViewportWidgetsItem::DrawViewportWidgetsItem()
     : RibbonMenuItem( "Draw Viewport Widgets" )
 {
-    preDrawConnection_ = getViewerInstance().preDrawSignal.connect( [this]
+    preDrawConnection_ = getViewerInstance().signals().preDrawSignal.connect( [this]
     {
         for ( Viewport& viewport : getViewerInstance().viewport_list )
             handleViewport( viewport );

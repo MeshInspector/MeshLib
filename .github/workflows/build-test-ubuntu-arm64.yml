@@ -43,19 +43,21 @@ jobs:
       matrix:
         os: [ ubuntu20, ubuntu22, ubuntu24 ]
         config: [ Release ]
-        compiler: [ clang ]
         include:
           - os: ubuntu20
+            compiler: clang
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
             cxx-standard: 20
           - os: ubuntu22
+            compiler: clang
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             cxx-standard: 20
           - os: ubuntu24
-            cxx-compiler: /usr/bin/clang++-18
-            c-compiler: /usr/bin/clang-18
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++-14
+            c-compiler: /usr/bin/gcc-14
             cxx-standard: 23
     permissions:
       id-token: write # This is required for requesting the JWT

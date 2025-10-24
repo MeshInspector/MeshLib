@@ -9,6 +9,8 @@
 
 #include <parallel_hashmap/phmap_config.h>
 #ifdef __aarch64__
+// force on Clang for ABI compatibility with GCC:
+// https://github.com/greg7mdp/parallel-hashmap/issues/289
 #undef PHMAP_HAVE_INTRINSIC_INT128
 #define PHMAP_HAVE_INTRINSIC_INT128 1
 #endif

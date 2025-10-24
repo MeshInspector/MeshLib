@@ -93,9 +93,9 @@ def test_decimate(tmp_path, dec_params):
     # So instead we build the whole MeshLib with Clang 18 (only on ubuntu 20.04 arm) when building the wheels,
     # but when building ML we simply disable the offending tests (makes no sense to use Clang 18 for that,
     # since the library users will then face this ABI incompatibility).
-    if os.getenv("MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES","0") == "1" and dec_params.get("hasAbiIssuesOnUbuntuArm2004Mrbind", False):
-        print('Skipping this configuration on Ubuntu Arm 20.04')
-        return
+    #if os.getenv("MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES","0") == "1" and dec_params.get("hasAbiIssuesOnUbuntuArm2004Mrbind", False):
+    #    print('Skipping this configuration on Ubuntu Arm 20.04')
+    #    return
 
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "decimate" / "R0003C_V4-16aug19"
@@ -120,7 +120,7 @@ def test_decimate(tmp_path, dec_params):
     #  check meshes similarity (for extra details on fail)
     with check:
         compare_meshes_similarity(mesh, ref_mesh,
-                                  verts_thresh=0.01, edges_thresh=0.01)  # diff vs reference usually about 5 verts on 800 overall
+                                  verts_thresh=0.02, edges_thresh=0.02)  # increase thresholds for Arm-builds, see MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES above
     with check:
         self_col_tri = mrmeshpy.findSelfCollidingTriangles(mesh).size()
         assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"

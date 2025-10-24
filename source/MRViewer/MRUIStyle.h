@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 #include <optional>
+#include <filesystem>
 
 namespace MR
 {

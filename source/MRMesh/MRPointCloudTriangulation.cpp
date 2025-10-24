@@ -19,7 +19,7 @@
 #include "MRLocalTriangulations.h"
 #include "MRMeshFixer.h"
 #include "MREdgePaths.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 
 namespace MR
 {

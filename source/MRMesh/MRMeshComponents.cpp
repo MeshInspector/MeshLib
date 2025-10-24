@@ -8,7 +8,7 @@
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
 #include "MRUnionFindParallel.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 #include <climits>
 
 namespace MR

@@ -9,6 +9,7 @@
 #include "MRMeshRelax.h"
 #include "MRLaplacian.h"
 #include "MRTimer.h"
+#include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
 
 namespace MR

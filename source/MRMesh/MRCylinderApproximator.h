@@ -1,21 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-
-#include "MRPch/MRSuppressWarning.h"
-
-MR_SUPPRESS_WARNING_PUSH
-#if defined( _MSC_VER )
-#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
-#pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
-#elif defined( __apple_build_version__ )
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined( __clang__ )
-#elif defined( __GNUC__ )
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include <Eigen/Eigenvalues>
-MR_SUPPRESS_WARNING_POP
+#include <MRPch/MREigenCore.h>
 
 // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
 
@@ -28,7 +14,7 @@ class Cylinder3Approximation
 private:
     enum class CylinderFitterType
     {
-        // The algorithm implimentation needs an initial approximation to refine the cylinder axis.
+        // The algorithm implementation needs an initial approximation to refine the cylinder axis.
         // In this option, we sort through several possible options distributed over the hemisphere.
         HemisphereSearchFit,
 
@@ -36,7 +22,7 @@ private:
         // Therefore, we specify only the position that is given from the outside
         SpecificAxisFit
 
-        // TODO for Meshes try to impliment specific algorithm from https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
+        // TODO for Meshes try to implement specific algorithm from https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
         // TODO Also, an estimate of the cylinder axis can be obtained by the gravel component method or the like. But this requires additional. experiments.
         // TODO for future try eigen vector covariance   https://www.geometrictools.com/Documentation/RobustEigenSymmetric3x3.pdf
     };

@@ -4,34 +4,22 @@
 #include "MRCone3.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
-#include "MRPch/MRTBB.h"
-#include <algorithm>
+#include <MRPch/MREigenCore.h>
+#include <Eigen/SVD>
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 4068) // unknown pragmas
-#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4244) // conversion from double to float
 #pragma warning(disable: 4464) // relative include path contains '..'
-#pragma warning(disable: 4643) // Forward declaring 'tuple' in namespace std is not permitted by the C++ Standard.
-#pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
-#pragma warning(disable: 4244) // casting float to double
-#elif defined(__clang__)
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
-
 #include <unsupported/Eigen/NonLinearOptimization>
 #include <unsupported/Eigen/NumericalDiff>
-#include <Eigen/Dense>
-
 #ifdef _MSC_VER
 #pragma warning(pop)
-#elif defined(__clang__)
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
 #endif
 
+#include "MRPch/MRTBB.h"
+#include <algorithm>
 
 // Main idea is here: https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf pages 45-51
 // Below we will write out the function and Jacobian for minimization by the Levenberg-Marquard method

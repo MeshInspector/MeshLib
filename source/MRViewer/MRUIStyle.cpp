@@ -7,10 +7,12 @@
 #include "MRRibbonFontManager.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
+#include "MRModalDialog.h"
 #include "MRViewer/MRViewer.h"
-#include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRMesh/MRVector4.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
 
 #include <imgui_internal.h>
 
@@ -231,8 +233,11 @@ void init()
 
 ImGuiKey getImGuiModPrimaryCtrl()
 {
-    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL || 
+        ( getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER && ImGui::GetIO().ConfigMacOSXBehaviors ) ) // In new version of ImGui ImGuiMod_Ctrl is already swapped with ImGuiMod_Super internally, so we don't swap it on our end
+    {
         return ImGuiMod_Ctrl;
+    }
     else
         return ImGuiMod_Super;
 }
@@ -2305,6 +2310,97 @@ void highlightWindowArea( const ImVec2& min, const ImVec2& max )
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * UI::scale() );
     ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, Color( ImGui::GetStyleColorVec4( ImGuiCol_Header ) ).getUInt32() );
+}
+
+std::string CustomConfigModalSettings::popupName() const
+{
+    return "Save " + configName + "##Config" + imGuiIdKey;
+}
+
+void saveCustomConfigModal( const CustomConfigModalSettings& settings )
+{
+    auto popupName = settings.popupName();
+    ModalDialog saveDialog( popupName.c_str(), {
+        .headline = "Save " + settings.configName,
+    } );
+    if ( !saveDialog.beginPopup() )
+        return;
+
+    const auto& style = ImGui::GetStyle();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * UI::scale() } );
+    static std::string currentConfigName;
+
+    ImGui::SetNextItemWidth( saveDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+    if ( settings.inputName )
+    {
+        UI::inputText( "Name", *settings.inputName );
+        currentConfigName = *settings.inputName;
+    }
+    else
+        UI::inputText( "Name", currentConfigName );
+    ImGui::PopStyleVar();
+
+    const float btnWidth = cModalButtonWidth * UI::scale();
+
+    auto existingPopupName = settings.configName + " already exists##" + settings.configName + "Helper";
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+    bool valid = !currentConfigName.empty() && !hasProhibitedChars( currentConfigName );
+    if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
+    {
+        std::error_code ec;
+        if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / ( currentConfigName + ".json" ), ec ) )
+        {
+            ImGui::OpenPopup( existingPopupName.c_str() );
+        }
+        else
+        {
+            assert( settings.onSave );
+            if ( settings.onSave && settings.onSave( currentConfigName ) )
+                ImGui::CloseCurrentPopup();
+        }
+    }
+    ImGui::PopStyleVar();
+    if ( !valid )
+    {
+        UI::setTooltipIfHovered( currentConfigName.empty() ?
+            "Cannot save " + settings.configName + " with empty name" :
+            "Please do not use any of these symbols: \? * / \\ \" < >" );
+    }
+
+    bool closeTopPopup = false;
+    ModalDialog warningPopup( existingPopupName, {
+        .text = settings.configName + " preset with this name already exists, override?",
+    } );
+    if ( warningPopup.beginPopup() )
+    {
+        auto w = ImGui::GetContentRegionAvail().x;
+        auto p = style.FramePadding.x;
+        if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
+        {
+            assert( settings.onSave );
+            closeTopPopup = settings.onSave && settings.onSave( currentConfigName );
+        }
+        ImGui::SameLine( 0, p );
+        if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Escape ) )
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        warningPopup.endPopup();
+    }
+    if ( closeTopPopup )
+        ImGui::CloseCurrentPopup();
+
+    ImGui::SameLine();
+
+    ImGui::SetCursorPosX( saveDialog.windowWidth() - btnWidth - style.WindowPadding.x );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+    if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
+        ImGui::CloseCurrentPopup();
+    ImGui::PopStyleVar();
+
+    saveDialog.endPopup();
 }
 
 } // namespace UI

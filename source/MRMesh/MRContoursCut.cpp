@@ -17,7 +17,7 @@
 #include "MRMeshIntersect.h"
 #include "MRSurfacePath.h"
 #include "MRPch/MRSpdlog.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 #include <numeric>
 
 namespace MR

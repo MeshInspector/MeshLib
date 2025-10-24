@@ -31,18 +31,21 @@ def test_icp():
     diffXf.A -= newXf.A
     diffXf.b -= newXf.b
 
-    assert abs(diffXf.A.x.x) < 1e-6
-    assert abs(diffXf.A.x.y) < 1e-6
-    assert abs(diffXf.A.x.z) < 1e-6
+    # eps increase from 1e-6 to 3e-5 for GCC11 Debug Arm build
+    eps = 3e-5
 
-    assert abs(diffXf.A.y.x) < 1e-6
-    assert abs(diffXf.A.y.y) < 1e-6
-    assert abs(diffXf.A.y.z) < 1e-6
+    assert abs(diffXf.A.x.x) < eps
+    assert abs(diffXf.A.x.y) < eps
+    assert abs(diffXf.A.x.z) < eps
 
-    assert abs(diffXf.A.z.x) < 1e-6
-    assert abs(diffXf.A.z.y) < 1e-6
-    assert abs(diffXf.A.z.z) < 1e-6
+    assert abs(diffXf.A.y.x) < eps
+    assert abs(diffXf.A.y.y) < eps
+    assert abs(diffXf.A.y.z) < eps
 
-    assert abs(diffXf.b.x) < 1e-6
-    assert abs(diffXf.b.y) < 1e-6
-    assert abs(diffXf.b.z) < 1e-6
+    assert abs(diffXf.A.z.x) < eps
+    assert abs(diffXf.A.z.y) < eps
+    assert abs(diffXf.A.z.z) < eps
+
+    assert abs(diffXf.b.x) < eps
+    assert abs(diffXf.b.y) < eps
+    assert abs(diffXf.b.z) < eps

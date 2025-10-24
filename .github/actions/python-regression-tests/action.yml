@@ -21,11 +21,6 @@ inputs:
     description: "S3 path for test artifacts. Make sure it is unique for different jobs"
     required: true
     type: string
-  ubuntu20_arm_workaround:
-    description: "Disable specific tests incompatible with Ubuntu 20.04 ARM configuration"
-    required: false
-    type: boolean
-    default: false
   upload_test_artifacts:
     required: true
     type: boolean
@@ -43,7 +38,6 @@ runs:
         pytest_args: ${{ inputs.pytest_args }}
         smoke: ${{ inputs.smoke }}
         test_artifacts_path: ${{ inputs.test_artifacts_path }}
-        ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}
         upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
         EOF
 
@@ -56,7 +50,6 @@ runs:
         Write-Output "pytest_args: ${{ inputs.pytest_args }}"
         Write-Output "smoke: ${{ inputs.smoke }}"
         Write-Output "test_artifacts_path: ${{ inputs.test_artifacts_path }}"
-        Write-Output "ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}"
         Write-Output "upload_test_artifacts: ${{ inputs.upload_test_artifacts }}"
 
     # cache management: https://github.com/MeshInspector/MeshLib/actions/caches
@@ -86,8 +79,6 @@ runs:
       if: ${{ runner.os != 'Windows' }}
       shell: bash
       working-directory: build/${{ inputs.build_config }}/bin
-      env:
-        MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ fromJSON( inputs.ubuntu20_arm_workaround ) && '1' || '0' }}
       run: >
         python3 ../../../scripts/run_python_test_script.py
         -d '../test_regression'

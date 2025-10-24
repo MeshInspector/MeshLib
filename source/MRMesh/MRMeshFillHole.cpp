@@ -11,7 +11,7 @@
 #include "MRGTest.h"
 #include "MRParallelFor.h"
 #include "MRPch/MRSpdlog.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 #include <queue>
 #include <functional>
 

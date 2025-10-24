@@ -7,12 +7,12 @@
 #include "MRRibbonFontManager.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
+#include "MRModalDialog.h"
 #include "MRViewer/MRViewer.h"
-#include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRMesh/MRVector4.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRModalDialog.h"
 
 #include <imgui_internal.h>
 

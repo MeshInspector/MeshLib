@@ -312,6 +312,11 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
 namespace MR
 {
 
+struct Viewer::Connections
+{
+    std::vector<boost::signals2::scoped_connection> uiUpdateConnections;
+};
+
 void Viewer::emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable )
 {
     if ( eventQueue_ )
@@ -1163,7 +1168,8 @@ Viewer::Viewer() :
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
     mouseController_( std::make_unique<MouseController>() ),
     recentFilesStore_( std::make_unique<RecentFilesStore>() ),
-    frameCounter_( std::make_unique<FrameCounter>() )
+    frameCounter_( std::make_unique<FrameCounter>() ),
+    connections_( std::make_unique<Connections>() )
 {
     window = nullptr;
 
@@ -2089,7 +2095,7 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    uiUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this, numF] ()
+    connections_->uiUpdateConnections.push_back( ColorTheme::instance().onChanged( [this, numF] ()
     {
         if ( !basisAxes )
             return;
@@ -2117,7 +2123,7 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, false );
         }
     } ) );
-    uiUpdateConnections_.push_back( postRescaleSignal.connect( [this] ( float, float )
+    connections_->uiUpdateConnections.push_back( postRescaleSignal.connect( [this] ( float, float )
     {
         if ( !menuPlugin_ )
             return;

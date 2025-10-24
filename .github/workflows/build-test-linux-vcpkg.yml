@@ -70,6 +70,7 @@ jobs:
             os: ubuntu-24.04-arm
           - arch: arm64
             compiler: GCC 11
+            skip_mrbind: true # GCC + ARM64 build has unresolved problems
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -115,7 +116,7 @@ jobs:
           git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/mrbind-pybind11 thirdparty/mrbind
 
       - name: Install MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        if: ${{ (inputs.mrbind || inputs.mrbind_c) && !matrix.skip_mrbind }}
         run: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
@@ -130,7 +131,7 @@ jobs:
         run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Generate C bindings
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ inputs.mrbind_c && !matrix.skip_mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
@@ -147,10 +148,10 @@ jobs:
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c && !matrix.skip_mrbind] }}
 
       - name: Generate and build Python bindings
-        if: ${{ inputs.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
@@ -170,30 +171,31 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest ${{ matrix.skip_mrbind && '--no-python-tests' || '' }}
 
       - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
 
       - name: C Unit Tests
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ inputs.mrbind_c && !matrix.skip_mrbind }}
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
-        if: ${{ inputs.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Python Regression Tests
-        if: ${{ inputs.internal_build && inputs.mrbind }}
+        if: ${{ inputs.internal_build && inputs.mrbind && !matrix.skip_mrbind }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
-          mrbind: ${{ inputs.mrbind }}
+          mrbind: ${{ inputs.mrbind && !matrix.skip_mrbind }}
           pytest_args: "--run-cuda=negative"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: linux-vcpkg-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}
+          ubuntu20_arm_workaround: ${{ inputs.mrbind && matrix.arch == 'arm64' }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Package

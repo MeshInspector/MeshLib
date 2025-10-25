@@ -13,7 +13,7 @@ MeshTopologyDiff::MeshTopologyDiff( const MeshTopology & from, const MeshTopolog
     for ( EdgeId e{0}; e < toEdgesSize_; ++e )
     {
         if ( e >= from.edges_.size() || from.edges_[e] != to.edges_[e] )
-            changedEdges_[e] = to.edges_[e];
+            changedEdges_[e] = to.getHalfEdge_( e );
     }
 }
 
@@ -25,7 +25,7 @@ void MeshTopologyDiff::applyAndSwap( MeshTopology & m )
     // remember edges_ being deleted from m
     for ( EdgeId e{toEdgesSize_}; e < mEdgesSize; ++e )
     {
-        changedEdges_[e] = m.edges_[e];
+        changedEdges_[e] = m.getHalfEdge_( e );
     }
     m.edges_.resize( toEdgesSize_ );
     // swap common edges_ and delete edges_ for vertices missing in original m (that will be next target)
@@ -35,7 +35,7 @@ void MeshTopologyDiff::applyAndSwap( MeshTopology & m )
         auto & pos = it->second;
         if ( e < toEdgesSize_ )
         {
-            std::swap( pos, m.edges_[e] );
+            m.swapHalfEdge_( e, pos );
             if ( e >= mEdgesSize )
             {
                 it = changedEdges_.erase( it );

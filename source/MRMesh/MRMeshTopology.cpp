@@ -2131,7 +2131,7 @@ void MeshTopology::pack( const PackMapping & map )
     {
         Timer t( "left" );
         Vector<FaceId, EdgeId> tmpLeft;
-        tmpLeft.resizeNoInit( map.e.tsize );
+        tmpLeft.resizeNoInit( 2 * map.e.tsize );
         ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
         {
             UndirectedEdgeId newUe = map.e.b[oldUe];
@@ -2386,19 +2386,31 @@ void MeshTopology::packMinMem( const PackMapping & map )
     updateValids_ = true;
 }
 
-struct SerializedHalfEdgeRecord
+void MeshTopology::setHalfEdge_( EdgeId e, const SerializedHalfEdgeRecord & rec )
 {
-    EdgeId next;
-    EdgeId prev;
-    VertId org;
-    FaceId left;
+    edges_[e].next = rec.next;
+    edges_[e].prev = rec.prev;
+    edges_[e].org = rec.org;
+    left_[e] = rec.left;
+}
 
-    SerializedHalfEdgeRecord() noexcept = default;
-    explicit SerializedHalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit )
-    {
-    }
-};
-static_assert( sizeof( SerializedHalfEdgeRecord ) == 16 );
+void MeshTopology::swapHalfEdge_( EdgeId e, SerializedHalfEdgeRecord & rec )
+{
+    std::swap( edges_[e].next, rec.next );
+    std::swap( edges_[e].prev, rec.prev );
+    std::swap( edges_[e].org, rec.org );
+    std::swap( left_[e], rec.left );
+}
+
+MeshTopology::SerializedHalfEdgeRecord MeshTopology::getHalfEdge_( EdgeId e ) const
+{
+    SerializedHalfEdgeRecord res( noInit );
+    res.next = edges_[e].next;
+    res.prev = edges_[e].prev;
+    res.org = edges_[e].org;
+    res.left = left_[e];
+    return res;
+}
 
 void MeshTopology::write( std::ostream & s ) const
 {
@@ -2411,10 +2423,7 @@ void MeshTopology::write( std::ostream & s ) const
     recs.resizeNoInit( numEdges );
     ParallelFor( recs, [&] ( EdgeId e )
     {
-        recs[e].next = edges_[e].next;
-        recs[e].prev = edges_[e].prev;
-        recs[e].org = edges_[e].org;
-        recs[e].left = left_[e];
+        recs[e] = getHalfEdge_( e );
     } );
     s.write( (const char*)recs.data(), recs.size() * sizeof(HalfEdgeRecord) );
 
@@ -2455,12 +2464,10 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
         return unexpectedOperationCanceled();
 
     edges_.resizeNoInit( numEdges );
+    left_.resizeNoInit( numEdges );
     ParallelFor( recs, [&] ( EdgeId e )
     {
-        edges_[e].next = recs[e].next;
-        edges_[e].prev = recs[e].prev;
-        edges_[e].org = recs[e].org;
-        left_[e] = recs[e].left;
+        setHalfEdge_( e, recs[e] );
     } );
 
     // read verts

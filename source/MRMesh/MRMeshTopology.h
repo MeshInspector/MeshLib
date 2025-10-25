@@ -532,13 +532,11 @@ public:
     MRMESH_API bool checkValidity( ProgressCallback cb = {}, bool allVerts = true ) const;
 
 private:
-    friend class MeshTopologyDiff;
     /// computes from edges_ all remaining fields: \n
     /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_,
     /// 4) numValidFaces_, 5) validFaces_, 6) edgePerFace_
     MRMESH_API void computeAllFromEdges_();
 
-private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
@@ -583,6 +581,23 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
+
+    friend class MeshTopologyDiff;
+    /// data of every half-edge
+    struct SerializedHalfEdgeRecord
+    {
+        EdgeId next;
+        EdgeId prev;
+        VertId org;
+        FaceId left;
+
+        SerializedHalfEdgeRecord() noexcept = default;
+        explicit SerializedHalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+    };
+    static_assert( sizeof( SerializedHalfEdgeRecord ) == 16 );
+    void setHalfEdge_( EdgeId e, const SerializedHalfEdgeRecord & rec );
+    void swapHalfEdge_( EdgeId e, SerializedHalfEdgeRecord & rec );
+    SerializedHalfEdgeRecord getHalfEdge_( EdgeId e ) const;
 };
 
 template <typename T>

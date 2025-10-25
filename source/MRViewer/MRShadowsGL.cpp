@@ -1,5 +1,7 @@
 #include "MRShadowsGL.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
+#include "MRMakeSlot.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
@@ -29,9 +31,9 @@ void ShadowsGL::enable( bool on )
     enabled_ = on;
     if ( on )
     {
-        preDrawConnection_ = getViewerInstance().preDrawSignal.connect( MAKE_SLOT( &ShadowsGL::preDraw_ ), boost::signals2::at_back );
-        postDrawConnection_ = getViewerInstance().postDrawPreViewportSignal.connect( MAKE_SLOT( &ShadowsGL::postDraw_ ), boost::signals2::at_front );
-        postResizeConnection_ = getViewerInstance().postResizeSignal.connect( MAKE_SLOT( &ShadowsGL::postResize_ ), boost::signals2::at_back );
+        preDrawConnection_ = getViewerInstance().signals().preDrawSignal.connect( MAKE_SLOT( &ShadowsGL::preDraw_ ), boost::signals2::at_back );
+        postDrawConnection_ = getViewerInstance().signals().postDrawPreViewportSignal.connect( MAKE_SLOT( &ShadowsGL::postDraw_ ), boost::signals2::at_front );
+        postResizeConnection_ = getViewerInstance().signals().postResizeSignal.connect( MAKE_SLOT( &ShadowsGL::postResize_ ), boost::signals2::at_back );
         
         glfwGetFramebufferSize( getViewerInstance().window, &sceneSize_.x, &sceneSize_.y );
         lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );

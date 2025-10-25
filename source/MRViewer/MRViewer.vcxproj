@@ -159,6 +159,7 @@
     <ClInclude Include="exports.h" />
     <ClInclude Include="MRDragDropHandler.h" />
     <ClInclude Include="MRDragDropWin32Handler.h" />
+    <ClInclude Include="MRFileLoadOptions.h" />
     <ClInclude Include="MRImGui.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />

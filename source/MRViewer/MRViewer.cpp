@@ -34,6 +34,7 @@
 #include "MRViewerTitle.h"
 #include "MRViewportCornerController.h"
 #include "MRViewportGlobalBasis.h"
+#include "MRFileLoadOptions.h"
 #include "MRWebRequest.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
@@ -1249,6 +1250,11 @@ static std::optional<std::string> commonClassName( const std::vector<std::shared
             return {};
 
     return objs[0]->classNameInPlural();
+}
+
+bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
+{
+    return loadFiles( filesList, {} );
 }
 
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )

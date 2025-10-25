@@ -15,6 +15,7 @@ enum class FitMode;
 struct BaseFitParams;
 struct FitDataParams;
 struct FitBoxParams;
+struct FileLoadOptions;
 
 enum class MouseButton;
 enum class MouseMode;

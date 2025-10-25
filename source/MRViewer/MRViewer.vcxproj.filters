@@ -957,6 +957,9 @@
     <ClInclude Include="MRViewerSignals.h">
       <Filter>Viewer</Filter>
     </ClInclude>
+    <ClInclude Include="MRFileLoadOptions.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

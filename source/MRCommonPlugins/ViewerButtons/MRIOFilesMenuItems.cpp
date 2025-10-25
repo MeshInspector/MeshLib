@@ -6,6 +6,7 @@
 #include "MRViewer/MRRecentFilesStore.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MROpenObjects.h"
+#include "MRViewer/MRFileLoadOptions.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"

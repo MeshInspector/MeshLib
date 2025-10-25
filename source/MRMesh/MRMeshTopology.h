@@ -93,10 +93,10 @@ public:
     [[nodiscard]] VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
 
     /// returns left face of half-edge
-    [[nodiscard]] FaceId left( EdgeId he ) const { assert(he.valid()); return edges_[he].left; }
+    [[nodiscard]] FaceId left( EdgeId he ) const { assert(he.valid()); return left_[he]; }
 
     /// returns right face of half-edge
-    [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
+    [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return left_[he.sym()]; }
 
 
     /// sets new origin to the full origin ring including this edge;
@@ -532,13 +532,11 @@ public:
     MRMESH_API bool checkValidity( ProgressCallback cb = {}, bool allVerts = true ) const;
 
 private:
-    friend class MeshTopologyDiff;
     /// computes from edges_ all remaining fields: \n
     /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_,
     /// 4) numValidFaces_, 5) validFaces_, 6) edgePerFace_
     MRMESH_API void computeAllFromEdges_();
 
-private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
@@ -546,29 +544,27 @@ private:
     void setLeft_( EdgeId a, FaceId f );
 
     /// data of every half-edge
-    struct HalfEdgeRecord
+    struct OldHalfEdge
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
-        FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const HalfEdgeRecord& b ) const
-        {
-            return next == b.next && prev == b.prev && org == b.org && left == b.left;
-        }
-        HalfEdgeRecord() noexcept = default;
-        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        bool operator ==( const OldHalfEdge& b ) const = default;
+        OldHalfEdge() noexcept = default;
+        explicit OldHalfEdge( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>
-    void translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const;
+    void translateNoFlip_( OldHalfEdge & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const;
     template<typename FM, typename VM, typename WEM>
-    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+    void translate_( OldHalfEdge & r, FaceId & left, OldHalfEdge & rsym, FaceId & symLeft,
         const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
-    Vector<HalfEdgeRecord, EdgeId> edges_;
+    Vector<OldHalfEdge, EdgeId> edges_;
+
+    Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
 
     /// edgePerVertex_: VertId -> one edge id of one of edges with origin there
     Vector<EdgeId, VertId> edgePerVertex_;
@@ -582,6 +578,32 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
+
+    friend class MeshTopologyDiff;
+    /// data of every half-edge
+    struct HalfEdgeRecord
+    {
+        EdgeId next; ///< next counter clock wise half-edge in the origin ring
+        EdgeId prev; ///< next clock wise half-edge in the origin ring
+        VertId org;  ///< vertex at the origin of the edge
+        FaceId left; ///< face at the left of the edge
+
+        operator OldHalfEdge() const { OldHalfEdge res( noInit ); res.next = next; res.prev = prev; res.org = org; return res; }
+
+        bool operator ==( const HalfEdgeRecord& b ) const = default;
+        HalfEdgeRecord() noexcept = default;
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        HalfEdgeRecord( const OldHalfEdge & o, FaceId l ) : next( o.next ), prev( o.prev ), org( o.org ), left( l ) {}
+    };
+    static_assert( sizeof( HalfEdgeRecord ) == 16 );
+    void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec );
+    void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec );
+    HalfEdgeRecord getHalfEdge_( EdgeId e ) const;
+
+    struct EdgeRecord
+    {
+        HalfEdgeRecord he[2];
+    };
 };
 
 template <typename T>

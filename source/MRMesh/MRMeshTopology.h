@@ -588,14 +588,22 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
+        operator OldHalfEdge() const { OldHalfEdge res( noInit ); res.next = next; res.prev = prev; res.org = org; return res; }
+
         bool operator ==( const HalfEdgeRecord& b ) const = default;
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        HalfEdgeRecord( const OldHalfEdge & o, FaceId l ) : next( o.next ), prev( o.prev ), org( o.org ), left( l ) {}
     };
     static_assert( sizeof( HalfEdgeRecord ) == 16 );
     void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec );
     void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec );
     HalfEdgeRecord getHalfEdge_( EdgeId e ) const;
+
+    struct EdgeRecord
+    {
+        HalfEdgeRecord he[2];
+    };
 };
 
 template <typename T>

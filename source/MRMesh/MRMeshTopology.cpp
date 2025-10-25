@@ -2314,29 +2314,21 @@ void MeshTopology::packMinMem( const PackMapping & map )
         validVerts_.resize( numValidVerts_, true );
     } );
 
-    struct EdgeRecord
-    {
-        OldHalfEdge he0;
-        FaceId l0;
-        OldHalfEdge he1;
-        FaceId l1;
-    };
-
     shuffle( map.e,
         [&]( UndirectedEdgeId ue )
         {
             const EdgeId e0( ue );
             const EdgeId e1( e0.sym() );
-            return EdgeRecord{ edges_[e0], left_[e0], edges_[e1], left_[e1] };
+            return EdgeRecord{ HalfEdgeRecord{ edges_[e0], left_[e0] }, HalfEdgeRecord{ edges_[e1], left_[e1] } };
         },
         [&]( UndirectedEdgeId ue, const EdgeRecord& r )
         {
             const EdgeId e0( ue );
             const EdgeId e1( e0.sym() );
-            edges_[e0] = r.he0;
-            left_[e0] = r.l0;
-            edges_[e1] = r.he1;
-            left_[e1] = r.l1;
+            edges_[e0] = r.he[0];
+            left_[e0] = r.he[0].left;
+            edges_[e1] = r.he[1];
+            left_[e1] = r.he[1].left;
         }
     );
     edges_.resize( 2 * map.e.tsize );

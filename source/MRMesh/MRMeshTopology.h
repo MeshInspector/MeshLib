@@ -544,25 +544,25 @@ private:
     void setLeft_( EdgeId a, FaceId f );
 
     /// data of every half-edge
-    struct HalfEdgeRecord
+    struct OldHalfEdge
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
 
-        bool operator ==( const HalfEdgeRecord& b ) const = default;
-        HalfEdgeRecord() noexcept = default;
-        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ) {}
+        bool operator ==( const OldHalfEdge& b ) const = default;
+        OldHalfEdge() noexcept = default;
+        explicit OldHalfEdge( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>
-    void translateNoFlip_( HalfEdgeRecord & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const;
+    void translateNoFlip_( OldHalfEdge & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const;
     template<typename FM, typename VM, typename WEM>
-    void translate_( HalfEdgeRecord & r, FaceId & left, HalfEdgeRecord & rsym, FaceId & symLeft,
+    void translate_( OldHalfEdge & r, FaceId & left, OldHalfEdge & rsym, FaceId & symLeft,
         const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
-    Vector<HalfEdgeRecord, EdgeId> edges_;
+    Vector<OldHalfEdge, EdgeId> edges_;
 
     Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
 
@@ -581,21 +581,21 @@ private:
 
     friend class MeshTopologyDiff;
     /// data of every half-edge
-    struct SerializedHalfEdgeRecord
+    struct HalfEdgeRecord
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const SerializedHalfEdgeRecord& b ) const = default;
-        SerializedHalfEdgeRecord() noexcept = default;
-        explicit SerializedHalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        bool operator ==( const HalfEdgeRecord& b ) const = default;
+        HalfEdgeRecord() noexcept = default;
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
-    static_assert( sizeof( SerializedHalfEdgeRecord ) == 16 );
-    void setHalfEdge_( EdgeId e, const SerializedHalfEdgeRecord & rec );
-    void swapHalfEdge_( EdgeId e, SerializedHalfEdgeRecord & rec );
-    SerializedHalfEdgeRecord getHalfEdge_( EdgeId e ) const;
+    static_assert( sizeof( HalfEdgeRecord ) == 16 );
+    void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec );
+    void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec );
+    HalfEdgeRecord getHalfEdge_( EdgeId e ) const;
 };
 
 template <typename T>

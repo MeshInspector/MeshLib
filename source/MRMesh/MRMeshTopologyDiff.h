@@ -32,7 +32,7 @@ public:
 
 private:
     size_t toEdgesSize_ = 0;
-    HashMap<EdgeId, MeshTopology::SerializedHalfEdgeRecord> changedEdges_;
+    HashMap<EdgeId, MeshTopology::HalfEdgeRecord> changedEdges_;
 };
 
 } // namespace MR

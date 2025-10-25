@@ -78,12 +78,12 @@ bool MeshTopology::isLoneEdge( EdgeId a ) const
     if ( a >= edges_.size() )
         return true;
     auto & adata = edges_[a];
-    if ( adata.left.valid() || adata.org.valid() || adata.next != a || adata.prev != a )
+    if ( left_[a].valid() || adata.org.valid() || adata.next != a || adata.prev != a )
         return false;
 
     auto b = a.sym();
     auto & bdata = edges_[b];
-    if ( bdata.left.valid() || bdata.org.valid() || bdata.next != b || bdata.prev != b )
+    if ( left_[b].valid() || bdata.org.valid() || bdata.next != b || bdata.prev != b )
         return false;
 
     return true;
@@ -163,17 +163,19 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
     assert( a.valid() && b.valid() );
     if ( a == b )
         return;
+    const auto aNext = next( a );
+    const auto bNext = next( b );
 
     auto & aData = edges_[a];
-    auto & aNextData = edges_[next( a )];
+    auto & aNextData = edges_[aNext];
     auto & bData = edges_[b];
-    auto & bNextData = edges_[next( b )];
+    auto & bNextData = edges_[bNext];
 
     bool wasSameOriginId = aData.org == bData.org;
     assert( wasSameOriginId || !aData.org.valid() || !bData.org.valid() );
 
-    bool wasSameLeftId = aData.left == bData.left;
-    assert( wasSameLeftId || !aData.left.valid() || !bData.left.valid() );
+    bool wasSameLeftId = left_[a] == left_[b];
+    assert( wasSameLeftId || !left_[a].valid() || !left_[b].valid() );
 
     if ( !wasSameOriginId )
     {
@@ -185,10 +187,10 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
 
     if ( !wasSameLeftId )
     {
-        if ( aData.left.valid() )
-            setLeft_( b, aData.left );
-        else if ( bData.left.valid() )
-            setLeft_( a, bData.left );
+        if ( left_[a].valid() )
+            setLeft_( b, left_[a] );
+        else if ( left_[b].valid() )
+            setLeft_( a, left_[b] );
     }
 
     std::swap( aData.next, bData.next );
@@ -201,11 +203,11 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
             edgePerVertex_[aData.org] = a;
     }
 
-    if ( wasSameLeftId && bData.left.valid() )
+    if ( wasSameLeftId && left_[b].valid() )
     {
         setLeft_( b, FaceId() );
-        if ( !fromSameLeftRing( edgePerFace_[aData.left], a ) )
-            edgePerFace_[aData.left] = a;
+        if ( !fromSameLeftRing( edgePerFace_[left_[a]], a ) )
+            edgePerFace_[left_[a]] = a;
     }
 }
 
@@ -496,9 +498,7 @@ void MeshTopology::setLeft_( EdgeId a, FaceId f )
 {
     assert( a.valid() );
     for ( EdgeId i : leftRing( *this, a ) )
-    {
-        edges_[i].left = f;
-    }
+        left_[i] = f;
 }
 
 void MeshTopology::setLeft( EdgeId a, FaceId f )
@@ -959,7 +959,7 @@ void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
 }
 
 template<typename FM, typename VM, typename WEM>
-void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const
+void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const
 {
     for ( auto n = r.next; ; n = next( n ) )
     {
@@ -976,22 +976,22 @@ void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const 
     if ( r.org.valid() )
         r.org = getAt( vmap, r.org );
 
-    if ( r.left.valid() )
-        r.left = getAt( fmap, r.left );
+    if ( left.valid() )
+        left = getAt( fmap, left );
 }
 
 template<typename FM, typename VM, typename WEM>
-void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+void MeshTopology::translate_( HalfEdgeRecord & r, FaceId & left, HalfEdgeRecord & rsym, FaceId & symLeft,
     const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const
 {
-    translateNoFlip_( r, fmap, vmap, emap );
-    translateNoFlip_( rsym, fmap, vmap, emap );
+    translateNoFlip_( r, left, fmap, vmap, emap );
+    translateNoFlip_( rsym, symLeft, fmap, vmap, emap );
 
     if ( flipOrientation )
     {
         std::swap( r.prev, r.next );
         std::swap( rsym.prev, rsym.next );
-        std::swap( r.left, rsym.left );
+        std::swap( left, symLeft );
     }
 }
 
@@ -1183,7 +1183,7 @@ void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents 
         auto & r1 = edges_[i + 1];
         std::swap( r1.next, r1.prev );
 
-        std::swap( r0.left, r1.left );
+        std::swap( left_[i], left_[i + 1] );
     } );
 }
 
@@ -1347,7 +1347,7 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
         for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
         {
             EdgeId e{ ue };
-            from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, false );
+            from.translate_( edges_[e], left_[e], edges_[e.sym()], left_[e.sym()], fmap, vmap, emap, false );
         }
     } );
 
@@ -1451,11 +1451,12 @@ void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, co
         assert ( !from.isLoneEdge( i ) );
 
         const HalfEdgeRecord & fromEdge = from.edges_[i];
-        HalfEdgeRecord & to = edges_[emap( i )];
+        const auto j = emap( i );
+        HalfEdgeRecord & to = edges_[j];
         to.next = emap( fromEdge.next );
         to.prev = emap( fromEdge.prev );
         to.org = fromEdge.org.valid() ? vmap[fromEdge.org] : VertId{};
-        to.left = fromEdge.left.valid() ? fmap[fromEdge.left] : FaceId{};
+        left_[j] = from.left_[i].valid() ? fmap[from.left_[i]] : FaceId{};
     }
 }
 
@@ -1622,8 +1623,9 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
                 he.next = i + 1 < edgeRing.size() ? edgeRing[i + 1].e : edgeRing[0].e;
                 he.prev = i > 0 ? edgeRing[i - 1].e : edgeRing.back().e;
                 he.org = v;
-                he.left = edgeRing[i].f;
-                edges_[edgeRing[i].e] = he;
+                const auto e = edgeRing[i].e;
+                edges_[e] = he;
+                left_[e] = edgeRing[i].f;
             }
         }
     }, subprogress( cb, 0.0f, 0.5f ) );
@@ -1696,12 +1698,12 @@ void MeshTopology::computeAllFromEdges_()
     MR_TIMER;
 
     VertId maxValidVert;
-    FaceId maxValidFace;
     for( const auto & he : edges_ )
-    {
         maxValidVert = std::max( maxValidVert, he.org );
-        maxValidFace = std::max( maxValidFace, he.left );
-    }
+
+    FaceId maxValidFace;
+    for ( const auto& f : left_ )
+        maxValidFace = std::max( maxValidFace, f );
 
     edgePerVertex_.clear();
     edgePerVertex_.resize( maxValidVert + 1 );
@@ -1726,11 +1728,11 @@ void MeshTopology::computeAllFromEdges_()
                 ++numValidVerts_;
             }
         }
-        if ( he.left.valid() )
+        if ( left_[e].valid() )
         {
-            if ( !validFaces_.test_set( he.left ) )
+            if ( !validFaces_.test_set( left_[e] ) )
             {
-                edgePerFace_[he.left] = e;
+                edgePerFace_[left_[e]] = e;
                 ++numValidFaces_;
             }
         }
@@ -1961,8 +1963,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 const HalfEdgeRecord & fromHe = from.edges_[e];
                 toHe.next = mapEdge( emap, flipOrientation ? fromHe.prev : fromHe.next );
                 assert( toHe.next );
-                if ( auto left = flipOrientation ? from.edges_[e.sym()].left : fromHe.left )
-                    toHe.left = getAt( fmap, left );
+                if ( auto left = flipOrientation ? from.left_[e.sym()] : from.left_[e] )
+                    left_[e1] = getAt( fmap, left );
             }
             {
                 HalfEdgeRecord & toHe = edges_[e1.sym()];
@@ -1977,14 +1979,20 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     edges_.resizeNoInit( nextNewEdge );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
-        auto e0 = from.edges_[EdgeId{ fromUe }];
-        auto e1 = from.edges_[EdgeId{ fromUe }.sym()];
-        from.translate_( e0, e1, fmap, vmap, emap, flipOrientation );
+        const EdgeId fromE( fromUe );
+        const EdgeId fromSymE( fromE.sym() );
+        auto e0 = from.edges_[fromE];
+        auto l0 = from.left_[fromE];
+        auto e1 = from.edges_[fromSymE];
+        auto l1 = from.left_[fromSymE];
+        from.translate_( e0, l0, e1, l1, fmap, vmap, emap, flipOrientation );
 
         const UndirectedEdgeId nue = getAt( emap, fromUe );
         const EdgeId ne{ nue };
         edges_[ne] = e0;
+        left_[ne] = l0;
         edges_[ne.sym()] = e1;
+        left_[ne.sym()] = l1;
     } );
 
     // translate vertex records

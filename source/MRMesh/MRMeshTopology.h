@@ -93,10 +93,10 @@ public:
     [[nodiscard]] VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
 
     /// returns left face of half-edge
-    [[nodiscard]] FaceId left( EdgeId he ) const { assert(he.valid()); return edges_[he].left; }
+    [[nodiscard]] FaceId left( EdgeId he ) const { assert(he.valid()); return left_[he]; }
 
     /// returns right face of half-edge
-    [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
+    [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return left_[he.sym()]; }
 
 
     /// sets new origin to the full origin ring including this edge;
@@ -551,24 +551,25 @@ private:
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
-        FaceId left; ///< face at the left of the edge
 
         bool operator ==( const HalfEdgeRecord& b ) const
         {
-            return next == b.next && prev == b.prev && org == b.org && left == b.left;
+            return next == b.next && prev == b.prev && org == b.org;
         }
         HalfEdgeRecord() noexcept = default;
-        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>
-    void translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const;
+    void translateNoFlip_( HalfEdgeRecord & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const;
     template<typename FM, typename VM, typename WEM>
-    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+    void translate_( HalfEdgeRecord & r, FaceId & left, HalfEdgeRecord & rsym, FaceId & symLeft,
         const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
     Vector<HalfEdgeRecord, EdgeId> edges_;
+
+    Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
 
     /// edgePerVertex_: VertId -> one edge id of one of edges with origin there
     Vector<EdgeId, VertId> edgePerVertex_;

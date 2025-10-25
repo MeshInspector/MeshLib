@@ -2425,7 +2425,7 @@ void MeshTopology::write( std::ostream & s ) const
     {
         recs[e] = getHalfEdge_( e );
     } );
-    s.write( (const char*)recs.data(), recs.size() * sizeof(HalfEdgeRecord) );
+    s.write( (const char*)recs.data(), recs.size() * sizeof( SerializedHalfEdgeRecord ) );
 
     // write verts
     auto numVerts = (std::uint32_t)edgePerVertex_.size();
@@ -2450,7 +2450,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
         return unexpected( std::string( "Stream reading error" ) );
 
     const auto streamSize = getStreamSize( s );
-    if ( size_t( streamSize ) < numEdges * sizeof( HalfEdgeRecord ) )
+    if ( size_t( streamSize ) < numEdges * sizeof( SerializedHalfEdgeRecord ) )
         return unexpected( std::string( "Stream reading error: stream is too short" ) ); // stream is too short
 
     Vector<SerializedHalfEdgeRecord, EdgeId> recs;

@@ -64,10 +64,12 @@ EdgeId MeshTopology::makeEdge()
     HalfEdgeRecord d0;
     d0.next = d0.prev = he0;
     edges_.push_back( d0 );
+    left_.emplace_back();
 
     HalfEdgeRecord d1;
     d1.next = d1.prev = he1;
     edges_.push_back( d1 );
+    left_.emplace_back();
 
     return he0;
 }
@@ -1253,8 +1255,12 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
         setAt( emap, i, edges_.endId() );
         if ( map.tgt2srcEdges )
             map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ i } );
-        edges_.push_back( from.edges_[ EdgeId( i ) ] );
-        edges_.push_back( from.edges_[ EdgeId( i ).sym() ] );
+        const EdgeId e0( i );
+        const EdgeId e1 = e0.sym();
+        edges_.push_back( from.edges_[e0] );
+        left_.push_back( from.left_[e0] );
+        edges_.push_back( from.edges_[e1] );
+        left_.push_back( from.left_[e1] );
     }
 
     auto vmap = map.src2tgtVerts ? std::move( *map.src2tgtVerts ) : VertMapOrHashMap::createMap();

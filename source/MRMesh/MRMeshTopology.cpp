@@ -2118,6 +2118,24 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER;
 
+    // translate left faces
+    {
+        Timer t( "left" );
+        Vector<FaceId, EdgeId> tmpLeft;
+        tmpLeft.resizeNoInit( map.e.tsize );
+        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        {
+            UndirectedEdgeId newUe = map.e.b[oldUe];
+            if ( !newUe )
+                return;
+            EdgeId oldE = oldUe;
+            EdgeId newE = newUe;
+            tmpLeft[newE] = getAt( map.f.b, left_[oldE] );
+            tmpLeft[newE.sym()] = getAt( map.f.b, left_[oldE.sym()] );
+        } );
+        left_ = std::move( tmpLeft );
+    }
+
     Vector<NoDefInit<HalfEdgeRecord>, UndirectedEdgeId> tmp( map.e.tsize );
     auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
     {
@@ -2125,7 +2143,6 @@ void MeshTopology::pack( const PackMapping & map )
         res.next = getAt( map.e.b, he.next );
         res.prev = getAt( map.e.b, he.prev );
         res.org = getAt( map.v.b, he.org );
-        res.left = getAt( map.f.b, he.left );
         return res;
     };
 

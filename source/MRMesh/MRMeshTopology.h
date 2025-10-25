@@ -550,10 +550,7 @@ private:
         EdgeId prev; ///< next clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
 
-        bool operator ==( const HalfEdgeRecord& b ) const
-        {
-            return next == b.next && prev == b.prev && org == b.org;
-        }
+        bool operator ==( const HalfEdgeRecord& b ) const = default;
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ) {}
     };
@@ -586,11 +583,12 @@ private:
     /// data of every half-edge
     struct SerializedHalfEdgeRecord
     {
-        EdgeId next;
-        EdgeId prev;
-        VertId org;
-        FaceId left;
+        EdgeId next; ///< next counter clock wise half-edge in the origin ring
+        EdgeId prev; ///< next clock wise half-edge in the origin ring
+        VertId org;  ///< vertex at the origin of the edge
+        FaceId left; ///< face at the left of the edge
 
+        bool operator ==( const SerializedHalfEdgeRecord& b ) const = default;
         SerializedHalfEdgeRecord() noexcept = default;
         explicit SerializedHalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };

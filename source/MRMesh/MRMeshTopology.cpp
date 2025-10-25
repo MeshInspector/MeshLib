@@ -1400,7 +1400,7 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
         */
     }
 
-    return edges_ == b.edges_;
+    return edges_ == b.edges_ && left_ == b.left_;
 }
 
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )

@@ -12,7 +12,7 @@ MeshTopologyDiff::MeshTopologyDiff( const MeshTopology & from, const MeshTopolog
     toEdgesSize_ = to.edges_.size();
     for ( EdgeId e{0}; e < toEdgesSize_; ++e )
     {
-        if ( e >= from.edges_.size() || from.edges_[e] != to.edges_[e] )
+        if ( e >= from.edges_.size() || from.getHalfEdge_( e ) != to.getHalfEdge_( e ) )
             changedEdges_[e] = to.getHalfEdge_( e );
     }
 }

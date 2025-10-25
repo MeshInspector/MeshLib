@@ -1404,6 +1404,7 @@ void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, si
     updateValids_ = false;
 
     edges_.resizeNoInit( edgeSize );
+    left_.resizeNoInit( edgeSize );
 
     edgePerVertex_.resize( vertSize );
     validVerts_.resize( vertSize );
@@ -1510,6 +1511,7 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
     edgePerVertex_.resizeNoInit( settings.vertIds.tsize );
     edgePerFace_.resizeNoInit( settings.faceIds.tsize );
     edges_.resizeNoInit( 2 * settings.uedgeIds.tsize );
+    left_.resizeNoInit( 2 * settings.uedgeIds.tsize );
 
     auto getVertId = [&]( Vector2i v ) -> VertId
     {
@@ -1977,6 +1979,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
 
     // translate edge records
     edges_.resizeNoInit( nextNewEdge );
+    left_.resizeNoInit( nextNewEdge );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
         const EdgeId fromE( fromUe );
@@ -2305,10 +2308,33 @@ void MeshTopology::packMinMem( const PackMapping & map )
         validVerts_.resize( numValidVerts_, true );
     } );
 
+    struct EdgeRecord
+    {
+        HalfEdgeRecord he0;
+        FaceId l0;
+        HalfEdgeRecord he1;
+        FaceId l1;
+    };
+
     shuffle( map.e,
-        [&]( UndirectedEdgeId ue ) { return std::make_pair( edges_[ EdgeId{ue} ], edges_[ EdgeId{ue}.sym() ] ); },
-        [&]( UndirectedEdgeId ue, const auto & val ) { edges_[ EdgeId{ue} ] = val.first; edges_[ EdgeId{ue}.sym() ] = val.second; } );
+        [&]( UndirectedEdgeId ue )
+        {
+            const EdgeId e0( ue );
+            const EdgeId e1( e0.sym() );
+            return EdgeRecord{ edges_[e0], left_[e0], edges_[e1], left_[e1] };
+        },
+        [&]( UndirectedEdgeId ue, const EdgeRecord& r )
+        {
+            const EdgeId e0( ue );
+            const EdgeId e1( e0.sym() );
+            edges_[e0] = r.he0;
+            left_[e0] = r.l0;
+            edges_[e1] = r.he1;
+            left_[e1] = r.l1;
+        }
+    );
     edges_.resize( 2 * map.e.tsize );
+    left_.resize( 2 * map.e.tsize );
 
     group.wait();
 
@@ -2323,10 +2349,13 @@ void MeshTopology::packMinMem( const PackMapping & map )
                 he.next = getAt( map.e.b, he.next );
                 he.prev = getAt( map.e.b, he.prev );
                 he.org = getAt( map.v.b, he.org );
-                he.left = getAt( map.f.b, he.left );
             };
-            translateHalfEdge( edges_[ EdgeId{ue} ] );
-            translateHalfEdge( edges_[ EdgeId{ue}.sym() ] );
+            const EdgeId e0( ue );
+            const EdgeId e1( e0.sym() );
+            translateHalfEdge( edges_[e0] );
+            translateHalfEdge( edges_[e1] );
+            left_[e0] = getAt( map.f.b, left_[e0] );
+            left_[e1] = getAt( map.f.b, left_[e1] );
         }
     } );
 
@@ -2351,12 +2380,37 @@ void MeshTopology::packMinMem( const PackMapping & map )
     updateValids_ = true;
 }
 
+struct SerializedHalfEdgeRecord
+{
+    EdgeId next;
+    EdgeId prev;
+    VertId org;
+    FaceId left;
+
+    SerializedHalfEdgeRecord() noexcept = default;
+    explicit SerializedHalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit )
+    {
+    }
+};
+static_assert( sizeof( SerializedHalfEdgeRecord ) == 16 );
+
 void MeshTopology::write( std::ostream & s ) const
 {
+    MR_TIMER;
     // write edges
     auto numEdges = (std::uint32_t)edges_.size();
     s.write( (const char*)&numEdges, 4 );
-    s.write( (const char*)edges_.data(), edges_.size() * sizeof(HalfEdgeRecord) );
+
+    Vector<SerializedHalfEdgeRecord, EdgeId> recs;
+    recs.resizeNoInit( numEdges );
+    ParallelFor( recs, [&] ( EdgeId e )
+    {
+        recs[e].next = edges_[e].next;
+        recs[e].prev = edges_[e].prev;
+        recs[e].org = edges_[e].org;
+        recs[e].left = left_[e];
+    } );
+    s.write( (const char*)recs.data(), recs.size() * sizeof(HalfEdgeRecord) );
 
     // write verts
     auto numVerts = (std::uint32_t)edgePerVertex_.size();
@@ -2371,6 +2425,7 @@ void MeshTopology::write( std::ostream & s ) const
 
 Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
 {
+    MR_TIMER;
     updateValids_ = false;
 
     // read edges
@@ -2383,13 +2438,24 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     if ( size_t( streamSize ) < numEdges * sizeof( HalfEdgeRecord ) )
         return unexpected( std::string( "Stream reading error: stream is too short" ) ); // stream is too short
 
-    edges_.resize( numEdges );
-    if ( !readByBlocks( s, ( char* )edges_.data(), edges_.size() * sizeof( HalfEdgeRecord ),
+    Vector<SerializedHalfEdgeRecord, EdgeId> recs;
+    recs.resizeNoInit( numEdges );
+
+    if ( !readByBlocks( s, ( char* )recs.data(), recs.size() * sizeof( SerializedHalfEdgeRecord ),
         callback ? [callback] ( float v )
     {
         return callback( v / 3.f );
     } : callback ) )
         return unexpectedOperationCanceled();
+
+    edges_.resizeNoInit( numEdges );
+    ParallelFor( recs, [&] ( EdgeId e )
+    {
+        edges_[e].next = recs[e].next;
+        edges_[e].prev = recs[e].prev;
+        edges_[e].org = recs[e].org;
+        left_[e] = recs[e].left;
+    } );
 
     // read verts
     std::uint32_t numVerts;
@@ -2460,7 +2526,7 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
             // check that vertex v is manifold - there is only one ring of edges around it
             parCheck( edgePerVertex_[v] && fromSameOriginRing( edgePerVertex_[v], e ) );
         }
-        if ( auto f = edges_[e].left )
+        if ( auto f = left_[e] )
         {
             parCheck( validFaces_.test( f ) );
             // check that face f is manifold - there is only one ring of edges around it
@@ -2514,7 +2580,7 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
         {
             parCheck( validFaces_.test( f ) );
             parCheck( edgePerFace_[f] < edges_.size() );
-            parCheck( edges_[edgePerFace_[f]].left == f );
+            parCheck( left_[edgePerFace_[f]] == f );
             ++myValidFaces;
             for ( EdgeId e : leftRing( *this, f ) )
                 parCheck( left(e) == f );

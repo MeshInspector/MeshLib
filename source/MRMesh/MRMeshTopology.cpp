@@ -64,11 +64,13 @@ EdgeId MeshTopology::makeEdge()
     OldHalfEdge d0;
     d0.next = d0.prev = he0;
     edges_.push_back( d0 );
+    org_.emplace_back();
     left_.emplace_back();
 
     OldHalfEdge d1;
     d1.next = d1.prev = he1;
     edges_.push_back( d1 );
+    org_.emplace_back();
     left_.emplace_back();
 
     return he0;
@@ -1257,8 +1259,10 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
         const EdgeId e0( i );
         const EdgeId e1 = e0.sym();
         edges_.push_back( from.edges_[e0] );
+        org_.push_back( from.org_[e0] );
         left_.push_back( from.left_[e0] );
         edges_.push_back( from.edges_[e1] );
+        org_.push_back( from.org_[e1] );
         left_.push_back( from.left_[e1] );
     }
 
@@ -1410,6 +1414,7 @@ void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, si
     updateValids_ = false;
 
     edges_.resizeNoInit( edgeSize );
+    org_.resizeNoInit( edgeSize );
     left_.resizeNoInit( edgeSize );
 
     edgePerVertex_.resize( vertSize );
@@ -1517,6 +1522,7 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
     edgePerVertex_.resizeNoInit( settings.vertIds.tsize );
     edgePerFace_.resizeNoInit( settings.faceIds.tsize );
     edges_.resizeNoInit( 2 * settings.uedgeIds.tsize );
+    org_.resizeNoInit( 2 * settings.uedgeIds.tsize );
     left_.resizeNoInit( 2 * settings.uedgeIds.tsize );
 
     auto getVertId = [&]( Vector2i v ) -> VertId
@@ -1984,6 +1990,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
 
     // translate edge records
     edges_.resizeNoInit( nextNewEdge );
+    org_.resizeNoInit( nextNewEdge );
     left_.resizeNoInit( nextNewEdge );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
@@ -2324,6 +2331,7 @@ void MeshTopology::packMinMem( const PackMapping & map )
         [&]( UndirectedEdgeId ue, const EdgeRecord& r ) { setEdge_( ue, r ); }
     );
     edges_.resize( 2 * map.e.tsize );
+    org_.resize( 2 * map.e.tsize );
     left_.resize( 2 * map.e.tsize );
 
     group.wait();
@@ -2423,6 +2431,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
         return unexpectedOperationCanceled();
 
     edges_.resizeNoInit( numEdges );
+    org_.resizeNoInit( numEdges );
     left_.resizeNoInit( numEdges );
     ParallelFor( recs, [&] ( EdgeId e )
     {

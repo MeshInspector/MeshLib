@@ -2325,17 +2325,18 @@ void MeshTopology::packMinMem( const PackMapping & map )
     {
         for ( auto ue = range.begin(); ue < range.end(); ++ue )
         {
-            auto translateHalfEdge = [&]( OldHalfEdge & he )
-            {
-                he.next = getAt( map.e.b, he.next );
-                he.prev = getAt( map.e.b, he.prev );
-            };
             const EdgeId e0( ue );
             const EdgeId e1( e0.sym() );
-            translateHalfEdge( edges_[e0] );
-            translateHalfEdge( edges_[e1] );
+
+            next_[e0] = getAt( map.e.b, next_[e0] );
+            next_[e1] = getAt( map.e.b, next_[e1] );
+
+            prev_[e0] = getAt( map.e.b, prev_[e0] );
+            prev_[e1] = getAt( map.e.b, prev_[e1] );
+
             org_[e0] = getAt( map.v.b, org_[e0] );
             org_[e1] = getAt( map.v.b, org_[e1] );
+
             left_[e0] = getAt( map.f.b, left_[e0] );
             left_[e1] = getAt( map.f.b, left_[e1] );
         }
@@ -2366,7 +2367,10 @@ void MeshTopology::write( std::ostream & s ) const
 {
     MR_TIMER;
     // write edges
-    auto numEdges = (std::uint32_t)edges_.size();
+    assert( next_.size() == prev_.size() );
+    assert( next_.size() == org_.size() );
+    assert( next_.size() == left_.size() );
+    auto numEdges = (std::uint32_t)next_.size();
     s.write( (const char*)&numEdges, 4 );
 
     Vector<HalfEdgeRecord, EdgeId> recs;
@@ -2413,7 +2417,8 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     } : callback ) )
         return unexpectedOperationCanceled();
 
-    edges_.resizeNoInit( numEdges );
+    next_.resizeNoInit( numEdges );
+    prev_.resizeNoInit( numEdges );
     org_.resizeNoInit( numEdges );
     left_.resizeNoInit( numEdges );
     ParallelFor( recs, [&] ( EdgeId e )
@@ -2462,6 +2467,11 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
     MR_TIMER;
 
     #define CHECK(x) { assert(x); if (!(x)) return false; }
+
+    CHECK( next_.size() == prev_.size() );
+    CHECK( next_.size() == org_.size() );
+    CHECK( next_.size() == left_.size() );
+
     CHECK( updateValids_ );
     const auto vSize = edgePerVertex_.size();
     CHECK( vSize == validVerts_.size() )
@@ -2475,12 +2485,12 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
             failed.store( true, std::memory_order_relaxed );
     };
 
-    auto result = ParallelFor( edges_, [&] (const EdgeId& e)
+    auto result = ParallelFor( next_, [&] (const EdgeId& e)
     {
         if ( failed.load( std::memory_order_relaxed ) )
             return;
-        parCheck( edges_[edges_[e].next].prev == e );
-        parCheck( edges_[edges_[e].prev].next == e );
+        parCheck( prev_[next_[e]] == e );
+        parCheck( next_[prev_[e]] == e );
         auto v = org_[e];
         if ( allVerts && !isLoneEdge( e ) )
             parCheck( v.valid() );
@@ -2513,7 +2523,7 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
         if ( edgePerVertex_[v].valid() )
         {
             parCheck( validVerts_.test( v ) );
-            parCheck( edgePerVertex_[v] < edges_.size() );
+            parCheck( edgePerVertex_[v] < next_.size() );
             parCheck( org_[edgePerVertex_[v]] == v );
             ++myValidVerts;
             for ( EdgeId e : orgRing( *this, v ) )
@@ -2543,7 +2553,7 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
         if ( edgePerFace_[f].valid() )
         {
             parCheck( validFaces_.test( f ) );
-            parCheck( edgePerFace_[f] < edges_.size() );
+            parCheck( edgePerFace_[f] < next_.size() );
             parCheck( left_[edgePerFace_[f]] == f );
             ++myValidFaces;
             for ( EdgeId e : leftRing( *this, f ) )

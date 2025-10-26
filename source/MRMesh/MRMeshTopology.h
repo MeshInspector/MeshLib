@@ -553,33 +553,7 @@ private:
         OldHalfEdge() noexcept = default;
         explicit OldHalfEdge( NoInit ) noexcept : next( noInit ), prev( noInit ) {}
     };
-    /// translates all fields in the record for this edge given maps
-    template<typename FM, typename VM, typename WEM>
-    void translateNoFlip_( OldHalfEdge & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const;
-    template<typename FM, typename VM, typename WEM>
-    void translate_( OldHalfEdge & r, FaceId & left, OldHalfEdge & rsym, FaceId & symLeft,
-        const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
 
-    /// edges_: EdgeId -> edge data
-    Vector<OldHalfEdge, EdgeId> edges_;
-
-    Vector<VertId, EdgeId> org_;  ///< org_[e] - vertex at the origin of the edge (e)
-    Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
-
-    /// edgePerVertex_: VertId -> one edge id of one of edges with origin there
-    Vector<EdgeId, VertId> edgePerVertex_;
-    VertBitSet validVerts_; ///< each true bit here corresponds to valid element in edgePerVertex_
-
-    /// edgePerFace_: FaceId -> one edge id with this face at left
-    Vector<EdgeId, FaceId> edgePerFace_;
-    FaceBitSet validFaces_; ///< each true bit here corresponds to valid element in edgePerFace_
-
-    int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
-    int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
-
-    bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
-
-    friend class MeshTopologyDiff;
     /// data of every half-edge
     struct HalfEdgeRecord
     {
@@ -604,6 +578,35 @@ private:
     {
         HalfEdgeRecord he[2];
     };
+    void setEdge_( UndirectedEdgeId ue, const EdgeRecord & rec );
+    EdgeRecord getEdge_( UndirectedEdgeId ue ) const;
+
+    /// translates all fields in the record for this edge given maps
+    template<typename FM, typename VM, typename WEM>
+    void translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const;
+    template<typename FM, typename VM, typename WEM>
+    void translate_( EdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
+
+    /// edges_: EdgeId -> edge data
+    Vector<OldHalfEdge, EdgeId> edges_;
+
+    Vector<VertId, EdgeId> org_;  ///< org_[e] - vertex at the origin of the edge (e)
+    Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
+
+    /// edgePerVertex_: VertId -> one edge id of one of edges with origin there
+    Vector<EdgeId, VertId> edgePerVertex_;
+    VertBitSet validVerts_; ///< each true bit here corresponds to valid element in edgePerVertex_
+
+    /// edgePerFace_: FaceId -> one edge id with this face at left
+    Vector<EdgeId, FaceId> edgePerFace_;
+    FaceBitSet validFaces_; ///< each true bit here corresponds to valid element in edgePerFace_
+
+    int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
+    int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
+
+    bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
+
+    friend class MeshTopologyDiff;
 };
 
 template <typename T>

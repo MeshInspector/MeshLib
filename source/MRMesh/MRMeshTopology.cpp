@@ -961,7 +961,7 @@ void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
 }
 
 template<typename FM, typename VM, typename WEM>
-void MeshTopology::translateNoFlip_( OldHalfEdge & r, FaceId & left, const FM & fmap, const VM & vmap, const WEM & emap ) const
+void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const
 {
     for ( auto n = r.next; ; n = next( n ) )
     {
@@ -978,22 +978,21 @@ void MeshTopology::translateNoFlip_( OldHalfEdge & r, FaceId & left, const FM & 
     if ( r.org.valid() )
         r.org = getAt( vmap, r.org );
 
-    if ( left.valid() )
-        left = getAt( fmap, left );
+    if ( r.left.valid() )
+        r.left = getAt( fmap, r.left );
 }
 
 template<typename FM, typename VM, typename WEM>
-void MeshTopology::translate_( OldHalfEdge & r, FaceId & left, OldHalfEdge & rsym, FaceId & symLeft,
-    const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const
+void MeshTopology::translate_( EdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const
 {
-    translateNoFlip_( r, left, fmap, vmap, emap );
-    translateNoFlip_( rsym, symLeft, fmap, vmap, emap );
+    translateNoFlip_( r.he[0], fmap, vmap, emap );
+    translateNoFlip_( r.he[1], fmap, vmap, emap );
 
     if ( flipOrientation )
     {
-        std::swap( r.prev, r.next );
-        std::swap( rsym.prev, rsym.next );
-        std::swap( left, symLeft );
+        std::swap( r.he[0].prev, r.he[0].next );
+        std::swap( r.he[1].prev, r.he[1].next );
+        std::swap( r.he[0].left, r.he[1].left );
     }
 }
 
@@ -1352,8 +1351,9 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
     {
         for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
         {
-            EdgeId e{ ue };
-            from.translate_( edges_[e], left_[e], edges_[e.sym()], left_[e.sym()], fmap, vmap, emap, false );
+            auto r = getEdge_( ue );
+            from.translate_( r, fmap, vmap, emap, false );
+            setEdge_( ue, r );
         }
     } );
 
@@ -1462,8 +1462,8 @@ void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, co
         OldHalfEdge & to = edges_[j];
         to.next = emap( fromEdge.next );
         to.prev = emap( fromEdge.prev );
-        to.org = fromEdge.org.valid() ? vmap[fromEdge.org] : VertId{};
-        left_[j] = from.left_[i].valid() ? fmap[from.left_[i]] : FaceId{};
+        org_[j] = getAt( vmap, from.org_[i] );
+        left_[j] = getAt( fmap, from.left_[i] );
     }
 }
 
@@ -1630,9 +1630,9 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
                 OldHalfEdge he( noInit );
                 he.next = i + 1 < edgeRing.size() ? edgeRing[i + 1].e : edgeRing[0].e;
                 he.prev = i > 0 ? edgeRing[i - 1].e : edgeRing.back().e;
-                he.org = v;
                 const auto e = edgeRing[i].e;
                 edges_[e] = he;
+                org_[e] = v;
                 left_[e] = edgeRing[i].f;
             }
         }
@@ -1706,8 +1706,8 @@ void MeshTopology::computeAllFromEdges_()
     MR_TIMER;
 
     VertId maxValidVert;
-    for( const auto & he : edges_ )
-        maxValidVert = std::max( maxValidVert, he.org );
+    for( const auto & v : org_ )
+        maxValidVert = std::max( maxValidVert, v );
 
     FaceId maxValidFace;
     for ( const auto& f : left_ )
@@ -1727,12 +1727,11 @@ void MeshTopology::computeAllFromEdges_()
 
     for ( EdgeId e{0}; e < edges_.size(); ++e )
     {
-        const auto & he = edges_[e];
-        if ( he.org.valid() )
+        if ( org_[e].valid() )
         {
-            if ( !validVerts_.test_set( he.org ) )
+            if ( !validVerts_.test_set( org_[e] ) )
             {
-                edgePerVertex_[he.org] = e;
+                edgePerVertex_[org_[e]] = e;
                 ++numValidVerts_;
             }
         }
@@ -2402,6 +2401,17 @@ MeshTopology::HalfEdgeRecord MeshTopology::getHalfEdge_( EdgeId e ) const
     res.org = edges_[e].org;
     res.left = left_[e];
     return res;
+}
+
+void MeshTopology::setEdge_( UndirectedEdgeId ue, const EdgeRecord & rec )
+{
+    setHalfEdge_( EdgeId( ue ), rec.he[0] );
+    setHalfEdge_( EdgeId( ue ).sym(), rec.he[1] );
+}
+
+MeshTopology::EdgeRecord MeshTopology::getEdge_( UndirectedEdgeId ue ) const
+{
+    return { getHalfEdge_( EdgeId( ue ) ), getHalfEdge_( EdgeId( ue ).sym() ) };
 }
 
 void MeshTopology::write( std::ostream & s ) const

@@ -2128,11 +2128,12 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER;
 
+    const UndirectedEdgeId oldLastUe( undirectedEdgeSize() ); // undirectedEdgeSize() is computed from next_
     {
         Timer t( "next" );
         Vector<EdgeId, EdgeId> tmpNext;
         tmpNext.resizeNoInit( 2 * map.e.tsize );
-        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        ParallelFor( 0_ue, oldLastUe, [&] ( UndirectedEdgeId oldUe )
         {
             UndirectedEdgeId newUe = map.e.b[oldUe];
             if ( !newUe )
@@ -2149,7 +2150,7 @@ void MeshTopology::pack( const PackMapping & map )
         Timer t( "prev" );
         Vector<EdgeId, EdgeId> tmpPrev;
         tmpPrev.resizeNoInit( 2 * map.e.tsize );
-        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        ParallelFor( 0_ue, oldLastUe, [&] ( UndirectedEdgeId oldUe )
         {
             UndirectedEdgeId newUe = map.e.b[oldUe];
             if ( !newUe )
@@ -2166,7 +2167,7 @@ void MeshTopology::pack( const PackMapping & map )
         Timer t( "org" );
         Vector<VertId, EdgeId> tmpOrg;
         tmpOrg.resizeNoInit( 2 * map.e.tsize );
-        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        ParallelFor( 0_ue, oldLastUe, [&] ( UndirectedEdgeId oldUe )
         {
             UndirectedEdgeId newUe = map.e.b[oldUe];
             if ( !newUe )
@@ -2183,7 +2184,7 @@ void MeshTopology::pack( const PackMapping & map )
         Timer t( "left" );
         Vector<FaceId, EdgeId> tmpLeft;
         tmpLeft.resizeNoInit( 2 * map.e.tsize );
-        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        ParallelFor( 0_ue, oldLastUe, [&] ( UndirectedEdgeId oldUe )
         {
             UndirectedEdgeId newUe = map.e.b[oldUe];
             if ( !newUe )

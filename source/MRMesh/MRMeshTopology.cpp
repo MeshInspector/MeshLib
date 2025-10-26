@@ -142,6 +142,18 @@ UndirectedEdgeBitSet MeshTopology::findNotLoneUndirectedEdges() const
     return res;
 }
 
+void MeshTopology::edgeReserve( size_t newCapacity )
+{
+    assert( next_.capacity() == prev_.capacity() );
+    assert( next_.capacity() == org_.capacity() );
+    assert( next_.capacity() == left_.capacity() );
+
+    next_.reserve( newCapacity );
+    prev_.reserve( newCapacity );
+    org_.reserve( newCapacity );
+    left_.reserve( newCapacity );
+}
+
 size_t MeshTopology::heapBytes() const
 {
     return

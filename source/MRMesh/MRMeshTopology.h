@@ -34,16 +34,16 @@ public:
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
 
     /// returns the number of half-edge records including lone ones
-    [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
+    [[nodiscard]] size_t edgeSize() const { return next_.size(); }
 
     /// returns the number of allocated edge records
-    [[nodiscard]] size_t edgeCapacity() const { return edges_.capacity(); }
+    [[nodiscard]] size_t edgeCapacity() const { return next_.capacity(); }
 
     /// returns the number of undirected edges (pairs of half-edges) including lone ones
-    [[nodiscard]] size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
+    [[nodiscard]] size_t undirectedEdgeSize() const { return next_.size() >> 1; }
 
     /// returns the number of allocated undirected edges (pairs of half-edges)
-    [[nodiscard]] size_t undirectedEdgeCapacity() const { return edges_.capacity() >> 1; }
+    [[nodiscard]] size_t undirectedEdgeCapacity() const { return next_.capacity() >> 1; }
 
     /// computes the number of not-lone (valid) undirected edges
     [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
@@ -52,7 +52,7 @@ public:
     [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findNotLoneUndirectedEdges() const;
 
     /// sets the capacity of half-edges vector
-    void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
+    MRMESH_API void edgeReserve( size_t newCapacity );
 
     /// returns true if given edge is within valid range and not-lone
     [[nodiscard]] bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
@@ -544,17 +544,6 @@ private:
     void setLeft_( EdgeId a, FaceId f );
 
     /// data of every half-edge
-    struct OldHalfEdge
-    {
-        EdgeId next; ///< next counter clock wise half-edge in the origin ring
-        EdgeId prev; ///< next clock wise half-edge in the origin ring
-
-        bool operator ==( const OldHalfEdge& b ) const = default;
-        OldHalfEdge() noexcept = default;
-        explicit OldHalfEdge( NoInit ) noexcept : next( noInit ), prev( noInit ) {}
-    };
-
-    /// data of every half-edge
     struct HalfEdgeRecord
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
@@ -562,12 +551,9 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        operator OldHalfEdge() const { OldHalfEdge res( noInit ); res.next = next; res.prev = prev; return res; }
-
         bool operator ==( const HalfEdgeRecord& b ) const = default;
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
-        HalfEdgeRecord( const OldHalfEdge & r, VertId o, FaceId l ) : next( r.next ), prev( r.prev ), org( o ), left( l ) {}
         HalfEdgeRecord( EdgeId n, EdgeId p, VertId o, FaceId l ) : next( n ), prev( p ), org( o ), left( l ) {}
     };
     static_assert( sizeof( HalfEdgeRecord ) == 16 );
@@ -588,9 +574,8 @@ private:
     template<typename FM, typename VM, typename WEM>
     void translate_( EdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
 
-    /// edges_: EdgeId -> edge data
-    Vector<OldHalfEdge, EdgeId> edges_;
-
+    Vector<EdgeId, EdgeId> next_; ///< next_[e] - next counter clock wise half-edge in the origin ring of (e)
+    Vector<EdgeId, EdgeId> prev_; ///< prev_[e] - next clock wise half-edge in the origin ring of (e)
     Vector<VertId, EdgeId> org_;  ///< org_[e] - vertex at the origin of the edge (e)
     Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
 

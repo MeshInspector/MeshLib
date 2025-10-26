@@ -2371,43 +2371,6 @@ void MeshTopology::packMinMem( const PackMapping & map )
     updateValids_ = true;
 }
 
-void MeshTopology::setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec )
-{
-    edges_[e].next = rec.next;
-    edges_[e].prev = rec.prev;
-    org_[e] = rec.org;
-    left_[e] = rec.left;
-}
-
-void MeshTopology::swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec )
-{
-    std::swap( edges_[e].next, rec.next );
-    std::swap( edges_[e].prev, rec.prev );
-    std::swap( org_[e], rec.org );
-    std::swap( left_[e], rec.left );
-}
-
-MeshTopology::HalfEdgeRecord MeshTopology::getHalfEdge_( EdgeId e ) const
-{
-    HalfEdgeRecord res( noInit );
-    res.next = edges_[e].next;
-    res.prev = edges_[e].prev;
-    res.org = org_[e];
-    res.left = left_[e];
-    return res;
-}
-
-void MeshTopology::setEdge_( UndirectedEdgeId ue, const EdgeRecord & rec )
-{
-    setHalfEdge_( EdgeId( ue ), rec.he[0] );
-    setHalfEdge_( EdgeId( ue ).sym(), rec.he[1] );
-}
-
-MeshTopology::EdgeRecord MeshTopology::getEdge_( UndirectedEdgeId ue ) const
-{
-    return { getHalfEdge_( EdgeId( ue ) ), getHalfEdge_( EdgeId( ue ).sym() ) };
-}
-
 void MeshTopology::write( std::ostream & s ) const
 {
     MR_TIMER;

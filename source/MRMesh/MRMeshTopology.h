@@ -568,18 +568,19 @@ private:
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
         HalfEdgeRecord( const OldHalfEdge & r, VertId o, FaceId l ) : next( r.next ), prev( r.prev ), org( o ), left( l ) {}
+        HalfEdgeRecord( EdgeId n, EdgeId p, VertId o, FaceId l ) : next( n ), prev( p ), org( o ), left( l ) {}
     };
     static_assert( sizeof( HalfEdgeRecord ) == 16 );
-    void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec );
-    void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec );
-    HalfEdgeRecord getHalfEdge_( EdgeId e ) const;
+    void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec ) { edges_[e].next = rec.next; edges_[e].prev = rec.prev; org_[e] = rec.org; left_[e] = rec.left; }
+    void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec ) { std::swap( edges_[e].next, rec.next ); std::swap( edges_[e].prev, rec.prev ); std::swap( org_[e], rec.org ); std::swap( left_[e], rec.left ); }
+    HalfEdgeRecord getHalfEdge_( EdgeId e ) const { return { edges_[e].next, edges_[e].prev, org_[e], left_[e] }; }
 
     struct EdgeRecord
     {
         HalfEdgeRecord he[2];
     };
-    void setEdge_( UndirectedEdgeId ue, const EdgeRecord & rec );
-    EdgeRecord getEdge_( UndirectedEdgeId ue ) const;
+    void setEdge_( UndirectedEdgeId ue, const EdgeRecord & rec ) { setHalfEdge_( EdgeId( ue ), rec.he[0] ); setHalfEdge_( EdgeId( ue ).sym(), rec.he[1] ); }
+    EdgeRecord getEdge_( UndirectedEdgeId ue ) const { return { getHalfEdge_( EdgeId( ue ) ), getHalfEdge_( EdgeId( ue ).sym() ) }; }
 
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>

@@ -532,11 +532,13 @@ public:
     MRMESH_API bool checkValidity( ProgressCallback cb = {}, bool allVerts = true ) const;
 
 private:
+    friend class MeshTopologyDiff;
     /// computes from edges_ all remaining fields: \n
     /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_,
     /// 4) numValidFaces_, 5) validFaces_, 6) edgePerFace_
     MRMESH_API void computeAllFromEdges_();
 
+private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
@@ -551,7 +553,10 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const HalfEdgeRecord& b ) const = default;
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && prev == b.prev && org == b.org && left == b.left;
+        }
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
         HalfEdgeRecord( EdgeId n, EdgeId p, VertId o, FaceId l ) : next( n ), prev( p ), org( o ), left( l ) {}
@@ -591,8 +596,6 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
-
-    friend class MeshTopologyDiff;
 };
 
 template <typename T>

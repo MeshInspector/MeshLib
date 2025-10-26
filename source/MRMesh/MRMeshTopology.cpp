@@ -2128,7 +2128,40 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER;
 
-    // translate origin vertices
+    {
+        Timer t( "next" );
+        Vector<EdgeId, EdgeId> tmpNext;
+        tmpNext.resizeNoInit( 2 * map.e.tsize );
+        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        {
+            UndirectedEdgeId newUe = map.e.b[oldUe];
+            if ( !newUe )
+                return;
+            EdgeId oldE = oldUe;
+            EdgeId newE = newUe;
+            tmpNext[newE] = getAt( map.e.b, next_[oldE] );
+            tmpNext[newE.sym()] = getAt( map.e.b, next_[oldE.sym()] );
+        } );
+        next_ = std::move( tmpNext );
+    }
+
+    {
+        Timer t( "prev" );
+        Vector<EdgeId, EdgeId> tmpPrev;
+        tmpPrev.resizeNoInit( 2 * map.e.tsize );
+        ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId oldUe )
+        {
+            UndirectedEdgeId newUe = map.e.b[oldUe];
+            if ( !newUe )
+                return;
+            EdgeId oldE = oldUe;
+            EdgeId newE = newUe;
+            tmpPrev[newE] = getAt( map.e.b, prev_[oldE] );
+            tmpPrev[newE.sym()] = getAt( map.e.b, prev_[oldE.sym()] );
+        } );
+        prev_ = std::move( tmpPrev );
+    }
+
     {
         Timer t( "org" );
         Vector<VertId, EdgeId> tmpOrg;
@@ -2146,7 +2179,6 @@ void MeshTopology::pack( const PackMapping & map )
         org_ = std::move( tmpOrg );
     }
 
-    // translate left faces
     {
         Timer t( "left" );
         Vector<FaceId, EdgeId> tmpLeft;
@@ -2163,62 +2195,6 @@ void MeshTopology::pack( const PackMapping & map )
         } );
         left_ = std::move( tmpLeft );
     }
-
-    Vector<NoDefInit<OldHalfEdge>, UndirectedEdgeId> tmp( map.e.tsize );
-    auto translateHalfEdge = [&]( const OldHalfEdge & he )
-    {
-        OldHalfEdge res;
-        res.next = getAt( map.e.b, he.next );
-        res.prev = getAt( map.e.b, he.prev );
-        return res;
-    };
-
-    // translate even half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
-    {
-        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
-        {
-            auto newUe = map.e.b[oldUe];
-            if ( !newUe )
-                continue;
-            tmp[ newUe ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
-        }
-    } );
-    // copy back even half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
-    {
-        for ( auto newUe = range.begin(); newUe < range.end(); ++newUe )
-        {
-            edges_[ EdgeId{newUe} ] = tmp[ newUe ];
-        }
-    } );
-
-    // translate odd half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
-    {
-        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
-        {
-            auto newUe = map.e.b[oldUe];
-            if ( !newUe )
-                continue;
-            tmp[ newUe ] = translateHalfEdge( edges_[ EdgeId{oldUe}.sym() ] );
-        }
-    } );
-    // copy back odd half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
-    {
-        for ( auto newUe = range.begin(); newUe < range.end(); ++newUe )
-        {
-            edges_[ EdgeId{newUe}.sym() ] = tmp[ newUe ];
-        }
-    } );
-
-    tmp = {};
-    edges_.resize( 2 * map.e.tsize );
 
     Vector<EdgeId, FaceId> newEdgePerFace;
     newEdgePerFace.resizeNoInit( map.f.tsize );
@@ -2336,7 +2312,8 @@ void MeshTopology::packMinMem( const PackMapping & map )
         [&]( UndirectedEdgeId ue ) { return getEdge_( ue ); },
         [&]( UndirectedEdgeId ue, const EdgeRecord& r ) { setEdge_( ue, r ); }
     );
-    edges_.resize( 2 * map.e.tsize );
+    next_.resize( 2 * map.e.tsize );
+    prev_.resize( 2 * map.e.tsize );
     org_.resize( 2 * map.e.tsize );
     left_.resize( 2 * map.e.tsize );
 

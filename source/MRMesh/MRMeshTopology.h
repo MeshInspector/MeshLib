@@ -81,10 +81,10 @@ public:
 
 
     /// next (counter clock wise) half-edge in the origin ring
-    [[nodiscard]] EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }
+    [[nodiscard]] EdgeId next( EdgeId he ) const { assert(he.valid()); return next_[he]; }
 
     /// previous (clock wise) half-edge in the origin ring
-    [[nodiscard]] EdgeId prev( EdgeId he ) const { assert(he.valid()); return edges_[he].prev; }
+    [[nodiscard]] EdgeId prev( EdgeId he ) const { assert(he.valid()); return prev_[he]; }
 
     /// returns origin vertex of half-edge
     [[nodiscard]] VertId org( EdgeId he ) const { assert(he.valid()); return org_[he]; }
@@ -557,9 +557,9 @@ private:
         HalfEdgeRecord( EdgeId n, EdgeId p, VertId o, FaceId l ) : next( n ), prev( p ), org( o ), left( l ) {}
     };
     static_assert( sizeof( HalfEdgeRecord ) == 16 );
-    void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec ) { edges_[e].next = rec.next; edges_[e].prev = rec.prev; org_[e] = rec.org; left_[e] = rec.left; }
-    void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec ) { std::swap( edges_[e].next, rec.next ); std::swap( edges_[e].prev, rec.prev ); std::swap( org_[e], rec.org ); std::swap( left_[e], rec.left ); }
-    HalfEdgeRecord getHalfEdge_( EdgeId e ) const { return { edges_[e].next, edges_[e].prev, org_[e], left_[e] }; }
+    void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec ) { next_[e] = rec.next; prev_[e] = rec.prev; org_[e] = rec.org; left_[e] = rec.left; }
+    void swapHalfEdge_( EdgeId e, HalfEdgeRecord & rec ) { std::swap( next_[e], rec.next ); std::swap( prev_[e], rec.prev ); std::swap( org_[e], rec.org ); std::swap( left_[e], rec.left ); }
+    HalfEdgeRecord getHalfEdge_( EdgeId e ) const { return { next_[e], prev_[e], org_[e], left_[e] }; }
 
     struct EdgeRecord
     {

@@ -57,19 +57,20 @@ void MeshTopology::faceResizeWithReserve( size_t newSize )
 
 EdgeId MeshTopology::makeEdge()
 {
-    assert( edges_.size() % 2 == 0 );
-    EdgeId he0( int( edges_.size() ) );
-    EdgeId he1( int( edges_.size() + 1 ) );
+    assert( next_.size() == prev_.size() );
+    assert( next_.size() == org_.size() );
+    assert( next_.size() == left_.size() );
+    assert( next_.size() % 2 == 0 );
+    EdgeId he0( int( next_.size() ) );
+    EdgeId he1( int( next_.size() + 1 ) );
 
-    OldHalfEdge d0;
-    d0.next = d0.prev = he0;
-    edges_.push_back( d0 );
+    next_.push_back( he0 );
+    prev_.push_back( he0 );
     org_.emplace_back();
     left_.emplace_back();
 
-    OldHalfEdge d1;
-    d1.next = d1.prev = he1;
-    edges_.push_back( d1 );
+    next_.push_back( he1 );
+    prev_.push_back( he1 );
     org_.emplace_back();
     left_.emplace_back();
 
@@ -79,15 +80,13 @@ EdgeId MeshTopology::makeEdge()
 bool MeshTopology::isLoneEdge( EdgeId a ) const
 {
     assert( a.valid() );
-    if ( a >= edges_.size() )
+    if ( a >= next_.size() )
         return true;
-    auto & adata = edges_[a];
-    if ( left_[a].valid() || org_[a].valid() || adata.next != a || adata.prev != a )
+    if ( left_[a].valid() || org_[a].valid() || next_[a] != a || prev_[a] != a )
         return false;
 
     auto b = a.sym();
-    auto & bdata = edges_[b];
-    if ( left_[b].valid() || org_[b].valid() || bdata.next != b || bdata.prev != b )
+    if ( left_[b].valid() || org_[b].valid() || next_[b] != b || prev_[b] != b )
         return false;
 
     return true;
@@ -95,7 +94,7 @@ bool MeshTopology::isLoneEdge( EdgeId a ) const
 
 UndirectedEdgeId MeshTopology::lastNotLoneUndirectedEdge() const
 {
-    assert( edges_.size() % 2 == 0 );
+    assert( next_.size() % 2 == 0 );
     for ( UndirectedEdgeId i{ (int)undirectedEdgeSize() - 1 }; i.valid(); --i )
     {
         if ( !isLoneEdge( i ) )
@@ -157,7 +156,10 @@ void MeshTopology::edgeReserve( size_t newCapacity )
 size_t MeshTopology::heapBytes() const
 {
     return
-        edges_.heapBytes() +
+        next_.heapBytes() +
+        prev_.heapBytes() +
+        org_.heapBytes() +
+        left_.heapBytes() +
         edgePerVertex_.heapBytes() +
         validVerts_.heapBytes() +
         edgePerFace_.heapBytes() +
@@ -167,7 +169,14 @@ size_t MeshTopology::heapBytes() const
 void MeshTopology::shrinkToFit()
 {
     MR_TIMER;
-    edges_.vec_.shrink_to_fit();
+    next_.vec_.shrink_to_fit();
+    prev_.vec_.shrink_to_fit();
+    org_.vec_.shrink_to_fit();
+    left_.vec_.shrink_to_fit();
+    assert( next_.size() == prev_.size() );
+    assert( next_.size() == org_.size() );
+    assert( next_.size() == left_.size() );
+
     edgePerVertex_.vec_.shrink_to_fit();
     validVerts_.shrink_to_fit();
     edgePerFace_.vec_.shrink_to_fit();

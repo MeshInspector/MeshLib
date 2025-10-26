@@ -87,10 +87,10 @@ public:
     [[nodiscard]] EdgeId prev( EdgeId he ) const { assert(he.valid()); return edges_[he].prev; }
 
     /// returns origin vertex of half-edge
-    [[nodiscard]] VertId org( EdgeId he ) const { assert(he.valid()); return edges_[he].org; }
+    [[nodiscard]] VertId org( EdgeId he ) const { assert(he.valid()); return org_[he]; }
 
     /// returns destination vertex of half-edge
-    [[nodiscard]] VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
+    [[nodiscard]] VertId dest( EdgeId he ) const { assert(he.valid()); return org_[he.sym()]; }
 
     /// returns left face of half-edge
     [[nodiscard]] FaceId left( EdgeId he ) const { assert(he.valid()); return left_[he]; }
@@ -548,11 +548,10 @@ private:
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
-        VertId org;  ///< vertex at the origin of the edge
 
         bool operator ==( const OldHalfEdge& b ) const = default;
         OldHalfEdge() noexcept = default;
-        explicit OldHalfEdge( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ) {}
+        explicit OldHalfEdge( NoInit ) noexcept : next( noInit ), prev( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>
@@ -564,6 +563,7 @@ private:
     /// edges_: EdgeId -> edge data
     Vector<OldHalfEdge, EdgeId> edges_;
 
+    Vector<VertId, EdgeId> org_;  ///< org_[e] - vertex at the origin of the edge (e)
     Vector<FaceId, EdgeId> left_; ///< left_[e] - face at the left of the edge (e)
 
     /// edgePerVertex_: VertId -> one edge id of one of edges with origin there
@@ -588,12 +588,12 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        operator OldHalfEdge() const { OldHalfEdge res( noInit ); res.next = next; res.prev = prev; res.org = org; return res; }
+        operator OldHalfEdge() const { OldHalfEdge res( noInit ); res.next = next; res.prev = prev; return res; }
 
         bool operator ==( const HalfEdgeRecord& b ) const = default;
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
-        HalfEdgeRecord( const OldHalfEdge & o, FaceId l ) : next( o.next ), prev( o.prev ), org( o.org ), left( l ) {}
+        HalfEdgeRecord( const OldHalfEdge & r, VertId o, FaceId l ) : next( r.next ), prev( r.prev ), org( o ), left( l ) {}
     };
     static_assert( sizeof( HalfEdgeRecord ) == 16 );
     void setHalfEdge_( EdgeId e, const HalfEdgeRecord & rec );

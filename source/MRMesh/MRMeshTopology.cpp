@@ -80,12 +80,12 @@ bool MeshTopology::isLoneEdge( EdgeId a ) const
     if ( a >= edges_.size() )
         return true;
     auto & adata = edges_[a];
-    if ( left_[a].valid() || adata.org.valid() || adata.next != a || adata.prev != a )
+    if ( left_[a].valid() || org_[a].valid() || adata.next != a || adata.prev != a )
         return false;
 
     auto b = a.sym();
     auto & bdata = edges_[b];
-    if ( left_[b].valid() || bdata.org.valid() || bdata.next != b || bdata.prev != b )
+    if ( left_[b].valid() || org_[b].valid() || bdata.next != b || bdata.prev != b )
         return false;
 
     return true;
@@ -173,18 +173,18 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
     auto & bData = edges_[b];
     auto & bNextData = edges_[bNext];
 
-    bool wasSameOriginId = aData.org == bData.org;
-    assert( wasSameOriginId || !aData.org.valid() || !bData.org.valid() );
+    bool wasSameOriginId = org_[a] == org_[b];
+    assert( wasSameOriginId || !org_[a].valid() || !org_[b].valid() );
 
     bool wasSameLeftId = left_[a] == left_[b];
     assert( wasSameLeftId || !left_[a].valid() || !left_[b].valid() );
 
     if ( !wasSameOriginId )
     {
-        if ( aData.org.valid() )
-            setOrg_( b, aData.org );
-        else if ( bData.org.valid() )
-            setOrg_( a, bData.org );
+        if ( org_[a].valid() )
+            setOrg_( b, org_[a] );
+        else if ( org_[b].valid() )
+            setOrg_( a, org_[b] );
     }
 
     if ( !wasSameLeftId )
@@ -198,11 +198,11 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
     std::swap( aData.next, bData.next );
     std::swap( aNextData.prev, bNextData.prev );
 
-    if ( wasSameOriginId && bData.org.valid() )
+    if ( wasSameOriginId && org_[b].valid() )
     {
         setOrg_( b, VertId() );
-        if ( !fromSameOriginRing( edgePerVertex_[aData.org], a ) )
-            edgePerVertex_[aData.org] = a;
+        if ( !fromSameOriginRing( edgePerVertex_[org_[a]], a ) )
+            edgePerVertex_[org_[a]] = a;
     }
 
     if ( wasSameLeftId && left_[b].valid() )
@@ -464,7 +464,7 @@ void MeshTopology::setOrg_( EdgeId a, VertId v )
     assert( a.valid() );
     for ( EdgeId i : orgRing( *this, a ) )
     {
-        edges_[i].org = v;
+        org_[i] = v;
     }
 }
 

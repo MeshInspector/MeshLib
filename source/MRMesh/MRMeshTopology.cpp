@@ -191,11 +191,6 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
     const auto aNext = next( a );
     const auto bNext = next( b );
 
-    auto & aData = edges_[a];
-    auto & aNextData = edges_[aNext];
-    auto & bData = edges_[b];
-    auto & bNextData = edges_[bNext];
-
     bool wasSameOriginId = org_[a] == org_[b];
     assert( wasSameOriginId || !org_[a].valid() || !org_[b].valid() );
 
@@ -218,8 +213,8 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
             setLeft_( a, left_[b] );
     }
 
-    std::swap( aData.next, bData.next );
-    std::swap( aNextData.prev, bNextData.prev );
+    std::swap( next_[a], next_[b] );
+    std::swap( prev_[aNext], prev_[bNext] );
 
     if ( wasSameOriginId && org_[b].valid() )
     {
@@ -734,7 +729,7 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
 EdgeBitSet MeshTopology::findBoundaryEdges() const
 {
     MR_TIMER;
-    EdgeBitSet res( edges_.size() );
+    EdgeBitSet res( edgeSize() );
     BitSetParallelForAll( res, [&]( EdgeId e )
     {
         if ( !left( e ) && !isLoneEdge( e ) )
@@ -756,7 +751,7 @@ bool MeshTopology::isBdEdge( EdgeId e, const FaceBitSet * region ) const
 EdgeBitSet MeshTopology::findLeftBdEdges( const FaceBitSet * region, const EdgeBitSet * test ) const
 {
     MR_TIMER;
-    EdgeBitSet res( edges_.size() );
+    EdgeBitSet res( edgeSize() );
     BitSetParallelForAll( res, [&]( EdgeId e )
     {
         if ( test && !test->test( e ) )
@@ -1201,12 +1196,8 @@ void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents 
         if ( fullComponents && !fullComponents->test( ue ) )
             return;
         EdgeId i = ue;
-        auto & r0 = edges_[i];
-        std::swap( r0.next, r0.prev );
-
-        auto & r1 = edges_[i + 1];
-        std::swap( r1.next, r1.prev );
-
+        std::swap( next_[i], prev_[i] );
+        std::swap( next_[i + 1], prev_[i + 1] );
         std::swap( left_[i], left_[i + 1] );
     } );
 }
@@ -1269,20 +1260,23 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
     auto emap = map.src2tgtEdges ? std::move( *map.src2tgtEdges ) : WholeEdgeMapOrHashMap::createMap();
     const auto ueSize = from.undirectedEdgeSize();
     emap.resizeReserve( ueSize, ueSize );
-    EdgeId firstNewEdge = edges_.endId();
+    EdgeId firstNewEdge = next_.endId();
     for ( UndirectedEdgeId i{ 0 }; i < ueSize; ++i )
     {
         if ( from.isLoneEdge( i ) )
             continue;
-        setAt( emap, i, edges_.endId() );
+        setAt( emap, i, next_.endId() );
         if ( map.tgt2srcEdges )
             map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ i } );
         const EdgeId e0( i );
-        const EdgeId e1 = e0.sym();
-        edges_.push_back( from.edges_[e0] );
+        next_.push_back( from.next_[e0] );
+        prev_.push_back( from.prev_[e0] );
         org_.push_back( from.org_[e0] );
         left_.push_back( from.left_[e0] );
-        edges_.push_back( from.edges_[e1] );
+
+        const EdgeId e1 = e0.sym();
+        next_.push_back( from.next_[e1] );
+        prev_.push_back( from.prev_[e1] );
         org_.push_back( from.org_[e1] );
         left_.push_back( from.left_[e1] );
     }
@@ -1371,7 +1365,7 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
     }
 
     // translate edge records
-    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
+    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), next_.endId().undirected() ),
         [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
         for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
@@ -1425,7 +1419,7 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
         */
     }
 
-    return edges_ == b.edges_ && left_ == b.left_;
+    return next_ == b.next_ && prev_ == b.prev_ && org_ == b.org_ && left_ == b.left_;
 }
 
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )
@@ -1434,7 +1428,8 @@ void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, si
 
     updateValids_ = false;
 
-    edges_.resizeNoInit( edgeSize );
+    next_.resizeNoInit( edgeSize );
+    prev_.resizeNoInit( edgeSize );
     org_.resizeNoInit( edgeSize );
     left_.resizeNoInit( edgeSize );
 
@@ -1450,7 +1445,7 @@ void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, co
     MR_TIMER;
 
     assert( toEdgeId.valid() );
-    assert( (int)toEdgeId + from.edges_.size() <= edges_.size() );
+    assert( (int)toEdgeId + from.next_.size() <= next_.size() );
     // in all maps: from index -> to index
     auto emap = [toEdgeId]( EdgeId e ) { return toEdgeId + (int)e; };
 

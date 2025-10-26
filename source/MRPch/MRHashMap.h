@@ -1,10 +1,14 @@
 #pragma once
 
+#include "MRSuppressWarning.h"
+
+MR_SUPPRESS_WARNING_PUSH
 #if defined(__EMSCRIPTEN__)
-#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-builtins"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #pragma clang diagnostic ignored "-Wshift-count-overflow"
+#elif __clang_major__ >= 21
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #include <parallel_hashmap/phmap_config.h>
@@ -16,6 +20,4 @@
 #endif
 #include <parallel_hashmap/phmap.h>
 
-#if defined(__EMSCRIPTEN__)
-#pragma clang diagnostic pop
-#endif
+MR_SUPPRESS_WARNING_POP

@@ -545,8 +545,8 @@ private:
     /// sets new left face to the full left ring including this edge, without updating edgePerFace_ table
     void setLeft_( EdgeId a, FaceId f );
 
-    /// data of every half-edge
-    struct HalfEdgeRecord
+    /// data of every half-edge, align to put whole record in one cache line
+    struct alignas( 16 ) HalfEdgeRecord
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
@@ -560,6 +560,8 @@ private:
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
+    static_assert( sizeof( HalfEdgeRecord ) == 16 );
+
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>
     void translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const;

@@ -2237,6 +2237,12 @@
     <ClCompile Include="MRTelemetry.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
+    <ClCompile Include="MRProjectionMeshAttribute.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRChangeMeshDataAction.cpp">
+      <Filter>Source Files\History</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

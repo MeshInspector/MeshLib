@@ -590,10 +590,9 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), edgeLenSq );
     float maxNewEdgeLenSq = 0;
 
-    bool normalFlip = false; // at least one triangle flips its normal or a degenerate triangle becomes not-degenerate
     originNeis_.clear();
-    triDblAreas_.clear();
-    Vector3d sumDblArea_;
+    triDblAreas_.clear(); // new directed areas of triangles that flip their normal or became not-degenerate from degenerate
+    Vector3d sumDblArea;
     EdgeId oBdEdge; // a boundary edge !right(e) incident to org( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
@@ -619,18 +618,15 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( eDest != vr )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            if ( !normalFlip )
+            sumDblArea += Vector3d{ da };
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
             {
                 const auto oldA = cross( pDest - po, pDest2 - po );
                 if ( dot( da, oldA ) <= 0 )
-                    normalFlip = true;
+                    triDblAreas_.push_back( da );
             }
-            triDblAreas_.push_back( da );
-            sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
@@ -664,18 +660,15 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            if ( !normalFlip )
+            sumDblArea += Vector3d{ da };
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
             {
                 const auto oldA = cross( pDest - pd, pDest2 - pd );
                 if ( dot( da, oldA ) <= 0 )
-                    normalFlip = true;
+                    triDblAreas_.push_back( da );
             }
-            triDblAreas_.push_back( da );
-            sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
@@ -696,10 +689,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
         return { .status =  CollapseStatus::LongEdge }; // new edge would be longer than all of old edges and longer than allowed in settings
 
-    // if at least one triangle normal flips, checks that all new normals are consistent
-    if ( normalFlip && ( ( po != pd ) || ( po != collapsePos ) ) )
+    // if at least one remaining triangle flips its normal, checks that new normal is consistent with the average normal of new vertex neighborhood
+    if ( !triDblAreas_.empty() && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
-        auto n = Vector3f{ sumDblArea_.normalized() };
+        auto n = Vector3f{ sumDblArea.normalized() };
         for ( const auto da : triDblAreas_ )
             if ( dot( da, n ) < 0 )
                 return { .status =  CollapseStatus::NormalFlip };

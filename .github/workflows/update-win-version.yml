@@ -42,7 +42,7 @@ jobs:
           .\thirdparty\install.bat
 
       - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: WindowsArchive*
           merge-multiple: true
@@ -68,7 +68,7 @@ jobs:
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
 
       - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: DistributivesWin
           path: MeshLibDist.zip

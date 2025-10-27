@@ -6,7 +6,6 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
-#include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"

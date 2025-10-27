@@ -79,6 +79,7 @@ public:
     MRVIEWER_API float getAxesSize() const;
 
     /// returns projection matrix that is used for basis axes and view controller rendering
+    [[deprecated("Use (draw/getBaseRenderParams/getModelRenderParams)OrthoFixedPos functions instead of using this value")]] 
     const Matrix4f& getAxesProjectionMatrix() const { return axesProjMat_; }
 
     // Shutdown
@@ -102,6 +103,11 @@ public:
     /// Immediate draw of given object with given transformation to world and given projection matrix
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+
+    /// Immediate draw of given object with given transformation to world, orthographic proj matrix and rotation component of view matrix
+    /// Returns true if something was drawn.
+    MRVIEWER_API bool drawOrthoFixedPos( const VisualObject& obj, const AffineXf3f& xf,
         DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
 
     /// Rendering parameters for immediate drawing of lines and points
@@ -137,6 +143,10 @@ public:
     [[nodiscard]] BaseRenderParams getBaseRenderParams( const Matrix4f & projM ) const
         { return { viewM_, projM, id, toVec4<int>( viewportRect_ ) }; }
 
+    /// Prepares base rendering parameters for this viewport with orthographic proj matrix and rotation component of view matrix
+    [[nodiscard]] BaseRenderParams getBaseRenderParamsOrthoFixedPos() const
+        { return { axesViewMat_, axesProjMat_, id, toVec4<int>( viewportRect_ ) }; }
+
     /// Prepares rendering parameters to draw a model with given transformation in this viewport
     [[nodiscard]] ModelRenderParams getModelRenderParams(
          const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
@@ -145,10 +155,20 @@ public:
          RenderModelPassMask pass = RenderModelPassMask::All,
          bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
     ) const
-    { return getModelRenderParams( modelM, projM_, normM, depthFunc, pass, allowAlphaSort ); }
+    { return getModelRenderParams( modelM, getBaseRenderParams(projM_), normM, depthFunc, pass, allowAlphaSort); }
 
-    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom projection matrix
-    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+    /// Prepares rendering parameters to draw a model with orthographic proj matrix and rotation component of view matrix
+    [[nodiscard]] ModelRenderParams getModelRenderParamsOrthoFixedPos(
+         const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
+         DepthFunction depthFunc = DepthFunction::Default,
+         RenderModelPassMask pass = RenderModelPassMask::All,
+         bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
+    ) const
+    { return getModelRenderParams( modelM, getBaseRenderParamsOrthoFixedPos(), normM, depthFunc, pass, allowAlphaSort); }
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom BaseRenderParams
+    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const BaseRenderParams& baseParams,
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
          RenderModelPassMask pass = RenderModelPassMask::All,
@@ -515,8 +535,8 @@ private:
 
     // initializes proj matrix based on camera angle and viewport rectangle size
     void setupProjMatrix_();
-    // initializes proj matrix for static view objects (like corner axes)
-    void setupAxesProjMatrix_();
+    // initializes view and proj matrix for static view objects (like corner axes)
+    void setupAxesViewProjMatrix_();
 
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
@@ -543,6 +563,7 @@ private:
 
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
+    Matrix4f axesViewMat_;
     Matrix4f axesProjMat_;
     Vector2f basisAxesPos_;
     float basisAxesSize_;

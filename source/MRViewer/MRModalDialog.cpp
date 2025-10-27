@@ -5,6 +5,7 @@
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include <imgui_internal.h>
 #include "ImGuiHelpers.h"
 
 namespace MR

@@ -407,7 +407,7 @@ bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::stri
 {
     const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
     return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
-                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
+                    ( hasRealChildren ? sDefaultGroupState : 0 ) );
 }
 
 void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr )
@@ -453,7 +453,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     const ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_SpanAvailWidth |
         ImGuiTreeNodeFlags_Framed |
-        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
+        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | sDefaultGroupState : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
     const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );
@@ -482,7 +482,7 @@ void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vecto
     }
 
     bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
-    bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
+    bool released = isSelected && !needDragDropTarget_() && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
 
     if ( pressed )
         clickTrigger_ = true;
@@ -503,8 +503,6 @@ void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_
 
     if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect | ImGuiDragDropFlags_SourceNoDisableHover ) )
     {
-        dragTrigger_ = true;
-
         std::vector<Object*> vectorObjPtr;
         for ( auto& ptr : payload )
             vectorObjPtr.push_back( ptr.get() );
@@ -582,7 +580,6 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         }
     }
     sceneReorderCommand_ = {};
-    dragTrigger_ = false;
 }
 
 void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()

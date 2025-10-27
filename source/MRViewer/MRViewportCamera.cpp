@@ -94,7 +94,7 @@ void Viewport::setupProjMatrix_()
     }
 }
 
-void Viewport::setupAxesProjMatrix_()
+void Viewport::setupAxesViewProjMatrix_()
 {
     float h = 1.0f;// ( cameraEye - cameraCenter ).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
@@ -104,6 +104,8 @@ void Viewport::setupAxesProjMatrix_()
     axesProjMat_( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
     axesProjMat_( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
     axesProjMat_( 3, 0 ) = 0.f; axesProjMat_( 3, 1 ) = 0.f; axesProjMat_( 3, 2 ) = 0.f; axesProjMat_( 3, 3 ) = 1.f;
+    
+    axesViewMat_ = cXf * AffineXf3f::linear( params_.cameraTrackballAngle );
 }
 
 // ================================================================

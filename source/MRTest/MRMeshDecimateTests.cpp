@@ -29,6 +29,10 @@ TEST( MRMesh, MeshDecimate )
     ASSERT_NE(regionSaved, regionForDecimation);
     ASSERT_GT(decimateResults.vertsDeleted, 0);
     ASSERT_GT(decimateResults.facesDeleted, 0);
+
+    ASSERT_TRUE(meshCylinder.topology.checkValidity());
+    meshCylinder.packOptimally();
+    ASSERT_TRUE(meshCylinder.topology.checkValidity());
 }
 
 TEST( MRMesh, MeshDecimateParallel )

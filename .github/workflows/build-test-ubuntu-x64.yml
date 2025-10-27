@@ -131,7 +131,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Timing_Logs_${{matrix.os}}-x86_${{matrix.config}}_${{matrix.cxx-compiler}}
           path: time_log/
@@ -215,7 +215,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Distributives_${{matrix.os}}-x86
           path: meshlib_${{matrix.os}}-dev.deb
@@ -232,7 +232,7 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.os == 'ubuntu20' && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: DotNetPatchArchiveLinux-x64
           path: ./patched_content/*

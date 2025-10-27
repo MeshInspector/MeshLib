@@ -82,4 +82,86 @@ enum class GeodesicPathApprox : char
     FastMarching
 };
 
+// A stub measurement unit representing no unit.
+enum class NoUnit
+{
+    _count [[maybe_unused]]
+};
+
+// Measurement units of length.
+enum class LengthUnit
+{
+    mm,
+    meters,
+    inches,
+    _count [[maybe_unused]],
+};
+
+// Measurement units of angle.
+enum class AngleUnit
+{
+    radians,
+    degrees,
+    _count [[maybe_unused]],
+};
+
+// Measurement units of screen sizes.
+enum class PixelSizeUnit
+{
+    pixels,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for factors / ratios.
+enum class RatioUnit
+{
+    factor, // 0..1 x
+    percents, // 0..100 %
+    _count [[maybe_unused]],
+};
+
+// Measurement units for time.
+enum class TimeUnit
+{
+    seconds,
+    milliseconds,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for movement speed.
+enum class MovementSpeedUnit
+{
+    mmPerSecond,
+    metersPerSecond,
+    inchesPerSecond,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for surface area.
+enum class AreaUnit
+{
+    mm2,
+    meters2,
+    inches2,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for body volume.
+enum class VolumeUnit
+{
+    mm3,
+    meters3,
+    inches3,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for 1/length.
+enum class InvLengthUnit
+{
+    inv_mm, // mm^-1
+    inv_meters, // meters^-1
+    inv_inches, // inches^-1
+    _count [[maybe_unused]],
+};
+
 } //namespace MR

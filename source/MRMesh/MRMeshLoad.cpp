@@ -15,6 +15,7 @@
 #include "MRMeshDelone.h"
 #include "MRPly.h"
 #include "MRParallelFor.h"
+#include "MRImageLoad.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -324,6 +325,25 @@ Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {
         *settings.skippedFaceCount = r.skippedFaceCount;
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = r.duplicatedVertexCount;
+    if ( settings.uvCoords )
+        *settings.uvCoords = std::move( r.uvCoords );
+    if ( settings.texture && r.textureFiles.size() == 1 )
+    {
+        // only load one texture from MeshLoad version of obj opening for now
+        auto image = ImageLoad::fromAnySupportedFormat( r.textureFiles.front() );
+        if ( image.has_value() )
+        {
+            settings.texture->resolution = std::move( image->resolution );
+            settings.texture->pixels = std::move( image->pixels );
+            settings.texture->filter = FilterType::Linear;
+            settings.texture->wrap = WrapType::Clamp;
+        }
+        else
+        {
+            // Cannot read texture, but do not fail at least to open geometry
+            // this could be valid branch for WASM
+        }
+    }
     if ( settings.xf )
         *settings.xf = r.xf;
     return std::move( r.mesh );

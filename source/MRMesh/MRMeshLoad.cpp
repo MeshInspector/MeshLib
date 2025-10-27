@@ -327,7 +327,7 @@ Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {
         *settings.duplicatedVertexCount = r.duplicatedVertexCount;
     if ( settings.uvCoords )
         *settings.uvCoords = std::move( r.uvCoords );
-    if ( settings.texture && r.textureFiles.size() == 1 )
+    if ( settings.texture && !r.textureFiles.empty() ) // if there is at least one texture
     {
         // only load one texture from MeshLoad version of obj opening for now
         auto image = ImageLoad::fromAnySupportedFormat( r.textureFiles.front() );

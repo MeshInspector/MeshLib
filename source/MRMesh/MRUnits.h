@@ -238,7 +238,7 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 
 // Modifies the default parameters for converting a specific unit type to a string.
 template <UnitEnum E>
-void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
+void MR_BIND_IGNORE setDefaultUnitParams( const UnitToStringParams<E>& newParams );
 
 #define MR_X(E) extern template MRMESH_API void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
 DETAIL_MR_UNIT_ENUMS(MR_X)
@@ -335,7 +335,7 @@ using VarUnitToStringParams = std::variant<
 // Converts value to a string, possibly converting it to a different unit.
 // By default, length is kept as is, while angles are converted from radians to the current UI unit.
 template <UnitEnum E, detail::Units::Scalar T>
-[[nodiscard]] MRMESH_API std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
 
 #define MR_Y(T, E) extern template MRMESH_API std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );
 #define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
@@ -345,7 +345,7 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 
 // This overload lets you select the unit kind at runtime.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRMESH_API std::string valueToString( T value, const VarUnitToStringParams& params );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::string valueToString( T value, const VarUnitToStringParams& params );
 
 #define MR_X(T, unused) extern template MRMESH_API std::string valueToString( T value, const VarUnitToStringParams& params );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)

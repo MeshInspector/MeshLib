@@ -1,5 +1,6 @@
 #include "MRImGuiFormatString.h"
 #include "MRMesh/MRString.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {

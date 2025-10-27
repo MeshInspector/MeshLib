@@ -162,7 +162,7 @@ MeshViewer
 \endcode
   - or run locally built binary
 \code{.sh}
-MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
+./build/Release/bin/MeshViewer
 \endcode
  5. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.

@@ -230,7 +230,7 @@ struct UnitToStringParams;
 // Returns the default parameters for converting a specific unit type to a string.
 // You can modify those with `setDefaultUnitParams()`.
 template <UnitEnum E>
-[[nodiscard]] const UnitToStringParams<E>& getDefaultUnitParams();
+[[nodiscard]] MR_BIND_IGNORE const UnitToStringParams<E>& getDefaultUnitParams();
 
 #define MR_X(E) extern template MRMESH_API const UnitToStringParams<E>& getDefaultUnitParams();
 DETAIL_MR_UNIT_ENUMS(MR_X)

@@ -57,6 +57,9 @@ MRMESH_API Expected<void> toPly( const Mesh & mesh, std::ostream & out, const Sa
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
+/// saves in .3mf file
+MRMESH_API Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+
 /// detects the format from file extension and save mesh to it
 MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format

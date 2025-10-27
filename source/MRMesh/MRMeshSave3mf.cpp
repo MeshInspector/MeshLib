@@ -3,6 +3,8 @@
 #include "MRIOFilters.h"
 #include "MRStringConvert.h"
 #include "MRMesh.h"
+#include "MRUniqueTemporaryFolder.h"
+#include "MRZip.h"
 #include "MRTimer.h"
 #include "MRPch/MRFmt.h"
 
@@ -103,7 +105,70 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     return {};
 }
 
+Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings )
+{
+    MR_TIMER;
+    if ( file.empty() )
+        return unexpected( "Cannot save to empty path" );
+
+    UniqueTemporaryFolder scenePath;
+    if ( !scenePath )
+        return unexpected( "Cannot create temporary folder" );
+
+    {
+        std::ofstream f( scenePath / "[Content_Types].xml" );
+        f <<
+R"(<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
+  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml" />
+  <Default Extension="texture" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodeltexture" />
+  <Default Extension="xml" ContentType="application/vnd.ms-printing.printticket+xml" />
+  <Default Extension="prop" ContentType="application/vnd.openxmlformats-package.core-properties+xml" />
+  <Default Extension="gif" ContentType="image/gif" />
+  <Default Extension="jpg" ContentType="image/jpeg" />
+  <Default Extension="png" ContentType="image/png" />
+</Types>
+)";
+        if ( !f )
+            return unexpected( "Cannot write file inside temporary folder" );
+    }
+
+    {
+        const auto dirRels = scenePath / "_rels";
+        std::error_code ec;
+        if ( !create_directory( dirRels, ec ) )
+            return unexpected( "Cannot create subdirectory inside temporary folder" );
+
+        std::ofstream f( dirRels / ".rels" );
+        f <<
+R"(<?xml version="1.0" encoding="utf-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/3dmodel.model" Id="rel0" />
+</Relationships>
+)";
+        if ( !f )
+            return unexpected( "Cannot write file inside temporary folder" );
+    }
+
+    {
+        const auto dir3D = scenePath / "3D";
+        std::error_code ec;
+        if ( !create_directory( dir3D, ec ) )
+            return unexpected( "Cannot create subdirectory inside temporary folder" );
+
+        auto settings1 = settings;
+        settings1.progress = subprogress( settings.progress, 0.0f, 0.9f );
+        if ( auto maybeDone = toModel3mf( mesh, dir3D / "3dmodel.model", settings1 ); !maybeDone )
+            return unexpected( std::move( maybeDone.error() ) );
+    }
+
+    return compressZip( file, scenePath, {}, nullptr, subprogress( settings.progress, 0.9f, 1.0f ) );
+}
+
 MR_ADD_MESH_SAVER( IOFilter( "3D Manufacturing model (.model)", "*.model" ), toModel3mf, {} )
+
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( IOFilter( "3D Manufacturing format (.3mf)", "*.3mf" ), { to3mf, nullptr, {} } ); };
 
 } //namespace MeshSave
 

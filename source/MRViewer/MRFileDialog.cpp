@@ -15,6 +15,8 @@
 
 #include <clocale>
 
+#include "MRFileDialogPortal.h"
+
 #ifndef _WIN32
   #if defined( __APPLE__ )
     #include "MRFileDialogCocoa.h"
@@ -237,6 +239,7 @@ std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Paramete
 }
 #else
 #ifndef MRVIEWER_NO_GTK
+# if 0
 std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const MR::FileDialog::Parameters& params )
 {
     if ( params.folderDialog )
@@ -357,6 +360,7 @@ std::vector<std::filesystem::path> gtkDialog( const MR::FileDialog::Parameters& 
 }
 #endif
 #endif
+#endif
 #ifdef __EMSCRIPTEN__
 std::string webAccumFilter( const MR::IOFilters& filters )
 {
@@ -398,7 +402,7 @@ std::filesystem::path openFileDialog( const FileParameters& params )
 #elif defined( __APPLE__ )
     results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
-    results = gtkDialog( parameters );
+    results = detail::runPortalFileDialog( parameters );
 #endif
     if ( results.size() == 1 )
     {
@@ -447,7 +451,7 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
 #elif defined( __APPLE__ )
     results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
-    results = gtkDialog( parameters );
+    results = detail::runPortalFileDialog( parameters );
 #endif
     if ( results.empty() )
         spdlog::info( "Open dialog canceled" );
@@ -505,7 +509,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
 #elif defined( __APPLE__ )
     results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
-    results = gtkDialog( parameters );
+    results = detail::runPortalFileDialog( parameters );
 #endif
     if ( results.size() == 1 )
     {
@@ -556,7 +560,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
 #elif defined( __APPLE__ )
     results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
-    results = gtkDialog( parameters );
+    results = detail::runPortalFileDialog( parameters );
 #endif
     if ( !results.empty() )
         FileDialogSignals::instance().onSelectFolders( results );
@@ -578,7 +582,7 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 #elif defined( __APPLE__ )
     results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
-    results = gtkDialog( parameters );
+    results = detail::runPortalFileDialog( parameters );
 #endif
     if ( results.size() == 1 && !results[0].empty() )
     {

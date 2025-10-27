@@ -4,8 +4,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRViewer CXX)
 
-option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux and macOS)" OFF)
+option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux)" OFF)
 option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
+option(MRVIEWER_NO_XDG_DESKTOP_PORTAL "Disable XDG Desktop Portal support (affects file dialog support on Linux)" OFF)
 
 IF(NOT MESHLIB_BUILD_VOXELS)
   set(MRVIEWER_NO_VOXELS ON)
@@ -13,6 +14,7 @@ ENDIF()
 
 IF(WIN32 OR APPLE OR MR_EMSCRIPTEN)
   set(MRVIEWER_NO_GTK ON)
+  set(MRVIEWER_NO_XDG_DESKTOP_PORTAL ON)
 ENDIF()
 
 file(GLOB HEADERS "*.h")
@@ -48,6 +50,12 @@ IF(NOT MRVIEWER_NO_GTK)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtk)
+ENDIF()
+
+IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
+  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::dbus)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)

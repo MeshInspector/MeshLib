@@ -1993,23 +1993,15 @@ void notificationFrame( NotificationType type, const std::string& str )
     ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * UI::scale() );
     transparentTextWrapped( "%s", str.c_str() );
 
-    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 0.7f;
-        ImGuiObsolete::PushFont( iconsFont );
-    }
+    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
 
     ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * UI::scale(), StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
     ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
     ImGui::Text( "%s", UI::notificationChar( type ).first );
     ImGui::PopStyleColor();
 
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 1.0f;
+    if ( popIconsFont )
         ImGui::PopFont();
-    }
 
     ImGui::SetCursorPos( pos );
     ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );

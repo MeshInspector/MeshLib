@@ -21,7 +21,7 @@ static ImFont* loadFontChecked( const char* filename, float size_pixels, const I
         assert( false && "Failed to load font!" );
         spdlog::error( "Failed to load font from `{}`.", filename );
 
-        font =ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+        font = ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
             droid_sans_compressed_size, size_pixels, font_cfg, glyph_ranges );
     }
     return font;
@@ -58,7 +58,7 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
 
     const ImWchar iconRanges[] = { 0xe005, 0xf8ff, 0 };
 
-    std::vector<CustomGlyph> customGlyphs;
+    //std::vector<CustomGlyph> customGlyphs;
 
     for ( int i = 0; i< int( FontType::Count ); ++i )
     {
@@ -67,11 +67,11 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
         else
             loadFont_( FontType( i ), charRanges );
 
-        addCustomGlyphs_( FontType( i ), customGlyphs );
+        //addCustomGlyphs_( FontType( i ), customGlyphs );
     }
-    ImGui::GetIO().Fonts->Build();
+    //ImGui::GetIO().Fonts->Build();
 
-    renderCustomGlyphsToAtlas_( customGlyphs );
+    //renderCustomGlyphsToAtlas_( customGlyphs );
 }
 
 ImFont* RibbonFontManager::getFontByType( FontType type ) const
@@ -135,7 +135,17 @@ void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontMa
     getFontManagerInstance_() = ribbonFontManager;
 }
 
-MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
+bool RibbonFontManager::imGuiPushFont( const FontType& type, float scale /*= 1.f*/ )
+{
+    RibbonFontManager* fontManager = getFontManagerInstance_();
+    if ( !fontManager )
+        return false;
+
+    ImGui::PushFont( fontManager->getFontByType( type ), fontManager->getFontSizeByType( type ) * scale );
+    return true;
+}
+
+RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 {
     static RibbonFontManager* instance{ nullptr };
     return instance;
@@ -143,42 +153,42 @@ MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 
 void RibbonFontManager::updateFontsScaledOffset_()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
-    std::array<ImFont*, int( FontType::Count )> localFonts{};
-    for ( int i = 0; i < int( FontType::Count ); ++i )
-    {
-        auto& font = fonts_[int( i )];
-        auto fontPath = fontPaths_[int( font.fontFile )];
+    //ImGuiIO& io = ImGui::GetIO();
+    //const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
+    //std::array<ImFont*, int( FontType::Count )> localFonts{};
+    //for ( int i = 0; i < int( FontType::Count ); ++i )
+    //{
+    //    auto& font = fonts_[int( i )];
+    //    auto fontPath = fontPaths_[int( font.fontFile )];
 
-        ImFontConfig config;
-        config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        if ( i == int( FontType::Icons ) )
-            continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
+    //    ImFontConfig config;
+    //    config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+    //    if ( i == int( FontType::Icons ) )
+    //        continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
-        auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
-        localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
-    }
-    io.Fonts->Build();
-    for ( int i = 0; i < int( FontType::Count ); ++i )
-    {
-        auto* lFont = localFonts[i];
-        if ( !lFont )
-            continue;
-        if ( lFont->Glyphs.size() != 1 )
-            continue;
-        const auto& glyph = lFont->Glyphs.back();
+    //    auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
+    //    localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
+    //}
+    //io.Fonts->Build();
+    //for ( int i = 0; i < int( FontType::Count ); ++i )
+    //{
+    //    auto* lFont = localFonts[i];
+    //    if ( !lFont )
+    //        continue;
+    //    if ( lFont->Glyphs.size() != 1 )
+    //        continue;
+    //    const auto& glyph = lFont->Glyphs.back();
 
-        auto& fontRef = fonts_[int( i )];
-        auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
-        Box2f box;
-        box.include( Vector2f( glyph.X0, glyph.Y0 ) );
-        box.include( Vector2f( glyph.X1, glyph.Y1 ) );
-        fontRef.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
-        fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
-        fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
-    }
-    io.Fonts->Clear();
+    //    auto& fontRef = fonts_[int( i )];
+    //    auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
+    //    Box2f box;
+    //    box.include( Vector2f( glyph.X0, glyph.Y0 ) );
+    //    box.include( Vector2f( glyph.X1, glyph.Y1 ) );
+    //    fontRef.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
+    //    fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
+    //    fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
+    //}
+    //io.Fonts->Clear();
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
@@ -194,8 +204,8 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
     }
     else
     {
-        config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        config.GlyphOffset = ImVec2( font.scaledOffset );
+        //config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+        //config.GlyphOffset = ImVec2( font.scaledOffset );
     }
 
     font.fontPtr = loadFontChecked(
@@ -203,50 +213,50 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
         &config, ranges );
 }
 
-void RibbonFontManager::addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs )
-{
-    // `font->FontSize` is null at this point, so we must pass `fontSize` manually.
+//void RibbonFontManager::addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs )
+//{
+//    // `font->FontSize` is null at this point, so we must pass `fontSize` manually.
+//
+//    auto addGlyph = [&](
+//        ImWchar ch, float relWidth,
+//        std::function<void( unsigned char* texture, int stride, int rectW, int rectH )> render
+//    )
+//    {
+//        int height = int( std::floor( getFontSizeByType( font ) * UI::scale() ) );
+//        int width = int( std::round( height * relWidth ) );
+//
+//        int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )].fontPtr, ch, width, height, float( width ) );
+//        auto renderWrapper = [index, func = std::move( render )]( unsigned char* texData, int texW )
+//        {
+//            const ImFontAtlasCustomRect* rect = ImGui::GetIO().Fonts->GetCustomRectByIndex(index);
+//            func( texData + rect->X + rect->Y * texW, texW, rect->Width, rect->Height );
+//        };
+//        glyphs.push_back( CustomGlyph{ .render = renderWrapper } );
+//    };
+//
+//    if ( font != FontType::Icons )
+//    {
+//        addGlyph( 0x207B /*SUPERSCRIPT MINUS*/, 0.25f, []( unsigned char* texture, int stride, int rectW, int rectH )
+//        {
+//            int lineH = int( rectH * 0.30f );
+//
+//            for ( int y = 0; y < rectH; y++ )
+//            {
+//                unsigned char value = y == lineH ? 255 : 0;
+//                for ( int x = 0; x < rectW; x++ )
+//                    texture[x + y * stride] = value;
+//            }
+//        } );
+//    }
+//}
 
-    auto addGlyph = [&](
-        ImWchar ch, float relWidth,
-        std::function<void( unsigned char* texture, int stride, int rectW, int rectH )> render
-    )
-    {
-        int height = int( std::floor( getFontSizeByType( font ) * UI::scale() ) );
-        int width = int( std::round( height * relWidth ) );
-
-        int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )].fontPtr, ch, width, height, float( width ) );
-        auto renderWrapper = [index, func = std::move( render )]( unsigned char* texData, int texW )
-        {
-            const ImFontAtlasCustomRect* rect = ImGui::GetIO().Fonts->GetCustomRectByIndex(index);
-            func( texData + rect->X + rect->Y * texW, texW, rect->Width, rect->Height );
-        };
-        glyphs.push_back( CustomGlyph{ .render = renderWrapper } );
-    };
-
-    if ( font != FontType::Icons )
-    {
-        addGlyph( 0x207B /*SUPERSCRIPT MINUS*/, 0.25f, []( unsigned char* texture, int stride, int rectW, int rectH )
-        {
-            int lineH = int( rectH * 0.30f );
-
-            for ( int y = 0; y < rectH; y++ )
-            {
-                unsigned char value = y == lineH ? 255 : 0;
-                for ( int x = 0; x < rectW; x++ )
-                    texture[x + y * stride] = value;
-            }
-        } );
-    }
-}
-
-void RibbonFontManager::renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs )
-{
-    unsigned char* texData = nullptr;
-    int texW = 0;
-    ImGui::GetIO().Fonts->GetTexDataAsAlpha8( &texData, &texW, nullptr );
-    for ( const CustomGlyph& glyph : glyphs )
-        glyph.render( texData, texW );
-}
+//void RibbonFontManager::renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs )
+//{
+//    unsigned char* texData = nullptr;
+//    int texW = 0;
+//    ImGui::GetIO().Fonts->GetTexDataAsAlpha8( &texData, &texW, nullptr );
+//    for ( const CustomGlyph& glyph : glyphs )
+//        glyph.render( texData, texW );
+//}
 
 }

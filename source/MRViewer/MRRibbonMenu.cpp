@@ -180,7 +180,7 @@ void RibbonMenu::load_font( int )
 {
     ImVector<ImWchar> ranges;
     ImFontGlyphRangesBuilder builder;
-    addMenuFontRanges_( builder );
+    //addMenuFontRanges_( builder );
     builder.BuildRanges( &ranges );
     fontManager_.loadAllFonts( ranges.Data );
 }
@@ -295,9 +295,6 @@ void RibbonMenu::drawSearchButton_()
 
 void RibbonMenu::drawCollapseButton_()
 {
-    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-    font->Scale = 0.7f;
-
     float btnSize = UI::scale() * cTopPanelAditionalButtonSize;
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
@@ -309,7 +306,7 @@ void RibbonMenu::drawCollapseButton_()
     if ( collapseState_ == CollapseState::Pinned )
     {
         ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-        ImGuiObsolete::PushFont( font );
+        bool popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
         if ( ImGui::Button( "\xef\x81\x93", ImVec2( btnSize, btnSize ) ) )
         {
             collapseState_ = CollapseState::Opened;
@@ -319,24 +316,25 @@ void RibbonMenu::drawCollapseButton_()
             asyncRequest_.reset();
 #endif
         }
-        ImGui::PopFont();
+        if ( popFont )
+            ImGui::PopFont();
         ImGui::PopStyleColor();
         UI::setTooltipIfHovered( "Unpin" );
     }
     else
     {
         ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-        ImGuiObsolete::PushFont( font );
+        bool popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
         if ( ImGui::Button( "\xef\x81\xb7", ImVec2( btnSize, btnSize ) ) )
         {
             collapseState_ = CollapseState::Pinned;
             fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
         }
-        ImGui::PopFont();
+        if ( popFont )
+            ImGui::PopFont();
         ImGui::PopStyleColor();
         UI::setTooltipIfHovered( "Pin" );
     }
-    font->Scale = 1.0f;
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar( 2 );
@@ -378,9 +376,6 @@ void RibbonMenu::drawCollapseButton_()
 
 void RibbonMenu::drawHelpButton_( const std::string& url )
 {
-    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-    font->Scale = 0.7f;
-
     float btnSize = UI::scale() * cTopPanelAditionalButtonSize;
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
@@ -390,13 +385,13 @@ void RibbonMenu::drawHelpButton_( const std::string& url )
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-    ImGuiObsolete::PushFont( font );
+    bool popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
     if ( ImGui::Button( "\xef\x81\x99", ImVec2( btnSize, btnSize ) ) )
         OpenLink( url );
-    ImGui::PopFont();
+    if ( popFont )
+        ImGui::PopFont();
     ImGui::PopStyleColor();
     UI::setTooltipIfHovered( "Open help page" );
-    font->Scale = 1.0f;
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar( 2 );
@@ -1811,22 +1806,17 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
 
-    auto iconsFont = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGuiObsolete::PushFont( iconsFont );
-    }
+
+    bool popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
     ImGui::SetCursorPos( contextBtnPos );
 
     if ( ImGui::Button( "\xef\x85\x82", smallBtnSize ) ) // three dots icon to open context dialog
         ImGui::OpenPopup( cTransformContextName );
-    if ( iconsFont )
+    if ( popIconsFont )
         ImGui::PopFont();
     UI::setTooltipIfHovered( "Open Transform Data context menu." );
-    if ( iconsFont )
-        ImGuiObsolete::PushFont( iconsFont );
+    popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
     const auto& selectedObjectsCache = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     if ( numButtons >= 2.0f && selectedObjectsCache.size() == 1 && selectedObjectsCache.front()->xf() != AffineXf3f() )
@@ -1841,11 +1831,10 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             AppendHistory<ChangeXfAction>( "Reset Transform", obj );
             obj->setXf( AffineXf3f() );
         }
-        if ( iconsFont )
+        if ( popIconsFont )
             ImGui::PopFont();
         UI::setTooltipIfHovered( "Resets transform value to identity." );
-        if ( iconsFont )
-            ImGuiObsolete::PushFont( iconsFont );
+        popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         bool drawApplyBtn = numButtons >=3.0f &&
@@ -1859,18 +1848,14 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
 
             if ( ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
                 item->second.item->action();
-            if ( iconsFont )
+            if ( popIconsFont )
                 ImGui::PopFont();
             UI::setTooltipIfHovered( "Transforms object and resets transform value to identity." );
-            if ( iconsFont )
-                ImGuiObsolete::PushFont( iconsFont );
+            popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
         }
     }
-    if ( iconsFont )
-    {
+    if ( popIconsFont )
         ImGui::PopFont();
-        iconsFont->Scale = 1.0f;
-    }
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar();
     return res;
@@ -2344,21 +2329,15 @@ void RibbonMenu::drawShortcutsWindow_()
 
             std::string keyStr = ShortcutManager::getKeyString( key.key );
             bool isArrow = key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT;
-            ImFont* font = nullptr;
+            bool popFont = false;
             if ( isArrow )
-            {
-                font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-                font->Scale = cDefaultFontSize / cBigIconSize;
-                ImGuiObsolete::PushFont( font );
-            }
+                popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
 
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
             addReadOnlyLine( keyStr );
 
-            if ( isArrow )
-            {
+            if ( isArrow && popFont )
                 ImGui::PopFont();
-            }
         }
 
         ImGui::PopStyleVar();

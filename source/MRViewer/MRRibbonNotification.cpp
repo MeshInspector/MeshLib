@@ -104,12 +104,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
 
     ImGui::Begin( name.c_str(), nullptr, flags );
 
-    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 0.65f;
-        ImGuiObsolete::PushFont( iconsFont );
-    }
+    bool popFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, 0.65f );
 
     auto fontSize = ImGui::GetFontSize();
     ImGui::SetCursorPos( 0.5f * ( windowSzie - ImVec2( fontSize, fontSize ) ) );
@@ -117,11 +112,8 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
     ImGui::Text( "%s", UI::notificationChar( notificationsHistory_.front().notification.type ).first );
     ImGui::PopStyleColor();
 
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 1.0f;
+    if ( popFont )
         ImGui::PopFont();
-    }
 
     if ( ImGui::IsWindowHovered() )
     {

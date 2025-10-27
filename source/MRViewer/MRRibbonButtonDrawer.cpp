@@ -283,16 +283,12 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
     pressed = pressed || params.forcePressed;
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
-    if ( font ) {
-        if ( params.iconSize != 0 )
-            font->Scale = params.iconSize / cBigIconSize;
-        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-            font->Scale = cSmallIconSize / cBigIconSize;
-        fontScale = font->Scale;
-        ImGuiObsolete::PushFont( font );
-    }
+    if ( params.iconSize != 0 )
+        fontScale = params.iconSize / cBigIconSize;
+    else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+        fontScale = cSmallIconSize / cBigIconSize;
+    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, fontScale );
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
@@ -345,11 +341,8 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( font )
-    {
+    if ( popIconsFont )
         ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
 
     if ( params.sizeType == DrawButtonParams::SizeType::Big )
     {
@@ -403,17 +396,12 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 
     int colorChanged = pushRibbonButtonColors( true, false, params.forceHovered, params.rootType );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
-    if ( font )
-    {
-        if ( params.iconSize != 0 )
-            font->Scale = params.iconSize / cBigIconSize;
-        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-            font->Scale = cSmallIconSize / cBigIconSize;
-        fontScale = font->Scale;
-        ImGuiObsolete::PushFont( font );
-    }
+    if ( params.iconSize != 0 )
+        fontScale = params.iconSize / cBigIconSize;
+    else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+        fontScale = cSmallIconSize / cBigIconSize;
+    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, fontScale );
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
@@ -449,11 +437,8 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( font )
-    {
+    if ( popIconsFont )
         ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
 
     if ( colorChanged > 0 )
         ImGui::PopStyleColor( colorChanged );
@@ -468,20 +453,12 @@ bool RibbonButtonDrawer::drawTabArrowButton( const char* icon, const ImVec2& siz
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        font->Scale = iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGuiObsolete::PushFont( font );
-    }
+    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
     bool pressed = ImGui::Button( icon, size );
 
-    if ( font )
-    {
+    if ( popIconsFont )
         ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar();
@@ -496,16 +473,14 @@ void RibbonButtonDrawer::setMonochrome( const std::optional<Color>& color )
 void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const
 {
     float iconSize = params.iconSize * 0.5f;
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( params.sizeType == DrawButtonParams::SizeType::Big )
-            font->Scale = iconSize / fontSize;
-        else
-            font->Scale = iconSize * 1.5f / fontSize;
-        ImGuiObsolete::PushFont( font );
-    }
+    float fontScale = 1.f;
+    const float baseFontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
+    if ( params.sizeType == DrawButtonParams::SizeType::Big )
+        fontScale = iconSize / baseFontSize;
+    else
+        fontScale = iconSize * 1.5f / baseFontSize;
+    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, fontScale );
+
     auto frameHeight = ImGui::GetFrameHeight();
     ImVec2 itemSize = ImVec2( frameHeight, frameHeight );
     ImVec2 dropBtnPos;
@@ -555,11 +530,8 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( pushedColors );
 
-    if ( font )
-    {
+    if ( popIconsFont )
         ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
 
     // manage menu popup
     if ( comboPressed && !menuOpened )

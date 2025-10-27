@@ -68,6 +68,8 @@ public:
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
+    MRVIEWER_API static bool imGuiPushFont( const FontType& type, float scale = 1.f );
+
 private:
 
 #ifndef __EMSCRIPTEN__
@@ -93,12 +95,12 @@ private:
 
     void loadFont_( FontType type, const ImWchar* ranges );
 
-    struct CustomGlyph
-    {
-        std::function<void( unsigned char* texData, int texW )> render;
-    };
-    void addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs );
-    void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
+    //struct CustomGlyph
+    //{
+    //    std::function<void( unsigned char* texData, int texW )> render;
+    //};
+    //void addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs );
+    //void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
 };
 
 }

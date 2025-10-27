@@ -149,12 +149,7 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ).getUInt32() );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        font->Scale = customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() );
-        ImGuiObsolete::PushFont( font );
-    }
+    bool popFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
 
     const char* text = "\xef\x85\x82";
     auto textSize = ImGui::CalcTextSize( text );
@@ -168,11 +163,8 @@ void Toolbar::drawToolbar()
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );
 
-    if ( font )
-    {
+    if ( popFont )
         ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
 
     ImGui::PopStyleColor( 4 );
 

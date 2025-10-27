@@ -740,14 +740,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const auto buttonOffset = ( titleBarHeight - buttonSize ) * 0.5f;
     ImGui::SetCursorScreenPos( { window->Rect().Min.x + buttonOffset, window->Rect().Min.y + buttonOffset } );
 
-    ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
     ImFont* titleFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
 
-    if ( iconsFont )
-    {
-        iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
-        ImGuiObsolete::PushFont( iconsFont );
-    }
+    bool popIconsFont = MR::RibbonFontManager::imGuiPushFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
 
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
 
@@ -762,7 +757,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor( 2 );
 
-            if (iconsFont )
+            if ( popIconsFont )
                 ImGui::PopFont();
 
             window->DrawList->PopClipRect();
@@ -772,7 +767,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         ImGui::SameLine();
     }
 
-    if ( iconsFont )
+    if ( popIconsFont )
         ImGui::PopFont();
 
     auto cursorScreenPos = ImGui::GetCursorScreenPos();
@@ -808,9 +803,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.helpBtnFn )
     {
-        auto font = ImGui::GetFont();
-        font->Scale = 0.9f;
-        ImGuiObsolete::PushFont( font );
+        ImGui::PushFont( nullptr, ImGui::GetFontSize() * 0.9f );
 
         const auto btnHelpTextSize = ImGui::CalcTextSize( "HELP" );
         const float btnHelpWidth = btnHelpTextSize.x + 6.0f * UI::scale();
@@ -826,13 +819,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         ImGui::PopStyleColor( 4 );
 
         ImGui::PopFont();
-        font->Scale = 1.f;
 
         ImGui::SameLine();
     }
 
-    if ( iconsFont )
-        ImGuiObsolete::PushFont( iconsFont );
+    popIconsFont = MR::RibbonFontManager::imGuiPushFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
 
     ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ), window->Rect().Min.y + buttonOffset } );
     bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
@@ -842,7 +833,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     {
         *open = false;
 
-        if ( iconsFont )
+        if ( popIconsFont )
             ImGui::PopFont();
 
         ImGui::PopStyleColor( 2 );
@@ -852,11 +843,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         return false;
     }
 
-    if ( iconsFont )
-    {
+    if ( popIconsFont )
         ImGui::PopFont();
-        iconsFont->Scale = 1.0f;
-    }
 
     ImGui::PopStyleVar( 3 );
 
@@ -1546,12 +1534,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * UI::scale() + ImGui::GetTextLineHeight();
-    ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
-        ImGuiObsolete::PushFont( iconsFont );
-    }
+    bool popIconsFont = MR::RibbonFontManager::imGuiPushFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
 
     auto& shift = planeWidget.isInLocalMode() ? localShift : plane.d;
     auto shiftBackUp = shift;
@@ -1564,11 +1547,9 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     if ( MR::UI::button( "\xef\x84\x85", { arrowButtonSize, arrowButtonSize } ) )
         shift += dragspeed;
     ImGui::PopStyleVar();
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 1.0f;
+
+    if ( popIconsFont )
         ImGui::PopFont();
-    }
 
     ImGui::SameLine();
     ImGui::PopItemFlag();

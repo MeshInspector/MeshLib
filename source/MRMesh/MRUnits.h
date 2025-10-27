@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMacros.h"
-#include "exports.h"
 #include "MRVectorTraits.h"
 
 #include <cassert>
@@ -386,26 +385,6 @@ requires (VectorTraits<T>::size > 1 && detail::Units::Scalar<typename VectorTrai
 #define MR_X(T, unused) \
     extern template MRMESH_API int guessPrecision( T value ); \
     extern template MRMESH_API int guessPrecision( T min, T max );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
-#undef MR_X
-
-// Generates a printf-style format string for `value`, for use with ImGui widgets.
-// It has form "123.45 mm##%.6f" (the baked number, then `##` and some format string).
-// The `##...` part isn't printed, but we need it when ctrl+clicking the number, to show the correct number of digits.
-template <UnitEnum E, detail::Units::Scalar T>
-[[nodiscard]] MRMESH_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
-
-#define MR_Y(T, E) extern template MRMESH_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params );
-#define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
-DETAIL_MR_UNIT_ENUMS(MR_X)
-#undef MR_X
-#undef MR_Y
-
-// This overload lets you select the unit kind at runtime.
-template <detail::Units::Scalar T>
-[[nodiscard]] MRMESH_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
-
-#define MR_X(T, unused) extern template MRMESH_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 

@@ -5,6 +5,7 @@
 #include "MRUIStyle.h" // To help intellisense.
 #include "MRUITestEngine.h"
 #include "MRViewerInstance.h"
+#include "MRImGuiFormatString.h"
 #include "MRMesh/MRString.h"
 
 namespace MR::UI

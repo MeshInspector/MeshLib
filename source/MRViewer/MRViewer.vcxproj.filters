@@ -484,6 +484,9 @@
     <ClCompile Include="MRItemEnabledPerViewport.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRImGuiFormatString.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -950,6 +953,12 @@
     </ClInclude>
     <ClInclude Include="MRFileLoadOptions.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGuiFormatString.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVectorTraits.h">
+      <Filter>UIStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

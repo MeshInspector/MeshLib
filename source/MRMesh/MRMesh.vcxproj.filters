@@ -2243,6 +2243,9 @@
     <ClCompile Include="MRChangeMeshDataAction.cpp">
       <Filter>Source Files\History</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshSave3mf.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

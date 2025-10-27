@@ -46,17 +46,21 @@ MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, co
 
 /// saves in textual .stl file;
 /// SaveSettings::onlyValidPoints = false is ignored
-MRMESH_API Expected<void> toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .ply file
-MRMESH_API Expected<void> toPly( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toPly( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+
+/// saves in 3mf .model file
+MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// detects the format from file extension and save mesh to it
 MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
 
 /// \}
 

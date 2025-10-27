@@ -68,14 +68,14 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
                 Timer t( "extractTriangles" );
                 auto numIndices = reader.num_triangles( indecies[0] );
                 tris.resize( numIndices );
-                reader.extract_triangles( indecies[0], &res.front().x, (std::uint32_t)res.size(), miniply::PLYPropertyType::Int, &tris.front() );
+                reader.extract_triangles( indecies[0], &res.front().x, (std::uint32_t)res.size(), miniply::PLYPropertyType::Int, tris.data() );
             }
             else
             {
                 Timer t( "extractTriples" );
                 auto numIndices = reader.num_rows();
                 tris.resize( numIndices );
-                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &tris.front() );
+                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, tris.data() );
             }
             const auto posCurrent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress

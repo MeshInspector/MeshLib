@@ -1,7 +1,7 @@
 #pragma once
 
 #include "exports.h"
-#include "MRUnits.h"
+#include "MRMesh/MRUnits.h"
 
 // This abstracts away the UI measurement unit configuration. Internally this uses `setDefaultUnitParams()`.
 

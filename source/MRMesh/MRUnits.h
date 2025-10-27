@@ -1,8 +1,8 @@
 #pragma once
 
-#include "MRMesh/MRMacros.h"
-#include "MRViewer/exports.h"
-#include "MRViewer/MRVectorTraits.h"
+#include "MRMacros.h"
+#include "exports.h"
+#include "MRVectorTraits.h"
 
 #include <cassert>
 #include <optional>
@@ -143,7 +143,7 @@ struct UnitInfo
 template <UnitEnum E>
 [[nodiscard]] const UnitInfo& getUnitInfo( E unit ) = delete;
 
-#define MR_X(E) template <> [[nodiscard]] MRVIEWER_API const UnitInfo& getUnitInfo( E unit );
+#define MR_X(E) template <> [[nodiscard]] MRMESH_API const UnitInfo& getUnitInfo( E unit );
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
@@ -233,7 +233,7 @@ struct UnitToStringParams;
 template <UnitEnum E>
 [[nodiscard]] const UnitToStringParams<E>& getDefaultUnitParams();
 
-#define MR_X(E) extern template MRVIEWER_API const UnitToStringParams<E>& getDefaultUnitParams();
+#define MR_X(E) extern template MRMESH_API const UnitToStringParams<E>& getDefaultUnitParams();
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
@@ -241,7 +241,7 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 template <UnitEnum E>
 void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
 
-#define MR_X(E) extern template MRVIEWER_API void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
+#define MR_X(E) extern template MRMESH_API void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
@@ -261,7 +261,7 @@ enum class DegreesMode
     degreesMinutesSeconds, // Integral degrees and minutes, fractional arcseconds.
     _count [[maybe_unused]],
 };
-[[nodiscard]] MRVIEWER_API std::string_view toString( DegreesMode mode );
+[[nodiscard]] MRMESH_API std::string_view toString( DegreesMode mode );
 
 enum class ZeroMode
 {
@@ -336,9 +336,9 @@ using VarUnitToStringParams = std::variant<
 // Converts value to a string, possibly converting it to a different unit.
 // By default, length is kept as is, while angles are converted from radians to the current UI unit.
 template <UnitEnum E, detail::Units::Scalar T>
-[[nodiscard]] MRVIEWER_API std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+[[nodiscard]] MRMESH_API std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
 
-#define MR_Y(T, E) extern template MRVIEWER_API std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );
+#define MR_Y(T, E) extern template MRMESH_API std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );
 #define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
@@ -346,22 +346,22 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 
 // This overload lets you select the unit kind at runtime.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
+[[nodiscard]] MRMESH_API std::string valueToString( T value, const VarUnitToStringParams& params );
 
-#define MR_X(T, unused) extern template MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
+#define MR_X(T, unused) extern template MRMESH_API std::string valueToString( T value, const VarUnitToStringParams& params );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 // Guesses the number of digits of precision for fixed-point formatting of `value`.
 // Mostly for internal use.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRVIEWER_API int guessPrecision( T value );
+[[nodiscard]] MRMESH_API int guessPrecision( T value );
 
 // Guesses the number of digits of precision for fixed-point formatting of the min-max range.
 // If `min >= max`, always returns zero. Ignores min and/or max if they are the smallest of the largest representable value respectively.
 // Mostly for internal use.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRVIEWER_API int guessPrecision( T min, T max );
+[[nodiscard]] MRMESH_API int guessPrecision( T min, T max );
 
 // Same but for vectors.
 template <typename T>
@@ -384,8 +384,8 @@ requires (VectorTraits<T>::size > 1 && detail::Units::Scalar<typename VectorTrai
 }
 
 #define MR_X(T, unused) \
-    extern template MRVIEWER_API int guessPrecision( T value ); \
-    extern template MRVIEWER_API int guessPrecision( T min, T max );
+    extern template MRMESH_API int guessPrecision( T value ); \
+    extern template MRMESH_API int guessPrecision( T min, T max );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
@@ -393,9 +393,9 @@ DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 // It has form "123.45 mm##%.6f" (the baked number, then `##` and some format string).
 // The `##...` part isn't printed, but we need it when ctrl+clicking the number, to show the correct number of digits.
 template <UnitEnum E, detail::Units::Scalar T>
-[[nodiscard]] MRVIEWER_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+[[nodiscard]] MRMESH_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
 
-#define MR_Y(T, E) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params );
+#define MR_Y(T, E) extern template MRMESH_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params );
 #define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
@@ -403,9 +403,9 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 
 // This overload lets you select the unit kind at runtime.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
+[[nodiscard]] MRMESH_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
 
-#define MR_X(T, unused) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
+#define MR_X(T, unused) extern template MRMESH_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 

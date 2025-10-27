@@ -1,7 +1,6 @@
 #include "MRUnits.h"
-
-#include "MRMesh/MRConstants.h"
-#include "MRMesh/MRString.h"
+#include "MRConstants.h"
+#include "MRString.h"
 #include "MRPch/MRFmt.h"
 #include <algorithm>
 
@@ -310,7 +309,7 @@ const UnitToStringParams<E>& getDefaultUnitParams()
     return defaultUnitToStringParams<E>;
 }
 
-#define MR_X(E) template MRVIEWER_API const UnitToStringParams<E>& getDefaultUnitParams();
+#define MR_X(E) template MRMESH_API const UnitToStringParams<E>& getDefaultUnitParams();
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 

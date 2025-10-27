@@ -271,7 +271,7 @@ enum class ZeroMode
 
 // Controls how a value with a unit is converted to a string.
 template <UnitEnum E>
-struct UnitToStringParams
+struct MR_BIND_IGNORE UnitToStringParams
 {
     // The resulting string is wrapped in this.
     // Do NOT use this for custom unit suffixes! Add them as actual units instead.

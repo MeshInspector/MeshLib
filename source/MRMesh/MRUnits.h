@@ -354,13 +354,13 @@ DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 // Guesses the number of digits of precision for fixed-point formatting of `value`.
 // Mostly for internal use.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRMESH_API int guessPrecision( T value );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API int guessPrecision( T value );
 
 // Guesses the number of digits of precision for fixed-point formatting of the min-max range.
 // If `min >= max`, always returns zero. Ignores min and/or max if they are the smallest of the largest representable value respectively.
 // Mostly for internal use.
 template <detail::Units::Scalar T>
-[[nodiscard]] MRMESH_API int guessPrecision( T min, T max );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API int guessPrecision( T min, T max );
 
 // Same but for vectors.
 template <typename T>

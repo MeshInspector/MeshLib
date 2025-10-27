@@ -186,7 +186,7 @@ jobs:
 
       - name: Upload Python Stubs
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -202,14 +202,14 @@ jobs:
 
       - name: Upload C bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: CBindings
           path: ./source/MeshLibC2/include
           retention-days: 1
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ManyLinux-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
@@ -359,7 +359,7 @@ jobs:
           python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Windows
           path: wheelhouse\meshlib-*.whl
@@ -442,7 +442,7 @@ jobs:
           python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Macos-${{matrix.platform}}
           path: meshlib-*.whl

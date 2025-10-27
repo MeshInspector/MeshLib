@@ -127,7 +127,7 @@ jobs:
 
       - name: Upload C bindings headers
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: CBindings
           path: ./source/MeshLibC2/include
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -170,7 +170,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
@@ -248,7 +248,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Distributives_${{matrix.os}}_arm64
           path: meshlib_${{matrix.os}}-arm64-dev.deb

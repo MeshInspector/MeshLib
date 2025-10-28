@@ -92,9 +92,12 @@ static auto getLengthDependentUnit()
         {
             switch ( unit )
             {
+                case LengthUnit::um:     return AreaUnit::um2;
                 case LengthUnit::mm:     return AreaUnit::mm2;
-                case LengthUnit::meters: return AreaUnit::meters2;
+                case LengthUnit::cm:     return AreaUnit::cm2;
+                case LengthUnit::m:      return AreaUnit::m2;
                 case LengthUnit::inches: return AreaUnit::inches2;
+                case LengthUnit::feet:   return AreaUnit::feet2;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
@@ -104,9 +107,12 @@ static auto getLengthDependentUnit()
         {
             switch ( unit )
             {
+                case LengthUnit::um:     return VolumeUnit::um3;
                 case LengthUnit::mm:     return VolumeUnit::mm3;
-                case LengthUnit::meters: return VolumeUnit::meters3;
+                case LengthUnit::cm:     return VolumeUnit::cm3;
+                case LengthUnit::m:      return VolumeUnit::m3;
                 case LengthUnit::inches: return VolumeUnit::inches3;
+                case LengthUnit::feet:   return VolumeUnit::feet3;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
@@ -116,9 +122,12 @@ static auto getLengthDependentUnit()
         {
             switch ( unit )
             {
+                case LengthUnit::um:     return MovementSpeedUnit::umPerSecond;
                 case LengthUnit::mm:     return MovementSpeedUnit::mmPerSecond;
-                case LengthUnit::meters: return MovementSpeedUnit::metersPerSecond;
+                case LengthUnit::cm:     return MovementSpeedUnit::cmPerSecond;
+                case LengthUnit::m:      return MovementSpeedUnit::mPerSecond;
                 case LengthUnit::inches: return MovementSpeedUnit::inchesPerSecond;
+                case LengthUnit::feet:   return MovementSpeedUnit::feetPerSecond;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
@@ -128,9 +137,12 @@ static auto getLengthDependentUnit()
         {
             switch ( unit )
             {
+                case LengthUnit::um:     return InvLengthUnit::inv_um;
                 case LengthUnit::mm:     return InvLengthUnit::inv_mm;
-                case LengthUnit::meters: return InvLengthUnit::inv_meters;
+                case LengthUnit::cm:     return InvLengthUnit::inv_cm;
+                case LengthUnit::m:      return InvLengthUnit::inv_m;
                 case LengthUnit::inches: return InvLengthUnit::inv_inches;
+                case LengthUnit::feet:   return InvLengthUnit::inv_feet;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );

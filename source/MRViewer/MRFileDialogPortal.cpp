@@ -512,6 +512,12 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
     {
         // remove 'file://' prefix and revert percent-encoding
         std::filesystem::path path = percentDecode( uri.substr( 7 ) );
+        std::error_code ec;
+        if ( params.folderDialog && !std::filesystem::is_directory( path, ec ) )
+        {
+            // work-around folder selection for older protocol versions
+            path = path.parent_path();
+        }
         if ( params.saveDialog && !availExts.empty() )
         {
             // make sure the given filename has a correct extension

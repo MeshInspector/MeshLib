@@ -14,6 +14,7 @@
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
     <tab type="usergroup" url="__BEGIN_URL__Tutorials__END_URL__" title="Tutorials">
       <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
+      <tab type="user" url="__BEGIN_URL__SupportGeneratorTutorial__END_URL__" title="Support Generator Tool using C++"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__" title="Examples">
       <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#CppApplication" title="C++ Application Based on MeshLib">

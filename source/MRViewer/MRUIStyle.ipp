@@ -187,7 +187,7 @@ requires ( VectorTraits<T>::size == 1 )
     if constexpr ( std::is_same_v<E, NoUnit> )
         return 1;
     else if constexpr ( std::is_same_v<E, LengthUnit> )
-        return getDefaultUnitParams<LengthUnit>().targetUnit == LengthUnit::mm ? 1 : 1/16.f;
+        return getDefaultUnitParams<LengthUnit>().targetUnit == LengthUnit::millimeters ? 1 : 1/16.f;
     else if constexpr ( std::is_same_v<E, AngleUnit> )
         return PI_F / 180;
     else

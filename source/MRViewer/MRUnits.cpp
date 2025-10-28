@@ -8,6 +8,9 @@
 namespace MR
 {
 
+// U+00B5 - Micro Sign, see https://www.utf8-chartable.de/
+#define MR_MICRO_SIGN "\xC2\xB5"
+
 template <UnitEnum E>
 static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     constexpr char commonThouSep = ' ', commonThouSepFrac = 0;
@@ -34,7 +37,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<LengthUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = LengthUnit::mm,
+            .targetUnit = LengthUnit::millimeters,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -124,7 +127,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<MovementSpeedUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = MovementSpeedUnit::mmPerSecond,
+            .targetUnit = MovementSpeedUnit::millimetersPerSecond,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -142,7 +145,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<AreaUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = AreaUnit::mm2,
+            .targetUnit = AreaUnit::millimeters2,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -160,7 +163,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<VolumeUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = VolumeUnit::mm3,
+            .targetUnit = VolumeUnit::millimeters3,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -178,7 +181,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<InvLengthUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = InvLengthUnit::inv_mm,
+            .targetUnit = InvLengthUnit::inv_millimeters,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -210,9 +213,12 @@ template <>
 const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm" },
-        { .conversionFactor = 1000, .prettyName = "Meters", .unitSuffix = " m" },
-        { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
+        { .conversionFactor = 0.001f, .prettyName = "Microns",     .unitSuffix = " " MR_MICRO_SIGN "m" },
+        { .conversionFactor = 1,      .prettyName = "Millimeters", .unitSuffix = " mm" },
+        { .conversionFactor = 10,     .prettyName = "Centimeters", .unitSuffix = " cm" },
+        { .conversionFactor = 1000,   .prettyName = "Meters",      .unitSuffix = " m" },
+        { .conversionFactor = 25.4f,  .prettyName = "Inches",      .unitSuffix = " in"/* or "\"" */ },
+        { .conversionFactor = 304.8f, .prettyName = "Feet",        .unitSuffix = " ft" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );
     return ret[int( length )];
@@ -260,9 +266,12 @@ template <>
 const UnitInfo& getUnitInfo( MovementSpeedUnit speed )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Millimeters per second", .unitSuffix = " mm/s" },
-        { .conversionFactor = 1000, .prettyName = "Meters per second", .unitSuffix = " m/s" },
-        { .conversionFactor = 25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
+        { .conversionFactor = 0.001f, .prettyName = "Microns per second",     .unitSuffix = " " MR_MICRO_SIGN "m/s" },
+        { .conversionFactor = 1,      .prettyName = "Millimeters per second", .unitSuffix = " mm/s" },
+        { .conversionFactor = 10,     .prettyName = "Centimeters per second", .unitSuffix = " cm/s" },
+        { .conversionFactor = 1000,   .prettyName = "Meters per second",      .unitSuffix = " m/s" },
+        { .conversionFactor = 25.4f,  .prettyName = "Inches per second",      .unitSuffix = " in/s" },
+        { .conversionFactor = 304.8f, .prettyName = "Feet per second",        .unitSuffix = " ft/s" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( MovementSpeedUnit::_count ) );
     return ret[int( speed )];
@@ -272,9 +281,12 @@ const UnitInfo& getUnitInfo( AreaUnit area )
 {
     static const UnitInfo ret[] = {
         // U+00B2 SUPERSCRIPT TWO
-        { .conversionFactor = 1, .prettyName = "Millimeters\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
-        { .conversionFactor = 1000*1000, .prettyName = "Meters\xc2\xb2", .unitSuffix = " m\xc2\xb2" },
-        { .conversionFactor = 25.4f*25.4f, .prettyName = "Inches\xc2\xb2", .unitSuffix = " in\xc2\xb2" },
+        { .conversionFactor = sqr(0.001f), .prettyName = "Microns\xc2\xb2",     .unitSuffix = " " MR_MICRO_SIGN "m\xc2\xb2" },
+        { .conversionFactor = sqr(1.0f),   .prettyName = "Millimeters\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
+        { .conversionFactor = sqr(10.0f),  .prettyName = "Centimeters\xc2\xb2", .unitSuffix = " cm\xc2\xb2" },
+        { .conversionFactor = sqr(1000.0f),.prettyName = "Meters\xc2\xb2",      .unitSuffix = " m\xc2\xb2" },
+        { .conversionFactor = sqr(25.4f),  .prettyName = "Inches\xc2\xb2",      .unitSuffix = " in\xc2\xb2" },
+        { .conversionFactor = sqr(304.8f), .prettyName = "Feet\xc2\xb2",        .unitSuffix = " ft\xc2\xb2" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( AreaUnit::_count ) );
     return ret[int( area )];
@@ -282,11 +294,15 @@ const UnitInfo& getUnitInfo( AreaUnit area )
 template <>
 const UnitInfo& getUnitInfo( VolumeUnit volume )
 {
+    auto cbc = []( float x ) { return x * x * x; };
     static const UnitInfo ret[] = {
         // U+00B3 SUPERSCRIPT THREE
-        { .conversionFactor = 1, .prettyName = "Millimeters\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
-        { .conversionFactor = 1000*1000*1000, .prettyName = "Meters\xc2\xb3", .unitSuffix = " m\xc2\xb3" },
-        { .conversionFactor = 25.4f*25.4f*25.4f, .prettyName = "Inches\xc2\xb3", .unitSuffix = " in\xc2\xb3" },
+        { .conversionFactor = cbc(0.001f), .prettyName = "Microns\xc2\xb3",     .unitSuffix = " " MR_MICRO_SIGN "m\xc2\xb3" },
+        { .conversionFactor = cbc(1.0f),   .prettyName = "Millimeters\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
+        { .conversionFactor = cbc(10.0f),  .prettyName = "Centimeters\xc2\xb3", .unitSuffix = " cm\xc2\xb3" },
+        { .conversionFactor = cbc(1000.0f),.prettyName = "Meters\xc2\xb3",      .unitSuffix = " m\xc2\xb3" },
+        { .conversionFactor = cbc(25.4f),  .prettyName = "Inches\xc2\xb3",      .unitSuffix = " in\xc2\xb3" },
+        { .conversionFactor = cbc(304.8f), .prettyName = "Feet\xc2\xb3",        .unitSuffix = " ft\xc2\xb3" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( VolumeUnit::_count ) );
     return ret[int( volume )];
@@ -294,11 +310,15 @@ const UnitInfo& getUnitInfo( VolumeUnit volume )
 template <>
 const UnitInfo& getUnitInfo( InvLengthUnit length )
 {
+    auto rep = []( float x ) { return 1 / x; };
     static const UnitInfo ret[] = {
         // U+207B SUPERSCRIPT MINUS, U+00B9 SUPERSCRIPT ONE
-        { .conversionFactor = 1, .prettyName = "Millimeters\u207B\u00B9", .unitSuffix = " mm\u207B\u00B9" },
-        { .conversionFactor = 1/1000.f, .prettyName = "Meters\u207B\u00B9", .unitSuffix = " m\u207B\u00B9" },
-        { .conversionFactor = 1/25.4f, .prettyName = "Inches\u207B\u00B9", .unitSuffix = " in\u207B\u00B9" },
+        { .conversionFactor = rep(0.001f), .prettyName = "Microns\u207B\u00B9",     .unitSuffix = " " MR_MICRO_SIGN "m\u207B\u00B9" },
+        { .conversionFactor = rep(1.0f),   .prettyName = "Millimeters\u207B\u00B9", .unitSuffix = " mm\u207B\u00B9" },
+        { .conversionFactor = rep(10.0f),  .prettyName = "Centimeters\u207B\u00B9", .unitSuffix = " cm\u207B\u00B9" },
+        { .conversionFactor = rep(1000.0f),.prettyName = "Meters\u207B\u00B9",      .unitSuffix = " m\u207B\u00B9" },
+        { .conversionFactor = rep(25.4f),  .prettyName = "Inches\u207B\u00B9",      .unitSuffix = " in\u207B\u00B9" },
+        { .conversionFactor = rep(304.8f), .prettyName = "Feet\u207B\u00B9",        .unitSuffix = " ft\u207B\u00B9" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( InvLengthUnit::_count ) );
     return ret[int( length )];

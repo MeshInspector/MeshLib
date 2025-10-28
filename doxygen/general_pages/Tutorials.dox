@@ -11,8 +11,13 @@ Prefer video? Check out our [YouTube tutorial playlist](https://youtube.com/play
 In just a few minutes, you'll learn how to set up your development environment, write your first plugin, and get it running with MeshLib. 
 This tutorial will help you establish a solid foundation for more advanced plugin development.
 
-
 \ref FirstPluginTutorial "Start Tutorial"
 
-\note A video tutorial on creating advanced plugins is coming soon. Stay tuned!
+
+### Building a Support Generator Plugin Using MeshLib C++ on Windows
+In this extended tutorial, you'll learn how to expand MeshLib's capabilities by developing custom tools. 
+Through a practical, hands-on session, you'll build a fully functional support generator that combines user interaction, geometric processing, and real-time visualization within the MeshLib Viewer.
+
+\ref SupportGeneratorTutorial "Support Generator Tutorial"
+
 */

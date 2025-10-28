@@ -21,7 +21,7 @@ std::string getWindowId( GLFWwindow* window )
     switch ( glfwGetPlatform() )
     {
     case GLFW_PLATFORM_X11:
-        return fmt::format( "x11:{:x}", glfwGetX11Window( window ) );
+        return fmt::format( "x11:{:08x}", glfwGetX11Window( window ) );
     // TODO: Wayland support
     default:
         return "";
@@ -135,7 +135,7 @@ struct FileChooserOptions
     bool directory = false;
     std::vector<FileChooserFilter> filters;
     std::optional<FileChooserFilter> currentFilter;
-    // TODO: choices
+    // choices are not used for now
     std::string currentName;
     std::filesystem::path currentFolder;
     std::filesystem::path currentFile;
@@ -228,7 +228,7 @@ struct Response
         Unknown = 2,
     } code;
     std::vector<std::string> uris;
-    // TODO: choices
+    // choices are not used for now
     std::optional<std::string> currentFilterName; // name only to simplify parsing
 };
 
@@ -387,11 +387,10 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
         title = params.multiselect ? "Save Files" : "Save File";
 
     FileChooserOptions options;
-    options.handleToken = "MRFileDialogPortal"; // TODO: randomize token?
+    options.handleToken = "MeshLibFileDialogPortal"; // randomize token?
     options.currentFolder = params.baseFolder;
     for ( const auto& filter : params.filters )
     {
-        // TODO: handle case-sensitivity
         options.filters.push_back( {
             .name = filter.name,
             .globs = split( filter.extensions, ";" ),
@@ -428,7 +427,6 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
     for ( const auto& uri : resp->uris )
     {
         // remove 'file://' prefix and revert percent-encoding
-        // TODO: apply current filter?
         results.emplace_back( percentDecode( uri.substr( 7 ) ) );
     }
     return results;

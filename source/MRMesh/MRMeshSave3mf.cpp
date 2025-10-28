@@ -14,6 +14,16 @@ namespace MR
 namespace MeshSave
 {
 
+static constexpr const char * sUnitNames[(int)LengthUnit::_count] =
+{
+    "micron",
+    "millimeter",
+    "centimeter",
+    "meter",
+    "inch",
+    "foot"
+};
+
 Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -27,9 +37,13 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
 {
     MR_TIMER;
 
+    assert( !settings.lengthUnit || *settings.lengthUnit < LengthUnit::_count );
+    const char * unitName = 
+        sUnitNames[int( settings.lengthUnit ? *settings.lengthUnit : LengthUnit::millimeters )];
+
     out <<
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        "<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
+        "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
         "  <resources>\n"
         "    <object id=\"0\" type=\"model\">\n"
         "      <mesh>\n"

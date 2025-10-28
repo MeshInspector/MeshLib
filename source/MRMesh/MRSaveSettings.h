@@ -4,7 +4,9 @@
 #include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRVector.h"
+#include "MREnums.h"
 #include <cassert>
+#include <optional>
 
 namespace MR
 {
@@ -37,6 +39,9 @@ struct SaveSettings
 
     /// this transformation can optionally be applied to all vertices (points) of saved object
     const AffineXf3d * xf = nullptr;
+
+    /// units of input coordinates and transformation, to be serialized if the format supports it
+    std::optional<LengthUnit> lengthUnit;
 
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;

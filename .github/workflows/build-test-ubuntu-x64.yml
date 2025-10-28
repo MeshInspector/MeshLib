@@ -118,6 +118,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind && matrix.os != 'ubuntu20'] }}
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}

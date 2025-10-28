@@ -1,5 +1,5 @@
 #include "MRFileDialogPortal.h"
-#ifndef MRVIEWER_NO_XDG_DESKTOP_PORTAL
+#if !defined( _WIN32 ) && !defined( MRVIEWER_NO_XDG_DESKTOP_PORTAL )
 #include "MRGladGlfw.h"
 #include "MRViewer.h"
 

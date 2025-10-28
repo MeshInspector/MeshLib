@@ -91,10 +91,10 @@ enum class NoUnit
 // Measurement units of length.
 enum class LengthUnit
 {
-    um, // microns
-    mm, // millimeters
-    cm, // centimeters
-    m,  // meters
+    microns,
+    millimeters,
+    centimeters,
+    meters,
     inches,
     feet,
     _count [[maybe_unused]],
@@ -134,10 +134,10 @@ enum class TimeUnit
 // Measurement units for movement speed.
 enum class MovementSpeedUnit
 {
-    umPerSecond,
-    mmPerSecond,
-    cmPerSecond,
-    mPerSecond,
+    micronsPerSecond,
+    millimetersPerSecond,
+    centimetersPerSecond,
+    metersPerSecond,
     inchesPerSecond,
     feetPerSecond,
     _count [[maybe_unused]],
@@ -146,10 +146,10 @@ enum class MovementSpeedUnit
 // Measurement units for surface area.
 enum class AreaUnit
 {
-    um2,
-    mm2,
-    cm2,
-    m2,
+    microns2,
+    millimeters2,
+    centimeters2,
+    meters2,
     inches2,
     feet2,
     _count [[maybe_unused]],
@@ -158,10 +158,10 @@ enum class AreaUnit
 // Measurement units for body volume.
 enum class VolumeUnit
 {
-    um3,
-    mm3,
-    cm3,
-    m3,
+    microns3,
+    millimeters3,
+    centimeters3,
+    meters3,
     inches3,
     feet3,
     _count [[maybe_unused]],
@@ -170,10 +170,10 @@ enum class VolumeUnit
 // Measurement units for 1/length.
 enum class InvLengthUnit
 {
-    inv_um,
-    inv_mm,
-    inv_cm,
-    inv_m,
+    inv_microns,
+    inv_millimeters,
+    inv_centimeters,
+    inv_meters,
     inv_inches,
     inv_feet,
     _count [[maybe_unused]],

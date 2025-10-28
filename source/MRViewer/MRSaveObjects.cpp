@@ -117,7 +117,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
             // always save DICOM in meters because the format supports units information
             if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
             {
-                vol.voxelSize *= getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::m ).conversionFactor;
+                vol.voxelSize *= getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
             }
         }
 

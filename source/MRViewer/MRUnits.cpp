@@ -37,7 +37,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<LengthUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = LengthUnit::mm,
+            .targetUnit = LengthUnit::millimeters,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -127,7 +127,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<MovementSpeedUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = MovementSpeedUnit::mmPerSecond,
+            .targetUnit = MovementSpeedUnit::millimetersPerSecond,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -145,7 +145,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<AreaUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = AreaUnit::mm2,
+            .targetUnit = AreaUnit::millimeters2,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -163,7 +163,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<VolumeUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = VolumeUnit::mm3,
+            .targetUnit = VolumeUnit::millimeters3,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -181,7 +181,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<InvLengthUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = InvLengthUnit::inv_mm,
+            .targetUnit = InvLengthUnit::inv_millimeters,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,

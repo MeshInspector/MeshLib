@@ -37,6 +37,7 @@ DBusConnection* getConnection()
 std::string getWindowId( GLFWwindow* window )
 {
     // https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
     switch ( glfwGetPlatform() )
     {
     case GLFW_PLATFORM_X11:
@@ -45,6 +46,9 @@ std::string getWindowId( GLFWwindow* window )
     default:
         return "";
     }
+#else
+    return fmt::format( "x11:{:08x}", glfwGetX11Window( window ) );
+#endif
 }
 
 void dbusAppend( DBusMessageIter& iter, std::byte value )

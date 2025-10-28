@@ -126,7 +126,7 @@ If you want to add a new unit to an existing enum: (say, add `LengthUnit::yards`
 
 If you want to create a new unit enum: (say, `EnergyUnit { joules, electronvolts, ... }`)
 
-* Add the enum to `MRViewer/MRUnits.h`, next to the other enums.
+* Add the enum to `MRMesh/MREnums.h`, next to the other enums.
 * Add your enum to the `#define DETAIL_MR_UNIT_ENUMS` macro in `MRViewer/MRUnits.h`.
 * Add the default to-string parameters for your enum to `defaultUnitToStringParams` in `MRViewer/MRUnits.cpp`.
 

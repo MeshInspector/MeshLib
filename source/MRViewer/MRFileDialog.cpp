@@ -386,7 +386,10 @@ std::string webAccumFilter( const MR::IOFilters& filters )
 
 std::vector<std::filesystem::path> runDialog( const MR::FileDialog::Parameters& parameters )
 {
-#if defined( _WIN32 )
+#if defined( __EMSCRIPTEN__ )
+    (void)parameters;
+    return {};
+#elif defined( _WIN32 )
     return windowsDialog( parameters );
 #elif defined( __APPLE__ )
     return MR::detail::runCocoaFileDialog( parameters );
@@ -398,6 +401,7 @@ std::vector<std::filesystem::path> runDialog( const MR::FileDialog::Parameters& 
 #if !defined( MRVIEWER_NO_GTK )
     return gtkDialog( parameters );
 #endif
+    (void)parameters;
     return {};
 #endif
 }

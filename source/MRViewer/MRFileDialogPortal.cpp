@@ -2,12 +2,14 @@
 #ifndef MRVIEWER_NO_XDG_DESKTOP_PORTAL
 #include "MRViewer.h"
 
+#include "MRMesh/MRFinally.h"
+#include "MRMesh/MRStringConvert.h"
+
 #include <dbus/dbus.h>
 
 #define GLFW_EXPOSE_NATIVE_X11
 #include <GLFW/glfw3native.h>
-
-#include "MRMesh/MRStringConvert.h"
+#undef Success // :(
 
 namespace
 {
@@ -45,13 +47,6 @@ void dbusAppend( DBusMessageIter& iter, const char* str )
 {
     dbus_message_iter_append_basic( &iter, DBUS_TYPE_STRING, &str );
 }
-
-# if 0
-const char* signatureFor( std::byte )
-{
-    return DBUS_TYPE_BYTE_AS_STRING;
-}
-# endif
 
 const char* signatureFor( bool )
 {
@@ -223,6 +218,138 @@ void initArgs( DBusMessage* msg, const char* parentWindow, const char* title, co
     } );
 }
 
+struct Response
+{
+    enum Code : uint32_t
+    {
+        Succeeded = 0,
+        UserCancelled = 1,
+        Unknown = 2,
+    } code;
+    std::vector<std::string> uris;
+    // TODO: choices
+    std::optional<std::string> currentFilterName; // name only to simplify parsing
+};
+
+std::optional<Response> parseResponse( DBusMessage* msg )
+{
+    Response result;
+
+    DBusMessageIter iter;
+    dbus_message_iter_init( msg, &iter );
+
+    if ( dbus_message_iter_get_arg_type( &iter ) != DBUS_TYPE_UINT32 )
+        return {};
+    dbus_message_iter_get_basic( &iter, &result.code );
+    if ( result.code != Response::Succeeded )
+        return result;
+
+    dbus_message_iter_next( &iter );
+
+    if ( dbus_message_iter_get_arg_type( &iter ) != DBUS_TYPE_ARRAY )
+        return {};
+    DBusMessageIter dict;
+    dbus_message_iter_recurse( &iter, &dict );
+    do
+    {
+        if ( dbus_message_iter_get_arg_type( &dict ) != DBUS_TYPE_DICT_ENTRY )
+            return {};
+        DBusMessageIter entry;
+        dbus_message_iter_recurse( &dict, &entry );
+
+        if ( dbus_message_iter_get_arg_type( &entry ) != DBUS_TYPE_STRING )
+            return {};
+        const char* key;
+        dbus_message_iter_get_basic( &entry, &key );
+
+        if ( !dbus_message_iter_next( &entry ) )
+            break;
+
+        if ( dbus_message_iter_get_arg_type( &entry ) != DBUS_TYPE_VARIANT )
+            return {};
+        DBusMessageIter varIter;
+        dbus_message_iter_recurse( &entry, &varIter );
+        if ( strcmp( key, "uris" ) == 0 )
+        {
+            if ( dbus_message_iter_get_arg_type( &varIter ) != DBUS_TYPE_ARRAY )
+                return {};
+            DBusMessageIter arrIter;
+            dbus_message_iter_recurse( &varIter, &arrIter );
+            do
+            {
+                if ( dbus_message_iter_get_arg_type( &arrIter ) != DBUS_TYPE_STRING )
+                    return {};
+                const char* uri;
+                dbus_message_iter_get_basic( &arrIter, &uri );
+                result.uris.emplace_back( uri );
+            }
+            while ( dbus_message_iter_next( &arrIter ) );
+        }
+        else if ( strcmp( key, "current_filter" ) == 0 )
+        {
+            if ( dbus_message_iter_get_arg_type( &varIter ) != DBUS_TYPE_STRUCT )
+                return {};
+            DBusMessageIter strIter;
+            dbus_message_iter_recurse( &varIter, &strIter );
+
+            if ( dbus_message_iter_get_arg_type( &strIter ) != DBUS_TYPE_STRING )
+                return {};
+            const char* name;
+            dbus_message_iter_get_basic( &strIter, &name );
+            result.currentFilterName = name;
+        }
+    }
+    while ( dbus_message_iter_next( &dict ) );
+
+    return result;
+}
+
+std::optional<Response> waitForResponse( DBusConnection* conn )
+{
+    while ( true )
+    {
+        if ( !dbus_connection_read_write( conn, -1 ) )
+            return {};
+
+        while ( auto* respMsg = dbus_connection_pop_message( conn ) )
+        {
+            MR_FINALLY { dbus_message_unref( respMsg ); };
+            if ( dbus_message_is_signal( respMsg, "org.freedesktop.portal.Request", "Response" ) )
+                return parseResponse( respMsg );
+        }
+    }
+}
+
+char fromHex( char hex )
+{
+    if ( '0' <= hex && hex <= '9' )
+        return hex - '0';
+    if ( 'A' <= hex && hex <= 'F' )
+        return hex - 'A' + 10;
+    if ( 'a' <= hex && hex <= 'f' )
+        return hex - 'a' + 10;
+    MR_UNREACHABLE
+}
+
+std::string percentDecode( std::string_view str )
+{
+    std::string result;
+    size_t cur = 0;
+    for ( auto pos = str.find( '%' ); pos != std::string_view::npos; pos = str.find( '%', cur ) )
+    {
+        result.append( str.substr( cur, pos - cur ) );
+        cur = pos + 3;
+        if ( str.size() < cur )
+            return result;
+
+        const auto* substr = str.data() + pos;
+        char decoded = fromHex( substr[1] ) * 0x10 + fromHex( substr[2] );
+        result.append( { decoded } );
+    }
+    result.append( str.substr( cur ) );
+    return result;
+}
+
 } // namespace
 
 namespace MR::detail
@@ -232,6 +359,7 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
 {
     DBusError err;
     dbus_error_init( &err );
+    MR_FINALLY { dbus_error_free( &err ); };
 
     auto* conn = dbus_bus_get( DBUS_BUS_SESSION, &err );
     if ( dbus_error_is_set( &err ) )
@@ -247,7 +375,7 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
     const auto* method = "OpenFile";
     if ( params.saveDialog )
         method = params.folderDialog ? "SaveFiles" : "SaveFile";
-    auto* msg = dbus_message_new_method_call( cSessionBus, cObjectPath, cInterface, method );
+    auto* callMsg = dbus_message_new_method_call( cSessionBus, cObjectPath, cInterface, method );
 
     const auto parentWindowId = getWindowId( getViewerInstance().window );
 
@@ -258,6 +386,7 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
         title = params.multiselect ? "Save Files" : "Save File";
 
     FileChooserOptions options;
+    options.handleToken = "MRFileDialogPortal"; // TODO: randomize token?
     options.currentFolder = params.baseFolder;
     for ( const auto& filter : params.filters )
     {
@@ -278,24 +407,30 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
         options.currentName = params.fileName;
     }
 
-    initArgs( msg, parentWindowId.c_str(), title, options );
+    initArgs( callMsg, parentWindowId.c_str(), title, options );
 
-    auto* reply = dbus_connection_send_with_reply_and_block( conn, msg, DBUS_TIMEOUT_INFINITE, &err );
+    dbus_connection_send_with_reply_and_block( conn, callMsg, DBUS_TIMEOUT_INFINITE, &err );
     dbus_connection_flush( conn );
-    dbus_message_unref( msg );
+    dbus_message_unref( callMsg );
     if ( dbus_error_is_set( &err ) )
     {
         spdlog::warn( "Failed to send DBus message: {}", err.message );
         return {};
     }
 
-    std::vector<std::filesystem::path> results;
-    DBusMessageIter replyIter;
-    if ( dbus_message_iter_init( reply, &replyIter ) )
-    {
-        //
-    }
+    auto resp = waitForResponse( conn );
+    if ( !resp )
+        return {};
+    if ( resp->code != Response::Succeeded )
+        return {};
 
+    std::vector<std::filesystem::path> results;
+    for ( const auto& uri : resp->uris )
+    {
+        // remove 'file://' prefix and revert percent-encoding
+        // TODO: apply current filter?
+        results.emplace_back( percentDecode( uri.substr( 7 ) ) );
+    }
     return results;
 }
 

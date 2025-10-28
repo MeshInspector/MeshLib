@@ -373,15 +373,61 @@ std::string percentDecode( std::string_view str )
 namespace MR::detail
 {
 
+constexpr auto* cPortalServiceName = "org.freedesktop.portal.Desktop";
+constexpr auto* cPortalObjectPath = "/org/freedesktop/portal/desktop";
+constexpr auto* cFileChooserInterface = "org.freedesktop.portal.FileChooser";
+
 bool isPortalFileDialogSupported()
 {
-    auto* conn = getConnection();
-    if ( !conn )
-        return false;
+    static bool sIsSupported = []
+    {
+        auto* conn = getConnection();
+        if ( !conn )
+            return false;
 
-    // TODO: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html#org-freedesktop-portal-filechooser-version
+        DBusError err;
+        dbus_error_init( &err );
+        MR_FINALLY { dbus_error_free( &err ); };
 
-    return true;
+        if ( !dbus_bus_name_has_owner( conn, cPortalServiceName, &err ) )
+        {
+            spdlog::warn( "XDG Desktop Portal implementation is not found" );
+            return false;
+        }
+        if ( dbus_error_is_set( &err ) )
+        {
+            spdlog::warn( "DBus error: {}", err.message );
+            return false;
+        }
+
+        auto* callMsg = dbus_message_new_method_call( cPortalServiceName, cPortalObjectPath, "org.freedesktop.DBus.Properties", "Get" );
+        DBusMessageIter argsIter;
+        dbus_message_iter_init_append( callMsg, &argsIter );
+        dbusAppend( argsIter, cFileChooserInterface );
+        dbusAppend( argsIter, "version" );
+
+        auto* reply = dbus_connection_send_with_reply_and_block( conn, callMsg, DBUS_TIMEOUT_INFINITE, &err );
+        dbus_connection_flush( conn );
+        dbus_message_unref( callMsg );
+        if ( !reply || dbus_error_is_set( &err ) )
+        {
+            spdlog::warn( "Failed to send DBus message: {}", err.message );
+            return false;
+        }
+
+        DBusMessageIter respIter;
+        dbus_message_iter_init( reply, &respIter );
+        assert( dbus_message_iter_get_arg_type( &respIter ) == DBUS_TYPE_VARIANT );
+        DBusMessageIter varIter;
+        dbus_message_iter_recurse( &respIter, &varIter );
+        assert( dbus_message_iter_get_arg_type( &varIter ) == DBUS_TYPE_UINT32 );
+        uint32_t version;
+        dbus_message_iter_get_basic( &varIter, &version );
+        spdlog::info( "File Chooser portal found: version {}", version );
+
+        return true;
+    } ();
+    return sIsSupported;
 }
 
 std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Parameters& params )
@@ -391,13 +437,7 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
         return {};
 
     // https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html
-    constexpr auto* cSessionBus = "org.freedesktop.portal.Desktop";
-    constexpr auto* cObjectPath = "/org/freedesktop/portal/desktop";
-    constexpr auto* cInterface = "org.freedesktop.portal.FileChooser";
-    const auto* method = "OpenFile";
-    if ( params.saveDialog )
-        method = params.folderDialog ? "SaveFiles" : "SaveFile";
-    auto* callMsg = dbus_message_new_method_call( cSessionBus, cObjectPath, cInterface, method );
+    auto* callMsg = dbus_message_new_method_call( cPortalServiceName, cPortalObjectPath, cFileChooserInterface, params.saveDialog ? "SaveFile" : "OpenFile" );
 
     const auto parentWindowId = getWindowId( getViewerInstance().window );
 

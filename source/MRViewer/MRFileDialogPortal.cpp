@@ -1,10 +1,12 @@
 #include "MRFileDialogPortal.h"
 #ifndef MRVIEWER_NO_XDG_DESKTOP_PORTAL
+#include "MRGladGlfw.h"
 #include "MRViewer.h"
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <dbus/dbus.h>
 

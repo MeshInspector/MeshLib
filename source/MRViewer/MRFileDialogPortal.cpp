@@ -495,10 +495,31 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
         return {};
 
     std::vector<std::filesystem::path> results;
+    std::vector<std::string> availExts;
+    if ( resp->currentFilterName )
+    {
+        for ( const auto& filter : options.filters )
+        {
+            if ( filter.name == *resp->currentFilterName )
+            {
+                for ( const auto& glob : filter.globs )
+                    availExts.emplace_back( glob.substr( 1 ) );
+                break;
+            }
+        }
+    }
     for ( const auto& uri : resp->uris )
     {
         // remove 'file://' prefix and revert percent-encoding
-        results.emplace_back( percentDecode( uri.substr( 7 ) ) );
+        std::filesystem::path path = percentDecode( uri.substr( 7 ) );
+        if ( params.saveDialog && !availExts.empty() )
+        {
+            // make sure the given filename has a correct extension
+            const auto ext = utf8string( path.extension() );
+            if ( ext.empty() || std::find( availExts.begin(), availExts.end(), ext ) == availExts.end() )
+                path.replace_extension( ext + availExts.front() );
+        }
+        results.emplace_back( path );
     }
     return results;
 }

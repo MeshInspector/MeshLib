@@ -87,8 +87,14 @@ public:
     MRMESH_API const ViewportProperty<Color>& getEdgesColorsForAllViewports() const;
     MRMESH_API virtual void setEdgesColorsForAllViewports( ViewportProperty<Color> val );
 
+    MRMESH_API const ViewportProperty<Color>& getPointsColorsForAllViewports() const;
+    MRMESH_API virtual void setPointsColorsForAllViewports( ViewportProperty<Color> val );
+
     MRMESH_API const ViewportProperty<Color>& getBordersColorsForAllViewports() const;
     MRMESH_API virtual void setBordersColorsForAllViewports( ViewportProperty<Color> val );
+
+    /// set all object solid colors (front/back/etc.) from other object for all viewports
+    MRMESH_API void copyAllSolidColors( const ObjectMeshHolder& other );
 
     /// Edges on mesh, that will have sharp visualization even with smooth shading
     const UndirectedEdgeBitSet& creases() const { return data_.creases; }

@@ -70,6 +70,13 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
     return res;
 }
 
+void VisualObject::copyAllSolidColors( const VisualObject& other )
+{
+    setFrontColorsForAllViewports( other.getFrontColorsForAllViewports( true ), true );
+    setFrontColorsForAllViewports( other.getFrontColorsForAllViewports( false ), false );
+    setBackColorsForAllViewports( other.getBackColorsForAllViewports() );
+}
+
 ViewportMask VisualObject::globalClippedByPlaneMask() const
 {
     // do not access clipByPlane_ directly, to allow subclasses to override the behavior

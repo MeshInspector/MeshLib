@@ -406,6 +406,12 @@ void ObjectPointsHolder::setSelectedVerticesColorsForAllViewports( ViewportPrope
     selectedColor_ = std::move( val );
 }
 
+void ObjectPointsHolder::copyAllSolidColors( const ObjectPointsHolder& other )
+{
+    VisualObject::copyAllSolidColors( other );
+    setSelectedVerticesColorsForAllViewports( other.getSelectedVerticesColorsForAllViewports() );
+}
+
 void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();

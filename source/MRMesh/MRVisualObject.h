@@ -155,6 +155,9 @@ public:
         setAllVisualizeProperties_( properties, counter );
     }
 
+    /// set all object solid colors (front/back/etc.) from other object for all viewports
+    MRMESH_API void copyAllSolidColors( const VisualObject& other );
+
     /// returns all viewports where this object or any of its parents is clipped by plane
     [[nodiscard]] MRMESH_API ViewportMask globalClippedByPlaneMask() const;
 

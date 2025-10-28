@@ -15,6 +15,23 @@
 namespace
 {
 
+DBusConnection* getConnection()
+{
+    static DBusConnection* sConn = []
+    {
+        DBusError err;
+        dbus_error_init( &err );
+        MR_FINALLY { dbus_error_free( &err ); };
+
+        auto* conn = dbus_bus_get( DBUS_BUS_SESSION, &err );
+        if ( dbus_error_is_set( &err ) )
+            spdlog::warn( "Failed to connect to DBus: {}", err.message );
+
+        return conn;
+    } ();
+    return sConn;
+}
+
 std::string getWindowId( GLFWwindow* window )
 {
     // https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
@@ -356,18 +373,22 @@ std::string percentDecode( std::string_view str )
 namespace MR::detail
 {
 
+bool isPortalFileDialogSupported()
+{
+    auto* conn = getConnection();
+    if ( !conn )
+        return false;
+
+    // TODO: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html#org-freedesktop-portal-filechooser-version
+
+    return true;
+}
+
 std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Parameters& params )
 {
-    DBusError err;
-    dbus_error_init( &err );
-    MR_FINALLY { dbus_error_free( &err ); };
-
-    auto* conn = dbus_bus_get( DBUS_BUS_SESSION, &err );
-    if ( dbus_error_is_set( &err ) )
-    {
-        spdlog::warn( "Failed to connect to DBus: {}", err.message );
+    auto* conn = getConnection();
+    if ( !conn )
         return {};
-    }
 
     // https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html
     constexpr auto* cSessionBus = "org.freedesktop.portal.Desktop";
@@ -407,6 +428,10 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
     }
 
     initArgs( callMsg, parentWindowId.c_str(), title, options );
+
+    DBusError err;
+    dbus_error_init( &err );
+    MR_FINALLY { dbus_error_free( &err ); };
 
     dbus_connection_send_with_reply_and_block( conn, callMsg, DBUS_TIMEOUT_INFINITE, &err );
     dbus_connection_flush( conn );

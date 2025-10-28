@@ -3,6 +3,7 @@
 #include "MRViewer.h"
 
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 
 #include <dbus/dbus.h>
@@ -115,8 +116,8 @@ void dbusAppendArray( DBusMessageIter& iter, const char* key, const char* signat
 struct FileChooserFilter
 {
     std::string name;
-    std::string glob;
-    std::string mime;
+    std::vector<std::string> globs;
+    std::vector<std::string> mimes;
 
     enum Kind : uint32_t
     {
@@ -145,17 +146,17 @@ void dbusAppend( DBusMessageIter& iter, const FileChooserFilter& filter )
     ContainerHandle cont( iter, DBUS_TYPE_STRUCT, nullptr );
     dbusAppend( cont, filter.name.c_str() );
     ContainerHandle arr( cont, DBUS_TYPE_ARRAY, "(us)" );
-    if ( !filter.glob.empty() )
+    for ( const auto& glob : filter.globs )
     {
-        ContainerHandle glob( arr, DBUS_TYPE_STRUCT, nullptr );
-        dbusAppend( glob, FileChooserFilter::GlobKind );
-        dbusAppend( glob, filter.glob.c_str() );
+        ContainerHandle globIter( arr, DBUS_TYPE_STRUCT, nullptr );
+        dbusAppend( globIter, FileChooserFilter::GlobKind );
+        dbusAppend( globIter, glob.c_str() );
     }
-    if ( !filter.mime.empty() )
+    for ( const auto& mime : filter.mimes )
     {
-        ContainerHandle mime( arr, DBUS_TYPE_STRUCT, nullptr );
-        dbusAppend( mime, FileChooserFilter::MimeKind );
-        dbusAppend( mime, filter.mime.c_str() );
+        ContainerHandle mimeIter( arr, DBUS_TYPE_STRUCT, nullptr );
+        dbusAppend( mimeIter, FileChooserFilter::MimeKind );
+        dbusAppend( mimeIter, mime.c_str() );
     }
 }
 
@@ -390,11 +391,10 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
     options.currentFolder = params.baseFolder;
     for ( const auto& filter : params.filters )
     {
-        // TODO: handle multiple extensions
         // TODO: handle case-sensitivity
         options.filters.push_back( {
             .name = filter.name,
-            .glob = filter.extensions,
+            .globs = split( filter.extensions, ";" ),
         } );
     }
     if ( !params.saveDialog )

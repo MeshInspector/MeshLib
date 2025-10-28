@@ -9,7 +9,7 @@ namespace MR
 {
 
 // U+00B5 - Micro Sign, see https://www.utf8-chartable.de/
-#define MICRO_SIGN "\xC2\xB5"
+#define MR_MICRO_SIGN "\xC2\xB5"
 
 template <UnitEnum E>
 static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
@@ -213,7 +213,7 @@ template <>
 const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 0.001f, .prettyName = "Microns",     .unitSuffix = " " MICRO_SIGN "m" },
+        { .conversionFactor = 0.001f, .prettyName = "Microns",     .unitSuffix = " " MR_MICRO_SIGN "m" },
         { .conversionFactor = 1,      .prettyName = "Millimeters", .unitSuffix = " mm" },
         { .conversionFactor = 10,     .prettyName = "Centimeters", .unitSuffix = " cm" },
         { .conversionFactor = 1000,   .prettyName = "Meters",      .unitSuffix = " m" },
@@ -266,7 +266,7 @@ template <>
 const UnitInfo& getUnitInfo( MovementSpeedUnit speed )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 0.001f, .prettyName = "Microns per second",     .unitSuffix = " " MICRO_SIGN "m/s" },
+        { .conversionFactor = 0.001f, .prettyName = "Microns per second",     .unitSuffix = " " MR_MICRO_SIGN "m/s" },
         { .conversionFactor = 1,      .prettyName = "Millimeters per second", .unitSuffix = " mm/s" },
         { .conversionFactor = 10,     .prettyName = "Centimeters per second", .unitSuffix = " cm/s" },
         { .conversionFactor = 1000,   .prettyName = "Meters per second",      .unitSuffix = " m/s" },
@@ -281,7 +281,7 @@ const UnitInfo& getUnitInfo( AreaUnit area )
 {
     static const UnitInfo ret[] = {
         // U+00B2 SUPERSCRIPT TWO
-        { .conversionFactor = sqr(0.001f), .prettyName = "Microns\xc2\xb2",     .unitSuffix = " " MICRO_SIGN "m\xc2\xb2" },
+        { .conversionFactor = sqr(0.001f), .prettyName = "Microns\xc2\xb2",     .unitSuffix = " " MR_MICRO_SIGN "m\xc2\xb2" },
         { .conversionFactor = sqr(1.0f),   .prettyName = "Millimeters\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
         { .conversionFactor = sqr(10.0f),  .prettyName = "Centimeters\xc2\xb2", .unitSuffix = " cm\xc2\xb2" },
         { .conversionFactor = sqr(1000.0f),.prettyName = "Meters\xc2\xb2",      .unitSuffix = " m\xc2\xb2" },
@@ -297,7 +297,7 @@ const UnitInfo& getUnitInfo( VolumeUnit volume )
     auto cbc = []( float x ) { return x * x * x; };
     static const UnitInfo ret[] = {
         // U+00B3 SUPERSCRIPT THREE
-        { .conversionFactor = cbc(0.001f), .prettyName = "Microns\xc2\xb3",     .unitSuffix = " " MICRO_SIGN "m\xc2\xb3" },
+        { .conversionFactor = cbc(0.001f), .prettyName = "Microns\xc2\xb3",     .unitSuffix = " " MR_MICRO_SIGN "m\xc2\xb3" },
         { .conversionFactor = cbc(1.0f),   .prettyName = "Millimeters\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
         { .conversionFactor = cbc(10.0f),  .prettyName = "Centimeters\xc2\xb3", .unitSuffix = " cm\xc2\xb3" },
         { .conversionFactor = cbc(1000.0f),.prettyName = "Meters\xc2\xb3",      .unitSuffix = " m\xc2\xb3" },
@@ -313,7 +313,7 @@ const UnitInfo& getUnitInfo( InvLengthUnit length )
     auto rep = []( float x ) { return 1 / x; };
     static const UnitInfo ret[] = {
         // U+207B SUPERSCRIPT MINUS, U+00B9 SUPERSCRIPT ONE
-        { .conversionFactor = rep(0.001f), .prettyName = "Microns\u207B\u00B9",     .unitSuffix = " " MICRO_SIGN "m\u207B\u00B9" },
+        { .conversionFactor = rep(0.001f), .prettyName = "Microns\u207B\u00B9",     .unitSuffix = " " MR_MICRO_SIGN "m\u207B\u00B9" },
         { .conversionFactor = rep(1.0f),   .prettyName = "Millimeters\u207B\u00B9", .unitSuffix = " mm\u207B\u00B9" },
         { .conversionFactor = rep(10.0f),  .prettyName = "Centimeters\u207B\u00B9", .unitSuffix = " cm\u207B\u00B9" },
         { .conversionFactor = rep(1000.0f),.prettyName = "Meters\u207B\u00B9",      .unitSuffix = " m\u207B\u00B9" },

@@ -42,13 +42,14 @@ struct SizeAndXf
 };
 
 /// Given mesh, returns the size of the filling surface (with padding) and its transform back to mesh
-SizeAndXf getFillingSizeAndXf( const Mesh& mesh, float period )
+SizeAndXf getFillingSizeAndXf( const Mesh& mesh, Kind surfaceKind, float period )
 {
     const auto extraStep = Vector3f::diagonal( period );
+    const float k = surfaceKind == Kind::TPMS ? 1.5f : 2.5f;
 
     SizeAndXf ret;
-    ret.xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
-    ret.size = mesh.getBoundingBox().size() + 1.5f*extraStep;
+    ret.xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.5f*k*extraStep );
+    ret.size = mesh.getBoundingBox().size() + k*extraStep;
     return ret;
 }
 
@@ -232,7 +233,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 {
     MR_TIMER;
     // first construct a surface by the bounding box of the mesh
-    auto [size, xf] = getFillingSizeAndXf( mesh, 1.f / params.frequency );
+    auto [size, xf] = getFillingSizeAndXf( mesh, Kind::TPMS, 1.f / params.frequency );
 
     auto sponge = build( size, params, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
@@ -256,7 +257,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 
 size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution )
 {
-    const auto dims = getDimsAndSize( getFillingSizeAndXf( mesh, 1.f / frequency ).size, frequency, resolution ).dims;
+    const auto dims = getDimsAndSize( getFillingSizeAndXf( mesh, Kind::TPMS, 1.f / frequency ).size, frequency, resolution ).dims;
     return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
 }
 
@@ -501,7 +502,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
 
 Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallback& cb )
 {
-    auto [size, xf] = getFillingSizeAndXf( mesh, std::max( params.period.x, std::max( params.period.y, params.period.z ) ) );
+    auto [size, xf] = getFillingSizeAndXf( mesh, Kind::Cellular, std::max( params.period.x, std::max( params.period.y, params.period.z ) ) );
     auto filling = build( size, params, subprogress( cb, 0.f, 0.2f ) );
     if ( !filling )
         return filling;

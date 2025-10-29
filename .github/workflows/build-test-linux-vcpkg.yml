@@ -149,6 +149,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c && !matrix.skip_mrbind] }}
+            -DMRVIEWER_NO_GTK=ON
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}

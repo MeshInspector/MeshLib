@@ -806,7 +806,7 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
                 vertUV = refUV;
             }
         }
-        else if ( it->second->nodeType_ == NodeType::ColorGroup )
+        else if ( it->second->nodeType_ == NodeType::ColorGroup || it->second->nodeType_ == NodeType::BaseMaterials )
         {
             for ( int i = 0; i < 3; ++i )
             {

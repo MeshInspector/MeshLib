@@ -8,10 +8,11 @@
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRVector2.h"
-#include "imgui_internal.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include "MRRibbonFontHolder.h"
 #include "MRPch/MRSpdlog.h"
+#include <imgui_internal.h>
 
 namespace MR
 {
@@ -149,7 +150,7 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ).getUInt32() );
 
-    bool popFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
 
     const char* text = "\xef\x85\x82";
     auto textSize = ImGui::CalcTextSize( text );
@@ -163,8 +164,7 @@ void Toolbar::drawToolbar()
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );
 
-    if ( popFont )
-        ImGui::PopFont();
+    font.popFont();
 
     ImGui::PopStyleColor( 4 );
 

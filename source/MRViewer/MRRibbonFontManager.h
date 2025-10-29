@@ -68,8 +68,6 @@ public:
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
-    MRVIEWER_API static bool imGuiPushFont( const FontType& type, float scale = 1.f );
-
 private:
 
 #ifndef __EMSCRIPTEN__

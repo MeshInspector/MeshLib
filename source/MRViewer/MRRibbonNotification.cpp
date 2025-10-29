@@ -13,6 +13,7 @@
 #include "MRRibbonMenu.h"
 #include "MRUITestEngine.h"
 #include "MRMouseController.h"
+#include "MRRibbonFontHolder.h"
 #include <imgui_internal.h>
 
 namespace
@@ -104,7 +105,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
 
     ImGui::Begin( name.c_str(), nullptr, flags );
 
-    bool popFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, 0.65f );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.65f );
 
     auto fontSize = ImGui::GetFontSize();
     ImGui::SetCursorPos( 0.5f * ( windowSize - ImVec2( fontSize, fontSize ) ) );
@@ -112,8 +113,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
     ImGui::Text( "%s", UI::notificationChar( notificationsHistory_.front().notification.type ).first );
     ImGui::PopStyleColor();
 
-    if ( popFont )
-        ImGui::PopFont();
+    font.popFont();
 
     if ( ImGui::IsWindowHovered() )
     {

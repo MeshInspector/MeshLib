@@ -493,7 +493,7 @@ void RibbonSchemaLoader::recalcItemSizes()
     if ( !menu )
         return;
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
-    const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Small );
+    const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Small ) * UI::scale();
     if ( !font )
         return;
 

@@ -23,6 +23,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRRibbonFontHolder.h"
 #include <imgui_internal.h>
 
 namespace ImGui
@@ -751,9 +752,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const auto buttonOffset = ( titleBarHeight - buttonSize ) * 0.5f;
     ImGui::SetCursorScreenPos( { window->Rect().Min.x + buttonOffset, window->Rect().Min.y + buttonOffset } );
 
-    ImFont* titleFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
-
-    bool popIconsFont = MR::RibbonFontManager::imGuiPushFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
+    RibbonFontHolder iconsFont(MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
 
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
 
@@ -768,8 +767,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor( 2 );
 
-            if ( popIconsFont )
-                ImGui::PopFont();
+            iconsFont.popFont();
 
             window->DrawList->PopClipRect();
             ImGui::End();
@@ -777,14 +775,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
         ImGui::SameLine();
     }
-
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     auto cursorScreenPos = ImGui::GetCursorScreenPos();
-    if ( titleFont )
+    RibbonFontHolder titleFont( MR::RibbonFontManager::FontType::SemiBold );
+    if ( titleFont.isPushed() )
     {
-        ImGuiObsolete::PushFont( titleFont );
         // "+ 5 * UI::scale()" eliminates shift of the font
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 5 * UI::scale() } );
     }
@@ -795,8 +791,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const ImVec2 labelTextSize = ImGui::CalcTextSize( label, nullptr, true );
     ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
-    if ( titleFont )
-        ImGui::PopFont();
+    titleFont.popFont();
 
     ImGui::SameLine();
 
@@ -814,7 +809,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.helpBtnFn )
     {
-        ImGui::PushFont( nullptr, ImGui::GetFontSize() * 0.9f );
+        ImGui::PushFont( nullptr, ImGui::GetStyle().FontSizeBase * 0.9f );
 
         const auto btnHelpTextSize = ImGui::CalcTextSize( "HELP" );
         const float btnHelpWidth = btnHelpTextSize.x + 6.0f * UI::scale();
@@ -834,7 +829,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         ImGui::SameLine();
     }
 
-    popIconsFont = MR::RibbonFontManager::imGuiPushFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
+    iconsFont.pushFont();
 
     ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ), window->Rect().Min.y + buttonOffset } );
     bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
@@ -844,8 +839,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     {
         *open = false;
 
-        if ( popIconsFont )
-            ImGui::PopFont();
+        iconsFont.popFont();
 
         ImGui::PopStyleColor( 2 );
         ImGui::PopStyleVar( 4 );
@@ -854,8 +848,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         return false;
     }
 
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     ImGui::PopStyleVar( 3 );
 
@@ -990,9 +983,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     if ( !window || ( flags & ImGuiWindowFlags_NoTitleBar ) )
         return true;
 
-    auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
-    if ( font )
-        ImGuiObsolete::PushFont( font );
+    RibbonFontHolder font( MR::RibbonFontManager::FontType::SemiBold );
 
     const auto backupPos = ImGui::GetCursorPos();
 
@@ -1004,8 +995,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     ImGui::SetCursorPos( backupPos );
     ImGui::PopClipRect();
 
-    if ( font )
-        ImGui::PopFont();
+    font.popFont();
 
     return true;
 }
@@ -1475,7 +1465,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * UI::scale() + ImGui::GetTextLineHeight();
-    bool popIconsFont = MR::RibbonFontManager::imGuiPushFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
+    RibbonFontHolder iconsFont( MR::RibbonFontManager::FontType::Icons, MR::cDefaultFontSize / MR::cBigIconSize );
 
     auto& shift = planeWidget.isInLocalMode() ? localShift : plane.d;
     auto shiftBackUp = shift;
@@ -1489,8 +1479,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
         shift += dragspeed;
     ImGui::PopStyleVar();
 
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     ImGui::SameLine();
     ImGui::PopItemFlag();
@@ -1585,12 +1574,9 @@ void Spinner( float radius )
 
 bool ModalBigTitle( const char* title )
 {
-    auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Headline );
-    if ( font )
-        ImGuiObsolete::PushFont( font );
+    RibbonFontHolder font( MR::RibbonFontManager::FontType::Headline );
     ImGui::Text( "%s", title);
-    if ( font )
-        ImGui::PopFont();
+    font.popFont();
 
     const float exitButtonSize = MR::StyleConsts::Modal::exitBtnSize * UI::scale();
     ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - exitButtonSize );

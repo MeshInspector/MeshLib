@@ -46,6 +46,7 @@
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRLambdaRibbonItem.h"
 #include "MRIOExtras/MRPng.h"
+#include "MRViewer/MRRibbonFontHolder.h"
 
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -340,9 +341,7 @@ void OpenFilesMenuItem::preDraw_()
         ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
     drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 
-    auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-    if ( bigFont )
-        ImGuiObsolete::PushFont( bigFont );
+    RibbonFontHolder bigFont( RibbonFontManager::FontType::Headline );
 
     auto textSize = ImGui::CalcTextSize( "Load as Scene" );
     auto textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
@@ -361,8 +360,7 @@ void OpenFilesMenuItem::preDraw_()
         drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), "Add Files" );
     }
 
-    if ( bigFont )
-        ImGui::PopFont();
+    bigFont.popFont();
 }
 
 void OpenFilesMenuItem::parseLaunchParams_()

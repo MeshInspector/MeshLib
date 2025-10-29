@@ -10,6 +10,7 @@
 #include "MRModalDialog.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRRibbonFontHolder.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
@@ -1998,15 +1999,14 @@ void notificationFrame( NotificationType type, const std::string& str )
     ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * UI::scale() );
     transparentTextWrapped( "%s", str.c_str() );
 
-    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, 0.7f );
 
     ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * UI::scale(), StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
     ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
     ImGui::Text( "%s", UI::notificationChar( type ).first );
     ImGui::PopStyleColor();
 
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     ImGui::SetCursorPos( pos );
     ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );

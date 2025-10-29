@@ -21,6 +21,7 @@
 #include "MRSceneOperations.h"
 #include "MRToolbar.h"
 #include "MRStatePlugin.h"
+#include "MRRibbonFontHolder.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -183,6 +184,7 @@ void RibbonMenu::load_font( int )
     //addMenuFontRanges_( builder );
     builder.BuildRanges( &ranges );
     fontManager_.loadAllFonts( ranges.Data );
+    ImGui::GetStyle().FontScaleMain = hidpi_scaling_;
 }
 
 std::filesystem::path RibbonMenu::getMenuFontPath() const
@@ -306,7 +308,7 @@ void RibbonMenu::drawCollapseButton_()
     if ( collapseState_ == CollapseState::Pinned )
     {
         ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-        bool popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
+        RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
         if ( ImGui::Button( "\xef\x81\x93", ImVec2( btnSize, btnSize ) ) )
         {
             collapseState_ = CollapseState::Opened;
@@ -316,22 +318,20 @@ void RibbonMenu::drawCollapseButton_()
             asyncRequest_.reset();
 #endif
         }
-        if ( popFont )
-            ImGui::PopFont();
+        font.popFont();
         ImGui::PopStyleColor();
         UI::setTooltipIfHovered( "Unpin" );
     }
     else
     {
         ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-        bool popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
+        RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
         if ( ImGui::Button( "\xef\x81\xb7", ImVec2( btnSize, btnSize ) ) )
         {
             collapseState_ = CollapseState::Pinned;
             fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
         }
-        if ( popFont )
-            ImGui::PopFont();
+        font.popFont();
         ImGui::PopStyleColor();
         UI::setTooltipIfHovered( "Pin" );
     }
@@ -385,11 +385,10 @@ void RibbonMenu::drawHelpButton_( const std::string& url )
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-    bool popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
     if ( ImGui::Button( "\xef\x81\x99", ImVec2( btnSize, btnSize ) ) )
         OpenLink( url );
-    if ( popFont )
-        ImGui::PopFont();
+    font.popFont();
     ImGui::PopStyleColor();
     UI::setTooltipIfHovered( "Open help page" );
 
@@ -481,7 +480,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
-    ImGuiObsolete::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
+    RibbonFontHolder font( RibbonFontManager::FontType::Small );
     UI::TestEngine::pushTree( "QuickAccess" );
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
@@ -498,7 +497,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
         ImGui::SameLine();
     }
     UI::TestEngine::popTree(); // "QuickAccess"
-    ImGui::PopFont();
+    font.popFont();
     ImGui::PopStyleVar( 2 );
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() - itemSpacing.x );
@@ -517,7 +516,7 @@ void RibbonMenu::drawHeaderPannel_()
 
     drawHeaderQuickAccess_();
 
-    ImGuiObsolete::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
+    RibbonFontHolder font( RibbonFontManager::FontType::SemiBold );
     // TODO_store: this needs recalc only on scaling change, no need to calc each frame
     const auto& schema = RibbonSchemaHolder::schema();
     std::vector<float> textSizes( schema.tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time
@@ -670,7 +669,7 @@ void RibbonMenu::drawHeaderPannel_()
         }
     }
     ImGui::EndChild();
-    ImGui::PopFont();
+    font.popFont();
 
     ImGui::PopStyleVar( 2 );
     const float separateLinePos = ( cTabYOffset + cTabHeight ) * UI::scale();
@@ -829,9 +828,7 @@ void RibbonMenu::drawActiveList_()
         ImVec2 btnSize = ImVec2( 56.0f * UI::scale(), 24.0f * UI::scale() );
         float maxSize = 0.0f;
 
-        auto sbFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
-        if ( sbFont )
-            ImGuiObsolete::PushFont( sbFont );
+        RibbonFontHolder sbFont( RibbonFontManager::FontType::SemiBold );
         if ( activeBlockingItem_.item )
             maxSize = ImGui::CalcTextSize( getItemCaption( activeBlockingItem_.item->name() ).c_str() ).x;
         for ( const auto& nonBlockItem : activeNonBlockingItems_ )
@@ -840,8 +837,7 @@ void RibbonMenu::drawActiveList_()
             if ( size > maxSize )
                 maxSize = size;
         }
-        if ( sbFont )
-            ImGui::PopFont();
+        sbFont.popFont();
 
         auto blockSize = ImVec2( 2 * winPadding.x + maxSize + 2 * ImGui::GetStyle().ItemSpacing.x + btnSize.x,
             btnSize.y + winPadding.y * 2 );
@@ -859,8 +855,7 @@ void RibbonMenu::drawActiveList_()
             ImGui::BeginChild( childName.c_str(), blockSize, ImGuiChildFlags_Borders,
                 ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
             ImGui::PopStyleColor();
-            if ( sbFont )
-                ImGuiObsolete::PushFont( sbFont );
+            RibbonFontHolder sbFont( RibbonFontManager::FontType::SemiBold );
             auto center = ImGui::GetCursorScreenPos();
             center.x += dotShift - winPadding.x;
             center.y += dotShift - winPadding.y;
@@ -870,8 +865,7 @@ void RibbonMenu::drawActiveList_()
             auto savedPos = ImGui::GetCursorPosY();
             ImGui::SetCursorPosY( 0.5f * ( blockSize.y - ImGui::GetFontSize() ) );
             ImGui::Text( "%s", name.c_str() );
-            if ( sbFont )
-                ImGui::PopFont();
+            sbFont.popFont();
             ImGui::SameLine( blockSize.x - btnSize.x - winPadding.x );
             ImGui::SetCursorPosY( savedPos );
             auto btnText = "Close" + childName;
@@ -1544,9 +1538,8 @@ void RibbonMenu::drawSceneListButtons_()
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 2 * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 6 * UI::scale(), 5 * UI::scale() ) );
-    auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
+    RibbonFontHolder font( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;
-    ImGuiObsolete::PushFont( font );
     UI::TestEngine::pushTree( "RibbonSceneButtons" );
     for ( const auto& item : RibbonSchemaHolder::schema().sceneButtonsList )
     {
@@ -1564,7 +1557,7 @@ void RibbonMenu::drawSceneListButtons_()
     }
     UI::TestEngine::popTree(); // "RibbonSceneButtons"
     ImGui::NewLine();
-    ImGui::PopFont();
+    font.popFont();
     const float separateLinePos = ImGui::GetCursorScreenPos().y;
 
     ImGui::PopStyleVar();
@@ -1748,7 +1741,7 @@ Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
 void RibbonMenu::drawRibbonViewportsLabels_()
 {
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
-    ImGuiObsolete::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
+    RibbonFontHolder font( RibbonFontManager::FontType::SemiBold );
     for ( const auto& vp : viewer->viewport_list )
     {
         std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
@@ -1770,7 +1763,7 @@ void RibbonMenu::drawRibbonViewportsLabels_()
         ImGui::Text( "%s", text.c_str() );
         ImGui::End();
     }
-    ImGui::PopFont();
+    font.popFont();
     ImGui::PopStyleVar();
 }
 
@@ -1807,16 +1800,15 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
 
 
-    bool popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
     ImGui::SetCursorPos( contextBtnPos );
 
     if ( ImGui::Button( "\xef\x85\x82", smallBtnSize ) ) // three dots icon to open context dialog
         ImGui::OpenPopup( cTransformContextName );
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
     UI::setTooltipIfHovered( "Open Transform Data context menu." );
-    popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
+    iconsFont.pushFont();
 
     const auto& selectedObjectsCache = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     if ( numButtons >= 2.0f && selectedObjectsCache.size() == 1 && selectedObjectsCache.front()->xf() != AffineXf3f() )
@@ -1831,10 +1823,9 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             AppendHistory<ChangeXfAction>( "Reset Transform", obj );
             obj->setXf( AffineXf3f() );
         }
-        if ( popIconsFont )
-            ImGui::PopFont();
+        iconsFont.popFont();
         UI::setTooltipIfHovered( "Resets transform value to identity." );
-        popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
+        iconsFont.pushFont();
 
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         bool drawApplyBtn = numButtons >=3.0f &&
@@ -1848,14 +1839,12 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
 
             if ( ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
                 item->second.item->action();
-            if ( popIconsFont )
-                ImGui::PopFont();
+            iconsFont.popFont();
             UI::setTooltipIfHovered( "Transforms object and resets transform value to identity." );
-            popIconsFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) );
+            iconsFont.pushFont();
         }
     }
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar();
     return res;
@@ -2329,15 +2318,13 @@ void RibbonMenu::drawShortcutsWindow_()
 
             std::string keyStr = ShortcutManager::getKeyString( key.key );
             bool isArrow = key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT;
-            bool popFont = false;
-            if ( isArrow )
-                popFont = fontManager_.imGuiPushFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
+            RibbonFontHolder font( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize, isArrow );
 
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
             addReadOnlyLine( keyStr );
 
-            if ( isArrow && popFont )
-                ImGui::PopFont();
+            if ( isArrow )
+                font.popFont();
         }
 
         ImGui::PopStyleVar();
@@ -2458,7 +2445,7 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
 
     ImGuiTableFlags tableFlags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV;
 
-    ImGuiObsolete::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
+    RibbonFontHolder font( RibbonFontManager::FontType::Small );
     const auto& tab = RibbonSchemaHolder::schema().tabsOrder[activeTabIndex_].name;
     if ( collapseState_ != CollapseState::Closed )
     {
@@ -2492,7 +2479,7 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
             ImGui::PopStyleColor( 2 );
         }
     }
-    ImGui::PopFont();
+    font.popFont();
     endTopPanel_();
 }
 

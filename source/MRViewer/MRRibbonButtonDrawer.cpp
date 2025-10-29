@@ -9,6 +9,7 @@
 #include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRUIStyle.h"
+#include "MRRibbonFontHolder.h"
 #include "imgui_internal.h"
 
 namespace MR
@@ -288,7 +289,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         fontScale = params.iconSize / cBigIconSize;
     else if ( params.sizeType != DrawButtonParams::SizeType::Big )
         fontScale = cSmallIconSize / cBigIconSize;
-    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, fontScale );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
@@ -341,8 +342,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     if ( params.sizeType == DrawButtonParams::SizeType::Big )
     {
@@ -401,7 +401,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
         fontScale = params.iconSize / cBigIconSize;
     else if ( params.sizeType != DrawButtonParams::SizeType::Big )
         fontScale = cSmallIconSize / cBigIconSize;
-    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, fontScale );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
@@ -437,8 +437,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     if ( colorChanged > 0 )
         ImGui::PopStyleColor( colorChanged );
@@ -453,12 +452,11 @@ bool RibbonButtonDrawer::drawTabArrowButton( const char* icon, const ImVec2& siz
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
-    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
     bool pressed = ImGui::Button( icon, size );
-
-    if ( popIconsFont )
-        ImGui::PopFont();
+    
+    iconsFont.popFont();
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar();
@@ -479,7 +477,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         fontScale = iconSize / baseFontSize;
     else
         fontScale = iconSize * 1.5f / baseFontSize;
-    bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, fontScale );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
 
     auto frameHeight = ImGui::GetFrameHeight();
     ImVec2 itemSize = ImVec2( frameHeight, frameHeight );
@@ -530,8 +528,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( pushedColors );
 
-    if ( popIconsFont )
-        ImGui::PopFont();
+    iconsFont.popFont();
 
     // manage menu popup
     if ( comboPressed && !menuOpened )
@@ -624,9 +621,7 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
 
 void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const
 {
-    auto sFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
-    if ( sFont )
-        ImGuiObsolete::PushFont( sFont );
+    RibbonFontHolder smallFont( RibbonFontManager::FontType::Small );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * UI::scale(), cRibbonButtonWindowPaddingY * UI::scale() ) );
     std::string tooltip = item.item->getDynamicTooltip();
@@ -678,8 +673,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
     }
     ImGui::EndTooltip();
     ImGui::PopStyleVar( 2 );
-    if ( sFont )
-        ImGui::PopFont();
+    smallFont.popFont();
 }
 
 

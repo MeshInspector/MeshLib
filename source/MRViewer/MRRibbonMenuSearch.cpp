@@ -4,12 +4,13 @@
 #include "MRRibbonFontManager.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonButtonDrawer.h"
-#include <imgui_internal.h>
-#include "MRViewer/MRUITestEngine.h"
+#include "MRUITestEngine.h"
 #include "MRViewerInstance.h"
-#include "MRViewer/MRViewer.h"
+#include "MRViewer.h"
 #include "MRRibbonMenu.h"
 #include "MRUIStyle.h"
+#include "MRRibbonFontHolder.h"
+#include <imgui_internal.h>
 
 namespace MR
 {
@@ -313,7 +314,7 @@ void RibbonMenuSearch::activate()
         setInputFocus_ = true;
 }
 
-bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
+bool RibbonMenuSearch::smallSearchButton_( const Parameters& )
 {
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
@@ -326,10 +327,9 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
 
     float btnSize = UI::scale() * cTopPanelAditionalButtonSize;
-    bool popFont = params.fontManager.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
     bool pressed = UI::buttonEx( "\xef\x80\x82", ImVec2( btnSize, btnSize ), { .forceImGuiBackground = true, .testEngineName = "ActivateSearchBtn" } );
-    if ( popFont )
-        ImGui::PopFont();
+    font.popFont();
 
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar( 2 );
@@ -337,7 +337,7 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
     return pressed;
 }
 
-bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& params )
+bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& )
 {
     ImGui::PushID( "searchInputText" );
     const ImVec2 cursorPos = ImGui::GetCursorPos();
@@ -357,12 +357,11 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
         ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
         ++colorNum;
     }
-    bool popFont = params.fontManager.imGuiPushFont( RibbonFontManager::FontType::Icons, 0.7f );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
     const float inputWidth = cSearchSize * UI::scale() - style.FramePadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "\xef\x80\x82" ).x;
     ImGui::SetCursorPos( ImVec2( cursorPos.x + inputWidth + style.ItemSpacing.x, cursorPos.y + style.FramePadding.y ) );
     ImGui::Text( "%s", "\xef\x80\x82" );
-    if ( popFont )
-        ImGui::PopFont();
+    font.popFont();
     if ( colorNum )
         ImGui::PopStyleColor( colorNum );
 

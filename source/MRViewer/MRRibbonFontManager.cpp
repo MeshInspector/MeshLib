@@ -58,20 +58,13 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
 
     const ImWchar iconRanges[] = { 0xe005, 0xf8ff, 0 };
 
-    //std::vector<CustomGlyph> customGlyphs;
-
     for ( int i = 0; i< int( FontType::Count ); ++i )
     {
         if ( i == int( FontType::Icons ) )
             loadFont_( FontType::Icons, iconRanges );
         else
             loadFont_( FontType( i ), charRanges );
-
-        //addCustomGlyphs_( FontType( i ), customGlyphs );
     }
-    //ImGui::GetIO().Fonts->Build();
-
-    //renderCustomGlyphsToAtlas_( customGlyphs );
 }
 
 ImFont* RibbonFontManager::getFontByType( FontType type ) const
@@ -135,16 +128,6 @@ void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontMa
     getFontManagerInstance_() = ribbonFontManager;
 }
 
-bool RibbonFontManager::imGuiPushFont( const FontType& type, float scale /*= 1.f*/ )
-{
-    RibbonFontManager* fontManager = getFontManagerInstance_();
-    if ( !fontManager )
-        return false;
-
-    ImGui::PushFont( fontManager->getFontByType( type ), fontManager->getFontSizeByType( type ) * scale );
-    return true;
-}
-
 RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 {
     static RibbonFontManager* instance{ nullptr };
@@ -153,47 +136,39 @@ RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 
 void RibbonFontManager::updateFontsScaledOffset_()
 {
-    //ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
     //const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
-    //std::array<ImFont*, int( FontType::Count )> localFonts{};
-    //for ( int i = 0; i < int( FontType::Count ); ++i )
-    //{
-    //    auto& font = fonts_[int( i )];
-    //    auto fontPath = fontPaths_[int( font.fontFile )];
+    std::array<ImFont*, int( FontType::Count )> localFonts{};
+    for ( int i = 0; i < int( FontType::Count ); ++i )
+    {
+        auto& font = fonts_[int( i )];
+        auto fontPath = fontPaths_[int( font.fontFile )];
 
-    //    ImFontConfig config;
-    //    config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-    //    if ( i == int( FontType::Icons ) )
-    //        continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
+        ImFontConfig config;
+        config.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_Bitmap;
+        if ( i == int( FontType::Icons ) )
+            continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
-    //    auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
-    //    localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, wRange );
-    //}
-    //io.Fonts->Build();
-    //for ( int i = 0; i < int( FontType::Count ); ++i )
-    //{
-    //    auto* lFont = localFonts[i];
-    //    if ( !lFont )
-    //        continue;
-    //    if ( lFont->Glyphs.size() != 1 )
-    //        continue;
-    //    const auto& glyph = lFont->Glyphs.back();
+        auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
+        localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config );
 
-    //    auto& fontRef = fonts_[int( i )];
-    //    auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
-    //    Box2f box;
-    //    box.include( Vector2f( glyph.X0, glyph.Y0 ) );
-    //    box.include( Vector2f( glyph.X1, glyph.Y1 ) );
-    //    fontRef.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
-    //    fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
-    //    fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
-    //}
-    //io.Fonts->Clear();
+        auto* lFont = localFonts[i];
+        const char wChar[] = "W\0";
+        auto textSize = lFont->CalcTextSizeA( fontSize, 100, 100, wChar, wChar + 1 );
+        auto glyph = lFont->GetFontBaked( fontSize )->FindGlyph( 'W' );
+        Box2f box;
+        box.include( Vector2f( glyph->X0, glyph->Y0 ) );
+        box.include( Vector2f( glyph->X1, glyph->Y1 ) );
+        font.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
+        font.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
+        font.scaledOffset.y = std::round( font.scaledOffset.y );
+    }
+    io.Fonts->Clear();
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
 {
-    float fontSize = getFontSizeByType( type ) * UI::scale();
+    float fontSize = getFontSizeByType( type );
     auto& font = fonts_[int( type )];
     auto fontPath = fontPaths_[int( font.fontFile )];
 
@@ -204,8 +179,8 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
     }
     else
     {
-        //config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        //config.GlyphOffset = ImVec2( font.scaledOffset );
+        config.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_Bitmap;
+        config.GlyphOffset = ImVec2( font.scaledOffset );
     }
 
     font.fontPtr = loadFontChecked(

@@ -97,6 +97,7 @@
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRString.h"
 #include "MRUIQualityControl.h"
+#include "MRRibbonFontHolder.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -601,7 +602,7 @@ void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 // Keyboard IO
 bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 {
-    ImGui_ImplGlfw_CharCallback( nullptr, key );
+    ImGui_ImplGlfw_CharCallback( viewer->window, key );
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
@@ -2306,14 +2307,13 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             return style.FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
         };
 
-        bool popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
+        RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
 
-        const auto* removeButtonText = popIconsFont ? "\xef\x80\x8d" : "X";
-        const auto* addButtonText = popIconsFont ? "\xef\x81\x95" : "+";
+        const auto* removeButtonText = iconsFont.isPushed() ? "\xef\x80\x8d" : "X";
+        const auto* addButtonText = iconsFont.isPushed() ? "\xef\x81\x95" : "+";
         const auto removeButtonWidth = buttonWidth( removeButtonText );
         const auto addButtonWidth = buttonWidth( addButtonText );
-        if ( popIconsFont )
-            ImGui::PopFont();
+        iconsFont.popFont();
 
         const auto& allVisTags = VisualObjectTagManager::tags();
         auto allKnownTags = allTags;
@@ -2369,7 +2369,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
 
-            popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
+            iconsFont.pushFont();
 
             ImGui::PushStyleColor( ImGuiCol_Button, Color{ 0xff, 0xff, 0xff, 0x00 } );
             ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color{ 0xff, 0x5f, 0x5f } );
@@ -2381,8 +2381,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
                     selObj->removeTag( tag );
             }
             ImGui::PopStyleColor( 3 );
-            if ( popIconsFont )
-                ImGui::PopFont();
+            iconsFont.popFont();
 
             ImGui::SameLine();
         }
@@ -2442,7 +2441,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             tagNewName_.clear();
         }
 
-        popIconsFont = RibbonFontManager::imGuiPushFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
+        iconsFont.pushFont();
 
         ImGui::SameLine( 0, style.ItemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
@@ -2452,8 +2451,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
                     selObj->addTag( name );
             tagNewName_.clear();
         }
-        if ( popIconsFont )
-            ImGui::PopFont();
+        iconsFont.popFont();
 
         ImGui::EndPopup();
     }

@@ -1,6 +1,6 @@
 #include "MRUITestEngine.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRImGui.h"
+#include "MRPch/MRFmt.h"
 
 #ifndef MR_ENABLE_UI_TEST_ENGINE
 // Set to 0 to disable the UI test engine. All functions will act as if no UI elements are registered.
@@ -220,4 +220,12 @@ const GroupEntry& getRootEntry()
     return state.root;
 }
 
+[[nodiscard]] MRVIEWER_API Unexpected<std::string> Entry::unexpected_( std::string_view selfName, std::string_view tKindName )
+{
+    if ( selfName.empty() )
+        return unexpected( fmt::format( "Expected UI entity to be a `{}` but got a `{}`.", tKindName, getKindName() ) );
+    else
+        return unexpected( fmt::format( "Expected UI entity `{}` to be a `{}` but got a `{}`.", selfName, tKindName, getKindName() ) );
 }
+
+} // namespace MR::UI::TestEngine

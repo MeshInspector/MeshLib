@@ -1,5 +1,7 @@
 #include "MRSpaceMouseController.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
+#include "MRMakeSlot.h"
 #include "MRViewerInstance.h"
 #include "MRViewport.h"
 #include "MRSpaceMouseHandler.h"
@@ -14,8 +16,8 @@ namespace MR
 void SpaceMouseController::connect()
 {
     auto& viewer = getViewerInstance();
-    viewer.spaceMouseMoveSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseMove_ ) );
-    viewer.spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ) );
+    viewer.signals().spaceMouseMoveSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseMove_ ) );
+    viewer.signals().spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ) );
 }
 
 void SpaceMouseController::setParameters( const SpaceMouseParameters& newParams )

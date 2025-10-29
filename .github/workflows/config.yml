@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2025.04.09" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2025.10.17" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -128,7 +128,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d
+        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
@@ -237,7 +237,7 @@ jobs:
 
           jq \
             --arg vs19 "2024.10.21" \
-            --arg vs22 "2025.04.09" \
+            --arg vs22 "2025.10.17" \
             '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
             | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
             "$MATRIX_FILE" > tmp.json

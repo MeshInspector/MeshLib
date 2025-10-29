@@ -859,6 +859,16 @@ void ObjectMeshHolder::setBordersColorsForAllViewports( ViewportProperty<Color> 
     needRedraw_ = true;
 }
 
+void ObjectMeshHolder::copyAllSolidColors( const ObjectMeshHolder& other )
+{
+    VisualObject::copyAllSolidColors( other );
+    setSelectedFacesColorsForAllViewports( other.getSelectedFacesColorsForAllViewports() );
+    setSelectedEdgesColorsForAllViewports( other.getSelectedEdgesColorsForAllViewports() );
+    setEdgesColorsForAllViewports( other.getEdgesColorsForAllViewports() );
+    setPointsColorsForAllViewports( other.getPointsColorsForAllViewports() );
+    setBordersColorsForAllViewports( other.getBordersColorsForAllViewports() );
+}
+
 const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports() const
 {
     return edgesColor_;
@@ -867,6 +877,17 @@ const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports()
 void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> val )
 {
     edgesColor_ = std::move( val );
+    needRedraw_ = true;
+}
+
+const ViewportProperty<MR::Color>& ObjectMeshHolder::getPointsColorsForAllViewports() const
+{
+    return pointsColor_;
+}
+
+void ObjectMeshHolder::setPointsColorsForAllViewports( ViewportProperty<Color> val )
+{
+    pointsColor_ = std::move( val );
     needRedraw_ = true;
 }
 

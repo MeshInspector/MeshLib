@@ -49,6 +49,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
     SaveSettings saveSettings
     {
         .xf = ( xf == AffineXf3d() ) ? nullptr : &xf,
+        .lengthUnit = UnitSettings::getModelLengthUnit() ? UnitSettings::getModelLengthUnit() : UnitSettings::getUiLengthUnit(),
         .progress = settings.callback
     };
     Expected<void> result;

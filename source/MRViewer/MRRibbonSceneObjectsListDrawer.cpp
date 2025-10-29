@@ -29,6 +29,7 @@
 #include "MRColorTheme.h"
 #include "MRViewport.h"
 #include "MRImGuiImage.h"
+#include "ImGuiHelpers.h"
 #include "imgui_internal.h"
 
 #ifndef MRVIEWER_NO_VOXELS
@@ -217,7 +218,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
 
     const ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_AllowOverlap |
-        ( !leaf ? 0 : ImGuiTreeNodeFlags_Bullet );
+        ( !leaf ? sDefaultGroupState : ImGuiTreeNodeFlags_Bullet );
 
 
     auto startScreenPos = ImGui::GetCursorScreenPos();

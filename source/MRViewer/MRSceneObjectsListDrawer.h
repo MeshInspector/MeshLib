@@ -117,7 +117,6 @@ private:
                                            const std::vector<std::shared_ptr<Object>>& all );
     void updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
-    bool dragTrigger_ = false;
     bool clickTrigger_ = false;
     bool allowSceneReorder_ = true;
 
@@ -151,4 +150,6 @@ protected:
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
 
-}
+constexpr inline int sDefaultGroupState = 0; // 0 means closed; the other option is ImGuiTreeNodeFlags_DefaultOpen
+
+} //namespace MR

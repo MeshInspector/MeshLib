@@ -3,6 +3,9 @@
 #include "MRImGui.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
+#include "MRSceneCache.h"
+#include "MRStatePlugin.h"
+#include "MRUIStyle.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSerializer.h"
@@ -11,8 +14,6 @@
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
-#include "MRSceneCache.h"
-#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {

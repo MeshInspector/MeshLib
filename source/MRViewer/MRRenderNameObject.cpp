@@ -10,6 +10,7 @@
 #include "MRMesh/MRVisualObject.h"
 
 #include "MRUIStyle.h"
+#include "ImGuiHelpers.h"
 #include <imgui.h>
 
 namespace MR

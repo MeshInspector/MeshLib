@@ -6,7 +6,6 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
-#include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"
@@ -101,12 +100,6 @@ int main( int argc, char** argv )
 
         //Test python mrmeshpy
         {
-            #ifdef __APPLE__
-            // Fix the module path.
-            // We need this because our default behavior is to handle bundles (back out from `<AppName>.app/Contents/MacOS`, etc).
-            MR::SystemPath::overrideDirectory(MR::SystemPath::Directory::PythonModules, MR::SystemPath::getExecutableDirectory().value());
-            #endif
-
             auto str = "import mrmeshpy\n"
                 "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
                 "funcs = dir( mrmeshpy )\n"

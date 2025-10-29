@@ -6,10 +6,10 @@
 #include "MRMesh/MRVector.h"
 #include "MRColorTheme.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRViewport.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRMeshTexture.h"
-#include "MRMesh/MRVector.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
@@ -617,7 +617,7 @@ void CornerControllerObject::initDefault()
         }
     } ) );
 
-    connections_.push_back( getViewerInstance().preDrawSignal.connect( [this] ()
+    connections_.push_back( getViewerInstance().signals().preDrawSignal.connect( [this] ()
     {
         if ( !rootObj_ )
             return;
@@ -626,7 +626,7 @@ void CornerControllerObject::initDefault()
     } ) );
 
     // 5th group: we want cornerControllerMouseDown_ signal be caught before tools but after menu
-    connections_.push_back( getViewerInstance().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
+    connections_.push_back( getViewerInstance().signals().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
     {
         if ( !rootObj_ )
             return false;
@@ -662,7 +662,7 @@ void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, 
         if ( !childern[i]->isVisible( vp.id ) )
             continue;
         if ( auto visObj = childern[i]->asType<VisualObject>() )
-            vp.draw( *visObj, xf, vp.getAxesProjectionMatrix(), DepthFunction::Always );
+            vp.drawOrthoFixedPos( *visObj, xf, DepthFunction::Always );
     }
     // second pass
     for ( const auto& child : childern )
@@ -670,7 +670,7 @@ void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, 
         if ( !child->isVisible( vp.id ) )
             continue;
         if ( auto visObj = child->asType<VisualObject>() )
-            vp.draw( *visObj, visObj->xf( vp.id ), vp.getAxesProjectionMatrix() );
+            vp.drawOrthoFixedPos( *visObj, visObj->xf( vp.id ) );
     }
 }
 
@@ -707,7 +707,7 @@ CornerControllerObject::PickedIds CornerControllerObject::pick_( const Vector2f&
         return {};
 
     const auto& children = rootObj_->children();
-    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
+    auto staticRenderParams = vp.getBaseRenderParamsOrthoFixedPos();
     auto [obj, pick] = vp.pickRenderObject( { {
             static_cast< VisualObject* >( children[0].get() ),
             static_cast< VisualObject* >( children[1].get() ),

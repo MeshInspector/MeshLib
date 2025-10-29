@@ -194,7 +194,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     if (path.empty())
         return unexpected( "Cannot save to empty path" );
 
-    UniqueTemporaryFolder scenePath( {} );
+    UniqueTemporaryFolder scenePath;
     if ( !scenePath )
         return unexpected( "Cannot create temporary folder" );
 

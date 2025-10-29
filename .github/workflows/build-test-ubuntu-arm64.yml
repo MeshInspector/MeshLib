@@ -43,19 +43,21 @@ jobs:
       matrix:
         os: [ ubuntu20, ubuntu22, ubuntu24 ]
         config: [ Release ]
-        compiler: [ clang ]
         include:
           - os: ubuntu20
+            compiler: clang
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
             cxx-standard: 20
           - os: ubuntu22
+            compiler: clang
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             cxx-standard: 20
           - os: ubuntu24
-            cxx-compiler: /usr/bin/clang++-18
-            c-compiler: /usr/bin/clang-18
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++-14
+            c-compiler: /usr/bin/gcc-14
             cxx-standard: 23
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -125,7 +127,7 @@ jobs:
 
       - name: Upload C bindings headers
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: CBindings
           path: ./source/MeshLibC2/include
@@ -157,7 +159,7 @@ jobs:
 
       - name: Upload Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -168,14 +170,14 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
@@ -246,7 +248,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Distributives_${{matrix.os}}_arm64
           path: meshlib_${{matrix.os}}-arm64-dev.deb

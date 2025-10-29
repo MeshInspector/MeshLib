@@ -270,7 +270,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
 
 Expected<LoadedObject> makeObjectTreeFromZip( const std::filesystem::path& zipPath, const ProgressCallback& callback )
 {
-    auto tmpFolder = UniqueTemporaryFolder( {} );
+    UniqueTemporaryFolder tmpFolder;
     auto contentsFolder = tmpFolder / zipPath.stem();
 
     std::ifstream in( zipPath, std::ifstream::binary );

@@ -33,12 +33,14 @@
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRMeshTopologyTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
+    <ClCompile Include="MRObjectTests.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
     <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
+    <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />

@@ -1,6 +1,7 @@
 #ifdef _WIN32
 #include "MRDragDropWin32Handler.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRPch/MRSpdlog.h"
 
 
@@ -95,7 +96,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragEnter(/* [unique][in] */ __RPC__in_
     auto& v = getViewerInstance();
     v.emplaceEvent( "Drag enter", [&v] ()
     {
-        v.dragEntranceSignal( true );
+        v.signals().dragEntranceSignal( true );
     } );
 
     return S_OK;
@@ -115,7 +116,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragOver(/* [in] */ DWORD grfKeyState, 
         glfwGetWindowPos( v.window, &posx, &posy );
         x -= posx;
         y -= posy;
-        v.dragOverSignal( int( std::round( x * v.pixelRatio ) ), int( std::round( y * v.pixelRatio ) ) );
+        v.signals().dragOverSignal( int( std::round( x * v.pixelRatio ) ), int( std::round( y * v.pixelRatio ) ) );
     }, true );
 
     return S_OK;
@@ -126,7 +127,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragLeave( void )
     auto& v = getViewerInstance();
     v.emplaceEvent( "Drag leave", [&v] ()
     {
-        v.dragEntranceSignal( false );
+        v.signals().dragEntranceSignal( false );
     } );
 
     return S_OK;

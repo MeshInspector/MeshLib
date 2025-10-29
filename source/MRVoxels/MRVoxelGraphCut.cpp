@@ -9,7 +9,7 @@
 #include "MRMesh/MRBox.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRMesh/MRphmap.h"
 #include <array>
 #include <cfloat>
 

@@ -229,12 +229,15 @@ bool DefaultSplashWindow::frame_( float /*scaling*/ )
     ImGui::Begin( "Splash window", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove );
     auto availableSize = ImGui::GetContentRegionAvail();
     ImGui::Image( *splashImage_, availableSize );
+    // comment out copyright and version lines in splash
+    /*
     ImGui::SetCursorPos( ImVec2( ImGui::GetFrameHeight() * 3, availableSize.y - ImGui::GetFrameHeight() * 2 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, Color( 90, 97, 105 ).getUInt32() );
     ImGui::Text( "Copyright 2025, MeshInspector/MeshLib" );
     ImGui::SameLine( availableSize.x * 0.5f + ImGui::GetFrameHeight() * 4 );
     ImGui::Text( "%s", versionStr_.c_str() );
     ImGui::PopStyleColor();
+    */
     ImGui::End();
     return true;
 }

@@ -551,11 +551,11 @@ Expected<void> Node::load()
             return unexpected( res.error() );
         break;
     case NodeType::Texture2d:
-        if ( auto res = loadTexture2d_( node ) )
+        if ( auto res = loadTexture2d_( node ); !res )
             loader->warnings.append( res.error() + '\n' );
         break;
     case NodeType::Texture2dGroup:
-        if ( auto res = loadTexture2dGroup_( node ) )
+        if ( auto res = loadTexture2dGroup_( node ); !res )
             loader->warnings.append( res.error() + '\n' );
         break;
     case NodeType::Multiproperties:
@@ -1084,7 +1084,7 @@ Expected<void> Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
 
 Expected<LoadedObject> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, const ProgressCallback& callback )
 {
-    const auto tmpFolder = UniqueTemporaryFolder( {} );
+    const UniqueTemporaryFolder tmpFolder;
 
     auto resZip = decompressZip( path, tmpFolder );
     if ( !resZip )

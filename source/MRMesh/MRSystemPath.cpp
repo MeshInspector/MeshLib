@@ -25,21 +25,6 @@ namespace MR
 namespace
 {
 
-#if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-// If true, the resources should be loaded from the MRMesh.so/dylib directory, rather than from the system directories.
-[[nodiscard]] bool resourcesAreNearLib()
-{
-    static const bool res = []
-    {
-        auto opt = std::getenv( "MR_LOCAL_RESOURCES" );
-        bool res = opt && std::string_view( opt ) == "1";
-        spdlog::info( "MR_LOCAL_RESOURCES={}", res ? "1" : "0" );
-        return res;
-    }();
-    return res;
-}
-#endif
-
 std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 {
 #if defined( __EMSCRIPTEN__ )
@@ -49,11 +34,16 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     (void)dir;
     return SystemPath::getExecutableDirectory().value_or( "\\" );
 #elif defined( __APPLE__ )
-    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
-    if ( resourcesAreNearLib() )
-    {
+    auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    // detecting a developer build (all files are located in the same directory)
+    const auto execDir = SystemPath::getExecutableDirectory().value_or( "/" );
+    if ( libDir == execDir )
         return libDir;
-    }
+    // detecting developer build's bundle (<AppName>.app/Contents/MacOS/<AppName>)
+    if ( execDir.filename() == "MacOS"
+        && execDir.parent_path().filename() == "Contents"
+        && execDir.parent_path().parent_path().parent_path() == libDir )
+        return libDir;
 
     using Directory = SystemPath::Directory;
     switch ( dir )
@@ -72,7 +62,9 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     MR_UNREACHABLE
 #else
     auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
-    if ( resourcesAreNearLib() )
+    // detecting a developer build (all files are located in the same directory)
+    const auto execDir = SystemPath::getExecutableDirectory().value_or( "/" );
+    if ( libDir == execDir )
         return libDir;
 
     static const auto findResourceDir = [] ( std::filesystem::path libDir ) -> std::filesystem::path

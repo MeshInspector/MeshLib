@@ -1,4 +1,5 @@
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -29,6 +30,12 @@
 #include "MRHistoryStore.h"
 #include "MRShowModal.h"
 #include "MRFileDialog.h"
+#include "MRSceneCache.h"
+#include "MRViewerTitle.h"
+#include "MRViewportCornerController.h"
+#include "MRViewportGlobalBasis.h"
+#include "MRFileLoadOptions.h"
+#include "MRWebRequest.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
@@ -59,11 +66,7 @@
 #include "MRMesh/MRSceneColors.h"
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRGcodeLoad.h"
-#include "MRSceneCache.h"
-#include "MRViewerTitle.h"
-#include "MRViewportCornerController.h"
-#include "MRViewportGlobalBasis.h"
-#include "MRWebRequest.h"
+#include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
 
 #ifndef __EMSCRIPTEN__
@@ -222,7 +225,7 @@ static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
     auto viewer = &MR::getViewerInstance();
     viewer->emplaceEvent( "Cursor enter", [entered, viewer] ()
     {
-        viewer->cursorEntranceSignal( bool( entered ) );
+        viewer->signals().cursorEntranceSignal( bool( entered ) );
     } );
 }
 
@@ -311,6 +314,11 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
 
 namespace MR
 {
+
+struct Viewer::Connections
+{
+    std::vector<boost::signals2::scoped_connection> uiUpdateConnections;
+};
 
 void Viewer::emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable )
 {
@@ -1028,46 +1036,7 @@ void Viewer::launchShut()
     }
 
     /// disconnect all slots before shared libraries with plugins are unloaded
-    mouseDownSignal = {};
-    mouseUpSignal = {};
-    mouseMoveSignal = {};
-    mouseScrollSignal = {};
-    mouseClickSignal = {};
-    dragStartSignal = {};
-    dragEndSignal = {};
-    dragSignal = {};
-    cursorEntranceSignal = {};
-    charPressedSignal = {};
-    keyUpSignal = {};
-    keyDownSignal = {};
-    keyRepeatSignal = {};
-    spaceMouseMoveSignal = {};
-    spaceMouseDownSignal = {};
-    spaceMouseUpSignal = {};
-    spaceMouseRepeatSignal = {};
-    preDrawSignal = {};
-    preDrawPostViewportSignal = {};
-    drawSignal = {};
-    postDrawPreViewportSignal = {};
-    postDrawSignal = {};
-    objectsLoadedSignal = {};
-    dragDropSignal = {};
-    postResizeSignal = {};
-    postRescaleSignal = {};
-    interruptCloseSignal = {};
-    touchStartSignal = {};
-    touchMoveSignal = {};
-    touchEndSignal = {};
-    touchpadRotateGestureBeginSignal = {};
-    touchpadRotateGestureUpdateSignal = {};
-    touchpadRotateGestureEndSignal = {};
-    touchpadSwipeGestureBeginSignal = {};
-    touchpadSwipeGestureUpdateSignal = {};
-    touchpadSwipeGestureEndSignal = {};
-    touchpadZoomGestureBeginSignal = {};
-    touchpadZoomGestureUpdateSignal = {};
-    touchpadZoomGestureEndSignal = {};
-    postFocusSignal = {};
+    *signals_ = {};
 }
 
 void Viewer::init_()
@@ -1163,7 +1132,9 @@ Viewer::Viewer() :
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
     mouseController_( std::make_unique<MouseController>() ),
     recentFilesStore_( std::make_unique<RecentFilesStore>() ),
-    frameCounter_( std::make_unique<FrameCounter>() )
+    frameCounter_( std::make_unique<FrameCounter>() ),
+    connections_( std::make_unique<Connections>() ),
+    signals_( std::make_unique<ViewerSignals>() )
 {
     window = nullptr;
 
@@ -1281,6 +1252,11 @@ static std::optional<std::string> commonClassName( const std::vector<std::shared
     return objs[0]->classNameInPlural();
 }
 
+bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
+{
+    return loadFiles( filesList, {} );
+}
+
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
 {
     if ( filesList.empty() )
@@ -1313,7 +1289,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 }
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
-                objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
+                signals_->objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
             {
@@ -1333,7 +1309,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 }
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( children, result.errorSummary, result.warningSummary );
-                objectsLoadedSignal( children, result.errorSummary, result.warningSummary );
+                signals_->objectsLoadedSignal( children, result.errorSummary, result.warningSummary );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
@@ -1350,7 +1326,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         {
             if ( options.loadedCallback )
                 options.loadedCallback( {}, result.errorSummary, result.warningSummary );
-            objectsLoadedSignal( {}, result.errorSummary, result.warningSummary );
+            signals_->objectsLoadedSignal( {}, result.errorSummary, result.warningSummary );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
@@ -1408,7 +1384,7 @@ bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::CharPressed )]++;
 
-    return charPressedSignal( unicode_key, modifiers );
+    return signals_->charPressedSignal( unicode_key, modifiers );
 }
 
 bool Viewer::keyDown( int key, int modifiers )
@@ -1417,7 +1393,7 @@ bool Viewer::keyDown( int key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::KeyDown )]++;
 
-    if ( keyDownSignal( key, modifiers ) )
+    if ( signals_->keyDownSignal( key, modifiers ) )
         return true;
 
     return false;
@@ -1429,7 +1405,7 @@ bool Viewer::keyUp( int key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::KeyUp )]++;
 
-    if ( keyUpSignal( key, modifiers ) )
+    if ( signals_->keyUpSignal( key, modifiers ) )
         return true;
 
     return false;
@@ -1442,7 +1418,7 @@ bool Viewer::keyRepeat( int key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::KeyRepeat )]++;
 
-    if ( keyRepeatSignal( key, modifiers ) )
+    if ( signals_->keyRepeatSignal( key, modifiers ) )
         return true;
 
     return false;
@@ -1457,7 +1433,7 @@ bool Viewer::mouseDown( MouseButton button, int modifier )
 
     eventsCounter_.counter[size_t( EventType::MouseDown )]++;
 
-    if ( mouseDownSignal( button, modifier ) )
+    if ( signals_->mouseDownSignal( button, modifier ) )
         return true;
 
     return true;
@@ -1472,7 +1448,7 @@ bool Viewer::mouseUp( MouseButton button, int modifier )
 
     eventsCounter_.counter[size_t( EventType::MouseUp )]++;
 
-    if ( mouseUpSignal( button, modifier ) )
+    if ( signals_->mouseUpSignal( button, modifier ) )
         return true;
 
     return true;
@@ -1482,7 +1458,7 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
 {
     eventsCounter_.counter[size_t( EventType::MouseMove )]++;
 
-    if ( mouseMoveSignal( mouse_x, mouse_y ) )
+    if ( signals_->mouseMoveSignal( mouse_x, mouse_y ) )
         return true;
 
     return false;
@@ -1490,69 +1466,69 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
 
 bool Viewer::touchStart( int id, int x, int y )
 {
-    return touchStartSignal( id, x, y );
+    return signals_->touchStartSignal( id, x, y );
 }
 
 bool Viewer::touchMove( int id, int x, int y )
 {
-    return touchMoveSignal( id, x, y );
+    return signals_->touchMoveSignal( id, x, y );
 }
 
 bool Viewer::touchEnd( int id, int x, int y )
 {
-    return touchEndSignal( id, x, y );
+    return signals_->touchEndSignal( id, x, y );
 }
 
 bool Viewer::touchpadRotateGestureBegin()
 {
-    return touchpadRotateGestureBeginSignal();
+    return signals_->touchpadRotateGestureBeginSignal();
 }
 
 bool Viewer::touchpadRotateGestureUpdate( float angle )
 {
-    return touchpadRotateGestureUpdateSignal( angle );
+    return signals_->touchpadRotateGestureUpdateSignal( angle );
 }
 
 bool Viewer::touchpadRotateGestureEnd()
 {
-    return touchpadRotateGestureEndSignal();
+    return signals_->touchpadRotateGestureEndSignal();
 }
 
 bool Viewer::touchpadSwipeGestureBegin()
 {
-    return touchpadSwipeGestureBeginSignal();
+    return signals_->touchpadSwipeGestureBeginSignal();
 }
 
 bool Viewer::touchpadSwipeGestureUpdate( float dx, float dy, bool kinetic )
 {
-    return touchpadSwipeGestureUpdateSignal( dx, dy, kinetic );
+    return signals_->touchpadSwipeGestureUpdateSignal( dx, dy, kinetic );
 }
 
 bool Viewer::touchpadSwipeGestureEnd()
 {
-    return touchpadSwipeGestureEndSignal();
+    return signals_->touchpadSwipeGestureEndSignal();
 }
 
 bool Viewer::touchpadZoomGestureBegin()
 {
-    return touchpadZoomGestureBeginSignal();
+    return signals_->touchpadZoomGestureBeginSignal();
 }
 
 bool Viewer::touchpadZoomGestureUpdate( float scale, bool kinetic )
 {
-    return touchpadZoomGestureUpdateSignal( scale, kinetic );
+    return signals_->touchpadZoomGestureUpdateSignal( scale, kinetic );
 }
 
 bool Viewer::touchpadZoomGestureEnd()
 {
-    return touchpadZoomGestureEndSignal();
+    return signals_->touchpadZoomGestureEndSignal();
 }
 
 bool Viewer::mouseScroll( float delta_y )
 {
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
-    if ( mouseScrollSignal( scrollForce * delta_y ) )
+    if ( signals_->mouseScrollSignal( scrollForce * delta_y ) )
         return true;
 
     return true;
@@ -1560,47 +1536,47 @@ bool Viewer::mouseScroll( float delta_y )
 
 bool Viewer::mouseClick( MouseButton button, int modifier )
 {
-    return mouseClickSignal( button, modifier );
+    return signals_->mouseClickSignal( button, modifier );
 }
 
 bool Viewer::dragStart( MouseButton button, int modifier )
 {
-    return dragStartSignal( button, modifier );
+    return signals_->dragStartSignal( button, modifier );
 }
 
 bool Viewer::dragEnd( MouseButton button, int modifier )
 {
-    return dragEndSignal( button, modifier );
+    return signals_->dragEndSignal( button, modifier );
 }
 
 bool Viewer::drag( int mouse_x, int mouse_y )
 {
-    return dragSignal( mouse_x, mouse_y );
+    return signals_->dragSignal( mouse_x, mouse_y );
 }
 
 bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
 {
-    return spaceMouseMoveSignal( translate, rotate );
+    return signals_->spaceMouseMoveSignal( translate, rotate );
 }
 
 bool Viewer::spaceMouseDown( int key )
 {
-    return spaceMouseDownSignal( key );
+    return signals_->spaceMouseDownSignal( key );
 }
 
 bool Viewer::spaceMouseUp( int key )
 {
-    return spaceMouseUpSignal( key );
+    return signals_->spaceMouseUpSignal( key );
 }
 
 bool Viewer::spaceMouseRepeat( int key )
 {
-    return spaceMouseRepeatSignal( key );
+    return signals_->spaceMouseRepeatSignal( key );
 }
 
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
 {
-    if ( dragDropSignal( paths ) )
+    if ( signals_->dragDropSignal( paths ) )
         return true;
 
     return false;
@@ -1608,7 +1584,7 @@ bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
 
 bool Viewer::interruptWindowClose()
 {
-    if ( interruptCloseSignal() )
+    if ( signals_->interruptCloseSignal() )
         return true;
 
     return false;
@@ -1848,7 +1824,7 @@ void Viewer::drawFull( bool dirtyScene )
         // need to clean it in texture too
         clearFramebuffers();
     }
-    preDrawSignal();
+    signals_->preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
     bool renderScene = forceRedrawFramesWithoutSwap_ <= 1;
@@ -1856,7 +1832,7 @@ void Viewer::drawFull( bool dirtyScene )
         renderScene = renderScene && dirtyScene;
     if ( renderScene )
         drawScene();
-    postDrawSignal();
+    signals_->postDrawSignal();
     if ( sceneTexture_ )
     {
         sceneTexture_->unbind();
@@ -1881,7 +1857,7 @@ void Viewer::drawScene()
     for ( auto& viewport : viewport_list )
         viewport.preDraw();
 
-    preDrawPostViewportSignal();
+    signals_->preDrawPostViewportSignal();
 
     for ( const auto& viewport : viewport_list )
     {
@@ -1892,7 +1868,7 @@ void Viewer::drawScene()
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
     }
 
-    drawSignal();
+    signals_->drawSignal();
 
     if ( numTransparent > 0 && alphaSortEnabled_ )
     {
@@ -1903,7 +1879,7 @@ void Viewer::drawScene()
     for ( const auto& viewport : viewport_list )
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::NoDepthTest );
 
-    postDrawPreViewportSignal();
+    signals_->postDrawPreViewportSignal();
 
     for ( const auto& viewport : viewport_list )
         viewport.postDraw();
@@ -1913,7 +1889,7 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
-    preSetupViewSignal();
+    signals_->preSetupViewSignal();
     for ( auto& viewport : viewport_list )
         viewport.setupView();
 }
@@ -1965,7 +1941,7 @@ void Viewer::postResize( int w, int h )
                 viewport.setViewportRect( rect );
             }
     }
-    postResizeSignal( w, h );
+    signals_->postResizeSignal( w, h );
     if ( w != 0 )
         framebufferSize.x = w;
     if ( h != 0 )
@@ -2024,12 +2000,12 @@ void Viewer::postFocus( bool focused )
         draw( true );
     }
 #endif
-    postFocusSignal( bool( focused ) );
+    signals_->postFocusSignal( bool( focused ) );
 }
 
 void Viewer::postRescale( float x, float y )
 {
-    postRescaleSignal( x, y );
+    signals_->postRescaleSignal( x, y );
 }
 
 void Viewer::postClose()
@@ -2089,7 +2065,7 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    uiUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this, numF] ()
+    connections_->uiUpdateConnections.push_back( ColorTheme::instance().onChanged( [this, numF] ()
     {
         if ( !basisAxes )
             return;
@@ -2117,7 +2093,7 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, false );
         }
     } ) );
-    uiUpdateConnections_.push_back( postRescaleSignal.connect( [this] ( float, float )
+    connections_->uiUpdateConnections.push_back( signals_->postRescaleSignal.connect( [this] ( float, float )
     {
         if ( !menuPlugin_ )
             return;

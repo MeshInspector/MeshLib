@@ -33,7 +33,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2025.04.09'
+  VCPKG-VERSION: '2025.10.17'
   CUDA-VERSION: '12.0.1.52833'
   CUDA-MAJOR: '12'
   CUDA-MINOR: '0'
@@ -135,7 +135,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d
+        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41
 
       - name: Build Python shim libs
         run: |
@@ -154,7 +154,7 @@ jobs:
           done
 
       - name: Run Tests
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+        run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
         run: build/Release/bin/MRTest
@@ -186,7 +186,7 @@ jobs:
 
       - name: Upload Python Stubs
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -202,14 +202,14 @@ jobs:
 
       - name: Upload C bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: CBindings
           path: ./source/MeshLibC2/include
           retention-days: 1
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ManyLinux-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
@@ -359,7 +359,7 @@ jobs:
           python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Windows
           path: wheelhouse\meshlib-*.whl
@@ -442,7 +442,7 @@ jobs:
           python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Macos-${{matrix.platform}}
           path: meshlib-*.whl
@@ -519,7 +519,7 @@ jobs:
           ${{ env.PYTHON_CMD }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ManyLinux-${{matrix.platform}}
           merge-multiple: true
@@ -546,7 +546,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Windows
           merge-multiple: true
@@ -643,7 +643,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Macos-${{matrix.platform}}
           merge-multiple: true
@@ -664,19 +664,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: ManyLinux-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: Windows
           merge-multiple: true
 
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: Macos-*
           merge-multiple: true

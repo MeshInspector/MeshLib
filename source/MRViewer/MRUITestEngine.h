@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMesh/MRExpected.h"
-#include "MRPch/MRFmt.h"
 #include "MRViewer/exports.h"
 
 #include <cstdint>
@@ -175,12 +174,7 @@ struct Entry
     {
         Expected<T *> ret = std::get_if<T>( &value );
         if ( !*ret )
-        {
-            if ( selfName.empty() )
-                ret = unexpected( fmt::format( "Expected UI entity to be a `{}` but got a `{}`.", T::kindName, getKindName() ) );
-            else
-                ret = unexpected( fmt::format( "Expected UI entity `{}` to be a `{}` but got a `{}`.", selfName, T::kindName, getKindName() ) );
-        }
+            ret = unexpected_( selfName, T::kindName );
         return ret;
     }
     template <typename T>
@@ -188,6 +182,9 @@ struct Entry
     {
         return const_cast<Entry *>( this )->template getAs<T>( selfName );
     }
+
+private:
+    [[nodiscard]] MRVIEWER_API Unexpected<std::string> unexpected_( std::string_view selfName, std::string_view tKindName );
 };
 
 // Returns the current entry tree.

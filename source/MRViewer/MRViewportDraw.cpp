@@ -25,10 +25,17 @@ bool Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
      DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
 {
     Matrix4f normM;
-    return obj.render( getModelRenderParams( xf, projM, &normM, depthFunc, pass, allowAlphaSort ) );
+    return obj.render( getModelRenderParams( xf, getBaseRenderParams( projM ), &normM, depthFunc, pass, allowAlphaSort ) );
 }
 
-ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+bool Viewport::drawOrthoFixedPos( const VisualObject& obj, const AffineXf3f& xf, 
+    DepthFunction depthFunc /*= DepthFunction::Default*/, RenderModelPassMask pass /*= RenderModelPassMask::All*/, bool allowAlphaSort /*= false */ ) const
+{
+    Matrix4f normM;
+    return obj.render( getModelRenderParamsOrthoFixedPos( xf, &normM, depthFunc, pass, allowAlphaSort ) );
+}
+
+ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const BaseRenderParams& baseParams,
     Matrix4f * normM, DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
 {
     if ( normM )
@@ -47,7 +54,7 @@ ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const
     return ModelRenderParams
     {
         {
-            getBaseRenderParams( projM ),
+            baseParams,
             modelM,
             params_.clippingPlane,
             depthFunc,

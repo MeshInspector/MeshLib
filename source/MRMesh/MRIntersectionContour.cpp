@@ -6,7 +6,7 @@
 #include "MRFillContour.h"
 #include "MRAffineXf3.h"
 #include "MRParallelFor.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 #include <optional>
 
 namespace MR

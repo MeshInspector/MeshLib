@@ -44,7 +44,6 @@
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
-    <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonLayoutConfig.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
@@ -110,7 +109,6 @@
     <ClCompile Include="MRImGuiImage.cpp" />
     <ClCompile Include="MRPalette.cpp" />
     <ClCompile Include="MRGLStaticHolder.cpp" />
-    <ClCompile Include="MRMenu.cpp" />
     <ClCompile Include="MRMeshModifier.cpp" />
     <ClCompile Include="MRViewer.cpp" />
     <ClCompile Include="MRViewport.cpp" />
@@ -161,6 +159,7 @@
     <ClInclude Include="exports.h" />
     <ClInclude Include="MRDragDropHandler.h" />
     <ClInclude Include="MRDragDropWin32Handler.h" />
+    <ClInclude Include="MRFileLoadOptions.h" />
     <ClInclude Include="MRImGui.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
@@ -191,7 +190,6 @@
     <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
-    <ClInclude Include="MRProjectMeshAttributes.h" />
     <ClInclude Include="MRRibbonLayoutConfig.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonRegisterItem.h" />
@@ -254,7 +252,6 @@
     <ClInclude Include="MRImGuiImage.h" />
     <ClInclude Include="MRPalette.h" />
     <ClInclude Include="MRGLStaticHolder.h" />
-    <ClInclude Include="MRMenu.h" />
     <ClInclude Include="MRMeshModifier.h" />
     <ClInclude Include="MRStatePluginUpdate.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />
@@ -268,6 +265,7 @@
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRSaveObjects.h" />
     <ClInclude Include="MRViewerSettingsPlugin.h" />
+    <ClInclude Include="MRViewerSignals.h" />
     <ClInclude Include="MRViewerTitle.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />

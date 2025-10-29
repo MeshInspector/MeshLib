@@ -579,7 +579,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         bool value = UnitSettings::getShowLeadingZero();
         if ( UI::checkbox( "Leading zero", &value ) )
             UnitSettings::setShowLeadingZero( value );
-        ImGui::SetItemTooltip( "If disabled, remove the lone zeroes before the decimal point." );
+        UI::setTooltipIfHovered( "If disabled, remove the lone zeroes before the decimal point." );
         ImGui::PopStyleVar();
 
         // --- Thousands separator
@@ -593,6 +593,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         if ( UI::inputTextIntoArray( "Thousands Separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
             UnitSettings::setThousandsSeparator( thouSep[0] );
+        UI::setTooltipIfHovered( "A symbol used to separate groups of thousands in large numbers to make them easier to read." );
 
         // If the separator is empty or a space, display a string explaining that on top of the textbox.
         if ( !ImGui::IsItemActive() )
@@ -633,28 +634,30 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         int targetOption = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        if ( UI::combo( "UI Unit##length", &targetOption, optionNames ) )
+        if ( UI::combo( "UI Units##length", &targetOption, optionNames ) )
         {
             if ( targetOption == int( LengthUnit::_count ) )
                 UnitSettings::setUiLengthUnit( {}, true );
             else
                 UnitSettings::setUiLengthUnit( LengthUnit( targetOption ), true );
-            UnitSettings::setModelLengthUnit( {} );
         }
+        UI::setTooltipIfHovered( "It selects length units to be show in the user interface. If model units are different, then stored values will be automatically converted when shown in UI." );
 
         int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
-        if ( UI::combo( "Model Unit##length", &sourceOption, optionNames ) )
+        if ( UI::combo( "Model Units##length", &sourceOption, optionNames ) )
         {
             if ( sourceOption == int( LengthUnit::_count ) )
                 UnitSettings::setModelLengthUnit( {} );
             else
                 UnitSettings::setModelLengthUnit( LengthUnit( sourceOption ) );
         }
+        UI::setTooltipIfHovered( "It selects length units of model's actual values (e.g. coordinates of points stored in memory). And it affects on importing and exporting of data. 'No units' here means unknown units of import data, and it turns off values conversion for the UI." );
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();
         if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiLengthPrecision( precision );
+        UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for length measurements." );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -677,8 +680,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         // Degree mode.
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
+        if ( UI::combo( "Units##angle", &flavorOption, flavorOptions ) )
             UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
+        UI::setTooltipIfHovered( "It selects angular units to be show in the user interface." );
 
         // Degree-mode-specific options.
 
@@ -689,6 +693,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
             int precision = UnitSettings::getUiAnglePrecision();
             if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, cMaxPrecision ) )
                 UnitSettings::setUiAnglePrecision( precision );
+            UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for angular measurements." );
         }
 
         ImGui::PopStyleVar();
@@ -706,6 +711,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         int precision = UnitSettings::getUiRatioPrecision();
         if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiRatioPrecision( precision );
+        UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for dimensionless measurements." );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -717,6 +723,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
     if ( UI::button( "Reset Unit Settings" ) )
         UnitSettings::resetToDefaults();
+    UI::setTooltipIfHovered( "Set all settings here to their default values." );
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_()

@@ -2093,6 +2093,11 @@ void separator( const SeparatorParams& params )
         const int elementsCount = 1 + ( params.icon ? 1 : 0 ) + ( ( !params.label.empty() || !params.suffix.empty() ) ? 1 : 0 );
         if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + params.label ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
         {
+            if ( params.icon )
+                ImGui::TableSetupColumn( "##icon" );
+            if ( !params.label.empty() || !params.suffix.empty() )
+                ImGui::TableSetupColumn( "##text" );
+            ImGui::TableSetupColumn( "##separator", ImGuiTableColumnFlags_WidthStretch );
             // icon
             if ( params.icon )
             {
@@ -2123,8 +2128,7 @@ void separator( const SeparatorParams& params )
 
             // separator
             ImGui::TableNextColumn();
-            auto width = ImGui::GetWindowWidth();
-            ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) );
             ImGui::Separator();
 
             ImGui::EndTable();

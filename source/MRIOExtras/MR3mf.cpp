@@ -124,17 +124,16 @@ static Expected<std::vector<int>> parseInts( const std::string& str )
 class ThreeMFLoader;
 class Node
 {
-private:    
-
+private:
     Expected<void> loadColorGroup_( const tinyxml2::XMLElement* xmlNode );
     Expected<void> loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode );
-    Expected<void> loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback );    
-    Expected<void> loadBuildData_( const tinyxml2::XMLElement* xmlNode );
-    Expected<void> loadTexture2d_( const tinyxml2::XMLElement* xmlNode );
-    Expected<void> loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, ProgressCallback callback );
+    Expected<void> loadBuildData_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadTexture2d_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadTexture2dGroup_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode );
     Expected<void> loadMultiproperties_( const tinyxml2::XMLElement* xmlNode );
     
-    Expected<void> loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback );
+    Expected<void> loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, ProgressCallback callback );
 
     int id = -1;
     int pid = -1;
@@ -152,7 +151,7 @@ private:
     std::shared_ptr<Object> obj;
     std::vector<Color> colors;
 
-    void setFilamentFaceColor_( FaceId f, const std::string& id, FaceColors& fColorMap );
+    void setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::string& id, FaceColors& fColorMap );
 
 
     std::vector<int> pids;
@@ -160,15 +159,13 @@ private:
     const tinyxml2::XMLElement* node = nullptr;
 
 public:
-    inline static ThreeMFLoader* loader = nullptr;
-
     Node( const tinyxml2::XMLElement* xmlNode )
     : nodeName( xmlNode->Name() ),
     node( xmlNode )
     {
     }
 
-    Expected<void> load();
+    Expected<void> load( ThreeMFLoader& loader );
 
     friend class ThreeMFLoader;
 };
@@ -299,7 +296,7 @@ Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, ProgressCallback ca
         ++objectCount_;
 
     roots_.push_back( std::make_shared<Node>( xmlNode ) );
-    if ( const auto res = roots_.back()->load(); !res )
+    if ( const auto res = roots_.back()->load( *this ); !res )
         return unexpected( res.error() );
 
     ++documentsLoaded_;
@@ -332,7 +329,6 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
 Expected<void> ThreeMFLoader::loadTree_( ProgressCallback callback )
 {
     roots_.reserve( xmlDocuments_.size() );
-    Node::loader = this;
 
     initFilamentColors_();
 
@@ -387,13 +383,13 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
     return LoadedObject{ .obj = objRes, .warnings = std::move( warnings ) };
 }
 
-Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
+Expected<void> Node::loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
 {
     auto meshNode = xmlNode->FirstChildElement( "mesh" );
     auto componentsNode = xmlNode->FirstChildElement( "components" );
     if ( meshNode )
     {
-        auto meshErr = loadMesh_( meshNode, callback );
+        auto meshErr = loadMesh_( loader, meshNode, callback );
         if ( !meshErr )
             return unexpected( meshErr.error() );
     }
@@ -416,7 +412,7 @@ Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressC
                 transform = std::move( *xfRes );
             }
 
-            auto nodeRes = loader->getNodeById_( objId, componentNode->Attribute( "p:path" ) );
+            auto nodeRes = loader.getNodeById_( objId, componentNode->Attribute( "p:path" ) );
             if ( !nodeRes.has_value() )
                 return unexpected( std::move( nodeRes.error() ) );
 
@@ -460,7 +456,7 @@ Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressC
     return {};
 }
 
-Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadBuildData_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode )
 {
     for ( auto itemNode = xmlNode->FirstChildElement( "item" ); itemNode; itemNode = itemNode->NextSiblingElement( "item" ) )
     {
@@ -470,7 +466,7 @@ Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
 
         const int objId = std::stoi( objIdAttr );
 
-        auto nodeRes = loader->getNodeById_( objId, itemNode->Attribute( "p:path" ) );
+        auto nodeRes = loader.getNodeById_( objId, itemNode->Attribute( "p:path" ) );
         if ( !nodeRes.has_value() )
             return unexpected( std::move( nodeRes.error() ) );
 
@@ -498,17 +494,17 @@ Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
                 return unexpected( resXf.error() );
 
             if ( resXf->A.det() == 0 )
-                loader->warnings.append( "Degenerate object transform: " + objNode->obj->name() + "\n" );
+                loader.warnings.append( "Degenerate object transform: " + objNode->obj->name() + "\n" );
 
             objNode->obj->setXf( *resXf );
         }
-        loader->objectNodes_.push_back( objNode );
+        loader.objectNodes_.push_back( objNode );
     }
 
     return {};
 }
 
-Expected<void> Node::load()
+Expected<void> Node::load( ThreeMFLoader& loader )
 {
     if ( auto it = nodeTypeMap.find( nodeName ); it != nodeTypeMap.end() )
         nodeType = it->second;
@@ -517,14 +513,14 @@ Expected<void> Node::load()
     if ( attr )
     {
         id = std::stoi( attr );
-        loader->nodeByIdMap_[id] = this;
+        loader.nodeByIdMap_[id] = this;
     }
 
     attr = node->Attribute( "pid" );
     if ( attr )
     {
-        pid = std::stoi( attr );        
-        if ( auto it = loader->nodeByIdMap_.find( pid ); it != loader->nodeByIdMap_.end() )
+        pid = std::stoi( attr );
+        if ( auto it = loader.nodeByIdMap_.find( pid ); it != loader.nodeByIdMap_.end() )
             pNode = it->second;
     }
 
@@ -543,20 +539,20 @@ Expected<void> Node::load()
             return unexpected( res.error() );
         break;
     case NodeType::Object:
-        if ( auto res = loadObject_( node, subprogress( loader->documentProgressCallback, loader->objectsLoaded_++, loader->objectCount_ ) ); !res )
+        if ( auto res = loadObject_( loader, node, subprogress( loader.documentProgressCallback, loader.objectsLoaded_++, loader.objectCount_ ) ); !res )
             return unexpected( res.error() );
         break;
     case NodeType::Build:
-        if ( auto res = loadBuildData_( node ); !res )
+        if ( auto res = loadBuildData_( loader, node ); !res )
             return unexpected( res.error() );
         break;
     case NodeType::Texture2d:
-        if ( auto res = loadTexture2d_( node ); !res )
-            loader->warnings.append( res.error() + '\n' );
+        if ( auto res = loadTexture2d_( loader, node ); !res )
+            loader.warnings.append( res.error() + '\n' );
         break;
     case NodeType::Texture2dGroup:
-        if ( auto res = loadTexture2dGroup_( node ); !res )
-            loader->warnings.append( res.error() + '\n' );
+        if ( auto res = loadTexture2dGroup_( loader, node ); !res )
+            loader.warnings.append( res.error() + '\n' );
         break;
     case NodeType::Multiproperties:
         if ( auto res = loadMultiproperties_( node ); !res )
@@ -566,10 +562,10 @@ Expected<void> Node::load()
         for ( auto childNode = node->FirstChildElement(); childNode; childNode = childNode->NextSiblingElement() )
         {
             children.push_back( std::make_shared<Node>( childNode ) );
-            if ( auto resOrErr = children.back()->load(); !resOrErr )
+            if ( auto resOrErr = children.back()->load( loader ); !resOrErr )
                 return unexpected( resOrErr.error() );
         }
-        break;    
+        break;
     }
 
     return {};
@@ -605,13 +601,13 @@ Expected<void> Node::loadColorGroup_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<void> Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadTexture2d_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode )
 {
     std::string innerPath = "./" + std::string(xmlNode->Attribute("path"));
     if ( innerPath.size() == 2 )
         return unexpected( std::string( "Texture2d node does not have 'path' attribute" ) );
 
-    std::filesystem::path fullPath = loader->rootPath_ / innerPath;
+    std::filesystem::path fullPath = loader.rootPath_ / innerPath;
     std::error_code ec;
     if ( !std::filesystem::exists( fullPath, ec ) )
         return unexpected( std::string( "Texture2d does not exist: " ) + utf8string( fullPath ) );
@@ -627,12 +623,12 @@ Expected<void> Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<void> Node::loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadTexture2dGroup_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode )
 {
     if ( tinyxml2::XML_SUCCESS != xmlNode->QueryIntAttribute( "texid", &texId ) )
         return unexpected( std::string( "3DF model texture2d group node does not have 'texid' attribute" ) );
 
-    auto nodeRes = loader->getNodeById_( texId );
+    auto nodeRes = loader.getNodeById_( texId );
     if ( !nodeRes.has_value() )
         return unexpected( std::string( "3DF model has incorrect 'texid' attribute" ) );
 
@@ -650,7 +646,7 @@ Expected<void> Node::loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback )
+Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, ProgressCallback callback )
 {
     auto verticesNode = meshNode->FirstChildElement( "vertices" );
     if ( !verticesNode )
@@ -720,21 +716,21 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
             if ( hasFilamentId == tinyxml2::XML_NO_ATTRIBUTE )
                 hasFilamentId = triangleNode->QueryStringAttribute( "paint_color", &filamentId );
             if ( hasFilamentId == tinyxml2::XML_SUCCESS )
-                setFilamentFaceColor_( tris.backId(), std::string( filamentId ), fColorMap );
+                setFilamentFaceColor_( loader, tris.backId(), std::string( filamentId ), fColorMap );
             continue;
         }
         
-        auto it = loader->nodeByIdMap_.find( texGroupId );
-        if ( it == loader->nodeByIdMap_.end() ||
+        auto it = loader.nodeByIdMap_.find( texGroupId );
+        if ( it == loader.nodeByIdMap_.end() ||
         ( it->second->nodeType != NodeType::Texture2dGroup 
         && it->second->nodeType != NodeType::ColorGroup 
         && it->second->nodeType != NodeType::BaseMaterials
         && it->second->nodeType != NodeType::Multiproperties ) )
         {
-            if ( !loader->failedToLoadColoring )
+            if ( !loader.failedToLoadColoring )
             {
-                loader->warnings.append( std::string( "3DF model has unsupported coloring\n" ) );
-                loader->failedToLoadColoring = true;
+                loader.warnings.append( std::string( "3DF model has unsupported coloring\n" ) );
+                loader.failedToLoadColoring = true;
             }
             continue;
         }
@@ -754,15 +750,15 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         {
             auto pidIt = std::find_if( it->second->pids.begin(), it->second->pids.end(), [&] ( int pid )
             {
-                auto it = loader->nodeByIdMap_.find( pid );
-                if ( it == loader->nodeByIdMap_.end() )
+                auto it = loader.nodeByIdMap_.find( pid );
+                if ( it == loader.nodeByIdMap_.end() )
                     return false;
 
                 return it->second->nodeType == NodeType::Texture2dGroup;
             } );
 
             if ( pidIt != it->second->pids.end() )
-                texId = loader->nodeByIdMap_[*pidIt]->texId;
+                texId = loader.nodeByIdMap_[*pidIt]->texId;
 
             if ( vColorMap.empty() )
                 vColorMap.resize( vertexCoordinates.size(), bgColor );
@@ -801,10 +797,10 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
                 auto& vertUV = vUVCoords[VertId( vs[i] )];
                 const auto refUV = it->second->uvGroup[ps[i]];
                 // If vertex already has another UV coordinates, texture will be ignored
-                if ( !loader->failedToLoadColoring && !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
+                if ( !loader.failedToLoadColoring && !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                 {
-                    loader->failedToLoadColoring = true;
-                    loader->warnings.append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
+                    loader.failedToLoadColoring = true;
+                    loader.warnings.append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
                 }
 
                 vertUV = refUV;
@@ -830,29 +826,29 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
             
             auto colorIt = std::find_if( refPids.begin(), refPids.end(), [&] ( int pid )
             {
-                auto it = loader->nodeByIdMap_.find( pid );
-                return ( it == loader->nodeByIdMap_.end() ) ? false : it->second->nodeType == NodeType::ColorGroup;
+                auto it = loader.nodeByIdMap_.find( pid );
+                return ( it == loader.nodeByIdMap_.end() ) ? false : it->second->nodeType == NodeType::ColorGroup;
             } );
 
             if ( colorIt != refPids.end() )
             { 
-                colorNode = loader->nodeByIdMap_[*colorIt];
+                colorNode = loader.nodeByIdMap_[*colorIt];
                 colorIndex = int( colorIt - refPids.begin() );
             }
 
             auto textureIt = std::find_if( refPids.begin(), refPids.end(), [&] ( int pid )
             {
-                auto it = loader->nodeByIdMap_.find( pid );
-                return ( it == loader->nodeByIdMap_.end() ) ? false : it->second->nodeType == NodeType::Texture2dGroup;
+                auto it = loader.nodeByIdMap_.find( pid );
+                return ( it == loader.nodeByIdMap_.end() ) ? false : it->second->nodeType == NodeType::Texture2dGroup;
             } );
 
             if ( textureIt != refPids.end() )
             { 
-                textureNode = loader->nodeByIdMap_[*textureIt];
+                textureNode = loader.nodeByIdMap_[*textureIt];
                 textureIndex = int( textureIt - refPids.begin() );
             }
 
-            if ( colorNode && !loader->failedToLoadColoring )
+            if ( colorNode && !loader.failedToLoadColoring )
             {
                 for ( int i = 0; i < 3; ++i )
                 {
@@ -870,7 +866,7 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
                 }
             }
 
-            if ( textureNode && !loader->failedToLoadColoring )
+            if ( textureNode && !loader.failedToLoadColoring )
             {
 
                 for ( int i = 0; i < 3; ++i )
@@ -889,8 +885,8 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
                     // If vertex already has another UV coordinates, texture will be ignored
                     if ( !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                     {
-                        loader->failedToLoadColoring = true;
-                        loader->warnings.append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
+                        loader.failedToLoadColoring = true;
+                        loader.warnings.append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
                     }
 
                     vertUV = refUV;
@@ -908,14 +904,14 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
 
     if ( !fColorMap.empty() )
     {
-        fColorMap.resize( tris.size(), loader->filamentColors[0] );
+        fColorMap.resize( tris.size(), loader.filamentColors[0] );
     }
 
     auto resMesh = std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, &dups, buildSettings ) );
     
     if ( !dups.empty() )
     {
-        loader->duplicatedVertexCountAccum += int( dups.size() );
+        loader.duplicatedVertexCountAccum += int( dups.size() );
         if ( !vUVCoords.empty() )
         {
             vUVCoords.resize( resMesh->topology.lastValidVert() + 1 );
@@ -935,7 +931,7 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         }
     }
     
-    loader->skippedFaceCountAccum += skippedFaceCount;
+    loader.skippedFaceCountAccum += skippedFaceCount;
 
     if ( !reportProgress( callback, 0.75f ) )
         return unexpectedOperationCanceled();
@@ -959,8 +955,8 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         //if any vertex has NaN UV, we can't load the texture
         if ( std::none_of( begin( vUVCoords ), end( vUVCoords ), [] ( const auto& uv ) { return std::isnan( uv.x ); } ) )
         {
-            auto it = loader->nodeByIdMap_.find( texId );
-            if ( it == loader->nodeByIdMap_.end() )
+            auto it = loader.nodeByIdMap_.find( texId );
+            if ( it == loader.nodeByIdMap_.end() )
                 return unexpected( "Invalid texture id" );
 
             if ( it->second->texture.resolution.x > 0 && it->second->texture.resolution.y > 0 )
@@ -972,12 +968,12 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
             }
             else
             {
-                loader->warnings.append( "Texture will not be loaded.\n" );
+                loader.warnings.append( "Texture will not be loaded.\n" );
             }
         }
         else
         {
-            loader->warnings.append( "Object " + obj->name() + " has incomplete UV coordinates. Texture will not be loaded.\n" );
+            loader.warnings.append( "Object " + obj->name() + " has incomplete UV coordinates. Texture will not be loaded.\n" );
         }
     }
 
@@ -1025,14 +1021,14 @@ void ThreeMFLoader::initFilamentColors_()
         filamentColors.clear();
 }
 
-void Node::setFilamentFaceColor_( FaceId f, const std::string& fId, FaceColors& fColorMap )
+void Node::setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::string& fId, FaceColors& fColorMap )
 {
-    if ( !loader->filamentInited_ )
+    if ( !loader.filamentInited_ )
         return;
-    if ( loader->filamentColors.empty() )
+    if ( loader.filamentColors.empty() )
         return;
     if ( fColorMap.size() <= f )
-        fColorMap.resize( f + 1, loader->filamentColors[0] );
+        fColorMap.resize( f + 1, loader.filamentColors[0] );
 
     // taken from https://github.com/bambulab/BambuStudio/issues/1892#issuecomment-1628513224
     constexpr std::array<const char*, 16> cIdMap =
@@ -1048,8 +1044,8 @@ void Node::setFilamentFaceColor_( FaceId f, const std::string& fId, FaceColors& 
             break;
         }
     }
-    if ( foundFilId != -1 && foundFilId < loader->filamentColors.size() )
-        fColorMap[f] = loader->filamentColors[foundFilId];
+    if ( foundFilId != -1 && foundFilId < loader.filamentColors.size() )
+        fColorMap[f] = loader.filamentColors[foundFilId];
 }
 
 Expected<void> Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )

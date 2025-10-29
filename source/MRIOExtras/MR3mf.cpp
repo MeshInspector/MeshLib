@@ -127,13 +127,13 @@ class Node
 private:
     Expected<void> loadColorGroup_( const tinyxml2::XMLElement* xmlNode );
     Expected<void> loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode );
-    Expected<void> loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, ProgressCallback callback );
+    Expected<void> loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, const ProgressCallback& callback );
     Expected<void> loadBuildData_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode );
     Expected<void> loadTexture2d_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode );
     Expected<void> loadTexture2dGroup_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode );
     Expected<void> loadMultiproperties_( const tinyxml2::XMLElement* xmlNode );
     
-    Expected<void> loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, ProgressCallback callback );
+    Expected<void> loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, const ProgressCallback& callback );
 
     int id_ = -1;
     int pid_ = -1;
@@ -192,14 +192,13 @@ class ThreeMFLoader
     Expected<void> loadFiles_( const std::vector<std::filesystem::path>& files );
 
     // Load object tree from loaded XML files
-    Expected<void> loadTree_( ProgressCallback callback );
-    Expected<void> loadDocument_( LoadedXml& doc, ProgressCallback callback );
+    Expected<void> loadTree_( const ProgressCallback& callback );
+    Expected<void> loadDocument_( LoadedXml& doc, const ProgressCallback& callback );
 
     int duplicatedVertexCountAccum_ = 0;
     int skippedFaceCountAccum_ = 0;
     
-    ProgressCallback documentProgressCallback_;
-    ProgressCallback generalCallback_;
+    ProgressCallback progress_;
 
     size_t objectCount_ = 0;
     size_t objectsLoaded_ = 0;
@@ -216,7 +215,7 @@ public:
     std::string warnings;
     bool failedToLoadColoring = false;
 
-    Expected<LoadedObject> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
+    Expected<LoadedObject> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, const ProgressCallback& callback );
 
     friend class Node;
 };
@@ -276,7 +275,7 @@ Expected<void> ThreeMFLoader::loadFiles_( const std::vector<std::filesystem::pat
     return {};
 }
 
-Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, ProgressCallback callback )
+Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, const ProgressCallback& callback )
 {
     if ( doc.loaded )
         return {};
@@ -287,7 +286,7 @@ Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, ProgressCallback ca
 
     objectCount_ = 0;
     objectsLoaded_ = 0;
-    documentProgressCallback_ = callback;
+    progress_ = callback;
 
     auto resourcesNode = xmlNode->FirstChildElement( "resources" );
     if ( !resourcesNode )
@@ -318,7 +317,7 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
     if ( docIt == xmlDocuments_.end() )
         return unexpected( "Cannot find file specified in p:path" );
 
-    if ( auto e = loadDocument_( docIt->second, subprogress( generalCallback_, documentsLoaded_, xmlDocuments_.size() ) ); !e )
+    if ( auto e = loadDocument_( docIt->second, subprogress( progress_, documentsLoaded_, xmlDocuments_.size() ) ); !e )
         return unexpected( std::move( e.error() ) );
 
     it = nodeByIdMap_.find( id );
@@ -327,7 +326,7 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
     return unexpected( "Invalid object id" );
 }
 
-Expected<void> ThreeMFLoader::loadTree_( ProgressCallback callback )
+Expected<void> ThreeMFLoader::loadTree_( const ProgressCallback& callback )
 {
     roots_.reserve( xmlDocuments_.size() );
 
@@ -342,7 +341,7 @@ Expected<void> ThreeMFLoader::loadTree_( ProgressCallback callback )
     return {};
 }
 
-Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback )
+Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, const ProgressCallback& callback )
 {
     rootPath_ = root.lexically_normal();
 
@@ -384,7 +383,7 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
     return LoadedObject{ .obj = objRes, .warnings = std::move( warnings ) };
 }
 
-Expected<void> Node::loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
+Expected<void> Node::loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, const ProgressCallback& callback )
 {
     auto meshNode = xmlNode->FirstChildElement( "mesh" );
     auto componentsNode = xmlNode->FirstChildElement( "components" );
@@ -540,7 +539,7 @@ Expected<void> Node::load( ThreeMFLoader& loader )
             return unexpected( res.error() );
         break;
     case NodeType::Object:
-        if ( auto res = loadObject_( loader, node_, subprogress( loader.documentProgressCallback_, loader.objectsLoaded_++, loader.objectCount_ ) ); !res )
+        if ( auto res = loadObject_( loader, node_, subprogress( loader.progress_, loader.objectsLoaded_++, loader.objectCount_ ) ); !res )
             return unexpected( res.error() );
         break;
     case NodeType::Build:
@@ -647,11 +646,11 @@ Expected<void> Node::loadTexture2dGroup_( ThreeMFLoader& loader, const tinyxml2:
     return {};
 }
 
-Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, ProgressCallback callback )
+Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, const ProgressCallback& callback )
 {
     auto verticesNode = meshNode->FirstChildElement( "vertices" );
     if ( !verticesNode )
-        return unexpected( std::string( "3DF model 'vertices' node not found" ) );    
+        return unexpected( std::string( "3DF model 'vertices' node not found" ) );
 
     Color bgColor = Color::white();
     bool bgColorWasRead = false;

@@ -634,7 +634,7 @@ Expected<void> Node::loadTexture2dGroup_( ThreeMFLoader& loader, const tinyxml2:
         return unexpected( std::string( "3DF model has incorrect 'texid' attribute" ) );
 
 #if TINYXML2_MAJOR_VERSION > 10
-    uvGroup.reserve( xmlNode->ChildElementCount( "m:tex2coord" ) );
+    uvGroup_.reserve( xmlNode->ChildElementCount( "m:tex2coord" ) );
 #endif
     for ( auto coordNode = xmlNode->FirstChildElement( "m:tex2coord" ); coordNode; coordNode = coordNode->NextSiblingElement( "m:tex2coord" ) )
     {

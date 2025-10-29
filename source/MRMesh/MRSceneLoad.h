@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRObject.h"
+#include "MREnums.h"
+#include <optional>
 
 namespace MR::SceneLoad
 {
@@ -22,12 +24,16 @@ struct SceneLoadResult
     std::string warningSummary;
 };
 
-/// Load scene from file
-MRMESH_API SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback = {} );
+/// Load scene from file;
+/// if both targetUnit and loadedObject.lengthUnit are not nullopt, then adjusts transformations of the loaded objects
+MRMESH_API SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const ProgressCallback& callback = {},
+    const std::optional<LengthUnit>& targetUnit = {} );
 
-/// Async load scene from file
+/// Async load scene from file;
+/// if both targetUnit and loadedObject.lengthUnit are not nullopt, then adjusts transformations of the loaded objects;
 /// calls `postLoadCallback` from a working thread (or from the main thread on single-thread platforms) after all files being loaded
 using PostLoadCallback = std::function<void ( SceneLoadResult )>;
-MRMESH_API void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, PostLoadCallback postLoadCallback, ProgressCallback progressCallback = {} );
+MRMESH_API void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const PostLoadCallback& postLoadCallback,
+    const ProgressCallback& progressCallback = {}, const std::optional<LengthUnit>& targetUnits = {} );
 
 } // namespace MR::SceneLoad

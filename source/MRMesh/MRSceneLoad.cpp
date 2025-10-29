@@ -42,6 +42,8 @@ std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& 
 class SceneConstructor
 {
 public:
+    SceneConstructor( const std::optional<LengthUnit>& targetUnit ) : targetUnit_( targetUnit ) {}
+
     // gather objects and error and warning messages
     void process( const std::filesystem::path& path, Expected<LoadedObjects> res )
     {
@@ -72,7 +74,13 @@ public:
         const auto prevObjectCount = loadedObjects_.size();
         for ( auto& obj : res->objs )
             if ( obj )
+            {
+                if ( targetUnit_ && res->lengthUnit && targetUnit_ != res->lengthUnit )
+                {
+                    // adjust transform
+                }
                 loadedObjects_.emplace_back( std::move( obj ) );
+            }
         if ( prevObjectCount != loadedObjects_.size() )
             loadedFiles_.emplace_back( path );
         else
@@ -122,6 +130,7 @@ public:
     }
 
 private:
+    const std::optional<LengthUnit> targetUnit_;
     std::vector<std::filesystem::path> loadedFiles_;
     std::vector<std::shared_ptr<Object>> loadedObjects_;
     std::ostringstream errorSummary_;
@@ -175,9 +184,10 @@ struct AsyncLoadContext
 namespace MR::SceneLoad
 {
 
-SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback )
+SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const ProgressCallback& callback,
+    const std::optional<LengthUnit>& targetUnit )
 {
-    SceneConstructor constructor;
+    SceneConstructor constructor( targetUnit );
     for ( auto index = 0ull; index < files.size(); ++index )
     {
         const auto& path = files[index];
@@ -191,7 +201,8 @@ SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>
 }
 
 void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files,
-                                  SceneLoad::PostLoadCallback postLoadCallback, ProgressCallback progressCallback )
+                                  const SceneLoad::PostLoadCallback& postLoadCallback, const ProgressCallback& progressCallback,
+                                  const std::optional<LengthUnit>& targetUnit )
 {
     auto ctx = std::make_shared<AsyncLoadContext>();
     ctx->paths = files;
@@ -220,9 +231,9 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
     ctx->progressCallback = subprogress( progressCallback, (float)syncIndex / (float)count, 1.00f );
     ctx->initializeProgressMap( asyncBitSet );
 
-    auto postLoad = [ctx, count, postLoadCallback]
+    auto postLoad = [ctx, count, postLoadCallback, targetUnit]
     {
-        SceneConstructor constructor;
+        SceneConstructor constructor( targetUnit );
         for ( auto index = 0ull; index < count; ++index )
             constructor.process( ctx->paths[index], ctx->results[index] );
         postLoadCallback( constructor.construct() );

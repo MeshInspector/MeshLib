@@ -33,6 +33,9 @@ struct LoadedObjects
 {
     std::vector<ObjectPtr> objs;
     std::string warnings; //either empty or ends with '\n'
+
+    /// units of object coordinates and transformations (if known)
+    std::optional<LengthUnit> lengthUnit;
 };
 
 } //namespace MR

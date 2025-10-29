@@ -20,9 +20,11 @@
     #include "MRFileDialogCocoa.h"
   #else
     #if !defined( MRVIEWER_NO_GTK )
+      #pragma message( "Using GTK" )
       #include <gtk/gtk.h>
     #endif
     #if !defined( MRVIEWER_NO_XDG_DESKTOP_PORTAL )
+      #pragma message( "Using XDG Desktop Portal" )
       #include "MRFileDialogPortal.h"
     #endif
   #endif
@@ -395,10 +397,12 @@ std::vector<std::filesystem::path> runDialog( const MR::FileDialog::Parameters& 
     return MR::detail::runCocoaFileDialog( parameters );
 #else
 #if !defined( MRVIEWER_NO_XDG_DESKTOP_PORTAL )
+    #pragma message( "Using XDG Desktop Portal" )
     if ( MR::detail::isPortalFileDialogSupported() )
         return MR::detail::runPortalFileDialog( parameters );
 #endif
 #if !defined( MRVIEWER_NO_GTK )
+    #pragma message( "Using GTK" )
     return gtkDialog( parameters );
 #endif
     (void)parameters;

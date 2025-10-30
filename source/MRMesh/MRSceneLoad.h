@@ -7,8 +7,18 @@
 namespace MR::SceneLoad
 {
 
+struct Settings
+{
+    /// if both targetUnit and loadedObject.lengthUnit are not nullopt,
+    /// then adjusts transformations of the loaded objects to match target units
+    std::optional<LengthUnit> targetUnit;
+
+    /// to report loading progress and allow the user to cancel it
+    ProgressCallback progress;
+};
+
 /// Scene loading result
-struct SceneLoadResult
+struct Result
 {
     /// The loaded scene or empty object
     std::shared_ptr<SceneRootObject> scene;
@@ -26,14 +36,11 @@ struct SceneLoadResult
 
 /// Load scene from file;
 /// if both targetUnit and loadedObject.lengthUnit are not nullopt, then adjusts transformations of the loaded objects
-MRMESH_API SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const ProgressCallback& callback = {},
-    const std::optional<LengthUnit>& targetUnit = {} );
+MRMESH_API Result fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const Settings& settings = {} );
 
 /// Async load scene from file;
-/// if both targetUnit and loadedObject.lengthUnit are not nullopt, then adjusts transformations of the loaded objects;
 /// calls `postLoadCallback` from a working thread (or from the main thread on single-thread platforms) after all files being loaded
-using PostLoadCallback = std::function<void ( SceneLoadResult )>;
-MRMESH_API void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const PostLoadCallback& postLoadCallback,
-    const ProgressCallback& progressCallback = {}, const std::optional<LengthUnit>& targetUnits = {} );
+using PostLoadCallback = std::function<void ( Result )>;
+MRMESH_API void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const PostLoadCallback& postLoadCallback, const Settings& settings = {} );
 
 } // namespace MR::SceneLoad

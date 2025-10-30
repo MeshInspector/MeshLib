@@ -6,10 +6,11 @@
 
 #include <MRPch/MRSpdlog.h>
 
-namespace
+namespace MR::SceneLoad
 {
 
-using namespace MR;
+namespace
+{
 
 // check if stream is empty (has no data)
 inline bool isEmpty( std::ostream& os )
@@ -92,7 +93,7 @@ public:
     }
 
     // construct a scene object
-    SceneLoad::SceneLoadResult construct() const
+    SceneLoad::Result construct() const
     {
         auto scene = std::make_shared<SceneRootObject>();
 
@@ -119,7 +120,7 @@ public:
                 scene->addChild( object );
         }
 
-        SceneLoad::SceneLoadResult ret{
+        SceneLoad::Result ret{
             .scene = std::move( scene ),
             .isSceneConstructed = constructed,
             .loadedFiles = loadedFiles_,
@@ -183,15 +184,11 @@ struct AsyncLoadContext
     }
 };
 
-}
+} // anonymous namespace
 
-namespace MR::SceneLoad
+Result fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const Settings& settings )
 {
-
-SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const ProgressCallback& callback,
-    const std::optional<LengthUnit>& targetUnit )
-{
-    SceneConstructor constructor( targetUnit );
+    SceneConstructor constructor( settings.targetUnit );
     for ( auto index = 0ull; index < files.size(); ++index )
     {
         const auto& path = files[index];
@@ -199,14 +196,13 @@ SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>
             continue;
 
         spdlog::info( "Loading file {}", utf8string( path ) );
-        constructor.process( path, loadObjectFromFile( path, subprogress( callback, index, files.size() ) ) );
+        constructor.process( path, loadObjectFromFile( path, subprogress( settings.progress, index, files.size() ) ) );
     }
     return constructor.construct();
 }
 
 void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files,
-                                  const SceneLoad::PostLoadCallback& postLoadCallback, const ProgressCallback& progressCallback,
-                                  const std::optional<LengthUnit>& targetUnit )
+                                  const SceneLoad::PostLoadCallback& postLoadCallback, const Settings& settings )
 {
     auto ctx = std::make_shared<AsyncLoadContext>();
     ctx->paths = files;
@@ -227,15 +223,15 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         else
         {
             spdlog::info( "Loading file {}", utf8string( path ) );
-            ctx->results[index] = loadObjectFromFile( path, subprogress( progressCallback, syncIndex++, count ) );
+            ctx->results[index] = loadObjectFromFile( path, subprogress( settings.progress, syncIndex++, count ) );
         }
     }
     assert( syncIndex + asyncBitSet.count() == count );
 
-    ctx->progressCallback = subprogress( progressCallback, (float)syncIndex / (float)count, 1.00f );
+    ctx->progressCallback = subprogress( settings.progress, (float)syncIndex / (float)count, 1.00f );
     ctx->initializeProgressMap( asyncBitSet );
 
-    auto postLoad = [ctx, count, postLoadCallback, targetUnit]
+    auto postLoad = [ctx, count, postLoadCallback, targetUnit = settings.targetUnit]
     {
         SceneConstructor constructor( targetUnit );
         for ( auto index = 0ull; index < count; ++index )

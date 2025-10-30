@@ -75,9 +75,13 @@ public:
         for ( auto& obj : res->objs )
             if ( obj )
             {
-                if ( targetUnit_ && res->lengthUnit && targetUnit_ != res->lengthUnit )
+                if ( targetUnit_ && res->lengthUnit && *targetUnit_ != *res->lengthUnit )
                 {
-                    // adjust transform
+                    const auto s = getUnitInfo( *res->lengthUnit ).conversionFactor / getUnitInfo( *targetUnit_ ).conversionFactor;
+                    auto xf = obj->xf();
+                    xf.A *= s;
+                    xf.b *= s;
+                    obj->setXf( xf );
                 }
                 loadedObjects_.emplace_back( std::move( obj ) );
             }

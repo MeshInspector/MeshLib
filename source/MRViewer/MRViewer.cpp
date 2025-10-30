@@ -36,6 +36,7 @@
 #include "MRViewportGlobalBasis.h"
 #include "MRFileLoadOptions.h"
 #include "MRWebRequest.h"
+#include "MRUnitSettings.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
@@ -1351,12 +1352,12 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         {
             postProcess( result );
             ProgressBar::finish();
-        }, ProgressBar::callBackSetProgress );
+        }, ProgressBar::callBackSetProgress, UnitSettings::getActualModelLengthUnit() );
     } );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
     {
-        auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
+        auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress, UnitSettings::getActualModelLengthUnit() );
         return [result = std::move( result ), postProcess]
         {
             postProcess( result );

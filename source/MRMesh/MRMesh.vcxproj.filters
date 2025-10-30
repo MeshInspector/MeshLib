@@ -1370,6 +1370,9 @@
     <ClInclude Include="MRTelemetry.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRUnitInfo.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2245,6 +2248,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshSave3mf.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUnitInfo.cpp">
+      <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

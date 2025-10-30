@@ -4,7 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRVector.h"
-#include "MREnums.h"
+#include "MRUnitInfo.h"
 #include <cassert>
 #include <optional>
 

@@ -12,6 +12,11 @@
 namespace MR
 {
 
+namespace detail::Units
+{
+    struct Empty {};
+}
+
 template <UnitEnum E>
 struct UnitToStringParams;
 

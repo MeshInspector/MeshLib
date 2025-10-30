@@ -2,13 +2,109 @@
 
 #include "MRVectorTraits.h"
 #include "MRMacros.h"
-#include "MREnums.h"
 
 #include <cassert>
 #include <optional>
 
 namespace MR
 {
+
+// A stub measurement unit representing no unit.
+enum class NoUnit
+{
+    _count [[maybe_unused]]
+};
+
+// Measurement units of length.
+enum class LengthUnit
+{
+    microns,
+    millimeters,
+    centimeters,
+    meters,
+    inches,
+    feet,
+    _count [[maybe_unused]],
+};
+
+// Measurement units of angle.
+enum class AngleUnit
+{
+    radians,
+    degrees,
+    _count [[maybe_unused]],
+};
+
+// Measurement units of screen sizes.
+enum class PixelSizeUnit
+{
+    pixels,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for factors / ratios.
+enum class RatioUnit
+{
+    factor, // 0..1 x
+    percents, // 0..100 %
+    _count [[maybe_unused]],
+};
+
+// Measurement units for time.
+enum class TimeUnit
+{
+    seconds,
+    milliseconds,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for movement speed.
+enum class MovementSpeedUnit
+{
+    micronsPerSecond,
+    millimetersPerSecond,
+    centimetersPerSecond,
+    metersPerSecond,
+    inchesPerSecond,
+    feetPerSecond,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for surface area.
+enum class AreaUnit
+{
+    microns2,
+    millimeters2,
+    centimeters2,
+    meters2,
+    inches2,
+    feet2,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for body volume.
+enum class VolumeUnit
+{
+    microns3,
+    millimeters3,
+    centimeters3,
+    meters3,
+    inches3,
+    feet3,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for 1/length.
+enum class InvLengthUnit
+{
+    inv_microns,
+    inv_millimeters,
+    inv_centimeters,
+    inv_meters,
+    inv_inches,
+    inv_feet,
+    _count [[maybe_unused]],
+};
 
 // A list of all unit enums, for internal use.
 #define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit) X(MovementSpeedUnit) X(AreaUnit) X(VolumeUnit) X(InvLengthUnit)
@@ -77,8 +173,6 @@ template <UnitEnum E>
 
 namespace detail::Units
 {
-    struct Empty {};
-
     template <typename T>
     concept Scalar = std::is_arithmetic_v<T> && !std::is_same_v<T, bool>;
 

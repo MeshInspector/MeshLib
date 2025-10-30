@@ -18,7 +18,7 @@ Our convention is:
 
 ### Converting between units
 
-You can use `convertUnits()` from `<MRViewer/MRUnits.h>` to convert between different units, e.g.:
+You can use `convertUnits()` from `<MRMesh/MRUnitInfo.h>` to convert between different units, e.g.:
 ```cpp
 float a = convertUnits( AngleUnit::degrees, AngleUnit::radians, 180.f ); // a == pi
 ```
@@ -28,7 +28,7 @@ You usually don't need to call `convertUnits()` directly, prefer higher-level fu
 
 Use `valueToString<E>( value )` from `<MRViewer/MRUnits.h>` to convert a value to a string.
 
-Here `E` is one of: `LengthUnit`, `AngleUnit`, `NoUnit`, ... (see the list of types in `MRUnits.h`).
+Here `E` is one of: `LengthUnit`, `AngleUnit`, `NoUnit`, ... (see the list of types in `<MRMesh/MRUnitInfo.h>`).
 
 For example:
 ```cpp
@@ -68,7 +68,7 @@ See the definition of `UnitToStringParams<E>` in `<MRViewer/MRUnits.h>` for the 
 
 Where:
 
-* `E` is one of: `LengthUnit`, `AngleUnit`, `NoUnit`, ... (see the list of types in `MRUnits.h`).
+* `E` is one of: `LengthUnit`, `AngleUnit`, `NoUnit`, ... (see the list of types in `<MRMesh/MRUnitInfo.h>`).
 
   See [Introduction](#introduction) for our default assumptions about units.
 
@@ -115,7 +115,7 @@ If you want to add a new unit to an existing enum: (say, add `LengthUnit::yards`
 
 * Add a new constant to the enum.
 
-* In `MRViewer/MRUnits.cpp`, in the `getUnitInfo()` specialization for your unit, add an array element with information about your unit.
+* In `<MRMesh/MRUnitInfo.cpp>`, in the `getUnitInfo()` specialization for your unit, add an array element with information about your unit.
 
 * If you're updating `LengthUnit` or anything that depends on length (such as `VolumeUnit`):
 
@@ -127,12 +127,12 @@ If you want to add a new unit to an existing enum: (say, add `LengthUnit::yards`
 If you want to create a new unit enum: (say, `EnergyUnit { joules, electronvolts, ... }`)
 
 * Add the enum to `MRMesh/MREnums.h`, next to the other enums.
-* Add your enum to the `#define DETAIL_MR_UNIT_ENUMS` macro in `MRViewer/MRUnits.h`.
+* Add your enum to the `#define DETAIL_MR_UNIT_ENUMS` macro in `<MRMesh/MRUnitInfo.h>`.
 * Add the default to-string parameters for your enum to `defaultUnitToStringParams` in `MRViewer/MRUnits.cpp`.
 
   The important thing you have to decide are: the default display unit and the default source code unit (which can be null to always match the display unit).
 
-* Add a specialization of `getUnitInfo()` to `MRViewer/MRUnits.cpp` for your enum, next to the other ones.
+* Add a specialization of `getUnitInfo()` to `<MRMesh/MRUnitInfo.cpp>` for your enum, next to the other ones.
 
 * Add your enum to `forAll...Params()` in `MRUnitSettings.cpp` (choose `...` accordingly).
 

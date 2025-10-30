@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRObject.h"
-#include "MREnums.h"
+#include "MRUnitInfo.h"
 #include <optional>
 
 namespace MR::SceneLoad

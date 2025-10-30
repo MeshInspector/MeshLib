@@ -84,7 +84,7 @@ void SceneObjectsListDrawer::draw( float height )
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
-    ImGui::BeginChild( "EmptySpace" );
+    ImGui::BeginChild( "EmptySpace", ImGui::GetContentRegionAvail() );
     if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
     {
         for ( const auto& s : selected )

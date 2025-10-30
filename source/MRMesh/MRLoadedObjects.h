@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MREnums.h"
+#include "MRUnitInfo.h"
 #include <memory>
 #include <optional>
 

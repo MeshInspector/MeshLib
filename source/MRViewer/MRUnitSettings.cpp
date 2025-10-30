@@ -184,6 +184,13 @@ void setModelLengthUnit( std::optional<LengthUnit> unit )
     } );
 }
 
+std::optional<LengthUnit> getActualModelLengthUnit()
+{
+    auto res = getModelLengthUnit();
+    if ( !res )
+        res = getUiLengthUnit();
+    return res;
+}
 
 DegreesMode getDegreesMode()
 {

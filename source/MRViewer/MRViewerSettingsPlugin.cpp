@@ -1037,11 +1037,12 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
 
         auto plusPos = ctrlStr.rfind( '+' );
+        std::string uniqueKeyStr = "##key" + std::to_string( i );
         if ( plusPos == std::string::npos )
         {
             // Draw button name in a frame
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * UI::scale() } );
-            UI::inputTextCenteredReadOnly( "##key", ctrlStr, 54 * UI::scale() );
+            UI::inputTextCenteredReadOnly( uniqueKeyStr.c_str(), ctrlStr, 54 * UI::scale() );
             ImGui::PopStyleVar();
             ImGui::SameLine();
         }
@@ -1051,7 +1052,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x * 0.25f, style.ItemSpacing.y } );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * UI::scale() } );
-            UI::inputTextCenteredReadOnly( "##modifierKey", ctrlStr.substr( 0, plusPos ),
+            auto modKeyUniqueStr = "##modifierKey" + std::to_string( i );
+            UI::inputTextCenteredReadOnly( modKeyUniqueStr.c_str(), ctrlStr.substr( 0, plusPos ),
                 // Expand the area in case of multiple modifiers (assume that is rarely used)
                 std::max( 54.0f, 7 * float( plusPos ) ) * UI::scale() );
             ImGui::PopStyleVar();
@@ -1063,7 +1065,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * UI::scale() } );
-            UI::inputTextCenteredReadOnly( "##key", ctrlStr.substr( plusPos + 1 ), 54 * UI::scale() );
+            UI::inputTextCenteredReadOnly( uniqueKeyStr.c_str(), ctrlStr.substr( plusPos + 1 ), 54 * UI::scale() );
             ImGui::PopStyleVar();
 
             ImGui::PopStyleVar();

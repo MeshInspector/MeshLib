@@ -57,7 +57,8 @@ struct UnitInfo
 template <UnitEnum E>
 [[nodiscard]] const UnitInfo& getUnitInfo( E unit ) = delete;
 
-#define MR_X(E) template <> [[nodiscard]] MRMESH_API const UnitInfo& getUnitInfo( E unit );
+// ignore for bindings to prevent GCC14 error: undefined symbol: _ZN2MR11getUnitInfoITkNS_8UnitEnumENS_8TimeUnitEEERKNS_8UnitInfoET_
+#define MR_X(E) template <> [[nodiscard]] MRMESH_API MR_BIND_IGNORE const UnitInfo& getUnitInfo( E unit );
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 

@@ -190,6 +190,20 @@ FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir 
     return metric;
 }
 
+FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, const Vector3f& upDir )
+{
+    MR::FillHoleMetric metric;
+    metric.edgeMetric = [&mesh, up = Vector3d( upDir ).normalized()] ( MR::VertId a, MR::VertId b, MR::VertId, MR::VertId )
+    {
+        const Vector3d ap( mesh.points[a] );
+        const Vector3d bp( mesh.points[b] );
+        const auto ab = bp - ap;
+        // larger orthogonal component of AB - larger penalty
+        return ( ab - dot( ab, up ) * up ).lengthSq();
+    };
+    return metric;
+}
+
 FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e0 )
 {
     float maxEdgeLengthSq = 0.0f;

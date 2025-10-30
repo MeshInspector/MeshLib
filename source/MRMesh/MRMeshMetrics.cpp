@@ -198,8 +198,8 @@ FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, const Vector3
         const Vector3d ap( mesh.points[a] );
         const Vector3d bp( mesh.points[b] );
         const auto ab = bp - ap;
-        // larger ortogonal component of AB - larger penalty
-        return ( ab - ( dot( ab, up ) / up.lengthSq() * up ) ).lengthSq();
+        // larger orthogonal component of AB - larger penalty
+        return ( ab - dot( ab, up ) * up ).lengthSq();
     };
     return metric;
 }

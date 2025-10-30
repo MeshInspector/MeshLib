@@ -36,6 +36,7 @@
 #include "MRViewportGlobalBasis.h"
 #include "MRFileLoadOptions.h"
 #include "MRWebRequest.h"
+#include "MRUnitSettings.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
@@ -1262,7 +1263,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [this, options] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [this, options] ( const SceneLoad::Result& result )
     {
         if ( result.scene )
         {
@@ -1347,16 +1348,18 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
     ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
     {
-        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::SceneLoadResult result )
+        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::Result result )
         {
             postProcess( result );
             ProgressBar::finish();
-        }, ProgressBar::callBackSetProgress );
+        },
+        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
     } );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
     {
-        auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
+        auto result = SceneLoad::fromAnySupportedFormat( filesList,
+            { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
         return [result = std::move( result ), postProcess]
         {
             postProcess( result );

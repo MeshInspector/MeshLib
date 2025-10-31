@@ -18,6 +18,7 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRJson.h"
+#include "MRMesh/MRString.h"
 
 #include <tinyxml2.h>
 
@@ -30,23 +31,22 @@ namespace MR
 
 static Expected <AffineXf3f> parseAffineXf( const std::string& s )
 {
-    std::istringstream ss( s );
-    float value;
-    AffineXf3f xf;
-    int row = 0, col = 0;
-    while ( ss >> value )
+    AffineXf3d xf;
+    bool success{ true };
+    int curId = 0;
+    MR::split( s, " ", [&] ( const std::string_view& sub )
     {
-        if ( row < 3 )
-            xf.A[row][col] = value;
-        else if ( row == 3 )
-            xf.b[col] = value;
-        col++;
-        if ( col == 3 )
-            col = 0, row++;
-    }
-    if ( !( row == 4 && col == 0 ) )
+        auto [_, ec] = std::from_chars( sub.data(), sub.data() + sub.size(), ( ( double* )( &xf ) )[curId++] );
+        if ( ec != std::errc() )
+        {
+            success = false;
+            return true; // break
+        }
+        return false;
+    } );
+    if ( !success )
         return unexpected( "Invalid matrix format" );
-    return xf;
+    return AffineXf3f( xf );
 }
 
 static Expected<Color> parseColor( const std::string& s )
@@ -284,8 +284,6 @@ Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, const ProgressCallb
     if ( std::string( xmlNode->Name() ) != "model" ) //maybe another xml, just skip
         return {};
 
-    objectCount_ = 0;
-    objectsLoaded_ = 0;
     progress_ = callback;
 
     auto resourcesNode = xmlNode->FirstChildElement( "resources" );
@@ -334,6 +332,8 @@ Expected<void> ThreeMFLoader::loadTree_( const ProgressCallback& callback )
 
     for ( auto& [_, xmlDoc] : xmlDocuments_ )
     {
+        objectCount_ = 0;
+        objectsLoaded_ = 0;
         if ( auto resOrErr = loadDocument_( xmlDoc, subprogress(callback, documentsLoaded_, xmlDocuments_.size())); !resOrErr )
             return unexpected( resOrErr.error() );
     }

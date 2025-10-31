@@ -124,7 +124,7 @@ namespace MR::Extra
     // Detects the format from file extension and loads scene object from it.
     Expected<std::shared_ptr<Object>> loadSceneObject( const std::filesystem::path& path, ProgressCallback callback = {} )
     {
-        auto result = SceneLoad::fromAnySupportedFormat( { path }, std::move( callback ) );
+        auto result = SceneLoad::fromAnySupportedFormat( { path }, { .progress = std::move( callback ) } );
         if ( !result.scene || !result.errorSummary.empty() )
             return unexpected( std::move( result.errorSummary ) );
 

@@ -211,6 +211,8 @@ class ThreeMFLoader
     bool filamentInited_{ false };
     void initFilamentColors_(); // specific way for FaceColors used in PrunaSlicer and BambuStudio
 
+    std::optional<LengthUnit> lengthUnit_;
+
 public:
     std::string warnings;
     bool failedToLoadColoring = false;
@@ -283,6 +285,24 @@ Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, const ProgressCallb
     auto xmlNode = doc.doc->FirstChildElement();
     if ( std::string( xmlNode->Name() ) != "model" ) //maybe another xml, just skip
         return {};
+
+    if ( auto unitVal = xmlNode->Attribute( "unit" ) )
+    {
+        static constexpr const char * sUnitNames[(int)LengthUnit::_count] =
+        {
+            "micron",
+            "millimeter",
+            "centimeter",
+            "meter",
+            "inch",
+            "foot"
+        };
+        for ( int u = 0; u < (int)LengthUnit::_count; ++u )
+        {
+            if ( std::strcmp( unitVal, sUnitNames[u] ) == 0 )
+                lengthUnit_ = LengthUnit( u );
+        }
+    }
 
     progress_ = callback;
 
@@ -380,7 +400,7 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
 
     if ( objRes->children().size() == 1 )
         objRes = objRes->children()[0];
-    return LoadedObject{ .obj = objRes, .warnings = std::move( warnings ) };
+    return LoadedObject{ .obj = objRes, .warnings = std::move( warnings ), .lengthUnit = lengthUnit_ };
 }
 
 Expected<void> Node::loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElement* xmlNode, const ProgressCallback& callback )

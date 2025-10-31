@@ -31,20 +31,21 @@ namespace MR
 
 static Expected <AffineXf3f> parseAffineXf( const std::string& s )
 {
+    std::istringstream ss( s );
+    double value;
     AffineXf3d xf;
-    bool success{ true };
-    int curId = 0;
-    MR::split( s, " ", [&] ( const std::string_view& sub )
+    int row = 0, col = 0;
+    while ( ss >> value )
     {
-        auto [_, ec] = std::from_chars( sub.data(), sub.data() + sub.size(), ( ( double* )( &xf ) )[curId++] );
-        if ( ec != std::errc() )
-        {
-            success = false;
-            return true; // break
-        }
-        return false;
-    } );
-    if ( !success )
+        if ( row < 3 )
+            xf.A[row][col] = value;
+        else if ( row == 3 )
+            xf.b[col] = value;
+        col++;
+        if ( col == 3 )
+            col = 0, row++;
+    }
+    if ( !( row == 4 && col == 0 ) )
         return unexpected( "Invalid matrix format" );
     return AffineXf3f( xf );
 }

@@ -1229,6 +1229,14 @@ float ImGuiMenu::drawSelectionInformation_()
 
     for ( const auto& obj : selectedObjs )
     {
+        const auto xf = obj->worldXf();
+        Matrix3f q, r;
+        decomposeMatrix3( xf.A, q, r );
+        const Vector3f scale{ r.x.x, r.y.y, r.z.z };
+        const auto lengthScale = ( scale.x + scale.y + scale.z ) / 3; // correct for uniform scales only
+        const auto areaScale = sqr( lengthScale );
+        const auto volumeScale = scale.x * scale.y * scale.z; // correct for not-uniform scales as well
+
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )
         {
@@ -1255,10 +1263,10 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalVerts += mesh->topology.numValidVerts();
                 totalEdges += mObj->numUndirectedEdges();
                 totalSelectedEdges += mObj->numSelectedEdges();
-                totalVolume += mObj->volume();
-                totalArea += mObj->totalArea();
-                totalSelectedArea += mObj->selectedArea();
-                avgEdgeLen = mObj->avgEdgeLen();
+                totalVolume += volumeScale * mObj->volume();
+                totalArea += areaScale * mObj->totalArea();
+                totalSelectedArea += areaScale * mObj->selectedArea();
+                avgEdgeLen = lengthScale * mObj->avgEdgeLen();
                 holes += mObj->numHoles();
                 components += mObj->numComponents();
             }
@@ -1269,8 +1277,8 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 totalVerts += polyline->topology.numValidVerts();
                 totalEdges += lObj->numUndirectedEdges();
-                totalLength += polyline->totalLength();
-                avgEdgeLen = lObj->avgEdgeLen();
+                totalLength += lengthScale * polyline->totalLength();
+                avgEdgeLen = lengthScale * lObj->avgEdgeLen();
                 components += lObj->numComponents();
             }
         }
@@ -1439,12 +1447,20 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
-        drawDimensionsVec3( "Box Min", selectionBbox_.min, LengthUnit{} );
-        drawDimensionsVec3( "Box Max", selectionBbox_.max, LengthUnit{} );
+        drawDimensionsVec3( "Local Box Size", bsize, LengthUnit{} );
+        UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
+
+        drawDimensionsVec3( "Local Box Min", selectionBbox_.min, LengthUnit{} );
+        UI::setTooltipIfHovered( "Lower left corner of the tight axis-aligned bounding box in the local object space." );
+
+        drawDimensionsVec3( "Local Box Max", selectionBbox_.max, LengthUnit{} );
+        UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the local object space." );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+        {
             drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );
+            UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the world space." );
+        }
     }
 
     if ( totalFaces || totalVerts || totalEdges || totalPoints )
@@ -1464,26 +1480,33 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( totalFaces )
     {
         drawUnitInfo( "Volume", totalVolume, VolumeUnit{} );
+        UI::setTooltipIfHovered( "The volume surrounded by the mesh(es) in the world space." );
 
         ImGui::SetNextItemWidth( itemWidth );
         if ( totalSelectedArea > 0 )
         {
             UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
                 { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
-            UI::setTooltipIfHovered( "Selected / Total surface area" );
+            UI::setTooltipIfHovered( "Selected / Total surface area in the world space." );
         }
         else
         {
             UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
-            UI::setTooltipIfHovered( "Total surface area" );
+            UI::setTooltipIfHovered( "Total surface area in the world space." );
         }
     }
 
     if ( totalLength > 0 )
+    {
         drawUnitInfo( "Length", totalLength, LengthUnit{} );
+        UI::setTooltipIfHovered( "The length of the lines in the world space." );
+    }
 
     if ( selectedObjs.size() == 1 && avgEdgeLen > 0 )
+    {
         drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
+        UI::setTooltipIfHovered( "Average edge length of the object(s) in the world space." );
+    }
 
     drawPrimitivesInfo( "Holes", holes );
     drawPrimitivesInfo( "Components", components );

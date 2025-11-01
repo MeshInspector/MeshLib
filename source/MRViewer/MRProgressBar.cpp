@@ -12,6 +12,7 @@
 #include "MRCommandLoop.h"
 #include "MRColorTheme.h"
 #include "MRRibbonFontManager.h"
+#include "MRRibbonFontHolder.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
@@ -234,9 +235,7 @@ void setup()
         instance.frameRequest_.reset();
 
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
-        auto smallFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
-        if ( smallFont )
-            ImGuiObsolete::PushFont( smallFont );
+        RibbonFontHolder smallFont( RibbonFontManager::FontType::Small );
         ImGui::PushStyleColor( ImGuiCol_Text, StyleConsts::ProgressBar::textColor.getUInt32() );
         ImGui::SetCursorPos( ImVec2( 32.0f * UI::scale(), 20.0f * UI::scale() ) );
         {
@@ -257,8 +256,7 @@ void setup()
             }
         }
         ImGui::PopStyleColor();
-        if ( smallFont )
-            ImGui::PopFont();
+        smallFont.popFont();
 
         auto progress = (float)instance.progress_;
         ImGui::SetCursorPos( ImVec2( 32.0f * UI::scale(), 56.0f * UI::scale() ) );

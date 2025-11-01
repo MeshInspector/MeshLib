@@ -37,7 +37,6 @@ void Toolbar::drawToolbar()
         return;
 
     const auto& buttonDrawer = ribbonMenu_->getRibbonButtonDrawer();
-    const auto& fontManager = ribbonMenu_->getFontManager();
 
     auto windowPadding = ImVec2( 12 * UI::scale(), 4 * UI::scale() );
     auto itemSpacing = ImVec2( 12 * UI::scale(), 0 );
@@ -98,7 +97,7 @@ void Toolbar::drawToolbar()
 
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
-    ImGuiObsolete::PushFont( fontManager.getFontByType( RibbonFontManager::FontType::Small ) );
+    RibbonFontHolder smallFont( RibbonFontManager::FontType::Small );
     UI::TestEngine::pushTree( "Toolbar" );
     for ( const auto& item : itemsList_ )
     {
@@ -150,7 +149,7 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ).getUInt32() );
 
-    RibbonFontHolder font( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
 
     const char* text = "\xef\x85\x82";
     auto textSize = ImGui::CalcTextSize( text );
@@ -164,12 +163,12 @@ void Toolbar::drawToolbar()
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );
 
-    font.popFont();
+    iconsFont.popFont();
 
     ImGui::PopStyleColor( 4 );
 
     ImGui::PopStyleVar();
-    ImGui::PopFont();
+    smallFont.popFont();
 
     ImGui::End();
 }

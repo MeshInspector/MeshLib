@@ -130,7 +130,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             }
         }
 
-        ImGuiObsolete::PushFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small ) );
+        RibbonFontHolder font( RibbonFontManager::FontType::Small );
         auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * UI::scale();
         ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered,
@@ -229,7 +229,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             ImGui::EndChild();
         ImGui::PopStyleVar( 1 );
         ImGui::PopStyleColor( 3 );
-        ImGui::PopFont();
+        font.popFont();
         ImGui::End();
     }
 }

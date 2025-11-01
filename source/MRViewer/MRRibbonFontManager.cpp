@@ -123,6 +123,14 @@ ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
     return nullptr;
 }
 
+RibbonFontManager::FontAndSize RibbonFontManager::getFontAndSizeByTypeStatic( FontType type )
+{
+    RibbonFontManager* fontManager = getFontManagerInstance_();
+    if ( !fontManager )
+        return { nullptr, 0.f };
+    return { fontManager->getFontByType( type ), fontManager->getFontSizeByType( type ) };
+}
+
 void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontManager )
 {
     getFontManagerInstance_() = ribbonFontManager;
@@ -187,51 +195,5 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
         utf8string( fontPath ).c_str(), fontSize,
         &config, ranges );
 }
-
-//void RibbonFontManager::addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs )
-//{
-//    // `font->FontSize` is null at this point, so we must pass `fontSize` manually.
-//
-//    auto addGlyph = [&](
-//        ImWchar ch, float relWidth,
-//        std::function<void( unsigned char* texture, int stride, int rectW, int rectH )> render
-//    )
-//    {
-//        int height = int( std::floor( getFontSizeByType( font ) * UI::scale() ) );
-//        int width = int( std::round( height * relWidth ) );
-//
-//        int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )].fontPtr, ch, width, height, float( width ) );
-//        auto renderWrapper = [index, func = std::move( render )]( unsigned char* texData, int texW )
-//        {
-//            const ImFontAtlasCustomRect* rect = ImGui::GetIO().Fonts->GetCustomRectByIndex(index);
-//            func( texData + rect->X + rect->Y * texW, texW, rect->Width, rect->Height );
-//        };
-//        glyphs.push_back( CustomGlyph{ .render = renderWrapper } );
-//    };
-//
-//    if ( font != FontType::Icons )
-//    {
-//        addGlyph( 0x207B /*SUPERSCRIPT MINUS*/, 0.25f, []( unsigned char* texture, int stride, int rectW, int rectH )
-//        {
-//            int lineH = int( rectH * 0.30f );
-//
-//            for ( int y = 0; y < rectH; y++ )
-//            {
-//                unsigned char value = y == lineH ? 255 : 0;
-//                for ( int x = 0; x < rectW; x++ )
-//                    texture[x + y * stride] = value;
-//            }
-//        } );
-//    }
-//}
-
-//void RibbonFontManager::renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs )
-//{
-//    unsigned char* texData = nullptr;
-//    int texW = 0;
-//    ImGui::GetIO().Fonts->GetTexDataAsAlpha8( &texData, &texW, nullptr );
-//    for ( const CustomGlyph& glyph : glyphs )
-//        glyph.render( texData, texW );
-//}
 
 }

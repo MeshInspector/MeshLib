@@ -1879,12 +1879,9 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         return Transform{ xf, uniformScale };
     };
 
-    auto semiBoldFont = fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold );
-    if ( semiBoldFont )
-        ImGuiObsolete::PushFont( semiBoldFont );
+    RibbonFontHolder semiBoldFont( RibbonFontManager::FontType::SemiBold );
     ImGui::Text( "Transform Data" );
-    if ( semiBoldFont )
-        ImGui::PopFont();
+    semiBoldFont.popFont();
 
     const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
@@ -2261,9 +2258,9 @@ void RibbonMenu::drawShortcutsWindow_()
             if ( category != lastCategory )
             {
                 // draw category line
-                ImGuiObsolete::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::BigSemiBold ) );
+                RibbonFontHolder font( MR::RibbonFontManager::FontType::BigSemiBold );
                 UI::separator( ShortcutManager::categoryNames[int( category )].c_str() );
-                ImGui::PopFont();
+                font.popFont();
                 lastCategory = category;
             }
             // draw hotkey

@@ -91,7 +91,10 @@ void point( Element elem, const Params& params, ImVec2 point )
 static Text::FontFunc& defaultFontFuncStorage()
 {
     // We default to a monospaced font. Just in case, use a function and re-get it every time.
-    static Text::FontFunc ret = []{ return RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Monospace ); };
+    static Text::FontFunc ret = []
+    {
+        return RibbonFontManager::getFontAndSizeByTypeStatic( RibbonFontManager::FontType::Monospace );
+    };
     return ret;
 }
 
@@ -139,7 +142,7 @@ void Text::update( bool force ) const
         return; // Nothing to do.
     dirty = false;
 
-    ImFont* curFont = defaultFont;
+    std::pair<ImFont*, float> curFont = defaultFont;
 
     // Compute `elem.computedSize` and `line.computedSize[WithPadding].y`.
     for ( const Line& line : lines )
@@ -151,10 +154,10 @@ void Text::update( bool force ) const
             std::visit( overloaded{
                 [&]( const std::string& str )
                 {
-                    if ( curFont )
-                        ImGuiObsolete::PushFont( curFont );
+                    if ( curFont.first )
+                        ImGui::PushFont( curFont.first, curFont.second );
                     MR_FINALLY{
-                        if ( curFont )
+                        if ( curFont.first )
                             ImGui::PopFont();
                     };
 
@@ -172,7 +175,7 @@ void Text::update( bool force ) const
                 [&]( const TextFont& font )
                 {
                     elem.computedSize = ImVec2();
-                    curFont = font.font;
+                    curFont = { font.font, font.size };
                 },
             }, elem.var );
 
@@ -251,7 +254,7 @@ Text::DrawResult Text::draw( ImDrawList& list, ImVec2 pos, const TextColor& defa
     ret.cornerA = curPos;
     ret.cornerB = curPos + computedSize;
 
-    ImFont* curFont = defaultFont;
+    std::pair<ImFont*, float> curFont = defaultFont;
 
     for ( const Line& line : lines )
     {
@@ -266,10 +269,10 @@ Text::DrawResult Text::draw( ImDrawList& list, ImVec2 pos, const TextColor& defa
             std::visit( overloaded{
                 [&]( const std::string& str )
                 {
-                    if ( curFont )
-                        ImGuiObsolete::PushFont( curFont );
+                    if ( curFont.first )
+                        ImGui::PushFont( curFont.first, curFont.second );
                     MR_FINALLY{
-                        if ( curFont )
+                        if ( curFont.first )
                             ImGui::PopFont();
                     };
 
@@ -295,7 +298,7 @@ Text::DrawResult Text::draw( ImDrawList& list, ImVec2 pos, const TextColor& defa
                 },
                 [&]( const TextFont& font )
                 {
-                    curFont = font.font;
+                    curFont = { font.font, font.size };
                 },
             }, elem.var );
         }

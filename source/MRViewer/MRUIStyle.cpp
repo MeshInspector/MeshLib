@@ -2096,7 +2096,7 @@ void separator( const SeparatorParams& params )
             if ( !params.label.empty() || !params.suffix.empty() )
             {
                 ImGui::TableNextColumn();
-                ImGuiObsolete::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+                RibbonFontHolder sbFont( MR::RibbonFontManager::FontType::SemiBold );
                 if ( !params.label.empty() )
                     ImGui::Text( "%s", params.label.c_str() );
                 ImGui::SameLine();
@@ -2110,7 +2110,7 @@ void separator( const SeparatorParams& params )
                     if ( params.suffixFrameColor )
                         ImGui::PopStyleColor();
                 }
-                ImGui::PopFont();
+                sbFont.popFont();
             }
 
             // separator

@@ -33,8 +33,7 @@ RibbonFontHolder::RibbonFontHolder( const RibbonFontManager::FontType& fontType,
 
 RibbonFontHolder::~RibbonFontHolder()
 {
-    if ( pushed_ )
-        popFont();
+    assert( !pushed_ );
 }
 
 void RibbonFontHolder::pushFont()

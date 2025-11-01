@@ -19,7 +19,7 @@ public:
     // check the font for existence and push it
     MRVIEWER_API void pushFont();
 
-    // check the font is pushed and pop it
+    // check the font for existence and pop it
     MRVIEWER_API void popFont();
 
     // font is pushed

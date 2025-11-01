@@ -43,6 +43,8 @@ void RibbonFontHolder::pushFont()
 
 void RibbonFontHolder::popFont()
 {
+    if ( !font_ )
+        return;
     pushed_ = false;
     ImGui::PopFont();
 }

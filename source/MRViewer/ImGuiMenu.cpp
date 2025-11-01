@@ -349,25 +349,9 @@ static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR:
     return { atLeastOneTrue,allTrue };
 }
 
-//void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
-//{
-//    builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
-//    builder.AddChar( 0x2014 ); // EM DASH
-//    builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
-//    builder.AddChar( 0x2208 ); // INSIDE
-//    builder.AddChar( 0x2209 ); // OUTSIDE
-//    builder.AddChar( 0x2212 ); // MINUS SIGN
-//    builder.AddChar( 0x2229 ); // INTERSECTION
-//    builder.AddChar( 0x222A ); // UNION
-//    // Characters not in the font, with custom glyphs added in `addCustomGlyphs_`:
-//    // 0x207B SUPERSCRIPT MINUS
-//#ifndef __EMSCRIPTEN__
-//    builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
-//#endif
-//}
-
 void ImGuiMenu::load_font(int font_size)
 {
+    ImGui::GetStyle().FontScaleDpi = UI::scale();
 #ifdef _WIN32
     if ( viewer->isGLInitialized() )
     {
@@ -375,32 +359,24 @@ void ImGuiMenu::load_font(int font_size)
 
         auto fontPath = getMenuFontPath();
 
-        ImVector<ImWchar> ranges;
-        ImFontGlyphRangesBuilder builder;
-        //addMenuFontRanges_( builder );
-        builder.BuildRanges( &ranges );
-
         if ( !io.Fonts->AddFontFromFileTTF(
-            utf8string( fontPath ).c_str(), font_size * UI::scale(),
-            nullptr, ranges.Data ) )
+            utf8string( fontPath ).c_str(), font_size ) )
         {
             assert( false && "Failed to load font!" );
             spdlog::error( "Failed to load font from `{}`.", utf8string( fontPath ) );
 
             ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-                droid_sans_compressed_size, font_size * hidpi_scaling_ );
+                droid_sans_compressed_size, font_size );
         }
-        //io.Fonts->Build();
     }
     else
     {
         ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-            droid_sans_compressed_size, font_size * hidpi_scaling_ );
-        //ImGui::GetIO().Fonts[0].Build();
+            droid_sans_compressed_size, font_size );
     }
 #else
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-        droid_sans_compressed_size, font_size * hidpi_scaling_);
+        droid_sans_compressed_size, font_size );
     //TODO: expand for non-Windows systems
 #endif
 }

@@ -249,7 +249,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     UI::TestEngine::pushTree( "RibbonSearch" );
     if ( isSmallUI_ )
     {
-        if ( smallSearchButton_( params ) )
+        if ( smallSearchButton_() )
         {
             if ( blockSearchBtn_ )
                 blockSearchBtn_ = false;
@@ -266,7 +266,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
             ImGui::SetKeyboardFocusHere();
             setInputFocus_ = false;
         }
-        if ( searchInputText_( "##SearchLine", searchLine_, params ) )
+        if ( searchInputText_( "##SearchLine", searchLine_ ) )
             updateSearchResult_();
         if ( mainInputFocused_ && !ImGui::IsItemFocused() )
         {
@@ -314,7 +314,7 @@ void RibbonMenuSearch::activate()
         setInputFocus_ = true;
 }
 
-bool RibbonMenuSearch::smallSearchButton_( const Parameters& )
+bool RibbonMenuSearch::smallSearchButton_()
 {
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
@@ -337,7 +337,7 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& )
     return pressed;
 }
 
-bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& )
+bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str )
 {
     ImGui::PushID( "searchInputText" );
     const ImVec2 cursorPos = ImGui::GetCursorPos();

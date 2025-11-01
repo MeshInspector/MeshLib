@@ -181,7 +181,6 @@ void RibbonMenu::load_font( int )
 {
     ImVector<ImWchar> ranges;
     ImFontGlyphRangesBuilder builder;
-    //addMenuFontRanges_( builder );
     builder.BuildRanges( &ranges );
     fontManager_.loadAllFonts( ranges.Data );
     ImGui::GetStyle().FontScaleMain = hidpi_scaling_;

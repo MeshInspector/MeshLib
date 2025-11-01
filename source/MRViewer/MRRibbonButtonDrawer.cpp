@@ -290,6 +290,8 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     else if ( params.sizeType != DrawButtonParams::SizeType::Big )
         fontScale = cSmallIconSize / cBigIconSize;
     RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
+    if ( !iconsFont.isPushed() )
+        fontScale = 1.f;
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
@@ -402,6 +404,8 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
     else if ( params.sizeType != DrawButtonParams::SizeType::Big )
         fontScale = cSmallIconSize / cBigIconSize;
     RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
+    if ( !iconsFont.isPushed() )
+        fontScale = 1.f;
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );

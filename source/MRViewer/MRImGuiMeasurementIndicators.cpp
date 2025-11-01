@@ -5,7 +5,6 @@
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRUIStyle.h"
-#include "ImGuiHelpers.h"
 
 namespace MR::ImGuiMeasurementIndicators
 {

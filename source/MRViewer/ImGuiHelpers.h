@@ -365,3 +365,4 @@ inline ImVec2 GetContentRegionMax()
 #endif
 
 } // namespace ImGui
+

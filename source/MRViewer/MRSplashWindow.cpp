@@ -219,7 +219,7 @@ void DefaultSplashWindow::reloadFont_( float hdpiScale, float pixelRatio )
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
         droid_sans_compressed_size, 14.0f * hdpiScale );
 
-    io.FontGlobalScale = 1.0f / pixelRatio;
+    ImGui::GetStyle().FontScaleMain = 1.0f / pixelRatio;
 }
 
 bool DefaultSplashWindow::frame_( float /*scaling*/ )

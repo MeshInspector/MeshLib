@@ -30,7 +30,8 @@
 #include "MRViewport.h"
 #include "MRImGuiImage.h"
 #include "ImGuiHelpers.h"
-#include "imgui_internal.h"
+#include "MRRibbonFontHolder.h"
+#include <imgui_internal.h>
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -70,16 +71,14 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
 
     if ( !imageIcon )
     {
-        auto font = fontManager.getFontByType( RibbonFontManager::FontType::Icons );
-        font->Scale = fontManager.getFontSizeByType( RibbonFontManager::FontType::Default ) /
+        const float fontScale = fontManager.getFontSizeByType( RibbonFontManager::FontType::Default ) /
             fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGui::PushFont( font );
+        RibbonFontHolder font( RibbonFontManager::FontType::Icons, fontScale );
 
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( imageSize - ImGui::GetFontSize() ) * 0.5f );
         ImGui::Text( "%s", getSceneItemIconByTypeName_( obj.typeName() ) );
 
-        ImGui::PopFont();
-        font->Scale = 1.0f;
+        font.popFont();
     }
     else
     {

@@ -4,12 +4,13 @@
 #include "MRRibbonFontManager.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonButtonDrawer.h"
-#include <imgui_internal.h>
-#include "MRViewer/MRUITestEngine.h"
+#include "MRUITestEngine.h"
 #include "MRViewerInstance.h"
-#include "MRViewer/MRViewer.h"
+#include "MRViewer.h"
 #include "MRRibbonMenu.h"
 #include "MRUIStyle.h"
+#include "MRRibbonFontHolder.h"
+#include <imgui_internal.h>
 
 namespace MR
 {
@@ -129,7 +130,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             }
         }
 
-        ImGui::PushFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small ) );
+        RibbonFontHolder font( RibbonFontManager::FontType::Small );
         auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * UI::scale();
         ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered,
@@ -228,7 +229,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             ImGui::EndChild();
         ImGui::PopStyleVar( 1 );
         ImGui::PopStyleColor( 3 );
-        ImGui::PopFont();
+        font.popFont();
         ImGui::End();
     }
 }
@@ -248,7 +249,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     UI::TestEngine::pushTree( "RibbonSearch" );
     if ( isSmallUI_ )
     {
-        if ( smallSearchButton_( params ) )
+        if ( smallSearchButton_() )
         {
             if ( blockSearchBtn_ )
                 blockSearchBtn_ = false;
@@ -265,7 +266,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
             ImGui::SetKeyboardFocusHere();
             setInputFocus_ = false;
         }
-        if ( searchInputText_( "##SearchLine", searchLine_, params ) )
+        if ( searchInputText_( "##SearchLine", searchLine_ ) )
             updateSearchResult_();
         if ( mainInputFocused_ && !ImGui::IsItemFocused() )
         {
@@ -313,12 +314,8 @@ void RibbonMenuSearch::activate()
         setInputFocus_ = true;
 }
 
-bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
+bool RibbonMenuSearch::smallSearchButton_()
 {
-    ImFont* font = params.fontManager.getFontByType( RibbonFontManager::FontType::Icons );
-    if ( font )
-        font->Scale = 0.7f;
-
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     if ( active_ )
@@ -330,14 +327,9 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
 
     float btnSize = UI::scale() * cTopPanelAditionalButtonSize;
-    if ( font )
-        ImGui::PushFont( font );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
     bool pressed = UI::buttonEx( "\xef\x80\x82", ImVec2( btnSize, btnSize ), { .forceImGuiBackground = true, .testEngineName = "ActivateSearchBtn" } );
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    font.popFont();
 
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar( 2 );
@@ -345,7 +337,7 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
     return pressed;
 }
 
-bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& params )
+bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str )
 {
     ImGui::PushID( "searchInputText" );
     const ImVec2 cursorPos = ImGui::GetCursorPos();
@@ -365,19 +357,11 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
         ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
         ++colorNum;
     }
-    ImFont* font = params.fontManager.getFontByType( RibbonFontManager::FontType::Icons );
-    if ( font )
-        font->Scale = 0.7f;
-    if ( font )
-        ImGui::PushFont( font );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
     const float inputWidth = cSearchSize * UI::scale() - style.FramePadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "\xef\x80\x82" ).x;
     ImGui::SetCursorPos( ImVec2( cursorPos.x + inputWidth + style.ItemSpacing.x, cursorPos.y + style.FramePadding.y ) );
     ImGui::Text( "%s", "\xef\x80\x82" );
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    font.popFont();
     if ( colorNum )
         ImGui::PopStyleColor( colorNum );
 

@@ -8,10 +8,11 @@
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRVector2.h"
-#include "imgui_internal.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include "MRRibbonFontHolder.h"
 #include "MRPch/MRSpdlog.h"
+#include <imgui_internal.h>
 
 namespace MR
 {
@@ -36,7 +37,6 @@ void Toolbar::drawToolbar()
         return;
 
     const auto& buttonDrawer = ribbonMenu_->getRibbonButtonDrawer();
-    const auto& fontManager = ribbonMenu_->getFontManager();
 
     auto windowPadding = ImVec2( 12 * UI::scale(), 4 * UI::scale() );
     auto itemSpacing = ImVec2( 12 * UI::scale(), 0 );
@@ -97,7 +97,7 @@ void Toolbar::drawToolbar()
 
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
-    ImGui::PushFont( fontManager.getFontByType( RibbonFontManager::FontType::Small ) );
+    RibbonFontHolder smallFont( RibbonFontManager::FontType::Small );
     UI::TestEngine::pushTree( "Toolbar" );
     for ( const auto& item : itemsList_ )
     {
@@ -149,12 +149,7 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ).getUInt32() );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        font->Scale = customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() );
-        ImGui::PushFont( font );
-    }
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
 
     const char* text = "\xef\x85\x82";
     auto textSize = ImGui::CalcTextSize( text );
@@ -168,16 +163,12 @@ void Toolbar::drawToolbar()
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );
 
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    iconsFont.popFont();
 
     ImGui::PopStyleColor( 4 );
 
     ImGui::PopStyleVar();
-    ImGui::PopFont();
+    smallFont.popFont();
 
     ImGui::End();
 }

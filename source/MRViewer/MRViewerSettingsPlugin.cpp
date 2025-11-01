@@ -622,19 +622,21 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         // --- Units
 
-        static const std::vector<std::string> optionNames = []{
+        auto makeLengthUnitsVec = []( const char * lastOption )
+        {
             std::vector<std::string> ret;
             ret.reserve( std::size_t( LengthUnit::_count ) + 1 );
             for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
                 ret.emplace_back( getUnitInfo( LengthUnit( i ) ).prettyName );
-            ret.emplace_back( "No units" );
+            ret.emplace_back( lastOption );
             return ret;
-        }();
+        };
 
         int targetOption = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        if ( UI::combo( "UI Units##length", &targetOption, optionNames ) )
+        static const std::vector<std::string> uiLengthUnitNames = makeLengthUnitsVec( "No Units" );
+        if ( UI::combo( "UI Units##length", &targetOption, uiLengthUnitNames ) )
         {
             if ( targetOption == int( LengthUnit::_count ) )
                 UnitSettings::setUiLengthUnit( {}, true );
@@ -644,14 +646,15 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         UI::setTooltipIfHovered( "It selects length units to be show in the user interface. If model units are different, then stored values will be automatically converted when shown in UI." );
 
         int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
-        if ( UI::combo( "Model Units##length", &sourceOption, optionNames ) )
+        static const std::vector<std::string> modelLengthUnitNames = makeLengthUnitsVec( "Same as UI Units" );
+        if ( UI::combo( "Model Units##length", &sourceOption, modelLengthUnitNames ) )
         {
             if ( sourceOption == int( LengthUnit::_count ) )
                 UnitSettings::setModelLengthUnit( {} );
             else
                 UnitSettings::setModelLengthUnit( LengthUnit( sourceOption ) );
         }
-        UI::setTooltipIfHovered( "It selects length units of model's actual values (e.g. coordinates of points stored in memory). And it affects on importing and exporting of data. 'No units' here means unknown units of import data, and it turns off values conversion for the UI." );
+        UI::setTooltipIfHovered( "It selects length units of model's actual values (e.g. coordinates of points stored in memory). And it affects on importing and exporting of data." );
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();

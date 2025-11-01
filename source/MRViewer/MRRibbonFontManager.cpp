@@ -162,7 +162,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
 
         auto* lFont = localFonts[i];
         const char wChar[] = "W\0";
-        auto textSize = lFont->CalcTextSizeA( fontSize, 100, 100, wChar, wChar + 1 );
+        [[maybe_unused]] auto textSize = lFont->CalcTextSizeA( fontSize, 10, 10, wChar, wChar + 1 );
         auto glyph = lFont->GetFontBaked( fontSize )->FindGlyph( 'W' );
         Box2f box;
         box.include( Vector2f( glyph->X0, glyph->Y0 ) );

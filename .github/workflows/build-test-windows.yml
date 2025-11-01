@@ -279,6 +279,22 @@ jobs:
           if exist source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
           if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
+      - name: Build C++ examples
+        #if: ${{ matrix.build_system == 'CMake' }}
+        env:
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D MESHLIB_INCLUDE_DIR=./source/ \
+            -D MESHLIB_THIRDPARTY_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-meshlib/ \
+            -D MESHLIB_LIB_DIR=./source/x64/${{ matrix.config }}/
+          cmake \
+            --build cpp-examples-build \
+            --config ${{ matrix.config }} \
+            --parallel $env:NUMBER_OF_PROCESSORS
+
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' }}

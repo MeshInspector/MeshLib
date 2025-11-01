@@ -156,6 +156,7 @@
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MRObjectMeshData.h" />
+    <ClInclude Include="MRObjectSaveSettings.h" />
     <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MROneMeshContours.h" />
     <ClInclude Include="MROutlierPoints.h" />

@@ -723,31 +723,17 @@ class WatershedGraph;
 
 struct TbbTaskArenaAndGroup;
 
+struct SaveSettings;
+namespace ObjectSave { struct Settings; }
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-enum class FilterType : char
-{
-    Linear,
-    Discrete
-};
-
-enum class WrapType : char
-{
-    Repeat,
-    Mirror,
-    Clamp
-};
-
-/// determines how points to be ordered
-enum class Reorder : char
-{
-    None,              ///< the order is not changed
-    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
-    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
-};
+enum class FilterType : char;
+enum class WrapType : char;
+enum class Reorder : char;
 
 /// squared value
 template <typename T>

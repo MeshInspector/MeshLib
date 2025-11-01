@@ -7,6 +7,7 @@
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MROpenObjects.h"
 #include "MRViewer/MRFileLoadOptions.h"
+#include "MRViewer/MRUnitSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -742,7 +743,11 @@ bool SaveSelectedMenuItem::action()
 
         ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone]()->std::function<void()>
         {
-            auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath, ProgressBar::callBackSetProgress );
+            auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath,
+                {
+                    .lengthUnit = UnitSettings::getActualModelLengthUnit(),
+                    .progress = ProgressBar::callBackSetProgress
+                } );
 
             return[savePath, res]()
             {
@@ -787,7 +792,11 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
         if ( savePath.extension().empty() )
             return [] { showError( "File name is not set" ); };
 
-        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
+            {
+                .lengthUnit = UnitSettings::getActualModelLengthUnit(),
+                .progress = ProgressBar::callBackSetProgress
+            } );
 
         return[savePath, res]()
         {

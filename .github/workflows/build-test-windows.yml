@@ -288,6 +288,22 @@ jobs:
         if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
         run: tar -a -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
 
+      - name: Build C++ examples
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
+        env:
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D MESHLIB_INCLUDE_DIR=./source/ \
+            -D MESHLIB_THIRDPARTY_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-meshlib/ \
+            -D MESHLIB_LIB_DIR=./source/x64/Release/
+          cmake \
+            --build cpp-examples-build \
+            --config Release \
+            --parallel $env:NUMBER_OF_PROCESSORS
+
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' }}
         uses: actions/upload-artifact@v5

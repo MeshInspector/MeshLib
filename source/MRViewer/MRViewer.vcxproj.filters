@@ -488,7 +488,7 @@
       <Filter>RibbonMenu</Filter>
     </ClCompile>
     <ClCompile Include="MRRibbonFontHolder.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>RibbonMenu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -964,7 +964,7 @@
       <Filter>Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonFontHolder.h">
-      <Filter>Source Files</Filter>
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

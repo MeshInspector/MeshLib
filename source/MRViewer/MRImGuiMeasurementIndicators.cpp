@@ -141,7 +141,7 @@ void Text::update( bool force ) const
         return; // Nothing to do.
     dirty = false;
 
-    std::pair<ImFont*, float> curFont = defaultFont;
+    FontAndSize curFont = defaultFont;
 
     // Compute `elem.computedSize` and `line.computedSize[WithPadding].y`.
     for ( const Line& line : lines )
@@ -253,7 +253,7 @@ Text::DrawResult Text::draw( ImDrawList& list, ImVec2 pos, const TextColor& defa
     ret.cornerA = curPos;
     ret.cornerB = curPos + computedSize;
 
-    std::pair<ImFont*, float> curFont = defaultFont;
+    FontAndSize curFont = defaultFont;
 
     for ( const Line& line : lines )
     {

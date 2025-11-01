@@ -7,7 +7,6 @@ RibbonFontHolder::RibbonFontHolder( const RibbonFontManager::FontType& fontType 
 {
     font_ = RibbonFontManager::getFontByTypeStatic( fontType );
     size_ = RibbonFontManager::getFontSizeByType( fontType );
-    assert( font_ );
     assert( size_ >= 1.f );
     pushFont();
 }
@@ -16,7 +15,6 @@ RibbonFontHolder::RibbonFontHolder( const RibbonFontManager::FontType& fontType,
 {
     font_ = RibbonFontManager::getFontByTypeStatic( fontType );
     size_ = RibbonFontManager::getFontSizeByType( fontType ) * scale;
-    assert( font_ );
     assert( size_ >= 1.f );
     pushFont();
 }
@@ -25,7 +23,6 @@ RibbonFontHolder::RibbonFontHolder( const RibbonFontManager::FontType& fontType,
 {
     font_ = RibbonFontManager::getFontByTypeStatic( fontType );
     size_ = RibbonFontManager::getFontSizeByType( fontType ) * scale;
-    assert( font_ );
     assert( size_ >= 1.f );
     if ( pushOnCreate )
         pushFont();

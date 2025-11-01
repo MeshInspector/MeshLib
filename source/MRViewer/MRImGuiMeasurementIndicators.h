@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRFlagOperators.h"
 #include "MRViewer/exports.h"
+#include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 
 #include <imgui.h>
@@ -188,14 +189,14 @@ struct Text
     // Alignment. [0,0] = top-left, [1,1] = bottom-right.
     ImVec2 align;
 
-    using FontFunc = std::function<std::pair<ImFont*, float>()>;
+    using FontFunc = std::function<FontAndSize()>;
     // Get the default value for `.defaultFont`. This can be null to default to null, which means the current font.
     [[nodiscard]] MRVIEWER_API static const FontFunc& getStaticDefaultFontFunc();
     MRVIEWER_API static void setStaticDefaultFontFunc( FontFunc func );
 
     // If null, uses the current font. Currently this defaults to a monospaced font.
     // This is here because `update()` needs to know the font too.
-    std::pair<ImFont*, float> defaultFont = getStaticDefaultFontFunc()();
+    FontAndSize defaultFont = getStaticDefaultFontFunc()();
 
     // The computed content size. Read-only. Don't set manually, `update()` sets this.
     mutable ImVec2 computedSize;

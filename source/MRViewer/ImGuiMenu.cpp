@@ -351,7 +351,6 @@ static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR:
 
 void ImGuiMenu::load_font(int font_size)
 {
-    ImGui::GetStyle().FontScaleDpi = UI::scale();
 #ifdef _WIN32
     if ( viewer->isGLInitialized() )
     {
@@ -360,23 +359,23 @@ void ImGuiMenu::load_font(int font_size)
         auto fontPath = getMenuFontPath();
 
         if ( !io.Fonts->AddFontFromFileTTF(
-            utf8string( fontPath ).c_str(), font_size ) )
+            utf8string( fontPath ).c_str(), float( font_size ) ) )
         {
             assert( false && "Failed to load font!" );
             spdlog::error( "Failed to load font from `{}`.", utf8string( fontPath ) );
 
             ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-                droid_sans_compressed_size, font_size );
+                droid_sans_compressed_size, float( font_size ) );
         }
     }
     else
     {
         ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-            droid_sans_compressed_size, font_size );
+            droid_sans_compressed_size, float( font_size ) );
     }
 #else
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-        droid_sans_compressed_size, font_size );
+        droid_sans_compressed_size, float( font_size ) );
     //TODO: expand for non-Windows systems
 #endif
 }
@@ -390,7 +389,6 @@ void ImGuiMenu::reload_font(int font_size)
   ImGuiIO& io = ImGui::GetIO();
   io.Fonts->Clear();
 
-  ImGui::GetStyle().FontScaleDpi = hidpi_scaling_;
   load_font(font_size);
 
 }

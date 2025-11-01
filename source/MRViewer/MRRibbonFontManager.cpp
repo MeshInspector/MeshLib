@@ -13,7 +13,7 @@
 namespace MR
 {
 
-static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr )
+static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr, const char* additionalFilename = nullptr )
 {
     auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF( filename, size_pixels, font_cfg, glyph_ranges );
     if ( !font )
@@ -23,6 +23,12 @@ static ImFont* loadFontChecked( const char* filename, float size_pixels, const I
 
         font = ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
             droid_sans_compressed_size, size_pixels, font_cfg, glyph_ranges );
+    }
+    if ( additionalFilename )
+    {
+        ImFontConfig cfg = *font_cfg;
+        cfg.MergeMode = true;
+        ImGui::GetIO().Fonts->AddFontFromFileTTF( additionalFilename, size_pixels, &cfg, glyph_ranges );
     }
     return font;
 }
@@ -123,7 +129,7 @@ ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
     return nullptr;
 }
 
-RibbonFontManager::FontAndSize RibbonFontManager::getFontAndSizeByTypeStatic( FontType type )
+FontAndSize RibbonFontManager::getFontAndSizeByTypeStatic( FontType type )
 {
     RibbonFontManager* fontManager = getFontManagerInstance_();
     if ( !fontManager )
@@ -191,9 +197,11 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
         config.GlyphOffset = ImVec2( font.scaledOffset );
     }
 
+    bool addFont = font.fontFile == FontFile::RegularSC;
+
     font.fontPtr = loadFontChecked(
         utf8string( fontPath ).c_str(), fontSize,
-        &config, ranges );
+        &config, ranges, addFont ? utf8string( fontPaths_[0] ).c_str() : nullptr );
 }
 
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRViewerFwd.h"
 #include "MRImGui.h"
 #include <array>
 #include <filesystem>
@@ -64,8 +65,7 @@ public:
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static ImFont* getFontByTypeStatic( FontType type );
 
-    using FontAndSize = std::pair<ImFont*, float>;
-    /// get font and size by font type
+    /// get font by font type
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static FontAndSize getFontAndSizeByTypeStatic( FontType type );
 

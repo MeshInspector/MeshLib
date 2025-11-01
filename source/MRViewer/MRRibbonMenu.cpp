@@ -179,11 +179,7 @@ void RibbonMenu::openToolbarCustomize()
 // we use design preset font size
 void RibbonMenu::load_font( int )
 {
-    ImVector<ImWchar> ranges;
-    ImFontGlyphRangesBuilder builder;
-    builder.BuildRanges( &ranges );
-    fontManager_.loadAllFonts( ranges.Data );
-    ImGui::GetStyle().FontScaleMain = hidpi_scaling_;
+    fontManager_.loadAllFonts( nullptr );
 }
 
 std::filesystem::path RibbonMenu::getMenuFontPath() const

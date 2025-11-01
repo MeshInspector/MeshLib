@@ -492,8 +492,7 @@ void RibbonSchemaLoader::recalcItemSizes()
     auto menu = getViewerInstance().getMenuPlugin();
     if ( !menu )
         return;
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
-    const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Small ) * UI::scale();
+    auto [font, fontSize] = RibbonFontManager::getFontAndSizeByTypeStatic( RibbonFontManager::FontType::Small );
     if ( !font )
         return;
 

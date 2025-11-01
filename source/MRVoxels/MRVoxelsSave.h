@@ -81,6 +81,6 @@ MR_FORMAT_REGISTRY_EXTERNAL_DECL( MRVOXELS_API, VoxelsSaver )
 } // namespace VoxelsSave
 
 MRVOXELS_API Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path,
-                                                    const ProgressCallback& callback = {} );
+                                                    const ObjectSave::Settings& settings );
 
 } // namespace MR

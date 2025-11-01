@@ -1373,6 +1373,9 @@
     <ClInclude Include="MRUnitInfo.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectSaveSettings.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

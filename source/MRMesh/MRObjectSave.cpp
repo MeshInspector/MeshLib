@@ -122,7 +122,7 @@ namespace ObjectSave
 {
 
 Expected<void> toAnySupportedSceneFormat( const Object& object, const std::filesystem::path& file,
-                                     ProgressCallback callback )
+                                          const Settings& settings )
 {
     // NOTE: single-char string literal may break due to the GCC bug:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
@@ -131,39 +131,39 @@ Expected<void> toAnySupportedSceneFormat( const Object& object, const std::files
     if ( !saver )
         return unexpected( "unsupported file format" );
 
-    return saver( object, file, callback );
+    return saver( object, file, settings );
 }
 
 Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem::path& file,
-                                     ProgressCallback callback )
+                                     const Settings& settings )
 {
     // NOTE: single-char string literal may break due to the GCC bug:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
     const auto extension = '*' + toLower( utf8string( file.extension() ) );
     if ( findFilter( SceneSave::getFilters(), extension ) )
     {
-        return toAnySupportedSceneFormat( object, file, callback );
+        return toAnySupportedSceneFormat( object, file, settings );
     }
     else if ( findFilter( ObjectSave::getFilters(), extension ) )
     {
         auto saver = ObjectSave::getObjectSaver( extension );
         assert( saver );
-        return saver( object, file, callback );
+        return saver( object, file, settings );
     }
     else if ( findFilter( MeshSave::getFilters(), extension ) )
     {
         const auto mesh = mergeToMesh( object );
-        return MeshSave::toAnySupportedFormat( mesh, file, { .progress = callback } );
+        return MeshSave::toAnySupportedFormat( mesh, file, { .lengthUnit = settings.lengthUnit, .progress = settings.progress } );
     }
     else if ( findFilter( PointsSave::getFilters(), extension ) )
     {
         const auto pointCloud = mergeToPoints( object );
-        return PointsSave::toAnySupportedFormat( pointCloud, file, { .progress = callback } );
+        return PointsSave::toAnySupportedFormat( pointCloud, file, { .progress = settings.progress } );
     }
     else if ( findFilter( LinesSave::getFilters(), extension ) )
     {
         const auto polyline = mergeToLines( object );
-        return LinesSave::toAnySupportedFormat( polyline, file, { .progress = callback } );
+        return LinesSave::toAnySupportedFormat( polyline, file, { .progress = settings.progress } );
     }
     else if ( findFilter( DistanceMapSave::getFilters(), extension ) )
     {
@@ -188,7 +188,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 } // namespace ObjectSave
 
 Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
-                                  ProgressCallback progressCb, FolderCallback preCompress )
+                                  FolderCallback preCompress, const ObjectSave::Settings& settings )
 {
     MR_TIMER;
     if (path.empty())
@@ -198,11 +198,13 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     if ( !scenePath )
         return unexpected( "Cannot create temporary folder" );
 
-    if ( progressCb && !progressCb( 0.0f ) )
-        return unexpected( "Canceled" );
+    if ( !reportProgress( settings.progress, 0.0f ) )
+        return unexpectedOperationCanceled();
 
     Json::Value root;
     root["FormatVersion"] = "0.0";
+    if ( settings.lengthUnit )
+        root["LengthUnits"] = std::string( getUnitInfo( *settings.lengthUnit ).prettyName );
     auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0 );
     if ( !expectedSaveModelFutures.has_value() )
         return unexpected( expectedSaveModelFutures.error() );
@@ -214,7 +216,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
         return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
 
 #ifndef __EMSCRIPTEN__
-    if ( !reportProgress( progressCb, 0.1f ) )
+    if ( !reportProgress( settings.progress, 0.1f ) )
         return unexpectedOperationCanceled();
 
     // wait for all models are saved before making compressed folder
@@ -226,7 +228,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
             if ( saveModelFutures[i].wait_for( std::chrono::milliseconds( 200 ) ) != std::future_status::timeout )
                 inProgress.reset( i );
         }
-        if ( !reportProgress( subprogress( progressCb, 0.1f, 0.9f ), 1.0f - (float)inProgress.count() / inProgress.size() ) )
+        if ( !reportProgress( subprogress( settings.progress, 0.1f, 0.9f ), 1.0f - (float)inProgress.count() / inProgress.size() ) )
             return unexpectedOperationCanceled();
     }
 #endif
@@ -241,12 +243,12 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     if ( preCompress )
         preCompress( scenePath );
 
-    return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
+    return compressZip( path, scenePath, {}, nullptr, subprogress( settings.progress, 0.9f, 1.0f ) );
 }
 
-Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path, ProgressCallback progress )
+Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path, const ObjectSave::Settings& settings )
 {
-    return serializeObjectTree( object, path, std::move( progress ), {} );
+    return serializeObjectTree( object, path, {}, settings );
 }
 
 MR_ADD_SCENE_SAVER_WITH_PRIORITY( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), serializeObjectTree, -1 )

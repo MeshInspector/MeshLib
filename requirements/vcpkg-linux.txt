@@ -12,13 +12,13 @@ boost-stacktrace
 boost-url
 clip
 cpr
+dbus
 eigen3
 freetype
 gdcm
 glad
 glfw3
 gtest
-gtk3
 hidapi
 jsoncpp
 laz-perf

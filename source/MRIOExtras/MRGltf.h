@@ -5,15 +5,16 @@
 #include "exports.h"
 
 #include <MRMesh/MRExpected.h>
-#include <MRMesh/MRObject.h>
+#include <filesystem>
 
 namespace MR
 {
 
 // loads scene from glTF file in a new container object
 MRIOEXTRAS_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback = {} );
+
 // saves scene to a glTF file
-MRIOEXTRAS_API Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback = {} );
+MRIOEXTRAS_API Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const ObjectSave::Settings& settings );
 
 } // namespace MR
 #endif

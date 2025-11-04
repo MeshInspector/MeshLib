@@ -148,8 +148,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     std::atomic<int> completed{ 0 };
     std::atomic<bool> loadingCanceled{ false };
     float dicomScaleFactor = 1.f;
-    if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
-        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *maybeUserScale ).conversionFactor;
+    // consider that all data inside DICOM is in meters, convert them in our internal units
+    if ( auto unit = UnitSettings::getActualModelLengthUnit(); unit && *unit != LengthUnit::meters )
+        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *unit ).conversionFactor;
 
     for ( auto& nodeAndRes : nodes )
     {

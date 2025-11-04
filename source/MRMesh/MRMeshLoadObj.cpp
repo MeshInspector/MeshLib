@@ -461,7 +461,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         firstVert = faces[minFace].vertices.front();
     }
     if ( firstVert < 0 )
-        firstVert = int( points.size() ) - firstVert;
+        firstVert = int( points.size() ) + firstVert;
     else
         --firstVert;
     if ( firstVert < 0 || firstVert >= points.size() )
@@ -490,7 +490,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                 VertexRepr repr;
                 repr.vId = faces[i].vertices[v];
                 if ( repr.vId < 0 )
-                    repr.vId = int( points.size() ) - repr.vId;
+                    repr.vId = int( points.size() ) + repr.vId;
                 else
                     --repr.vId;
                 if ( repr.vId < 0 || repr.vId >= points.size() )
@@ -503,7 +503,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                 {
                     repr.vtId = faces[i].textures[v];
                     if ( repr.vtId < 0 )
-                        repr.vtId = int( uvCoords.size() ) - repr.vtId;
+                        repr.vtId = int( uvCoords.size() ) + repr.vtId;
                     else
                         --repr.vtId;
                     if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
@@ -604,14 +604,14 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         VertexRepr repr;
         repr.vId = faces[fId].vertices[ind];
         if ( repr.vId < 0 )
-            repr.vId = int( points.size() ) - repr.vId;
+            repr.vId = int( points.size() ) + repr.vId;
         else
             --repr.vId;
         if ( ind < faces[fId].textures.size() )
         {
             repr.vtId = faces[fId].textures[ind];
             if ( repr.vtId < 0 )
-                repr.vtId = int( uvCoords.size() ) - repr.vtId;
+                repr.vtId = int( uvCoords.size() ) + repr.vtId;
             else
                 --repr.vtId;
         }

@@ -77,8 +77,14 @@ MRMESH_API FillHoleMetric getEdgeLengthFillMetric( const Mesh& mesh );
 MRMESH_API FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh );
 
 /// Forbids connecting vertices from the same hole \n
+/// penalize for large area and face normal deviation from upDir \n
 /// All new faces should be parallel to given direction
 MRMESH_API FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir );
+
+/// Forbids connecting vertices from the same hole \n
+/// penalize for long edges and its deviation from upDir \n
+/// All new faces should be parallel to given direction
+MRMESH_API FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, const Vector3f& upDir );
 
 /// This metric minimizes the sum of triangleMetric for all triangles in the triangulation
 /// plus the sum edgeMetric for all edges inside and on the boundary of the triangulation.\n

@@ -156,6 +156,7 @@
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MRObjectMeshData.h" />
+    <ClInclude Include="MRObjectSaveSettings.h" />
     <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MROneMeshContours.h" />
     <ClInclude Include="MROutlierPoints.h" />
@@ -350,6 +351,7 @@
     <ClInclude Include="MRUnionFindParallel.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRUnitInfo.h" />
     <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUnsigned.h" />
     <ClInclude Include="MRUVSphere.h" />
@@ -447,6 +449,7 @@
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
+    <ClCompile Include="MRMeshSave3mf.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROneMeshContours.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
@@ -668,6 +671,7 @@
     <ClCompile Include="MRStringConvert.cpp" />
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
+    <ClCompile Include="MRUnitInfo.cpp" />
     <ClCompile Include="MRVertCoordsDiff.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />

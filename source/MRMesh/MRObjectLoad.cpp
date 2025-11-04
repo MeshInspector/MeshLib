@@ -367,7 +367,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             return unexpected( std::move( objTree.error() ) );
 
         objTree->obj->setName( utf8string( filename.stem() ) );
-        result = LoadedObjects{ .objs = { objTree->obj }, .warnings = std::move( objTree->warnings ) };
+        result = LoadedObjects{ .objs = { objTree->obj }, .warnings = std::move( objTree->warnings ), .lengthUnit = objTree->lengthUnit };
         loadedFromSceneFile = true;
     }
     else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )

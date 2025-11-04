@@ -148,6 +148,7 @@
     <ClCompile Include="MRRenderClickableRect.cpp" />
     <ClCompile Include="MRUIQualityControl.cpp" />
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
+    <ClCompile Include="MRFileDialogPortal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -314,6 +315,7 @@
     <ClInclude Include="MRUIQualityControl.h" />
     <ClInclude Include="MRItemEnabledPerViewport.h" />
     <ClInclude Include="MRWebResponseCallback.h" />
+    <ClInclude Include="MRFileDialogPortal.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

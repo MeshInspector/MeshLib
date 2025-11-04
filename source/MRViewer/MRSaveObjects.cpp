@@ -49,6 +49,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
     SaveSettings saveSettings
     {
         .xf = ( xf == AffineXf3d() ) ? nullptr : &xf,
+        .lengthUnit = UnitSettings::getActualModelLengthUnit(),
         .progress = settings.callback
     };
     Expected<void> result;
@@ -114,11 +115,9 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         VdbVolume vol = objVoxels->vdbVolume();
         if ( ext == u8".dcm" )
         {
-            // always save DICOM in meters because the format supports units information
-            if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
-            {
-                vol.voxelSize *= getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
-            }
+            // consider that all data inside DICOM is in meters, convert our internal units into meters
+            if ( auto unit = UnitSettings::getActualModelLengthUnit(); unit && *unit != LengthUnit::meters )
+                vol.voxelSize *= getUnitInfo( *unit ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
         }
 
         result = VoxelsSave::toAnySupportedFormat( vol, filename, settings.callback );

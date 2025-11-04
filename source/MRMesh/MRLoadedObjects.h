@@ -1,7 +1,9 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRUnitInfo.h"
 #include <memory>
+#include <optional>
 
 namespace MR
 {
@@ -15,6 +17,9 @@ struct LoadedObjectT
 {
     std::shared_ptr<ObjectT> obj;
     std::string warnings; //either empty or ends with '\n'
+
+    /// units of object coordinates and transformations (if known)
+    std::optional<LengthUnit> lengthUnit;
 };
 
 using LoadedObject =       LoadedObjectT<Object>;
@@ -28,6 +33,9 @@ struct LoadedObjects
 {
     std::vector<ObjectPtr> objs;
     std::string warnings; //either empty or ends with '\n'
+
+    /// units of object coordinates and transformations (if known)
+    std::optional<LengthUnit> lengthUnit;
 };
 
 } //namespace MR

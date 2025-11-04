@@ -490,9 +490,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 return ret;
             }();
             auto targetIt = map.find( loadString( cUnitsLenUnit, "" ) );
-            UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::mm : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
+            UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::millimeters : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
             auto sourceIt = map.find( loadString( cUnitsModelLenUnit, "" ) );
-            UnitSettings::setModelLengthUnit( ( sourceIt == map.end() || targetIt->second == LengthUnit::_count ) ? std::nullopt : std::optional( targetIt->second ) );
+            UnitSettings::setModelLengthUnit( ( sourceIt == map.end() || sourceIt->second == LengthUnit::_count ) ? std::nullopt : std::optional( sourceIt->second ) );
         }
 
         { // Thousands separator.

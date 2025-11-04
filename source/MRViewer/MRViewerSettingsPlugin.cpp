@@ -579,7 +579,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         bool value = UnitSettings::getShowLeadingZero();
         if ( UI::checkbox( "Leading zero", &value ) )
             UnitSettings::setShowLeadingZero( value );
-        ImGui::SetItemTooltip( "If disabled, remove the lone zeroes before the decimal point." );
+        UI::setTooltipIfHovered( "If disabled, remove the lone zeroes before the decimal point." );
         ImGui::PopStyleVar();
 
         // --- Thousands separator
@@ -593,6 +593,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         if ( UI::inputTextIntoArray( "Thousands Separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
             UnitSettings::setThousandsSeparator( thouSep[0] );
+        UI::setTooltipIfHovered( "A symbol used to separate groups of thousands in large numbers to make them easier to read." );
 
         // If the separator is empty or a space, display a string explaining that on top of the textbox.
         if ( !ImGui::IsItemActive() )
@@ -621,40 +622,45 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         // --- Units
 
-        static const std::vector<std::string> optionNames = []{
+        auto makeLengthUnitsVec = []( const char * lastOption )
+        {
             std::vector<std::string> ret;
             ret.reserve( std::size_t( LengthUnit::_count ) + 1 );
             for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
                 ret.emplace_back( getUnitInfo( LengthUnit( i ) ).prettyName );
-            ret.emplace_back( "No units" );
+            ret.emplace_back( lastOption );
             return ret;
-        }();
+        };
 
         int targetOption = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        if ( UI::combo( "UI Unit##length", &targetOption, optionNames ) )
+        static const std::vector<std::string> uiLengthUnitNames = makeLengthUnitsVec( "No Units" );
+        if ( UI::combo( "UI Units##length", &targetOption, uiLengthUnitNames ) )
         {
             if ( targetOption == int( LengthUnit::_count ) )
                 UnitSettings::setUiLengthUnit( {}, true );
             else
                 UnitSettings::setUiLengthUnit( LengthUnit( targetOption ), true );
-            UnitSettings::setModelLengthUnit( {} );
         }
+        UI::setTooltipIfHovered( "It selects length units to be show in the user interface. If model units are different, then stored values will be automatically converted when shown in UI." );
 
         int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
-        if ( UI::combo( "Model Unit##length", &sourceOption, optionNames ) )
+        static const std::vector<std::string> modelLengthUnitNames = makeLengthUnitsVec( "Same as UI Units" );
+        if ( UI::combo( "Model Units##length", &sourceOption, modelLengthUnitNames ) )
         {
             if ( sourceOption == int( LengthUnit::_count ) )
                 UnitSettings::setModelLengthUnit( {} );
             else
                 UnitSettings::setModelLengthUnit( LengthUnit( sourceOption ) );
         }
+        UI::setTooltipIfHovered( "It selects length units of model's actual values (e.g. coordinates of points stored in memory). And it affects on importing and exporting of data." );
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();
         if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiLengthPrecision( precision );
+        UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for length measurements." );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -677,8 +683,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         // Degree mode.
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
+        if ( UI::combo( "Units##angle", &flavorOption, flavorOptions ) )
             UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
+        UI::setTooltipIfHovered( "It selects angular units to be show in the user interface." );
 
         // Degree-mode-specific options.
 
@@ -689,6 +696,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
             int precision = UnitSettings::getUiAnglePrecision();
             if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, cMaxPrecision ) )
                 UnitSettings::setUiAnglePrecision( precision );
+            UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for angular measurements." );
         }
 
         ImGui::PopStyleVar();
@@ -706,6 +714,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         int precision = UnitSettings::getUiRatioPrecision();
         if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiRatioPrecision( precision );
+        UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for dimensionless measurements." );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -717,6 +726,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
     if ( UI::button( "Reset Unit Settings" ) )
         UnitSettings::resetToDefaults();
+    UI::setTooltipIfHovered( "Set all settings here to their default values." );
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_()
@@ -1030,11 +1040,12 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
 
         auto plusPos = ctrlStr.rfind( '+' );
+        std::string uniqueKeyStr = "##key" + std::to_string( i );
         if ( plusPos == std::string::npos )
         {
             // Draw button name in a frame
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * UI::scale() } );
-            UI::inputTextCenteredReadOnly( "##key", ctrlStr, 54 * UI::scale() );
+            UI::inputTextCenteredReadOnly( uniqueKeyStr.c_str(), ctrlStr, 54 * UI::scale() );
             ImGui::PopStyleVar();
             ImGui::SameLine();
         }
@@ -1044,7 +1055,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x * 0.25f, style.ItemSpacing.y } );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * UI::scale() } );
-            UI::inputTextCenteredReadOnly( "##modifierKey", ctrlStr.substr( 0, plusPos ),
+            auto modKeyUniqueStr = "##modifierKey" + std::to_string( i );
+            UI::inputTextCenteredReadOnly( modKeyUniqueStr.c_str(), ctrlStr.substr( 0, plusPos ),
                 // Expand the area in case of multiple modifiers (assume that is rarely used)
                 std::max( 54.0f, 7 * float( plusPos ) ) * UI::scale() );
             ImGui::PopStyleVar();
@@ -1056,7 +1068,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * UI::scale() } );
-            UI::inputTextCenteredReadOnly( "##key", ctrlStr.substr( plusPos + 1 ), 54 * UI::scale() );
+            UI::inputTextCenteredReadOnly( uniqueKeyStr.c_str(), ctrlStr.substr( plusPos + 1 ), 54 * UI::scale() );
             ImGui::PopStyleVar();
 
             ImGui::PopStyleVar();

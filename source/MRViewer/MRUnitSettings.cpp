@@ -37,7 +37,7 @@ static void forAllUnits( auto&& func )
 void resetToDefaults()
 {
     UnitSettings::setThousandsSeparator( ' ' );
-    UnitSettings::setUiLengthUnit( LengthUnit::mm, true );
+    UnitSettings::setUiLengthUnit( LengthUnit::millimeters, true );
     UnitSettings::setUiLengthPrecision( 3 );
     UnitSettings::setDegreesMode( DegreesMode::degrees, true );
     UnitSettings::setUiRatioPrecision( 3 );
@@ -92,49 +92,61 @@ static auto getLengthDependentUnit()
         {
             switch ( unit )
             {
-                case LengthUnit::mm:     return AreaUnit::mm2;
-                case LengthUnit::meters: return AreaUnit::meters2;
-                case LengthUnit::inches: return AreaUnit::inches2;
+                case LengthUnit::microns:     return AreaUnit::microns2;
+                case LengthUnit::millimeters: return AreaUnit::millimeters2;
+                case LengthUnit::centimeters: return AreaUnit::centimeters2;
+                case LengthUnit::meters:      return AreaUnit::meters2;
+                case LengthUnit::inches:      return AreaUnit::inches2;
+                case LengthUnit::feet:        return AreaUnit::feet2;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
-            return AreaUnit::mm2;
+            return AreaUnit::millimeters2;
         },
         []<std::same_as<VolumeUnit>>( LengthUnit unit )
         {
             switch ( unit )
             {
-                case LengthUnit::mm:     return VolumeUnit::mm3;
-                case LengthUnit::meters: return VolumeUnit::meters3;
-                case LengthUnit::inches: return VolumeUnit::inches3;
+                case LengthUnit::microns:     return VolumeUnit::microns3;
+                case LengthUnit::millimeters: return VolumeUnit::millimeters3;
+                case LengthUnit::centimeters: return VolumeUnit::centimeters3;
+                case LengthUnit::meters:      return VolumeUnit::meters3;
+                case LengthUnit::inches:      return VolumeUnit::inches3;
+                case LengthUnit::feet:        return VolumeUnit::feet3;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
-            return VolumeUnit::mm3;
+            return VolumeUnit::millimeters3;
         },
         []<std::same_as<MovementSpeedUnit>>( LengthUnit unit )
         {
             switch ( unit )
             {
-                case LengthUnit::mm:     return MovementSpeedUnit::mmPerSecond;
-                case LengthUnit::meters: return MovementSpeedUnit::metersPerSecond;
-                case LengthUnit::inches: return MovementSpeedUnit::inchesPerSecond;
+                case LengthUnit::microns:     return MovementSpeedUnit::micronsPerSecond;
+                case LengthUnit::millimeters: return MovementSpeedUnit::millimetersPerSecond;
+                case LengthUnit::centimeters: return MovementSpeedUnit::centimetersPerSecond;
+                case LengthUnit::meters:      return MovementSpeedUnit::metersPerSecond;
+                case LengthUnit::inches:      return MovementSpeedUnit::inchesPerSecond;
+                case LengthUnit::feet:        return MovementSpeedUnit::feetPerSecond;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
-            return MovementSpeedUnit::mmPerSecond;
+            return MovementSpeedUnit::millimetersPerSecond;
         },
         []<std::same_as<InvLengthUnit>>( LengthUnit unit )
         {
             switch ( unit )
             {
-                case LengthUnit::mm:     return InvLengthUnit::inv_mm;
-                case LengthUnit::meters: return InvLengthUnit::inv_meters;
-                case LengthUnit::inches: return InvLengthUnit::inv_inches;
+                case LengthUnit::microns:     return InvLengthUnit::inv_microns;
+                case LengthUnit::millimeters: return InvLengthUnit::inv_millimeters;
+                case LengthUnit::centimeters: return InvLengthUnit::inv_centimeters;
+                case LengthUnit::meters:      return InvLengthUnit::inv_meters;
+                case LengthUnit::inches:      return InvLengthUnit::inv_inches;
+                case LengthUnit::feet:        return InvLengthUnit::inv_feet;
                 case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
-            return InvLengthUnit::inv_mm;
+            return InvLengthUnit::inv_millimeters;
         },
     };
 }
@@ -172,6 +184,13 @@ void setModelLengthUnit( std::optional<LengthUnit> unit )
     } );
 }
 
+std::optional<LengthUnit> getActualModelLengthUnit()
+{
+    auto res = getModelLengthUnit();
+    if ( !res )
+        res = getUiLengthUnit();
+    return res;
+}
 
 DegreesMode getDegreesMode()
 {

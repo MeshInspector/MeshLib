@@ -9,6 +9,7 @@
 #include "MROnInit.h"
 #include "MRPointsLoadSettings.h"
 #include "MRSaveSettings.h"
+#include "MRObjectSaveSettings.h"
 #include "MRLoadedObjects.h"
 
 #include <filesystem>
@@ -322,7 +323,7 @@ MR_ON_INIT { using namespace MR::ObjectLoad; setObjectLoader( filter, loader ); 
 namespace ObjectSave
 {
 
-using ObjectSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const ProgressCallback& );
+using ObjectSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const Settings& );
 
 MR_FORMAT_REGISTRY_DECL( ObjectSaver )
 
@@ -359,7 +360,7 @@ MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader, prio
 namespace SceneSave
 {
 
-using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, ProgressCallback );
+using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const ObjectSave::Settings& );
 
 MR_FORMAT_REGISTRY_DECL( SceneSaver )
 

@@ -11,6 +11,7 @@
 #include "ImGuiMenu.h"
 #include "MRModalDialog.h"
 #include "MRSceneCache.h"
+#include "MRUnitSettings.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObjectSave.h"
@@ -52,7 +53,11 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                 if ( !savePath.empty() )
                     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction = settings.onOk, savePath, &root = SceneRoot::get()] ()->std::function<void()>
                 {
-                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
+                        {
+                            .lengthUnit = UnitSettings::getActualModelLengthUnit(),
+                            .progress = ProgressBar::callBackSetProgress
+                        } );
 
                     return[customFunction = customFunction, savePath, res] ()
                     {

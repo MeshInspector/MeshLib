@@ -5,6 +5,27 @@
 namespace MR
 {
 
+enum class FilterType : char
+{
+    Linear,
+    Discrete
+};
+
+enum class WrapType : char
+{
+    Repeat,
+    Mirror,
+    Clamp
+};
+
+/// determines how points to be ordered
+enum class Reorder : char
+{
+    None,              ///< the order is not changed
+    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
+    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
+};
+
 /// determines the weight or mass of each vertex in applications like Laplacian
 enum class VertexMass
 {

@@ -101,7 +101,10 @@ public:
     static void onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer );
     static void onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer );
     static void onScrollEvent( NSView* view, SEL cmd, NSEvent* event );
-    static void onTouchesEvent( NSView* view, SEL cmd, NSEvent* event );
+    // required for correct Magic Mouse distinguishing only
+    static void onTouchesBeganEvent( NSView* view, SEL cmd, NSEvent* event );
+    static void onTouchesEndedEvent( NSView* view, SEL cmd, NSEvent* event );
+    static void onTouchesCancelledEvent( NSView* view, SEL cmd, NSEvent* event );
 
 private:
     NSView* view_;
@@ -110,7 +113,7 @@ private:
     NSRotationGestureRecognizer* rotationGestureRecognizer_;
     IMP previousScrollWheelMethod_;
 
-    bool hasTouches_ = false;
+    int activeTouchCount_ = 0;
 };
 
 TouchpadCocoaHandler::TouchpadCocoaHandler( GLFWwindow* window )
@@ -154,7 +157,9 @@ TouchpadCocoaHandler::Impl::Impl(GLFWwindow *window, TouchpadCocoaHandler *handl
     TouchpadCocoaHandlerRegistry::instance().add( view_, handler );
 
     view_.allowedTouchTypes = NSTouchTypeMaskIndirect;
-    class_addMethod( cls, @selector(touchesBeganWithEvent:), (IMP)Impl::onTouchesEvent, "v@:@" );
+    class_addMethod( cls, @selector(touchesBeganWithEvent:), (IMP)Impl::onTouchesBeganEvent, "v@:@" );
+    class_addMethod( cls, @selector(touchesEndedWithEvent:), (IMP)Impl::onTouchesEndedEvent, "v@:@" );
+    class_addMethod( cls, @selector(touchesCancelledWithEvent:), (IMP)Impl::onTouchesCancelledEvent, "v@:@" );
 }
 
 TouchpadCocoaHandler::Impl::~Impl()
@@ -203,7 +208,7 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
     if (
         [event subtype] == NSEventSubtypeMouseEvent ||
         // detecting Magic Mouse
-        ( [event subtype] == NSEventSubtypeTabletPoint && !handler->impl_->hasTouches_ ) ||
+        ( [event subtype] == NSEventSubtypeTabletPoint && handler->impl_->activeTouchCount_ == 0 ) ||
         // We know exactly one Mac machine where mouse scroll events arrive with this subtype. Some sort of a bug?
         // We also have to filter by `phase == NSEventPhaseNone` here, because otherwise this incorrectly catches the "move two fingers in any direciton" event from the touchpad (!!),
         //   which is instead supposed to rotate the camera, not act as a scroll.
@@ -262,13 +267,31 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
     }
 }
 
-void TouchpadCocoaHandler::Impl::onTouchesEvent( NSView* view, SEL, NSEvent* )
+void TouchpadCocoaHandler::Impl::onTouchesBeganEvent( NSView* view, SEL, NSEvent* )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )
         return;
 
-    handler->impl_->hasTouches_ = true;
+    handler->impl_->activeTouchCount_ += 1;
+}
+
+void TouchpadCocoaHandler::Impl::onTouchesEndedEvent( NSView* view, SEL, NSEvent* )
+{
+    auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
+    if ( !handler )
+        return;
+
+    handler->impl_->activeTouchCount_ -= 1;
+}
+
+void TouchpadCocoaHandler::Impl::onTouchesCancelledEvent( NSView* view, SEL, NSEvent* )
+{
+    auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
+    if ( !handler )
+        return;
+
+    handler->impl_->activeTouchCount_ -= 1;
 }
 
 }

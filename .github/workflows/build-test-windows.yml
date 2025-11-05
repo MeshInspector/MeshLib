@@ -173,6 +173,20 @@ jobs:
         if: ${{ matrix.build_system == 'CMake' }}
         uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
 
+      - name: WIP Build C++ examples
+        env:
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          cmake `
+            -S examples/cpp-examples `
+            -B cpp-examples-build `
+            -D MESHLIB_INCLUDE_DIR=./source/ `
+            -D MESHLIB_THIRDPARTY_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-meshlib/
+          cmake `
+            --build cpp-examples-build `
+            --config ${{ matrix.config }} `
+            --parallel $env:NUMBER_OF_PROCESSORS
+
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
         shell: cmd

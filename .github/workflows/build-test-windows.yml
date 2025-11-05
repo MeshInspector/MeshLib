@@ -280,7 +280,6 @@ jobs:
           if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Build C++ examples
-        #if: ${{ matrix.build_system == 'CMake' }}
         env:
           VCPKG_ROOT: C:\vcpkg
         run: |
@@ -291,6 +290,19 @@ jobs:
             -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/x64-windows-meshlib/lib"
           cmake `
             --build cpp-examples-build `
+            --config ${{ matrix.config }} `
+            --parallel $env:NUMBER_OF_PROCESSORS
+
+      - name: Build C examples
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
+        run: |
+          cmake `
+            -S examples/c-examples `
+            -B c-examples-build `
+            -D MESHLIB_INCLUDE_DIRS="$pwd/source/MeshLibC2/include" `
+            -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }}"
+          cmake `
+            --build c-examples-build `
             --config ${{ matrix.config }} `
             --parallel $env:NUMBER_OF_PROCESSORS
 

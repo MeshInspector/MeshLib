@@ -202,7 +202,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
         return unexpectedOperationCanceled();
 
     Json::Value root;
-    root["FormatVersion"] = "0.0";
+    root["FormatVersion"] = 1.0;
     if ( settings.lengthUnit )
         root["LengthUnits"] = std::string( getUnitInfo( *settings.lengthUnit ).prettyName );
     auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0 );

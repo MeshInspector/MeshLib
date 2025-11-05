@@ -279,38 +279,38 @@ jobs:
         run: |
           Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
 
+      - name: Adding Distributive to PATH
+        shell: bash
+        run: echo "C:\\meshlib-built\\install\\app\\Release" >> $GITHUB_PATH
+
       - name: Run MeshViewer
         if: always()
-        working-directory: C:\meshlib-built\install\app\Release
-        run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
+        run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
         if: always()
-        working-directory: C:\meshlib-built\install\app\Release
-        run: .\meshconv.exe --help
+        run: meshconv.exe --help
 
       - name: Build C++ examples
         if: always()
         working-directory: examples/cpp-examples
         env:
-          DIST_DIR: C:\meshlib-built\
+          DIST_DIR: C:\meshlib-built
         run: |
           cmake -S . -B build `
             -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
             -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
           cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          $env:PATH += ";$env:DIST_DIR\install\app\Release"
           .\build\Release\MeshModification.exe
 
       - name: Build C examples
         if: always()
         working-directory: examples/c-examples
         env:
-          DIST_DIR: C:\meshlib-built\
+          DIST_DIR: C:\meshlib-built
         run: |
           cmake -S . -B build `
             -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
             -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
           cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          $env:PATH += ";$env:DIST_DIR\install\app\Release"
           .\build\Release\MeshModification.exe

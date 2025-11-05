@@ -552,6 +552,10 @@ Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::p
         return unexpected( readRes.error() );
     }
     auto root = readRes.value();
+    if ( auto formatVersion = root["FormatVersion"]; formatVersion.isNumeric() && formatVersion.asDouble() >= 2 )
+    {
+        return unexpected( "Unsupported version of scene file. Please update your application." );
+    }
 
     LoadedObject res;
     if ( auto lengthUnits = root["LengthUnits"]; lengthUnits.isString() )

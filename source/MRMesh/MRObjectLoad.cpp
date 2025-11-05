@@ -553,8 +553,19 @@ Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::p
     }
     auto root = readRes.value();
 
-    auto typeTreeSize = root["Type"].size();
     LoadedObject res;
+    if ( auto lengthUnits = root["LengthUnits"]; lengthUnits.isString() )
+    {
+        auto lengthUnitsStr = lengthUnits.asString();
+        for ( int i = 0; i < (int)LengthUnit::_count; ++i )
+            if ( lengthUnitsStr == getUnitInfo( (LengthUnit)i ).prettyName )
+            {
+                res.lengthUnit = (LengthUnit)i;
+                break;
+            }
+    }
+
+    auto typeTreeSize = root["Type"].size();
     for (int i = typeTreeSize-1;i>=0;--i)
     {
         const auto& type = root["Type"][unsigned( i )];

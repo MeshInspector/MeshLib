@@ -243,7 +243,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
     if ( !sponge )
         return sponge;
 
-    BooleanOperation booleanOp = BooleanOperation::Union;
+    BooleanOperation booleanOp = mesh.volume() > 0 ? BooleanOperation::Intersection : BooleanOperation::Union;
     auto res = boolean( mesh, *sponge, booleanOp, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );
@@ -511,7 +511,8 @@ Expected<Mesh> fill( const Mesh& mesh, const Params& params, const ProgressCallb
     if ( !filling )
         return filling;
 
-    auto res = boolean( mesh, *filling, BooleanOperation::Union, &xf, {}, subprogress( cb, 0.2f, 1.f ) );
+    BooleanOperation booleanOp = mesh.volume() > 0 ? BooleanOperation::Intersection : BooleanOperation::Union;
+    auto res = boolean( mesh, *filling, booleanOp, &xf, {}, subprogress( cb, 0.2f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );
     return *res;

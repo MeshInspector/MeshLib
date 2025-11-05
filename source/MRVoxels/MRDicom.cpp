@@ -311,7 +311,7 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
 
     auto dicomStatus = isDicomFile( file );
     if ( !dicomStatus )
-        return unexpected( "loadDicomFile: not valid DICOM file: " + dicomStatus.reason + ": " + utf8string( file ) );
+        return unexpected( stringUnsupportedFileFormat() + " for DICOM: " + utf8string( file ) );
 
     T vol{};
     vol.voxelSize = Vector3f();

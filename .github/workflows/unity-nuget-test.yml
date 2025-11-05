@@ -118,6 +118,7 @@ jobs:
         run: |
           aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/batch_log.txt
           aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
+          cat C:\work\batch_log.txt
 
 
   stop-instance:

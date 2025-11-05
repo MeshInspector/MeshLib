@@ -220,6 +220,8 @@ void ViewportGlobalBasis::creteGrids_()
     thinGrid->setFrontColor( Color::gray(), false );
     thickGrid->setFrontColor( Color::gray(), true );
     thickGrid->setFrontColor( Color::gray(), false );
+    thinGrid->setVisibilityMask( ViewportMask() );
+    thickGrid->setVisibilityMask( ViewportMask() );
 }
 
 void ViewportGlobalBasis::updateGridXfs_( const Viewport& vp ) const

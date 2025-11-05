@@ -376,7 +376,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
         result = loader( filename, callback );
     }
     // no else to support same extensions in object and mesh loaders
-    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    if ( !result.has_value() && result.error().starts_with( stringUnsupportedFileFormat() ) )
     {
         auto maybe = makeObjectFromMeshFile( filename, callback );
         if ( maybe )
@@ -388,7 +388,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             result = unexpected( std::move( maybe.error() ) );
     }
 
-    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    if ( !result.has_value() && result.error().starts_with( stringUnsupportedFileFormat() ) )
     {
         auto objectLines = makeObjectLinesFromFile( filename, callback );
         if ( objectLines.has_value() )
@@ -401,7 +401,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             result = unexpected( std::move( objectLines.error() ) );
     }
 
-    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    if ( !result.has_value() && result.error().starts_with( stringUnsupportedFileFormat() ) )
     {
         auto objectPoints = makeObjectPointsFromFile( filename, callback );
         if ( objectPoints.has_value() )
@@ -414,7 +414,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             result = unexpected( std::move( objectPoints.error() ) );
     }
 
-    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    if ( !result.has_value() && result.error().starts_with( stringUnsupportedFileFormat() ) )
     {
         auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
         if ( objectDistanceMap.has_value() )
@@ -427,7 +427,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             result = unexpected( std::move( objectDistanceMap.error() ) );
     }
 
-    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    if ( !result.has_value() && result.error().starts_with( stringUnsupportedFileFormat() ) )
     {
         auto objectGcode = makeObjectGcodeFromFile( filename, callback );
         if ( objectGcode.has_value() )

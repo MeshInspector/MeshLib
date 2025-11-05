@@ -41,11 +41,11 @@ foreach(TARGET ${EXAMPLES})
   add_executable(${TARGET} ${TARGET}.dox.cpp)
 endforeach()
 
-if(DEFINED MESHLIB_INCLUDE_DIR AND DEFINED MESHLIB_THIRDPARTY_INCLUDE_DIR AND DEFINED MESHLIB_LIB_DIR)
+if(DEFINED MESHLIB_INCLUDE_DIRS AND DEFINED MESHLIB_LIB_DIRS)
   # for distributions without CMake config files
   foreach(TARGET ${EXAMPLES})
-    target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-    target_link_directories(${TARGET} PUBLIC ${MESHLIB_LIB_DIR})
+    target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIRS})
+    target_link_directories(${TARGET} PUBLIC ${MESHLIB_LIB_DIRS})
     target_link_libraries(${TARGET} PRIVATE MRMesh)
   endforeach()
   # MeshFromText additionally depends on MRSymbolMesh

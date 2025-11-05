@@ -287,9 +287,8 @@ jobs:
           cmake `
             -S examples/cpp-examples `
             -B cpp-examples-build `
-            -D MESHLIB_INCLUDE_DIR=./source/ `
-            -D MESHLIB_THIRDPARTY_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-meshlib/ `
-            -D MESHLIB_LIB_DIR=./source/x64/${{ matrix.config }}/
+            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include" `
+            -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/x64-windows-meshlib/lib"
           cmake `
             --build cpp-examples-build `
             --config ${{ matrix.config }} `

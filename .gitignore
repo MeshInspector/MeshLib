@@ -41,3 +41,4 @@ wheelhouse/*
 /source/MeshLibC2/src
 /source/MeshLibC2/temp
 compile_commands.json
+/source/CustomMRPlatform.props

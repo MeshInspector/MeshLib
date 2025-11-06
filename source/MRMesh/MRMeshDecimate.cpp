@@ -1248,14 +1248,12 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
     const bool finalMeshPack = settings.packMesh;
     settings.packMesh = false;
 
-    assert( !settings.region );
-    settings.region = data.selectedFaces.any() ? &data.selectedFaces : nullptr;
-
     if ( settings.subdivideParts > 1 )
         settings.progressCallback = subprogress( set0.progressCallback, 0.2f, 1.0f );
 
     const bool updateUV = data.mesh->topology.lastValidVert() < data.uvCoordinates.size();
     const bool updateColorMap = data.mesh->topology.lastValidVert() < data.vertColors.size();
+    const bool updateFaceColorMap = data.mesh->topology.lastValidFace() < data.faceColors.size();
 
     if ( updateUV || updateColorMap )
     {
@@ -1275,6 +1273,10 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
             data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
         if ( updateColorMap )
             data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( updateFaceColorMap )
+            data.faceColors = rearrangeVectorByMap( data.faceColors, packMapping.f );
+        if ( data.selectedFaces.any() )
+            data.selectedFaces = data.selectedFaces.getMapping( packMapping.f );
         if ( settings.region )
             *settings.region = settings.region->getMapping( packMapping.f );
         emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
@@ -1293,6 +1295,10 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
             data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
         if ( updateColorMap )
             data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( updateFaceColorMap )
+            data.faceColors = rearrangeVectorByMap( data.faceColors, packMapping.f );
+        if ( data.selectedFaces.any() )
+            data.selectedFaces = data.selectedFaces.getMapping( packMapping.f );
         if ( settings.region )
             *settings.region = settings.region->getMapping( packMapping.f );
         if ( emap )
@@ -1302,6 +1308,10 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
 
         packMapping = {}; //free memory
         data.mesh->shrinkToFit();
+    }
+    else
+    {
+        data.selectedFaces &= data.mesh->topology.getValidFaces();
     }
 
     if ( emap && emap->tsize > 0 )

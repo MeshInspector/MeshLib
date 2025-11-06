@@ -495,6 +495,7 @@ void RibbonSchemaLoader::recalcItemSizes()
     auto [font, fontSize] = RibbonFontManager::getFontAndSizeByTypeStatic( RibbonFontManager::FontType::Small );
     if ( !font )
         return;
+    fontSize *= UI::scale();
 
     const float cMaxTextWidth =
         RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) *

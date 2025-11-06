@@ -163,7 +163,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
         if ( i == int( FontType::Icons ) )
             continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
-        auto fontSize = getFontSizeByType( FontType( i ) ) * UI::scale();
+        auto fontSize = getFontSizeByType( FontType( i ) );
         localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config );
 
         auto* lFont = localFonts[i];

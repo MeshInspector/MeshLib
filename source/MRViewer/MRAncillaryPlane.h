@@ -4,6 +4,8 @@
 
 namespace MR
 {
+
+/// small struct to simplify creating and clearing ancillary plane object in tools
 struct MRVIEWER_CLASS AncillaryPlane
 {
     AncillaryPlane() = default;

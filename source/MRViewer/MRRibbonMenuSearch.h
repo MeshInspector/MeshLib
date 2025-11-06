@@ -52,13 +52,13 @@ public:
     // this signal is emitted when tool is activated within search
     Signal<void( std::shared_ptr<RibbonMenuItem> )> onToolActivateSignal;
 private:
-    bool smallSearchButton_( const Parameters& params );
+    bool smallSearchButton_();
 
     void drawWindow_( const Parameters& params );
 
     void deactivateSearch_();
 
-    bool searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& params );
+    bool searchInputText_( const char* label, std::string& str );
 
     void updateSearchResult_();
 

@@ -33,6 +33,7 @@
     <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRRibbonFontHolder.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -176,6 +177,7 @@
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />
     <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRRibbonFontHolder.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
     <ClInclude Include="MRMacOSOpenDocumentsHandler.h">

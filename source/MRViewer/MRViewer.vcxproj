@@ -15,6 +15,7 @@
     <ClCompile Include="MRAncillaryLabels.cpp" />
     <ClCompile Include="MRAncillaryLines.cpp" />
     <ClCompile Include="MRAncillaryMesh.cpp" />
+    <ClCompile Include="MRAncillaryPlane.cpp" />
     <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="MRAncillaryLabels.h" />
     <ClInclude Include="MRAncillaryLines.h" />
     <ClInclude Include="MRAncillaryMesh.h" />
+    <ClInclude Include="MRAncillaryPlane.h" />
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />

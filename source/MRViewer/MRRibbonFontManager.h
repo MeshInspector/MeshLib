@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRViewerFwd.h"
 #include "MRImGui.h"
 #include <array>
 #include <filesystem>
@@ -64,6 +65,10 @@ public:
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static ImFont* getFontByTypeStatic( FontType type );
 
+    /// get font by font type
+    /// (need to avoid dynamic cast menu to ribbon menu)
+    MRVIEWER_API static FontAndSize getFontAndSizeByTypeStatic( FontType type );
+
     /// initialize static holder for easier access to ribbon fonts
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
@@ -92,13 +97,6 @@ private:
     void updateFontsScaledOffset_();
 
     void loadFont_( FontType type, const ImWchar* ranges );
-
-    struct CustomGlyph
-    {
-        std::function<void( unsigned char* texData, int texW )> render;
-    };
-    void addCustomGlyphs_( FontType font, std::vector<CustomGlyph>& glyphs );
-    void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
 };
 
 }

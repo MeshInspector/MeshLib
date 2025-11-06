@@ -383,8 +383,6 @@ protected:
     // called in ImGuiMenu::postRescale_()
     MRVIEWER_API virtual void rescaleStyle_();
 
-    MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
-
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
 

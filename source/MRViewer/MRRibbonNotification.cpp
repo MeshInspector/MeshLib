@@ -13,6 +13,7 @@
 #include "MRRibbonMenu.h"
 #include "MRUITestEngine.h"
 #include "MRMouseController.h"
+#include "MRRibbonFontHolder.h"
 #include <imgui_internal.h>
 
 namespace
@@ -104,12 +105,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
 
     ImGui::Begin( name.c_str(), nullptr, flags );
 
-    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 0.65f;
-        ImGui::PushFont( iconsFont );
-    }
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.65f );
 
     auto fontSize = ImGui::GetFontSize();
     ImGui::SetCursorPos( 0.5f * ( windowSize - ImVec2( fontSize, fontSize ) ) );
@@ -117,11 +113,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
     ImGui::Text( "%s", UI::notificationChar( notificationsHistory_.front().notification.type ).first );
     ImGui::PopStyleColor();
 
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 1.0f;
-        ImGui::PopFont();
-    }
+    font.popFont();
 
     if ( ImGui::IsWindowHovered() )
     {
@@ -323,11 +315,9 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     const bool changeHeaderColor = notification.type == NotificationType::Error || notification.type == NotificationType::Warning;
 
     const ImVec2 contentShift = ImVec2( 26.0f * UI::scale(), radius );
-    auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
     if ( !notification.header.empty() )
     {
-        if ( boldFont )
-            ImGui::PushFont( boldFont );
+        RibbonFontHolder boldFont( RibbonFontManager::FontType::SemiBold );
 
         ImGui::SetCursorPosX( contentShift.x );
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
@@ -343,8 +333,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
         if ( changeHeaderColor )
             ImGui::PopStyleColor();
 
-        if ( boldFont )
-            ImGui::PopFont();
+        boldFont.popFont();
     }
 
     if ( !notification.text.empty() )
@@ -426,8 +415,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
 
     if ( hasCounter )
     {
-        if ( boldFont )
-            ImGui::PushFont( boldFont );
+        RibbonFontHolder boldFont( RibbonFontManager::FontType::SemiBold );
         auto countText = std::to_string( counter );
         const auto textSize = ImGui::CalcTextSize( countText.c_str() );
 
@@ -456,8 +444,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
             ImGui::PopStyleColor();
         drawList->PopClipRect();
 
-        if ( boldFont )
-            ImGui::PopFont();
+        boldFont.popFont();
     }
 
     if ( settings.historyMode )

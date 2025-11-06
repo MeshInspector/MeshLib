@@ -487,6 +487,9 @@
     <ClCompile Include="MRItemEnabledPerViewport.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRRibbonFontHolder.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -959,6 +962,9 @@
     </ClInclude>
     <ClInclude Include="MRFileLoadOptions.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonFontHolder.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

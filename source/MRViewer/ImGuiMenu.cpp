@@ -97,6 +97,7 @@
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRString.h"
 #include "MRUIQualityControl.h"
+#include "MRRibbonFontHolder.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -207,6 +208,12 @@ void ImGuiMenu::initBackend()
     rescaleStyle_();
     ImGui_ImplGlfw_InitForOpenGL( viewer->window, false );
     ImGui_ImplOpenGL3_Init( glsl_version );
+
+    // init emscripten resize, fullscreen, mouse scroll callback
+    // may duplicate an existing resize callback (resizeEmsCanvas in MRViewer.cpp)
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks( viewer->window, "#canvas" );
+#endif
 }
 
 void reserveKeyEvent( ImGuiKey key )
@@ -348,23 +355,6 @@ static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR:
     return { atLeastOneTrue,allTrue };
 }
 
-void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
-{
-    builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
-    builder.AddChar( 0x2014 ); // EM DASH
-    builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
-    builder.AddChar( 0x2208 ); // INSIDE
-    builder.AddChar( 0x2209 ); // OUTSIDE
-    builder.AddChar( 0x2212 ); // MINUS SIGN
-    builder.AddChar( 0x2229 ); // INTERSECTION
-    builder.AddChar( 0x222A ); // UNION
-    // Characters not in the font, with custom glyphs added in `addCustomGlyphs_`:
-    // 0x207B SUPERSCRIPT MINUS
-#ifndef __EMSCRIPTEN__
-    builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
-#endif
-}
-
 void ImGuiMenu::load_font(int font_size)
 {
 #ifdef _WIN32
@@ -374,32 +364,24 @@ void ImGuiMenu::load_font(int font_size)
 
         auto fontPath = getMenuFontPath();
 
-        ImVector<ImWchar> ranges;
-        ImFontGlyphRangesBuilder builder;
-        addMenuFontRanges_( builder );
-        builder.BuildRanges( &ranges );
-
         if ( !io.Fonts->AddFontFromFileTTF(
-            utf8string( fontPath ).c_str(), font_size * UI::scale(),
-            nullptr, ranges.Data ) )
+            utf8string( fontPath ).c_str(), float( font_size ) ) )
         {
             assert( false && "Failed to load font!" );
             spdlog::error( "Failed to load font from `{}`.", utf8string( fontPath ) );
 
             ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-                droid_sans_compressed_size, font_size * hidpi_scaling_ );
+                droid_sans_compressed_size, float( font_size ) );
         }
-        io.Fonts->Build();
     }
     else
     {
         ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-            droid_sans_compressed_size, font_size * hidpi_scaling_ );
-        ImGui::GetIO().Fonts[0].Build();
+            droid_sans_compressed_size, float( font_size ) );
     }
 #else
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-        droid_sans_compressed_size, font_size * hidpi_scaling_);
+        droid_sans_compressed_size, float( font_size ) );
     //TODO: expand for non-Windows systems
 #endif
 }
@@ -600,7 +582,7 @@ void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 // Keyboard IO
 bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 {
-    ImGui_ImplGlfw_CharCallback( nullptr, key );
+    ImGui_ImplGlfw_CharCallback( viewer->window, key );
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
@@ -2321,22 +2303,20 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 
         const auto& style = ImGui::GetStyle();
 
-        auto* iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-        if ( iconsFont )
-            iconsFont->Scale = cDefaultFontSize / cBigIconSize;
+        
 
         const auto buttonWidth = [&] ( const char* label )
         {
             return style.FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
         };
-        if ( iconsFont )
-            ImGui::PushFont( iconsFont );
-        const auto* removeButtonText = iconsFont ? "\xef\x80\x8d" : "X";
-        const auto* addButtonText = iconsFont ? "\xef\x81\x95" : "+";
+
+        RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize );
+
+        const auto* removeButtonText = iconsFont.isPushed() ? "\xef\x80\x8d" : "X";
+        const auto* addButtonText = iconsFont.isPushed() ? "\xef\x81\x95" : "+";
         const auto removeButtonWidth = buttonWidth( removeButtonText );
         const auto addButtonWidth = buttonWidth( addButtonText );
-        if ( iconsFont )
-            ImGui::PopFont();
+        iconsFont.popFont();
 
         const auto& allVisTags = VisualObjectTagManager::tags();
         auto allKnownTags = allTags;
@@ -2391,8 +2371,9 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
                 ImGui::PopStyleColor( 2 );
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
-            if ( iconsFont )
-                ImGui::PushFont( iconsFont );
+
+            iconsFont.pushFont();
+
             ImGui::PushStyleColor( ImGuiCol_Button, Color{ 0xff, 0xff, 0xff, 0x00 } );
             ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color{ 0xff, 0x5f, 0x5f } );
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::red() );
@@ -2403,8 +2384,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
                     selObj->removeTag( tag );
             }
             ImGui::PopStyleColor( 3 );
-            if ( iconsFont )
-                ImGui::PopFont();
+            iconsFont.popFont();
 
             ImGui::SameLine();
         }
@@ -2464,8 +2444,8 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             tagNewName_.clear();
         }
 
-        if ( iconsFont )
-            ImGui::PushFont( iconsFont );
+        iconsFont.pushFont();
+
         ImGui::SameLine( 0, style.ItemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
@@ -2474,8 +2454,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
                     selObj->addTag( name );
             tagNewName_.clear();
         }
-        if ( iconsFont )
-            ImGui::PopFont();
+        iconsFont.popFont();
 
         ImGui::EndPopup();
     }
@@ -2851,14 +2830,7 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
     ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
 
-#pragma warning(push)
-#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
-#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
-#endif
-    ImFont font = *ImGui::GetFont();
-#pragma warning(pop)
-    font.Scale = 1.2f;
-    ImGui::PushFont( &font );
+    ImGui::PushFont( nullptr, ImGui::GetStyle().FontSizeBase * 1.2f );
     ImGui::Text( "Hot Key List" );
     ImGui::PopFont();
     ImGui::NewLine();

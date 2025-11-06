@@ -1309,6 +1309,10 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
         packMapping = {}; //free memory
         data.mesh->shrinkToFit();
     }
+    else
+    {
+        data.selectedFaces &= data.mesh->topology.getValidFaces();
+    }
 
     if ( emap && emap->tsize > 0 )
     {
@@ -1320,7 +1324,6 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
         data.mesh->topology.excludeLoneEdges( data.selectedEdges );
         data.mesh->topology.excludeLoneEdges( data.creases );
     }
-    data.selectedFaces &= data.mesh->topology.getValidFaces();
 
     return res;
 }

@@ -207,6 +207,12 @@ void ImGuiMenu::initBackend()
     rescaleStyle_();
     ImGui_ImplGlfw_InitForOpenGL( viewer->window, false );
     ImGui_ImplOpenGL3_Init( glsl_version );
+
+    // init emscripten resize, fullscreen, mouse scroll callback
+    // may duplicate an existing resize callback (resizeEmsCanvas in MRViewer.cpp)
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks( viewer->window, "#canvas" );
+#endif
 }
 
 void reserveKeyEvent( ImGuiKey key )

@@ -16,10 +16,5 @@ runs:
             -H "X-aws-ec2-metadata-token: $TOKEN" \
             "http://169.254.169.254/latest/meta-data/instance-type" 2>/dev/null || true)
           
-          # if not EC2, set to self-hosted
-          if [ -z "$AWS_INSTANCE_TYPE" ]; then
-            AWS_INSTANCE_TYPE="self-hosted"
-          fi
-          
           echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
           echo $AWS_INSTANCE_TYPE

@@ -267,8 +267,6 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
         return 0;
     }
 
-    auto notFlippable = data.selectedEdges | data.creases;
-
     MeshAttributesToUpdate meshParams;
     if ( !data.uvCoordinates.empty() )
         meshParams.uvCoords = &data.uvCoordinates;
@@ -297,22 +295,22 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
 
     subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
     {
+        // notFlippable is updated inside subdivideMesh( *data.mesh, subs1 )
+
         if ( data.selectedEdges.test( e.undirected() ) )
-        {
             data.selectedEdges.autoResizeSet( e1.undirected() );
-            notFlippable.autoResizeSet( e1.undirected() );
-        }
+
         if ( data.creases.test( e.undirected() ) )
-        {
             data.creases.autoResizeSet( e1.undirected() );
-            notFlippable.autoResizeSet( e1.undirected() );
-        }
 
         updateAttributesCb( e1, e );
         if ( settings.onEdgeSplit )
             settings.onEdgeSplit( e1, e );
     };
-    assert( !subs1.notFlippable );
+
+    auto notFlippable = data.selectedEdges | data.creases;
+    if ( subs1.notFlippable )
+        notFlippable |= *subs1.notFlippable;
     subs1.notFlippable = &notFlippable;
 
     return subdivideMesh( *data.mesh, subs1 );

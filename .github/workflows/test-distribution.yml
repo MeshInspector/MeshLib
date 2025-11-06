@@ -271,28 +271,32 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        continue-on-error: true
         run: |
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "MeshLibDist*.zip" --repo ${{ github.repository }}
 
       - name: Unpack Distributive
+        id: unpack-dist
         run: |
-          Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
-
-      - name: Adding Distributive to PATH
-        shell: bash
-        run: echo "C:\\meshlib-built\\install\\app\\Release" >> $GITHUB_PATH
+          if (Test-Path MeshLibDist*.zip) {
+            Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
+            Write-Output "C:\\meshlib-built\\install\\app\\Release" >> $env:GITHUB_PATH
+            Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
+          }
 
       - name: Run MeshViewer
-        if: always()
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
         run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
         run: meshconv.exe --help
 
       - name: Build C++ examples
-        if: always()
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
         working-directory: examples/cpp-examples
         env:
           DIST_DIR: C:\meshlib-built
@@ -304,7 +308,7 @@ jobs:
           .\build\Release\MeshModification.exe
 
       - name: Build C examples
-        if: always()
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
         working-directory: examples/c-examples
         env:
           DIST_DIR: C:\meshlib-built

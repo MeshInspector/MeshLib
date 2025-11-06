@@ -107,7 +107,10 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     out << fmt::format(
         "  <build>\n"
         "    <item objectid=\"0\" transform=\"{} {} {} {} {} {} {} {} {} {} {} {}\" />\n"
-        "  </build>\n", A.x.x, A.x.y, A.x.z, A.y.x, A.y.y, A.y.z, A.z.x, A.z.y, A.z.z, b.x, b.y, b.z );
+        "  </build>\n", A.x.x, A.y.x, A.z.x,
+                        A.x.y, A.y.y, A.z.y,
+                        A.x.z, A.y.z, A.z.z,
+                        b.x,   b.y,   b.z );
 
     out <<
         "</model>\n";

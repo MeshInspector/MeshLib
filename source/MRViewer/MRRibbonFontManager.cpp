@@ -197,12 +197,13 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* )
         config.GlyphOffset = ImVec2( font.scaledOffset );
     }
 
+    bool addFont = false;
 #ifndef __EMSCRIPTEN__
-    bool addFont = font.fontFile == FontFile::RegularSC;
+    addFont = font.fontFile == FontFile::RegularSC;
+#endif // !__EMSCRIPTEN__
     font.fontPtr = loadFontChecked(
         utf8string( fontPath ).c_str(), fontSize,
         &config, nullptr, addFont ? utf8string( fontPaths_[0] ).c_str() : nullptr );
-#endif // !__EMSCRIPTEN__
 }
 
 }

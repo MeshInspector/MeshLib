@@ -38,6 +38,15 @@ def parse_job(job: dict):
     if not stats_filename.exists():
         return None
 
+    runner_type = "self-hosted"
+    runner_name = job['runner_name']
+    if job['runner_group_name'] == "GitHub Actions" or job['runner_name'].starts_with("GitHub Actions"):
+        runner_type = "github actions"
+        runner_name = None
+    elif job['runner_name'].starts_with("i-0"):
+        runner_type = "aws instance"
+        runner_name = None
+
     runner_stats = None
     try:
         with open(stats_filename, 'r') as f:
@@ -51,6 +60,7 @@ def parse_job(job: dict):
             'target_arch':       runner_stats['target_arch'],
             'compiler':          runner_stats['compiler'],
             'build_config':      runner_stats['build_config'],
+            'runner_type':       runner_type,
             'runner_name':       job['runner_name'],
             'runner_group_name': job['runner_group_name'],
             'runner_cpu_count':  runner_stats['cpu_count'],

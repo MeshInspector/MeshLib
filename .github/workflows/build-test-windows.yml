@@ -71,6 +71,7 @@ jobs:
           cxx_compiler: ${{ matrix.os }} # os name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
+          aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
       - name: Clean Vcpkg Directory
         if: ${{ matrix.os == 'windows-2022' }}

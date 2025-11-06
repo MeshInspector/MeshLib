@@ -260,3 +260,61 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+  
+  windows-test:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Download Distributive
+        continue-on-error: true
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "MeshLibDist*.zip" --repo ${{ github.repository }}
+
+      - name: Unpack Distributive
+        id: unpack-dist
+        run: |
+          if (Test-Path MeshLibDist*.zip) {
+            Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
+            Write-Output "C:\\meshlib-built\\install\\app\\Release" >> $env:GITHUB_PATH
+            Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Run MeshViewer
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
+
+      - name: Show meshconv help
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        run: meshconv.exe --help
+
+      - name: Build C++ examples
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        working-directory: examples/cpp-examples
+        env:
+          DIST_DIR: C:\meshlib-built
+        run: |
+          cmake -S . -B build `
+            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
+          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\Release\MeshModification.exe
+
+      - name: Build C examples
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        working-directory: examples/c-examples
+        env:
+          DIST_DIR: C:\meshlib-built
+        run: |
+          cmake -S . -B build `
+            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
+          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\Release\MeshModification.exe

@@ -83,6 +83,16 @@ jobs:
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
+      - name: WIP Find CMake
+        run: |
+          # https://github.com/microsoft/vswhere/wiki/Start-Developer-Command-Prompt#using-powershell
+          $installationPath = vswhere.exe -latest -property installationPath
+          & "${env:COMSPEC}" /s /c "`"$installationPath\Common7\Tools\vsdevcmd.bat`" -no_logo && set" | foreach-object {
+            $name, $value = $_ -split '=', 2
+            set-content env:\"$name" $value
+          }
+          cmake.exe --version
+
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
         id: vcpkg-cache

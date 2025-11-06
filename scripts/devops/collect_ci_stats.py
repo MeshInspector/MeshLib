@@ -34,9 +34,6 @@ def parse_step(step: dict):
 
 def parse_job(job: dict):
     job_id = job['id']
-    stats_filename = Path(f"RunnerSysStats-{job_id}.json")
-    if not stats_filename.exists():
-        return None
 
     runner_type = "self-hosted"
     runner_name = job['runner_name']
@@ -46,6 +43,10 @@ def parse_job(job: dict):
     elif job['runner_name'].startswith("i-0"):
         runner_type = "aws instance"
         runner_name = None
+
+    stats_filename = Path(f"RunnerSysStats-{job_id}.json")
+    if not stats_filename.exists():
+        return None
 
     runner_stats = None
     try:

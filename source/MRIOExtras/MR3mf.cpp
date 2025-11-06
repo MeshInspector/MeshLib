@@ -37,16 +37,20 @@ static Expected <AffineXf3f> parseAffineXf( const std::string& s )
     int row = 0, col = 0;
     while ( ss >> value )
     {
-        if ( row < 3 )
+        if ( col == 4 )
+            return unexpected( "3MF: too many elements in transform" );
+        if ( col < 3 )
             xf.A[row][col] = value;
-        else if ( row == 3 )
-            xf.b[col] = value;
-        col++;
-        if ( col == 3 )
-            col = 0, row++;
+        else
+            xf.b[row] = value;
+        if ( ++row == 3 )
+        {
+            row = 0;
+            ++col;
+        }
     }
-    if ( !( row == 4 && col == 0 ) )
-        return unexpected( "Invalid matrix format" );
+    if ( !( col == 4 && row == 0 ) )
+        return unexpected( "3MF: too few elements in transform" );
     return AffineXf3f( xf );
 }
 

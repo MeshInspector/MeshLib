@@ -180,7 +180,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
     io.Fonts->Clear();
 }
 
-void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
+void RibbonFontManager::loadFont_( FontType type, const ImWchar* )
 {
     float fontSize = getFontSizeByType( type );
     auto& font = fonts_[int( type )];
@@ -201,7 +201,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges )
     bool addFont = font.fontFile == FontFile::RegularSC;
     font.fontPtr = loadFontChecked(
         utf8string( fontPath ).c_str(), fontSize,
-        &config, ranges, addFont ? utf8string( fontPaths_[0] ).c_str() : nullptr );
+        &config, nullptr, addFont ? utf8string( fontPaths_[0] ).c_str() : nullptr );
 #endif // !__EMSCRIPTEN__
 }
 

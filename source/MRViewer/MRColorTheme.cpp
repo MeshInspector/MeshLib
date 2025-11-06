@@ -462,6 +462,8 @@ void ColorTheme::resetImGuiStyle()
 
     ImGui::GetStyle().ScaleAllSizes( UI::scale() );
     style.ScrollbarSize = 4.0f * UI::scale() + 6.0f; // 6 - is scroll background area, independent of scaling
+
+    style.FontScaleDpi = UI::scale();
 }
 
 void ColorTheme::updateUserThemesList()

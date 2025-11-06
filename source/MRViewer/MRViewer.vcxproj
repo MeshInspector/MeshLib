@@ -15,6 +15,7 @@
     <ClCompile Include="MRAncillaryLabels.cpp" />
     <ClCompile Include="MRAncillaryLines.cpp" />
     <ClCompile Include="MRAncillaryMesh.cpp" />
+    <ClCompile Include="MRAncillaryPlane.cpp" />
     <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
@@ -33,6 +34,7 @@
     <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRRibbonFontHolder.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -155,6 +157,7 @@
     <ClInclude Include="MRAncillaryLabels.h" />
     <ClInclude Include="MRAncillaryLines.h" />
     <ClInclude Include="MRAncillaryMesh.h" />
+    <ClInclude Include="MRAncillaryPlane.h" />
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
@@ -176,6 +179,7 @@
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />
     <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRRibbonFontHolder.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
     <ClInclude Include="MRMacOSOpenDocumentsHandler.h">

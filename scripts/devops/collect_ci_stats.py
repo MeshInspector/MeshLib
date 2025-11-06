@@ -40,10 +40,10 @@ def parse_job(job: dict):
 
     runner_type = "self-hosted"
     runner_name = job['runner_name']
-    if job['runner_group_name'] == "GitHub Actions" or job['runner_name'].starts_with("GitHub Actions"):
+    if job['runner_group_name'] == "GitHub Actions" or job['runner_name'].startswith("GitHub Actions"):
         runner_type = "github actions"
         runner_name = None
-    elif job['runner_name'].starts_with("i-0"):
+    elif job['runner_name'].startswith("i-0"):
         runner_type = "aws instance"
         runner_name = None
 

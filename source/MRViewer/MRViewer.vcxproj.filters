@@ -490,6 +490,12 @@
     <ClCompile Include="MRRibbonFontHolder.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRFileDialogPortal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryPlane.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -965,6 +971,10 @@
     </ClInclude>
     <ClInclude Include="MRRibbonFontHolder.h">
       <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogPortal.h" />
+    <ClInclude Include="MRAncillaryPlane.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

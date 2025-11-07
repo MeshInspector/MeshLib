@@ -17,7 +17,7 @@ eigen3
 freetype
 gdcm
 glad
-glfw3[core,x11]
+glfw3
 gtest
 hidapi
 jsoncpp
@@ -36,3 +36,4 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+wayland-client

@@ -36,4 +36,4 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
-wayland-client
+wayland

@@ -340,7 +340,8 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
     if ( docIt == xmlDocuments_.end() )
         return unexpected( "Cannot find file specified in p:path" );
 
-    if ( auto e = loadDocument_( docIt->second, subprogress( progress_, documentsLoaded_, xmlDocuments_.size() ) ); !e )
+    // no progress reporting because this can be called from another loadDocument_
+    if ( auto e = loadDocument_( docIt->second, {} ); !e )
         return unexpected( std::move( e.error() ) );
 
     it = nodeByIdMap_.find( id );

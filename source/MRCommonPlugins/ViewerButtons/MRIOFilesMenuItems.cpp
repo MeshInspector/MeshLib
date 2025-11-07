@@ -547,14 +547,20 @@ template<typename T>
 std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & objs )
 {
     std::optional<SaveInfo> res;
-    if ( objs.empty() )
+    // return nullopt if there is no single VisualObject in objs
+    if ( std::none_of( objs.begin(), objs.end(), [&]( const auto & pObj )
+        { return dynamic_cast<const VisualObject*>( pObj.get() ); } ) )
         return res;
 
     auto checkObjects = [&]<class U>( SaveInfo info )
     {
         for ( const auto & obj : objs )
+        {
+            if ( !dynamic_cast<const VisualObject*>( obj.get() ) )
+                continue; // skip not VisualObjects
             if ( !dynamic_cast<const U*>( obj.get() ) )
                 return false;
+        }
         res.emplace( info );
         return true;
     };
@@ -592,7 +598,10 @@ std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<c
 
 bool SaveObjectMenuItem::action()
 {
-    const auto objs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    auto objs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    // erase not VisualObjects from objs
+    std::erase_if( objs, [&]( const auto & pObj )
+        { return !dynamic_cast<const VisualObject*>( pObj.get() ); } );
     if ( objs.empty() )
         return false;
     const auto optInfo = getSaveInfo( objs );

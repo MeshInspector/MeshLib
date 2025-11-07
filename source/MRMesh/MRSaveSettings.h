@@ -5,6 +5,7 @@
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRUnitInfo.h"
+#include "MRColor.h"
 #include <cassert>
 #include <optional>
 
@@ -42,6 +43,9 @@ struct SaveSettings
 
     /// units of input coordinates and transformation, to be serialized if the format supports it
     std::optional<LengthUnit> lengthUnit;
+
+    /// the color of whole object
+    std::optional<Color> solidColor;
 
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;

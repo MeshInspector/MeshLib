@@ -44,16 +44,29 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     out <<
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
-        "  <resources>\n"
-        "    <object id=\"0\" type=\"model\">\n"
-        "      <mesh>\n"
-        "        <vertices>\n";
+        "  <resources>\n";
+
+    if ( settings.solidColor )
+    {
+        out <<
+            fmt::format(
+            "    <m:colorgroup id=\"1\">\n"
+            "      <m:color color=\"#{:02X}{:02X}{:02X}{:02X}\" />\n"
+            "    </m:colorgroup>\n"
+            "    <object id=\"0\" type=\"model\" pid=\"1\" pindex=\"0\">\n",
+                settings.solidColor->r, settings.solidColor->g, settings.solidColor->b, settings.solidColor->a );
+    }
+    else
+        out << "    <object id=\"0\" type=\"model\">\n";
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
 
     // write vertices
+    out <<
+        "      <mesh>\n"
+        "        <vertices>\n";
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {

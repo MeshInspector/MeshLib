@@ -52,8 +52,14 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         .lengthUnit = UnitSettings::getActualModelLengthUnit(),
         .progress = settings.callback
     };
-    Expected<void> result;
+    if ( auto vis = obj.asType<VisualObject>() )
+    {
+        // if selected and unselected are the same color, then save it
+        if ( vis->getFrontColor( true ) == vis->getFrontColor( false ) )
+            saveSettings.solidColor = vis->getFrontColor( true );
+    }
 
+    Expected<void> result;
     if ( auto objPoints = obj.asType<ObjectPoints>() )
     {
         if ( objPoints->pointCloud() )

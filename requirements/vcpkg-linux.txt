@@ -17,7 +17,7 @@ eigen3
 freetype
 gdcm
 glad
-glfw3
+glfw3[core,x11]
 gtest
 hidapi
 jsoncpp

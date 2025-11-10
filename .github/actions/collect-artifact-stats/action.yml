@@ -19,7 +19,8 @@ runs:
       shell: python3 collect_artifact_stats.py {0}
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
-        ARTIFACT_PATH: ${{ inputs.artifact_path }}
+        ARTIFACT_PATH: ../..
+        ARTIFACT_GLOB: ${{ inputs.artifact_path }}
         STATS_FILE: "${{ runner.temp }}/ArtifactStats${{ inputs.stats_file_suffix }}.json"
       run: ""
 

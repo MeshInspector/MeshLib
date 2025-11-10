@@ -93,6 +93,8 @@ ObjElement parseToken<ObjElement>( std::string_view line )
     }
 }
 
+// some elements should be considered as individual groups even if following same element
+// for example "usemtl" (actually if there are several sequential "usemtl" lines only last one makes sense)
 template <typename T>
 bool isSingleLineElement( T el )
 {

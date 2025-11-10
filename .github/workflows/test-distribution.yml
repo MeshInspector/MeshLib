@@ -19,13 +19,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
         include:
-          - os: "ubuntu:20.04"
-            name: "ubuntu20"
-            compiler: clang-11
-            c-compiler: /usr/bin/clang-11
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
@@ -125,13 +120,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
         include:
-          - os: "ubuntu:20.04"
-            name: "ubuntu20"
-            compiler: clang-11
-            c-compiler: /usr/bin/clang-11
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14

@@ -66,15 +66,7 @@ ELSE()
     set(OPENVDB_BUILD_BINARIES OFF)
     set(OPENVDB_BUILD_VDB_PRINT OFF)
     set(USE_EXPLICIT_INSTANTIATION OFF)
-
-    # Ubuntu 20.04 compatibility
-    find_package(Boost REQUIRED)
-    find_package(TBB REQUIRED)
-    IF(Boost_VERSION VERSION_LESS 1.73 OR TBB_VERSION VERSION_LESS 2020.2)
-      add_subdirectory(./openvdb/v9/openvdb)
-    ELSE()
-      add_subdirectory(./openvdb/v10/openvdb)
-    ENDIF()
+    add_subdirectory(./openvdb/v10/openvdb)
   ENDIF()
 
   find_package(cpr)

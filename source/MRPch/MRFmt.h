@@ -6,20 +6,3 @@
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/fmt/ostr.h>
 #pragma warning(pop)
-
-#include "MRPch/MRBindingMacros.h"
-
-namespace MR
-{
-#if FMT_VERSION < 80000
-MR_BIND_IGNORE inline std::string_view runtimeFmt( std::string_view str )
-{
-    return str;
-}
-#else
-MR_BIND_IGNORE inline auto runtimeFmt( std::string_view str )
-{
-    return fmt::runtime( str );
-}
-#endif
-}

@@ -1,11 +1,5 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-
 # Note that in this file I'm intentionally not enabling PCH, since this project adds some extra defines, and them missing in the PCH causes issues.
 # They are bindings-only, and can't be added to the PCH itself.
-
 
 project(MeshLibC2 CXX)
 

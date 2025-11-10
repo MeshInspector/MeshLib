@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-
 IF(MESHLIB_EXPERIMENTAL_HIP)
   project(MRCuda CXX HIP)
 ELSE()

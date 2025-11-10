@@ -10,46 +10,28 @@ install(
 )
 
 IF(MR_PCH)
-  IF(MR_EMSCRIPTEN)
+  add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+
+  IF(EMSCRIPTEN)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+      EIGEN_STACK_ALLOCATION_LIMIT=0
+      SPDLOG_FMT_EXTERNAL
+    )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-    # FIXME: comment required
-    target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
       fmt
       jsoncpp
       tbb
     )
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(Boost COMPONENTS REQUIRED)
-    find_package(Eigen3 REQUIRED)
-
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
+  ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt::fmt
-      spdlog::spdlog
       Boost::boost
       Eigen3::Eigen
+      fmt::fmt
       JsonCpp::JsonCpp
+      spdlog::spdlog
       TBB::tbb
-    )
-  ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
-
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
-      Boost::boost
-      JsonCpp::JsonCpp
-      tbb
     )
   ENDIF()
 

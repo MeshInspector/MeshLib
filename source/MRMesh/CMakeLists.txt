@@ -19,140 +19,61 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
-set(MRMESH_OPTIONAL_LIBRARY_DIRS "")
-set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MRMESH_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
-  ENDIF()
+  find_package(TIFF REQUIRED)
+  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
 ENDIF()
 
 IF(NOT MRMESH_NO_GTEST)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(GTest REQUIRED)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
-  ELSE()
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
-  ENDIF()
+  find_package(GTest REQUIRED)
+  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
 ENDIF()
 
-# alternative Eigen include for external project
-find_package(Eigen3 NO_MODULE)
-IF(DEFINED EIGEN3_FOUND)
-  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
-ENDIF()
 IF(EMSCRIPTEN)
-  # FIXME: comment required
-  target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
-ENDIF()
-
-IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED)
-ELSE()
+  target_compile_definitions(${PROJECT_NAME} PUBLIC
+    EIGEN_STACK_ALLOCATION_LIMIT=0
+    SPDLOG_FMT_EXTERNAL
+  )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF()
 
-IF(NOT EMSCRIPTEN)
-  # FIXME: the definition must be populated by spdlog
-  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-  ENDIF()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    spdlog
+    fmt
+    blosc
+    mbedtls
+    mbedx509
+    mbedcrypto
+    zip
+    jsoncpp
+    tbb
+    ${MRMESH_OPTIONAL_DEPENDENCIES}
+  )
 ELSE()
-  target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-ENDIF()
-
-IF(APPLE OR MR_EMSCRIPTEN)
-  #jpeg-turbo is keg-only, which means it was not symlinked into /opt/homebrew,
-  #because libjpeg-turbo is not linked to prevent conflicts with the standard libjpeg.
-  #include_directories(/opt/homebrew/opt/jpeg-turbo/include)
-  #link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
+  find_package(libzip REQUIRED)
+  find_package(tl-expected REQUIRED)
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      Boost::boost
+      Eigen3::Eigen
+      fmt::fmt
+      JsonCpp::JsonCpp
+      spdlog::spdlog
+      TBB::tbb
+      tl::expected
+    PRIVATE
+      libzip::zip
+      ${CMAKE_DL_LIBS}
+      ${MRMESH_OPTIONAL_DEPENDENCIES}
+  )
 
   IF(APPLE)
-    find_library(COCOA_LIBRARY Cocoa ONLY)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
+    # for Boost.Stacktrace
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      zip
-      Boost::boost
-      jsoncpp
-      fmt
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-      ${COCOA_LIBRARY}
-      ${CMAKE_DL_LIBS}
-    )
-  ELSE()
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      fmt
-      blosc
-      mbedtls
-      mbedx509
-      mbedcrypto
-      zip
-      jsoncpp
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-    )
+
+    find_library(COCOA_LIBRARY Cocoa ONLY)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
   ENDIF()
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(tl-expected REQUIRED)
-  find_package(libzip REQUIRED)
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
-  target_link_libraries(${PROJECT_NAME} PUBLIC
-    tl::expected
-    fmt::fmt
-    spdlog::spdlog
-    libzip::zip
-    Boost::boost
-    JsonCpp::JsonCpp
-    TBB::tbb
-    ${CMAKE_DL_LIBS}
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
-  )
-ELSE()
-  find_package(tl-expected REQUIRED)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tl::expected
-    fmt
-    spdlog
-    zip
-    Boost::boost
-    JsonCpp::JsonCpp
-    tbb
-    ${CMAKE_DL_LIBS}
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
-  )
 ENDIF()
 
 IF(MR_PCH)

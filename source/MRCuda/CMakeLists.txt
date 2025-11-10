@@ -40,23 +40,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CUDA_INCLUDE_DIRS}
 )
 
-IF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog::spdlog
-    fmt::fmt
-    TBB::tbb
-    ${MRCUDA_OPTIONAL_DEPENDENCIES}
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog
-    fmt
-    tbb
-    ${MRCUDA_OPTIONAL_DEPENDENCIES}
-  )
-ENDIF()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  ${MRCUDA_OPTIONAL_DEPENDENCIES}
+)
 
 IF(MESHLIB_EXPERIMENTAL_HIP)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-result)

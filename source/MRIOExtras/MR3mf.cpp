@@ -1053,25 +1053,35 @@ void Node::setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::st
         return;
     if ( loader.filamentColors_.empty() )
         return;
-    if ( fColorMap.size() <= f )
-        fColorMap.resize( f + 1, loader.filamentColors_[0] );
+    fColorMap.autoResizeSet( f, loader.filamentColors_[0] );
 
     // taken from https://github.com/bambulab/BambuStudio/issues/1892#issuecomment-1628513224
-    constexpr std::array<const char*, 16> cIdMap =
+    static const HashMap<std::string, int> fId2seq
     {
-        "4", "8", "0C", "1C", "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C", "AC", "BC", "CC", "DC"
+        { "4", 0 },
+        { "8", 1 },
+        { "0C", 2 },
+        { "1C", 3 },
+        { "2C", 4 },
+        { "3C", 5 },
+        { "4C", 6 },
+        { "5C", 7 },
+        { "6C", 8 },
+        { "7C", 9 },
+        { "8C", 10 },
+        { "9C", 11 },
+        { "AC", 12 },
+        { "BC", 13 },
+        { "CC", 14 },
+        { "DC", 15 }
     };
-    int foundFilId = -1;
-    for ( int i = 0; i < cIdMap.size(); ++i )
+
+    if ( auto it = fId2seq.find( fId ); it != fId2seq.end() )
     {
-        if ( fId == cIdMap[i] )
-        {
-            foundFilId = i;
-            break;
-        }
+        auto foundFilId = it->second;
+        if ( foundFilId < loader.filamentColors_.size() )
+            fColorMap[f] = loader.filamentColors_[foundFilId];
     }
-    if ( foundFilId != -1 && foundFilId < loader.filamentColors_.size() )
-        fColorMap[f] = loader.filamentColors_[foundFilId];
 }
 
 Expected<void> Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )

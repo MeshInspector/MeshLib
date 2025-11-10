@@ -224,7 +224,7 @@ jobs:
           retention-days: 1
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:

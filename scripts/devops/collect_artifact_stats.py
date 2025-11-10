@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -10,6 +11,9 @@ if __name__ == "__main__":
             str(filename.relative_to(path)): filename.stat().st_size
             for filename in path.glob(glob)
         }
-        with open(os.environ['STATS_FILE'], 'w') as f:
-            json.dump(results, f)
-            print(json.dumps(results, indent=2))
+        if results:
+            with open(os.environ['STATS_FILE'], 'w') as f:
+                json.dump(results, f)
+                print(json.dumps(results, indent=2))
+        else:
+            sys.exit(1)

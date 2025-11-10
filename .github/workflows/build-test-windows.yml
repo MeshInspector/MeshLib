@@ -339,7 +339,7 @@ jobs:
           retention-days: 1
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:

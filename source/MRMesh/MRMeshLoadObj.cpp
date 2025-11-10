@@ -93,6 +93,17 @@ ObjElement parseToken<ObjElement>( std::string_view line )
     }
 }
 
+// some elements should be considered as individual groups even if following same element
+// for example "usemtl" (actually if there are several sequential "usemtl" lines only last one makes sense)
+template <typename T>
+bool isSingleLineElement( T el )
+{
+    if constexpr ( std::is_same_v<T, ObjElement> )
+        return el == ObjElement::MaterialName;
+    else
+        return false;
+}
+
 template <>
 MtlElement parseToken<MtlElement>( std::string_view line )
 {
@@ -170,7 +181,7 @@ std::vector<ElementGroup<Element>> groupLines( const char* data, size_t, const s
     {
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
         const auto element = parseToken<Element>( line );
-        if ( element != groups.back().element )
+        if ( element != groups.back().element || isSingleLineElement( element ) )
         {
             groups.back().end = li;
             groups.push_back( { element, li, 0 } );

@@ -50,21 +50,19 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${IMGUI_ROOT}>
 )
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_ENABLE_FREETYPE)
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+target_compile_definitions(${PROJECT_NAME} PUBLIC
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+  IMGUI_ENABLE_FREETYPE
+  IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\"
+)
 
 IF(MR_EMSCRIPTEN)
-  add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    IMGUI_IMPL_OPENGL_ES3
+  )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
-  find_package(freetype)
-  IF(NOT freetype_FOUND)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(Freetype REQUIRED IMPORTED_TARGET freetype2)
-    add_library(Freetype::Freetype ALIAS PkgConfig::Freetype)
-  ENDIF()
-
+  find_package(Freetype REQUIRED)
   find_package(glfw3 CONFIG REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE

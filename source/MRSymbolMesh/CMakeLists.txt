@@ -5,13 +5,8 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
-ELSE()
-  find_package(Freetype REQUIRED)
-ENDIF()
-
-IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     freetype
@@ -19,36 +14,15 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     tbb
   )
-ELSEIF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    PkgConfig::jsoncpp
-    fmt
-    spdlog
-    tbb
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    TBB::tbb
-  )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    tbb
+  find_package(Freetype REQUIRED)
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      Freetype::Freetype
   )
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

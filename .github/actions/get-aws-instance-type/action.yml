@@ -5,6 +5,7 @@ runs:
   using: 'composite'
   steps:
     - name: Get AWS instance type
+      if: ${{ runner.os != 'Windows' }}
       shell: bash
       run: |
           # Get token and instance type from EC2 metadata service
@@ -16,10 +17,18 @@ runs:
             -H "X-aws-ec2-metadata-token: $TOKEN" \
             "http://169.254.169.254/latest/meta-data/instance-type" 2>/dev/null || true)
           
-          # if not EC2, set to self-hosted
-          if [ -z "$AWS_INSTANCE_TYPE" ]; then
-            AWS_INSTANCE_TYPE="self-hosted"
-          fi
-          
           echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
           echo $AWS_INSTANCE_TYPE
+
+    - name: Get AWS instance type (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      run: |
+        try {
+            $Token = Invoke-RestMethod -Uri "http://169.254.169.254/latest/api/token" -Method PUT -Headers @{ "X-aws-ec2-metadata-token-ttl-seconds" = "10" }
+            $InstanceType = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-type" -Headers @{ "X-aws-ec2-metadata-token" = $Token }
+            # https://github.com/actions/runner-images/issues/5251#issuecomment-1071030822
+            echo "AWS_INSTANCE_TYPE=$InstanceType" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Output $InstanceType
+        } catch { Write-Warning -Message "Error returned! $_" }
+        

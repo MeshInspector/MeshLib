@@ -58,6 +58,9 @@ jobs:
           # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
           git submodule update --init --recursive --depth 1 thirdparty/mrbind
 
+      - name: Get AWS instance type
+        uses: ./.github/actions/get-aws-instance-type
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         continue-on-error: true
@@ -68,6 +71,7 @@ jobs:
           cxx_compiler: ${{ matrix.os }} # os name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
+          aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
       - name: Clean Vcpkg Directory
         if: ${{ matrix.os == 'windows-2022' }}

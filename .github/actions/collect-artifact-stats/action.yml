@@ -1,0 +1,32 @@
+name: Collect artifact's stats
+
+inputs:
+  artifact_path:
+    required: true
+    type: string
+  stats_file_suffix:
+    required: false
+    type: string
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Collect artifact stats
+      id: collect_stats
+      # `shell` must be specified explicitly for composite actions.
+      # To prevent problems with running a unified shell (bash/pwsh) on all OSes, the script is called directly instead.
+      shell: python3 collect_artifact_stats.py {0}
+      working-directory: ${{ github.action_path }}/../../../scripts/devops
+      env:
+        ARTIFACT_PATH: ../..
+        ARTIFACT_GLOB: ${{ inputs.artifact_path }}
+        STATS_FILE: "${{ runner.temp }}/ArtifactStats${{ inputs.stats_file_suffix }}.json"
+      run: ""
+
+    - name: Upload artifact stats
+      uses: actions/upload-artifact@v4
+      with:
+        name: ArtifactStats${{ inputs.stats_file_suffix }}
+        path: "${{ runner.temp }}/ArtifactStats${{ inputs.stats_file_suffix }}.json"
+        retention-days: 1

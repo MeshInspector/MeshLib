@@ -45,6 +45,7 @@ def parse_job(job: dict):
         runner_name = None
 
     stats_filename = Path(f"RunnerSysStats-{job_id}.json")
+    artifact_stats_filename = Path(f"ArtifactStats-{job_id}.json")
     if not stats_filename.exists():
         return None
 
@@ -52,6 +53,13 @@ def parse_job(job: dict):
     try:
         with open(stats_filename, 'r') as f:
             runner_stats = json.load(f)
+
+        artifact_size = None
+        if artifact_stats_filename.exists():
+            with open(artifact_stats_filename, 'r') as f:
+                artifact_stats = json.load(f)
+                artifact_size = sum(artifact_stats.values())
+
         return {
             'id':                job['id'],
             'conclusion':        job['conclusion'],
@@ -67,6 +75,7 @@ def parse_job(job: dict):
             'runner_ram_mb':     runner_stats['ram_mb'],
             'build_system':      runner_stats['build_system'],
             'aws_instance_type': runner_stats['aws_instance_type'],
+            'artifact_size':     artifact_size,
         }
     except:
         print("Something went wrong while parsing the job/runner info. Debug info:")

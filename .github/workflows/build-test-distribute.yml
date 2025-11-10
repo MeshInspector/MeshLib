@@ -295,6 +295,12 @@ jobs:
           pattern: RunnerSysStats*
           merge-multiple: true
 
+      - name: Download artifact stats
+        uses: actions/download-artifact@v6
+        with:
+          pattern: ArtifactStats*
+          merge-multiple: true
+
       - uses: aws-actions/configure-aws-credentials@v5
         id: aws-creds
         with:
@@ -354,6 +360,12 @@ jobs:
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: RunnerSysStats*
+          failOnError: false
+
+      - name: Delete artifact stats
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: ArtifactStats*
           failOnError: false
 
       # generate timing logs archive

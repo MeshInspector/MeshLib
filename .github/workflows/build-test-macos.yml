@@ -97,6 +97,7 @@ jobs:
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -242,3 +243,11 @@ jobs:
           name: Distributives_macos-${{matrix.os}}
           path: meshlib_${{matrix.os}}.pkg
           retention-days: 1
+
+      - name: Collect artifact stats
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-artifact-stats
+        with:
+          artifact_path: meshlib_${{matrix.os}}.pkg
+          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

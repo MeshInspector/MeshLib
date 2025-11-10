@@ -98,6 +98,7 @@ jobs:
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -243,3 +244,11 @@ jobs:
           name: Distributives_linux-vcpkg-${{ matrix.arch }}
           path: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
           retention-days: 1
+
+      - name: Collect artifact stats
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-artifact-stats
+        with:
+          artifact_path: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

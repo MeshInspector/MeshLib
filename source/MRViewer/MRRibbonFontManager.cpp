@@ -13,6 +13,23 @@
 namespace MR
 {
 
+namespace
+{
+
+// additional offset for the true centering symbol
+std::array<float, int( RibbonFontManager::FontType::Count )> offsetFixToCenter = {
+    -16.f / 300.f,
+    -7.5f / 300.f,
+    6.f / 300.f,
+    0.f,
+    -12.f / 300.f,
+    -16.5f / 300.f,
+    -4.f / 300.f,
+    6.f / 300.f,
+};
+
+}
+
 static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr, const char* additionalFilename = nullptr )
 {
     auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF( filename, size_pixels, font_cfg, glyph_ranges );
@@ -174,8 +191,8 @@ void RibbonFontManager::updateFontsScaledOffset_()
         box.include( Vector2f( glyph->X0, glyph->Y0 ) );
         box.include( Vector2f( glyph->X1, glyph->Y1 ) );
         font.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
-        font.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
-        font.scaledOffset.y = std::round( font.scaledOffset.y );
+        font.scaledOffset.x = -box.min.x; // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
+        font.scaledOffset.y -= offsetFixToCenter[i] * fontSize; // 
     }
     io.Fonts->Clear();
 }

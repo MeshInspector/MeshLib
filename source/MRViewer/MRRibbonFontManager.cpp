@@ -164,18 +164,20 @@ void RibbonFontManager::updateFontsScaledOffset_()
             continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
         auto fontSize = getFontSizeByType( FontType( i ) );
+        float fontSizeHiRes = 100.f;
         localFonts[i] = io.Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config );
 
         auto* lFont = localFonts[i];
         const char wChar[] = "W\0";
-        [[maybe_unused]] auto textSize = lFont->CalcTextSizeA( fontSize, 10, 10, wChar, wChar + 1 );
-        auto glyph = lFont->GetFontBaked( fontSize )->FindGlyph( 'W' );
+        [[maybe_unused]] auto textSize = lFont->CalcTextSizeA( fontSizeHiRes, 10, 10, wChar, wChar + 1 );
+        auto glyph = lFont->GetFontBaked( fontSizeHiRes )->FindGlyph( 'W' );
         Box2f box;
         box.include( Vector2f( glyph->X0, glyph->Y0 ) );
         box.include( Vector2f( glyph->X1, glyph->Y1 ) );
+        box.min *= fontSize / fontSizeHiRes;
+        box.max *= fontSize / fontSizeHiRes;
         font.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
-        font.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
-        font.scaledOffset.y = std::round( font.scaledOffset.y );
+        font.scaledOffset.x = -box.min.x; // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
     }
     io.Fonts->Clear();
 }

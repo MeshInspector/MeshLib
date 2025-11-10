@@ -1,6 +1,7 @@
 boost
 cmake
 cpr
+eigen
 fmt
 gdcm
 glfw

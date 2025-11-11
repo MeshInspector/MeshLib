@@ -40,8 +40,8 @@ std::vector<int> makePalette( const std::vector<Color> & colors, std::ostream & 
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
         {
-            out << fmt::format( "      <base displaycolor=\"#{:02X}{:02X}{:02X}{:02X}\" name=\"{}\"/>\n",
-                c.r, c.g, c.b, c.a, nextPaletteCell );
+            out << fmt::format( "      <m:color color=\"#{:02X}{:02X}{:02X}{:02X}\"/>\n",
+                c.r, c.g, c.b, c.a );
             ++nextPaletteCell;
         }
         res.push_back( it->second );
@@ -71,17 +71,21 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         sUnitNames[int( settings.lengthUnit ? *settings.lengthUnit : LengthUnit::millimeters )];
 
     out <<
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    if ( settings.colors )
+        out << "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n";
+    else
+        out << "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n";
+    out <<
         "  <resources>\n";
 
     Vector<int, VertId> palette;
     if ( settings.colors )
     {
-        out << "    <basematerials id=\"1\">\n";
+        out << "    <m:colorgroup id=\"1\">\n";
         palette.vec_ = makePalette( settings.colors->vec_, out );
-        out << "    </basematerials>\n"
-               "    <object id=\"0\" type=\"model\" pid=\"1\" pindex=\"0\">\n";
+        out << "    </m:colorgroup>\n"
+               "    <object id=\"0\" type=\"model\">\n";
     }
     else if ( settings.solidColor )
     {
@@ -156,6 +160,11 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "        </triangles>\n"
         "      </mesh>\n"
         "    </object>\n"
+        "    <object id=\"2\" type=\"model\">\n"
+        "      <components>\n"
+        "        <component objectid=\"0\" />\n"
+        "      </components>\n"
+        "    </object>"
         "  </resources>\n";
 
     AffineXf3d xf;

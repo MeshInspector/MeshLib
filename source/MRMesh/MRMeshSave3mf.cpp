@@ -27,16 +27,18 @@ constexpr const char * sUnitNames[(int)LengthUnit::_count] =
     "foot"
 };
 
-std::vector<int> makePalette( const std::vector<Color> & colors, std::ostream & out )
+std::vector<int> makePalette( const std::vector<Color> & colors, const BitSet & validColors, std::ostream & out )
 {
     MR_TIMER;
-    std::vector<int> res;
-    res.reserve( colors.size() );
+    std::vector<int> res( colors.size() );
 
     HashMap<Color, int> hmap;
     int nextPaletteCell = 0;
-    for ( const auto & c : colors )
+    for ( size_t i : validColors )
     {
+        if ( i >= colors.size() )
+            break;
+        const auto & c = colors[i];
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
         {
@@ -44,9 +46,8 @@ std::vector<int> makePalette( const std::vector<Color> & colors, std::ostream & 
                 c.r, c.g, c.b, c.a );
             ++nextPaletteCell;
         }
-        res.push_back( it->second );
+        res[i] = it->second;
     }
-    assert( res.size() == colors.size() );
 
     return res;
 }
@@ -79,7 +80,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     if ( settings.colors )
     {
         out << "    <m:colorgroup id=\"1\">\n";
-        palette.vec_ = makePalette( settings.colors->vec_, out );
+        palette.vec_ = makePalette( settings.colors->vec_, mesh.topology.getValidVerts(), out );
         out << "    </m:colorgroup>\n"
                "    <object id=\"2\" type=\"model\">\n";
     }

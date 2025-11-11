@@ -197,6 +197,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* )
     {
         config.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_Bitmap;
         config.GlyphOffset = ImVec2( font.scaledOffset );
+        config.PixelSnapV = true;
     }
 
     bool addFont = false;

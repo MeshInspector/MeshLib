@@ -27,7 +27,7 @@ constexpr const char * sUnitNames[(int)LengthUnit::_count] =
     "foot"
 };
 
-std::vector<int> makePalette( const std::vector<Color> & colors )
+std::vector<int> makePalette( const std::vector<Color> & colors, std::ostream & out )
 {
     MR_TIMER;
     std::vector<int> res;
@@ -40,9 +40,13 @@ std::vector<int> makePalette( const std::vector<Color> & colors )
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
         {
+            out << fmt::format( "      <base displaycolor=\"#{:02X}{:02X}{:02X}{:02X}\" name=\"{}\"/>\n",
+                c.r, c.g, c.b, c.a, nextPaletteCell );
             ++nextPaletteCell;
         }
+        res.push_back( it->second );
     }
+    assert( res.size() == colors.size() );
 
     return res;
 }
@@ -71,11 +75,15 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
         "  <resources>\n";
 
-    std::vector<int> palette;
+    Vector<int, VertId> palette;
     if ( settings.colors )
-        palette = makePalette( settings.colors->vec_ );
-
-    if ( settings.solidColor )
+    {
+        out << "    <basematerials id=\"1\">\n";
+        palette.vec_ = makePalette( settings.colors->vec_, out );
+        out << "    </basematerials>\n"
+               "    <object id=\"0\" type=\"model\" pid=\"1\" pindex=\"0\">\n";
+    }
+    else if ( settings.solidColor )
     {
         out <<
             fmt::format(
@@ -119,17 +127,26 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
-        int v[3] = { 0, 0, 0 };
+        VertId vs[3] = {};
+        int v[3] = {};
         if ( mesh.topology.hasFace( f ) )
         {
-            VertId vs[3];
             mesh.topology.getTriVerts( f, vs );
             for ( int i = 0; i < 3; ++i )
                 v[i] = vertRenumber( vs[i] );
         }
         else if ( settings.packPrimitives )
             continue;
-        out << fmt::format( "          <triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n", v[0], v[1], v[2] );
+        if ( settings.colors )
+        {
+            out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",
+                getAt( palette, vs[0] ), getAt( palette, vs[1] ), getAt( palette, vs[2] ),
+                v[0], v[1], v[2] );
+        }
+        else
+        {
+            out << fmt::format( "          <triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n", v[0], v[1], v[2] );
+        }
         ++savedFaces;
         if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )
             return unexpectedOperationCanceled();

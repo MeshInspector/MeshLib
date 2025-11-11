@@ -209,7 +209,7 @@ std::string getVolumeFragmentShader()
             rayStart = rayStart + normRayDir*step;
         
         textCoord = ( rayStart - minPoint ) / diagonal;
-        if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
+        if ( any( lessThan( textCoord, vec3(-0.001,-0.001,-0.001) ) ) || any( greaterThan( textCoord, vec3(1.001,1.001,1.001) ) ) )
             break;
         
         if (useClippingPlane && dot( vec3( model*vec4(rayStart,1.0)),vec3(clippingPlane))>clippingPlane.w)
@@ -410,7 +410,7 @@ std::string getVolumePickerFragmentShader()
             rayStart = rayStart + normRayDir*step;
 
         textCoord = ( rayStart - minPoint ) / diagonal;
-        if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
+        if ( any( lessThan( textCoord, vec3(-0.001,-0.001,-0.001) ) ) || any( greaterThan( textCoord, vec3(1.001,1.001,1.001) ) ) )
             break;
         
         if (useClippingPlane && dot( vec3( model*vec4(rayStart,1.0)),vec3(clippingPlane))>clippingPlane.w)

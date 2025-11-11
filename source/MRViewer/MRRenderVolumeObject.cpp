@@ -70,7 +70,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     if ( !( dirty_ & DIRTY_SELECTION ) || !objVoxels_->vdbVolume().data )
         return glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y, false );
 
-    const auto& dims = objVoxels_->vdbVolume().dims;
+    const auto& dims = objVoxels_->getActiveBounds().size();
     auto numV = size_t( dims.x ) * dims.y * dims.z;
 
     auto size = numV / 32 + 1;

@@ -48,7 +48,7 @@ jobs:
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
-            runner: macos-13 # github hosted
+            runner: macos-15-intel # github hosted
           - arch: arm64
             config: Debug
             os: github-arm

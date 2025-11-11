@@ -183,6 +183,9 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
             context_ = __global_context;
         }
         ImGui::GetIO().IniFilename = nullptr;
+#ifdef NDEBUG
+        ImGui::GetIO().ConfigDebugHighlightIdConflicts = false;
+#endif
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 5.0f;

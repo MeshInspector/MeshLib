@@ -14,7 +14,10 @@ namespace MR
 namespace MeshSave
 {
 
-static constexpr const char * sUnitNames[(int)LengthUnit::_count] =
+namespace
+{
+
+constexpr const char * sUnitNames[(int)LengthUnit::_count] =
 {
     "micron",
     "millimeter",
@@ -23,6 +26,32 @@ static constexpr const char * sUnitNames[(int)LengthUnit::_count] =
     "inch",
     "foot"
 };
+
+std::vector<int> makePalette( const std::vector<Color> & colors, std::ostream & out )
+{
+    MR_TIMER;
+    std::vector<int> res;
+    res.reserve( colors.size() );
+
+    HashMap<Color, int> hmap;
+    int nextPaletteCell = 0;
+    for ( const auto & c : colors )
+    {
+        auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
+        if ( inserted )
+        {
+            out << fmt::format( "      <m:color color=\"#{:02X}{:02X}{:02X}{:02X}\"/>\n",
+                c.r, c.g, c.b, c.a );
+            ++nextPaletteCell;
+        }
+        res.push_back( it->second );
+    }
+    assert( res.size() == colors.size() );
+
+    return res;
+}
+
+} // anonymous namespace
 
 Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
@@ -43,21 +72,29 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
 
     out <<
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
+        "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n"
         "  <resources>\n";
 
-    if ( settings.solidColor )
+    Vector<int, VertId> palette;
+    if ( settings.colors )
+    {
+        out << "    <m:colorgroup id=\"1\">\n";
+        palette.vec_ = makePalette( settings.colors->vec_, out );
+        out << "    </m:colorgroup>\n"
+               "    <object id=\"2\" type=\"model\">\n";
+    }
+    else if ( settings.solidColor )
     {
         out <<
             fmt::format(
             "    <m:colorgroup id=\"1\">\n"
             "      <m:color color=\"#{:02X}{:02X}{:02X}{:02X}\" />\n"
             "    </m:colorgroup>\n"
-            "    <object id=\"0\" type=\"model\" pid=\"1\" pindex=\"0\">\n",
+            "    <object id=\"2\" type=\"model\" pid=\"1\" pindex=\"0\">\n",
                 settings.solidColor->r, settings.solidColor->g, settings.solidColor->b, settings.solidColor->a );
     }
     else
-        out << "    <object id=\"0\" type=\"model\">\n";
+        out << "    <object id=\"2\" type=\"model\">\n";
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
@@ -90,17 +127,26 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
-        int v[3] = { 0, 0, 0 };
+        VertId vs[3] = {};
+        int v[3] = {};
         if ( mesh.topology.hasFace( f ) )
         {
-            VertId vs[3];
             mesh.topology.getTriVerts( f, vs );
             for ( int i = 0; i < 3; ++i )
                 v[i] = vertRenumber( vs[i] );
         }
         else if ( settings.packPrimitives )
             continue;
-        out << fmt::format( "          <triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n", v[0], v[1], v[2] );
+        if ( settings.colors )
+        {
+            out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",
+                getAt( palette, vs[0] ), getAt( palette, vs[1] ), getAt( palette, vs[2] ),
+                v[0], v[1], v[2] );
+        }
+        else
+        {
+            out << fmt::format( "          <triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n", v[0], v[1], v[2] );
+        }
         ++savedFaces;
         if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )
             return unexpectedOperationCanceled();
@@ -119,7 +165,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     const auto & b = xf.b;
     out << fmt::format(
         "  <build>\n"
-        "    <item objectid=\"0\" transform=\"{} {} {} {} {} {} {} {} {} {} {} {}\" />\n"
+        "    <item objectid=\"2\" transform=\"{} {} {} {} {} {} {} {} {} {} {} {}\" />\n"
         "  </build>\n", A.x.x, A.y.x, A.z.x,
                         A.x.y, A.y.y, A.z.y,
                         A.x.z, A.y.z, A.z.z,

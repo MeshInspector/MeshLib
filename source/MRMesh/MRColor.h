@@ -132,4 +132,16 @@ inline Color operator /( const Color& b, float a )
 /// \note This operation is not commutative
 MRMESH_API Color blend( const Color& front, const Color& back );
 
-}
+} // namespace MR
+
+template<>
+struct std::hash<MR::Color>
+{
+    std::uint32_t operator()( MR::Color c ) const noexcept
+    {
+        std::uint32_t r;
+        static_assert( sizeof( r ) == sizeof( c ) );
+        std::memcpy( &r, &c, sizeof( r ) );
+        return r;
+    }
+};

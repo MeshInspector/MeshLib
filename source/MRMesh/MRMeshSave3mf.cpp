@@ -14,7 +14,10 @@ namespace MR
 namespace MeshSave
 {
 
-static constexpr const char * sUnitNames[(int)LengthUnit::_count] =
+namespace
+{
+
+constexpr const char * sUnitNames[(int)LengthUnit::_count] =
 {
     "micron",
     "millimeter",
@@ -23,6 +26,28 @@ static constexpr const char * sUnitNames[(int)LengthUnit::_count] =
     "inch",
     "foot"
 };
+
+std::vector<int> makePalette( const std::vector<Color> & colors )
+{
+    MR_TIMER;
+    std::vector<int> res;
+    res.reserve( colors.size() );
+
+    HashMap<Color, int> hmap;
+    int nextPaletteCell = 0;
+    for ( const auto & c : colors )
+    {
+        auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
+        if ( inserted )
+        {
+            ++nextPaletteCell;
+        }
+    }
+
+    return res;
+}
+
+} // anonymous namespace
 
 Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
@@ -45,6 +70,10 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n"
         "  <resources>\n";
+
+    std::vector<int> palette;
+    if ( settings.colors )
+        palette = makePalette( settings.colors->vec_ );
 
     if ( settings.solidColor )
     {

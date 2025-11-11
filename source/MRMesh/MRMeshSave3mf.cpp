@@ -71,12 +71,8 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         sUnitNames[int( settings.lengthUnit ? *settings.lengthUnit : LengthUnit::millimeters )];
 
     out <<
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-    if ( settings.colors )
-        out << "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n";
-    else
-        out << "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/2013/01\">\n";
-    out <<
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n"
         "  <resources>\n";
 
     Vector<int, VertId> palette;
@@ -85,7 +81,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         out << "    <m:colorgroup id=\"1\">\n";
         palette.vec_ = makePalette( settings.colors->vec_, out );
         out << "    </m:colorgroup>\n"
-               "    <object id=\"0\" type=\"model\">\n";
+               "    <object id=\"2\" type=\"model\">\n";
     }
     else if ( settings.solidColor )
     {
@@ -94,11 +90,11 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
             "    <m:colorgroup id=\"1\">\n"
             "      <m:color color=\"#{:02X}{:02X}{:02X}{:02X}\" />\n"
             "    </m:colorgroup>\n"
-            "    <object id=\"0\" type=\"model\" pid=\"1\" pindex=\"0\">\n",
+            "    <object id=\"2\" type=\"model\" pid=\"1\" pindex=\"0\">\n",
                 settings.solidColor->r, settings.solidColor->g, settings.solidColor->b, settings.solidColor->a );
     }
     else
-        out << "    <object id=\"0\" type=\"model\">\n";
+        out << "    <object id=\"2\" type=\"model\">\n";
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
@@ -160,11 +156,6 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "        </triangles>\n"
         "      </mesh>\n"
         "    </object>\n"
-        "    <object id=\"2\" type=\"model\">\n"
-        "      <components>\n"
-        "        <component objectid=\"0\" />\n"
-        "      </components>\n"
-        "    </object>"
         "  </resources>\n";
 
     AffineXf3d xf;
@@ -174,7 +165,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     const auto & b = xf.b;
     out << fmt::format(
         "  <build>\n"
-        "    <item objectid=\"0\" transform=\"{} {} {} {} {} {} {} {} {} {} {} {}\" />\n"
+        "    <item objectid=\"2\" transform=\"{} {} {} {} {} {} {} {} {} {} {} {}\" />\n"
         "  </build>\n", A.x.x, A.y.x, A.z.x,
                         A.x.y, A.y.y, A.z.y,
                         A.x.z, A.y.z, A.z.z,

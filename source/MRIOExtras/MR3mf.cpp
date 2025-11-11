@@ -1031,6 +1031,11 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
     {
         objMesh->setFrontColor( *bgColor, true );
         objMesh->setFrontColor( *bgColor, false );
+
+        // set transparency of BackColor equal to the background's transparency
+        auto bc = objMesh->getBackColor();
+        bc.a = bgColor->a;
+        objMesh->setBackColor( bc );
     }
     return {};
 }

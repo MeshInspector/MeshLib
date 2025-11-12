@@ -809,7 +809,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.helpBtnFn )
     {
-        RibbonFontHolder smallFont( RibbonFontManager::FontType::Big, 12.0f / RibbonFontManager::getFontSizeByType( MR::RibbonFontManager::FontType::Big ) );
+        RibbonFontHolder smallFont( RibbonFontManager::FontType::Middle );
 
         const auto btnHelpTextSize = ImGui::CalcTextSize( "HELP" );
         const float btnHelpWidth = btnHelpTextSize.x + 6.0f * UI::scale();

@@ -90,6 +90,8 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         {
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
                 saveSettings.colors = &objMesh->getVertsColorMap();
+            else if ( objMesh->getColoringType() == ColoringType::PrimitivesColorMap )
+                saveSettings.primitiveColors = &objMesh->getFacesColorMap().vec_;
             if ( objMesh->getUVCoords().size() >= objMesh->mesh()->topology.lastValidVert() )
                 saveSettings.uvMap = &objMesh->getUVCoords();
             if ( !objMesh->getTexture().pixels.empty() )

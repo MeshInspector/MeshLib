@@ -714,7 +714,7 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
     FaceColors fColorMap;
     VertColors vColorMap;
     bool allTrisHaveConstColors = true;
-    bool someTrisHaveNotBgColor = false;
+    bool someTrisHaveNotBgColor = !bgColor.has_value();
     VertUVCoords vUVCoords;
 
     Triangulation tris;
@@ -850,7 +850,8 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
                 {
                     const auto color = it->second->colors_[ps[0]];
                     fColorMap.push_back( color );
-                    someTrisHaveNotBgColor = someTrisHaveNotBgColor || ( bgColor && *bgColor != color );
+                    if ( bgColor )
+                        someTrisHaveNotBgColor = someTrisHaveNotBgColor || *bgColor != color;
                 }
                 else
                 {

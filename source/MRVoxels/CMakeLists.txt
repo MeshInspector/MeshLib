@@ -23,19 +23,6 @@ IF(MR_EMSCRIPTEN)
     tbb
   )
 ELSE()
-  # TODO: correct OpenVDB module search
-  IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND CMAKE_MODULE_PATH
-      "/usr/lib/cmake/OpenVDB/"
-      "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
-      "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
-      "/usr/lib64/cmake/OpenVDB/"
-    )
-  ELSEIF(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    list(APPEND CMAKE_MODULE_PATH
-      "${HOMEBREW_PREFIX}/lib/cmake/OpenVDB/"
-    )
-  ENDIF()
   find_package(OpenVDB REQUIRED)
 
   target_link_libraries(${PROJECT_NAME}

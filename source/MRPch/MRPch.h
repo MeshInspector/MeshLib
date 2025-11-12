@@ -31,8 +31,8 @@
 #include "MRSpdlog.h"
 #include "MRSuppressWarning.h"
 
+#include "MRWinapi.h"
 #ifdef _WIN32
-#include <windows.h>
 #include <shlobj.h>
 #include <commdlg.h>
 #endif

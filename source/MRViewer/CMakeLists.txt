@@ -21,15 +21,13 @@ IF(APPLE)
   file(GLOB OBJCPP_SOURCES "*.mm")
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF() # MR_EMSCRIPTEN
-
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 IF(EMSCRIPTEN)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
@@ -47,18 +45,14 @@ ELSE()
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       MRMesh
+      imgui
     PRIVATE
       MRIOExtras
       MRSymbolMesh
       cpr::cpr
       hidapi::hidapi
-      fmt::fmt
       glad::glad
       glfw
-      imgui
-      JsonCpp::JsonCpp
-      spdlog::spdlog
-      TBB::tbb
       ${CMAKE_DL_LIBS}
   )
 
@@ -102,25 +96,40 @@ IF(NOT MRVIEWER_NO_VOXELS)
   target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
 ENDIF()
 
+IF(MR_PCH)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()
+
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
   file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.ttf")
-  file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY ${MAIN_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY ${AWESOME_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY ${IMGUI_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY "resource" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY "wasm_async_func_list.txt" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-ELSE() # MR_EMSCRIPTEN
+  file(
+    COPY
+      ${JSONS}
+      ${MAIN_FONTS}
+      ${AWESOME_FONTS}
+      ${IMGUI_FONTS}
+      "resource"
+    DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
+  )
+  file(
+    COPY "wasm_async_func_list.txt"
+    DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+  )
+ELSE()
   file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
-  file(COPY ${JSONS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MAIN_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${AWESOME_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${IMGUI_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY "resource" DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ENDIF() # MR_EMSCRIPTEN
+  file(
+    COPY
+      ${JSONS}
+      ${MAIN_FONTS}
+      ${AWESOME_FONTS}
+      ${IMGUI_FONTS}
+      "resource"
+    DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  )
+ENDIF()
 
 install(
   TARGETS ${PROJECT_NAME}
@@ -140,14 +149,27 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-install(FILES ${HEADERS} DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
-install(FILES ${MAIN_FONTS} DESTINATION "${MR_FONTS_DIR}")
-install(FILES ${AWESOME_FONTS} DESTINATION "${MR_FONTS_DIR}")
-install(FILES ${IMGUI_FONTS} DESTINATION "${MR_FONTS_DIR}")
-install(FILES ${JSONS} DESTINATION "${MR_RESOURCES_DIR}")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource DESTINATION "${MR_RESOURCES_DIR}")
-IF(MR_EMSCRIPTEN)
-  install(FILES wasm_async_func_list.txt DESTINATION "${MR_RESOURCES_DIR}/wasm")
+install(
+  FILES ${HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+)
+install(
+  FILES
+    ${JSONS}
+    ${MAIN_FONTS}
+    ${AWESOME_FONTS}
+    ${IMGUI_FONTS}
+  DESTINATION ${MR_FONTS_DIR}
+)
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
+  DESTINATION ${MR_RESOURCES_DIR}
+)
+IF(EMSCRIPTEN)
+  install(
+    FILES "wasm_async_func_list.txt"
+    DESTINATION "${MR_RESOURCES_DIR}/wasm"
+  )
 ENDIF()
 
 install(
@@ -156,7 +178,3 @@ install(
   NAMESPACE MeshLib::
   DESTINATION ${MR_CONFIG_DIR}
 )
-
-IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
-ENDIF()

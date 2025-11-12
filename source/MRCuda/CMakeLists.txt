@@ -30,20 +30,18 @@ ENDIF()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRCUDA_OPTIONAL_DEPENDENCIES "")
-
-IF(NOT MRCUDA_NO_VOXELS)
-  list(APPEND MRCUDA_OPTIONAL_DEPENDENCIES MRVoxels)
-ENDIF()
-
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CUDA_INCLUDE_DIRS}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  ${MRCUDA_OPTIONAL_DEPENDENCIES}
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    MRMesh
 )
+
+IF(NOT MRCUDA_NO_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
+ENDIF()
 
 IF(MESHLIB_EXPERIMENTAL_HIP)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-result)

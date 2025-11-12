@@ -33,15 +33,11 @@ ELSE()
     )
   ENDIF()
   find_package(OpenVDB REQUIRED)
+
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       MRMesh
       OpenVDB::openvdb
-    PRIVATE
-      fmt::fmt
-      spdlog::spdlog
-      JsonCpp::JsonCpp
-      TBB::tbb
   )
 ENDIF()
 
@@ -54,7 +50,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

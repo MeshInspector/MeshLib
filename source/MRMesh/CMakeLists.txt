@@ -18,18 +18,6 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRMESH_OPTIONAL_DEPENDENCIES "")
-
-IF(NOT MRMESH_NO_TIFF)
-  find_package(TIFF REQUIRED)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-ENDIF()
-
-IF(NOT MRMESH_NO_GTEST)
-  find_package(GTest REQUIRED)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
-ENDIF()
-
 IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     EIGEN_STACK_ALLOCATION_LIMIT=0
@@ -47,7 +35,6 @@ IF(EMSCRIPTEN)
     zip
     jsoncpp
     tbb
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
   find_package(libzip REQUIRED)
@@ -64,7 +51,6 @@ ELSE()
     PRIVATE
       libzip::zip
       ${CMAKE_DL_LIBS}
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 
   IF(APPLE)
@@ -74,12 +60,21 @@ ELSE()
     find_library(COCOA_LIBRARY Cocoa ONLY)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
   ENDIF()
+
+  IF(NOT MRMESH_NO_TIFF)
+    find_package(TIFF REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
+  ENDIF()
+
+  IF(NOT MRMESH_NO_GTEST)
+    find_package(GTest REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
+  ENDIF()
 ENDIF()
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
-
 
 install(
   FILES ${HEADERS} "config_cmake.h"

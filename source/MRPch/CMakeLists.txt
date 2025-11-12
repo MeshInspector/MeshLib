@@ -52,8 +52,6 @@ IF(MR_PCH)
   # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
   # Also needed for `Boost.Stacktrace` apparently.
   IF(NOT WIN32)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC
-      _GNU_SOURCE
-    )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
   ENDIF()
 ENDIF()

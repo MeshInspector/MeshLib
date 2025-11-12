@@ -7,10 +7,12 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  pybind11nonlimitedapi_stubs
-  ${CMAKE_DL_LIBS}
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+    MRMesh
+    pybind11nonlimitedapi_stubs
+  PRIVATE
+    ${CMAKE_DL_LIBS}
 )
 
 IF(APPLE)
@@ -25,9 +27,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
 
 # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
 IF(NOT WIN32)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC
-    _GNU_SOURCE
-  )
+  target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
 ENDIF()
 
 IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)

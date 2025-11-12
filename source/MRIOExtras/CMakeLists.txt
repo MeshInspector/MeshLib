@@ -153,13 +153,11 @@ IF(MR_EMSCRIPTEN)
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt::fmt
-    JsonCpp::JsonCpp
-    spdlog::spdlog
-    TBB::tbb
-    ${MRIOEXTRAS_DEPENDENCIES}
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+    PRIVATE
+      ${MRIOEXTRAS_DEPENDENCIES}
   )
 ENDIF()
 

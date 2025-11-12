@@ -38,6 +38,10 @@ IF(EMSCRIPTEN)
     glfw
   )
 ELSE()
+  IF(APPLE)
+    list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
+  ENDIF()
+
   find_package(cpr REQUIRED)
   find_package(glad REQUIRED)
   find_package(glfw3 CONFIG REQUIRED)

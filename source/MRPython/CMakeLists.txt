@@ -21,6 +21,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 IF(APPLE)
+  target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::module)
   target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
 ENDIF()
 
@@ -28,7 +29,7 @@ ENDIF()
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${Python_INCLUDE_DIRS}>)
 
 # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
 IF(NOT WIN32)

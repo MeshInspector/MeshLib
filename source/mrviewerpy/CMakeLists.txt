@@ -25,11 +25,11 @@ IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
 ENDIF()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRPython
-  MRViewer
-  pybind11nonlimitedapi_stubs
-  ${CMAKE_DL_LIBS}
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    MRPython
+    MRViewer
+    ${CMAKE_DL_LIBS}
 )
 
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.

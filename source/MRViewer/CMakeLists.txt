@@ -50,6 +50,7 @@ ELSE()
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       MRMesh
+      glfw
       imgui
     PRIVATE
       MRIOExtras
@@ -57,7 +58,6 @@ ELSE()
       cpr::cpr
       hidapi::hidapi
       glad::glad
-      glfw
       ${CMAKE_DL_LIBS}
   )
 

@@ -640,6 +640,7 @@ bool SaveObjectMenuItem::action()
             | IOFilters( baseFilters.begin() + firstFilterNum + 1, baseFilters.end() );
     }
 
+    auto name = objs[0]->name(); // won't be able to get after moving objs into callback
     saveFileDialogAsync( [objs = std::move( objs ), objType, settingsManager] ( const std::filesystem::path& savePath0 ) mutable
     {
         if ( savePath0.empty() )
@@ -690,7 +691,7 @@ bool SaveObjectMenuItem::action()
             };
         } );
     }, {
-        .fileName = objs[0]->name(),
+        .fileName = std::move( name ),
         .filters = std::move( filters ),
     } );
     return false;

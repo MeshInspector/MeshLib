@@ -7,7 +7,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
   set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
 
 IF(MR_EMSCRIPTEN_WASM64)
@@ -48,13 +48,6 @@ IF(APPLE)
 ENDIF()
 
 IF(NOT APPLE AND NOT EMSCRIPTEN)
-  # TODO: correct OpenVDB module search
-  list(APPEND CMAKE_MODULE_PATH
-    "/usr/lib/cmake/OpenVDB/"
-    "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
-    "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
-    "/usr/lib64/cmake/OpenVDB/"
-  )
   find_package(OpenVDB 10 COMPONENTS openvdb)
   IF(NOT OpenVDB_FOUND)
     set(OPENVDB_ENABLE_UNINSTALL OFF)
@@ -95,14 +88,6 @@ IF(EMSCRIPTEN)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest)
-
-  set(ENABLE_PROGRAMS OFF CACHE BOOL "")
-  set(ENABLE_TESTING OFF CACHE BOOL "")
-  add_subdirectory(./mbedtls)
-  install(DIRECTORY mbedtls/include/mbedtls DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-
-  # Use custom FindMbedTLS.cmake to override the one included in ziplib, that does not work
-  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
   set(BUILD_TOOLS OFF CACHE BOOL "")
   set(BUILD_REGRESS OFF CACHE BOOL "")
@@ -175,8 +160,3 @@ add_subdirectory(./tinygltf)
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
-
-IF(MR_EMSCRIPTEN)
-  install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-  install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-ENDIF()

@@ -12,34 +12,36 @@ install(
 IF(MR_PCH)
   add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
+  # Emscripten's Boost package doesn't contain CMake config files
+  # on other systems the module mode shows a warning
+  IF(NOT EMSCRIPTEN)
+    find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
+  ELSE()
+    cmake_policy(PUSH)
+    cmake_policy(SET CMP0167 OLD)
+    find_package(Boost 1.73 REQUIRED)
+    cmake_policy(POP)
+  ENDIF()
+  find_package(Eigen3 REQUIRED)
+  find_package(fmt 8 REQUIRED)
+  find_package(JsonCpp REQUIRED)
+  find_package(spdlog 1.9 REQUIRED)
+  find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
+
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    Boost::boost
+    Eigen3::Eigen
+    fmt::fmt
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    TBB::tbb
+  )
+
   IF(EMSCRIPTEN)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
       EIGEN_STACK_ALLOCATION_LIMIT=0
-      SPDLOG_FMT_EXTERNAL
     )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      jsoncpp
-      tbb
-    )
-  ELSE()
-    find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
-    find_package(Eigen3 REQUIRED)
-    find_package(fmt 8 REQUIRED)
-    find_package(JsonCpp REQUIRED)
-    find_package(spdlog 1.9 REQUIRED)
-    find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      Boost::boost
-      Eigen3::Eigen
-      fmt::fmt
-      JsonCpp::JsonCpp
-      spdlog::spdlog
-      TBB::tbb
-    )
   ENDIF()
 
   IF(MR_PCH_USE_EXTRA_HEADERS)

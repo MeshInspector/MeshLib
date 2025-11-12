@@ -7,21 +7,11 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
-IF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog
-    pybind11nonlimitedapi_stubs
-    ${CMAKE_DL_LIBS}
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog::spdlog
-    pybind11nonlimitedapi_stubs
-    ${CMAKE_DL_LIBS}
-  )
-ENDIF()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  pybind11nonlimitedapi_stubs
+  ${CMAKE_DL_LIBS}
+)
 
 IF(APPLE)
   target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
@@ -66,7 +56,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

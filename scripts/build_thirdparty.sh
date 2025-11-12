@@ -151,6 +151,9 @@ else
   cmake -S ${MESHLIB_THIRDPARTY_DIR} -B . ${MR_CMAKE_OPTIONS}
   cmake --build . -j ${NPROC}
   cmake --install .
+
+  # build clip separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/clip.sh ${MESHLIB_THIRDPARTY_DIR}/clip
 fi
 popd
 

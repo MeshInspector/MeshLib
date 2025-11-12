@@ -3,12 +3,13 @@ project(MRViewer CXX)
 option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux)" OFF)
 option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
 option(MRVIEWER_NO_XDG_DESKTOP_PORTAL "Disable XDG Desktop Portal support (affects file dialog support on Linux)" OFF)
+option(MRVIEWER_WITH_BUNDLED_CURL "Link with cURL for extra functions required for portable Linux builds" OFF)
 
 IF(NOT MESHLIB_BUILD_VOXELS)
   set(MRVIEWER_NO_VOXELS ON)
 ENDIF()
 
-IF(WIN32 OR APPLE OR MR_EMSCRIPTEN)
+IF(WIN32 OR APPLE OR EMSCRIPTEN)
   set(MRVIEWER_NO_GTK ON)
   set(MRVIEWER_NO_XDG_DESKTOP_PORTAL ON)
 ENDIF()
@@ -28,33 +29,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRVIEWER_OPTIONAL_DEPENDENCIES "")
-
-IF(NOT MRVIEWER_NO_VOXELS)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
-  IF(APPLE)
-    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(OpenVDB REQUIRED)
-    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB::openvdb)
-  ELSE()
-    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES openvdb)
-  ENDIF()
-ENDIF()
-
-IF(NOT MRVIEWER_NO_GTK)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtk)
-ENDIF()
-
-IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::dbus)
-ENDIF()
-
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
@@ -63,87 +38,69 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     imgui
     glfw
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSEIF(APPLE)
-  set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
-    COMPILE_FLAGS "-x objective-c++"
-    SKIP_PRECOMPILE_HEADERS ON
-  )
-  find_library(APPKIT_LIBRARY AppKit REQUIRED)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE
-    _GNU_SOURCE
-  )
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRSymbolMesh
-    fmt
-    tbb
-    spdlog
-    jsoncpp
-    cpr
-    imgui
-    glad
-    glfw
-    hidapi
-    clip
-    ${APPKIT_LIBRARY}
-    ${CMAKE_DL_LIBS}
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(GDCM CONFIG REQUIRED)
+ELSE()
   find_package(cpr REQUIRED)
   find_package(glad REQUIRED)
   find_package(hidapi REQUIRED)
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRSymbolMesh
-    cpr::cpr
-    imgui
-    glad::glad
-    glfw
-    hidapi::hidapi
-    JsonCpp::JsonCpp
-    spdlog::spdlog
-    fmt::fmt
-    TBB::tbb
-    ${CMAKE_DL_LIBS}
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+    PRIVATE
+      MRIOExtras
+      MRSymbolMesh
+      cpr::cpr
+      hidapi::hidapi
+      fmt::fmt
+      glad::glad
+      glfw
+      imgui
+      JsonCpp::JsonCpp
+      spdlog::spdlog
+      TBB::tbb
+      ${CMAKE_DL_LIBS}
   )
+
   IF(NOT WIN32)
     find_package(clip CONFIG REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
-
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(curl REQUIRED IMPORTED_TARGET libcurl)
-    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::curl)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_WITH_BUNDLED_CURL)
   ENDIF()
-ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
-  find_package(GDCM CONFIG REQUIRED)
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRSymbolMesh
-    cpr
-    imgui
-    glad
-    glfw
-    hidapi-hidraw
-    JsonCpp::JsonCpp
-    spdlog
-    fmt
-    tbb
-    clip
-    ${CMAKE_DL_LIBS}
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-  )
-ENDIF() # APPLE
+  IF(APPLE)
+    set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
+      COMPILE_FLAGS "-x objective-c++"
+      SKIP_PRECOMPILE_HEADERS ON
+    )
+
+    find_library(APPKIT_LIBRARY AppKit REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY})
+  ENDIF()
+
+  IF(NOT WIN32 AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+
+    IF(NOT MRVIEWER_NO_GTK)
+      pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
+      target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::gtk)
+    ENDIF()
+
+    IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
+      pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
+      target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::dbus)
+    ENDIF()
+
+    IF(MRVIEWER_WITH_BUNDLED_CURL)
+      pkg_check_modules(curl REQUIRED IMPORTED_TARGET libcurl)
+      target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::curl)
+      target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_WITH_BUNDLED_CURL)
+    ENDIF()
+  ENDIF()
+ENDIF()
+
+IF(NOT MRVIEWER_NO_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
+ENDIF()
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")

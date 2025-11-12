@@ -94,11 +94,9 @@ ENDIF()
 IF(NOT MRIOEXTRAS_NO_PNG)
   IF(MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_LIBPNG=1")
-  ELSEIF(WIN32)
+  ELSE()
     find_package(PNG REQUIRED)
     list(APPEND MRIOEXTRAS_DEPENDENCIES PNG::PNG)
-  ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES png)
   ENDIF()
 ENDIF()
 
@@ -127,20 +125,16 @@ IF(NOT MRIOEXTRAS_NO_STEP)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES tiff)
-  ENDIF()
+  find_package(TIFF REQUIRED)
+  list(APPEND MRIOEXTRAS_DEPENDENCIES TIFF::TIFF)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_ZLIB)
-  IF(MR_EMSCRIPTEN)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES z)
-  ELSE()
+  IF(NOT EMSCRIPTEN)
     find_package(ZLIB REQUIRED)
     list(APPEND MRIOEXTRAS_DEPENDENCIES ZLIB::ZLIB)
+  ELSE()
+    list(APPEND MRIOEXTRAS_DEPENDENCIES z)
   ENDIF()
 ENDIF()
 
@@ -151,46 +145,24 @@ target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
   ${MRIOEXTRAS_LIBRARY_DIRS}
 )
 IF(MR_EMSCRIPTEN)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
     tbb
     jsoncpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSEIF(APPLE)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt
-    spdlog
-    tbb
-    jsoncpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSEIF(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt::fmt
-    spdlog::spdlog
-    TBB::tbb
-    JsonCpp::JsonCpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSE()
-  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     fmt::fmt
-    spdlog::spdlog
-    tbb
     JsonCpp::JsonCpp
+    spdlog::spdlog
+    TBB::tbb
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

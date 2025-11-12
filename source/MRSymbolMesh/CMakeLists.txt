@@ -19,6 +19,7 @@ ELSE()
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       MRMesh
+    PRIVATE
       Freetype::Freetype
   )
 ENDIF()
@@ -49,5 +50,5 @@ install(
 )
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

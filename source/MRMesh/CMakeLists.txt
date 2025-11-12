@@ -54,7 +54,7 @@ ELSE()
   find_package(tl-expected REQUIRED)
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
-      Boost::boost
+      Boost::headers
       Eigen3::Eigen
       fmt::fmt
       JsonCpp::JsonCpp
@@ -69,7 +69,7 @@ ELSE()
 
   IF(APPLE)
     # for Boost.Stacktrace
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
 
     find_library(COCOA_LIBRARY Cocoa ONLY)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})

@@ -14,22 +14,6 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRVOXELS_OPTIONAL_DEPENDENCIES "")
-
-IF(NOT MRVOXELS_NO_DICOM)
-  find_package(GDCM CONFIG REQUIRED)
-  list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF)
-ENDIF()
-
-IF(NOT MRVOXELS_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
-  ENDIF()
-ENDIF()
-
 IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
@@ -37,39 +21,33 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     spdlog
     tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
-  )
-ELSEIF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    OpenVDB
-    PkgConfig::jsoncpp
-    fmt
-    spdlog
-    tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(OpenVDB REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    OpenVDB::openvdb
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    TBB::tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    openvdb
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # TODO: correct OpenVDB module search
+    list(APPEND CMAKE_MODULE_PATH
+      "/usr/lib/cmake/OpenVDB/"
+      "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
+      "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
+      "/usr/lib64/cmake/OpenVDB/"
+    )
+  ENDIF()
+  find_package(OpenVDB REQUIRED)
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      OpenVDB::openvdb
+    PRIVATE
+      fmt::fmt
+      spdlog::spdlog
+      JsonCpp::JsonCpp
+      TBB::tbb
   )
+ENDIF()
+
+IF(NOT MRVOXELS_NO_DICOM)
+  find_package(GDCM CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF)
 ENDIF()
 
 IF(MR_PCH)

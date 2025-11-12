@@ -444,7 +444,10 @@ private:
             *avg = *avg / static_cast < T > ( xyPairs.size() );
         }
         // Solve the system of equations Ax = b using the least squares method
+        MR_SUPPRESS_WARNING_PUSH
+        MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
         Eigen::Matrix<T, Eigen::Dynamic, 1> x = A.bdcSvd( Eigen::ComputeThinU | Eigen::ComputeThinV ).solve( b );
+        MR_SUPPRESS_WARNING_POP
 
         lineA = x( 0 );
         lineB = x( 1 );

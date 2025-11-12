@@ -25,6 +25,13 @@ IF(MR_PCH)
       tbb
     )
   ELSE()
+    find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
+    find_package(Eigen3 REQUIRED)
+    find_package(fmt 8 REQUIRED)
+    find_package(JsonCpp REQUIRED)
+    find_package(spdlog 1.9 REQUIRED)
+    find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
+
     target_link_libraries(${PROJECT_NAME} PRIVATE
       Boost::boost
       Eigen3::Eigen

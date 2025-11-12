@@ -59,12 +59,10 @@ ELSE()
       MRMesh
       MRIOExtras
       MRViewer
-      JsonCpp::JsonCpp
       cpr
       fmt
       gtest
       spdlog
-      openvdb
       tbb
       ${CMAKE_DL_LIBS}
     )

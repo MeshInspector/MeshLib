@@ -37,8 +37,15 @@ IF(EMSCRIPTEN)
     tbb
   )
 ELSE()
+  find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
+  find_package(Eigen3 REQUIRED)
+  find_package(fmt 8 REQUIRED)
+  find_package(JsonCpp REQUIRED)
   find_package(libzip REQUIRED)
+  find_package(spdlog 1.9 REQUIRED)
+  find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
   find_package(tl-expected REQUIRED)
+
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       Boost::headers
@@ -71,6 +78,11 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
   ENDIF()
 ENDIF()
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+)
 
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)

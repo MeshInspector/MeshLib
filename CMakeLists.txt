@@ -154,18 +154,6 @@ ENDIF()
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
-  find_package(Eigen3 REQUIRED)
-  find_package(fmt 8 REQUIRED)
-  find_package(JsonCpp REQUIRED)
-  find_package(spdlog 1.9 REQUIRED)
-  find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
-ENDIF() # NOT MR_EMSCRIPTEN
-
-include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)
-include_directories(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include)
-
 IF(NOT $ENV{MR_VERSION} STREQUAL "")
   set(MESHLIB_VERSION $ENV{MR_VERSION})
 ELSE()
@@ -242,10 +230,6 @@ IF(MESHLIB_BUILD_VOXELS)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)
-  IF(NOT MR_EMSCRIPTEN)
-    find_package(glfw3 CONFIG REQUIRED)
-  ENDIF()
-
   IF(MR_EMSCRIPTEN)
     include(EmscriptenHelpers)
     mr_emscripten_pack_directory("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets" "/")

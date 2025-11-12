@@ -7,6 +7,11 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include>
+)
+
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh

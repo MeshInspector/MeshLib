@@ -40,6 +40,7 @@ IF(EMSCRIPTEN)
 ELSE()
   find_package(cpr REQUIRED)
   find_package(glad REQUIRED)
+  find_package(glfw3 CONFIG REQUIRED)
   find_package(hidapi REQUIRED)
 
   target_link_libraries(${PROJECT_NAME}

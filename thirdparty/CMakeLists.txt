@@ -47,9 +47,7 @@ IF(APPLE)
   set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE BOOL "" FORCED)
 ENDIF()
 
-IF(APPLE OR MR_EMSCRIPTEN)
-  add_subdirectory(./expected ./expected)
-ELSE()
+IF(NOT APPLE AND NOT EMSCRIPTEN)
   # TODO: correct OpenVDB module search
   list(APPEND CMAKE_MODULE_PATH
     "/usr/lib/cmake/OpenVDB/"
@@ -85,7 +83,9 @@ add_subdirectory(./OpenCTM-git ./OpenCTM)
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
+  add_subdirectory(./expected ./expected)
+
   set(GDCM_BUILD_APPLICATIONS OFF)
   set(GDCM_BUILD_SHARED_LIBS OFF)
   set(GDCM_BUILD_TESTING OFF)

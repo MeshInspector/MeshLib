@@ -23,7 +23,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **STEP** | Yes | No | Yes | No |
 | **STP** | Yes | No | Yes | No |
 | **CTM** | Yes | No | Yes | Yes |
-| **3MF** | Yes | Yes | Yes | No |
+| **3MF** | Yes | Yes | Yes | Yes |
 | **MODEL** | Yes | No | No | No |
 | **PLY** | Yes | No | Yes | Yes |
 | **GLTF** | Yes | Yes | Yes | Yes |

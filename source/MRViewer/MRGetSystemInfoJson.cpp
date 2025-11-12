@@ -88,6 +88,7 @@ Json::Value GetSystemInfoJson()
             monitorInfo["Height"] = maxHeight;
             monitorInfo["ScalingPercent"] = maxScale;
         }
+        windowInfo["Number of monitors"] = count;
     }
     else
     {

@@ -809,7 +809,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.helpBtnFn )
     {
-        ImGui::PushFont( nullptr, ImGui::GetStyle().FontSizeBase * 0.9f );
+        RibbonFontHolder smallFont( RibbonFontManager::FontType::Middle );
 
         const auto btnHelpTextSize = ImGui::CalcTextSize( "HELP" );
         const float btnHelpWidth = btnHelpTextSize.x + 6.0f * UI::scale();
@@ -824,7 +824,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             params.helpBtnFn();
         ImGui::PopStyleColor( 4 );
 
-        ImGui::PopFont();
+        smallFont.popFont();
 
         ImGui::SameLine();
     }

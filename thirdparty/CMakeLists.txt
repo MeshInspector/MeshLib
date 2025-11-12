@@ -57,7 +57,7 @@ ELSE()
     "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
     "/usr/lib64/cmake/OpenVDB/"
   )
-  find_package(OpenVDB 9 COMPONENTS openvdb)
+  find_package(OpenVDB 10 COMPONENTS openvdb)
   IF(NOT OpenVDB_FOUND)
     set(OPENVDB_ENABLE_UNINSTALL OFF)
     set(OPENVDB_ENABLE_INSTALL OFF)

@@ -25,75 +25,70 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-IF(EMSCRIPTEN)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+IF(APPLE)
+  list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
+ENDIF()
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+find_package(glad REQUIRED)
+IF(NOT EMSCRIPTEN)
+  find_package(glfw3 CONFIG REQUIRED)
+ENDIF()
+
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
     MRMesh
+    glfw
+    imgui
+  PRIVATE
     MRIOExtras
     MRSymbolMesh
-    tbb
-    jsoncpp
-    imgui
-    glfw
-  )
-ELSE()
-  IF(APPLE)
-    list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
-  ENDIF()
+    glad::glad
+    ${CMAKE_DL_LIBS}
+)
 
+IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
-  find_package(glad REQUIRED)
-  find_package(glfw3 CONFIG REQUIRED)
   find_package(hidapi REQUIRED)
 
   target_link_libraries(${PROJECT_NAME}
-    PUBLIC
-      MRMesh
-      glfw
-      imgui
     PRIVATE
-      MRIOExtras
-      MRSymbolMesh
       cpr::cpr
       hidapi::hidapi
-      glad::glad
-      ${CMAKE_DL_LIBS}
+  )
+ENDIF()
+
+IF(NOT WIN32 AND NOT EMSCRIPTEN)
+  find_package(clip CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
+ENDIF()
+
+IF(APPLE)
+  set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
+    COMPILE_FLAGS "-x objective-c++"
+    SKIP_PRECOMPILE_HEADERS ON
   )
 
-  IF(NOT WIN32)
-    find_package(clip CONFIG REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
+  find_library(APPKIT_LIBRARY AppKit REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY})
+ENDIF()
+
+IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(PkgConfig REQUIRED)
+
+  IF(NOT MRVIEWER_NO_GTK)
+    pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::gtk)
   ENDIF()
 
-  IF(APPLE)
-    set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
-      COMPILE_FLAGS "-x objective-c++"
-      SKIP_PRECOMPILE_HEADERS ON
-    )
-
-    find_library(APPKIT_LIBRARY AppKit REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY})
+  IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
+    pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::dbus)
   ENDIF()
 
-  IF(NOT WIN32 AND NOT APPLE)
-    find_package(PkgConfig REQUIRED)
-
-    IF(NOT MRVIEWER_NO_GTK)
-      pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
-      target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::gtk)
-    ENDIF()
-
-    IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
-      pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
-      target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::dbus)
-    ENDIF()
-
-    IF(MRVIEWER_WITH_BUNDLED_CURL)
-      pkg_check_modules(curl REQUIRED IMPORTED_TARGET libcurl)
-      target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::curl)
-      target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_WITH_BUNDLED_CURL)
-    ENDIF()
+  IF(MRVIEWER_WITH_BUNDLED_CURL)
+    pkg_check_modules(curl REQUIRED IMPORTED_TARGET libcurl)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::curl)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_WITH_BUNDLED_CURL)
   ENDIF()
 ENDIF()
 

@@ -85,6 +85,8 @@ protected:
     /// `centerPoint` - a point that will be used as center of rotation/scaling in world space
     MRVIEWER_API virtual void setCenterPoint_( const std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint ) const;
 
+    /// override this function to customize plane in which all movement will happen
+    /// default: screen plane moved to `xfCenterPoint`
     MRVIEWER_API virtual Plane3f calcControlPlane_( const Viewport& vp, const Vector3f& viewportCenterPoint, const Vector3f& xfCenterPoint ) const;
 
     /// Helper function to calculate world bounding box for several objects

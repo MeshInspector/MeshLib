@@ -36,84 +36,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRIOExtras
   MRSymbolMesh
   MRVoxels
-  JsonCpp::JsonCpp
+  # Boost.stacktrace uses something from libdl in its headers.
+  ${CMAKE_DL_LIBS}
 )
 
-# Boost.stacktrace uses something from libdl in its headers.
-target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
-
-IF(APPLE)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    jsoncpp
-  )
-ELSEIF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    jsoncpp
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    JsonCpp::JsonCpp
-  )
-ELSE()
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    jsoncpp
-  )
-ENDIF()
-
-
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    openvdb
-  )
-ELSEIF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    OpenVDB
-  )
-ELSEIF(WIN32)
-  find_package(OpenVDB REQUIRED)
-
+IF(WIN32)
   # Patch IMath (a dependency of OpenVDB) to not include `/EHsc`. See the beginning of this file for explanation.
   get_target_property(TMP_PROP Imath::Imath INTERFACE_COMPILE_OPTIONS)
   IF(TMP_PROP)
     string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
     set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
   ENDIF()
-
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    OpenVDB::openvdb
-  )
-ELSEIF(MESHLIB_USE_VCPKG)
-  find_package(OpenVDB REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    OpenVDB::openvdb
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    openvdb
-  )
 ENDIF()
-
-
-IF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    TBB::tbb
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tbb
-  )
-ENDIF()
-
 
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)
-
-# Needed for `Boost.Stacktrace` on Mac.
-IF(APPLE)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
-ENDIF()
 
 install(
   TARGETS ${PROJECT_NAME}

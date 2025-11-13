@@ -14,22 +14,15 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    openvdb
-    jsoncpp
-    spdlog
-    tbb
-  )
-ELSE()
-  find_package(OpenVDB REQUIRED)
+find_package(OpenVDB REQUIRED)
 
-  target_link_libraries(${PROJECT_NAME}
-    PUBLIC
-      MRMesh
-      OpenVDB::openvdb
-  )
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+    MRMesh
+    OpenVDB::openvdb
+)
+IF(EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE blosc)
 ENDIF()
 
 IF(NOT MRVOXELS_NO_DICOM)

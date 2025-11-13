@@ -501,7 +501,14 @@ if(NOT OPENVDB_USE_STATIC_LIBS AND NOT Boost_USE_STATIC_LIBS)
   set(Boost_USE_STATIC_LIBS OFF)
 endif()
 
-find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
+if(NOT EMSCRIPTEN)
+  find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
+else()
+  cmake_policy(PUSH)
+  cmake_policy(SET CMP0167 OLD)
+  find_package(Boost REQUIRED)
+  cmake_policy(POP)
+endif()
 
 # Add deps for pyopenvdb
 # @todo track for numpy

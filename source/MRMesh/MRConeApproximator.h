@@ -18,7 +18,9 @@
 #pragma warning(pop)
 #endif
 
+#include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
+
 #include <algorithm>
 
 // Main idea is here: https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf pages 45-51

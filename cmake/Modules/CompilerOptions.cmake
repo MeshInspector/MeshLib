@@ -66,6 +66,8 @@ IF(MSVC)
   #   warning C4710: function not inlined
   #   warning C4711: function selected for automatic inline expansion
   #   warning C4820: N bytes padding added after data member
+  #   warning C4865: the underlying type will change from 'int' to '__int64' when '/Zc:enumTypes' is specified on the command line (VS2026 v18.0.0, https://developercommunity.visualstudio.com/t/VS2026-MSVC-Warning-C4865-lies-about-und/10966873)
+  #   warning C4866: compiler may not enforce left-to-right evaluation order for call to
   #   warning C4868: compiler may not enforce left-to-right evaluation order in braced initializer list
   #   warning C5026: move constructor was implicitly defined as deleted
   #   warning C5027: move assignment operator was implicitly defined as deleted
@@ -81,7 +83,7 @@ IF(MSVC)
   #   warning C5264: 'const' variable is not used
   #   warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
   # !! NOTE: Sync this list with `common.props` !!
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4865 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
 ELSE()
   set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
 

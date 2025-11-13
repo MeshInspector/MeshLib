@@ -8,11 +8,12 @@
 #include "MRExpected.h"
 
 #pragma warning(push)
-#pragma warning(disable: 4619) //#pragma warning: there is no warning number
-#pragma warning(disable: 5204) //class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
+#pragma warning(disable: 4619) // #pragma warning: there is no warning number
+#pragma warning(disable: 5204) // class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
-#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#pragma warning(disable: 5267) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+#pragma warning(disable: 5311) // A literal - operator-id of the form 'operator string-literal identifier' has been deprecated (VS2026 v18.0.0)
 #if __clang_major__ >= 18
 #pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
 #endif

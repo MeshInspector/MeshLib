@@ -21,6 +21,7 @@
 #pragma warning(disable: 5215) //a function parameter with a volatile qualified type is deprecated in C++20
 #pragma warning(disable: 5219) //implicit conversion from '__int64' to 'double', possible loss of data
 #pragma warning(disable: 5220) //a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
+#pragma warning(disable: 5259) //explicit specialization requires 'template <>' (VS2026 v18.0.0)
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif

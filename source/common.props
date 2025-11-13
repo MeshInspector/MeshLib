@@ -84,6 +84,8 @@
            warning C4710: function not inlined
            warning C4711: function selected for automatic inline expansion
            warning C4820: N bytes padding added after data member
+           warning C4865: the underlying type will change from 'int' to '__int64' when '/Zc:enumTypes' is specified on the command line (VS2026 v18.0.0, https://developercommunity.visualstudio.com/t/VS2026-MSVC-Warning-C4865-lies-about-und/10966873)
+           warning C4866: compiler may not enforce left-to-right evaluation order for call to
            warning C4868: compiler may not enforce left-to-right evaluation order in braced initializer list
            warning C5026: move constructor was implicitly defined as deleted
            warning C5027: move assignment operator was implicitly defined as deleted
@@ -100,7 +102,7 @@
            warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
         !! NOTE: Sync this list with `CompilerOptions.cmake` !!
       -->
-      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4865;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>

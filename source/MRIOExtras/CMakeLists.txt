@@ -113,25 +113,29 @@ IF(NOT MRIOEXTRAS_NO_STEP)
   )
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE ${OpenCASCADE_INCLUDE_DIR})
   target_link_directories(${PROJECT_NAME} BEFORE PRIVATE ${OpenCASCADE_LIBRARY_DIR})
-  target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-      TKernel
-      TKBRep
-      TKMath
-      TKMesh
-      TKDESTEP
-      TKSTEP
-      TKTopAlgo
-      TKXSBase
+
+  set(OpenCASCADE_REQUIRED_LIBRARIES
+    TKernel
+    TKBRep
+    TKMath
+    TKMesh
+    TKDESTEP
+    TKSTEP
+    TKTopAlgo
+    TKXSBase
   )
   IF(MRIOEXTRAS_OPENCASCADE_USE_XDE)
-    target_link_libraries(${PROJECT_NAME}
-      PRIVATE
-        TKXDESTEP
-        TKLCAF
-        TKXCAF
+    list(APPEND OpenCASCADE_REQUIRED_LIBRARIES
+      TKXDESTEP
+      TKLCAF
+      TKXCAF
     )
   ENDIF()
+  foreach(LIBRARY_NAME ${OpenCASCADE_LIBRARIES})
+    IF(${LIBRARY_NAME} IN_LIST OpenCASCADE_REQUIRED_LIBRARIES)
+      target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBRARY_NAME})
+    ENDIF()
+  endforeach()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_TIFF)

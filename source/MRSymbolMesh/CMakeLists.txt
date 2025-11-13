@@ -7,22 +7,15 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    freetype
-    spdlog
-    jsoncpp
-    tbb
-  )
-ELSE()
-  find_package(Freetype REQUIRED)
-  target_link_libraries(${PROJECT_NAME}
-    PUBLIC
-      MRMesh
-    PRIVATE
-      Freetype::Freetype
-  )
 ENDIF()
+
+find_package(Freetype REQUIRED)
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+    MRMesh
+  PRIVATE
+    Freetype::Freetype
+)
 
 install(
   TARGETS ${PROJECT_NAME}

@@ -7,31 +7,25 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 IF(EMSCRIPTEN)
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
+  set(EM_WHOLE_ARCHIVE "-Wl,--whole-archive")
+  set(EM_NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
+ENDIF()
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    gtest
-    zip
-    jsoncpp
-    openvdb
-    tbb
-    -Wl,--whole-archive
-    MRMesh
-    MRIOExtras
-    MRViewer
-    -Wl,--no-whole-archive
-  )
-ELSE()
-  find_package(GTest REQUIRED)
+find_package(GTest REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  MRIOExtras
+  ${EM_WHOLE_ARCHIVE}
+  MRViewer
+  ${EM_NO_WHOLE_ARCHIVE}
+  GTest::gtest
+  ${CMAKE_DL_LIBS}
+)
+
+IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
-
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRViewer
-    cpr::cpr
-    GTest::gtest
-    ${CMAKE_DL_LIBS}
-  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
 ENDIF()
 
 add_test(

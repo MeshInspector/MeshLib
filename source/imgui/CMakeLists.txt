@@ -56,21 +56,22 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
   IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\"
 )
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PRIVATE
     IMGUI_IMPL_OPENGL_ES3
   )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
-  find_package(Freetype REQUIRED)
   find_package(glfw3 CONFIG REQUIRED)
-
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    glfw
-    Freetype::Freetype
-    ${CMAKE_DL_LIBS}
-  )
 ENDIF()
+
+find_package(Freetype REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  glfw
+  Freetype::Freetype
+  ${CMAKE_DL_LIBS}
+)
 
 install(
   TARGETS ${PROJECT_NAME}

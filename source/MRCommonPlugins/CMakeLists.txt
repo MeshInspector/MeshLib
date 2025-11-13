@@ -17,30 +17,16 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tbb
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
     MRMesh
     MRIOExtras
     MRViewer
-    glad
-    glfw
-    imgui
-    jsoncpp
-    spdlog
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-      MRMesh
-      MRIOExtras
-      MRViewer
-  )
-  IF(NOT WIN32)
-    find_package(clip REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE CLIP_ENABLE_IMAGE=1)
-  ENDIF()
+)
+IF(NOT WIN32 AND NOT EMSCRIPTEN)
+  find_package(clip REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE CLIP_ENABLE_IMAGE=1)
 ENDIF()
 
 IF(MESHLIB_BUILD_VOXELS)

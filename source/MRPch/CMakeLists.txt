@@ -37,6 +37,12 @@ IF(MR_PCH)
     TBB::tbb
   )
 
+  # TODO: CMake config
+  target_include_directories(${PROJECT_NAME}
+    PRIVATE
+      $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+  )
+
   IF(EMSCRIPTEN)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
       EIGEN_STACK_ALLOCATION_LIMIT=0

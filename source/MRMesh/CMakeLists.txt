@@ -56,12 +56,10 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 # TODO: CMake config
-IF(NOT MESHLIB_USE_VCPKG)
-  target_include_directories(${PROJECT_NAME}
-    PUBLIC
-      $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
-  )
-ENDIF()
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+)
 
 IF(APPLE)
   # for Boost.Stacktrace

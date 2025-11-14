@@ -115,9 +115,6 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 
-      - name: Work-around libzip config issue
-        run: apt install zipcmp zipmerge ziptool
-
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
         env:

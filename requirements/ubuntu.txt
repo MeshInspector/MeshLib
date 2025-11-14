@@ -27,3 +27,6 @@ libzstd-dev
 occt-misc
 pkg-config
 python3-venv
+zipcmp
+zipmerge
+ziptool

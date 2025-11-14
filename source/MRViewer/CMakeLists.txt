@@ -48,7 +48,12 @@ target_link_libraries(${PROJECT_NAME}
 
 IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
+
+  # prefer config over module for vcpkg compatibility
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV ${CMAKE_FIND_PACKAGE_PREFER_CONFIG})
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
   find_package(hidapi REQUIRED)
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ${CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV})
 
   target_link_libraries(${PROJECT_NAME}
     PRIVATE

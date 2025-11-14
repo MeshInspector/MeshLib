@@ -15,6 +15,17 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 find_package(OpenVDB 10 REQUIRED)
+
+IF(MSVC)
+  # Patch IMath (a dependency of OpenVDB) to not include `/EHsc` for C and CUDA compilers.
+  # Upstream issue: https://github.com/AcademySoftwareFoundation/openexr/issues/2018
+  get_target_property(IMATH_CXX_FLAGS Imath::Imath INTERFACE_COMPILE_OPTIONS)
+  IF(IMATH_CXX_FLAGS)
+    string(REPLACE "/EHsc" "$<$<COMPILE_LANGUAGE:CXX>:/EHsc>" IMATH_CXX_FLAGS "${IMATH_CXX_FLAGS}")
+    set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${IMATH_CXX_FLAGS}")
+  ENDIF()
+ENDIF()
+
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh

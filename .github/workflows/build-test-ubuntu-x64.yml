@@ -70,6 +70,10 @@ jobs:
           cxx_compiler: ${{ matrix.cxx-compiler }}
           build_config: ${{ matrix.config }}
 
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Checkout third-party submodules
         run: |
           # have to checkout selective submodules by our own
@@ -78,14 +82,27 @@ jobs:
           git config --global --add safe.directory '*'
           git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
 
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Install MRBind
         if: ${{ ( inputs.mrbind && matrix.os != 'ubuntu20' ) || inputs.mrbind_c }}
         run: scripts/mrbind/install_mrbind_ubuntu.sh
+
+
+      - name: Check disk space
+        if: always()
+        run: df -h
 
       - name: Create virtualenv
         run: |
@@ -95,8 +112,18 @@ jobs:
           python3 -m pip install --upgrade pip
           echo PATH=$PATH >> $GITHUB_ENV
 
+
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
+
+
+      - name: Check disk space
+        if: always()
+        run: df -h
 
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
@@ -104,6 +131,10 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
         run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+
+      - name: Check disk space
+        if: always()
+        run: df -h
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -121,6 +152,10 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
@@ -128,6 +163,11 @@ jobs:
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
 
+
+      - name: Check disk space
+        if: always()
+        run: df -h
+        
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"
 
@@ -183,6 +223,11 @@ jobs:
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
+
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Build C++ examples and samples
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
@@ -203,6 +248,10 @@ jobs:
             --build cpp-samples-build \
             --parallel $(nproc)
 
+      - name: Check disk space
+        if: always()
+        run: df -h
+
       - name: Build C examples
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
@@ -214,6 +263,10 @@ jobs:
           cmake \
             --build c-examples-build \
             --parallel $(nproc)
+
+      - name: Check disk space
+        if: always()
+        run: df -h
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
@@ -239,6 +292,10 @@ jobs:
           source ./wheel_venv/bin/activate
           python3 -m pip install auditwheel
           python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMRMeshC.so" "./patched_content/"
+
+      - name: Check disk space
+        if: always()
+        run: df -h
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.os == 'ubuntu20' && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}

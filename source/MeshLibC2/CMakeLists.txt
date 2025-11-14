@@ -31,6 +31,17 @@ IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
   )
 ENDIF()
 
+IF(WIN32)
+  # Patch IMath (a dependency of OpenVDB) to not include `/EHsc`. See the beginning of this file for explanation.
+  # Upstream issue: https://github.com/AcademySoftwareFoundation/openexr/issues/2018
+  find_package(OpenVDB 10 REQUIRED)
+  get_target_property(TMP_PROP Imath::Imath INTERFACE_COMPILE_OPTIONS)
+  IF(TMP_PROP)
+    string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
+    set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
+  ENDIF()
+ENDIF()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
   MRIOExtras
@@ -39,15 +50,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   # Boost.stacktrace uses something from libdl in its headers.
   ${CMAKE_DL_LIBS}
 )
-
-#IF(WIN32)
-#  # Patch IMath (a dependency of OpenVDB) to not include `/EHsc`. See the beginning of this file for explanation.
-#  get_target_property(TMP_PROP Imath::Imath INTERFACE_COMPILE_OPTIONS)
-#  IF(TMP_PROP)
-#    string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
-#    set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
-#  ENDIF()
-#ENDIF()
 
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)

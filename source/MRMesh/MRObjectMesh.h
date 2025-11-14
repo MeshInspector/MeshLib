@@ -64,8 +64,15 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };
 
+/// options to better controll MR::merge function
+struct ObjectMeshMergeOptions
+{
+    /// if not nullptr: merged object will take overridden transform for each object
+    const std::vector<AffineXf3f>* overrideXfs{ nullptr };
+};
+
 /// constructs new ObjectMesh containing the union of valid data from all input objects
-[[nodiscard]] MRMESH_API std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh );
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh, const ObjectMeshMergeOptions& options = {} );
 
 /// constructs new ObjectMesh containing the region of data from input object
 /// does not copy selection

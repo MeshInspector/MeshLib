@@ -64,7 +64,7 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };
 
-/// options to better controll MR::merge function
+/// options to better control MR::merge function
 struct ObjectMeshMergeOptions
 {
     /// if not nullptr: merged object will take overridden transform for each object

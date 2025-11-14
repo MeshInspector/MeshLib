@@ -4,6 +4,9 @@ inputs:
   artifact_path:
     required: true
     type: string
+  artifact_glob:
+    required: true
+    type: string
   stats_file_suffix:
     required: false
     type: string
@@ -19,8 +22,8 @@ runs:
       shell: python3 collect_artifact_stats.py {0}
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
-        ARTIFACT_PATH: ../..
-        ARTIFACT_GLOB: ${{ inputs.artifact_path }}
+        ARTIFACT_PATH: ${{ inputs.artifact_path }}
+        ARTIFACT_GLOB: ${{ inputs.artifact_glob }}
         STATS_FILE: "${{ runner.temp }}/ArtifactStats${{ inputs.stats_file_suffix }}.json"
       run: ""
 

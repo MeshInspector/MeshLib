@@ -250,5 +250,6 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
-          artifact_path: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          artifact_path: ${{ env.GITHUB_WORKSPACE }}
+          artifact_glob: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

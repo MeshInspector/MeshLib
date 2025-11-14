@@ -14,13 +14,13 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-find_package(OpenVDB REQUIRED)
-
+find_package(OpenVDB 10 REQUIRED)
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh
     OpenVDB::openvdb
 )
+# required for static linking
 IF(EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE blosc)
 ENDIF()

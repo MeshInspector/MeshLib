@@ -67,6 +67,13 @@ ENDIF()
 
 find_package(Freetype REQUIRED)
 
+# ImGui doesn't depend on MRMesh directly but includes some of its files that require parallel-hashmap to be available
+# TODO: CMake config
+target_include_directories(${PROJECT_NAME}
+  PRIVATE
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   glfw
   Freetype::Freetype

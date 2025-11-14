@@ -73,7 +73,7 @@ ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_JPEG)
   IF(APPLE)
-    target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
+    target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
     target_link_libraries(${PROJECT_NAME} PRIVATE ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
   ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE turbojpeg)

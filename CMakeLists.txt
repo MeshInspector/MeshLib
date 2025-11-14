@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(DefaultOptions)
 include(ConfigureVcpkg)
 
@@ -316,12 +316,10 @@ configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
   PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR
 )
-
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
   VERSION ${MESHLIB_VERSION}
   COMPATIBILITY ExactVersion
 )
-
 install(
   FILES
     ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
@@ -329,9 +327,10 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-IF(EMSCRIPTEN)
-  install(FILES cmake/Modules/EmscriptenHelpers.cmake DESTINATION ${MR_CONFIG_DIR})
-ENDIF()
+install(
+  DIRECTORY cmake/Modules
+  DESTINATION ${MR_CONFIG_DIR}
+)
 
 IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_GENERATOR "DRAGNDROP")

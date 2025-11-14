@@ -1,6 +1,5 @@
 import json
 import os
-import pprint
 import urllib.request
 
 GITHUB_HEADERS = {
@@ -27,7 +26,8 @@ def get_job_id():
     runner_name = os.environ.get("RUNNER_NAME")
 
     resp = fetch_jobs(repo, run_id)
-    pprint.pp(resp, indent=2, width=150)
+    if int(resp['total_count']) > 100:
+        print("Total job count has exceeded 100; consider enabling the pagination support")
     jobs = [
         job
         for job in resp['jobs']

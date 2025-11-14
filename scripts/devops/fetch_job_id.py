@@ -10,7 +10,9 @@ GITHUB_HEADERS = {
 }
 
 def fetch_jobs(repo: str, run_id: str):
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs'
+    # TODO: pagination support
+    # more info: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
     req = urllib.request.Request(url, headers=GITHUB_HEADERS)
     with urllib.request.urlopen(req) as resp:
         return json.loads(resp.read().decode())

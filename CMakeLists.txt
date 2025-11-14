@@ -139,9 +139,6 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   ENDIF()
 
   IF(DEFINED MESHLIB_PYTHON_VERSION)
-    # fix CLion build on macOS
-    set(Python_EXECUTABLE "")
-    set(Python3_EXECUTABLE "")
     find_package(Python ${MESHLIB_PYTHON_VERSION} EXACT REQUIRED COMPONENTS Interpreter Development)
   ELSE()
     find_package(Python REQUIRED COMPONENTS Interpreter Development)

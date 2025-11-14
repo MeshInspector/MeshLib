@@ -192,7 +192,7 @@ void ObjectMesh::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectMesh::TypeName() );
 }
 
-std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh )
+std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh, const ObjectMeshMergeOptions& options )
 {
     MR_TIMER;
 
@@ -288,8 +288,9 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     numObject = 0;
     TextureId previousNumTexture(-1);
     TextureId curNumTexture(-1);
-    for ( const auto& obj : objsMesh )
+    for ( int i = 0; i < objsMesh.size(); ++i )
     {
+        const auto& obj = objsMesh[i];
         if ( !obj->mesh() )
             continue;
 
@@ -297,7 +298,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
         FaceMap faceMap;
         mesh->addMesh( *obj->mesh(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
 
-        auto worldXf = obj->worldXf();
+        auto worldXf = options.overrideXfs && i < options.overrideXfs->size() ? ( *options.overrideXfs )[i] : obj->worldXf();
         for ( const auto& vInd : vertMap )
         {
             if ( vInd.valid() )

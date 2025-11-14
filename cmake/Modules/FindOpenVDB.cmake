@@ -504,10 +504,7 @@ endif()
 if(NOT EMSCRIPTEN)
   find_package(Boost CONFIG REQUIRED COMPONENTS iostreams)
 else()
-  cmake_policy(PUSH)
-  cmake_policy(SET CMP0167 OLD)
   find_package(Boost REQUIRED)
-  cmake_policy(POP)
 endif()
 
 # Add deps for pyopenvdb

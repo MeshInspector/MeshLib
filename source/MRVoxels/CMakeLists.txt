@@ -47,10 +47,15 @@ install(
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
 )
 
+include(CMakePackageConfigHelpers)
 configure_package_config_file(
   ${PROJECT_NAME}Config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
+)
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  DESTINATION ${MR_CONFIG_DIR}
 )
 
 install(

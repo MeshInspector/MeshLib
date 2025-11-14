@@ -28,6 +28,7 @@
 namespace
 {
 const std::string cOrthographicParamKey = "orthographic";
+const std::string cShowRotationPivotParamKey = "showRotationPivot";
 const std::string cFlatShadingParamKey = "flatShading"; // Legacy
 const std::string cShadingModeParamKey = "defaultMeshShading";
 const MR::Config::Enum cShadingModeEnum = { "AutoDetect", "Smooth", "Flat" }; // SceneSettings::ShadingMode
@@ -237,6 +238,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             viewer.globalBasis->setAxesProps( val[cGlobalBasisScaleKey].asFloat(), viewer.globalBasis->getAxesWidth() );
         }
     }
+
+    if ( cfg.hasBool( cShowRotationPivotParamKey ) && viewer.rotationSphere )
+    {
+        viewer.rotationSphere->setVisible( cfg.getBool( cShowRotationPivotParamKey ) );
+    }
+
     viewport.setParameters( params );
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
@@ -560,6 +567,11 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         else
             globalBasis[cGlobalBasisScaleKey] = viewer.globalBasis->getAxesLength( viewport.id );
         cfg.setJsonValue( cGlobalBasisKey, globalBasis );
+    }
+
+    if ( viewer.rotationSphere )
+    {
+        cfg.setBool( cShowRotationPivotParamKey, viewer.rotationSphere->isVisible( viewport.id ) );
     }
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );

@@ -2,6 +2,7 @@ build-essential
 cmake
 libblosc-dev
 libboost-all-dev
+libcurl4-openssl-dev
 libeigen3-dev
 libexpected-dev
 libfmt-dev

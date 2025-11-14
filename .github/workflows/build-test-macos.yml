@@ -249,5 +249,6 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
-          artifact_path: meshlib_${{matrix.os}}.pkg
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: meshlib_${{matrix.os}}.pkg
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

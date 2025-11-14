@@ -140,5 +140,6 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
-          artifact_path: meshlib_${{ matrix.package_name }}.zip
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: meshlib_${{ matrix.package_name }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

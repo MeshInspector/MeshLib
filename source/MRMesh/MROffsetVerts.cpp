@@ -10,6 +10,7 @@
 #include "MRRingIterator.h"
 #include "MRMeshProject.h"
 #include "MRBall.h"
+#include "MRMeshFixer.h"
 
 namespace MR
 {
@@ -36,61 +37,69 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
 {
     MR_TIMER;
 
+    Mesh res = m;
+    // every vertex must be on at most one hole boundary to have unique mapping on the vertices after makeDegenerateBandAroundHole
+    duplicateMultiHoleVertices( res );
+    assert( m.topology.getValidFaces() == res.topology.getValidFaces() );
+    // valid faces of res will change after makeDegenerateBandAroundHole
+    const auto orgPart = MeshPart{ res, &m.topology.getValidFaces() };
+
     VertNormals dirs;
-    dirs.resizeNoInit( m.topology.vertSize() );
-    BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+    dirs.resizeNoInit( res.topology.vertSize() );
+    BitSetParallelFor( res.topology.getValidVerts(), [&]( VertId v )
     {
-        dirs[v] = m.pseudonormal( v );
+        dirs[v] = res.pseudonormal( v );
     } );
 
     const auto maxOffset = std::max( params.insideOffset, params.outsideOffset );
     if ( maxOffset > 0 )
     {
-        Buffer<float, VertId> vertStabilizers( m.topology.vertSize() );
-        Buffer<float, UndirectedEdgeId> edgeWeights( m.topology.undirectedEdgeSize() );
+        Buffer<float, VertId> vertStabilizers( res.topology.vertSize() );
+        Buffer<float, UndirectedEdgeId> edgeWeights( res.topology.undirectedEdgeSize() );
 
-        BitSetParallelFor( m.topology.getValidVerts(), [&, rden = 1 / ( 2 * sqr( maxOffset ) )]( VertId v )
+        BitSetParallelFor( res.topology.getValidVerts(), [&, rden = 1 / ( 2 * sqr( maxOffset ) )]( VertId v )
         {
             float vertStabilizer = 1;
-            for ( auto e : orgRing( m.topology, v ) )
+            for ( auto e : orgRing( res.topology, v ) )
             {
                 // gaussian, weight is 1 for very short edges (compared to offset) and 0 for very long edges
-                auto edgeW = std::exp( -m.edgeLengthSq( e ) * rden );
+                auto edgeW = std::exp( -res.edgeLengthSq( e ) * rden );
                 if ( e.even() ) //only one thread to write in undirected edge
                     edgeWeights[e] = edgeW;
                 // stabilizer is 1 if all edges are long compared to offset, and 0 otherwise
                 vertStabilizer = std::min( vertStabilizer, 1 - edgeW );
             }
-            vertStabilizers[v] = vertStabilizer;
+            assert( vertStabilizer >= 0 && vertStabilizer <= 1 );
+            // 1e-6 here is to avoid the situation when all vertices of a connected component have stabilizer=0 and the system of equations is underdetermined
+            vertStabilizers[v] = std::max( vertStabilizer, 1e-6f );
         } );
 
         /// smooth directions on original mesh to avoid boundary effects near stitches
-        positionVertsSmoothlySharpBd( m.topology, dirs, PositionVertsSmoothlyParams
+        positionVertsSmoothlySharpBd( res.topology, dirs, PositionVertsSmoothlyParams
             {
                 .vertStabilizers = [&vertStabilizers]( VertId v ) { return vertStabilizers[v]; },
                 .edgeWeights = [&edgeWeights]( UndirectedEdgeId ue ) { return edgeWeights[ue]; }
             }
         );
-        BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+        BitSetParallelFor( res.topology.getValidVerts(), [&]( VertId v )
         {
             dirs[v] = dirs[v].normalized();
         } );
     }
 
-    Mesh res = m;
-    auto holesRepr = m.topology.findHoleRepresentiveEdges();
+    auto holesRepr = res.topology.findHoleRepresentiveEdges();
     EdgeLoops mHoles( holesRepr.size() );
     EdgeLoops extHoles( holesRepr.size() );
     for ( int i = 0; i < holesRepr.size(); ++i )
     {
-        mHoles[i] = trackRightBoundaryLoop( m.topology, holesRepr[i] );
+        mHoles[i] = trackRightBoundaryLoop( res.topology, holesRepr[i] );
         auto e = makeDegenerateBandAroundHole( res, holesRepr[i] );
         extHoles[i] = trackRightBoundaryLoop( res.topology, e );
     }
     PartMapping map;
     auto m2resVerts = VertMapOrHashMap::createMap();
     map.src2tgtVerts = &m2resVerts;
-    res.addMeshPart( m, true, extHoles, mHoles, map );
+    res.addMeshPart( orgPart, true, extHoles, mHoles, map );
 
     // apply shifts
     BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )

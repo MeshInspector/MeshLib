@@ -1809,7 +1809,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             auto e = fromContour[j];
             auto e1 = thisContour[j];
             assert( !left( e1 ) );
-            assert( ( flipOrientation && !from.left( e ) ) || ( !flipOrientation && !from.right( e ) ) );
+            assert( ( flipOrientation && !from.isLeftInRegion( e, fromFaces0 ) ) || ( !flipOrientation && !from.isLeftInRegion( e.sym(), fromFaces0 ) ) );
             setVmap( from.org( e ), org( e1 ) );
             setVmap( from.dest( e ), dest( e1 ) );
             assert( !getAt( emap, e.undirected() ) );

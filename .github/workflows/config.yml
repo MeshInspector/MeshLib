@@ -139,7 +139,7 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/(ubuntu20|ubuntu22|ubuntu24|emscripten)Dockerfile'
+              - 'docker/(ubuntu22|ubuntu24|emscripten)Dockerfile'
               - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'

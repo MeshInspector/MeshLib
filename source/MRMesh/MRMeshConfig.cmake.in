@@ -11,6 +11,9 @@ find_dependency(tl-expected)
 
 # static builds require to find private dependencies
 if(EMSCRIPTEN)
+  # libzip on Emscripten is unable to resolve its dependencies by itself
+  find_package(MbedTLS 1.0 REQUIRED)
+  find_package(ZLIB REQUIRED)
   find_dependency(libzip)
 
   set(MRMESH_NO_GTEST @MRMESH_NO_GTEST@)

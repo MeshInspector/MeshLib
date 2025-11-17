@@ -28,13 +28,20 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
+# no CUDA packages for Ubuntu 24.04 ARM64 for some reason, have to copy them from a Docker image
+FROM nvidia/cuda:12.6.0-devel-ubuntu24.04 AS cuda
+COPY scripts/ubuntu_cuda_libs.txt scripts/ubuntu_cuda_libs.txt
+WORKDIR /usr/local/cuda-12.6/targets/x86_64-linux/lib
+# remove excess libraries
+RUN find -type f,l ! -path "./cmake/*" $(printf "! -path ./%s " $(cat /home/MeshLib/scripts/ubuntu_cuda_libs.txt)) -delete
+
+
 FROM ubuntu:24.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
-COPY scripts/install_apt_cuda.sh scripts/install_apt_cuda.sh
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
@@ -45,6 +52,7 @@ COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/
 
 COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=cuda /usr/local/cuda-12.6 /usr/local/cuda-12.6
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -57,7 +65,6 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -qqy --no-install-recommends \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
  && ./scripts/install_apt_requirements.sh \
- && ./scripts/install_apt_cuda.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
  && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \

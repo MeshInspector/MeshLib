@@ -26,5 +26,11 @@ dpkg -i cuda-keyring_1.1-1_all.deb
 rm cuda-keyring_1.1-1_all.deb
 popd
 
+if [ $DISTRO = "ubuntu2004" ] ; then
+    CUDA_VERSION="12-1"
+else
+    CUDA_VERSION="12-6"
+fi
+
 apt update
-apt install -y cuda-minimal-build-12-6
+apt install -y "cuda-minimal-build-$CUDA_VERSION"

@@ -1865,9 +1865,7 @@ void Viewer::drawScene()
     for ( const auto& viewport : viewport_list )
     {
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
-#ifndef __EMSCRIPTEN__
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
-#endif
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
     }
 

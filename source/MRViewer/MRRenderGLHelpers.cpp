@@ -1,5 +1,6 @@
 #include "MRRenderGLHelpers.h"
 #include "MRViewer.h"
+#include "MRGLStaticHolder.h"
 
 namespace MR
 {
@@ -185,6 +186,44 @@ void FramebufferData::del()
     GL_EXEC( glDeleteFramebuffers( 1, &copyFramebuffer_ ) );
     GL_EXEC( glDeleteRenderbuffers( 1, &depthRenderbuffer_ ) );
     GL_EXEC( glDeleteRenderbuffers( 1, &colorRenderbuffer_ ) );
+}
+
+void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParams& params ) const
+{
+#ifndef __EMSCRIPTEN__
+    GL_EXEC( glDisable( GL_MULTISAMPLE ) );
+#endif
+    GL_EXEC( glViewport( 0, 0, params.size.x, params.size.y ) );
+
+    auto shader = GLStaticHolder::getShaderId( resDepthTexture_.valid() ? GLStaticHolder::DepthOverlayQuad : GLStaticHolder::SimpleOverlayQuad );
+    GL_EXEC( glUseProgram( shader ) );
+
+    quadObject.bind();
+    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, getColorTexture() ) );
+    setTextureWrapType( params.wrap );
+    setTextureFilterType( params.filter );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
+
+    if ( resDepthTexture_.valid() )
+    {
+        GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, getDepthTexture() ) );
+        setTextureWrapType( params.wrap );
+        setTextureFilterType( params.filter );
+        GL_EXEC( glUniform1i( glGetUniformLocation( shader, "depths" ), 0 ) );
+    }
+    else
+    {
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), params.simpleDepth ) );
+    }
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "viewportSize" ), float( params.size.x ), float( params.size.y ) ) );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
+    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 6 ) );
+
+#ifndef __EMSCRIPTEN__
+    GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
 }
 
 void FramebufferData::resize_( const Vector2i& size, int msaaPow )

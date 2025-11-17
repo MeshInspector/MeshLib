@@ -35,30 +35,7 @@ void SceneTextureGL::copyTexture()
 
 void SceneTextureGL::draw()
 {
-#ifndef __EMSCRIPTEN__
-    GL_EXEC( glDisable( GL_MULTISAMPLE ) );
-#endif
-
-    const auto& size = fd_.getSize();
-    GL_EXEC( glViewport( 0, 0, size.x, size.y ) );
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::SimpleOverlayQuad );
-    GL_EXEC( glUseProgram( shader ) );
-
-    qt_.bind();
-    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, fd_.getColorTexture() ) );
-    setTextureWrapType( WrapType::Mirror );
-    setTextureFilterType( FilterType::Discrete );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
-
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), 0.5f ) );
-    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "viewportSize" ), float( size.x ), float( size.y ) ) );
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
-    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 6 ) );
-
-#ifndef __EMSCRIPTEN__
-    GL_EXEC( glEnable( GL_MULTISAMPLE ) );
-#endif
+    fd_.draw( qt_, { .size = fd_.getSize(),.wrap = WrapType::Mirror,.filter = FilterType::Discrete } );
 }
 
 }

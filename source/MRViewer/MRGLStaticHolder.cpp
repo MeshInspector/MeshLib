@@ -40,6 +40,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
         "Simple overlay shader",
+        "Depth overlay shader",
 
         "Volume shader",
         "Volume picker shader"
@@ -575,6 +576,28 @@ void main(void)
     vec2 pos = gl_FragCoord.xy;
     pos = vec2( pos.x/float(viewportSize.x),pos.y/float(viewportSize.y) );
     outColor = texture(pixels, pos );
+    if (outColor.a == 0.0)
+      discard;
+  }
+)";
+        }
+        else if ( type == DepthOverlayQuad )
+        {
+            fragmentShader =
+                MR_GLSL_VERSION_LINE R"(
+  precision highp float;
+  precision highp int;
+  uniform sampler2D pixels;
+  uniform sampler2D depths;
+  uniform vec2 viewportSize;
+  out vec4 outColor;                 // (out to render) fragment color
+
+  void main()
+  {
+    vec2 pos = gl_FragCoord.xy;
+    pos = vec2( pos.x/float(viewportSize.x),pos.y/float(viewportSize.y) );
+    outColor = texture(pixels, pos );
+    gl_FragDepth = texture(depths, pos ).r;
     if (outColor.a == 0.0)
       discard;
   }

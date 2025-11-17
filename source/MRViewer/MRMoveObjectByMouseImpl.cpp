@@ -194,7 +194,7 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldEndPoint } );
 
         // Rotate around center point (e.g. bounding box center)
-        currentXf_ = AffineXf3f::xfAround( Matrix3f::rotation( vectorStart, worldEndPoint - xfCenterPoint_ ), xfCenterPoint_ );
+        currentXf_ = AffineXf3f::xfAround( Matrix3f::rotation( referencePlane_.n, -angle_ ), xfCenterPoint_ );
     }
     else if ( transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {

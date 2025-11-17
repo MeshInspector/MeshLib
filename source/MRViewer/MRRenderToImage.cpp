@@ -30,7 +30,7 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
 
     FramebufferData fd;
-    fd.gen( resolution, getMSAAPow( viewer.getRequestedMSAA() ) );
+    fd.gen( resolution, false, getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
 
     if ( backgroundColor )
@@ -50,7 +50,7 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     GLuint fbo;
     GL_EXEC( glGenFramebuffers( 1, &fbo ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, fbo ) );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0 ) );
+    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getColorTexture(), 0 ) );
 
     GL_EXEC( glReadPixels( 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, (void*)result.pixels.data() ) );
 

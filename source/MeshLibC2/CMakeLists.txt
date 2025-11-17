@@ -6,9 +6,10 @@ project(MeshLibC2 CXX)
 IF(MSVC)
   # Disabling following warnings:
   #   warning C4244: '+=': conversion from 'T' to 'unsigned short', possible loss of data
+  #   warning C4297: function assumed not to throw an exception but does
   #   warning C4305: 'argument': truncation from 'int' to 'T'
   #   warning C4804: '+=': unsafe use of type 'bool' in operation
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4305 /wd4804")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4297 /wd4305 /wd4804")
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context")
 ENDIF()

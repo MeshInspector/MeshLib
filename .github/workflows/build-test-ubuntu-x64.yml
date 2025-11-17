@@ -52,10 +52,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
-    steps:
-      - name: Display job info
-        run: echo "Building on ${{ matrix.os }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
-
+    pre-steps:
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -69,6 +66,10 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
+
+    steps:
+      - name: Display job info
+        run: echo "Building on ${{ matrix.os }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
 
       - name: Checkout
         uses: actions/checkout@v5

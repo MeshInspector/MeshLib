@@ -252,8 +252,7 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
             .wrap = WrapType::Clamp, 
             .filter = FilterType::Linear }, ( const char* ) nullptr );
         GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, resDepthTexture_.getId(), 0 ) );
-        auto status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
-        assert( status == GL_FRAMEBUFFER_COMPLETE );
+        assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     }
 }
 

@@ -2467,7 +2467,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transpare
     std::vector<Color> pixels( newRes.x * newRes.y );
 
     FramebufferData fd;
-    fd.gen( newRes, true );
+    fd.gen( newRes, false, -1 );
     fd.bind();
 
     setupScene();

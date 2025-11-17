@@ -30,7 +30,7 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
 
     FramebufferData fd;
-    fd.gen( resolution, getMSAAPow( viewer.getRequestedMSAA() ) );
+    fd.gen( resolution, false, getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
 
     if ( backgroundColor )

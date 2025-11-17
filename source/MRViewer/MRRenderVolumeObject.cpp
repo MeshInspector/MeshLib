@@ -32,8 +32,7 @@ bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
     RenderModelPassMask desiredPass =
         !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || objVoxels_->getFrontColor( objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
-        RenderModelPassMask::Opaque;
+        RenderModelPassMask::VolumeRendering;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 
@@ -70,7 +69,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     if ( !( dirty_ & DIRTY_SELECTION ) || !objVoxels_->vdbVolume().data )
         return glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y, false );
 
-    const auto& dims = objVoxels_->vdbVolume().dims;
+    const auto& dims = objVoxels_->getActiveBounds().size();
     auto numV = size_t( dims.x ) * dims.y * dims.z;
 
     auto size = numV / 32 + 1;

@@ -605,25 +605,9 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      # TODO: remove after GitHub runner update
-      - name: Prepare Python 3.14 installation
-        if: ${{ matrix.py-version == '3.14' }}
-        run: |
-          # check when it's time to remove this step
-          if [ $(brew list | grep python@3.14) ] ; then 
-            echo "The runner has been updated and already contains Python 3.14; remove this step from the workflow"
-            exit 1
-          fi
-          brew update
-          # more info: https://github.com/actions/runner-images/issues/9966
-          if [[ ${{ matrix.platform }} == 'x86' ]] ; then
-            brew unlink python@3.13 
-            brew link --overwrite python@3.13
-          fi
-
       - name: Python setup
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
-        run: brew install python@${{matrix.py-version}}
+        run: brew install --overwrite python@${{matrix.py-version}}
 
       - name: Create virtualenv
         run: |

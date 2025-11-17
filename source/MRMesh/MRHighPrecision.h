@@ -3,7 +3,17 @@
 #include "MRMeshFwd.h"
 #include "MRFastInt128.h"
 #include <MRPch/MRBindingMacros.h>
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <boost/multiprecision/cpp_int.hpp>
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 namespace MR
 {

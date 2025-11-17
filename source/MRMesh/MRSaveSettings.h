@@ -29,6 +29,9 @@ struct SaveSettings
     /// optional per-vertex color to save with the geometry
     const VertColors * colors = nullptr;
 
+    /// per-face colors for meshes, per-undirected-edge colors for polylines, unused for point clouds and other
+    const std::vector<Color> * primitiveColors = nullptr;
+
     /// optional per-vertex uv coordinate to save with the geometry
     const VertUVCoords * uvMap = nullptr;
 

@@ -111,7 +111,7 @@ std::string bytesString( size_t size )
 bool hasProhibitedChars( const std::string& line )
 {
     for ( const auto& c : line )
-        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+        if ( isProhibitedChar( c ) )
             return true;
     return false;
 }
@@ -120,7 +120,7 @@ std::string replaceProhibitedChars( const std::string& line, char replacement /*
 {
     auto res = line;
     for ( auto& c : res )
-        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+        if ( isProhibitedChar( c ) )
             c = replacement;
     return res;
 }

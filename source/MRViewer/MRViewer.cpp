@@ -1865,9 +1865,7 @@ void Viewer::drawScene()
     for ( const auto& viewport : viewport_list )
     {
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
-#ifndef __EMSCRIPTEN__
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
-#endif
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
     }
 
@@ -2469,7 +2467,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transpare
     std::vector<Color> pixels( newRes.x * newRes.y );
 
     FramebufferData fd;
-    fd.gen( newRes, true );
+    fd.gen( newRes, false, -1 );
     fd.bind();
 
     setupScene();
@@ -2483,7 +2481,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transpare
     GLuint fbo;
     GL_EXEC( glGenFramebuffers(1, &fbo) );
     GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
-    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
+    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getColorTexture(), 0) );
 
     GL_EXEC( glReadPixels(0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() )) );
 

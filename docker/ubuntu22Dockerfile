@@ -27,12 +27,13 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
-FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 AS production
+FROM ubuntu:22.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
+COPY scripts/install_apt_cuda.sh scripts/install_apt_cuda.sh
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
@@ -55,6 +56,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -qqy --no-install-recommends \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
  && ./scripts/install_apt_requirements.sh \
+ && ./scripts/install_apt_cuda.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
  && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \

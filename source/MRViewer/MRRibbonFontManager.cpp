@@ -52,6 +52,7 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
     fonts_ = {
         FontData{.fontFile = cFontFileRegular_},
         FontData{.fontFile = cFontFileRegular_},
+        FontData{.fontFile = cFontFileRegular_},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Icons},
         FontData{.fontFile = cFontFileRegular_},
@@ -88,6 +89,8 @@ float RibbonFontManager::getFontSizeByType( FontType type )
         return cDefaultFontSize;
     case MR::RibbonFontManager::FontType::Small:
         return cSmallFontSize;
+    case MR::RibbonFontManager::FontType::Middle:
+        return cMiddleFontSize;
     case MR::RibbonFontManager::FontType::Icons:
         return cBigIconSize;
     case MR::RibbonFontManager::FontType::Headline:
@@ -160,6 +163,7 @@ void RibbonFontManager::updateFontsScaledOffset_()
 
         ImFontConfig config;
         config.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_Bitmap;
+        config.PixelSnapV = true;
         if ( i == int( FontType::Icons ) )
             continue; // skip icons, because AddFontFromFileTTF return a font without glyphs, after that, io.Fonts->Build() trigger assert and crash (after update ImGui to 1.91.9)
 
@@ -173,9 +177,9 @@ void RibbonFontManager::updateFontsScaledOffset_()
         Box2f box;
         box.include( Vector2f( glyph->X0, glyph->Y0 ) );
         box.include( Vector2f( glyph->X1, glyph->Y1 ) );
-        font.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
-        font.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
-        font.scaledOffset.y = std::round( font.scaledOffset.y );
+        font.scaledOffset = ( 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min );
+        font.scaledOffset.x = std::round( -box.min.x * UI::scale() ) / UI::scale(); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
+        font.scaledOffset.y = std::round( font.scaledOffset.y * UI::scale() ) / UI::scale();
     }
     io.Fonts->Clear();
 }
@@ -187,6 +191,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* )
     auto fontPath = fontPaths_[int( font.fontFile )];
 
     ImFontConfig config;
+    config.PixelSnapV = true;
     if ( type == FontType::Icons )
     {
         config.GlyphMinAdvanceX = fontSize; // Use if you want to make the icon monospaced

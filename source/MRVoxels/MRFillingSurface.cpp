@@ -432,7 +432,7 @@ Expected<Mesh> build( const Vector3f& size, const Params& params, const Progress
 
     const auto delta = params.period - params.width;
     if ( delta.x <= 0 || delta.y <= 0 || delta.z <= 0 )
-        return unexpected( "Period must be larger than width" );
+        return unexpected( "Interval (period) must be larger than width" );
 
     auto getAbsentTipsIfNeeded = [&params] ( const Vector3i& idx, const Vector3i& size ) -> AbsentTips
     {

@@ -17,6 +17,7 @@ public:
     {
         Default,
         Small,
+        Middle,
         SemiBold,
         Icons,
         Big,

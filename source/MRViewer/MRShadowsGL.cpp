@@ -38,9 +38,9 @@ void ShadowsGL::enable( bool on )
         glfwGetFramebufferSize( getViewerInstance().window, &sceneSize_.x, &sceneSize_.y );
         lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );
         quadObject_.gen();
-        sceneFramebuffer_.gen( sceneSize_, -1 );
-        lowSizeFramebuffer_.gen( lowSize_, 0 );
-        convolutionXFramebuffer_.gen( lowSize_, 0 );
+        sceneFramebuffer_.gen( sceneSize_, false, -1 );
+        lowSizeFramebuffer_.gen( lowSize_, false, 0 );
+        convolutionXFramebuffer_.gen( lowSize_, false, 0 );
     }
     else
     {
@@ -89,9 +89,9 @@ void ShadowsGL::postResize_( int, int )
     convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
         
-    sceneFramebuffer_.gen( sceneSize_, -1 );
-    lowSizeFramebuffer_.gen( lowSize_, 0 );
-    convolutionXFramebuffer_.gen( lowSize_, 0 );
+    sceneFramebuffer_.gen( sceneSize_, false, -1 );
+    lowSizeFramebuffer_.gen( lowSize_, false, 0 );
+    convolutionXFramebuffer_.gen( lowSize_, false, 0 );
 }
 
 void ShadowsGL::preDraw_()
@@ -157,12 +157,12 @@ void ShadowsGL::drawShadow_( bool convX )
     if ( convX )
     {
         // draw scene texture to texture with X convolution
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getColorTexture() ) );
     }
     else
     {
         // draw X convolution texture to screen
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, convolutionXFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, convolutionXFramebuffer_.getColorTexture() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
@@ -180,11 +180,11 @@ void ShadowsGL::drawTexture_( bool scene, bool downsample )
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     if ( scene )
     {
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, sceneFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, sceneFramebuffer_.getColorTexture() ) );
     }
     else
     {
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getColorTexture() ) );
     }
     if ( scene )
     {
@@ -219,8 +219,8 @@ void ShadowsGL::setQuality( float quality )
     convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
     
-    lowSizeFramebuffer_.gen( lowSize_, 0 );
-    convolutionXFramebuffer_.gen( lowSize_, 0 );
+    lowSizeFramebuffer_.gen( lowSize_, false, 0 );
+    convolutionXFramebuffer_.gen( lowSize_, false, 0 );
 
     getViewerInstance().setSceneDirty();
 }

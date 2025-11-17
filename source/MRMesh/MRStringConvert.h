@@ -81,10 +81,15 @@ std::string utf8string( const std::string & ) = delete;
 /// ...
 [[nodiscard]] MRMESH_API std::string bytesString( size_t size );
 
-/// returns true if line contains any of OS prohibited chars ('?', '*', '/', '\', '"', '<', '>')
+/// returns true if the given character is any of prohibited in filenames in any of OSes
+/// https://stackoverflow.com/q/1976007/7325599
+[[nodiscard]] inline bool isProhibitedChar( char c )
+    { return c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' || c == ':' || c == '|' || (unsigned)c < 32; }
+
+/// returns true if line contains at least one character (c) for which isProhibitedChar(c)==true
 [[nodiscard]] MRMESH_API bool hasProhibitedChars( const std::string& line );
 
-/// replace OS prohibited chars ('?', '*', '/', '\', '"', '<', '>') with `replacement` char
+/// replace all characters (c), where isProhibitedChar(c)==true, with `replacement` char
 [[nodiscard]] MRMESH_API std::string replaceProhibitedChars( const std::string& line, char replacement = '_' );
 
 /// if (v) contains an error, then appends given file name to that error

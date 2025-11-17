@@ -72,6 +72,7 @@ void MoveObjectByMouseImpl::onDrawDialog() const
     if ( transformMode_ != TransformMode::None )
     {
         auto drawList = ImGui::GetBackgroundDrawList();
+        UI::LineAntialiasingDisabler ds( *drawList );
         drawList->AddPolyline( visualizeVectors_.data(), int( visualizeVectors_.size() ),
                                SceneColors::get( SceneColors::Labels ).getUInt32(), ImDrawFlags_None, 1.f );
     }
@@ -136,19 +137,17 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
                 clear_(); // stop mouse dragging if the transformation was changed from outside (e.g. undo)
         } ) );
     }
+    referencePlane_ = calcControlPlane_( viewport, viewportCenterPoint, xfCenterPoint_ );
+
+    Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
+
+    if ( auto crossPL = intersection( referencePlane_, startAxis ) )
+        worldStartPoint_ = *crossPL;
+    else
+        spdlog::warn( "Bad cross start axis and control plane" );
 
     if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
-        Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
-        referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
-
-        Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
-
-        if ( auto crossPL = intersection( referencePlane_, startAxis ) )
-            worldStartPoint_ = *crossPL;
-        else
-            spdlog::warn( "Bad cross start axis and rotation plane" );
-
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldStartPoint_ } );
     }
     else // if ( transformMode_ == TransformMode::Translation )
@@ -173,14 +172,14 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
     auto viewportEnd = viewer.screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewport.id );
     auto worldEndPoint = viewport.unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
 
+    auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
+    if ( auto crossPL = intersection( referencePlane_, endAxis ) )
+        worldEndPoint = *crossPL;
+    else
+        spdlog::warn( "Bad cross end axis and control plane" );
+
     if ( transformMode_ == TransformMode::Rotation )
     {
-        auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
-        if ( auto crossPL = intersection( referencePlane_, endAxis ) )
-            worldEndPoint = *crossPL;
-        else
-            spdlog::warn( "Bad cross end axis and rotation plane" );
-
         const Vector3f vectorStart = worldStartPoint_ - xfCenterPoint_;
         const Vector3f vectorEnd = worldEndPoint - xfCenterPoint_;
         const float abSquare = vectorStart.length() * vectorEnd.length();
@@ -195,16 +194,10 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldEndPoint } );
 
         // Rotate around center point (e.g. bounding box center)
-        currentXf_ = AffineXf3f::xfAround( Matrix3f::rotation( vectorStart, worldEndPoint - xfCenterPoint_ ), xfCenterPoint_ );
+        currentXf_ = AffineXf3f::xfAround( Matrix3f::rotation( referencePlane_.n, -angle_ ), xfCenterPoint_ );
     }
     else if ( transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
-        auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
-        if ( auto crossPL = intersection( referencePlane_, endAxis ) )
-            worldEndPoint = *crossPL;
-        else
-            spdlog::warn( "Bad cross end axis and rotation plane" );
-
         const Vector3f vectorStart = worldStartPoint_ - xfCenterPoint_;
         const Vector3f vectorEnd = worldEndPoint - xfCenterPoint_;
         scale_ = vectorStart.lengthSq() < 1.0e-7f ? 1.0f :
@@ -339,6 +332,12 @@ void MoveObjectByMouseImpl::setCenterPoint_( const std::vector<std::shared_ptr<O
 {
     Box3f box = getBbox_( objects );
     centerPoint = box.valid() ? box.center() : Vector3f{};
+}
+
+Plane3f MoveObjectByMouseImpl::calcControlPlane_( const Viewport& vp, const Vector3f& viewportCenterPoint, const Vector3f& xfCenterPoint ) const
+{
+    Line3f centerAxis = vp.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
+    return Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint );
 }
 
 Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>>& objects ) const

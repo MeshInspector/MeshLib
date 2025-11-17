@@ -668,19 +668,37 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
 
     size_t start{ 0 };
     std::vector<Object*> res;
+    size_t count = 0;
     if ( firstIt < clickedIt )
     {
         start = std::distance( all_objects.begin(), firstIt );
-        res.resize( std::distance( firstIt, clickedIt + 1 ) );
+        count = std::distance( firstIt, clickedIt + 1 );
     }
     else
     {
         start = std::distance( all_objects.begin(), clickedIt );
-        res.resize( std::distance( clickedIt, firstIt + 1 ) );
+        count = std::distance( clickedIt, firstIt + 1 );
     }
-    for ( int i = 0; i < res.size(); ++i )
+
+    auto checkVisibleInList = [&] ( size_t i )
     {
-        res[i] = all_objects[start + i].get();
+        Object* obj = all_objects[i]->parent();
+        while ( obj && obj != SceneRoot::getSharedPtr().get() )
+        {
+            const std::string uniqueStr = std::to_string( intptr_t( obj ) );
+            spdlog::info( "{}, {}", i, ImGui::GetCurrentWindow()->GetID(objectLineStrId_(*obj, uniqueStr).c_str()));
+            bool isOpen = ImGui::TreeNodeGetOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ) );
+            if ( !isOpen )
+                return false;
+            obj = obj->parent();
+        }
+        return true;
+    };
+    for ( size_t i = 0; i < count; ++i )
+    {
+        if ( !checkVisibleInList( start + i ) )
+            continue;
+        res.push_back( all_objects[start + i].get() );
     }
     return res;
 }

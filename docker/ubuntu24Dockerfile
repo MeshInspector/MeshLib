@@ -30,10 +30,10 @@ RUN ./scripts/build_thirdparty.sh
 
 # no CUDA packages for Ubuntu 24.04 ARM64 for some reason, have to copy them from a Docker image
 FROM nvidia/cuda:12.6.0-devel-ubuntu24.04 AS cuda
-COPY scripts/ubuntu_cuda_libs.txt scripts/ubuntu_cuda_libs.txt
 WORKDIR /usr/local/cuda-12.6/targets/x86_64-linux/lib
+COPY scripts/ubuntu_cuda_libs.txt ubuntu_cuda_libs.txt
 # remove excess libraries
-RUN find -type f,l ! -path "./cmake/*" $(printf "! -path ./%s " $(cat /home/MeshLib/scripts/ubuntu_cuda_libs.txt)) -delete
+RUN find -type f,l ! -path "./cmake/*" $(printf "! -path ./%s " $(cat ubuntu_cuda_libs.txt)) -delete
 
 
 FROM ubuntu:24.04 AS production

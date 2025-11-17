@@ -201,7 +201,7 @@ public:
     // generates framebuffer and associated data
     // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amount of samples
     // to resize: del(); gen( newSize, msaaPow );
-    MRVIEWER_API void gen( const Vector2i& size, int msaaPow );
+    MRVIEWER_API void gen( const Vector2i& size, bool copyDepth, int msaaPow );
     // binds this framebuffer as main rendering target
     // clears it if `clear` flag is set
     MRVIEWER_API void bind( bool clear = true );
@@ -217,7 +217,8 @@ public:
     // removes this framebuffer
     MRVIEWER_API void del();
     // gets texture id for binding in other shaders
-    unsigned getTexture() const { return resTexture_.getId(); }
+    unsigned getColorTexture() const { return resColorTexture_.getId(); }
+    unsigned getDepthTexture() const { return resDepthTexture_.getId(); }
 
     const Vector2i& getSize() const { return size_; }
     // return true if texture is bound
@@ -230,7 +231,8 @@ private:
     unsigned colorRenderbuffer_{ 0 };
     unsigned depthRenderbuffer_{ 0 };
     unsigned copyFramebuffer_{ 0 };
-    GlTexture2 resTexture_;
+    GlTexture2 resColorTexture_;
+    GlTexture2 resDepthTexture_;
     Vector2i size_;
 };
 

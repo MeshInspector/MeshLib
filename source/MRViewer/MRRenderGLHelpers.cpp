@@ -107,7 +107,7 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
     return id;
 }
 
-void FramebufferData::gen( const Vector2i& size, int msaaPow )
+void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow )
 {
     // Create an initial multisampled framebuffer
     GL_EXEC( glGenFramebuffers( 1, &mainFramebuffer_ ) );
@@ -128,7 +128,9 @@ void FramebufferData::gen( const Vector2i& size, int msaaPow )
     GL_EXEC( glGenFramebuffers( 1, &copyFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFramebuffer_ ) );
     // create a color attachment texture
-    resTexture_.gen();
+    resColorTexture_.gen();
+    if ( copyDepth )
+        resDepthTexture_.gen();
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 
     resize_( size, msaaPow );
@@ -158,20 +160,27 @@ void FramebufferData::bindDefault()
 
 void FramebufferData::bindTexture()
 {
-    resTexture_.bind();
+    resColorTexture_.bind();
+    if ( resDepthTexture_.valid() )
+        resDepthTexture_.bind();
 }
 
 void FramebufferData::copyTextureBindDef()
 {
     GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, mainFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, copyFramebuffer_ ) );
-    GL_EXEC( glBlitFramebuffer( 0, 0, size_.x, size_.y, 0, 0, size_.x, size_.y, GL_COLOR_BUFFER_BIT, GL_NEAREST ) );
+    auto copyBits = GL_COLOR_BUFFER_BIT;
+    if ( resDepthTexture_.valid() )
+        copyBits |= GL_DEPTH_BUFFER_BIT;
+    GL_EXEC( glBlitFramebuffer( 0, 0, size_.x, size_.y, 0, 0, size_.x, size_.y, copyBits, GL_NEAREST ) );
     bindDefault();
 }
 
 void FramebufferData::del()
 {
-    resTexture_.del();
+    resColorTexture_.del();
+    if ( resDepthTexture_.valid() )
+        resDepthTexture_.del();
     GL_EXEC( glDeleteFramebuffers( 1, &mainFramebuffer_ ) );
     GL_EXEC( glDeleteFramebuffers( 1, &copyFramebuffer_ ) );
     GL_EXEC( glDeleteRenderbuffers( 1, &depthRenderbuffer_ ) );
@@ -230,9 +239,21 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
 
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFramebuffer_ ) );
 
-    resTexture_.loadData( {.resolution = Vector3i(size.x, size.y, 1), .wrap = WrapType::Clamp, .filter = FilterType::Linear }, ( const char* ) nullptr );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resTexture_.getId(), 0 ) );
+    resColorTexture_.loadData( {.resolution = Vector3i(size.x, size.y, 1), .wrap = WrapType::Clamp, .filter = FilterType::Linear }, ( const char* ) nullptr );
+    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resColorTexture_.getId(), 0 ) );
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
+    if ( resDepthTexture_.valid() )
+    {
+        resDepthTexture_.loadData( { 
+            .resolution = Vector3i( size.x, size.y, 1 ), 
+            .internalFormat = GL_DEPTH_COMPONENT24, 
+            .format = GL_DEPTH_COMPONENT, 
+            .type = GL_UNSIGNED_INT,
+            .wrap = WrapType::Clamp, 
+            .filter = FilterType::Linear }, ( const char* ) nullptr );
+        GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, resDepthTexture_.getId(), 0 ) );
+        assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
+    }
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 }
 

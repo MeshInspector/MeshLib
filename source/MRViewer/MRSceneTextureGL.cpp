@@ -19,12 +19,12 @@ void SceneTextureGL::unbind()
 
 void SceneTextureGL::reset( const Vector2i& size, int msaa )
 {
-    if ( fd_.getTexture() != GlTexture2::NO_TEX )
+    if ( fd_.getColorTexture() != GlTexture2::NO_TEX )
     {
         fd_.del();
         qt_.del();
     }
-    fd_.gen( size, msaa );
+    fd_.gen( size, false, msaa );
     qt_.gen();
 }
 
@@ -46,7 +46,7 @@ void SceneTextureGL::draw()
 
     qt_.bind();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, fd_.getTexture() ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, fd_.getColorTexture() ) );
     setTextureWrapType( WrapType::Mirror );
     setTextureFilterType( FilterType::Discrete );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );

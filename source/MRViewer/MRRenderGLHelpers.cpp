@@ -254,6 +254,7 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
         GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, resDepthTexture_.getId(), 0 ) );
         assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     }
+    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 }
 
 void QuadTextureVertexObject::gen()

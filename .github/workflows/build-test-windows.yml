@@ -347,7 +347,8 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
-          artifact_path: MREDist_${{matrix.config}}.zip
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: MREDist_${{matrix.config}}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive

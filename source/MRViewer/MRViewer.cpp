@@ -2481,7 +2481,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transpare
     GLuint fbo;
     GL_EXEC( glGenFramebuffers(1, &fbo) );
     GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
-    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
+    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getColorTexture(), 0) );
 
     GL_EXEC( glReadPixels(0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() )) );
 

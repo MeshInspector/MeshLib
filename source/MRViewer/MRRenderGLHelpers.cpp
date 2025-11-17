@@ -211,7 +211,7 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
         GL_EXEC( glBindTexture( GL_TEXTURE_2D, getDepthTexture() ) );
         setTextureWrapType( params.wrap );
         setTextureFilterType( params.filter );
-        GL_EXEC( glUniform1i( glGetUniformLocation( shader, "depths" ), 0 ) );
+        GL_EXEC( glUniform1i( glGetUniformLocation( shader, "depths" ), 1 ) );
     }
     else
     {

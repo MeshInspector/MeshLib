@@ -52,7 +52,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time xvfb curl unzip ninja-build \
+        tzdata git sudo time xvfb curl unzip ninja-build wget \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/install_apt_cuda.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \

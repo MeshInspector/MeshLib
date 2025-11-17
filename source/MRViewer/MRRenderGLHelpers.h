@@ -205,8 +205,8 @@ public:
     // removes this object
     MRVIEWER_API void del();
 private:
-    unsigned vao_;
-    unsigned vbo_;
+    unsigned vao_{ 0 };
+    unsigned vbo_{ 0 };
 };
 
 // class for easier rendering in framebuffer texture

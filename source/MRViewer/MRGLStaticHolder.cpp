@@ -600,7 +600,7 @@ void main(void)
     if ( outColor.a == 0.0 )
       discard;
     float depth = texture(depths, pos ).r;
-    if ( depth >= 1.0 ) // antialiased pixels might have _depth == 1.0
+    if ( depth > 0.999 ) // antialiased pixels might have _depth == 1.0
       gl_FragDepth = 0.999;
     else 
       gl_FragDepth = depth;

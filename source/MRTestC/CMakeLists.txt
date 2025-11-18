@@ -5,27 +5,11 @@ file(GLOB SOURCES "*.c")
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
-IF(MR_EMSCRIPTEN)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
-ENDIF()
-
-IF(MR_EMSCRIPTEN)
-  set(CMAKE_EXECUTABLE_SUFFIX ".html")
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    gtest
-    -Wl,--whole-archive
-    MRMeshC
-    -Wl,--no-whole-archive
-  )
-ELSEIF(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMeshC
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMeshC
-    m
-  )
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMeshC
+)
+IF(NOT WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE m)
 ENDIF()
 
 add_test(

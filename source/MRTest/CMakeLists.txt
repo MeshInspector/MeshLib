@@ -4,71 +4,28 @@ file(GLOB SOURCES "*.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
+  set(EM_WHOLE_ARCHIVE "-Wl,--whole-archive")
+  set(EM_NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
 ENDIF()
 
-IF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRViewer
-    jsoncpp
-    cpr
-    fmt
-    gtest
-    spdlog
-    OpenVDB
-    tbb
-    ${CMAKE_DL_LIBS}
-  )
-ELSE()
-  IF(MR_EMSCRIPTEN)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      gtest
-      zip
-      jsoncpp
-      openvdb
-      tbb
-      -Wl,--whole-archive
-      MRMesh
-      MRIOExtras
-      MRViewer
-      -Wl,--no-whole-archive
-    )
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(GTest REQUIRED)
-    find_package(OpenVDB REQUIRED)
-    find_package(cpr REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRViewer
-      cpr::cpr
-      JsonCpp::JsonCpp
-      fmt::fmt
-      GTest::gtest
-      spdlog::spdlog
-      OpenVDB::openvdb
-      TBB::tbb
-      ${CMAKE_DL_LIBS}
-    )
-  ELSE()
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRViewer
-      JsonCpp::JsonCpp
-      cpr
-      fmt
-      gtest
-      spdlog
-      openvdb
-      tbb
-      ${CMAKE_DL_LIBS}
-    )
-  ENDIF()
+find_package(GTest REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  MRIOExtras
+  ${EM_WHOLE_ARCHIVE}
+  MRViewer
+  ${EM_NO_WHOLE_ARCHIVE}
+  GTest::gtest
+  ${CMAKE_DL_LIBS}
+)
+
+IF(NOT EMSCRIPTEN)
+  find_package(cpr REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
 ENDIF()
 
 add_test(
@@ -77,18 +34,15 @@ add_test(
 )
 
 IF(MESHLIB_BUILD_VOXELS)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRVoxels
-  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
 ENDIF()
 
 IF(MESHLIB_PYTHON_SUPPORT)
   target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRPython
     MREmbeddedPython
-    pybind11nonlimitedapi_stubs
+    MRPython
   )
   IF(NOT WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
@@ -98,5 +52,5 @@ ELSE()
 ENDIF()
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

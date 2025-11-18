@@ -147,39 +147,11 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   IF(APPLE)
     # TODO: revise
     link_directories(${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MESHLIB_PYTHON_VERSION}/lib/)
-    find_package(pybind11 REQUIRED)
   ENDIF()
 ENDIF()
 
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
-
-IF(NOT MR_EMSCRIPTEN)
-  IF(NOT TARGET JsonCpp::JsonCpp)
-    IF(MSVC)
-      find_package(JsonCpp REQUIRED)
-    ELSE()
-      # fix compatibility with Ubuntu 22.04
-      if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
-        set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-      endif()
-      find_package(jsoncpp QUIET)
-      IF(NOT TARGET JsonCpp::JsonCpp)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
-        add_library(JsonCpp::JsonCpp ALIAS PkgConfig::jsoncpp)
-      ENDIF()
-    ENDIF()
-  ENDIF()
-
-  find_package(fmt 8 REQUIRED)
-  find_package(spdlog 1.9 REQUIRED)
-  find_package(TBB 2020.1 REQUIRED)
-  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB SPDLOG_FMT_EXTERNAL)
-ENDIF() # NOT MR_EMSCRIPTEN
-
-include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)
-include_directories(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include)
 
 IF(NOT $ENV{MR_VERSION} STREQUAL "")
   set(MESHLIB_VERSION $ENV{MR_VERSION})
@@ -257,10 +229,6 @@ IF(MESHLIB_BUILD_VOXELS)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)
-  IF(NOT MR_EMSCRIPTEN)
-    find_package(glfw3 CONFIG REQUIRED)
-  ENDIF()
-
   IF(MR_EMSCRIPTEN)
     include(EmscriptenHelpers)
     mr_emscripten_pack_directory("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets" "/")
@@ -342,7 +310,7 @@ ENDIF()
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR MR_RESOURCES_DIR
 )
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
@@ -357,9 +325,10 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-IF(EMSCRIPTEN)
-  install(FILES cmake/Modules/EmscriptenHelpers.cmake DESTINATION ${MR_CONFIG_DIR})
-ENDIF()
+install(
+  DIRECTORY cmake/Modules
+  DESTINATION ${MR_CONFIG_DIR}
+)
 
 IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_GENERATOR "DRAGNDROP")

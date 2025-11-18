@@ -27,29 +27,29 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRIOEXTRAS_DEPENDENCIES "")
-set(MRIOEXTRAS_INCLUDE_DIRS "")
-set(MRIOEXTRAS_LIBRARY_DIRS "")
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+    MRMesh
+)
 
 IF(NOT MRIOEXTRAS_NO_3MF)
-  list(APPEND MRIOEXTRAS_DEPENDENCIES tinyxml2)
+  target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_CTM)
-  list(APPEND MRIOEXTRAS_DEPENDENCIES OpenCTM)
+  target_link_libraries(${PROJECT_NAME} PRIVATE OpenCTM)
   IF(NOT MR_EMSCRIPTEN)
     target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/OpenCTM-git/lib>)
   ENDIF()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_E57)
-  list(APPEND MRIOEXTRAS_DEPENDENCIES E57Format)
-  IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-  
-  file(GLOB XERCES_DLL_RELEASE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/xerces-c_3_*.dll")
-  file(GLOB XERCES_DLL_DEBUG "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/xerces-c_3_*.dll")
+  target_link_libraries(${PROJECT_NAME} PRIVATE E57Format)
 
-  
+  IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    file(GLOB XERCES_DLL_RELEASE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/xerces-c_3_*.dll")
+    file(GLOB XERCES_DLL_DEBUG "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/xerces-c_3_*.dll")
+
     # Not sure why this isn't auto-copied.
     IF($<CONFIG:Debug>)
       file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/E57Format-d.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -73,32 +73,30 @@ ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_JPEG)
   IF(APPLE)
-    target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
-    list(APPEND MRIOEXTRAS_DEPENDENCIES ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
+    target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
   ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES turbojpeg)
+    target_link_libraries(${PROJECT_NAME} PRIVATE turbojpeg)
   ENDIF()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_LAS)
-  list(APPEND MRIOEXTRAS_DEPENDENCIES lazperf)
+  target_link_libraries(${PROJECT_NAME} PRIVATE lazperf)
   IF(NOT MR_EMSCRIPTEN)
     target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/laz-perf/cpp>)
   ENDIF()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_PDF)
-  list(APPEND MRIOEXTRAS_DEPENDENCIES hpdf)
+  target_link_libraries(${PROJECT_NAME} PRIVATE hpdf)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_PNG)
   IF(MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_LIBPNG=1")
-  ELSEIF(WIN32)
-    find_package(PNG REQUIRED)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES PNG::PNG)
   ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES png)
+    find_package(PNG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PNG::PNG)
   ENDIF()
 ENDIF()
 
@@ -113,81 +111,41 @@ IF(NOT MRIOEXTRAS_NO_STEP)
     ApplicationFramework
     DataExchange
   )
-  set(OpenCASCADE_REQUIRED_LIBRARIES TKernel TKBRep TKMath TKMesh TKDESTEP TKSTEP TKTopAlgo TKXSBase)
+  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE ${OpenCASCADE_INCLUDE_DIR})
+  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE ${OpenCASCADE_LIBRARY_DIR})
+
+  set(OpenCASCADE_REQUIRED_LIBRARIES
+    TKernel
+    TKBRep
+    TKMath
+    TKMesh
+    TKDESTEP
+    TKSTEP
+    TKTopAlgo
+    TKXSBase
+  )
   IF(MRIOEXTRAS_OPENCASCADE_USE_XDE)
-    list(APPEND OpenCASCADE_REQUIRED_LIBRARIES TKXDESTEP TKLCAF TKXCAF)
+    list(APPEND OpenCASCADE_REQUIRED_LIBRARIES
+      TKXDESTEP
+      TKLCAF
+      TKXCAF
+    )
   ENDIF()
-  FOREACH(LIBRARY_NAME ${OpenCASCADE_LIBRARIES})
+  foreach(LIBRARY_NAME ${OpenCASCADE_LIBRARIES})
     IF(${LIBRARY_NAME} IN_LIST OpenCASCADE_REQUIRED_LIBRARIES)
-      list(APPEND MRIOEXTRAS_DEPENDENCIES ${LIBRARY_NAME})
+      target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBRARY_NAME})
     ENDIF()
-  ENDFOREACH()
-  list(APPEND MRIOEXTRAS_INCLUDE_DIRS ${OpenCASCADE_INCLUDE_DIR})
-  list(APPEND MRIOEXTRAS_LIBRARY_DIRS ${OpenCASCADE_LIBRARY_DIR})
+  endforeach()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES tiff)
-  ENDIF()
+  find_package(TIFF REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_ZLIB)
-  IF(MR_EMSCRIPTEN)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES z)
-  ELSE()
-    find_package(ZLIB REQUIRED)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES ZLIB::ZLIB)
-  ENDIF()
-ENDIF()
-
-target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-  ${MRIOEXTRAS_INCLUDE_DIRS}
-)
-target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-  ${MRIOEXTRAS_LIBRARY_DIRS}
-)
-IF(MR_EMSCRIPTEN)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog
-    tbb
-    jsoncpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSEIF(APPLE)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt
-    spdlog
-    tbb
-    jsoncpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSEIF(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt::fmt
-    spdlog::spdlog
-    TBB::tbb
-    JsonCpp::JsonCpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSE()
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt::fmt
-    spdlog::spdlog
-    tbb
-    JsonCpp::JsonCpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
 ENDIF()
 
 install(

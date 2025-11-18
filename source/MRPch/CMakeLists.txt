@@ -10,47 +10,41 @@ install(
 )
 
 IF(MR_PCH)
-  IF(MR_EMSCRIPTEN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+  add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-    # FIXME: comment required
-    target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      jsoncpp
-      tbb
-    )
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(Boost 1.73 CONFIG REQUIRED)
-    find_package(Eigen3 REQUIRED)
-
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt::fmt
-      spdlog::spdlog
-      Boost::boost
-      Eigen3::Eigen
-      JsonCpp::JsonCpp
-      TBB::tbb
-    )
+  # Emscripten's Boost package doesn't contain CMake config files
+  # on other systems the module mode shows a warning
+  IF(NOT EMSCRIPTEN)
+    find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
   ELSE()
-    find_package(Boost 1.73 CONFIG REQUIRED)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
+    find_package(Boost 1.73 REQUIRED)
+  ENDIF()
+  find_package(Eigen3 REQUIRED)
+  find_package(fmt 8 REQUIRED)
+  find_package(JsonCpp REQUIRED)
+  find_package(spdlog 1.9 REQUIRED)
+  find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    Boost::boost
+    Eigen3::Eigen
+    fmt::fmt
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    TBB::tbb
+  )
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
-      Boost::boost
-      JsonCpp::JsonCpp
-      tbb
+  # TODO: CMake config
+  target_include_directories(${PROJECT_NAME}
+    PRIVATE
+      $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+  )
+
+  IF(EMSCRIPTEN)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+      EIGEN_STACK_ALLOCATION_LIMIT=0
     )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
   ENDIF()
 
   IF(MR_PCH_USE_EXTRA_HEADERS)
@@ -70,8 +64,6 @@ IF(MR_PCH)
   # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
   # Also needed for `Boost.Stacktrace` apparently.
   IF(NOT WIN32)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC
-      _GNU_SOURCE
-    )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
   ENDIF()
 ENDIF()

@@ -45,7 +45,6 @@ COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
-COPY scripts/patches scripts/patches
 COPY requirements requirements
 COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
 COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh

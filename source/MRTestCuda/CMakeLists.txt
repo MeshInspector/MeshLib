@@ -4,24 +4,12 @@ file(GLOB SOURCES "*.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-IF(APPLE OR WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(GTest REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRCuda
-    GTest::gtest
-    fmt::fmt
-    spdlog::spdlog
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRCuda
-    gtest
-    fmt
-    spdlog
-  )
-ENDIF()
+find_package(GTest REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  MRCuda
+  GTest::gtest
+)
 
 add_test(
   NAME ${PROJECT_NAME}
@@ -29,5 +17,5 @@ add_test(
 )
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

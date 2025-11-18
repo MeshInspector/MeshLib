@@ -75,7 +75,7 @@ jobs:
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
       - name: Clean Vcpkg Directory
-        if: ${{ matrix.os == 'windows-2022' }}
+#        if: ${{ matrix.os == 'windows-2022' }}
         working-directory: C:\vcpkg
         run: git clean -ffdx
 

@@ -780,7 +780,7 @@ bool Viewer::setupWindow_( const LaunchParams& params )
 
     if ( depthPeeler_ )
     {
-        depthPeeler_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        depthPeeler_->reset( { width, height } );
         spdlog::info( "DepthPeeler created" );
     }
 
@@ -1960,7 +1960,7 @@ void Viewer::postResize( int w, int h )
     if ( sceneTexture_ )
         sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ), bool( depthPeeler_ ) );
     if ( depthPeeler_ )
-        depthPeeler_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        depthPeeler_->reset( framebufferSize );
 
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
@@ -2615,7 +2615,7 @@ void Viewer::requestChangeMSAA( int newMSAA )
         {
             sceneTexture_->reset( framebufferSize, getMSAAPow( newMSAA ), bool( depthPeeler_ ) );
             if ( depthPeeler_ )
-                depthPeeler_->reset( framebufferSize, getMSAAPow( newMSAA ) );
+                depthPeeler_->reset( framebufferSize );
             setSceneDirty();
         } );
     }

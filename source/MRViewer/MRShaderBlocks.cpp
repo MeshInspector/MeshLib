@@ -132,6 +132,32 @@ std::string getFragmentShaderEndBlock( ShaderTransparencyMode transparencyMode )
 )";
     else if ( transparencyMode == ShaderTransparencyMode::DepthPeel )
         return R"(
+
+    ivec2 dpTexSize = textureSize( dp_bg_depths, 0 );
+    ivec2 dpTexCoord = clamp( ivec2(gl_FragCoord.xy), ivec2(0,0), dpTexSize-ivec2(1,1));
+    
+    float dpBGDepth = texelFetch( dp_bg_depths, dpTexCoord,0 ).r;
+    float dpFGDepth = texelFetch( dp_fg_depths, dpTexCoord,0 ).r;
+    vec4 dpColor = texelFetch( dp_fg_colors, dpTexCoord,0 );
+
+    float dp_eps = 0.00001;
+    if ( gl_FragCoord.z >= dpBGDepth )
+    {
+        discard;
+    }
+    else if ( gl_FragCoord.z <= dpFGDepth )
+    {
+        outColor = dpColor;
+        gl_FragDepth = dpBGDepth - dp_eps;
+    }
+    else 
+    {
+        // blend
+        float alpha = dpColor.a + outColor.a * ( 1.0 - dpColor.a );
+        outColor.rgb = mix( outColor.a * outColor.rgb, dpColor.rgb, dpColor.a ) / alpha;
+        outColor.a = alpha;
+        gl_FragDepth = gl_FragCoord.z;
+    }
   }
 )";
     else

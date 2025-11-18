@@ -132,8 +132,9 @@ void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, G
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_depths" ), startGLTextureIndex - GL_TEXTURE0 + 2 ) );
 }
 
-void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow )
+void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow, bool highPrecisionDepth )
 {
+    highPrecisionDepth_ = highPrecisionDepth;
     // Create an initial multisampled framebuffer
     GL_EXEC( glGenFramebuffers( 1, &mainFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, mainFramebuffer_ ) );
@@ -288,13 +289,14 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
 
     GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, depthRenderbuffer_ ) );
+    auto depthComponent = highPrecisionDepth_ ? GL_DEPTH_COMPONENT32F : GL_DEPTH_COMPONENT24;
     if ( multisample )
     {
-        GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, GL_DEPTH_COMPONENT24, size.x, size.y ) );
+        GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, depthComponent, size.x, size.y ) );
     }
     else
     {
-        GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y ) );
+        GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, depthComponent, size.x, size.y ) );
     }
     GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, 0 ) );
     GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer_ ) );
@@ -309,11 +311,11 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
     {
         resDepthTexture_.loadData( { 
             .resolution = Vector3i( size.x, size.y, 1 ), 
-            .internalFormat = GL_DEPTH_COMPONENT24, 
+            .internalFormat = depthComponent,
             .format = GL_DEPTH_COMPONENT, 
-            .type = GL_UNSIGNED_INT,
+            .type = highPrecisionDepth_ ? GL_FLOAT : GL_UNSIGNED_INT,
             .wrap = WrapType::Clamp, 
-            .filter = FilterType::Linear }, ( const char* ) nullptr );
+            .filter = FilterType::Discrete }, ( const char* ) nullptr );
         GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, resDepthTexture_.getId(), 0 ) );
         assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     }

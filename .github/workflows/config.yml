@@ -144,7 +144,7 @@ jobs:
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
-              - 'thirdparty/!(install.bat|vcpkg/**)'
+              - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**)'
 
       - name: Filter Linux vcpkg paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3

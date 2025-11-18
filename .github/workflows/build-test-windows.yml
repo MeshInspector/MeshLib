@@ -216,6 +216,8 @@ jobs:
             move source\TempOutput\bin source\x64\${{matrix.config}}
             if errorlevel 1 exit 1
           ) else (
+            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=14.2
+            if errorlevel 1 exit 1
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
             if errorlevel 1 exit 1
           )
@@ -235,7 +237,7 @@ jobs:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=14.2
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Run Start-and-Exit Tests

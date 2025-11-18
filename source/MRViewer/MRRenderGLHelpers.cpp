@@ -108,6 +108,30 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
     return id;
 }
 
+void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, GLenum startGLTextureIndex )
+{
+    if ( !tMode.isDepthPeelingEnbaled() )
+        return;
+
+    GL_EXEC( glActiveTexture( startGLTextureIndex ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getBGDepthPeelingDepthTextureId() ) );
+    setTextureWrapType( WrapType::Clamp );
+    setTextureFilterType( FilterType::Discrete );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_bg_depths" ), startGLTextureIndex - GL_TEXTURE0 ) );
+
+    GL_EXEC( glActiveTexture( startGLTextureIndex + 1 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getFGDepthPeelingColorTextureId() ) );
+    setTextureWrapType( WrapType::Clamp );
+    setTextureFilterType( FilterType::Discrete );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_colors" ), startGLTextureIndex - GL_TEXTURE0 + 1 ) );
+
+    GL_EXEC( glActiveTexture( startGLTextureIndex + 2 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getFGDepthPeelingDepthTextureId() ) );
+    setTextureWrapType( WrapType::Clamp );
+    setTextureFilterType( FilterType::Discrete );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_depths" ), startGLTextureIndex - GL_TEXTURE0 + 2 ) );
+}
+
 void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow )
 {
     // Create an initial multisampled framebuffer

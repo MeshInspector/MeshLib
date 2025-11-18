@@ -261,4 +261,7 @@ private:
     Vector2i size_;
 };
 
+// helper function to bind depth and color buffers to given shader program
+MRVIEWER_API void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, GLenum startGLTextureIndex );
+
 } //namespace MR

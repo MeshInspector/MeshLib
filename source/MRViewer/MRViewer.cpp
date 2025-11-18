@@ -3,6 +3,7 @@
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
+#include "MRDepthPeelingGL.h"
 #include "MRGLMacro.h"
 #include "MRSetupViewer.h"
 #include "MRGLStaticHolder.h"
@@ -773,8 +774,14 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     enableAlphaSort( true );
     if ( sceneTexture_ )
     {
-        sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ), bool( depthPeeler_ ) );
         spdlog::info( "SceneTexture created" );
+    }
+
+    if ( depthPeeler_ )
+    {
+        depthPeeler_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        spdlog::info( "DepthPeeler created" );
     }
 
     if ( alphaSorter_ )
@@ -870,6 +877,8 @@ int Viewer::launchInit_( const LaunchParams& params )
             else
                 return EXIT_FAILURE;
         }
+        if ( !alphaSorter_ && sceneTexture_ )
+            depthPeeler_ = std::make_unique<DepthPeelingGL>();
     }
 
     if ( windowMode && !setupWindow_( params ) )
@@ -1015,6 +1024,7 @@ void Viewer::launchShut()
 
     alphaSorter_.reset();
     sceneTexture_.reset();
+    depthPeeler_.reset();
 
     if ( touchpadController_ )
         touchpadController_->reset();
@@ -1183,6 +1193,7 @@ Viewer::~Viewer()
     glInitialized_ = false;
     alphaSorter_.reset();
     sceneTexture_.reset();
+    depthPeeler_.reset();
 }
 
 bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
@@ -1686,24 +1697,6 @@ void Viewer::resetRedraw_()
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
 
-void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws ) const
-{
-    if ( !obj.isVisible( vp.id ) )
-        return;
-    auto xfCopy = parentXf * obj.xf( vp.id );
-    auto visObj = obj.asType<VisualObject>();
-    if ( visObj )
-    {
-        if ( vp.draw( *visObj, xfCopy, DepthFunction::Default, renderType, alphaSortEnabled_ ) )
-        {
-            if ( numDraws )
-                ++( *numDraws );
-        }
-    }
-    for ( const auto& child : obj.children() )
-        recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
-}
-
 void Viewer::draw( bool force )
 {
 #ifdef __EMSCRIPTEN__
@@ -1864,12 +1857,24 @@ void Viewer::drawScene()
 
     for ( const auto& viewport : viewport_list )
     {
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
+        viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::Opaque, alphaSortEnabled_ );
+        viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::VolumeRendering, alphaSortEnabled_ );
+        if ( alphaSortEnabled_ || !depthPeeler_ )
+            viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::Transparent, alphaSortEnabled_, &numTransparent );
+    }
+
+    bool depthPeelerPostDrawNeeded = false;
+    if ( depthPeeler_ )
+    {
+        depthPeelerPostDrawNeeded = depthPeeler_->doPasses( sceneTexture_.get() );
     }
 
     signals_->drawSignal();
+
+    if ( depthPeelerPostDrawNeeded )
+    {
+        depthPeeler_->draw();
+    }
 
     if ( numTransparent > 0 && alphaSortEnabled_ )
     {
@@ -1878,7 +1883,7 @@ void Viewer::drawScene()
     }
     // draw after alpha texture
     for ( const auto& viewport : viewport_list )
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::NoDepthTest );
+        viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::NoDepthTest, alphaSortEnabled_ );
 
     signals_->postDrawPreViewportSignal();
 
@@ -1953,7 +1958,9 @@ void Viewer::postResize( int w, int h )
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
     if ( sceneTexture_ )
-        sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ), bool( depthPeeler_ ) );
+    if ( depthPeeler_ )
+        depthPeeler_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ) );
 
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
@@ -2606,7 +2613,9 @@ void Viewer::requestChangeMSAA( int newMSAA )
     {
         CommandLoop::appendCommand( [newMSAA, this] ()
         {
-            sceneTexture_->reset( framebufferSize, getMSAAPow( newMSAA ) );
+            sceneTexture_->reset( framebufferSize, getMSAAPow( newMSAA ), bool( depthPeeler_ ) );
+            if ( depthPeeler_ )
+                depthPeeler_->reset( framebufferSize, getMSAAPow( newMSAA ) );
             setSceneDirty();
         } );
     }

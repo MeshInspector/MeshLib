@@ -120,7 +120,7 @@ bool RenderPlaneNormalComponent::render( const ModelRenderParams& params )
         },
         params.normMatrixPtr,
         params.lightPos,
-        params.allowAlphaSort,
+        params.transparencyMode,
         params.passMask,
     };
 

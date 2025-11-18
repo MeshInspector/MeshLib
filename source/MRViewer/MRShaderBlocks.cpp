@@ -39,12 +39,12 @@ std::string getPickerFragmentShader( bool points, bool cornerMode )
 
     return
         head +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         ( points ? getFragmentShaderPointSizeBlock() : R"()" ) +
         getFragmentShaderClippingBlock() +
         primId +
         tail +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
 std::string getFragmentShaderClippingBlock()
@@ -113,13 +113,9 @@ std::string getFragmentShaderHeaderBlock( bool gl4, bool alphaSort )
 )";
 }
 
-std::string getFragmentShaderEndBlock( bool alphaSort )
+std::string getFragmentShaderEndBlock( ShaderTransparencyMode transparencyMode )
 {
-    if ( !alphaSort )
-        return R"(
-  }
-)";
-    else
+    if ( transparencyMode == ShaderTransparencyMode::AlphaSort )
         return R"(
     uint nodeIndex = atomicCounterIncrement ( numNodes );
     
@@ -134,11 +130,29 @@ std::string getFragmentShaderEndBlock( bool alphaSort )
     discard;
   }
 )";
+    else if ( transparencyMode == ShaderTransparencyMode::DepthPeel )
+        return R"(
+  }
+)";
+    else
+        return R"(
+  }
+)";
 }
 
-std::string getShaderMainBeginBlock()
+std::string getShaderMainBeginBlock( bool addDepthPeelSamplers )
 {
-    return R"(
+    if (!addDepthPeelSamplers )
+        return R"(
+  void main()
+  {
+)";
+    else
+        return R"(
+  uniform sampler2D dp_bg_depths;
+  uniform sampler2D dp_fg_colors;
+  uniform sampler2D dp_fg_depths;
+
   void main()
   {
 )";

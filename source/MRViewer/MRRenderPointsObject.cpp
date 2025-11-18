@@ -8,7 +8,6 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
@@ -56,7 +55,17 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     if ( !objPoints_->hasVisualRepresentation() )
         return false;
 
-    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    GLStaticHolder::ShaderType shaderType = GLStaticHolder::Points;
+    if ( desiredPass == RenderModelPassMask::Transparent )
+    {
+        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+            shaderType = GLStaticHolder::AlphaSortPoints;
+        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+            shaderType = GLStaticHolder::DepthPeelPoints;
+    }
+
+
+    if ( shaderType == GLStaticHolder::AlphaSortPoints )
     {
         GL_EXEC( glDepthMask( GL_FALSE ) );
         GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
@@ -86,15 +95,22 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
+    if ( shaderType == GLStaticHolder::DepthPeelPoints )
+    {
+        GL_EXEC( glDisable( GL_BLEND ) );
+    }
+    else
+    {
+        GL_EXEC( glEnable( GL_BLEND ) );
+    }
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
-    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent;
-    bindPoints_( useAlphaSort );
+    bindPoints_( shaderType );
 
     // Send transformations to the GPU
-
-    auto shader = GLStaticHolder::getShaderId( useAlphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
+    if ( shaderType == GLStaticHolder::DepthPeelPoints )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE1 );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -146,7 +162,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 
-    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    if ( shaderType == GLStaticHolder::AlphaSortPoints )
     {
         // enable back masks, disabled for alpha sort
         GL_EXEC( glDepthMask( GL_TRUE ) );
@@ -214,7 +230,7 @@ size_t RenderPointsObject::glBytes() const
 void RenderPointsObject::forceBindAll()
 {
     update_();
-    bindPoints_( false );
+    bindPoints_( GLStaticHolder::Points );
 }
 
 RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
@@ -289,9 +305,9 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 }
 
 
-void RenderPointsObject::bindPoints_( bool alphaSort )
+void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 {
-    auto shader = GLStaticHolder::getShaderId( alphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     if ( objPoints_->hasVisualRepresentation() )

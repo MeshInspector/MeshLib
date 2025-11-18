@@ -48,6 +48,23 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         return false;
     }
 
+    if ( renderParams.transparencyMode.isAlphaSortEnabled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDepthMask( GL_FALSE ) );
+        GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glDisable( GL_MULTISAMPLE ) );
+#endif
+    }
+    else
+    {
+        GL_EXEC( glDepthMask( GL_TRUE ) );
+        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
+    }
+
     needUpdateScreenLengths_ = needAccumLengthDirtyUpdate_( renderParams );
 
     update_();
@@ -65,13 +82,31 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
+    if ( renderParams.transparencyMode.isDepthPeelingEnbaled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDisable( GL_BLEND ) );
+    }
+    else
+    {
+        GL_EXEC( glEnable( GL_BLEND ) );
+    }
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
-    render_( renderParams, false );
+
+    render_( renderParams, false, desiredPass );
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
-        render_( renderParams, true );
+        render_( renderParams, true, desiredPass );
+
+    if ( renderParams.transparencyMode.isAlphaSortEnabled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        // enable back masks, disabled for alpha sort
+        GL_EXEC( glDepthMask( GL_TRUE ) );
+        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
+    }
 
     return true;
 }
@@ -115,11 +150,25 @@ void RenderLinesObject::forceBindAll()
     bindLines_( GLStaticHolder::LinesJoint );
 }
 
-void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points )
+void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points, RenderModelPassMask desiredPass )
 {
-    auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
+    auto shaderType = GLStaticHolder::LinesJoint;
+    if ( !points )
+    {
+        shaderType = GLStaticHolder::Lines;
+        if ( desiredPass == RenderModelPassMask::Transparent )
+        {
+            if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+                shaderType = GLStaticHolder::AlphaSortLines;
+            else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+                shaderType = GLStaticHolder::DepthPeelLines;
+        }
+    }
     bindLines_( shaderType );
+
     auto shader = GLStaticHolder::getShaderId( shaderType );
+    if ( shaderType == GLStaticHolder::DepthPeelLines )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE4 );
 
 
     calcAndBindLength_( renderParams, shader );

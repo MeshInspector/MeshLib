@@ -5,7 +5,6 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRMeshNormals.h"
 #include "MRGLMacro.h"
-#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
@@ -48,9 +47,20 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         objMesh_->resetDirty();
         return false;
     }
+
+    GLStaticHolder::ShaderType shaderType = GLStaticHolder::Mesh;
+    if ( desiredPass == RenderModelPassMask::Transparent )
+    {
+        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+            shaderType = GLStaticHolder::AlphaSortMesh;
+        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+            shaderType = GLStaticHolder::DepthPeelMesh;
+    }
+
+
     update_( renderParams.viewportId );
 
-    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    if ( shaderType == GLStaticHolder::AlphaSortMesh )
     {
         GL_EXEC( glDepthMask( GL_FALSE ) );
         GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
@@ -80,13 +90,23 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
+    if ( shaderType == GLStaticHolder::DepthPeelMesh )
+    {
+        GL_EXEC( glDisable( GL_BLEND ) );
+    }
+    else
+    {
+        GL_EXEC( glEnable( GL_BLEND ) );
+    }
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
-    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent;
-    bindMesh_( useAlphaSort );
+    bindMesh_( shaderType );
 
-    auto shader = useAlphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::Mesh );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
+
+    if ( shaderType == GLStaticHolder::DepthPeelMesh )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE5 );
+
     // Send transformations to the GPU
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -143,16 +163,16 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     }
     // Render wireframe
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
-        renderMeshEdges_( renderParams, useAlphaSort );
+        renderMeshEdges_( renderParams, desiredPass );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-        renderEdges_( renderParams, useAlphaSort, borderArrayObjId_, objMesh_->getBordersColor( renderParams.viewportId ), DIRTY_BORDER_LINES );
+        renderEdges_( renderParams, desiredPass, borderArrayObjId_, objMesh_->getBordersColor( renderParams.viewportId ), DIRTY_BORDER_LINES );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-        renderEdges_( renderParams, useAlphaSort, selectedEdgesArrayObjId_, objMesh_->getSelectedEdgesColor( renderParams.viewportId ), DIRTY_EDGES_SELECTION );
+        renderEdges_( renderParams, desiredPass, selectedEdgesArrayObjId_, objMesh_->getSelectedEdgesColor( renderParams.viewportId ), DIRTY_EDGES_SELECTION );
     // Render vertices
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Points, renderParams.viewportId ) )
-        renderMeshVerts_( renderParams, useAlphaSort );
+        renderMeshVerts_( renderParams, desiredPass );
 
-    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    if ( shaderType == GLStaticHolder::AlphaSortMesh )
     {
         // enable back masks, disabled for alpha sort
         GL_EXEC( glDepthMask( GL_TRUE ) );
@@ -226,21 +246,28 @@ size_t RenderMeshObject::glBytes() const
 void RenderMeshObject::forceBindAll()
 {
     update_( ViewportMask::all() );
-    bindMesh_( false );
+    bindMesh_( GLStaticHolder::Mesh );
     bindEdges_();
     bindSelectedEdges_();
     bindBorders_();
-    bindPoints_( false );
+    bindPoints_( GLStaticHolder::Points );
 }
 
-void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool alphaSort, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
+void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, RenderModelPassMask desiredPass, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( vao ) );
 
-    auto shader = alphaSort ?
-        GLStaticHolder::getShaderId( GLStaticHolder::TransparentLines ) :
-        GLStaticHolder::getShaderId( GLStaticHolder::Lines );
+    auto shaderType = GLStaticHolder::Lines;
+    if ( desiredPass == RenderModelPassMask::Transparent )
+    {
+        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+            shaderType = GLStaticHolder::AlphaSortLines;
+        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+            shaderType = GLStaticHolder::DepthPeelLines;
+    }
+
+    auto shader = GLStaticHolder::getShaderId( shaderType );
 
     GL_EXEC( glUseProgram( shader ) );
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -260,6 +287,9 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "vertices" ), 0 ) );
     bindEmptyTextures_( shader );
+
+    if ( shaderType == GLStaticHolder::DepthPeelLines )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE4 );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
@@ -296,14 +326,21 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool
     dirty_ &= ~dirtyFlag;
 }
 
-void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, bool alphaSort )
+void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, RenderModelPassMask desiredPass )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( edgesArrayObjId_ ) );
 
-    auto shader = alphaSort ?
-        GLStaticHolder::getShaderId( GLStaticHolder::TransparentLines ) :
-        GLStaticHolder::getShaderId( GLStaticHolder::Lines );
+    auto shaderType = GLStaticHolder::Lines;
+    if ( desiredPass == RenderModelPassMask::Transparent )
+    {
+        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+            shaderType = GLStaticHolder::AlphaSortLines;
+        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+            shaderType = GLStaticHolder::DepthPeelLines;
+    }
+
+    auto shader = GLStaticHolder::getShaderId( shaderType );
 
     GL_EXEC( glUseProgram( shader ) );
 
@@ -312,6 +349,9 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, 
     bindEdges_();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "vertices" ), 0 ) );
     bindEmptyTextures_( shader );
+
+    if ( shaderType == GLStaticHolder::DepthPeelLines )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE4 );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
@@ -343,12 +383,24 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, 
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 }
 
-void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, bool alphaSort )
+void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, RenderModelPassMask desiredPass )
 {
-    bindPoints_( alphaSort );
+    auto shaderType = GLStaticHolder::Points;
+    if ( desiredPass == RenderModelPassMask::Transparent )
+    {
+        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+            shaderType = GLStaticHolder::AlphaSortPoints;
+        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+            shaderType = GLStaticHolder::DepthPeelPoints;
+    }
+
+    bindPoints_( shaderType );
 
     // Send transformations to the GPU
-    auto shader = GLStaticHolder::getShaderId( alphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
+
+    if ( shaderType == GLStaticHolder::DepthPeelPoints )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE1 );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -400,9 +452,9 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 }
 
-void RenderMeshObject::bindMesh_( bool alphaSort )
+void RenderMeshObject::bindMesh_( GLStaticHolder::ShaderType shaderType )
 {
-    auto shader = alphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::Mesh );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -660,9 +712,9 @@ void RenderMeshObject::bindEmptyTextures_(GLuint shaderId)
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "accumScnLength" ), 3 ) );
 }
 
-void RenderMeshObject::bindPoints_( bool alphaSort )
+void RenderMeshObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 {
-    auto shader = GLStaticHolder::getShaderId( alphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 

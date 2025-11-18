@@ -5,6 +5,33 @@
 namespace MR
 {
 
+/// struct to determine transparent rendering mode
+struct TransparencyMode
+{
+public:
+    TransparencyMode() = default;
+    TransparencyMode( bool alphaSort ) :alphaSort_{ alphaSort }
+    {
+    }
+    TransparencyMode( unsigned bgDepthTexId, unsigned fgColorTexId, unsigned fgDepthTexId ) :
+        bgDepthTexId_{ bgDepthTexId },
+        fgColorTexId_{ fgColorTexId },
+        fgDepthTexId_{ fgDepthTexId }
+    {
+    }
+    bool isAlphaSortEnabled() const { return alphaSort_; }
+    bool isDepthPeelingEnbaled() const { return !alphaSort_ && bgDepthTexId_ != 0 && fgColorTexId_ != 0 && fgDepthTexId_ != 0; }
+    unsigned getBGDepthPeelingDepthTextureId() const { return bgDepthTexId_; }
+    unsigned getFGDepthPeelingColorTextureId() const { return fgColorTexId_; }
+    unsigned getFGDepthPeelingDepthTextureId() const { return fgDepthTexId_; }
+
+private:
+    bool alphaSort_{ false };
+    unsigned bgDepthTexId_ = 0;
+    unsigned fgColorTexId_ = 0;
+    unsigned fgDepthTexId_ = 0;
+};
+
 /// Various passes of the 3D rendering.
 enum class RenderModelPassMask
 {

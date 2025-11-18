@@ -19,9 +19,11 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Picker shader",
         "Mesh desktop picker shader",
         "Alpha-sort mesh shader",
+        "Depth-peel mesh shader",
 
         "Points shader",
-        "Alpha-sort Points shader",
+        "Alpha-sort points shader",
+        "Depth-peel points shader",
 
         "Lines shader",
         "Lines joint shader",
@@ -29,6 +31,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Lines joint picker shader",
 
         "Alpha-sort lines shader",
+        "Depth-peel lines shader",
 
         "Labels shader",
 
@@ -112,7 +115,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         else
             fragmentShader = getVolumePickerFragmentShader();
     }
-    else if ( type == Mesh || type == TransparentMesh )
+    else if ( type == Mesh || type == AlphaSortMesh || type == DepthPeelMesh )
     {
         vertexShader = getMeshVerticesShader();
 
@@ -122,19 +125,29 @@ void GLStaticHolder::createShader_( ShaderType type )
         minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
 
         bool gl4 = major >= 4 && ( major != 4 || minor >= 3 );
-        bool alphaSort = type == TransparentMesh;
+        ShaderTransparencyMode tMode = ShaderTransparencyMode::None;
+        if ( type == AlphaSortMesh )
+            tMode = ShaderTransparencyMode::AlphaSort;
+        else if ( type == DepthPeelMesh )
+            tMode = ShaderTransparencyMode::DepthPeel;
         
         int curSamples = 0;
         GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
         
-        fragmentShader = getMeshFragmentShader( gl4, alphaSort, curSamples > 1 && !alphaSort );
+        fragmentShader = getMeshFragmentShader( gl4, tMode, curSamples > 1 && tMode != ShaderTransparencyMode::AlphaSort );
     }
-    else if ( type == Lines || type == LinesJoint || type == TransparentLines )
+    else if ( type == Lines || type == LinesJoint || type == AlphaSortLines || type == DepthPeelLines )
     {
-        if ( type == Lines || type == TransparentLines )
+        if ( type == Lines || type == AlphaSortLines || type == DepthPeelLines )
         {
+            ShaderTransparencyMode tMode = ShaderTransparencyMode::None;
+            if ( type == AlphaSortLines )
+                tMode = ShaderTransparencyMode::AlphaSort;
+            else if ( type == DepthPeelLines )
+                tMode = ShaderTransparencyMode::DepthPeel;
+
             vertexShader = getLinesVertexShader();
-            fragmentShader = getLinesFragmentShader( type == TransparentLines );
+            fragmentShader = getLinesFragmentShader( tMode );
         }
         else
         {
@@ -181,10 +194,16 @@ void GLStaticHolder::createShader_( ShaderType type )
 
         fragmentShader = getPickerFragmentShader( false, type == Picker );
     }
-    else if ( type == Points || type == TransparentPoints )
+    else if ( type == Points || type == AlphaSortPoints || type == DepthPeelPoints )
     {
+        ShaderTransparencyMode tMode = ShaderTransparencyMode::None;
+        if ( type == AlphaSortPoints )
+            tMode = ShaderTransparencyMode::AlphaSort;
+        else if ( type == DepthPeelPoints )
+            tMode = ShaderTransparencyMode::DepthPeel;
+
         vertexShader = getPointsVertexShader();
-        fragmentShader = getPointsFragmentShader( type == TransparentPoints );
+        fragmentShader = getPointsFragmentShader( tMode );
     }
     else if ( type == Labels )
     {
@@ -402,7 +421,7 @@ void GLStaticHolder::createShader_( ShaderType type )
   }
 )";
         }
-        else if ( type == TransparencyOverlayQuad )
+        else if ( type == AlphaSortOverlayQuad )
         {
             fragmentShader =
                 R"(
@@ -610,7 +629,7 @@ void main(void)
     }
 
     DisabledWarnings warns = {};
-    if ( type == TransparencyOverlayQuad )
+    if ( type == AlphaSortOverlayQuad )
         warns.push_back( { 7050,"used uninitialized" } );
 
     createShader( getShaderName( type ), vertexShader, fragmentShader, shadersIds_[type], warns );

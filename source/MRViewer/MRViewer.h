@@ -580,8 +580,6 @@ private:
     bool needRedraw_() const;
     void resetRedraw_();
 
-    void recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws = nullptr ) const;
-
     void initGlobalBasisAxesObject_();
     void initBasisAxesObject_();
     void initBasisViewControllerObject_();
@@ -604,6 +602,7 @@ private:
 
     std::unique_ptr<SceneTextureGL> sceneTexture_;
     std::unique_ptr<AlphaSortGL> alphaSorter_;
+    std::unique_ptr<DepthPeelingGL> depthPeeler_;
 
     bool alphaSortEnabled_{false};
 

@@ -15,13 +15,16 @@ public:
     // if present-> del();gen();
     // otherwise just gen()
     // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amount of samples
-    void reset( const Vector2i& size, int msaaPow );
+    void reset( const Vector2i& size, int msaaPow, bool depthTexture );
     // copy texture so draw() can render it
     void copyTexture();
     // renders texture
     void draw();
     // return true if texture is bound
     bool isBound() const { return fd_.isBound(); }
+
+    unsigned getColorTextureId() const { return fd_.getColorTexture(); }
+    unsigned getDepthTextureId() const { return fd_.getDepthTexture(); }
 private:
     FramebufferData fd_;
     QuadTextureVertexObject qt_;

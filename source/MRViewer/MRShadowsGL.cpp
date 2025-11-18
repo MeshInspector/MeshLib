@@ -172,32 +172,14 @@ void ShadowsGL::drawShadow_( bool convX )
 void ShadowsGL::drawTexture_( bool scene, bool downsample )
 {
     const auto& size = downsample ? lowSize_ : sceneSize_;
-    GL_EXEC( glViewport( 0, 0, size.x, size.y ) );
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::SimpleOverlayQuad );
-    GL_EXEC( glUseProgram( shader ) );
-
-    quadObject_.bind();
-    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     if ( scene )
     {
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, sceneFramebuffer_.getColorTexture() ) );
+        sceneFramebuffer_.draw( quadObject_, { .size = size } );
     }
     else
     {
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getColorTexture() ) );
+        lowSizeFramebuffer_.draw( quadObject_, { .size = size,.simpleDepth = 0.99f } );
     }
-    if ( scene )
-    {
-        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), 0.5f ) );
-    }
-    else
-    {
-        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), 0.99f ) );
-    }
-    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "viewportSize" ), float( size.x ), float( size.y ) ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
-    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 6 ) );
 }
 
 void ShadowsGL::setQuality( float quality )

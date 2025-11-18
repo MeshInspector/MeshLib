@@ -1,5 +1,5 @@
 # to force update thirdparty touch this line
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -7,7 +7,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
   set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
 
 IF(MR_EMSCRIPTEN_WASM64)
@@ -57,7 +57,7 @@ ELSE()
     "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
     "/usr/lib64/cmake/OpenVDB/"
   )
-  find_package(OpenVDB 9 COMPONENTS openvdb)
+  find_package(OpenVDB 10 COMPONENTS openvdb)
   IF(NOT OpenVDB_FOUND)
     set(OPENVDB_ENABLE_UNINSTALL OFF)
     set(OPENVDB_ENABLE_INSTALL OFF)
@@ -66,15 +66,7 @@ ELSE()
     set(OPENVDB_BUILD_BINARIES OFF)
     set(OPENVDB_BUILD_VDB_PRINT OFF)
     set(USE_EXPLICIT_INSTANTIATION OFF)
-
-    # Ubuntu 20.04 compatibility
-    find_package(Boost REQUIRED)
-    find_package(TBB REQUIRED)
-    IF(Boost_VERSION VERSION_LESS 1.73 OR TBB_VERSION VERSION_LESS 2020.2)
-      add_subdirectory(./openvdb/v9/openvdb)
-    ELSE()
-      add_subdirectory(./openvdb/v10/openvdb)
-    ENDIF()
+    add_subdirectory(./openvdb/v10/openvdb)
   ENDIF()
 
   find_package(cpr)

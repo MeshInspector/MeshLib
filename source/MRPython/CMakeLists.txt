@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRPython CXX)
 
 file(GLOB SOURCES "*.cpp")
@@ -70,7 +66,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

@@ -420,7 +420,7 @@ Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSet
     const size_t maxNumChars = std::to_string( numSlices ).size();
     for ( int i = 0; i < numSlices; ++i )
     {
-        const auto res = saveSliceToImage( settings.path / fmt::format( runtimeFmt( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
+        const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
         if ( !res )
             return res;
 

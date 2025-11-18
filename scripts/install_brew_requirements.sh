@@ -5,10 +5,7 @@
 # This script installs requirements by `brew` if not already installed
 
 requirements_file=requirements/macos.txt
-for req in `cat $requirements_file`
-do
-  brew install $req
-done
+brew install $(cat $requirements_file | tr '\n' ' ')
 
 brew install pybind11
 

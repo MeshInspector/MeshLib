@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-
 project(imgui LANGUAGES CXX)
 
 # Don't emit warnings.
@@ -60,13 +58,10 @@ IF(MR_EMSCRIPTEN)
   add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
-  find_package(freetype)
-  IF(NOT freetype_FOUND)
+  find_package(freetype QUIET)
+  IF(NOT TARGET Freetype::Freetype)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(Freetype REQUIRED IMPORTED_TARGET freetype2)
-    IF(CMAKE_VERSION VERSION_LESS 3.18)
-      set_target_properties(PkgConfig::Freetype PROPERTIES IMPORTED_GLOBAL TRUE)
-    ENDIF()
     add_library(Freetype::Freetype ALIAS PkgConfig::Freetype)
   ENDIF()
 

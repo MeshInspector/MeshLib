@@ -53,7 +53,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     {
         if ( renderParams.transparencyMode.isAlphaSortEnabled() )
             shaderType = GLStaticHolder::AlphaSortMesh;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
             shaderType = GLStaticHolder::DepthPeelMesh;
     }
 
@@ -263,7 +263,7 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, Rend
     {
         if ( renderParams.transparencyMode.isAlphaSortEnabled() )
             shaderType = GLStaticHolder::AlphaSortLines;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
             shaderType = GLStaticHolder::DepthPeelLines;
     }
 
@@ -336,7 +336,7 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, 
     {
         if ( renderParams.transparencyMode.isAlphaSortEnabled() )
             shaderType = GLStaticHolder::AlphaSortLines;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
             shaderType = GLStaticHolder::DepthPeelLines;
     }
 
@@ -390,7 +390,7 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
     {
         if ( renderParams.transparencyMode.isAlphaSortEnabled() )
             shaderType = GLStaticHolder::AlphaSortPoints;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
             shaderType = GLStaticHolder::DepthPeelPoints;
     }
 

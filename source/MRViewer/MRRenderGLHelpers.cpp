@@ -110,7 +110,7 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
 
 void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, GLenum startGLTextureIndex )
 {
-    if ( !tMode.isDepthPeelingEnbaled() )
+    if ( !tMode.isDepthPeelingEnabled() )
         return;
 
     GL_EXEC( glActiveTexture( startGLTextureIndex ) );

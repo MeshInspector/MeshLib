@@ -86,7 +86,7 @@ bool RenderLabelObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     }
 
-    if ( renderParams.transparencyMode.isDepthPeelingEnbaled() && desiredPass == RenderModelPassMask::Transparent )
+    if ( renderParams.transparencyMode.isDepthPeelingEnabled() && desiredPass == RenderModelPassMask::Transparent )
     {
         GL_EXEC( glDisable( GL_BLEND ) );
     }

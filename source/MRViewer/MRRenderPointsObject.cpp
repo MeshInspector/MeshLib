@@ -60,7 +60,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     {
         if ( renderParams.transparencyMode.isAlphaSortEnabled() )
             shaderType = GLStaticHolder::AlphaSortPoints;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
             shaderType = GLStaticHolder::DepthPeelPoints;
     }
 

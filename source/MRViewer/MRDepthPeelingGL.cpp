@@ -33,9 +33,9 @@ bool DepthPeelingGL::doPasses( SceneTextureGL* sceneTexture )
     sceneTexture->copyTexture();
 
     int numTransparent = 0;
-    GL_EXEC( glClearDepth( 0.0f ) );
+    GL_EXEC( glClearDepthf( 0.0f ) );
     accumFB_.bind( true ); // reset depth buffer to 0.0 value for first pass
-    GL_EXEC( glClearDepth( 1.0f ) );
+    GL_EXEC( glClearDepthf( 1.0f ) );
 
     for ( int i = 0; i < numPasses_; ++i )
     {

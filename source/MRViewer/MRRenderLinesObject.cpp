@@ -82,7 +82,7 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     }
 
-    if ( renderParams.transparencyMode.isDepthPeelingEnbaled() && desiredPass == RenderModelPassMask::Transparent )
+    if ( renderParams.transparencyMode.isDepthPeelingEnabled() && desiredPass == RenderModelPassMask::Transparent )
     {
         GL_EXEC( glDisable( GL_BLEND ) );
     }
@@ -160,7 +160,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
         {
             if ( renderParams.transparencyMode.isAlphaSortEnabled() )
                 shaderType = GLStaticHolder::AlphaSortLines;
-            else if ( renderParams.transparencyMode.isDepthPeelingEnbaled() )
+            else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
                 shaderType = GLStaticHolder::DepthPeelLines;
         }
     }

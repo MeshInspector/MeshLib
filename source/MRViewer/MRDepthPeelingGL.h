@@ -16,13 +16,13 @@ public:
     void reset( const Vector2i& size );
 
     /// renders transparent objects into this buffer
-    /// returns true if there is transparent objects to render
+    /// returns true if there are transparent objects to render
     bool doPasses( SceneTextureGL* sceneTexture );
 
     /// draws this result texture onto
     void draw();
 private:
-    FramebufferData accumFB_; // do we need two? of them to swap
+    FramebufferData accumFB_;
     QuadTextureVertexObject qt_;
     const int numPasses_{ 3 }; // bare minimum for test
 };

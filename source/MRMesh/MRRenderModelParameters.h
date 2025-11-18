@@ -20,7 +20,7 @@ public:
     {
     }
     bool isAlphaSortEnabled() const { return alphaSort_; }
-    bool isDepthPeelingEnbaled() const { return !alphaSort_ && bgDepthTexId_ != 0 && fgColorTexId_ != 0 && fgDepthTexId_ != 0; }
+    bool isDepthPeelingEnabled() const { return !alphaSort_ && bgDepthTexId_ != 0 && fgColorTexId_ != 0 && fgDepthTexId_ != 0; }
     unsigned getBGDepthPeelingDepthTextureId() const { return bgDepthTexId_; }
     unsigned getFGDepthPeelingColorTextureId() const { return fgColorTexId_; }
     unsigned getFGDepthPeelingDepthTextureId() const { return fgDepthTexId_; }

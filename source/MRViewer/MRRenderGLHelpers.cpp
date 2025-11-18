@@ -162,16 +162,16 @@ void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow, bo
     resize_( size, msaaPow );
 }
 
-void FramebufferData::bind( bool clear )
+void FramebufferData::bind( bool clear, float clearDepth )
 {
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, mainFramebuffer_ ) );
 
     // Clear the buffer
     if ( clear )
     {
-        float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
+        constexpr float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
         GL_EXEC( glClearBufferfv( GL_COLOR, 0, cClearValue ) );
-        GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
+        GL_EXEC( glClearBufferfv( GL_DEPTH, 0, &clearDepth ) );
     }
     isBound_ = true;
 }

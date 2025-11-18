@@ -219,7 +219,7 @@ public:
     MRVIEWER_API void gen( const Vector2i& size, bool copyDepth, int msaaPow, bool highPrecisionDepth = false );
     // binds this framebuffer as main rendering target
     // clears it if `clear` flag is set
-    MRVIEWER_API void bind( bool clear = true );
+    MRVIEWER_API void bind( bool clear = true, float clearDepth = 1.0f );
     // binds default framebuffer (and read/draw framebuffers)
     // make sure to bind correct framebuffer `getViewerInstance().bindSceneTexture( true )`
     MRVIEWER_API void bindDefault();

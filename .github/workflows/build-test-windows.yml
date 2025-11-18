@@ -216,9 +216,7 @@ jobs:
             move source\TempOutput\bin source\x64\${{matrix.config}}
             if errorlevel 1 exit 1
           ) else (
-            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=14.2
-            if errorlevel 1 exit 1
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }};PlatformToolset=v142
             if errorlevel 1 exit 1
           )
 

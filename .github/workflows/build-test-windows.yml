@@ -207,7 +207,7 @@ jobs:
             if errorlevel 1 exit 1
             cmake --version
             if errorlevel 1 exit 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] -DCMAKE_GENERATOR_TOOLSET=v142 }}
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DCMAKE_GENERATOR_TOOLSET=v142 -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             if errorlevel 1 exit 1
             cmake --build source\TempOutput -j
             if errorlevel 1 exit 1

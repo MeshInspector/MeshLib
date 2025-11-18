@@ -1,6 +1,7 @@
 {
   "include": [
     {
+      "cxx_compiler": "msvc-2019",
       "os": "windows-2019",
       "runner": ["windows-2022"],
       "config": "Debug",
@@ -12,6 +13,7 @@
       "vcpkg-version": "__VCPKG_VERSION_VS19__"
     },
     {
+      "cxx_compiler": "msvc-2019",
       "os": "windows-2019",
       "runner": ["windows-2022"],
       "config": "Debug",

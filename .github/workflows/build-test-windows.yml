@@ -44,7 +44,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.os == 'windows-2022' && matrix.build_system == 'MSBuild' }}
+      BUILD_C_SHARP: ${{ matrix.compiler_cxx == 'msvc-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -69,7 +69,7 @@ jobs:
         with:
           target_os: windows
           target_arch: x64
-          cxx_compiler: ${{ matrix.os }} # os name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
+          cxx_compiler: ${{ matrix.cxx_compiler }}
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
@@ -112,7 +112,7 @@ jobs:
         run: C:\vcpkg\vcpkg.exe integrate install
 
       - name: Restore CUDA Cache
-        if: ${{ matrix.os == 'windows-2022' }}
+#        if: ${{ matrix.os == 'windows-2022' }}
         uses: actions/cache@v4
         id: cuda-cache
         with:
@@ -120,11 +120,11 @@ jobs:
           path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
 
       - name: Install CUDA
-        if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' && matrix.os == 'windows-2022' }}
+        if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' }}
         run: choco install cuda --version=${{matrix.CUDA-VERSION}} --confirm
 
       - name: Setup CUDA
-        if: ${{ matrix.os == 'windows-2022' }}
+#        if: ${{ matrix.os == 'windows-2022' }}
         shell: bash
         run: |
           echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
@@ -133,7 +133,7 @@ jobs:
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
 
       - name: Install Visual Studio Integration
-        if: ${{ matrix.os == 'windows-2022' }}
+#        if: ${{ matrix.os == 'windows-2022' }}
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
@@ -207,7 +207,7 @@ jobs:
             if errorlevel 1 exit 1
             cmake --version
             if errorlevel 1 exit 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] -DCMAKE_GENERATOR_TOOLSET=v142 }}
             if errorlevel 1 exit 1
             cmake --build source\TempOutput -j
             if errorlevel 1 exit 1

@@ -190,7 +190,7 @@ jobs:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["-vcvars_ver=14.2", ""]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
 
       - name: Build
@@ -199,7 +199,7 @@ jobs:
           VCPKG_ROOT: C:\vcpkg
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["-vcvars_ver=14.2", ""]')[matrix.cxx_compiler == 'msvc-2019'] }}
+            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
             cmake --version
             if errorlevel 1 exit 1
@@ -212,7 +212,7 @@ jobs:
             move source\TempOutput\bin source\x64\${{matrix.config}}
             if errorlevel 1 exit 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('[";PlatformToolset=v142", ""]')[matrix.cxx_compiler == 'msvc-2019'] }}
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
           )
 
@@ -231,7 +231,7 @@ jobs:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["-vcvars_ver=14.2", ""]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Run Start-and-Exit Tests

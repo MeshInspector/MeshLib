@@ -2,7 +2,7 @@
   "include": [
     {
       "cxx_compiler": "msvc-2019",
-      "os": "windows-2019",
+      "test_artifacts_path": "windows/windows-2019/Debug",
       "runner": ["windows-2022"],
       "config": "Debug",
       "build_system": "MSBuild",
@@ -14,7 +14,7 @@
     },
     {
       "cxx_compiler": "msvc-2019",
-      "os": "windows-2019",
+      "test_artifacts_path": "windows/windows-2019/Debug",
       "runner": ["windows-2022"],
       "config": "Debug",
       "build_system": "CMake",

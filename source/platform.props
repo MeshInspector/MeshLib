@@ -8,10 +8,12 @@
     <!--Create file named CustomMRPlatform.props in any directory above to override PlatformToolset setting-->
     <CustomPlatfotmPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRPlatform.props))</CustomPlatfotmPropertyDir>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(CustomPlatfotmPropertyDir)' == ''">
+  <PropertyGroup Label="Configuration" Condition="'$(PlatformToolset)' == ''">
     <!-- v142 = Visual Studio 2019 compiler -->
     <!-- v143 = Visual Studio 2022 compiler -->
     <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
     <MRCudaVersion Condition="'$(PlatformToolset)' == 'v142'">11.4</MRCudaVersion>
     <MRCudaVersion Condition="'$(PlatformToolset)' == 'v143'">12.0</MRCudaVersion>
     <PreferredToolArchitecture>x86</PreferredToolArchitecture> <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->

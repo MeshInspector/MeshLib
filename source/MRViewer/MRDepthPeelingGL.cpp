@@ -2,7 +2,7 @@
 #include "MRViewer.h"
 #include "MRSceneTextureGL.h"
 #include "MRViewport.h"
-#include "MRMesh\MRSceneRoot.h"
+#include "MRMesh/MRSceneRoot.h"
 
 namespace MR
 {

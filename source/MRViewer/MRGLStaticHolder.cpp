@@ -597,9 +597,13 @@ void main(void)
     vec2 pos = gl_FragCoord.xy;
     pos = vec2( pos.x/float(viewportSize.x),pos.y/float(viewportSize.y) );
     outColor = texture(pixels, pos );
-    if (outColor.a == 0.0)
+    if ( outColor.a == 0.0 )
       discard;
-    gl_FragDepth = texture(depths, pos ).r;
+    float depth = texture(depths, pos ).r;
+    if ( depth >= 1.0 ) // antialiased pixels might have _depth == 1.0
+      gl_FragDepth = 0.999;
+    else 
+      gl_FragDepth = depth;
   }
 )";
         }

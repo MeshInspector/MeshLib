@@ -8,9 +8,11 @@
     <!--Create file named CustomMRPlatform.props in any directory above to override PlatformToolset setting-->
     <CustomPlatfotmPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRPlatform.props))</CustomPlatfotmPropertyDir>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(PlatformToolset)' == ''">
+  <!-- by default $(PlatformToolset)='v100' in VS2019 and $(PlatformToolset)='' in VS2022 -->
+  <PropertyGroup Label="Configuration" Condition="'$(PlatformToolset)' == '' or '$(PlatformToolset)' == 'v100'">
     <!-- v142 = Visual Studio 2019 compiler -->
     <!-- v143 = Visual Studio 2022 compiler -->
+    <!-- v144 = Visual Studio 2026 compiler -->
     <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">

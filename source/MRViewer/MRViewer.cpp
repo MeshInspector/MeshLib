@@ -614,7 +614,7 @@ int Viewer::launch( const LaunchParams& params )
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     experimentalFeatures = params.developerFeatures;
-    multiViewport = params.multiViewport;
+    multiViewport_ = params.multiViewport;
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;

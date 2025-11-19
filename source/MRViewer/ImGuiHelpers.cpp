@@ -656,7 +656,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         float minHeight = 0;
         float maxHeight = ImGui::GetIO().DisplaySize.y;
 
-        if ( !MR::getViewerInstance().multiViewport )
+        if ( !MR::getViewerInstance().isMultiViewport() )
         {
             if ( params.height > 0.0f )
             {

@@ -499,7 +499,7 @@
     <ClCompile Include="MRDepthPeelingGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="ImGuiMultiViewport.cpp">
+    <ClCompile Include="MRImGuiMultiViewport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -985,7 +985,7 @@
     <ClInclude Include="MRDepthPeelingGL.h">
       <Filter>Render</Filter>
     </ClInclude>
-    <ClInclude Include="ImGuiMultiViewport.h">
+    <ClInclude Include="MRImGuiMultiViewport.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

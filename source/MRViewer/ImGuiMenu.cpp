@@ -67,7 +67,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRHistoryStore.h"
 #include "ImGuiHelpers.h"
-#include "ImGuiMultiViewport.h"
+#include "MRImGuiMultiViewport.h"
 #include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRStringConvert.h"

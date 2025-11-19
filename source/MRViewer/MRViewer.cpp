@@ -441,6 +441,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-showSplash" ||
     #endif
             flag == "-console" ||
+            flag == "-noMultiViewport" ||
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
             flag == "-develop" ||

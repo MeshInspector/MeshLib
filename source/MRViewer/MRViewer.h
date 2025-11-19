@@ -467,8 +467,6 @@ public:
     uint16_t glPickRadius{ }; // init in resetSettingsFunction()
     // Experimental/developer features enabled
     bool experimentalFeatures{ };
-    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
-    bool multiViewport{ true };
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 
@@ -518,6 +516,9 @@ public:
 
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
+
+    /// return true if imgui multi viewport enabled
+    bool isMultiViewport() { return multiViewport_; }
 private:
     Viewer();
     ~Viewer();
@@ -627,6 +628,9 @@ private:
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
+
+    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
+    bool multiViewport_{ true };
 
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 

@@ -14,7 +14,7 @@
 #include "MRUITestEngine.h"
 #include "MRMouseController.h"
 #include "MRRibbonFontHolder.h"
-#include "ImGuiMultiViewport.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h>
 
 namespace

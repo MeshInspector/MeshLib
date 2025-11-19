@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiHelpers.cpp" />
-    <ClCompile Include="ImGuiMultiViewport.cpp" />
+    <ClCompile Include="MRImGuiMultiViewport.cpp" />
     <ClCompile Include="MRAncillaryLabels.cpp" />
     <ClCompile Include="MRAncillaryLines.cpp" />
     <ClCompile Include="MRAncillaryMesh.cpp" />
@@ -155,7 +155,7 @@
     <ClCompile Include="MRFileDialogPortal.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ImGuiMultiViewport.h" />
+    <ClInclude Include="MRImGuiMultiViewport.h" />
     <ClInclude Include="MRAlphaSortGL.h" />
     <ClInclude Include="MRAncillaryLabels.h" />
     <ClInclude Include="MRAncillaryLines.h" />

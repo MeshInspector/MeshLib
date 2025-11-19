@@ -44,7 +44,7 @@
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
 #include "MRGladGlfw.h"
-#include "ImGuiMultiViewport.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
@@ -2467,7 +2467,6 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
                 // fix broken scroll stabilizer
                 if ( ImGui::GetCurrentWindow()->ScrollbarXStabilizeEnabled )
                     ImGui::GetCurrentWindow()->ScrollbarXStabilizeToggledHistory = 128;
-
 
                 ImGui::EndTable();
             }

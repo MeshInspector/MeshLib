@@ -15,7 +15,7 @@
 #include "MRRibbonFontHolder.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer/MRUITestEngine.h"
-#include "ImGuiMultiViewport.h"
+#include "MRImGuiMultiViewport.h"
 #include "imgui_internal.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"

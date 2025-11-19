@@ -132,6 +132,57 @@ void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, G
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_depths" ), startGLTextureIndex - GL_TEXTURE0 + 2 ) );
 }
 
+void objectPreRenderSetup( const TransparencyMode& tMode, RenderModelPassMask desiredPass, bool deptTesting )
+{
+    if ( tMode.isAlphaSortEnabled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDepthMask( GL_FALSE ) );
+        GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glDisable( GL_MULTISAMPLE ) );
+#endif
+    }
+    else
+    {
+        GL_EXEC( glDepthMask( GL_TRUE ) );
+        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
+    }
+
+    if ( deptTesting )
+    {
+        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
+    }
+    else
+    {
+        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
+    }
+
+    if ( tMode.isDepthPeelingEnabled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDisable( GL_BLEND ) );
+    }
+    else
+    {
+        GL_EXEC( glEnable( GL_BLEND ) );
+    }
+    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
+}
+
+void objectPostRenderSetup( const TransparencyMode& tMode, RenderModelPassMask desiredPass, bool )
+{
+    if ( tMode.isAlphaSortEnabled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDepthMask( GL_TRUE ) );
+        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
+    }
+}
+
 void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow, bool highPrecisionDepth )
 {
     highPrecisionDepth_ = highPrecisionDepth;

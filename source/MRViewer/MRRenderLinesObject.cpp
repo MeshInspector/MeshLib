@@ -35,8 +35,9 @@ RenderLinesObject::~RenderLinesObject()
 
 bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
+    bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
-        !objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
@@ -48,22 +49,7 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         return false;
     }
 
-    if ( renderParams.transparencyMode.isAlphaSortEnabled() && desiredPass == RenderModelPassMask::Transparent )
-    {
-        GL_EXEC( glDepthMask( GL_FALSE ) );
-        GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
-#ifndef __EMSCRIPTEN__
-        GL_EXEC( glDisable( GL_MULTISAMPLE ) );
-#endif
-    }
-    else
-    {
-        GL_EXEC( glDepthMask( GL_TRUE ) );
-        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
-#ifndef __EMSCRIPTEN__
-        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
-#endif
-    }
+    objectPreRenderSetup( renderParams.transparencyMode,desiredPass, depthTest );
 
     needUpdateScreenLengths_ = needAccumLengthDirtyUpdate_( renderParams );
 
@@ -73,40 +59,13 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
 
-    if ( objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
-
-    if ( renderParams.transparencyMode.isDepthPeelingEnabled() && desiredPass == RenderModelPassMask::Transparent )
-    {
-        GL_EXEC( glDisable( GL_BLEND ) );
-    }
-    else
-    {
-        GL_EXEC( glEnable( GL_BLEND ) );
-    }
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-
 
     render_( renderParams, false, desiredPass );
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
         render_( renderParams, true, desiredPass );
 
-    if ( renderParams.transparencyMode.isAlphaSortEnabled() && desiredPass == RenderModelPassMask::Transparent )
-    {
-        // enable back masks, disabled for alpha sort
-        GL_EXEC( glDepthMask( GL_TRUE ) );
-        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
-#ifndef __EMSCRIPTEN__
-        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
-#endif
-    }
+    objectPostRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
     return true;
 }

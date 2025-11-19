@@ -224,7 +224,7 @@ public:
     // make sure to bind correct framebuffer `getViewerInstance().bindSceneTexture( true )`
     MRVIEWER_API void bindDefault();
     // marks the texture to reading
-    MRVIEWER_API void bindTexture();
+    MRVIEWER_API void bindTexture( bool color = true, bool depth = true );
     // copies picture rendered in this framebuffer to associated texutre for further use
     // and binds default framebuffer (and read/draw framebuffers)
     // make sure to bind correct framebuffer afterwards
@@ -244,6 +244,7 @@ public:
         Vector2i size; // size of the viewport that is used in `draw` function
         WrapType wrap{ WrapType::Clamp }; // wrap type of underlaying textures
         FilterType filter{ FilterType::Linear }; // filter type of underlaying textures
+        bool forceSimpleDepthDraw = false;
         float simpleDepth = 0.5f; // depth that is used if this framebuffer does not store depth component texture
     };
     // draws this framebuffer using `quadObject`

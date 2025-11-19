@@ -136,19 +136,18 @@ std::string getFragmentShaderEndBlock( ShaderTransparencyMode transparencyMode )
     ivec2 dpTexSize = textureSize( dp_bg_depths, 0 );
     ivec2 dpTexCoord = clamp( ivec2(gl_FragCoord.xy), ivec2(0,0), dpTexSize-ivec2(1,1));
     
-    float dpBGDepth = texelFetch( dp_bg_depths, dpTexCoord,0 ).r;
+    float dpBGDepth = texture( dp_bg_depths, gl_FragCoord.xy/vec2(dpTexSize) ).r;
     float dpFGDepth = texelFetch( dp_fg_depths, dpTexCoord,0 ).r;
     vec4 dpColor = texelFetch( dp_fg_colors, dpTexCoord,0 );
 
-    float dp_eps = 0.00001;
-    if ( gl_FragCoord.z >= dpBGDepth )
+    if ( gl_FragCoord.z > dpBGDepth )
     {
         discard;
     }
     else if ( gl_FragCoord.z <= dpFGDepth )
     {
         outColor = dpColor;
-        gl_FragDepth = dpBGDepth - dp_eps;
+        gl_FragDepth = dpBGDepth;
     }
     else 
     {

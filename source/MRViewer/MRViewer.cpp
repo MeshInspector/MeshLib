@@ -1827,7 +1827,7 @@ void Viewer::drawFull( bool dirtyScene )
     if ( sceneTexture_ )
         renderScene = renderScene && dirtyScene;
     if ( renderScene )
-        drawScene();
+        drawScene( sceneTexture_ ? &sceneTexture_->getFramebuffer() : nullptr );
     signals_->postDrawSignal();
     if ( sceneTexture_ )
     {
@@ -1844,7 +1844,7 @@ void Viewer::drawFull( bool dirtyScene )
     }
 }
 
-void Viewer::drawScene()
+void Viewer::drawScene( FramebufferData* framebuffer )
 {
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
@@ -1866,7 +1866,7 @@ void Viewer::drawScene()
     bool depthPeelerPostDrawNeeded = false;
     if ( depthPeeler_ )
     {
-        depthPeelerPostDrawNeeded = depthPeeler_->doPasses( sceneTexture_.get() );
+        depthPeelerPostDrawNeeded = depthPeeler_->doPasses( framebuffer );
     }
 
     signals_->drawSignal();
@@ -2467,22 +2467,26 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transpare
             viewport.setParameters( viewportParamsNew );
         }
     }
-    if ( newRes != framebufferSize && alphaSorter_ )
-        alphaSorter_->updateTransparencyTexturesSize( newRes.x, newRes.y );
-
+    if ( newRes != framebufferSize )
+    {
+        if ( alphaSorter_ )
+            alphaSorter_->updateTransparencyTexturesSize( newRes.x, newRes.y );
+        else if ( depthPeeler_ )
+            depthPeeler_->reset( newRes );
+    }
 
     std::vector<Color> pixels( newRes.x * newRes.y );
 
     FramebufferData fd;
-    fd.gen( newRes, false, -1 );
+    fd.gen( newRes, bool( depthPeeler_ ), -1 );
     fd.bind();
 
     setupScene();
     clearFramebuffers();
-    drawScene();
+    drawScene( &fd );
 
     fd.copyTextureBindDef();
-    fd.bindTexture();
+    fd.bindTexture( true, false ); // only bind color
 
 #ifdef __EMSCRIPTEN__
     GLuint fbo;
@@ -2510,8 +2514,13 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transpare
         for ( int i = 0; i < viewport_list.size(); ++i )
             viewport_list[i].setParameters( viewportParams[i] );
     }
-    if ( newRes != framebufferSize && alphaSorter_ )
-        alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+    if ( newRes != framebufferSize )
+    {
+        if ( alphaSorter_ )
+            alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+        else if ( depthPeeler_ )
+            depthPeeler_->reset( framebufferSize );
+    }
 
     return Image{ pixels, newRes };
 }

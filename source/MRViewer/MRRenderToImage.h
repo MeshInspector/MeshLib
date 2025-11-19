@@ -21,7 +21,7 @@ namespace MR
 MRVIEWER_API Image renderToImage(
     const Vector2i& resolution,
     const std::optional<Color>& backgroundColor,
-    const std::function<void ()>& drawFunc
+    const std::function<void( FramebufferData* framebuffer )>& drawFunc
 );
 
 } // namespace MR

@@ -24,6 +24,8 @@ struct GLFWwindow;
 namespace MR
 {
 
+class FramebufferData;
+
 // This struct contains rules for viewer launch
 struct LaunchParams
 {
@@ -155,7 +157,8 @@ public:
     // Draw 3d scene with UI
     MRVIEWER_API void drawFull( bool dirtyScene );
     // Draw 3d scene without UI
-    MRVIEWER_API void drawScene();
+    // framebuffer - bound framebuffer (needed if depth peeling is enabled)
+    MRVIEWER_API void drawScene( FramebufferData* framebuffer );
     // Call this function to force redraw scene into scene texture
     void setSceneDirty() { dirtyScene_ = true; }
     // Setup viewports views
@@ -328,6 +331,8 @@ public:
     MRVIEWER_API bool enableAlphaSort( bool on );
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
+    // Returns true if depth peeling is enabled, false otherwise
+    bool isDepthPeelingEnabled() const { return bool(depthPeeler_); }
 
     // Returns if scene texture is now bound
     MRVIEWER_API bool isSceneTextureBound()  const;

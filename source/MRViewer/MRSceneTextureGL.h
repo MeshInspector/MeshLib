@@ -23,8 +23,7 @@ public:
     // return true if texture is bound
     bool isBound() const { return fd_.isBound(); }
 
-    unsigned getColorTextureId() const { return fd_.getColorTexture(); }
-    unsigned getDepthTextureId() const { return fd_.getDepthTexture(); }
+    FramebufferData& getFramebuffer() { return fd_; }
 private:
     FramebufferData fd_;
     QuadTextureVertexObject qt_;

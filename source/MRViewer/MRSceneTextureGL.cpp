@@ -35,7 +35,7 @@ void SceneTextureGL::copyTexture()
 
 void SceneTextureGL::draw()
 {
-    fd_.draw( qt_, { .size = fd_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete } );
+    fd_.draw( qt_, { .size = fd_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete,.forceSimpleDepthDraw = true } );
 }
 
 }

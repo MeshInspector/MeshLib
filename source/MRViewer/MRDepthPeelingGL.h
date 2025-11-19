@@ -17,14 +17,14 @@ public:
 
     /// renders transparent objects into this buffer
     /// returns true if there are transparent objects to render
-    bool doPasses( SceneTextureGL* sceneTexture );
+    bool doPasses( FramebufferData* bgFramebuffer );
 
     /// draws this result texture onto
     void draw();
 private:
     FramebufferData accumFB_;
     QuadTextureVertexObject qt_;
-    const int numPasses_{ 3 }; // bare minimum for test
+    const int numPasses_{ 4 };
 };
 
 }

@@ -116,7 +116,7 @@ void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, G
     GL_EXEC( glActiveTexture( startGLTextureIndex ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getBGDepthPeelingDepthTextureId() ) );
     setTextureWrapType( WrapType::Clamp );
-    setTextureFilterType( FilterType::Discrete );
+    setTextureFilterType( FilterType::Linear );
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_bg_depths" ), startGLTextureIndex - GL_TEXTURE0 ) );
 
     GL_EXEC( glActiveTexture( startGLTextureIndex + 1 ) );
@@ -184,10 +184,11 @@ void FramebufferData::bindDefault()
     isBound_ = false;
 }
 
-void FramebufferData::bindTexture()
+void FramebufferData::bindTexture( bool color, bool depth )
 {
-    resColorTexture_.bind();
-    if ( resDepthTexture_.valid() )
+    if ( color )
+        resColorTexture_.bind();
+    if ( depth && resDepthTexture_.valid() )
         resDepthTexture_.bind();
 }
 
@@ -220,7 +221,8 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
 #endif
     GL_EXEC( glViewport( 0, 0, params.size.x, params.size.y ) );
 
-    auto shader = GLStaticHolder::getShaderId( resDepthTexture_.valid() ? GLStaticHolder::DepthOverlayQuad : GLStaticHolder::SimpleOverlayQuad );
+    bool useDepthTexture = !params.forceSimpleDepthDraw && resDepthTexture_.valid();
+    auto shader = GLStaticHolder::getShaderId( useDepthTexture ? GLStaticHolder::DepthOverlayQuad : GLStaticHolder::SimpleOverlayQuad );
     GL_EXEC( glUseProgram( shader ) );
 
     quadObject.bind();
@@ -230,7 +232,7 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
     setTextureFilterType( params.filter );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
 
-    if ( resDepthTexture_.valid() )
+    if ( useDepthTexture )
     {
         GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
         GL_EXEC( glBindTexture( GL_TEXTURE_2D, getDepthTexture() ) );

@@ -20,17 +20,17 @@ void DepthPeelingGL::reset( const Vector2i& size )
 
 void DepthPeelingGL::draw()
 {
-    accumFB_.draw( qt_, { .size = accumFB_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete } );
+    accumFB_.draw( qt_, { .size = accumFB_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete,.forceSimpleDepthDraw = true,.simpleDepth = 0.0f } );
 }
 
-bool DepthPeelingGL::doPasses( SceneTextureGL* sceneTexture )
+bool DepthPeelingGL::doPasses( FramebufferData* bgFramebuffer )
 {
-    assert( sceneTexture );
-    if ( !sceneTexture )
+    assert( bgFramebuffer );
+    if ( !bgFramebuffer )
         return false;
-    assert( sceneTexture->isBound() );
+    assert( bgFramebuffer->isBound() );
     
-    sceneTexture->copyTexture();
+    bgFramebuffer->copyTextureBindDef();
 
     int numTransparent = 0;
 
@@ -45,7 +45,7 @@ bool DepthPeelingGL::doPasses( SceneTextureGL* sceneTexture )
         for ( const auto& viewport : getViewerInstance().viewport_list )
         {
             viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::Transparent, 
-                { sceneTexture->getDepthTextureId(),accumFB_.getColorTexture(), accumFB_.getDepthTexture() }, 
+                { bgFramebuffer->getDepthTexture(),accumFB_.getColorTexture(), accumFB_.getDepthTexture() },
                 &numTransparent );
         }
         if ( numTransparent == 0 )
@@ -53,7 +53,7 @@ bool DepthPeelingGL::doPasses( SceneTextureGL* sceneTexture )
     }
     if ( numTransparent != 0 )
         accumFB_.copyTextureBindDef();
-    sceneTexture->bind( false );
+    bgFramebuffer->bind( false );
 
     GL_EXEC( glEnable( GL_BLEND ) );
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );

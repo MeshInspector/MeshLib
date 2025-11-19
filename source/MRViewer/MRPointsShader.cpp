@@ -1,5 +1,4 @@
 #include "MRPointsShader.h"
-#include "MRShaderBlocks.h"
 #include "MRGladGlfw.h"
 
 namespace MR
@@ -60,7 +59,7 @@ std::string getPointsVertexOutputArgumentBlock()
 std::string getPointsVertexMainBeginBlock()
 {
     return
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         R"(
     world_pos = vec3(model*vec4 (position, 1.0));
     position_eye = vec3 (view * vec4 (world_pos, 1.0));
@@ -213,17 +212,17 @@ std::string getPointsVertexShader()
         getPointsVertexMainEndBlock();
 }
 
-std::string getPointsFragmentShader( bool alphaSort )
+std::string getPointsFragmentShader( ShaderTransparencyMode mode )
 {
     return
-        getFragmentShaderHeaderBlock( alphaSort, alphaSort ) +
+        getFragmentShaderHeaderBlock( mode == ShaderTransparencyMode::AlphaSort, mode == ShaderTransparencyMode::AlphaSort ) +
         getPointsShaderViewBlock() +
         getPointsFragmentShaderArgumetsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( mode == ShaderTransparencyMode::DepthPeel ) +
         getFragmentShaderPointSizeBlock() +
         getFragmentShaderClippingBlock() +
         getPointsFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( alphaSort );
+        getFragmentShaderEndBlock( mode );
 }
 
 } // namespace MR

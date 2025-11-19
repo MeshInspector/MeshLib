@@ -1,5 +1,4 @@
 #include "MRLinesShader.h"
-#include "MRShaderBlocks.h"
 #include "MRGladGlfw.h"
 
 #ifndef __EMSCRIPTEN__
@@ -232,24 +231,24 @@ std::string getLinesVertexShader()
         getLinesVertexShaderColorsArgumentsBlock() +
         getLinesVertexShaderDashArgumentsBlock() +
         getLinesVertexShaderWidthArgumentsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         getLinesVertexShaderPositionBlock() +
         getLinesVertexDashFetchBlock() +
         getLinesVertexShaderColoringBlock() +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
-std::string getLinesFragmentShader( bool alphaSort )
+std::string getLinesFragmentShader( ShaderTransparencyMode mode )
 {
     return
-        getFragmentShaderHeaderBlock( alphaSort, alphaSort ) +
+        getFragmentShaderHeaderBlock( mode == ShaderTransparencyMode::AlphaSort, mode == ShaderTransparencyMode::AlphaSort ) +
         getLinesFragmentShaderArgumentsBlock() +
         getLinesFragmentShaderDashArgumentsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( mode == ShaderTransparencyMode::DepthPeel ) +
         getLinesFragmentShaderDashBlock() +
         getFragmentShaderClippingBlock() +
         getLinesFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( alphaSort );
+        getFragmentShaderEndBlock( mode );
 }
 
 std::string getLinesJointVertexShader()
@@ -258,10 +257,10 @@ std::string getLinesJointVertexShader()
         getLinesShaderHeaderBlock() +
         getLinesVertexShaderBaseArgumentsBlock( true ) +
         getLinesVertexShaderColorsArgumentsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         getLinesJointVertexShaderPositionBlock() +
         getLinesVertexShaderColoringBlock() +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
 std::string getLinesJointFragmentShader()
@@ -269,11 +268,11 @@ std::string getLinesJointFragmentShader()
     return
         getLinesShaderHeaderBlock() +
         getLinesFragmentShaderArgumentsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         getFragmentShaderPointSizeBlock() +
         getFragmentShaderClippingBlock() +
         getLinesFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
 std::string getLinesPickerVertexShader()
@@ -282,9 +281,9 @@ std::string getLinesPickerVertexShader()
         getLinesShaderHeaderBlock() +
         getLinesVertexShaderBaseArgumentsBlock( false ) +
         getLinesVertexShaderWidthArgumentsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         getLinesVertexShaderPositionBlock() +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
 std::string getLinesJointPickerVertexShader()
@@ -292,9 +291,9 @@ std::string getLinesJointPickerVertexShader()
     return
         getLinesShaderHeaderBlock() +
         getLinesVertexShaderBaseArgumentsBlock( true ) +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         getLinesJointVertexShaderPositionBlock() +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
 }

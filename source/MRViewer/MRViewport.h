@@ -90,25 +90,30 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clearFramebuffers();
 
+    /// Immediate draw of given object tree
+    MRVIEWER_API void recursiveDraw( const Object& obj,
+        DepthFunction depthFunc = DepthFunction::Default, const AffineXf3f& rootXf = {}, RenderModelPassMask renderType = RenderModelPassMask::All,
+        const TransparencyMode& transparentMode = {}, int* numDraws = nullptr ) const;
+
     /// Immediate draw of given object with transformation to world taken from object's scene
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Immediate draw of given object with given transformation to world
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Immediate draw of given object with given transformation to world and given projection matrix
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Immediate draw of given object with given transformation to world, orthographic proj matrix and rotation component of view matrix
     /// Returns true if something was drawn.
     MRVIEWER_API bool drawOrthoFixedPos( const VisualObject& obj, const AffineXf3f& xf,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Rendering parameters for immediate drawing of lines and points
     struct LinePointImmediateRenderParams : BaseRenderParams
@@ -153,9 +158,9 @@ public:
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
          RenderModelPassMask pass = RenderModelPassMask::All,
-         bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
+         const TransparencyMode& transparentMode = {} ///< determines how to draw transparent objects
     ) const
-    { return getModelRenderParams( modelM, getBaseRenderParams(projM_), normM, depthFunc, pass, allowAlphaSort); }
+    { return getModelRenderParams( modelM, getBaseRenderParams(projM_), normM, depthFunc, pass, transparentMode ); }
 
     /// Prepares rendering parameters to draw a model with orthographic proj matrix and rotation component of view matrix
     [[nodiscard]] ModelRenderParams getModelRenderParamsOrthoFixedPos(
@@ -163,16 +168,16 @@ public:
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
          RenderModelPassMask pass = RenderModelPassMask::All,
-         bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
+         const TransparencyMode& transparentMode = {} ///< determines how to draw transparent objects
     ) const
-    { return getModelRenderParams( modelM, getBaseRenderParamsOrthoFixedPos(), normM, depthFunc, pass, allowAlphaSort); }
+    { return getModelRenderParams( modelM, getBaseRenderParamsOrthoFixedPos(), normM, depthFunc, pass, transparentMode ); }
 
     /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom BaseRenderParams
     [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const BaseRenderParams& baseParams,
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
          RenderModelPassMask pass = RenderModelPassMask::All,
-         bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
+         const TransparencyMode& transparentMode = {} ///< determines how to draw transparent objects
     ) const;
 
     // Predicate to additionally filter objects that should be treated as pickable.

@@ -35,8 +35,9 @@ RenderLinesObject::~RenderLinesObject()
 
 bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
+    bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
-        !objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
@@ -48,6 +49,8 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         return false;
     }
 
+    objectPreRenderSetup( renderParams.transparencyMode,desiredPass, depthTest );
+
     needUpdateScreenLengths_ = needAccumLengthDirtyUpdate_( renderParams );
 
     update_();
@@ -56,22 +59,13 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
 
-    if ( objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-
-    render_( renderParams, false );
+    render_( renderParams, false, desiredPass );
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
-        render_( renderParams, true );
+        render_( renderParams, true, desiredPass );
+
+    objectPostRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
     return true;
 }
@@ -115,11 +109,25 @@ void RenderLinesObject::forceBindAll()
     bindLines_( GLStaticHolder::LinesJoint );
 }
 
-void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points )
+void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points, RenderModelPassMask desiredPass )
 {
-    auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
+    auto shaderType = GLStaticHolder::LinesJoint;
+    if ( !points )
+    {
+        shaderType = GLStaticHolder::Lines;
+        if ( desiredPass == RenderModelPassMask::Transparent )
+        {
+            if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+                shaderType = GLStaticHolder::AlphaSortLines;
+            else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
+                shaderType = GLStaticHolder::DepthPeelLines;
+        }
+    }
     bindLines_( shaderType );
+
     auto shader = GLStaticHolder::getShaderId( shaderType );
+    if ( shaderType == GLStaticHolder::DepthPeelLines )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE4 );
 
 
     calcAndBindLength_( renderParams, shader );

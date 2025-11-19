@@ -8,7 +8,6 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
@@ -39,8 +38,9 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     {
         isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
     }
+    bool depthTest = objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
-        !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || isColorTransparent ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
@@ -56,45 +56,27 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     if ( !objPoints_->hasVisualRepresentation() )
         return false;
 
-    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    GLStaticHolder::ShaderType shaderType = GLStaticHolder::Points;
+    if ( desiredPass == RenderModelPassMask::Transparent )
     {
-        GL_EXEC( glDepthMask( GL_FALSE ) );
-        GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
-#ifndef __EMSCRIPTEN__
-        GL_EXEC( glDisable( GL_MULTISAMPLE ) );
-#endif
+        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
+            shaderType = GLStaticHolder::AlphaSortPoints;
+        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
+            shaderType = GLStaticHolder::DepthPeelPoints;
     }
-    else
-    {
-        GL_EXEC( glDepthMask( GL_TRUE ) );
-        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
-#ifndef __EMSCRIPTEN__
-        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
-#endif
-    }
+
+    objectPreRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
 
-    if ( objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
-
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-
-    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent;
-    bindPoints_( useAlphaSort );
+    bindPoints_( shaderType );
 
     // Send transformations to the GPU
-
-    auto shader = GLStaticHolder::getShaderId( useAlphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
+    if ( shaderType == GLStaticHolder::DepthPeelPoints )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE1 );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -146,15 +128,8 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 
-    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
-    {
-        // enable back masks, disabled for alpha sort
-        GL_EXEC( glDepthMask( GL_TRUE ) );
-        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
-#ifndef __EMSCRIPTEN__
-        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
-#endif
-    }
+
+    objectPostRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
     return true;
 }
@@ -214,7 +189,7 @@ size_t RenderPointsObject::glBytes() const
 void RenderPointsObject::forceBindAll()
 {
     update_();
-    bindPoints_( false );
+    bindPoints_( GLStaticHolder::Points );
 }
 
 RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
@@ -289,9 +264,9 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 }
 
 
-void RenderPointsObject::bindPoints_( bool alphaSort )
+void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 {
-    auto shader = GLStaticHolder::getShaderId( alphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
+    auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     if ( objPoints_->hasVisualRepresentation() )

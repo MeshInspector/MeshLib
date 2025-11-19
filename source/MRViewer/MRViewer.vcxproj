@@ -27,6 +27,7 @@
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
+    <ClCompile Include="MRDepthPeelingGL.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
@@ -161,6 +162,7 @@
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRDepthPeelingGL.h" />
     <ClInclude Include="MRDragDropHandler.h" />
     <ClInclude Include="MRDragDropWin32Handler.h" />
     <ClInclude Include="MRFileLoadOptions.h" />

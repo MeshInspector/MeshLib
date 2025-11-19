@@ -17,17 +17,20 @@ public:
         Mesh,
         Picker,
         MeshDesktopPicker, // only for non corner-based mode
-        TransparentMesh,
+        AlphaSortMesh,
+        DepthPeelMesh,
 
         Points,
-        TransparentPoints,
+        AlphaSortPoints,
+        DepthPeelPoints,
 
         Lines,
         LinesJoint,
         LinesPicker,
         LinesJointPicker,
 
-        TransparentLines,
+        AlphaSortLines,
+        DepthPeelLines,
 
         Labels,
 
@@ -36,7 +39,7 @@ public:
         AdditionalPointsNoOffset, // special shader for old intel gpu (Intel HD 4000)
         AdditionalQuad,
         ViewportBorder,
-        TransparencyOverlayQuad,
+        AlphaSortOverlayQuad,
         ShadowOverlayQuad,
         SimpleOverlayQuad,
         DepthOverlayQuad,

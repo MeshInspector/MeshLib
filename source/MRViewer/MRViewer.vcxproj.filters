@@ -496,6 +496,9 @@
     <ClCompile Include="MRAncillaryPlane.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRDepthPeelingGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -975,6 +978,9 @@
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRAncillaryPlane.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDepthPeelingGL.h">
+      <Filter>Render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

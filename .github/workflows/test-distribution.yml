@@ -12,6 +12,7 @@ on:
 
 jobs:
   linux-x64-test:
+    if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     container:
@@ -118,6 +119,7 @@ jobs:
         run: python3 -m pytest -s -v
 
   linux-arm64-test:
+    if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
     timeout-minutes: 30
     runs-on: [self-hosted, linux-arm64, spot, meshinspector]
     container:
@@ -217,6 +219,7 @@ jobs:
         run: python3 -m pytest -s -v
 
   macos-test:
+    if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
     runs-on: macos-15-intel
     timeout-minutes: 30
     steps:

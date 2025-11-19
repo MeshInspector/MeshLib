@@ -266,4 +266,9 @@ private:
 // helper function to bind depth and color buffers to given shader program
 MRVIEWER_API void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, GLenum startGLTextureIndex );
 
+// defines OpenGl settings for desired pass with given settings
+// make sure to call `objectPostRenderSetup` after drawing to restore defaults
+MRVIEWER_API void objectPreRenderSetup( const TransparencyMode& tMode, RenderModelPassMask desiredPass, bool deptTesting );
+MRVIEWER_API void objectPostRenderSetup( const TransparencyMode& tMode, RenderModelPassMask desiredPass, bool deptTesting );
+
 } //namespace MR

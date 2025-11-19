@@ -777,6 +777,19 @@ void ViewerSettingsPlugin::drawRenderOptions_()
             viewer->enableAlphaSort( alphaBoxVal );
     }
 
+    ImGui::PushItemWidth( 100.0f * UI::scale() );
+    if ( viewer->isAlphaSortEnabled() )
+    {
+        UI::readOnlyValue<NoUnit>( "Depth Peeling Passes", viewer->getDepthPeelNumPasses() );
+    }
+    else
+    {
+        int dpNumPasses = viewer->getDepthPeelNumPasses();
+        UI::input<NoUnit>( "Depth Peeling Passes", dpNumPasses, 0, 64 );
+        viewer->setDepthPeelNumPasses( dpNumPasses );
+    }
+    ImGui::PopItemWidth();
+
     if ( viewer->isGLInitialized() )
     {
         if ( maxSamples_ > 1 )

@@ -331,8 +331,13 @@ public:
     MRVIEWER_API bool enableAlphaSort( bool on );
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
+
+    // Returns number of passes performed by depth peeler
+    MRVIEWER_API int getDepthPeelNumPasses() const;
+    // Sets desired number of passes to depth peeler
+    MRVIEWER_API void setDepthPeelNumPasses( int numPasses );
     // Returns true if depth peeling is enabled, false otherwise
-    bool isDepthPeelingEnabled() const { return bool(depthPeeler_); }
+    MRVIEWER_API bool isDepthPeelingEnabled() const;
 
     // Returns if scene texture is now bound
     MRVIEWER_API bool isSceneTextureBound()  const;
@@ -609,7 +614,7 @@ private:
     std::unique_ptr<AlphaSortGL> alphaSorter_;
     std::unique_ptr<DepthPeelingGL> depthPeeler_;
 
-    bool alphaSortEnabled_{false};
+    bool alphaSortEnabled_{ false };
 
     bool glInitialized_{ false };
 

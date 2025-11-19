@@ -13,18 +13,22 @@ public:
 
     /// if present-> del();gen();
     /// otherwise just gen()
-    void reset( const Vector2i& size );
+    MRVIEWER_API void reset( const Vector2i& size );
 
     /// renders transparent objects into this buffer
     /// returns true if there are transparent objects to render
-    bool doPasses( FramebufferData* bgFramebuffer );
+    MRVIEWER_API bool doPasses( FramebufferData* bgFramebuffer );
 
     /// draws this result texture onto
-    void draw();
+    MRVIEWER_API void draw();
+
+    /// functions to control number of passes
+    int getNumPasses() const { return numPasses_; }
+    void setNumPasses( int passes ) { numPasses_ = passes; }
 private:
     FramebufferData accumFB_;
     QuadTextureVertexObject qt_;
-    const int numPasses_{ 4 };
+    int numPasses_{ 5 };
 };
 
 }

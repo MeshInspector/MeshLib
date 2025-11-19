@@ -40,7 +40,7 @@ bool DepthPeelingGL::doPasses( FramebufferData* bgFramebuffer )
     {
         accumFB_.copyTextureBindDef();
         accumFB_.bind( false );
-        constexpr float cOneValue = 1.0f;
+        float cOneValue = 1.0f;
         GL_EXEC( glClearBufferfv( GL_DEPTH, 0, &cOneValue ) );
         for ( const auto& viewport : getViewerInstance().viewport_list )
         {

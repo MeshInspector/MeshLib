@@ -169,7 +169,7 @@ void FramebufferData::bind( bool clear, float clearDepth )
     // Clear the buffer
     if ( clear )
     {
-        constexpr float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
+        float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
         GL_EXEC( glClearBufferfv( GL_COLOR, 0, cClearValue ) );
         GL_EXEC( glClearBufferfv( GL_DEPTH, 0, &clearDepth ) );
     }

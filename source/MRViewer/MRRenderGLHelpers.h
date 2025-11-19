@@ -244,7 +244,7 @@ public:
         Vector2i size; // size of the viewport that is used in `draw` function
         WrapType wrap{ WrapType::Clamp }; // wrap type of underlaying textures
         FilterType filter{ FilterType::Linear }; // filter type of underlaying textures
-        bool forceSimpleDepthDraw = false;
+        bool forceSimpleDepthDraw = false; // force using `simpleDepth` for all fragments even if depth texture is present
         float simpleDepth = 0.5f; // depth that is used if this framebuffer does not store depth component texture
     };
     // draws this framebuffer using `quadObject`

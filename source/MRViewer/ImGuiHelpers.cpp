@@ -5,6 +5,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRPalette.h"
 #include "MRViewerInstance.h"
+#include "MRViewer.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
@@ -655,15 +656,18 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         float minHeight = 0;
         float maxHeight = ImGui::GetIO().DisplaySize.y;
 
-        if ( params.height > 0.0f )
+        if ( !MR::getViewerInstance().multiViewport )
         {
-            maxHeight = std::min( maxHeight, params.height );
-        }
-        else if ( window )
-        {
-            if ( window->Pos.y + ImGui::GetFrameHeight() < ImGui::GetIO().DisplaySize.y && window->Pos.y + maxHeight > ImGui::GetIO().DisplaySize.y )
+            if ( params.height > 0.0f )
             {
-                maxHeight = ImGui::GetIO().DisplaySize.y - window->Pos.y;
+                maxHeight = std::min( maxHeight, params.height );
+            }
+            else if ( window )
+            {
+                if ( window->Pos.y + ImGui::GetFrameHeight() < ImGui::GetIO().DisplaySize.y && window->Pos.y + maxHeight > ImGui::GetIO().DisplaySize.y )
+                {
+                    maxHeight = ImGui::GetIO().DisplaySize.y - window->Pos.y;
+                }
             }
         }
 

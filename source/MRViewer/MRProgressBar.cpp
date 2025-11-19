@@ -15,6 +15,7 @@
 #include "MRRibbonFontHolder.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer/MRUITestEngine.h"
+#include "ImGuiMultiViewport.h"
 #include "imgui_internal.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -225,7 +226,7 @@ void setup()
     instance.setupId_ = ImGui::GetID( "###GlobalProgressBarPopup" );
     const Vector2f windowSize( 440.0f * UI::scale(), 144.0f * UI::scale() );
     auto& viewer = getViewerInstance();
-    ImGui::SetNextWindowPos( 0.5f * ( Vector2f( viewer.framebufferSize ) - windowSize ), ImGuiCond_Appearing );
+    ImGuiMV::SetNextWindowPosMainViewport( 0.5f * ( Vector2f( viewer.framebufferSize ) - windowSize ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( "###GlobalProgressBarPopup", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {

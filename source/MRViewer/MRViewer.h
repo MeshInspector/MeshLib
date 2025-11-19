@@ -44,6 +44,7 @@ struct LaunchParams
     bool preferOpenGL3{ false };
     bool render3dSceneInTexture{ true }; // If not set renders scene each frame
     bool developerFeatures{ false }; // If set shows some developer features useful for debugging
+    bool multiViewport{ true }; // If set allows to move the imgui (tool) windows outside the main () window
     std::string name{ "MRViewer" }; // Window name
     bool resetConfig{ false }; // if true - resets config file on start of the application
     bool startEventLoop{ true }; // If false - does not start event loop
@@ -466,6 +467,8 @@ public:
     uint16_t glPickRadius{ }; // init in resetSettingsFunction()
     // Experimental/developer features enabled
     bool experimentalFeatures{ };
+    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
+    bool multiViewport{ true };
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 

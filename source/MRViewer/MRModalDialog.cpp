@@ -6,6 +6,7 @@
 #include "MRUIStyle.h"
 #include "MRViewer.h"
 #include "MRRibbonFontHolder.h"
+#include "ImGuiMultiViewport.h"
 #include <imgui_internal.h>
 
 namespace MR
@@ -22,7 +23,7 @@ bool ModalDialog::beginPopup()
     const auto windowWidth = settings_.windowWidth > 0.f ? settings_.windowWidth : cModalWindowWidth * UI::scale();
     const ImVec2 windowSize { windowWidth, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::SetNextWindowPos( Vector2f( getViewerInstance().framebufferSize ) * 0.5f, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
+    ImGuiMV::SetNextWindowPosMainViewport( Vector2f( getViewerInstance().framebufferSize ) * 0.5f, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
 
     setStyle_();
 

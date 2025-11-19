@@ -3,6 +3,7 @@
 #include "MRImGui.h"
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
+#include "ImGuiMultiViewport.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRRibbonSchema.h"
 #include "MRColorTheme.h"
@@ -80,7 +81,7 @@ void Toolbar::drawToolbar()
     const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - currentWidth_ / 2.f, sceneSize.x - 1.0f );
 
     const int currentTopPanelHeight = ribbonMenu_->getTopPanelCurrentHeight();
-    ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight ) * UI::scale() - 1 ) );
+    ImGuiMV::SetNextWindowPosMainViewport( ImVec2( windowPosX, float( currentTopPanelHeight ) * UI::scale() - 1 ) );
     ImGui::SetNextWindowSize( ImVec2( currentWidth_, cQuickAccessBarHeight * UI::scale() ), ImGuiCond_Always );
 
     ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
@@ -175,7 +176,7 @@ void Toolbar::drawToolbar()
 
 void Toolbar::drawCustomize()
 {
-    ImGui::SetNextWindowPos( ImVec2( -100, -100 ) );
+    ImGuiMV::SetNextWindowPosMainViewport( ImVec2( -100, -100 ) );
     ImGui::SetNextWindowSize( ImVec2( 1, 1 ) );
     ImGui::Begin( "Toolbar Customize##BaseWindow", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs );
     UI::TestEngine::pushTree( "Toolbar Customize" );
@@ -226,6 +227,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+    ImGui::SetNextWindowViewport( ImGui::GetMainViewport()->ID );
     ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPaddingSize );

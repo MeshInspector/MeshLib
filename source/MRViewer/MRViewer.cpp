@@ -533,6 +533,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.render3dSceneInTexture = false;
         else if ( flag == "-develop" )
             params.developerFeatures = true;
+        else if ( flag == "-noMultiViewport" )
+            params.multiViewport = false;
         else if ( flag == "-width" )
             nextW = true;
         else if ( flag == "-height" )
@@ -610,8 +612,8 @@ int Viewer::launch( const LaunchParams& params )
     launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
-    if ( params.developerFeatures )
-        experimentalFeatures = true;
+    experimentalFeatures = params.developerFeatures;
+    multiViewport = params.multiViewport;
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;

@@ -111,10 +111,6 @@ enum class InvLengthUnit
 
 // All supported value types for `valueToString()`.
 // Not using `__VA_OPT__(,)` here to support legacy MSVC preprocessor.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-#endif
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \
     X(float       ,__VA_ARGS__) X(double              ,__VA_ARGS__) X(long double ,__VA_ARGS__) \
     X(signed char ,__VA_ARGS__) X(unsigned char       ,__VA_ARGS__) \
@@ -122,9 +118,6 @@ enum class InvLengthUnit
     X(int         ,__VA_ARGS__) X(unsigned int        ,__VA_ARGS__) \
     X(long        ,__VA_ARGS__) X(unsigned long       ,__VA_ARGS__) \
     X(long long   ,__VA_ARGS__) X(unsigned long long  ,__VA_ARGS__)
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 // Whether `E` is one of the unit enums: NoUnit, LengthUnit, AngleUnit, ...
 template <typename T>

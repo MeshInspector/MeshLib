@@ -108,8 +108,33 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
     return id;
 }
 
-void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow )
+void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, GLenum startGLTextureIndex )
 {
+    if ( !tMode.isDepthPeelingEnabled() )
+        return;
+
+    GL_EXEC( glActiveTexture( startGLTextureIndex ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getBGDepthPeelingDepthTextureId() ) );
+    setTextureWrapType( WrapType::Clamp );
+    setTextureFilterType( FilterType::Linear );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_bg_depths" ), startGLTextureIndex - GL_TEXTURE0 ) );
+
+    GL_EXEC( glActiveTexture( startGLTextureIndex + 1 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getFGDepthPeelingColorTextureId() ) );
+    setTextureWrapType( WrapType::Clamp );
+    setTextureFilterType( FilterType::Discrete );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_colors" ), startGLTextureIndex - GL_TEXTURE0 + 1 ) );
+
+    GL_EXEC( glActiveTexture( startGLTextureIndex + 2 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getFGDepthPeelingDepthTextureId() ) );
+    setTextureWrapType( WrapType::Clamp );
+    setTextureFilterType( FilterType::Discrete );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_depths" ), startGLTextureIndex - GL_TEXTURE0 + 2 ) );
+}
+
+void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow, bool highPrecisionDepth )
+{
+    highPrecisionDepth_ = highPrecisionDepth;
     // Create an initial multisampled framebuffer
     GL_EXEC( glGenFramebuffers( 1, &mainFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, mainFramebuffer_ ) );
@@ -137,16 +162,16 @@ void FramebufferData::gen( const Vector2i& size, bool copyDepth, int msaaPow )
     resize_( size, msaaPow );
 }
 
-void FramebufferData::bind( bool clear )
+void FramebufferData::bind( bool clear, float clearDepth )
 {
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, mainFramebuffer_ ) );
 
     // Clear the buffer
     if ( clear )
     {
-        float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
+        constexpr float cClearValue[4] = { 0.0f,0.0f,0.0f,0.0f };
         GL_EXEC( glClearBufferfv( GL_COLOR, 0, cClearValue ) );
-        GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
+        GL_EXEC( glClearBufferfv( GL_DEPTH, 0, &clearDepth ) );
     }
     isBound_ = true;
 }
@@ -159,10 +184,11 @@ void FramebufferData::bindDefault()
     isBound_ = false;
 }
 
-void FramebufferData::bindTexture()
+void FramebufferData::bindTexture( bool color, bool depth )
 {
-    resColorTexture_.bind();
-    if ( resDepthTexture_.valid() )
+    if ( color )
+        resColorTexture_.bind();
+    if ( depth && resDepthTexture_.valid() )
         resDepthTexture_.bind();
 }
 
@@ -195,7 +221,8 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
 #endif
     GL_EXEC( glViewport( 0, 0, params.size.x, params.size.y ) );
 
-    auto shader = GLStaticHolder::getShaderId( resDepthTexture_.valid() ? GLStaticHolder::DepthOverlayQuad : GLStaticHolder::SimpleOverlayQuad );
+    bool useDepthTexture = !params.forceSimpleDepthDraw && resDepthTexture_.valid();
+    auto shader = GLStaticHolder::getShaderId( useDepthTexture ? GLStaticHolder::DepthOverlayQuad : GLStaticHolder::SimpleOverlayQuad );
     GL_EXEC( glUseProgram( shader ) );
 
     quadObject.bind();
@@ -205,7 +232,7 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
     setTextureFilterType( params.filter );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
 
-    if ( resDepthTexture_.valid() )
+    if ( useDepthTexture )
     {
         GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
         GL_EXEC( glBindTexture( GL_TEXTURE_2D, getDepthTexture() ) );
@@ -264,13 +291,14 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
 
     GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, depthRenderbuffer_ ) );
+    auto depthComponent = highPrecisionDepth_ ? GL_DEPTH_COMPONENT32F : GL_DEPTH_COMPONENT24;
     if ( multisample )
     {
-        GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, GL_DEPTH_COMPONENT24, size.x, size.y ) );
+        GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, depthComponent, size.x, size.y ) );
     }
     else
     {
-        GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y ) );
+        GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, depthComponent, size.x, size.y ) );
     }
     GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, 0 ) );
     GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer_ ) );
@@ -285,11 +313,11 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
     {
         resDepthTexture_.loadData( { 
             .resolution = Vector3i( size.x, size.y, 1 ), 
-            .internalFormat = GL_DEPTH_COMPONENT24, 
+            .internalFormat = depthComponent,
             .format = GL_DEPTH_COMPONENT, 
-            .type = GL_UNSIGNED_INT,
+            .type = highPrecisionDepth_ ? GL_FLOAT : GL_UNSIGNED_INT,
             .wrap = WrapType::Clamp, 
-            .filter = FilterType::Linear }, ( const char* ) nullptr );
+            .filter = FilterType::Discrete }, ( const char* ) nullptr );
         GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, resDepthTexture_.getId(), 0 ) );
         assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     }

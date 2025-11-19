@@ -1,5 +1,4 @@
 #include "MRMeshShader.h"
-#include "MRShaderBlocks.h"
 #include "MRGladGlfw.h"
 
 namespace MR
@@ -44,16 +43,16 @@ std::string getMeshVerticesShader()
 )";
 }
 
-std::string getMeshFragmentShader( bool gl4, bool alphaSort, bool msaaEnabled )
+std::string getMeshFragmentShader( bool gl4, ShaderTransparencyMode mode, bool msaaEnabled )
 {
     return
-        getFragmentShaderHeaderBlock( gl4, alphaSort ) +
+        getFragmentShaderHeaderBlock( gl4, mode == ShaderTransparencyMode::AlphaSort ) +
         getMeshFragmentShaderArgumetsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( mode == ShaderTransparencyMode::DepthPeel ) +
         getFragmentShaderClippingBlock() +
         getFragmentShaderOnlyOddBlock( gl4 && msaaEnabled ) + // alphaSort disable MSAA without changing current number of samples
         getMeshFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( alphaSort );
+        getFragmentShaderEndBlock( mode );
 }
 
 std::string getMeshFragmentShaderArgumetsBlock()

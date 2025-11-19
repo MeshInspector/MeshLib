@@ -216,15 +216,15 @@ public:
     // generates framebuffer and associated data
     // msaaPow - 2^msaaPow samples, msaaPow < 0 - use same default amount of samples
     // to resize: del(); gen( newSize, msaaPow );
-    MRVIEWER_API void gen( const Vector2i& size, bool copyDepth, int msaaPow );
+    MRVIEWER_API void gen( const Vector2i& size, bool copyDepth, int msaaPow, bool highPrecisionDepth = false );
     // binds this framebuffer as main rendering target
     // clears it if `clear` flag is set
-    MRVIEWER_API void bind( bool clear = true );
+    MRVIEWER_API void bind( bool clear = true, float clearDepth = 1.0f );
     // binds default framebuffer (and read/draw framebuffers)
     // make sure to bind correct framebuffer `getViewerInstance().bindSceneTexture( true )`
     MRVIEWER_API void bindDefault();
     // marks the texture to reading
-    MRVIEWER_API void bindTexture();
+    MRVIEWER_API void bindTexture( bool color = true, bool depth = true );
     // copies picture rendered in this framebuffer to associated texutre for further use
     // and binds default framebuffer (and read/draw framebuffers)
     // make sure to bind correct framebuffer afterwards
@@ -244,6 +244,7 @@ public:
         Vector2i size; // size of the viewport that is used in `draw` function
         WrapType wrap{ WrapType::Clamp }; // wrap type of underlaying textures
         FilterType filter{ FilterType::Linear }; // filter type of underlaying textures
+        bool forceSimpleDepthDraw = false; // force using `simpleDepth` for all fragments even if depth texture is present
         float simpleDepth = 0.5f; // depth that is used if this framebuffer does not store depth component texture
     };
     // draws this framebuffer using `quadObject`
@@ -252,6 +253,7 @@ private:
     void resize_( const Vector2i& size, int msaaPow );
 
     bool isBound_{ false };
+    bool highPrecisionDepth_{ false };
     unsigned mainFramebuffer_{ 0 };
     unsigned colorRenderbuffer_{ 0 };
     unsigned depthRenderbuffer_{ 0 };
@@ -260,5 +262,8 @@ private:
     GlTexture2 resDepthTexture_;
     Vector2i size_;
 };
+
+// helper function to bind depth and color buffers to given shader program
+MRVIEWER_API void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, GLenum startGLTextureIndex );
 
 } //namespace MR

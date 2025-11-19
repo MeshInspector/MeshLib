@@ -17,14 +17,14 @@ void SceneTextureGL::unbind()
     fd_.bindDefault();
 }
 
-void SceneTextureGL::reset( const Vector2i& size, int msaa )
+void SceneTextureGL::reset( const Vector2i& size, int msaa, bool depthTexture )
 {
     if ( fd_.getColorTexture() != GlTexture2::NO_TEX )
     {
         fd_.del();
         qt_.del();
     }
-    fd_.gen( size, false, msaa );
+    fd_.gen( size, depthTexture, msaa );
     qt_.gen();
 }
 
@@ -35,7 +35,7 @@ void SceneTextureGL::copyTexture()
 
 void SceneTextureGL::draw()
 {
-    fd_.draw( qt_, { .size = fd_.getSize(),.wrap = WrapType::Mirror,.filter = FilterType::Discrete } );
+    fd_.draw( qt_, { .size = fd_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete,.forceSimpleDepthDraw = true } );
 }
 
 }

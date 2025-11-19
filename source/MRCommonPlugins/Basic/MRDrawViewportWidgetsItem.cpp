@@ -10,7 +10,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerSignals.h"
 #include "MRViewer/MRViewport.h"
-#include "MRViewer/ImGuiMultiViewport.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 #include "MRPch/MRFmt.h"
 
 #include <imgui.h>

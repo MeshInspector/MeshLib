@@ -2847,6 +2847,7 @@ void Viewer::updatePixelRatio_()
     int winWidth, winHeight;
     glfwGetWindowSize( window, &winWidth, &winHeight );
     pixelRatio = float( framebufferSize.x ) / float( winWidth );
+    spdlog::info( "*************************************************** updatePixelRatio_ = {}", pixelRatio );
 }
 
 int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const

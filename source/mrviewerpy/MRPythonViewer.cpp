@@ -273,7 +273,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
                 MR::pythonAppendOrRun( [&viewer, x, y]
                 {
                     glfwSetCursorPos( viewer.window, double( x ) / viewer.pixelRatio, double( y ) / viewer.pixelRatio );
-
+                    std::cout << "mouseMove " << x << " " << y << "   ratio " << viewer.pixelRatio << "\n";
                     // On Windows `glfwSetCursorPos()` automatically sends the `mouseMove()` event. On Linux it doesn't, so we need this:
                     auto eventCall = [&viewer, x, y]{ viewer.mouseMove( x, y ); };
                     viewer.emplaceEvent( "simulatedMouseMove", eventCall, false );

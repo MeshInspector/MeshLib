@@ -6,13 +6,25 @@ on:
       release_tag:
         required: true
         type: string
+      test_ubuntu_x64:
+        required: true
+        type: boolean
+      test_ubuntu_arm64:
+        required: true
+        type: boolean
+      test_macos:
+        required: true
+        type: boolean
+      test_windows:
+        required: true
+        type: boolean
     secrets:
       GH_TOKEN:
         required: true
 
 jobs:
   linux-x64-test:
-    if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
+    if: ${{ inputs.test_ubuntu_x64 }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     container:
@@ -119,7 +131,7 @@ jobs:
         run: python3 -m pytest -s -v
 
   linux-arm64-test:
-    if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
+    if: ${{ inputs.test_ubuntu_arm64 }}
     timeout-minutes: 30
     runs-on: [self-hosted, linux-arm64, spot, meshinspector]
     container:
@@ -219,7 +231,7 @@ jobs:
         run: python3 -m pytest -s -v
 
   macos-test:
-    if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
+    if: ${{ inputs.test_macos }}
     runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
@@ -265,6 +277,7 @@ jobs:
           cmake --build build
   
   windows-test:
+    if: ${{ inputs.test_windows }}
     runs-on: windows-2022
     timeout-minutes: 30
     steps:

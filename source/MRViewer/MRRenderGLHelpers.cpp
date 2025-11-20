@@ -115,20 +115,14 @@ void bindDepthPeelingTextures( GLuint shaderId, const TransparencyMode& tMode, G
 
     GL_EXEC( glActiveTexture( startGLTextureIndex ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getBGDepthPeelingDepthTextureId() ) );
-    setTextureWrapType( WrapType::Clamp );
-    setTextureFilterType( FilterType::Linear );
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_bg_depths" ), startGLTextureIndex - GL_TEXTURE0 ) );
 
     GL_EXEC( glActiveTexture( startGLTextureIndex + 1 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getFGDepthPeelingColorTextureId() ) );
-    setTextureWrapType( WrapType::Clamp );
-    setTextureFilterType( FilterType::Discrete );
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_colors" ), startGLTextureIndex - GL_TEXTURE0 + 1 ) );
 
     GL_EXEC( glActiveTexture( startGLTextureIndex + 2 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, tMode.getFGDepthPeelingDepthTextureId() ) );
-    setTextureWrapType( WrapType::Clamp );
-    setTextureFilterType( FilterType::Discrete );
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "dp_fg_depths" ), startGLTextureIndex - GL_TEXTURE0 + 2 ) );
 }
 

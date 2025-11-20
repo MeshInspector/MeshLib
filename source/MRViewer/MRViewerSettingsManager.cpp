@@ -226,6 +226,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             bool gridVisible = visible;
             if ( val[cGlobalBasisGridVisibleKey].isBool() )
                 gridVisible = val[cGlobalBasisGridVisibleKey].asBool();
+
+            gridVisible &= visible; // do not allow showing grid without basis because it is disabled by `viewer.globalBasis`
             viewer.globalBasis->setGridVisible( gridVisible );
             if ( visible )
                 CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });

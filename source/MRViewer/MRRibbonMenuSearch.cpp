@@ -10,6 +10,7 @@
 #include "MRRibbonMenu.h"
 #include "MRUIStyle.h"
 #include "MRRibbonFontHolder.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h>
 
 namespace MR
@@ -72,7 +73,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     ImVec2 pos;
     pos.x = std::max( screenWidth - ( 70.f + cSearchSize + 16.f ) * UI::scale() - windowPaddingX, 0.f );
     pos.y = ( cTabYOffset + cTabHeight ) * UI::scale();
-    ImGui::SetNextWindowPos( pos );
+    ImGuiMV::SetNextWindowPosMainViewport( pos );
     ImGui::SetNextWindowSize( ImVec2( ( cSearchSize + 20 ) * UI::scale(), -1 ) );
 
     ImGui::SetNextFrameWantCaptureKeyboard( true );

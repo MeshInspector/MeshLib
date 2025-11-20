@@ -14,6 +14,7 @@
 #include "MRUITestEngine.h"
 #include "MRMouseController.h"
 #include "MRRibbonFontHolder.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h>
 
 namespace
@@ -85,7 +86,7 @@ void RibbonNotifier::drawHistoryButton_( const Box2i& limitFramebuffer )
     if ( cornerPosition == RibbonNotificationCorner::LowerRight )
         windowPos.x = float( limitFramebuffer.max.x ) - windowSize.x;
 
-    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always );
+    ImGuiMV::SetNextWindowPosMainViewport( windowPos, ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
@@ -154,7 +155,7 @@ void RibbonNotifier::drawHistory_( const Box2i& limitFramebuffer )
     if ( cornerPosition == RibbonNotificationCorner::LowerRight )
         windowPos.x = float( limitFramebuffer.max.x ) - width;
 
-    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
+    ImGuiMV::SetNextWindowPosMainViewport( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
     ImGui::SetNextWindowSizeConstraints( ImVec2( width, 1 ), ImVec2( width, float( limitFramebuffer.max.y - limitFramebuffer.min.y ) - cHistoryButtonSizeY * UI::scale() ) );
     ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
     ImGuiWindowFlags flags =
@@ -256,7 +257,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
         ImGui::SetCursorPosX( padding );
     }
     else
-        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
+        ImGuiMV::SetNextWindowPosMainViewport( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
 
     ImGui::SetNextWindowSizeConstraints( ImVec2( settings.width, 1 ), ImVec2( settings.width, settings.width ) );
     ImGui::SetNextWindowSize( ImVec2( settings.width, -1 ), ImGuiCond_Always );

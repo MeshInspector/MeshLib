@@ -44,6 +44,7 @@ struct LaunchParams
     bool preferOpenGL3{ false };
     bool render3dSceneInTexture{ true }; // If not set renders scene each frame
     bool developerFeatures{ false }; // If set shows some developer features useful for debugging
+    bool multiViewport{ true }; // If set allows to move the imgui (tool) windows outside the main () window
     std::string name{ "MRViewer" }; // Window name
     bool resetConfig{ false }; // if true - resets config file on start of the application
     bool startEventLoop{ true }; // If false - does not start event loop
@@ -520,6 +521,9 @@ public:
 
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
+
+    /// return true if imgui multi viewport enabled
+    bool isMultiViewport() { return multiViewport_; }
 private:
     Viewer();
     ~Viewer();
@@ -629,6 +633,9 @@ private:
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
+
+    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
+    bool multiViewport_{ true };
 
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 

@@ -524,7 +524,7 @@ public:
 
     /// return true if imgui multi viewport enabled
     /// (disabled for Apple, Wayland and Emscripten)
-    bool isMultiViewport() { return multiViewport_; }
+    bool isMultiViewport();
 private:
     Viewer();
     ~Viewer();

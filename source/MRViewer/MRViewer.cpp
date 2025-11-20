@@ -1809,7 +1809,7 @@ void Viewer::drawUiRenderObjects()
 bool Viewer::isMultiViewport()
 {
 #ifdef __EMSCRIPTEN__
-    return false
+    return false;
 #else
     return multiViewport_ && !hasScaledFramebuffer_;
 #endif

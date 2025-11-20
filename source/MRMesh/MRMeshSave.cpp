@@ -365,6 +365,15 @@ Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, con
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
+#ifndef __EMSCRIPTEN__
+    // it is hard to handle several files output for browser, so for now it is under ifdef,
+    // anyway later it may be reworked to save simple zip and taken out of ifdef
+    if ( settings.texture )
+    {
+        if ( auto texSaver = ImageSave::getImageSaver( "*.jpg" ) ) // MeshLab cannot open textures from .PNG
+            (void)texSaver( *settings.texture, file.parent_path() / ( settings.materialName + ".jpg" ) );
+    }
+#endif
     return toPly( mesh, out, settings );
 }
 
@@ -375,17 +384,21 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
-    const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
 
-    out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
-        "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
-    if ( saveColors )
+    out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n";
+    if ( settings.uvMap && settings.texture )
+        out << "comment TextureFile " <<  settings.materialName << ".jpg\n";
+    out << "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
+    if ( settings.colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
+    if ( settings.uvMap )
+        out << "property float texture_u\nproperty float texture_v\n";
 
     const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
     out <<  "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\nend_header\n";
 
+    static_assert( sizeof( UVCoord ) == 8, "wrong size of UVCoord" );
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
 #pragma pack(push, 1)
     struct PlyColor
@@ -405,9 +418,14 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
         out.write( ( const char* )&p, 12 );
         if ( settings.colors )
         {
-            const auto c = ( *settings.colors )[i];
+            const auto c = getAt( *settings.colors, i );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
+        }
+        if ( settings.uvMap )
+        {
+            const auto uv = getAt( *settings.uvMap, i );
+            out.write( ( const char* )&uv, sizeof( UVCoord ) );
         }
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )

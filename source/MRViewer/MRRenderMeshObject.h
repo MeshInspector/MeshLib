@@ -3,6 +3,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 
@@ -85,12 +86,12 @@ protected:
     GlBuffer pointValidBuffer_;
     bool dirtyPointPos_ = false;
 
-    MRVIEWER_API virtual void renderEdges_( const ModelRenderParams& parameters, bool alphaSort, GLuint vao, const Color& color, uint32_t dirtyFlag );
+    MRVIEWER_API virtual void renderEdges_( const ModelRenderParams& parameters, RenderModelPassMask desiredPass, GLuint vao, const Color& color, uint32_t dirtyFlag );
 
-    MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters, bool alphaSort );
-    MRVIEWER_API virtual void renderMeshVerts_( const ModelRenderParams& parameters, bool alphaSort );
+    MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters, RenderModelPassMask desiredPass );
+    MRVIEWER_API virtual void renderMeshVerts_( const ModelRenderParams& parameters, RenderModelPassMask desiredPass );
 
-    MRVIEWER_API virtual void bindMesh_( bool alphaSort );
+    MRVIEWER_API virtual void bindMesh_( GLStaticHolder::ShaderType shaderType );
 
     MRVIEWER_API virtual void bindMeshPicker_();
 
@@ -98,7 +99,7 @@ protected:
     MRVIEWER_API virtual void bindBorders_();
     MRVIEWER_API virtual void bindSelectedEdges_();
     MRVIEWER_API virtual void bindEmptyTextures_( GLuint shaderId );
-    MRVIEWER_API virtual void bindPoints_( bool alphaSort );
+    MRVIEWER_API virtual void bindPoints_( GLStaticHolder::ShaderType shaderType );
 
     MRVIEWER_API virtual void drawMesh_( bool solid, ViewportId viewportId, bool picker = false ) const;
 

@@ -21,6 +21,8 @@ def get_ram_amount():
 
 def get_compiler_id(compiler_path):
     # work-around for Windows runners
+    if compiler_path.startswith("msvc-"):
+        return compiler_path
     if compiler_path.startswith("windows-"):
         return compiler_path.replace("windows-", "msvc-")
 

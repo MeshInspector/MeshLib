@@ -24,6 +24,8 @@ enum class MouseMode;
 
 class AlphaSortGL;
 class ColorTheme;
+class DepthPeelingGL;
+class FramebufferData;
 class ImGuiImage;
 class ImGuiMenu;
 class IViewerSettingsManager;

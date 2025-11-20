@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiHelpers.cpp" />
+    <ClCompile Include="MRImGuiMultiViewport.cpp" />
     <ClCompile Include="MRAncillaryLabels.cpp" />
     <ClCompile Include="MRAncillaryLines.cpp" />
     <ClCompile Include="MRAncillaryMesh.cpp" />
@@ -27,6 +28,7 @@
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
+    <ClCompile Include="MRDepthPeelingGL.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
@@ -153,6 +155,7 @@
     <ClCompile Include="MRFileDialogPortal.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRImGuiMultiViewport.h" />
     <ClInclude Include="MRAlphaSortGL.h" />
     <ClInclude Include="MRAncillaryLabels.h" />
     <ClInclude Include="MRAncillaryLines.h" />
@@ -161,6 +164,7 @@
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRDepthPeelingGL.h" />
     <ClInclude Include="MRDragDropHandler.h" />
     <ClInclude Include="MRDragDropWin32Handler.h" />
     <ClInclude Include="MRFileLoadOptions.h" />

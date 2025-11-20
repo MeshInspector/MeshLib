@@ -44,6 +44,7 @@
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
 #include "MRGladGlfw.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
@@ -504,9 +505,10 @@ void RibbonMenu::drawHeaderPannel_()
     ImGui::PushStyleVar( ImGuiStyleVar_TabRounding, cTabFrameRounding * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
 
+    const ImVec2 mainViewportShift = ImGuiMV::GetMainViewportShift();
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddRectFilled(
-        ImVec2( 0, 0 ),
-        ImVec2( float( getViewerInstance().framebufferSize.x ), ( cTabHeight + cTabYOffset ) * UI::scale() ),
+        mainViewportShift,
+        mainViewportShift + ImVec2( float( getViewerInstance().framebufferSize.x ), ( cTabHeight + cTabYOffset ) * UI::scale() ),
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderBackground ).getUInt32() );
 
     drawHeaderQuickAccess_();
@@ -588,7 +590,7 @@ void RibbonMenu::drawHeaderPannel_()
         basePos.x -= tabPanelScroll_;
     }
     basePos.x += 12.0f * UI::scale();// temp hardcoded offset
-    basePos.y = cTabYOffset * UI::scale() - 1;// -1 due to ImGui::TabItemBackground internal offset
+    basePos.y += cTabYOffset * UI::scale() - 1;// -1 due to ImGui::TabItemBackground internal offset
     for ( int i = 0; i < schema.tabsOrder.size(); ++i )
     {
         if ( schema.tabsOrder[i].experimental && !getViewerInstance().experimentalFeatures )
@@ -635,7 +637,7 @@ void RibbonMenu::drawHeaderPannel_()
         }
         ImGui::SetCursorPosX( basePos.x + ( tabWidth - textSizes[i] ) * 0.5f );
         // `4.0f * UI::scale()` eliminates shift of the font
-        ImGui::SetCursorPosY( 2 * cTabYOffset * UI::scale() + 4.0f * UI::scale() );
+        ImGui::SetCursorPosY( basePos.y + cTabYOffset * UI::scale() + 4.0f * UI::scale() );
 
         if ( activeTabIndex_ == i )
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ).getUInt32() );
@@ -646,6 +648,7 @@ void RibbonMenu::drawHeaderPannel_()
 
         basePos.x += ( tabWidth + cTabsInterval * UI::scale() );
     }
+    ImGui::SetCursorPos( ImVec2( 0, 0 ) );
     ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::EndChild();
     UI::TestEngine::popTree(); // "RibbonTabs"
@@ -668,7 +671,7 @@ void RibbonMenu::drawHeaderPannel_()
 
     ImGui::PopStyleVar( 2 );
     const float separateLinePos = ( cTabYOffset + cTabHeight ) * UI::scale();
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( getViewerInstance().framebufferSize.x ), separateLinePos ),
+    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( mainViewportShift + ImVec2( 0, separateLinePos ), mainViewportShift + ImVec2( float( getViewerInstance().framebufferSize.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderSeparator ).getUInt32() );
 
 }
@@ -1229,7 +1232,7 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
 {
     DrawTabConfig res( groupsInTab.size() );
     const auto& style = ImGui::GetStyle();
-    const float screenWidth = float( getViewerInstance().framebufferSize.x ) - ImGui::GetCursorScreenPos().x -
+    const float screenWidth = float( getViewerInstance().framebufferSize.x ) - ( ImGui::GetCursorScreenPos().x - ImGui::GetMainViewport()->Pos.x ) -
         ( float( groupsInTab.size() ) + 1.0f ) * UI::scale();
     std::vector<float> groupWidths( groupsInTab.size() );
     float sumWidth = 0.0f;
@@ -1548,9 +1551,10 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::NewLine();
     font.popFont();
     const float separateLinePos = ImGui::GetCursorScreenPos().y;
+    const float posShiftX = ImGui::GetMainViewport()->Pos.x;
 
     ImGui::PopStyleVar();
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( sceneSize_.x ), separateLinePos ),
+    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( posShiftX, separateLinePos ), ImVec2( float( sceneSize_.x ) + posShiftX, separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32() );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f * UI::scale() );
 }
@@ -1632,7 +1636,7 @@ void RibbonMenu::drawRibbonSceneList_()
     if ( hasTopPanel )
         topShift = float( currentTopPanelHeight_ );
 
-    ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, topShift * UI::scale() - 1 ), ImGuiCond_Always );
+    ImGuiMV::SetNextWindowPosMainViewport( ImVec2( 0.f, topShift * UI::scale() - 1 ), ImGuiCond_Always );
     const float cMinSceneWidth = 100 * UI::scale();
     const float cMaxSceneWidth = std::max( cMinSceneWidth, std::round( viewerRef.framebufferSize.x * 0.5f ) );
     sceneSize_.x = std::max( sceneSize_.x, cMinSceneWidth );
@@ -1718,9 +1722,9 @@ Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
         ImGui::SetMouseCursor( ImGuiMouseCursor_ResizeEW );
         auto color = held ? ImGui::GetColorU32( ImGuiCol_ResizeGripActive ) : ImGui::GetColorU32( ImGuiCol_ResizeGripHovered );
         if ( held )
-            size.x = std::clamp( ImGui::GetMousePos().x, minX, maxX );
+            size.x = std::clamp( ImGuiMV::GetLocalMousePos().x, minX, maxX );
 
-        window->DrawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetMainViewport()->Size );
+        window->DrawList->PushClipRect( ImGui::GetMainViewport()->Pos, ImGui::GetMainViewport()->Pos + ImGui::GetMainViewport()->Size );
         window->DrawList->AddRectFilled( rectDraw.Min, rectDraw.Max, color );
         window->DrawList->PopClipRect();
     }
@@ -1745,7 +1749,7 @@ void RibbonMenu::drawRibbonViewportsLabels_()
         auto textSize = ImGui::CalcTextSize( text.c_str() );
         auto pos = viewer->viewportToScreen( Vector3f( width( vp.getViewportRect() ) - textSize.x - 30.0f * UI::scale(),
             height( vp.getViewportRect() ) - textSize.y - 12.0f * UI::scale(), 0.0f ), vp.id );
-        ImGui::SetNextWindowPos( ImVec2( pos.x, pos.y ) );
+        ImGuiMV::SetNextWindowPosMainViewport( ImVec2( pos.x, pos.y ) );
         ImGui::Begin( windowName.c_str(), nullptr,
                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize |
                       ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoBringToFrontOnFocus );
@@ -2182,7 +2186,7 @@ void RibbonMenu::drawShortcutsWindow_()
     windowPos.x = ( getViewerInstance().framebufferSize.x - windowWidth ) * 0.5f;
     windowPos.y = ( getViewerInstance().framebufferSize.y - windowHeight ) * 0.5f;
 
-    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
+    ImGuiMV::SetNextWindowPosMainViewport( windowPos, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Always );
 
     if ( !ImGui::IsPopupOpen( "HotKeys" ) )
@@ -2323,7 +2327,7 @@ void RibbonMenu::drawShortcutsWindow_()
 
 void RibbonMenu::beginTopPanel_()
 {
-    ImGui::SetNextWindowPos( ImVec2( 0, 0 ) );
+    ImGuiMV::SetNextWindowPosMainViewport( ImVec2( 0, 0 ) );
     ImGui::SetNextWindowSize( ImVec2( ( float ) Viewer::instanceRef().framebufferSize.x, currentTopPanelHeight_ * UI::scale() ) );
 
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.0f );
@@ -2459,6 +2463,11 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
                 UI::TestEngine::popTree(); // "Ribbon"
                 if ( !centerItems )
                     ImGui::TableNextColumn(); // fictive
+
+                // fix broken scroll stabilizer
+                if ( ImGui::GetCurrentWindow()->ScrollbarXStabilizeEnabled )
+                    ImGui::GetCurrentWindow()->ScrollbarXStabilizeToggledHistory = 128;
+
                 ImGui::EndTable();
             }
             ImGui::PopStyleVar( 4 );

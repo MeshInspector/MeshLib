@@ -67,6 +67,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRHistoryStore.h"
 #include "ImGuiHelpers.h"
+#include "MRImGuiMultiViewport.h"
 #include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRStringConvert.h"
@@ -186,6 +187,8 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
 #ifdef NDEBUG
         ImGui::GetIO().ConfigDebugHighlightIdConflicts = false;
 #endif
+        if ( _viewer->isMultiViewport() )
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable multi viewports in ImGui
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 5.0f;
@@ -315,6 +318,14 @@ void ImGuiMenu::finishFrame()
     {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+
+        if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent( backup_current_context );
+        }
     }
     else
     {
@@ -642,7 +653,7 @@ void ImGuiMenu::draw_viewer_window()
 void ImGuiMenu::draw_labels_window()
 {
   // Text labels
-  ImGui::SetNextWindowPos(ImVec2(0,0), ImGuiCond_Always);
+  ImGuiMV::SetNextWindowPosMainViewport(ImVec2(0,0), ImGuiCond_Always);
   ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
   bool visible = true;
   ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0,0,0,0));

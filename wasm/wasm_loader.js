@@ -2,7 +2,7 @@ var setWasmLoadProgress = function (proc) {
     progressElement = document.getElementById("progress");
     progressHolder = document.getElementById("progress-holder");
     progressHolder.setAttribute('style', 'visibility: visible');
-    progressElement.setAttribute('style', 'width:' + proc + "%");
+    progressElement.setAttribute('style', 'width:' + Math.min(Math.max(proc, 0), 100) + "%");
 }
 
 var clearWasmLoadProgress = function () {

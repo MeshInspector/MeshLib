@@ -24,6 +24,8 @@ struct GLFWwindow;
 namespace MR
 {
 
+class FramebufferData;
+
 // This struct contains rules for viewer launch
 struct LaunchParams
 {
@@ -42,6 +44,7 @@ struct LaunchParams
     bool preferOpenGL3{ false };
     bool render3dSceneInTexture{ true }; // If not set renders scene each frame
     bool developerFeatures{ false }; // If set shows some developer features useful for debugging
+    bool multiViewport{ true }; // If set allows to move the imgui (tool) windows outside the main () window. (unavailable for Apple, Wayland and Emscripten)
     std::string name{ "MRViewer" }; // Window name
     bool resetConfig{ false }; // if true - resets config file on start of the application
     bool startEventLoop{ true }; // If false - does not start event loop
@@ -155,7 +158,8 @@ public:
     // Draw 3d scene with UI
     MRVIEWER_API void drawFull( bool dirtyScene );
     // Draw 3d scene without UI
-    MRVIEWER_API void drawScene();
+    // framebuffer - bound framebuffer (needed if depth peeling is enabled)
+    MRVIEWER_API void drawScene( FramebufferData* framebuffer );
     // Call this function to force redraw scene into scene texture
     void setSceneDirty() { dirtyScene_ = true; }
     // Setup viewports views
@@ -328,6 +332,13 @@ public:
     MRVIEWER_API bool enableAlphaSort( bool on );
     // Returns true if alpha sort is enabled, false otherwise
     bool isAlphaSortEnabled() const { return alphaSortEnabled_; }
+
+    // Returns number of passes performed by depth peeler
+    MRVIEWER_API int getDepthPeelNumPasses() const;
+    // Sets desired number of passes to depth peeler
+    MRVIEWER_API void setDepthPeelNumPasses( int numPasses );
+    // Returns true if depth peeling is enabled, false otherwise
+    MRVIEWER_API bool isDepthPeelingEnabled() const;
 
     // Returns if scene texture is now bound
     MRVIEWER_API bool isSceneTextureBound()  const;
@@ -510,6 +521,10 @@ public:
 
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
+
+    /// return true if imgui multi viewport enabled
+    /// (disabled for Apple, Wayland and Emscripten)
+    bool isMultiViewport();
 private:
     Viewer();
     ~Viewer();
@@ -580,8 +595,6 @@ private:
     bool needRedraw_() const;
     void resetRedraw_();
 
-    void recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws = nullptr ) const;
-
     void initGlobalBasisAxesObject_();
     void initBasisAxesObject_();
     void initBasisViewControllerObject_();
@@ -604,8 +617,9 @@ private:
 
     std::unique_ptr<SceneTextureGL> sceneTexture_;
     std::unique_ptr<AlphaSortGL> alphaSorter_;
+    std::unique_ptr<DepthPeelingGL> depthPeeler_;
 
-    bool alphaSortEnabled_{false};
+    bool alphaSortEnabled_{ false };
 
     bool glInitialized_{ false };
 
@@ -620,6 +634,10 @@ private:
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
+
+    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
+    // (disabled for Apple, Wayland and Emscripten)
+    bool multiViewport_{ true };
 
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 

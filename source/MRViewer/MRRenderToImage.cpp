@@ -21,7 +21,7 @@ void fillFramebuffer( const Color& color )
 namespace MR
 {
 
-Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void()>& drawFunc )
+Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void( FramebufferData* framebuffer )>& drawFunc )
 {
     auto& viewer = Viewer::instanceRef();
     if ( !viewer.isGLInitialized() )
@@ -30,16 +30,16 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
 
     FramebufferData fd;
-    fd.gen( resolution, false, getMSAAPow( viewer.getRequestedMSAA() ) );
+    fd.gen( resolution, getViewerInstance().isDepthPeelingEnabled(), getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
 
     if ( backgroundColor )
         fillFramebuffer( *backgroundColor );
 
-    drawFunc();
+    drawFunc( &fd );
 
     fd.copyTextureBindDef();
-    fd.bindTexture();
+    fd.bindTexture( true, false ); // only bind color
 
     Image result;
     result.resolution = resolution;

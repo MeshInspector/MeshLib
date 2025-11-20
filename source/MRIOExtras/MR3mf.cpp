@@ -983,7 +983,7 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
     auto objMesh = std::make_shared<ObjectMesh>();
     obj_ = objMesh;
 
-    if ( allTrisHaveConstColors && someTrisHaveNotBgColor )
+    if ( allTrisHaveConstColors && someTrisHaveNotBgColor && !fColorMap.empty() )
     {
         assert( tris.size() == fColorMap.size() );
         vColorMap.clear();

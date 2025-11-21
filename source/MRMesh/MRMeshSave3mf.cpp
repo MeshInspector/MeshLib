@@ -30,16 +30,14 @@ constexpr const char * sUnitNames[(int)LengthUnit::_count] =
 std::vector<int> makePalette( const std::vector<Color> & colors, const BitSet & validColors, std::ostream & out )
 {
     MR_TIMER;
-    std::vector<int> res( colors.size() );
+    std::vector<int> res( validColors.size() );
 
     HashMap<Color, int> hmap;
     int nextPaletteCell = 0;
     out << "    <m:colorgroup id=\"1\">\n";
     for ( size_t i : validColors )
     {
-        if ( i >= colors.size() )
-            break;
-        const auto & c = colors[i];
+        const auto& c = getAt( colors, i );
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
         {
@@ -90,18 +88,15 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
-    const auto fLast = mesh.topology.lastValidFace();
-    bool hasColors = settings.colors && settings.colors->size() > lastVertId;
-    bool hasPrimColors = settings.primitiveColors && settings.primitiveColors->size() > fLast;
 
     Vector<int, VertId> vertPalette;
     Vector<int, FaceId> facePalette;
-    if ( hasColors )
+    if ( settings.colors )
     {
         vertPalette = makePalette( *settings.colors, mesh.topology.getValidVerts(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
-    else if ( hasPrimColors )
+    else if ( settings.primitiveColors )
     {
         facePalette.vec_ = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
@@ -140,6 +135,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "        </vertices>\n"
         "        <triangles>\n";
 
+    const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
 
     // write triangles
@@ -156,13 +152,13 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         }
         else if ( settings.packPrimitives )
             continue;
-        if ( hasColors )
+        if ( settings.colors )
         {
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",
                 getAt( vertPalette, vs[0] ), getAt( vertPalette, vs[1] ), getAt( vertPalette, vs[2] ),
                 v[0], v[1], v[2] );
         }
-        else if ( hasPrimColors )
+        else if ( settings.primitiveColors )
         {
             auto p = getAt( facePalette, f );
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",

@@ -279,14 +279,14 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         aIndices.data(), numSaveFaces, nullptr );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( options.colors && options.colors->size() > lastVertId )
+    if ( options.colors )
     {
         colors4f.reserve( aVertexCount );
         for ( VertId i{ 0 }; i <= lastVertId; ++i )
         {
             if ( options.onlyValidPoints && !mesh.topology.hasVert( i ) )
                 continue;
-            colors4f.push_back( Vector4f( ( *options.colors )[i] ) );
+            colors4f.push_back( Vector4f( getAt( *options.colors, i ) ) );
         }
         assert( colors4f.size() == aVertexCount );
 
@@ -482,14 +482,14 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
     }
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( options.colors && options.colors->size() >= cloud.points.size() )
+    if ( options.colors )
     {
         colors4f.reserve( aVertexCount );
         for ( auto v = 0_v; v < cloud.points.size(); ++v )
         {
             if ( options.onlyValidPoints && !cloud.validPoints.test( v ) )
                 continue;
-            colors4f.push_back( Vector4f{ ( *options.colors )[v] } );
+            colors4f.push_back( Vector4f{ getAt( *options.colors ,v ) } );
         }
         ctmAddAttribMap( context, ( const CTMfloat* )colors4f.data(), "Color" );
     }

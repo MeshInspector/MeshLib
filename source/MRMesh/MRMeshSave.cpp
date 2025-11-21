@@ -141,8 +141,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     MR_TIMER;
     const VertId lastVertId = mesh.topology.lastValidVert();
     out << "# MeshInspector.com\n";
-    bool saveUV = settings.uvMap && settings.uvMap->size() > lastVertId;
-    if ( saveUV )
+    if ( settings.uvMap )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
@@ -157,9 +156,9 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
 
         auto saveVertex = [&]( auto && p )
         {
-            if ( saveUV )
+            if ( settings.colors )
             {
-                const auto c = (Vector4f)( *settings.colors )[i];
+                const auto c = ( Vector4f )getAt( *settings.colors, i );
                 out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
             }
             else
@@ -176,7 +175,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             return unexpectedOperationCanceled();
     }
 
-    if ( saveUV )
+    if ( settings.uvMap )
     {
         numSaved = 0;
         sb = subprogress( settings.progress, 0.35f, 0.7f );
@@ -184,7 +183,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         {
             if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
                 continue;
-            const auto& uv = ( *settings.uvMap )[i];
+            const auto uv = getAt( *settings.uvMap, i );
             out << fmt::format( "vt {} {}\n", uv.x, uv.y );
             ++numSaved;
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
@@ -193,7 +192,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         out << "usemtl Texture\n";
     }
 
-    sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
+    sb = subprogress( settings.progress, settings.uvMap ? 0.7f : 0.5f, 1.0f );
     const float facesNum = float( mesh.topology.edgePerFace().size() );
     size_t faceIndex = 0;
     for ( const auto& e : mesh.topology.edgePerFace() )
@@ -207,7 +206,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         Vector3i values( vertRenumber( a ) + firstVertId, vertRenumber( b ) + firstVertId, vertRenumber( c ) + firstVertId );
-        if ( saveUV )
+        if ( settings.uvMap )
             out << fmt::format( "f {}/{} {}/{} {}/{}\n",
                 values.x, values.x,
                 values.y, values.y,
@@ -387,16 +386,14 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     const VertId lastVertId = mesh.topology.lastValidVert();
 
     bool hasTexture = settings.texture && !settings.texture->pixels.empty();
-    bool hasUV = settings.uvMap && settings.uvMap->size() > lastVertId;
-    bool hasColors = settings.colors && settings.colors->size() > lastVertId;
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n";
-    if ( hasUV && hasTexture )
+    if ( settings.uvMap && hasTexture )
         out << "comment TextureFile " <<  settings.materialName << ".jpg\n";
     out << "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
-    if ( hasColors )
+    if ( settings.colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
-    if ( hasUV )
+    if ( settings.uvMap )
         out << "property float texture_u\nproperty float texture_v\n";
 
     const auto fLast = mesh.topology.lastValidFace();
@@ -421,13 +418,13 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             continue;
         const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
         out.write( ( const char* )&p, 12 );
-        if ( hasColors )
+        if ( settings.colors )
         {
             const auto c = getAt( *settings.colors, i );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }
-        if ( hasUV )
+        if ( settings.uvMap )
         {
             const auto uv = getAt( *settings.uvMap, i );
             out.write( ( const char* )&uv, sizeof( UVCoord ) );

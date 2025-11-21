@@ -65,8 +65,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         if ( objPoints->pointCloud() )
         {
             const auto& colors = objPoints->getVertsColorMap();
-            if ( !colors.empty() )
-                saveSettings.colors = &colors;
+            saveSettings.colors = &colors;
             result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename, { saveSettings } );
         }
         else
@@ -77,8 +76,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         if ( objLines->polyline() )
         {
             const auto& colors = objLines->getVertsColorMap();
-            if ( !colors.empty() )
-                saveSettings.colors = &colors;
+            saveSettings.colors = &colors;
             result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, saveSettings );
         }
         else
@@ -88,14 +86,10 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
     {
         if ( objMesh->mesh() )
         {
-            if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
-                saveSettings.colors = &objMesh->getVertsColorMap();
-            else if ( objMesh->getColoringType() == ColoringType::PrimitivesColorMap )
-                saveSettings.primitiveColors = &objMesh->getFacesColorMap().vec_;
-            if ( objMesh->getUVCoords().size() >= objMesh->mesh()->topology.lastValidVert() )
-                saveSettings.uvMap = &objMesh->getUVCoords();
-            if ( !objMesh->getTexture().pixels.empty() )
-                saveSettings.texture = &objMesh->getTexture();
+            saveSettings.colors = &objMesh->getVertsColorMap();
+            saveSettings.primitiveColors = &objMesh->getFacesColorMap().vec_;
+            saveSettings.uvMap = &objMesh->getUVCoords();
+            saveSettings.texture = &objMesh->getTexture();
             saveSettings.materialName = utf8string( filename.stem() );
             result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, saveSettings );
         }

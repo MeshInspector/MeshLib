@@ -86,14 +86,22 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n"
         "  <resources>\n";
 
+
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+    const auto fLast = mesh.topology.lastValidFace();
+    bool hasColors = settings.colors && settings.colors->size() > lastVertId;
+    bool hasPrimColors = settings.primitiveColors && settings.primitiveColors->size() > fLast;
+
     Vector<int, VertId> vertPalette;
     Vector<int, FaceId> facePalette;
-    if ( settings.colors )
+    if ( hasColors )
     {
         vertPalette = makePalette( *settings.colors, mesh.topology.getValidVerts(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
-    else if ( settings.primitiveColors )
+    else if ( hasPrimColors )
     {
         facePalette.vec_ = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
@@ -111,9 +119,6 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     else
         out << "    <object id=\"2\" type=\"model\">\n";
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
-    const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
 
     // write vertices
     out <<
@@ -135,7 +140,6 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "        </vertices>\n"
         "        <triangles>\n";
 
-    const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
 
     // write triangles
@@ -152,13 +156,13 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         }
         else if ( settings.packPrimitives )
             continue;
-        if ( settings.colors )
+        if ( hasColors )
         {
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",
                 getAt( vertPalette, vs[0] ), getAt( vertPalette, vs[1] ), getAt( vertPalette, vs[2] ),
                 v[0], v[1], v[2] );
         }
-        else if ( settings.primitiveColors )
+        else if ( hasPrimColors )
         {
             auto p = getAt( facePalette, f );
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",

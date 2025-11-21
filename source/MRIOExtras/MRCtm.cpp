@@ -279,7 +279,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         aIndices.data(), numSaveFaces, nullptr );
 
     std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( options.colors )
+    if ( options.colors && options.colors->size() > lastVertId )
     {
         colors4f.reserve( aVertexCount );
         for ( VertId i{ 0 }; i <= lastVertId; ++i )

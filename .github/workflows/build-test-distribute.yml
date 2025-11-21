@@ -67,7 +67,7 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.tag-build-release-windows == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      nuget_build:           ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
+      nuget_build:           ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -95,7 +95,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   linux-vcpkg-build-test:
@@ -109,6 +108,7 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   emscripten-build-test:
@@ -144,11 +144,11 @@ jobs:
     secrets: inherit
 
   create-nuget-package:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build_enable_ubuntu_x64 == 'true'}}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build_enable_linux_vcpkg == 'true' }}
     needs:
       - config
       - windows-build-test
-      - ubuntu-x64-build-test
+      - linux-vcpkg-build-test
     timeout-minutes: 20
     runs-on: windows-2022
     steps:

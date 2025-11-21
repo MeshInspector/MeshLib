@@ -178,11 +178,18 @@ template <typename T, typename I>
 [[nodiscard]] MR_BIND_IGNORE inline auto end( Vector<T, I> & a )
     { return a.vec_.end(); }
 
+/// given some std::vector and a key, returns the value associated with the key, or default value if key is invalid or outside the std::vector
+template <typename T>
+[[nodiscard]] inline T getAt( const std::vector<T>& a, size_t id, T def = {} )
+{
+    return  id < a.size() ? a[id] : def;
+}
+
 /// given some Vector and a key, returns the value associated with the key, or default value if key is invalid or outside the Vector
 template <typename T, typename I>
 [[nodiscard]] inline T getAt( const Vector<T, I> & a, I id, T def = {} )
 {
-    return ( id && id < a.size() ) ? a[id] : def;
+    return getAt( a.vec_, size_t( id ), def );
 }
 
 } // namespace MR

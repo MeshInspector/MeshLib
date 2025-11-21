@@ -39,7 +39,7 @@ std::vector<int> makePalette( const std::vector<Color> & colors, const BitSet & 
     {
         if ( i >= colors.size() )
             break;
-        const auto & c = colors[i];
+        const auto& c = getAt( colors, i );
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
         {
@@ -86,14 +86,22 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "<model unit=\"" << unitName << "\" xml:lang=\"en-US\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n"
         "  <resources>\n";
 
+
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    const int numPoints = vertRenumber.sizeVerts();
+    const VertId lastVertId = mesh.topology.lastValidVert();
+
+    bool saveColors = settings.colors && !settings.colors->empty();
+    bool savePrimColors = settings.primitiveColors && !settings.primitiveColors->empty();
+
     Vector<int, VertId> vertPalette;
     Vector<int, FaceId> facePalette;
-    if ( settings.colors )
+    if ( saveColors )
     {
         vertPalette = makePalette( *settings.colors, mesh.topology.getValidVerts(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
-    else if ( settings.primitiveColors )
+    else if ( savePrimColors )
     {
         facePalette.vec_ = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
@@ -111,9 +119,6 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     else
         out << "    <object id=\"2\" type=\"model\">\n";
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
-    const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
 
     // write vertices
     out <<
@@ -152,13 +157,13 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         }
         else if ( settings.packPrimitives )
             continue;
-        if ( settings.colors )
+        if ( saveColors )
         {
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",
                 getAt( vertPalette, vs[0] ), getAt( vertPalette, vs[1] ), getAt( vertPalette, vs[2] ),
                 v[0], v[1], v[2] );
         }
-        else if ( settings.primitiveColors )
+        else if ( savePrimColors )
         {
             auto p = getAt( facePalette, f );
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",

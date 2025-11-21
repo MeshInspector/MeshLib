@@ -355,6 +355,9 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     const auto* data = mtlContent->data();
     const auto mtlSize = mtlContent->size();
 
+    if ( mtlSize == 0 )
+        return unexpected( "empty MTL file" );
+
     const auto newlines = splitByLines( data, mtlSize );
 
     const auto groups = groupLines<MtlElement>( data, mtlSize, newlines );

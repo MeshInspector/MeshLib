@@ -293,16 +293,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
     return res;
 }
 
-Expected<Mesh> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ios::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromObj( in, settings ), file );
-}
-
-Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+static Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings, const std::filesystem::path& dir )
 {
     MR_TIMER;
 
@@ -312,7 +303,7 @@ Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {
         .countSkippedFaces = settings.skippedFaceCount != nullptr,
         .callback = settings.callback
     };
-    auto objs = fromSceneObjFile( in, true, {}, objLoadSettings );
+    auto objs = fromSceneObjFile( in, true, dir, objLoadSettings );
     if ( !objs.has_value() )
         return unexpected( objs.error() );
     if ( objs->empty() )
@@ -347,6 +338,20 @@ Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {
     if ( settings.xf )
         *settings.xf = r.xf;
     return std::move( r.mesh );
+}
+
+Expected<Mesh> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
+{
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromObj( in, settings, file.parent_path() ), file );
+}
+
+Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+{
+    return fromObj( in, settings, std::filesystem::path{} );
 }
 
 Expected<MR::Mesh> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )

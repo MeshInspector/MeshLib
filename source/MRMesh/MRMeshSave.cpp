@@ -141,7 +141,10 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     MR_TIMER;
     const VertId lastVertId = mesh.topology.lastValidVert();
     out << "# MeshInspector.com\n";
-    if ( settings.uvMap )
+    bool saveUV = settings.uvMap && !settings.uvMap->empty();
+    bool saveColors = settings.colors && !settings.colors->empty();
+
+    if ( saveUV )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
@@ -156,7 +159,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
 
         auto saveVertex = [&]( auto && p )
         {
-            if ( settings.colors )
+            if ( saveColors )
             {
                 const auto c = ( Vector4f )getAt( *settings.colors, i );
                 out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
@@ -175,7 +178,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             return unexpectedOperationCanceled();
     }
 
-    if ( settings.uvMap )
+    if ( saveUV )
     {
         numSaved = 0;
         sb = subprogress( settings.progress, 0.35f, 0.7f );
@@ -192,7 +195,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         out << "usemtl Texture\n";
     }
 
-    sb = subprogress( settings.progress, settings.uvMap ? 0.7f : 0.5f, 1.0f );
+    sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
     const float facesNum = float( mesh.topology.edgePerFace().size() );
     size_t faceIndex = 0;
     for ( const auto& e : mesh.topology.edgePerFace() )
@@ -206,7 +209,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         Vector3i values( vertRenumber( a ) + firstVertId, vertRenumber( b ) + firstVertId, vertRenumber( c ) + firstVertId );
-        if ( settings.uvMap )
+        if ( saveUV )
             out << fmt::format( "f {}/{} {}/{} {}/{}\n",
                 values.x, values.x,
                 values.y, values.y,
@@ -385,15 +388,17 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
 
-    bool hasTexture = settings.texture && !settings.texture->pixels.empty();
+    bool saveTexture = settings.texture && !settings.texture->pixels.empty();
+    bool saveUV = settings.uvMap && !settings.uvMap->empty();
+    bool saveColors = settings.colors && !settings.colors->empty();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n";
-    if ( settings.uvMap && hasTexture )
+    if ( saveUV && saveTexture )
         out << "comment TextureFile " <<  settings.materialName << ".jpg\n";
     out << "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
-    if ( settings.colors )
+    if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
-    if ( settings.uvMap )
+    if ( saveUV )
         out << "property float texture_u\nproperty float texture_v\n";
 
     const auto fLast = mesh.topology.lastValidFace();
@@ -418,13 +423,13 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             continue;
         const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
         out.write( ( const char* )&p, 12 );
-        if ( settings.colors )
+        if ( saveColors )
         {
             const auto c = getAt( *settings.colors, i );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }
-        if ( settings.uvMap )
+        if ( saveUV )
         {
             const auto uv = getAt( *settings.uvMap, i );
             out.write( ( const char* )&uv, sizeof( UVCoord ) );

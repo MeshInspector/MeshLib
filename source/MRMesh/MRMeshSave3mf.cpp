@@ -30,13 +30,15 @@ constexpr const char * sUnitNames[(int)LengthUnit::_count] =
 std::vector<int> makePalette( const std::vector<Color> & colors, const BitSet & validColors, std::ostream & out )
 {
     MR_TIMER;
-    std::vector<int> res( validColors.size() );
+    std::vector<int> res( colors.size() );
 
     HashMap<Color, int> hmap;
     int nextPaletteCell = 0;
     out << "    <m:colorgroup id=\"1\">\n";
     for ( size_t i : validColors )
     {
+        if ( i >= colors.size() )
+            break;
         const auto& c = getAt( colors, i );
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
@@ -89,14 +91,17 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
 
+    bool saveColors = settings.colors && !settings.colors->empty();
+    bool savePrimColors = settings.primitiveColors && !settings.primitiveColors->empty();
+
     Vector<int, VertId> vertPalette;
     Vector<int, FaceId> facePalette;
-    if ( settings.colors )
+    if ( saveColors )
     {
         vertPalette = makePalette( *settings.colors, mesh.topology.getValidVerts(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
-    else if ( settings.primitiveColors )
+    else if ( savePrimColors )
     {
         facePalette.vec_ = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
@@ -152,13 +157,13 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         }
         else if ( settings.packPrimitives )
             continue;
-        if ( settings.colors )
+        if ( saveColors )
         {
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",
                 getAt( vertPalette, vs[0] ), getAt( vertPalette, vs[1] ), getAt( vertPalette, vs[2] ),
                 v[0], v[1], v[2] );
         }
-        else if ( settings.primitiveColors )
+        else if ( savePrimColors )
         {
             auto p = getAt( facePalette, f );
             out << fmt::format( "          <triangle p1=\"{}\" p2=\"{}\" p3=\"{}\" pid=\"1\" v1=\"{}\" v2=\"{}\" v3=\"{}\" />\n",

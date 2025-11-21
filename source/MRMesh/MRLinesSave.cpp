@@ -170,10 +170,11 @@ Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveS
     const VertRenumber vertRenumber( polyline.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = polyline.topology.lastValidVert();
+    bool saveColors = settings.colors && !settings.colors->empty();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
-    if ( settings.colors )
+    if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
 
     const auto ueLast = polyline.topology.lastNotLoneUndirectedEdge();
@@ -197,7 +198,7 @@ Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveS
             continue;
         const Vector3f p = applyFloat( settings.xf, polyline.points[i] );
         out.write( ( const char* )&p, 12 );
-        if ( settings.colors )
+        if ( saveColors )
         {
             const auto c = getAt( *settings.colors, i );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };

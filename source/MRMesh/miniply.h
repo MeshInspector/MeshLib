@@ -166,6 +166,9 @@ namespace miniply {
     uint32_t find_element(const char* name) const;
     PLYElement* get_element(uint32_t idx);
 
+    /// Returns all comment lines from PLY file
+    const std::vector<std::string> & comments() const { return m_comments; }
+
     /// Check whether the current element has the given name.
     bool element_is(const char* name) const;
 
@@ -286,6 +289,7 @@ namespace miniply {
     bool m_valid          = false;
     bool m_elementLoaded  = false;
     PLYFileType m_fileType= PLYFileType::ASCII; //!< Whether the file was ascii, binary little-endian, or binary big-endian.
+    std::vector<std::string> m_comments;
   };
 
 

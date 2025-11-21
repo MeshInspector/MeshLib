@@ -3,6 +3,9 @@
 #include "MRVector3.h"
 #include "MRVector.h"
 #include "MRColor.h"
+#include "MRStringConvert.h"
+#include "MRImageLoad.h"
+#include "MRMeshTexture.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -49,6 +52,13 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
                 colorsBuffer.resize( 3 * numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
+            if ( params.uvCoords && reader.find_texcoord( indecies ) )
+            {
+                Timer t( "extractUVs" );
+                params.uvCoords->resize( numVerts );
+                reader.extract_properties( indecies, 2, miniply::PLYPropertyType::Float, params.uvCoords->data() );
+            }
+
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !reportProgress( params.callback, progress ) )
                 return unexpectedOperationCanceled();
@@ -107,6 +117,30 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
         {
             int ind = 3 * i;
             ( *params.colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
+        }
+    }
+
+    if ( params.texture )
+    {
+        for ( const auto& comment : reader.comments() )
+        {
+            if ( !comment.starts_with( "TextureFile" ) )
+                continue;
+            int n = 11;
+            while ( n < comment.size() && ( comment[n] == ' ' || comment[n] == '\t' ) )
+                ++n;
+            const auto texFile = params.dir / asU8String( comment.substr( n ) );
+            std::error_code ec;
+            if ( !is_regular_file( texFile, ec ) )
+                break;
+            if ( auto image = ImageLoad::fromAnySupportedFormat( texFile ) )
+            {
+                params.texture->resolution = std::move( image->resolution );
+                params.texture->pixels = std::move( image->pixels );
+                params.texture->filter = FilterType::Linear;
+                params.texture->wrap = WrapType::Clamp;
+            }
+            break;
         }
     }
 

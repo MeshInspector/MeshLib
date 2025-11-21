@@ -574,16 +574,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     return res;
 }
 
-Expected<Mesh> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromPly( in, settings ), file );
-}
-
-Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings, const std::filesystem::path& dir )
 {
     MR_TIMER;
 
@@ -596,6 +587,7 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
         .uvCoords = settings.uvCoords,
         .normals = settings.normals,
         .texture = settings.texture,
+        .dir = dir,
         // suppose that reading is 10% of progress and building mesh is 90% of progress
         .callback = subprogress( settings.callback, 0.0f, 0.1f )
     };
@@ -621,6 +613,20 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
     if ( !reportProgress( settings.callback, 1.0f ) )
         return unexpectedOperationCanceled();
     return res;
+}
+
+Expected<Mesh> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromPly( in, settings, file.parent_path() ), file );
+}
+
+Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings )
+{
+    return fromPly( in, settings, std::filesystem::path{} );
 }
 
 Expected<Mesh> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )

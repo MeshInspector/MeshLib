@@ -4,6 +4,7 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include <iostream>
+#include <filesystem>
 #include <optional>
 
 namespace MR
@@ -18,6 +19,7 @@ struct PlyLoadParams
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals
     MeshTexture* texture = nullptr;  ///< optional load artifact: texture image
+    std::filesystem::path dir;       ///< directory to load texture files from
     ProgressCallback callback;       ///< callback for set progress and stop process
 };
 

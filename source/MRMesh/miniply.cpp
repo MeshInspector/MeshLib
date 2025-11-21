@@ -1313,7 +1313,9 @@ namespace miniply {
   bool PLYReader::next_line()
   {
     m_pos = m_end;
+    bool commentLine = false;
     do {
+      // skip the current line
       while (*m_pos != '\n') {
         if (m_pos == m_bufEnd) {
           m_end = m_pos;
@@ -1324,9 +1326,16 @@ namespace miniply {
         }
         ++m_pos;
       }
+      if ( commentLine )
+      {
+          while ( m_end < m_pos && is_whitespace( *m_end ) )
+              ++m_end; // skip white spaces after "comment" tag
+          m_comments.emplace_back( m_end, m_pos );
+      }
       ++m_pos; // move past the newline char
       m_end = m_pos;
-    } while (match("comment") || match("obj_info"));
+      commentLine = match( "comment" );
+    } while (commentLine || match("obj_info"));
 
     return true;
   }

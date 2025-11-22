@@ -147,9 +147,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ windows-2022 ]
+        runner: [ windows-2025 ]
         include:
-          - runner: windows-2022
+          - runner: windows-2025
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
     steps:
       - name: Setup vcpkg

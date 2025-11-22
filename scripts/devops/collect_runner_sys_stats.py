@@ -14,8 +14,9 @@ def get_ram_amount():
     elif system == "Linux":
         return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
     elif system == "Windows":
-        output = subprocess.check_output(['wmic', 'ComputerSystem', 'get', 'TotalPhysicalMemory'], text=True)
-        return int(re.search(r'\d+', output).group())
+        ps_command = "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"
+        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
+        return int(output.strip())
     else:
         raise RuntimeError(f"Unknown system: {system}")
 

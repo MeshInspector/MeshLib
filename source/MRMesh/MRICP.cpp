@@ -9,6 +9,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRStreamOperators.h"
 #include <numeric>
+#include <iostream>
 
 namespace MR
 {

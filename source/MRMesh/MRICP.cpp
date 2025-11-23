@@ -7,6 +7,7 @@
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
+#include "MRStreamOperators.h"
 #include <numeric>
 
 namespace MR
@@ -117,6 +118,8 @@ void ICP::updatePointPairs()
     MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
+    std::cout << "flt2refPairs_.active=" << MR::getNumActivePairs( flt2refPairs_ ) << std::endl;
+    std::cout << "ref2fltPairs_.active=" << MR::getNumActivePairs( ref2fltPairs_ ) << std::endl;
 }
 
 std::string getICPStatusInfo( int iterations, ICPExitType exitType )
@@ -378,15 +381,32 @@ bool ICP::p2plIter_()
 
 AffineXf3f ICP::calculateTransformation()
 {
+    std::cout << "method=" << (int)prop_.method << '\n';
+    std::cout << "p2plAngleLimit=" << prop_.p2plAngleLimit << '\n';
+    std::cout << "p2plScaleLimit=" << prop_.p2plScaleLimit << '\n';
+    std::cout << "cosThreshold=" << prop_.cosThreshold << '\n';
+    std::cout << "distThresholdSq=" << prop_.distThresholdSq << '\n';
+    std::cout << "farDistFactor=" << prop_.farDistFactor << '\n';
+    std::cout << "icpMode=" << (int)prop_.icpMode << '\n';
+    std::cout << "fixedRotationAxis=" << prop_.fixedRotationAxis << '\n';
+    std::cout << "iterLimit=" << prop_.iterLimit << '\n';
+    std::cout << "badIterStopCount=" << prop_.badIterStopCount << '\n';
+    std::cout << "exitVal=" << prop_.exitVal << '\n';
+    std::cout << "mutualClosest=" << prop_.mutualClosest << std::endl;
+
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
     AffineXf3f resXf = flt_.xf;
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
+        std::cout << "Iter #" << iter_ << '\n';
+        std::cout << "ref_.xf:\n" << ref_.xf << '\n';
+        std::cout << "flt_.xf:\n" << flt_.xf << std::endl;
         updatePointPairs();
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
+        std::cout << "pt2pt=" << pt2pt << std::endl;
 
         if ( iter_ == 1 )
             minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane(); // update initial metric before doing iteration
@@ -398,6 +418,7 @@ AffineXf3f ICP::calculateTransformation()
         }
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        std::cout << "curDist=" << curDist << std::endl;
 
         // exit if several(3) iterations didn't decrease minimization parameter
         if (curDist < minDist)

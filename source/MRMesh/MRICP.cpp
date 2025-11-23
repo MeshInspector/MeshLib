@@ -410,7 +410,10 @@ AffineXf3f ICP::calculateTransformation()
         std::cout << "pt2pt=" << pt2pt << std::endl;
 
         if ( iter_ == 1 )
+        {
             minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane(); // update initial metric before doing iteration
+            std::cout << "minDist0=" << minDist << std::endl;
+        }
 
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
@@ -426,6 +429,7 @@ AffineXf3f ICP::calculateTransformation()
         {
             resXf = flt_.xf;
             minDist = curDist;
+            std::cout << "minDist=" << minDist << std::endl;
             badIterCount = 0;
 
             if ( prop_.exitVal > curDist )
@@ -444,6 +448,8 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
+    std::cout << "final minDist=" << minDist << std::endl;
+    std::cout << "resXf:\n" << resXf << std::endl;
     flt_.xf = resXf;
     return resXf;
 }

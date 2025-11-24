@@ -395,31 +395,30 @@ AffineXf3f ICP::calculateTransformation()
     std::cout << "exitVal=" << prop_.exitVal << '\n';
     std::cout << "mutualClosest=" << prop_.mutualClosest << std::endl;
 
-    float minDist = std::numeric_limits<float>::max();
+    bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
+    updatePointPairs();
+    float minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+    std::cout << "minDist0=" << minDist << std::endl;
+
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
     AffineXf3f resXf = flt_.xf;
+
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         std::cout << "Iter #" << iter_ << '\n';
         std::cout << "ref_.xf:\n" << ref_.xf << '\n';
         std::cout << "flt_.xf:\n" << flt_.xf << std::endl;
-        updatePointPairs();
-        const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
+        pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
         std::cout << "pt2pt=" << pt2pt << std::endl;
-
-        if ( iter_ == 1 )
-        {
-            minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane(); // update initial metric before doing iteration
-            std::cout << "minDist0=" << minDist << std::endl;
-        }
 
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
             resultType_ = ICPExitType::NotFoundSolution;
             break;
         }
+        updatePointPairs();
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
         std::cout << "curDist=" << curDist << std::endl;

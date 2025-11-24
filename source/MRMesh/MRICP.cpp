@@ -10,6 +10,7 @@
 #include "MRStreamOperators.h"
 #include "MRPch/MRSpdlog.h"
 #include <numeric>
+#include "MRSystem.h"
 
 namespace MR
 {
@@ -389,6 +390,8 @@ static void logXf( const char* var, const AffineXf3f& xf )
 
 AffineXf3f ICP::calculateTransformation()
 {
+    static bool init = []{ MR::setupLoggerByDefault(); return true; }();
+
     spdlog::info( "method = {}", ( int )prop_.method );
     spdlog::info( "p2plAngleLimit = {}", prop_.p2plAngleLimit );
     spdlog::info( "p2plScaleLimit = {}", prop_.p2plScaleLimit );

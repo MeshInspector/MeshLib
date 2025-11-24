@@ -18,12 +18,12 @@ jobs:
           version: "1.11.0"
 
       - name: Checkout MeshLib
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: 'MeshLib/'
 
       - name: Checkout Doxygen Data
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: 'MeshInspector/MeshInspector.github.io'
           path: 'MeshInspector.github.io/'

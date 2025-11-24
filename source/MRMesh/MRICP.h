@@ -114,7 +114,7 @@ struct NumSum
 [[nodiscard]] MRMESH_API std::string getICPStatusInfo( int iterations, ICPExitType exitType );
 
 /// given prepared (p2pl) object, finds the best transformation from it of given type with given limitations on rotation angle and global scale
-[[nodiscard]] MRMESH_API AffineXf3f getAligningXf( const PointToPlaneAligningTransform & p2pl,
+[[nodiscard]] MRMESH_API AffineXf3d getAligningXf( const PointToPlaneAligningTransform & p2pl,
     ICPMode mode, float angleLimit, float scaleLimit, const Vector3f & fixedRotationAxis );
 
 

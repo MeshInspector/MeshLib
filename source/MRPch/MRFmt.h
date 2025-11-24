@@ -11,15 +11,9 @@
 
 namespace MR
 {
-#if FMT_VERSION < 80000
-MR_BIND_IGNORE inline std::string_view runtimeFmt( std::string_view str )
-{
-    return str;
-}
-#else
+[[deprecated( "Use fmt::runtime" )]]
 MR_BIND_IGNORE inline auto runtimeFmt( std::string_view str )
 {
     return fmt::runtime( str );
 }
-#endif
 }

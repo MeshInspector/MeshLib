@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRVoxels CXX)
 
 option(MRVOXELS_NO_DICOM "Disable DICOM format support" OFF)
@@ -47,14 +43,14 @@ ELSEIF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     OpenVDB
-    PkgConfig::jsoncpp
+    JsonCpp::JsonCpp
     fmt
     spdlog
     tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(OpenVDB REQUIRED)
+  find_package(OpenVDB 10 REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     OpenVDB::openvdb
@@ -80,7 +76,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

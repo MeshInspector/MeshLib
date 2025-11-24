@@ -239,7 +239,7 @@ std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
         if constexpr ( std::is_same_v<T, Empty> )
             return "";
         else
-            return fmt::format( runtimeFmt( fmtStr ), val );
+            return fmt::format( fmt::runtime( fmtStr ), val );
     }, data );
 }
 

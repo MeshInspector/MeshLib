@@ -144,7 +144,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
     mkdir -p build/Release
   fi
   cd build/Release
-    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
+    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
     cmake --build . -j ${NPROC} | tee ${logfile}
   cd ../..
 fi
@@ -155,7 +155,7 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
     mkdir -p build/Debug
   fi
   cd build/Debug
-    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} | tee ${logfile}
+    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
     cmake --build . -j ${NPROC} | tee ${logfile}
   cd ../..
 fi

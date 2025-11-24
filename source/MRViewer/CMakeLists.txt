@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRViewer CXX)
 
 option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux)" OFF)

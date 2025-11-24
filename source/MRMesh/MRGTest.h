@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+
 #ifdef MRMESH_NO_GTEST
 
 #undef TEST

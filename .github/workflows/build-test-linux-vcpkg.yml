@@ -94,7 +94,7 @@ jobs:
           done
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
   
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

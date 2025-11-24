@@ -17,3 +17,7 @@ IF(MR_EMSCRIPTEN AND MR_EMSCRIPTEN_WASM64)
 ENDIF()
 
 add_compile_definitions(MR_USE_CMAKE_CONFIGURE_FILE)
+
+# To overcome https://stackoverflow.com/q/68334645/7325599
+# This must be set here and not in `CompilerOptions.cmake`, because that file gets included too late.
+set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")

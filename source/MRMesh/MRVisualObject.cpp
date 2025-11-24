@@ -263,7 +263,10 @@ bool VisualObject::render( const ModelRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
+    {
+        resetDirty();
         return false;
+    }
 
     return renderObj_->render( params );
 }

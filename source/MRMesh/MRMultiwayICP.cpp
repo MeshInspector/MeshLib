@@ -892,7 +892,6 @@ bool MultiwayICP::p2plIter_()
             return;
         }
         centroidRef /= float( activeCount * 2 );
-        AffineXf3f centroidRefXf = AffineXf3f( Matrix3f(), centroidRef );
 
         PointToPlaneAligningTransform p2pl;
         for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
@@ -912,13 +911,15 @@ bool MultiwayICP::p2plIter_()
         }
         p2pl.prepare();
 
-        AffineXf3f res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
+        AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check
         {
             valid[objId] = FullSizeBool( false );
             return;
         }
-        objs_[objId].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[objId].xf;
+        const AffineXf3d subCentroid{ Matrix3d(), Vector3d( -centroidRef ) };
+        const AffineXf3d addCentroid{ Matrix3d(), Vector3d(  centroidRef ) };
+        objs_[objId].xf = AffineXf3f( addCentroid * res * subCentroid * AffineXf3d( objs_[objId].xf ) );
         valid[objId] = FullSizeBool( true );
     } );
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );

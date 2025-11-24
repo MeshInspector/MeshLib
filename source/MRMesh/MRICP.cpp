@@ -8,8 +8,8 @@
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
 #include "MRStreamOperators.h"
+#include "MRPch/MRSpdlog.h"
 #include <numeric>
-#include <iostream>
 
 namespace MR
 {
@@ -380,25 +380,32 @@ bool ICP::p2plIter_()
     return true;
 }
 
+static void logXf( const char* var, const AffineXf3f& xf )
+{
+    spdlog::info( "{} x: {} {} {} {}\n", var, xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x );
+    spdlog::info( "{} y: {} {} {} {}\n", var, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y );
+    spdlog::info( "{} z: {} {} {} {}\n", var, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z );
+}
+
 AffineXf3f ICP::calculateTransformation()
 {
-    std::cout << "method=" << (int)prop_.method << '\n';
-    std::cout << "p2plAngleLimit=" << prop_.p2plAngleLimit << '\n';
-    std::cout << "p2plScaleLimit=" << prop_.p2plScaleLimit << '\n';
-    std::cout << "cosThreshold=" << prop_.cosThreshold << '\n';
-    std::cout << "distThresholdSq=" << prop_.distThresholdSq << '\n';
-    std::cout << "farDistFactor=" << prop_.farDistFactor << '\n';
-    std::cout << "icpMode=" << (int)prop_.icpMode << '\n';
-    std::cout << "fixedRotationAxis=" << prop_.fixedRotationAxis << '\n';
-    std::cout << "iterLimit=" << prop_.iterLimit << '\n';
-    std::cout << "badIterStopCount=" << prop_.badIterStopCount << '\n';
-    std::cout << "exitVal=" << prop_.exitVal << '\n';
-    std::cout << "mutualClosest=" << prop_.mutualClosest << std::endl;
+    spdlog::info( "method = {}\n", ( int )prop_.method );
+    spdlog::info( "p2plAngleLimit = {}\n", prop_.p2plAngleLimit );
+    spdlog::info( "p2plScaleLimit = {}\n", prop_.p2plScaleLimit );
+    spdlog::info( "cosThreshold = {}\n", prop_.cosThreshold );
+    spdlog::info( "distThresholdSq = {}\n", prop_.distThresholdSq );
+    spdlog::info( "farDistFactor = {}\n", prop_.farDistFactor );
+    spdlog::info( "icpMode = {}\n", (int)prop_.icpMode );
+    spdlog::info( "fixedRotationAxis = {} {} {}\n", prop_.fixedRotationAxis.x, prop_.fixedRotationAxis.y, prop_.fixedRotationAxis.z );
+    spdlog::info( "iterLimit = {}\n", prop_.iterLimit );
+    spdlog::info( "badIterStopCount = {}\n", prop_.badIterStopCount );
+    spdlog::info( "exitVal = {}\n", prop_.exitVal );
+    spdlog::info( "mutualClosest = {}\n", prop_.mutualClosest );
 
     bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
     updatePointPairs();
     float minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-    std::cout << "minDist0=" << minDist << std::endl;
+    spdlog::info( "minDist0 = {}\n", minDist );
 
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
@@ -406,12 +413,12 @@ AffineXf3f ICP::calculateTransformation()
 
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        std::cout << "Iter #" << iter_ << '\n';
-        std::cout << "ref_.xf:\n" << ref_.xf << '\n';
-        std::cout << "flt_.xf:\n" << flt_.xf << std::endl;
+        spdlog::info( "Iter #{}\n", iter_ );
+        logXf( "ref_.xf", ref_.xf );
+        logXf( "flt_.xf", flt_.xf );
         pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
-        std::cout << "pt2pt=" << pt2pt << std::endl;
+        spdlog::info( "pt2pt = {}\n", pt2pt );
 
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
@@ -421,14 +428,14 @@ AffineXf3f ICP::calculateTransformation()
         updatePointPairs();
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-        std::cout << "curDist=" << curDist << std::endl;
+        spdlog::info( "curDist = {}\n", curDist );
 
         // exit if several(3) iterations didn't decrease minimization parameter
         if (curDist < minDist)
         {
             resXf = flt_.xf;
             minDist = curDist;
-            std::cout << "minDist=" << minDist << std::endl;
+            spdlog::info( "minDist = {}\n", minDist );
             badIterCount = 0;
 
             if ( prop_.exitVal > curDist )
@@ -447,8 +454,8 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    std::cout << "final minDist=" << minDist << std::endl;
-    std::cout << "resXf:\n" << resXf << std::endl;
+    spdlog::info( "minDist1 = {}\n", minDist );
+    logXf( "resXf", resXf );
     flt_.xf = resXf;
     return resXf;
 }

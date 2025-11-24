@@ -376,22 +376,17 @@ bool ICP::p2plIter_()
     return true;
 }
 
-AffineXf3f ICP::calculateTransformation()
+void ICP::calcGen_( float (ICP::*dist)() const, bool (ICP::*iter)() )
 {
-    MR_TIMER;
-    bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
     updatePointPairs();
-    float minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+    float minDist = (this->*dist)();
 
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
     AffineXf3f resXf = flt_.xf;
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
-            || prop_.method == ICPMethod::PointToPoint;
-
-        if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
+        if ( !(this->*iter)() )
         {
             resultType_ = ICPExitType::NotFoundSolution;
             break;
@@ -399,10 +394,10 @@ AffineXf3f ICP::calculateTransformation()
         // without this call, getMeanSqDistToPoint()/getMeanSqDistToPlane() will ignore xf changed in p2ptIter_()/p2plIter_()
         updatePointPairs();
 
-        const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        const float curDist = (this->*dist)();
 
         // exit if several(3) iterations didn't decrease minimization parameter
-        if (curDist < minDist)
+        if ( curDist < minDist )
         {
             resXf = flt_.xf;
             minDist = curDist;
@@ -425,7 +420,53 @@ AffineXf3f ICP::calculateTransformation()
         }
     }
     flt_.xf = resXf;
-    return resXf;
+}
+
+void ICP::calcP2Pt_()
+{
+    MR_TIMER;
+    calcGen_( &ICP::getMeanSqDistToPoint, &ICP::p2ptIter_ );
+}
+
+void ICP::calcP2Pl_()
+{
+    MR_TIMER;
+    calcGen_( &ICP::getMeanSqDistToPlane, &ICP::p2plIter_ );
+}
+
+void ICP::calcCombined_()
+{
+    MR_TIMER;
+    assert( prop_.iterLimit > 2 );
+    const auto safeLimit = prop_.iterLimit;
+
+    prop_.iterLimit = 2;
+    calcP2Pt_();
+
+    prop_.iterLimit = safeLimit - 2;
+    calcP2Pl_();
+
+    prop_.iterLimit = safeLimit;
+}
+
+AffineXf3f ICP::calculateTransformation()
+{
+    switch ( prop_.method )
+    {
+    case ICPMethod::Combined:
+        calcCombined_();
+        break;
+    case ICPMethod::PointToPoint:
+        calcP2Pt_();
+        break;
+    case ICPMethod::PointToPlane:
+        calcP2Pl_();
+        break;
+    default:
+        assert( false );
+        break;
+    }
+    return flt_.xf;
 }
 
 size_t getNumActivePairs( const IPointPairs& pairs )

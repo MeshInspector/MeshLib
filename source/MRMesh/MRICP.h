@@ -270,6 +270,11 @@ private:
     int iter_ = 0;
     bool p2ptIter_();
     bool p2plIter_();
+
+    void calcGen_( float (ICP::*dist)() const, bool (ICP::*iter)() );
+    void calcP2Pt_();
+    void calcP2Pl_();
+    void calcCombined_();
 };
 
 } //namespace MR

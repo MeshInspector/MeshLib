@@ -119,8 +119,8 @@ void ICP::updatePointPairs()
     MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
-    std::cout << "flt2refPairs_.active=" << MR::getNumActivePairs( flt2refPairs_ ) << std::endl;
-    std::cout << "ref2fltPairs_.active=" << MR::getNumActivePairs( ref2fltPairs_ ) << std::endl;
+    spdlog::info( "flt2refPairs_.active = {}\n", MR::getNumActivePairs( flt2refPairs_ ) );
+    spdlog::info( "ref2fltPairs_.active = {}\n", MR::getNumActivePairs( ref2fltPairs_ ) );
 }
 
 std::string getICPStatusInfo( int iterations, ICPExitType exitType )

@@ -119,8 +119,8 @@ void ICP::updatePointPairs()
     MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
-    spdlog::info( "flt2refPairs_.active = {}\n", MR::getNumActivePairs( flt2refPairs_ ) );
-    spdlog::info( "ref2fltPairs_.active = {}\n", MR::getNumActivePairs( ref2fltPairs_ ) );
+    spdlog::info( "flt2refPairs_.active = {}", MR::getNumActivePairs( flt2refPairs_ ) );
+    spdlog::info( "ref2fltPairs_.active = {}", MR::getNumActivePairs( ref2fltPairs_ ) );
 }
 
 std::string getICPStatusInfo( int iterations, ICPExitType exitType )
@@ -382,30 +382,30 @@ bool ICP::p2plIter_()
 
 static void logXf( const char* var, const AffineXf3f& xf )
 {
-    spdlog::info( "{} x: {} {} {} {}\n", var, xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x );
-    spdlog::info( "{} y: {} {} {} {}\n", var, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y );
-    spdlog::info( "{} z: {} {} {} {}\n", var, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z );
+    spdlog::info( "{} x: {} {} {} {}", var, xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x );
+    spdlog::info( "{} y: {} {} {} {}", var, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y );
+    spdlog::info( "{} z: {} {} {} {}", var, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z );
 }
 
 AffineXf3f ICP::calculateTransformation()
 {
-    spdlog::info( "method = {}\n", ( int )prop_.method );
-    spdlog::info( "p2plAngleLimit = {}\n", prop_.p2plAngleLimit );
-    spdlog::info( "p2plScaleLimit = {}\n", prop_.p2plScaleLimit );
-    spdlog::info( "cosThreshold = {}\n", prop_.cosThreshold );
-    spdlog::info( "distThresholdSq = {}\n", prop_.distThresholdSq );
-    spdlog::info( "farDistFactor = {}\n", prop_.farDistFactor );
-    spdlog::info( "icpMode = {}\n", (int)prop_.icpMode );
-    spdlog::info( "fixedRotationAxis = {} {} {}\n", prop_.fixedRotationAxis.x, prop_.fixedRotationAxis.y, prop_.fixedRotationAxis.z );
-    spdlog::info( "iterLimit = {}\n", prop_.iterLimit );
-    spdlog::info( "badIterStopCount = {}\n", prop_.badIterStopCount );
-    spdlog::info( "exitVal = {}\n", prop_.exitVal );
-    spdlog::info( "mutualClosest = {}\n", prop_.mutualClosest );
+    spdlog::info( "method = {}", ( int )prop_.method );
+    spdlog::info( "p2plAngleLimit = {}", prop_.p2plAngleLimit );
+    spdlog::info( "p2plScaleLimit = {}", prop_.p2plScaleLimit );
+    spdlog::info( "cosThreshold = {}", prop_.cosThreshold );
+    spdlog::info( "distThresholdSq = {}", prop_.distThresholdSq );
+    spdlog::info( "farDistFactor = {}", prop_.farDistFactor );
+    spdlog::info( "icpMode = {}", (int)prop_.icpMode );
+    spdlog::info( "fixedRotationAxis = {} {} {}", prop_.fixedRotationAxis.x, prop_.fixedRotationAxis.y, prop_.fixedRotationAxis.z );
+    spdlog::info( "iterLimit = {}", prop_.iterLimit );
+    spdlog::info( "badIterStopCount = {}", prop_.badIterStopCount );
+    spdlog::info( "exitVal = {}", prop_.exitVal );
+    spdlog::info( "mutualClosest = {}", prop_.mutualClosest );
 
     bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
     updatePointPairs();
     float minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-    spdlog::info( "minDist0 = {}\n", minDist );
+    spdlog::info( "minDist0 = {}", minDist );
 
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
@@ -413,12 +413,12 @@ AffineXf3f ICP::calculateTransformation()
 
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        spdlog::info( "Iter #{}\n", iter_ );
+        spdlog::info( "Iter #{}", iter_ );
         logXf( "ref_.xf", ref_.xf );
         logXf( "flt_.xf", flt_.xf );
         pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
-        spdlog::info( "pt2pt = {}\n", pt2pt );
+        spdlog::info( "pt2pt = {}", pt2pt );
 
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
@@ -428,14 +428,14 @@ AffineXf3f ICP::calculateTransformation()
         updatePointPairs();
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-        spdlog::info( "curDist = {}\n", curDist );
+        spdlog::info( "curDist = {}", curDist );
 
         // exit if several(3) iterations didn't decrease minimization parameter
         if (curDist < minDist)
         {
             resXf = flt_.xf;
             minDist = curDist;
-            spdlog::info( "minDist = {}\n", minDist );
+            spdlog::info( "minDist = {}", minDist );
             badIterCount = 0;
 
             if ( prop_.exitVal > curDist )
@@ -454,7 +454,7 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    spdlog::info( "minDist1 = {}\n", minDist );
+    spdlog::info( "minDist1 = {}", minDist );
     logXf( "resXf", resXf );
     flt_.xf = resXf;
     return resXf;

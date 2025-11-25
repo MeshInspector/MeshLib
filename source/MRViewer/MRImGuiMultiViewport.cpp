@@ -43,4 +43,9 @@ ImVec2 Window2ScreenSpaceImVec2( const ImVec2& point )
     return point + GetMainViewportShift();
 }
 
+Vector2f Window2ScreenSpaceVector2f( const Vector2f& point )
+{
+    return point + GetMainViewportShift();
+}
+
 }

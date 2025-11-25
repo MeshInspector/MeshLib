@@ -22,4 +22,5 @@ MRVIEWER_API ImVec2 Screen2WindowSpaceImVec2( const ImVec2& point );
 MRVIEWER_API Contour2f Screen2WindowSpaceContour2f( const Contour2f& points );
 // convert points from window space to screen space
 MRVIEWER_API ImVec2 Window2ScreenSpaceImVec2( const ImVec2& point );
+MRVIEWER_API Vector2f Window2ScreenSpaceVector2f( const Vector2f& point );
 }

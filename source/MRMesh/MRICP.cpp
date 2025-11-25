@@ -437,8 +437,12 @@ AffineXf3f ICP::calculateTransformation()
     {
         spdlog::info( "ref region = {}, flt region = {}", (void*)refMeshPart->region, (void*)fltMeshPart->region );
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
-        const_cast<Mesh&>(refMeshPart->mesh).invalidateCaches();
-        const_cast<Mesh&>(fltMeshPart->mesh).invalidateCaches();
+        const auto& refTopology = refMeshPart->mesh.topology;
+        const auto& fltTopology = fltMeshPart->mesh.topology;
+        for ( auto v = 0_v; v < refTopology.vertSize(); ++v )
+        {
+            spdlog::info( "{}_v: refE={} fltE={}", (int)v, (int)refTopology.edgeWithOrg( v ), (int)fltTopology.edgeWithOrg( v ) );
+        }
     }
     logXf( "ref_.xf", ref_.xf );
     logXfHex( "ref_.xf", ref_.xf );

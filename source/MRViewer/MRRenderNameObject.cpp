@@ -3,6 +3,7 @@
 #include "MRImGuiVectorOperators.h"
 #include "MRRibbonMenu.h"
 #include "MRViewport.h"
+#include "MRImGuiMultiViewport.h"
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSceneRoot.h"
@@ -144,7 +145,9 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
         auto result = viewportRef.projectToViewportSpace( point );
         if ( depthOutput )
             *depthOutput = result.z;
-        return ImVec2( result.x, result.y ) + viewportCornerA;
+
+        const ImVec2 shiftMV = ImGuiMV::GetMainViewportShift();
+        return ImVec2( result.x, result.y ) + viewportCornerA + shiftMV;
     };
 
     Vector3f fixedWorldPoint = worldPoint;

@@ -17,6 +17,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MR2to3.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRImGuiMultiViewport.h"
 
 namespace MR
 {
@@ -59,10 +60,11 @@ void MoveObjectByMouseImpl::onDrawDialog() const
             auto screenPos = getViewerInstance().viewportToScreen( vp.projectToViewportSpace( centerPoint ), vpId );
 
             auto drawList = ImGui::GetBackgroundDrawList();
-            drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), UI::scale() * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
+            const ImVec2 shift = ImGuiMV::GetMainViewportShift();
+            drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ) + shift, UI::scale() * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
             if ( deadZonePixelRadius_ * 0.5f > 4.0f )
             {
-                drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), UI::scale() * 4.0f, Color::red().getUInt32() );
+                drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ) + shift, UI::scale() * 4.0f, Color::red().getUInt32() );
             }
         }
     }
@@ -380,11 +382,12 @@ void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoi
     Viewer& viewer = getViewerInstance();
     Viewport& viewport = viewer.viewport();
     visualizeVectors_.clear();
+    const auto shift = ImGuiMV::GetMainViewportShift();
     for ( const auto& p : worldPoints )
     {
         const Vector3f screenPoint = viewer.viewportToScreen(
             viewport.projectToViewportSpace( p ), viewport.id );
-        visualizeVectors_.push_back( ImVec2( screenPoint.x, screenPoint.y ) );
+        visualizeVectors_.push_back( ImVec2( screenPoint.x, screenPoint.y ) + shift );
     }
 }
 

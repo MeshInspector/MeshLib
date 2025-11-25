@@ -9,6 +9,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 
 namespace MR
 {
@@ -23,12 +24,13 @@ void SelectObjectByClick::drawDialog( ImGuiContext* )
     if ( !picked_ )
         return;
     auto drawList = ImGui::GetBackgroundDrawList();
+    const ImVec2 shift = ImGuiMV::GetMainViewportShift();
     auto downPos = getViewerInstance().mouseController().getDownMousePos();
     auto currPos = getViewerInstance().mouseController().getMousePos();
     Box2i rect;
     rect.include( downPos );
     rect.include( currPos );
-    drawList->AddRect( ImVec2( float( rect.min.x ), float( rect.min.y ) ), ImVec2( float( rect.max.x ), float( rect.max.y ) ),
+    drawList->AddRect( ImVec2( float( rect.min.x ), float( rect.min.y ) ) + shift, ImVec2( float( rect.max.x ), float( rect.max.y ) ) + shift,
                        Color::white().getUInt32() );
 }
 

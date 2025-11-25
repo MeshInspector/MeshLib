@@ -2,6 +2,7 @@
 #include "exports.h"
 #include "MRImGui.h"
 #include "MRImGuiVectorOperators.h"
+#include "MRMesh/MRMeshFwd.h"
 
 // namespace for easy access to functions related to ImGui MultiViewport
 namespace ImGuiMV
@@ -16,4 +17,6 @@ MRVIEWER_API ImVec2 GetLocalMousePos();
 // returns the shift of the main viewport relative to global coordinates
 MRVIEWER_API ImVec2 GetMainViewportShift();
 
+// convert points from screen space to window space
+MRVIEWER_API MR::Contour2f Screen2WindowPoints( const MR::Contour2f& points );
 }

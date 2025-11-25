@@ -11,6 +11,7 @@
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 
 namespace MR::RenderDimensions
 {
@@ -77,7 +78,8 @@ static void endPassFailTextStyle( ImGuiMeasurementIndicators::Text& text )
 {
     auto rect = viewport.getViewportRect();
     Vector3f result = viewport.projectToViewportSpace( point );
-    return ImVec2( result.x, result.y ) + ImVec2( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y );
+    const ImVec2 shiftMV = ImGuiMV::GetMainViewportShift();
+    return ImVec2( result.x, result.y ) + shiftMV + ImVec2( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y );
 }
 
 PointTask::PointTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const PointParams& params )

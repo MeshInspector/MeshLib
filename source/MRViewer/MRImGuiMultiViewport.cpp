@@ -21,4 +21,16 @@ ImVec2 GetMainViewportShift()
     return ImGui::GetMainViewport()->Pos;
 }
 
+MR::Contour2f Screen2WindowPoints( const MR::Contour2f& points )
+{
+    const ImVec2 shiftMV = GetMainViewportShift();
+    if ( shiftMV == ImVec2( 0, 0 ) )
+        return points;
+
+    MR::Contour2f windowPoints( points.size() );
+    for ( int i = 0; i < points.size(); ++i )
+        windowPoints[i] = points[i] - shiftMV;
+    return windowPoints;
+}
+
 }

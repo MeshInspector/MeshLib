@@ -6,6 +6,7 @@
 #include "MRMouse.h"
 #include "MRPalette.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MREdgePaths.h"
@@ -507,7 +508,8 @@ void SurfaceManipulationWidget::postDraw_()
 
     auto drawList = ImGui::GetBackgroundDrawList();
     const auto& mousePos = Vector2f( getViewerInstance().mouseController().getMousePos() );
-    drawList->AddCircleFilled( ImVec2( mousePos.x, mousePos.y ), 10.f, Color::gray().getUInt32() );
+    const ImVec2 shift = ImGuiMV::GetMainViewportShift();
+    drawList->AddCircleFilled( ImVec2( mousePos.x, mousePos.y ) + shift, 10.f, Color::gray().getUInt32() );
 }
 
 void SurfaceManipulationWidget::appendMeshChangeHistory_( std::shared_ptr<Mesh> newMesh, const FaceBitSet& )

@@ -438,6 +438,7 @@ AffineXf3f ICP::calculateTransformation()
     {
         spdlog::info( "ref region = {}, flt region = {}", (void*)refMeshPart->region, (void*)fltMeshPart->region );
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
+        const auto& refPoints = refMeshPart->mesh.points;
         const auto& refTopology = refMeshPart->mesh.topology;
         //const auto& fltTopology = fltMeshPart->mesh.topology;
 /*        for ( auto v = 0_v; v < refTopology.vertSize(); ++v )
@@ -450,12 +451,17 @@ AffineXf3f ICP::calculateTransformation()
                 fltN.x, fltN.y, fltN.z,
                 fltNN.x, fltNN.y, fltNN.z );
         }*/
+        auto n0 = refMeshPart->mesh.pseudonormal( 0_v );
+        spdlog::info( "pseudonormal 0: {} {} {}", n0.x, n0.y, n0.z );
+        spdlog::info( "point 0: {} {} {}", refPoints[0_v].x, refPoints[0_v].y, refPoints[0_v].z );
         {
             std::ostringstream s;
             s << "0_v nei verts: ";
             for ( auto e : orgRing( refTopology, 0_v ) )
             {
-                s << (int)refTopology.dest( e ) << ' ';
+                auto d = refTopology.dest( e );
+                spdlog::info( "point {}: {} {} {}", (int)d, refPoints[d].x, refPoints[d].y, refPoints[d].z );
+                s << (int)d << ' ';
             }
             spdlog::info( "{}", s.str() );
         }

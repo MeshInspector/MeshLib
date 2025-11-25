@@ -391,6 +391,17 @@ static void logXf( const char* var, const AffineXf3f& xf )
     spdlog::info( "{} z: {} {} {} {}", var, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z );
 }
 
+static void logXfHex( const char* var, const AffineXf3f& xf )
+{
+    auto d = [] ( float f )
+    {
+        return std::bit_cast<std::uint32_t>( f );
+    };
+    spdlog::info( "{} x: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.x.x ), d( xf.A.x.y ), d( xf.A.x.z ), d( xf.b.x ) );
+    spdlog::info( "{} y: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.y.x ), d( xf.A.y.y ), d( xf.A.y.z ), d( xf.b.y ) );
+    spdlog::info( "{} z: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.z.x ), d( xf.A.z.y ), d( xf.A.z.z ), d( xf.b.z ) );
+}
+
 AffineXf3f ICP::calculateTransformation()
 {
     MR::setupLoggerByDefault();
@@ -408,6 +419,8 @@ AffineXf3f ICP::calculateTransformation()
         const_cast<Mesh&>(refMeshPart->mesh).invalidateCaches();
         const_cast<Mesh&>(fltMeshPart->mesh).invalidateCaches();
     }
+    logXf( "flt_.xf", flt_.xf );
+    logXfHex( "flt_.xf", flt_.xf );
 
     spdlog::info( "method = {}", ( int )prop_.method );
     spdlog::info( "p2plAngleLimit = {}", prop_.p2plAngleLimit );

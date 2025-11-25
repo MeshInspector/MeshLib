@@ -12,6 +12,7 @@
 #include <numeric>
 #include "MRSystem.h"
 #include <fenv.h>
+#include "MRRingIterator.h"
 
 namespace MR
 {
@@ -439,7 +440,7 @@ AffineXf3f ICP::calculateTransformation()
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
         const auto& refTopology = refMeshPart->mesh.topology;
         //const auto& fltTopology = fltMeshPart->mesh.topology;
-        for ( auto v = 0_v; v < refTopology.vertSize(); ++v )
+/*        for ( auto v = 0_v; v < refTopology.vertSize(); ++v )
         {
             auto refN = refMeshPart->mesh.pseudonormal( v );
             auto fltN = fltMeshPart->mesh.pseudonormal( v );
@@ -448,6 +449,24 @@ AffineXf3f ICP::calculateTransformation()
                 refN.x, refN.y, refN.z,
                 fltN.x, fltN.y, fltN.z,
                 fltNN.x, fltNN.y, fltNN.z );
+        }*/
+        {
+            std::ostringstream s;
+            s << "0_v nei verts: ";
+            for ( auto e : orgRing( refTopology, 0_v ) )
+            {
+                s << (int)refTopology.dest( e ) << ' ';
+            }
+            spdlog::info( "{}", s.str() );
+        }
+        {
+            std::ostringstream s;
+            s << "0_v nei faces: ";
+            for ( auto e : orgRing( refTopology, 0_v ) )
+            {
+                s << ( int )refTopology.left( e ) << ' ';
+            }
+            spdlog::info( "{}", s.str() );
         }
     }
     logXf( "ref_.xf", ref_.xf );

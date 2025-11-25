@@ -149,6 +149,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     MR_TIMER;
 
     VertColors colors;
+    FaceColors faceColors;
     VertUVCoords uvCoords;
     VertNormals normals;
     MeshTexture texture;
@@ -161,6 +162,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     {
         .edges = &edges,
         .colors = &colors,
+        .faceColors = &faceColors,
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &texture,
@@ -222,6 +224,8 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 
     const auto numVerts = mesh->points.size();
     const bool hasColors = colors.size() >= numVerts;
+    const auto numFaces = (int)mesh->topology.lastValidFace() + 1;
+    const bool hasFaceColors = faceColors.size() >= numFaces;
     const bool hasUV = uvCoords.size() >= numVerts;
     const bool hasTexture = !texture.pixels.empty();
 
@@ -229,10 +233,24 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     objectMesh->setName( utf8string( file.stem() ) );
     objectMesh->setMesh( std::make_shared<Mesh>( std::move( mesh.value() ) ) );
 
+    holesCount = int( objectMesh->numHoles() );
+    std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
+
     if ( hasColors )
         objectMesh->setVertsColorMap( std::move( colors ) );
+    else if ( !colors.empty() )
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
+
+    if ( hasFaceColors )
+        objectMesh->setFacesColorMap( std::move( faceColors ) );
+    else if ( !hasFaceColors )
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} triangles.\n", numFaces, numVerts );
+
     if ( hasUV )
         objectMesh->setUVCoords( std::move( uvCoords ) );
+    else if ( !uvCoords.empty() )
+        warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
+
     if ( hasTexture )
         objectMesh->setTextures( { std::move( texture ) } );
 
@@ -240,15 +258,10 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
     else if ( hasColors )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
+    else if ( hasFaceColors )
+        objectMesh->setColoringType( ColoringType::PrimitivesColorMap );
 
     objectMesh->setXf( xf );
-
-    holesCount = int( objectMesh->numHoles() );
-    std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
-        if ( !colors.empty() && !hasColors )
-        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
-        if ( !uvCoords.empty() && !hasUV )
-        warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
 
     return LoadedObject{ .obj = std::move( objectMesh ), .warnings = std::move( warnings ) };
 }

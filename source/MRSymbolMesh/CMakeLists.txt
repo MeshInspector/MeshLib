@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRSymbolMesh CXX)
 
 file(GLOB SOURCES "*.cpp")
@@ -27,7 +23,7 @@ ELSEIF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype
-    PkgConfig::jsoncpp
+    JsonCpp::JsonCpp
     fmt
     spdlog
     tbb
@@ -52,7 +48,6 @@ ELSE()
   )
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

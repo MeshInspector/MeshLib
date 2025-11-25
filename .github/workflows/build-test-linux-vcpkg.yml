@@ -72,8 +72,6 @@ jobs:
             os: ubuntu-latest
           - arch: arm64
             os: ubuntu-24.04-arm
-          - arch: arm64
-            compiler: GCC 11
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

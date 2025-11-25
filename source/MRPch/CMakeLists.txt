@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRPch CXX)
 
 option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
@@ -29,7 +25,7 @@ IF(MR_PCH)
       tbb
     )
   ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(Boost COMPONENTS REQUIRED)
+    find_package(Boost 1.73 CONFIG REQUIRED)
     find_package(Eigen3 REQUIRED)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
@@ -43,7 +39,7 @@ IF(MR_PCH)
       TBB::tbb
     )
   ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
+    find_package(Boost 1.73 CONFIG REQUIRED)
     include_directories(${jsoncpp_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})

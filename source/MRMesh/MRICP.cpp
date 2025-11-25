@@ -426,7 +426,12 @@ bool ICP::p2plIter_()
 
 inline float angleLog( const Vector3f& a, const Vector3f& b )
 {
-    auto x = cross( a, b ).length();
+    const auto c = cross( a, b );
+    spdlog::info( "a=({} {} {}), b=({} {} {}), c=({} {} {})",
+        a.x, a.y, a.z,
+        b.x, b.y, b.z,
+        c.x, c.y, c.z );
+    auto x = c.length();
     auto y = dot( a, b );
     auto r = std::atan2( x, y );
     spdlog::info( "std::atan2( {}, {} ) = {}", x, y, r );

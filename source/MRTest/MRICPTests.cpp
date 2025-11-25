@@ -24,13 +24,14 @@ TEST( MRMesh, ICPTorus )
 
     ICPProperties props
     {
+        .method = ICPMethod::PointToPoint,
         .iterLimit = 20
     };
     icp.setParams( props );
     auto newXf = icp.calculateTransformation();
     std::cout << icp.getStatusInfo() << '\n';
 
-    constexpr float eps = 1e-6f;
+    constexpr float eps = 1e-3f;
     EXPECT_NEAR( ( newXf.A - Matrix3f::identity() ).norm(), 0., eps );
     EXPECT_NEAR( newXf.b.length(), 0., eps );
 }

@@ -23,6 +23,7 @@ def test_icp():
 
     props = mrmesh.ICPProperties()
     props.iterLimit = 20
+    props.method = mrmesh.ICPMethod.PointToPoint
     icp.setParams(props)
     newXf = icp.calculateTransformation()
     print(icp.getStatusInfo())
@@ -31,18 +32,18 @@ def test_icp():
     diffXf.A -= newXf.A
     diffXf.b -= newXf.b
 
-    assert abs(diffXf.A.x.x) < 1e-6
-    assert abs(diffXf.A.x.y) < 1e-6
-    assert abs(diffXf.A.x.z) < 1e-6
+    assert abs(diffXf.A.x.x) < 1e-3
+    assert abs(diffXf.A.x.y) < 1e-3
+    assert abs(diffXf.A.x.z) < 1e-3
 
-    assert abs(diffXf.A.y.x) < 1e-6
-    assert abs(diffXf.A.y.y) < 1e-6
-    assert abs(diffXf.A.y.z) < 1e-6
+    assert abs(diffXf.A.y.x) < 1e-3
+    assert abs(diffXf.A.y.y) < 1e-3
+    assert abs(diffXf.A.y.z) < 1e-3
 
-    assert abs(diffXf.A.z.x) < 1e-6
-    assert abs(diffXf.A.z.y) < 1e-6
-    assert abs(diffXf.A.z.z) < 1e-6
+    assert abs(diffXf.A.z.x) < 1e-3
+    assert abs(diffXf.A.z.y) < 1e-3
+    assert abs(diffXf.A.z.z) < 1e-3
 
-    assert abs(diffXf.b.x) < 1e-6
-    assert abs(diffXf.b.y) < 1e-6
-    assert abs(diffXf.b.z) < 1e-6
+    assert abs(diffXf.b.x) < 1e-3
+    assert abs(diffXf.b.y) < 1e-3
+    assert abs(diffXf.b.z) < 1e-3

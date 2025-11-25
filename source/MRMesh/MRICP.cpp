@@ -405,6 +405,8 @@ AffineXf3f ICP::calculateTransformation()
     {
         spdlog::info( "ref region = {}, flt region = {}", (void*)refMeshPart->region, (void*)fltMeshPart->region );
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
+        const_cast<Mesh&>(refMeshPart->mesh).invalidateCaches();
+        const_cast<Mesh&>(fltMeshPart->mesh).invalidateCaches();
     }
 
     spdlog::info( "method = {}", ( int )prop_.method );
@@ -422,6 +424,8 @@ AffineXf3f ICP::calculateTransformation()
 
     bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
     updatePointPairs();
+    spdlog::info( "getMeanSqDistToPoint = {}", getMeanSqDistToPoint() );
+    spdlog::info( "getMeanSqDistToPlane = {}", getMeanSqDistToPlane() );
     float minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
     spdlog::info( "minDist0 = {}", minDist );
 

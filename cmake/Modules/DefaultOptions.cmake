@@ -21,4 +21,5 @@ add_compile_definitions(MR_USE_CMAKE_CONFIGURE_FILE)
 # MSVC debug information format
 IF(MSVC AND POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
+  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
 ENDIF()

@@ -424,6 +424,34 @@ bool ICP::p2plIter_()
     return true;
 }
 
+inline float angleLog( const Vector3f& a, const Vector3f& b )
+{
+    auto x = cross( a, b ).length();
+    auto y = dot( a, b );
+    auto r = std::atan2( x, y );
+    spdlog::info( "std::atan2( {}, {} ) = {}", x, y, r );
+    return r;
+}
+
+static Vector3f pseudonormalLog( const MeshTopology& topology, const VertCoords& points, VertId v, const FaceBitSet* region = nullptr )
+{
+    Vector3f sum;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        const auto l = topology.left( e );
+        if ( l && ( !region || region->test( l ) ) )
+        {
+            auto d0 = edgeVector( topology, points, e );
+            auto d1 = edgeVector( topology, points, topology.next( e ) );
+            auto angle = MR::angleLog( d0, d1 );
+            auto n = cross( d0, d1 );
+            sum += angle * n.normalized();
+        }
+    }
+
+    return sum.normalized();
+}
+
 AffineXf3f ICP::calculateTransformation()
 {
     MR::setupLoggerByDefault();
@@ -451,7 +479,7 @@ AffineXf3f ICP::calculateTransformation()
                 fltN.x, fltN.y, fltN.z,
                 fltNN.x, fltNN.y, fltNN.z );
         }*/
-        auto n0 = refMeshPart->mesh.pseudonormal( 0_v );
+        auto n0 = pseudonormalLog( refTopology, refPoints, 0_v );
         spdlog::info( "pseudonormal 0: {} {} {}", n0.x, n0.y, n0.z );
         spdlog::info( "point 0: {} {} {}", refPoints[0_v].x, refPoints[0_v].y, refPoints[0_v].z );
         {

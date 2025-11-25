@@ -172,7 +172,8 @@ void updatePointPairs( PointPairs & pairs,
     pairs.active.resize( pairs.vec.size(), true );
 
     // calculate pairs
-    BitSetParallelForAll( pairs.active, [&] ( size_t idx )
+    //BitSetParallelForAll( pairs.active, [&] ( size_t idx )
+    for( size_t idx : pairs.active )
     {
         auto & res = pairs.vec[idx];
         const auto p0 = srcPoints[res.srcVertId];
@@ -226,7 +227,7 @@ void updatePointPairs( PointPairs & pairs,
             if ( prj.closestVert != res.srcVertId )
                 pairs.active.reset( idx );
         }
-    } );
+    }// );
 }
 
 void ICP::deactivatefarDistPairs_()
@@ -237,6 +238,7 @@ void ICP::deactivatefarDistPairs_()
     {
         const auto avgDist = getMeanSqDistToPoint();
         const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
+        spdlog::info( "avgDist = {}, maxDistSq = {}", avgDist, maxDistSq );
         if ( maxDistSq >= prop_.distThresholdSq )
             break;
 
@@ -396,6 +398,14 @@ AffineXf3f ICP::calculateTransformation()
 #ifndef __EMSCRIPTEN__
     spdlog::info( "stacktrace:\n{}", getCurrentStacktrace() );
 #endif
+    auto* refMeshPart = ref_.obj.asMeshPart();
+    auto* fltMeshPart = flt_.obj.asMeshPart();
+    spdlog::info( "ref mesh = {}, flt mesh = {}", refMeshPart != nullptr, fltMeshPart != nullptr );
+    if ( refMeshPart && fltMeshPart )
+    {
+        spdlog::info( "ref region = {}, flt region = {}", (void*)refMeshPart->region, (void*)fltMeshPart->region );
+        spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
+    }
 
     spdlog::info( "method = {}", ( int )prop_.method );
     spdlog::info( "p2plAngleLimit = {}", prop_.p2plAngleLimit );

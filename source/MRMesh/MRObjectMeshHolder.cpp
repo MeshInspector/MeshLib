@@ -463,44 +463,47 @@ void ObjectMeshHolder::copyColors( const ObjectMeshHolder& src, const VertMap& t
     setColoringType( src.getColoringType() );
 
     const auto& srcColorMap = src.getVertsColorMap();
-    if ( srcColorMap.empty() )
-        return;
-
-    VertColors colorMap;
-    colorMap.resizeNoInit( thisToSrc.size() );
-    ParallelFor( colorMap, [&] ( VertId id )
+    if ( !srcColorMap.empty() )
     {
-        auto curId = thisToSrc[id];
-        if( curId.valid() )
-            colorMap[id] = srcColorMap[curId];
-    } );
-    setVertsColorMap( std::move( colorMap ) );
+        VertColors colorMap;
+        colorMap.resizeNoInit( thisToSrc.size() );
+        ParallelFor( colorMap, [&] ( VertId id )
+        {
+            auto curId = thisToSrc[id];
+            if( curId.valid() )
+                colorMap[id] = srcColorMap[curId];
+        } );
+        setVertsColorMap( std::move( colorMap ) );
+    }
 
-    if ( !data_.faceColors.empty() && data_.mesh )
+    const auto& srcFaceColorMap = src.getFacesColorMap();
+    if ( !srcFaceColorMap.empty() && data_.mesh )
     {
-        const auto& validFace = data_.mesh->topology.getValidFaces();
+        const auto& validFaces = data_.mesh->topology.getValidFaces();
         FaceColors faceColors;
-        faceColors.resizeNoInit( validFace.size() );
+        faceColors.resizeNoInit( validFaces.size() );
 
-        Color color = data_.faceColors[thisToSrcFaces[validFace.backId()]];
-        bool differentColor = false;
+        std::optional<Color> commonColor;
+        bool differentColors = false;
 
-        for ( const auto& faceId : validFace )
+        for ( const auto& faceId : validFaces )
         {
             if ( !thisToSrcFaces[faceId].valid() )
                 continue;
 
-            auto& newColor = data_.faceColors[thisToSrcFaces[faceId]];
+            auto& newColor = srcFaceColorMap[thisToSrcFaces[faceId]];
             faceColors[faceId] = newColor;
-            if ( color != newColor )
-                differentColor = true;
+            if ( !commonColor )
+                commonColor = newColor;
+            else if ( *commonColor != newColor )
+                differentColors = true;
         }
 
-        if ( differentColor )
+        if ( differentColors )
             setFacesColorMap( std::move( faceColors ) );
-        else if ( src.getColoringType() == ColoringType::FacesColorMap )
+        else if ( commonColor && src.getColoringType() == ColoringType::FacesColorMap )
         {
-            setFrontColor( color, true );
+            setFrontColor( *commonColor, true );
             setColoringType( ColoringType::SolidColor );
         }
     }

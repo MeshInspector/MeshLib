@@ -198,7 +198,7 @@ void updatePointPairs( PointPairs & pairs,
         {
             // no target point found within distance threshold
             pairs.active.reset( idx );
-            return;
+            continue;
         }
         const auto p1 = prj.point;
 
@@ -217,7 +217,7 @@ void updatePointPairs( PointPairs & pairs,
         if ( prj.isBd || vp.normalsAngleCos < cosThreshold || vp.distSq > distThresholdSq )
         {
             pairs.active.reset( idx );
-            return;
+            continue;
         }
         if ( mutualClosest )
         {

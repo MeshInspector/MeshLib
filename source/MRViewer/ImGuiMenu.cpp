@@ -2959,10 +2959,9 @@ void ImGuiMenu::UiRenderManagerImpl::preRenderViewport( ViewportId viewport )
 {
     const auto& v = getViewerInstance().viewport( viewport );
     auto rect = v.getViewportRect();
-    const ImVec2 shift = ImGuiMV::GetMainViewportShift();
 
-    ImVec2 cornerA = ImVec2( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y ) + shift;
-    ImVec2 cornerB = ImVec2( rect.max.x, ImGui::GetIO().DisplaySize.y - rect.min.y ) + shift;
+    ImVec2 cornerA = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y ) );
+    ImVec2 cornerB = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( rect.max.x, ImGui::GetIO().DisplaySize.y - rect.min.y ) );
 
     ImGui::GetBackgroundDrawList()->PushClipRect( cornerA, cornerB );
     ImGui::GetForegroundDrawList()->PushClipRect( cornerA, cornerB );

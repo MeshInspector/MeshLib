@@ -508,8 +508,7 @@ void SurfaceManipulationWidget::postDraw_()
 
     auto drawList = ImGui::GetBackgroundDrawList();
     const auto& mousePos = Vector2f( getViewerInstance().mouseController().getMousePos() );
-    const ImVec2 shift = ImGuiMV::GetMainViewportShift();
-    drawList->AddCircleFilled( ImVec2( mousePos.x, mousePos.y ) + shift, 10.f, Color::gray().getUInt32() );
+    drawList->AddCircleFilled( ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( mousePos.x, mousePos.y ) ), 10.f, Color::gray().getUInt32() );
 }
 
 void SurfaceManipulationWidget::appendMeshChangeHistory_( std::shared_ptr<Mesh> newMesh, const FaceBitSet& )

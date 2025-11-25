@@ -146,8 +146,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
         if ( depthOutput )
             *depthOutput = result.z;
 
-        const ImVec2 shiftMV = ImGuiMV::GetMainViewportShift();
-        return ImVec2( result.x, result.y ) + viewportCornerA + shiftMV;
+        return ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( result.x, result.y ) + viewportCornerA );
     };
 
     Vector3f fixedWorldPoint = worldPoint;

@@ -5,7 +5,7 @@
 #include "MRMesh/MRMeshFwd.h"
 
 // namespace for easy access to functions related to ImGui MultiViewport
-namespace ImGuiMV
+namespace MR::ImGuiMV
 {
 
 // attaches the next window to the viewport of the main window and sets the position relative to it
@@ -18,5 +18,8 @@ MRVIEWER_API ImVec2 GetLocalMousePos();
 MRVIEWER_API ImVec2 GetMainViewportShift();
 
 // convert points from screen space to window space
-MRVIEWER_API MR::Contour2f Screen2WindowPoints( const MR::Contour2f& points );
+MRVIEWER_API ImVec2 Screen2WindowSpaceImVec2( const ImVec2& point );
+MRVIEWER_API Contour2f Screen2WindowSpaceContour2f( const Contour2f& points );
+// convert points from window space to screen space
+MRVIEWER_API ImVec2 Window2ScreenSpaceImVec2( const ImVec2& point );
 }

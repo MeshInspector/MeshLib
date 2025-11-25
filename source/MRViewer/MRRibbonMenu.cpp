@@ -2339,9 +2339,8 @@ void RibbonMenu::beginTopPanel_()
     else
     {
         colorBg.a = 228;
-        const ImVec2 shift = ImGuiMV::GetMainViewportShift();
-        ImGui::GetBackgroundDrawList()->AddRectFilled( ImVec2( 0.0f, 0.0f ) + shift,
-            ImVec2( sceneSize_.x, currentTopPanelHeight_ * UI::scale() ) + shift,
+        ImGui::GetBackgroundDrawList()->AddRectFilled( ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( 0.0f, 0.0f ) ),
+            ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( sceneSize_.x, currentTopPanelHeight_ * UI::scale() ) ),
             ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ).getUInt32() );
     }
     ImGui::PushStyleColor( ImGuiCol_WindowBg, colorBg.getUInt32() );

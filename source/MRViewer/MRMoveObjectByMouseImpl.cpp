@@ -58,13 +58,14 @@ void MoveObjectByMouseImpl::onDrawDialog() const
 
             const auto& vp = getViewerInstance().viewport( vpId );
             auto screenPos = getViewerInstance().viewportToScreen( vp.projectToViewportSpace( centerPoint ), vpId );
+            const ImVec2 screenPosImGui = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( screenPos.x, screenPos.y ) );
 
             auto drawList = ImGui::GetBackgroundDrawList();
             const ImVec2 shift = ImGuiMV::GetMainViewportShift();
-            drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ) + shift, UI::scale() * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
+            drawList->AddCircleFilled( screenPosImGui, UI::scale() * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
             if ( deadZonePixelRadius_ * 0.5f > 4.0f )
             {
-                drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ) + shift, UI::scale() * 4.0f, Color::red().getUInt32() );
+                drawList->AddCircleFilled( screenPosImGui, UI::scale() * 4.0f, Color::red().getUInt32() );
             }
         }
     }
@@ -382,12 +383,11 @@ void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoi
     Viewer& viewer = getViewerInstance();
     Viewport& viewport = viewer.viewport();
     visualizeVectors_.clear();
-    const auto shift = ImGuiMV::GetMainViewportShift();
     for ( const auto& p : worldPoints )
     {
         const Vector3f screenPoint = viewer.viewportToScreen(
             viewport.projectToViewportSpace( p ), viewport.id );
-        visualizeVectors_.push_back( ImVec2( screenPoint.x, screenPoint.y ) + shift );
+        visualizeVectors_.push_back( ImGuiMV::Window2ScreenSpaceImVec2( ImVec2(  screenPoint.x, screenPoint.y ) ) );
     }
 }
 

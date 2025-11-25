@@ -391,6 +391,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     bool saveTexture = settings.texture && !settings.texture->pixels.empty();
     bool saveUV = settings.uvMap && !settings.uvMap->empty();
     bool saveColors = settings.colors && !settings.colors->empty();
+    bool saveFaceColors = settings.primitiveColors && !settings.primitiveColors->empty();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n";
     if ( saveUV && saveTexture )
@@ -403,7 +404,10 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
 
     const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
-    out <<  "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\nend_header\n";
+    out << "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\n";
+    if ( saveFaceColors )
+        out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
+    out << "end_header\n";
 
     static_assert( sizeof( UVCoord ) == 8, "wrong size of UVCoord" );
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
@@ -465,6 +469,12 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
         else
             continue;
         out.write( (const char *)&tri, sizeof( PlyTriangle ) );
+        if ( saveFaceColors )
+        {
+            const auto c = getAt( *settings.primitiveColors, f );
+            PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
+            out.write( ( const char* )&pc, 3 );
+        }
         ++savedFaces;
         if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )
             return unexpectedOperationCanceled();

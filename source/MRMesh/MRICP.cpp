@@ -150,6 +150,21 @@ std::string getICPStatusInfo( int iterations, ICPExitType exitType )
     return result;
 }
 
+void logPointPairs( const PointPairs& pairs )
+{
+    for ( int i = 0; i < pairs.vec.size(); ++i )
+    {
+        const auto& pair = pairs.vec[i];
+        spdlog::info( "#{}: active={}, srcVertId={}, tgtCloseVert={}, srcPoint=({} {} {}), srcNorm=({} {} {}), tgtPoint=({} {} {}), tgtNorm=({} {} {}), distSq={}, weight={}, normalsAngleCos={}, tgtOnBd={}",
+            i, pairs.active.test( i ), (int)pair.srcVertId, (int)pair.tgtCloseVert,
+            pair.srcPoint.x, pair.srcPoint.y, pair.srcPoint.z,
+            pair.srcNorm.x, pair.srcNorm.y, pair.srcNorm.z,
+            pair.tgtPoint.x, pair.tgtPoint.y, pair.tgtPoint.z,
+            pair.tgtNorm.x, pair.tgtNorm.y, pair.tgtNorm.z,
+            pair.distSq, pair.weight, pair.normalsAngleCos, pair.tgtOnBd );
+    }
+}
+
 void updatePointPairs( PointPairs & pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosThreshold, float distThresholdSq, bool mutualClosest )
@@ -437,6 +452,11 @@ AffineXf3f ICP::calculateTransformation()
 
     bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
     updatePointPairs();
+    spdlog::info( "flt2refPairs" );
+    logPointPairs( flt2refPairs_ );
+    spdlog::info( "ref2fltPairs" );
+    logPointPairs( ref2fltPairs_ );
+
     spdlog::info( "getMeanSqDistToPoint = {}", getMeanSqDistToPoint() );
     spdlog::info( "getMeanSqDistToPlane = {}", getMeanSqDistToPlane() );
     float minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();

@@ -11,6 +11,7 @@
 #include "MRPch/MRSpdlog.h"
 #include <numeric>
 #include "MRSystem.h"
+#include <fenv.h>
 
 namespace MR
 {
@@ -391,6 +392,10 @@ static void logXf( const char* var, const AffineXf3f& xf )
 AffineXf3f ICP::calculateTransformation()
 {
     MR::setupLoggerByDefault();
+    spdlog::info( "fegetround() = {}", fegetround() );
+#ifndef __EMSCRIPTEN__
+    spdlog::info( "stacktrace:\n{}", getCurrentStacktrace() );
+#endif
 
     spdlog::info( "method = {}", ( int )prop_.method );
     spdlog::info( "p2plAngleLimit = {}", prop_.p2plAngleLimit );

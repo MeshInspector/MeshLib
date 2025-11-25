@@ -61,7 +61,6 @@ void MoveObjectByMouseImpl::onDrawDialog() const
             const ImVec2 screenPosImGui = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( screenPos.x, screenPos.y ) );
 
             auto drawList = ImGui::GetBackgroundDrawList();
-            const ImVec2 shift = ImGuiMV::GetMainViewportShift();
             drawList->AddCircleFilled( screenPosImGui, UI::scale() * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
             if ( deadZonePixelRadius_ * 0.5f > 4.0f )
             {

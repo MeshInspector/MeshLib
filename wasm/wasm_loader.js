@@ -16,6 +16,9 @@ var statusElement = document.getElementById("status")
     , Module = {
         preRun: [],
         postRun: [],
+        locateFile: function (path, prefix) {
+            return prefix + path + window.location.search;
+        },
         print: function () {
             var e = document.getElementById("output");
             return e && (e.value = ""),
@@ -48,12 +51,12 @@ var statusElement = document.getElementById("status")
                     t ? (e = t[1],
                         setWasmLoadProgress(100 * parseInt(t[2]) / parseInt(t[4])),
                         spinnerElement.hidden = !1) : (
-                            e || (spinnerElement.style.display = "none",
-                                statusElement.style.display = "none",
-                                logoElement.style.display = "none",
-                                clearWasmLoadProgress(),
-                                postWasmLoad()
-                            )),
+                        e || (spinnerElement.style.display = "none",
+                            statusElement.style.display = "none",
+                            logoElement.style.display = "none",
+                            clearWasmLoadProgress(),
+                            postWasmLoad()
+                        )),
                     statusElement.innerHTML = e)
             }
         },

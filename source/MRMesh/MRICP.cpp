@@ -118,7 +118,9 @@ void ICP::sampleRefPoints( float samplingVoxelSize )
 void ICP::updatePointPairs()
 {
     MR_TIMER;
+    spdlog::info( "updatePointPairs flt->ref" );
     MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    spdlog::info( "updatePointPairs ref->flt" );
     MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
     spdlog::info( "flt2refPairs_.active = {}", MR::getNumActivePairs( flt2refPairs_ ) );
@@ -165,6 +167,24 @@ void logPointPairs( const PointPairs& pairs )
     }
 }
 
+static void logXf( const char* var, const AffineXf3f& xf )
+{
+    spdlog::info( "{} x: {} {} {} {}", var, xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x );
+    spdlog::info( "{} y: {} {} {} {}", var, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y );
+    spdlog::info( "{} z: {} {} {} {}", var, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z );
+}
+
+static void logXfHex( const char* var, const AffineXf3f& xf )
+{
+    auto d = [] ( float f )
+    {
+        return std::bit_cast< std::uint32_t >( f );
+    };
+    spdlog::info( "{} x: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.x.x ), d( xf.A.x.y ), d( xf.A.x.z ), d( xf.b.x ) );
+    spdlog::info( "{} y: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.y.x ), d( xf.A.y.y ), d( xf.A.y.z ), d( xf.b.y ) );
+    spdlog::info( "{} z: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.z.x ), d( xf.A.z.y ), d( xf.A.z.z ), d( xf.b.z ) );
+}
+
 void updatePointPairs( PointPairs & pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosThreshold, float distThresholdSq, bool mutualClosest )
@@ -172,6 +192,10 @@ void updatePointPairs( PointPairs & pairs,
     MR_TIMER;
     const auto src2tgtXf = tgt.xf.inverse() * src.xf;
     const auto tgt2srcXf = src.xf.inverse() * tgt.xf;
+    logXf( "src2tgtXf", src2tgtXf );
+    logXfHex( "src2tgtXf", src2tgtXf );
+    logXf( "tgt2srcXf", tgt2srcXf );
+    logXfHex( "tgt2srcXf", tgt2srcXf );
 
     const VertCoords& srcPoints = src.obj.points();
     const VertCoords& tgtPoints = tgt.obj.points();
@@ -399,24 +423,6 @@ bool ICP::p2plIter_()
     return true;
 }
 
-static void logXf( const char* var, const AffineXf3f& xf )
-{
-    spdlog::info( "{} x: {} {} {} {}", var, xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x );
-    spdlog::info( "{} y: {} {} {} {}", var, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y );
-    spdlog::info( "{} z: {} {} {} {}", var, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z );
-}
-
-static void logXfHex( const char* var, const AffineXf3f& xf )
-{
-    auto d = [] ( float f )
-    {
-        return std::bit_cast<std::uint32_t>( f );
-    };
-    spdlog::info( "{} x: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.x.x ), d( xf.A.x.y ), d( xf.A.x.z ), d( xf.b.x ) );
-    spdlog::info( "{} y: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.y.x ), d( xf.A.y.y ), d( xf.A.y.z ), d( xf.b.y ) );
-    spdlog::info( "{} z: {:08x} {:08x} {:08x} {:08x}", var, d( xf.A.z.x ), d( xf.A.z.y ), d( xf.A.z.z ), d( xf.b.z ) );
-}
-
 AffineXf3f ICP::calculateTransformation()
 {
     MR::setupLoggerByDefault();
@@ -434,6 +440,8 @@ AffineXf3f ICP::calculateTransformation()
         const_cast<Mesh&>(refMeshPart->mesh).invalidateCaches();
         const_cast<Mesh&>(fltMeshPart->mesh).invalidateCaches();
     }
+    logXf( "ref_.xf", ref_.xf );
+    logXfHex( "ref_.xf", ref_.xf );
     logXf( "flt_.xf", flt_.xf );
     logXfHex( "flt_.xf", flt_.xf );
 
@@ -452,10 +460,10 @@ AffineXf3f ICP::calculateTransformation()
 
     bool pt2pt = prop_.method == ICPMethod::Combined || prop_.method == ICPMethod::PointToPoint;
     updatePointPairs();
-    spdlog::info( "flt2refPairs" );
-    logPointPairs( flt2refPairs_ );
-    spdlog::info( "ref2fltPairs" );
-    logPointPairs( ref2fltPairs_ );
+    //spdlog::info( "flt2refPairs" );
+    //logPointPairs( flt2refPairs_ );
+    //spdlog::info( "ref2fltPairs" );
+    //logPointPairs( ref2fltPairs_ );
 
     spdlog::info( "getMeanSqDistToPoint = {}", getMeanSqDistToPoint() );
     spdlog::info( "getMeanSqDistToPlane = {}", getMeanSqDistToPlane() );

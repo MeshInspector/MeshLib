@@ -2,19 +2,21 @@ project(MeshViewer CXX)
 
 add_executable(${PROJECT_NAME} WIN32 MRViewerApp.cpp)
 
-IF(EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    -Wl,--whole-archive
-    MRViewer
-    MRCommonPlugins
-    -Wl,--no-whole-archive
+IF(NOT EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      MRMesh
+      MRViewer
   )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRViewer
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      -Wl,--whole-archive
+      MRMesh
+      MRIOExtras
+      MRViewer
+      MRCommonPlugins
+      -Wl,--no-whole-archive
   )
 ENDIF()
 

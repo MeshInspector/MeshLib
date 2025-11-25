@@ -4,28 +4,27 @@ file(GLOB SOURCES "*.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-IF(EMSCRIPTEN)
-  set(CMAKE_EXECUTABLE_SUFFIX ".html")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
-  set(EM_WHOLE_ARCHIVE "-Wl,--whole-archive")
-  set(EM_NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
-ENDIF()
-
 find_package(GTest REQUIRED)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  MRIOExtras
-  ${EM_WHOLE_ARCHIVE}
-  MRViewer
-  ${EM_NO_WHOLE_ARCHIVE}
-  GTest::gtest
-  ${CMAKE_DL_LIBS}
-)
-
 IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      MRViewer
+      cpr::cpr
+      GTest::gtest
+      ${CMAKE_DL_LIBS}
+  )
+ELSE()
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      -Wl,--whole-archive
+      MRViewer
+      -Wl,--no-whole-archive
+      GTest::gtest
+      ${CMAKE_DL_LIBS}
+  )
 ENDIF()
 
 add_test(

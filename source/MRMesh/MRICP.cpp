@@ -13,6 +13,8 @@
 #include "MRSystem.h"
 #include <fenv.h>
 #include "MRRingIterator.h"
+#include <bit>
+#include <dlfcn.h>
 
 namespace MR
 {
@@ -476,6 +478,14 @@ AffineXf3f ICP::calculateTransformation()
     {
         spdlog::info( "ref region = {}, flt region = {}", (void*)refMeshPart->region, (void*)fltMeshPart->region );
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
+
+        using A = std::array<void*,2>;
+        void* symbol = std::bit_cast<A>(&Vector3f::lengthSq)[0];
+        Dl_info info;
+        if ( !dladdr( symbol, &info ) )
+            spdlog::error( "Failed to get library path" );
+        else
+            spdlog::info( "Vector3f::lengthSq: fname={}, sname={}", info.dli_fname, info.dli_sname );
 
         Vector3f c( -0.02146666f, 0.0014069901f, 0.0014069926f );
         spdlog::info( "({} {} {}).lengthSq() = {}, length = {}", c.x, c.y, c.z, c.lengthSq(), c.length() );

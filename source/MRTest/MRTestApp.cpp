@@ -35,8 +35,11 @@ TEST(MRMesh, QuadraticForm)
 
 } //namespace MR
 
+inline void foo() {}
+
 int main( int argc, char** argv )
 {
+    foo();
     //! If `flag` exists in `argv`, returns true and removes it from there.
     [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {

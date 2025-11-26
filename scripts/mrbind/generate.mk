@@ -601,7 +601,7 @@ ifeq ($(TARGET),python)
 # Linux or MacOS.
 ifneq ($(IS_LINUX)$(IS_MACOS),)
 
-COMPILER += -fvisibility=hidden
+COMPILER += -fvisibility=hidden -fvisibility-inlines-hidden
 COMPILER_FLAGS += -fPIC
 
 # Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).

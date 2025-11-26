@@ -478,7 +478,7 @@ AffineXf3f ICP::calculateTransformation()
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
 
         Vector3f c( -0.02146666f, 0.0014069901f, 0.0014069926f );
-        spdlog::info( "({} {} {}).length() = {}", c.x, c.y, c.z, c.length() );
+        spdlog::info( "({} {} {}).lengthSq() = {}, length = {}", c.x, c.y, c.z, c.lengthSq(), c.length() );
 
         const auto& refPoints = refMeshPart->mesh.points;
         const auto& refTopology = refMeshPart->mesh.topology;

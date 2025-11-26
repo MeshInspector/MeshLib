@@ -424,6 +424,11 @@ bool ICP::p2plIter_()
     return true;
 }
 
+inline float myLength( const Vector3f& a )
+{
+    return std::sqrt( a.x * a.x + a.y * a.y + a.z * a.z );
+}
+
 inline float angleLog( const Vector3f& a, const Vector3f& b )
 {
     const auto c = cross( a, b );
@@ -431,7 +436,7 @@ inline float angleLog( const Vector3f& a, const Vector3f& b )
         a.x, a.y, a.z,
         b.x, b.y, b.z,
         c.x, c.y, c.z );
-    auto x = c.length();
+    auto x = myLength( c );
     auto y = dot( a, b );
     auto r = std::atan2( x, y );
     spdlog::info( "std::atan2( {}, {} ) = {}", x, y, r );
@@ -471,6 +476,10 @@ AffineXf3f ICP::calculateTransformation()
     {
         spdlog::info( "ref region = {}, flt region = {}", (void*)refMeshPart->region, (void*)fltMeshPart->region );
         spdlog::info( "same meshes = {}", refMeshPart->mesh == fltMeshPart->mesh );
+
+        Vector3f c( -0.02146666f, 0.0014069901f, 0.0014069926f );
+        spdlog::info( "({} {} {}).length() = {}", c.x, c.y, c.z, c.length() );
+
         const auto& refPoints = refMeshPart->mesh.points;
         const auto& refTopology = refMeshPart->mesh.topology;
         //const auto& fltTopology = fltMeshPart->mesh.topology;

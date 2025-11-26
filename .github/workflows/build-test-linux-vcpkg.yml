@@ -175,7 +175,9 @@ jobs:
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: |
+          objdump -T ./build/${{ matrix.config }}/bin/MRTest
+          ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC

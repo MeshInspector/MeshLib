@@ -3,167 +3,138 @@ project(MRViewer CXX)
 option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux)" OFF)
 option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
 option(MRVIEWER_NO_XDG_DESKTOP_PORTAL "Disable XDG Desktop Portal support (affects file dialog support on Linux)" OFF)
+option(MRVIEWER_WITH_BUNDLED_CURL "Link with cURL for extra functions required for portable Linux builds" OFF)
 
 IF(NOT MESHLIB_BUILD_VOXELS)
   set(MRVIEWER_NO_VOXELS ON)
 ENDIF()
 
-IF(WIN32 OR APPLE OR MR_EMSCRIPTEN)
+IF(WIN32 OR APPLE OR EMSCRIPTEN)
   set(MRVIEWER_NO_GTK ON)
   set(MRVIEWER_NO_XDG_DESKTOP_PORTAL ON)
 ENDIF()
 
-file(GLOB HEADERS "*.h")
+file(GLOB HEADERS "*.h" "*.ipp")
 file(GLOB SOURCES "*.cpp")
 set(OBJCPP_SOURCES "")
 IF(APPLE)
   file(GLOB OBJCPP_SOURCES "*.mm")
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF() # MR_EMSCRIPTEN
-
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRVIEWER_OPTIONAL_DEPENDENCIES "")
-
-IF(NOT MRVIEWER_NO_VOXELS)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
-  IF(APPLE)
-    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(OpenVDB REQUIRED)
-    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB::openvdb)
-  ELSE()
-    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES openvdb)
-  ENDIF()
+IF(APPLE)
+  list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
 ENDIF()
 
-IF(NOT MRVIEWER_NO_GTK)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtk)
+find_package(glad REQUIRED)
+IF(NOT EMSCRIPTEN)
+  find_package(glfw3 CONFIG REQUIRED)
 ENDIF()
 
-IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::dbus)
-ENDIF()
-
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
     MRMesh
+    glfw
+    imgui
+  PRIVATE
     MRIOExtras
     MRSymbolMesh
-    tbb
-    jsoncpp
-    imgui
-    glfw
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+    glad::glad
+    ${CMAKE_DL_LIBS}
+)
+
+IF(NOT EMSCRIPTEN)
+  find_package(cpr REQUIRED)
+
+  # prefer config over module for vcpkg compatibility
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV ${CMAKE_FIND_PACKAGE_PREFER_CONFIG})
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+  find_package(hidapi REQUIRED)
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ${CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV})
+
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      cpr::cpr
+      hidapi::hidapi
   )
-ELSEIF(APPLE)
+ENDIF()
+
+IF(NOT WIN32 AND NOT EMSCRIPTEN)
+  find_package(clip CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
+ENDIF()
+
+IF(APPLE)
   set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
     COMPILE_FLAGS "-x objective-c++"
     SKIP_PRECOMPILE_HEADERS ON
   )
+
   find_library(APPKIT_LIBRARY AppKit REQUIRED)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE
-    _GNU_SOURCE
-  )
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRSymbolMesh
-    fmt
-    tbb
-    spdlog
-    jsoncpp
-    cpr
-    imgui
-    glad
-    glfw
-    hidapi
-    clip
-    ${APPKIT_LIBRARY}
-    ${CMAKE_DL_LIBS}
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(GDCM CONFIG REQUIRED)
-  find_package(cpr REQUIRED)
-  find_package(glad REQUIRED)
-  find_package(hidapi REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY})
+ENDIF()
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRSymbolMesh
-    cpr::cpr
-    imgui
-    glad::glad
-    glfw
-    hidapi::hidapi
-    JsonCpp::JsonCpp
-    spdlog::spdlog
-    fmt::fmt
-    TBB::tbb
-    ${CMAKE_DL_LIBS}
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-  )
-  IF(NOT WIN32)
-    find_package(clip CONFIG REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
+IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(PkgConfig REQUIRED)
 
-    find_package(PkgConfig REQUIRED)
+  IF(NOT MRVIEWER_NO_GTK)
+    pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::gtk)
+  ENDIF()
+
+  IF(NOT MRVIEWER_NO_XDG_DESKTOP_PORTAL)
+    pkg_check_modules(dbus REQUIRED IMPORTED_TARGET dbus-1)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::dbus)
+  ENDIF()
+
+  IF(MRVIEWER_WITH_BUNDLED_CURL)
     pkg_check_modules(curl REQUIRED IMPORTED_TARGET libcurl)
     target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::curl)
     target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_WITH_BUNDLED_CURL)
   ENDIF()
-ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
-  find_package(GDCM CONFIG REQUIRED)
+ENDIF()
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRIOExtras
-    MRSymbolMesh
-    cpr
-    imgui
-    glad
-    glfw
-    hidapi-hidraw
-    JsonCpp::JsonCpp
-    spdlog
-    fmt
-    tbb
-    clip
-    ${CMAKE_DL_LIBS}
-    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-  )
-ENDIF() # APPLE
+IF(NOT MRVIEWER_NO_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
+ENDIF()
+
+IF(MR_PCH)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
   file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.ttf")
-  file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY ${MAIN_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY ${AWESOME_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY ${IMGUI_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY "resource" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-  file(COPY "wasm_async_func_list.txt" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-ELSE() # MR_EMSCRIPTEN
+  file(
+    COPY
+      ${JSONS}
+      ${MAIN_FONTS}
+      ${AWESOME_FONTS}
+      ${IMGUI_FONTS}
+      "resource"
+    DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
+  )
+  file(
+    COPY "wasm_async_func_list.txt"
+    DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+  )
+ELSE()
   file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
-  file(COPY ${JSONS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MAIN_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${AWESOME_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${IMGUI_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY "resource" DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ENDIF() # MR_EMSCRIPTEN
+  file(
+    COPY
+      ${JSONS}
+      ${MAIN_FONTS}
+      ${AWESOME_FONTS}
+      ${IMGUI_FONTS}
+      "resource"
+    DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  )
+ENDIF()
 
 install(
   TARGETS ${PROJECT_NAME}
@@ -183,14 +154,30 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-install(FILES ${HEADERS} DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
-install(FILES ${MAIN_FONTS} DESTINATION "${MR_FONTS_DIR}")
-install(FILES ${AWESOME_FONTS} DESTINATION "${MR_FONTS_DIR}")
-install(FILES ${IMGUI_FONTS} DESTINATION "${MR_FONTS_DIR}")
-install(FILES ${JSONS} DESTINATION "${MR_RESOURCES_DIR}")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource DESTINATION "${MR_RESOURCES_DIR}")
-IF(MR_EMSCRIPTEN)
-  install(FILES wasm_async_func_list.txt DESTINATION "${MR_RESOURCES_DIR}/wasm")
+install(
+  FILES ${HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+)
+install(
+  FILES
+    ${MAIN_FONTS}
+    ${AWESOME_FONTS}
+    ${IMGUI_FONTS}
+  DESTINATION ${MR_FONTS_DIR}
+)
+install(
+  FILES ${JSONS}
+  DESTINATION ${MR_RESOURCES_DIR}
+)
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
+  DESTINATION ${MR_RESOURCES_DIR}
+)
+IF(EMSCRIPTEN)
+  install(
+    FILES "wasm_async_func_list.txt"
+    DESTINATION "${MR_RESOURCES_DIR}/wasm"
+  )
 ENDIF()
 
 install(
@@ -199,7 +186,3 @@ install(
   NAMESPACE MeshLib::
   DESTINATION ${MR_CONFIG_DIR}
 )
-
-IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
-ENDIF()

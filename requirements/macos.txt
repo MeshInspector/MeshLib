@@ -1,6 +1,7 @@
 boost
 cmake
 cpr
+eigen
 fmt
 gdcm
 glfw
@@ -21,4 +22,5 @@ python@3.10
 spdlog
 tbb
 tinyxml2
+tl-expected
 zlib

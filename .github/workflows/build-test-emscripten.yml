@@ -79,8 +79,9 @@ jobs:
 
       - name: Install thirdparty libs
         run: |
-          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
       - name: Build
         env:

@@ -1,23 +1,24 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
+find_dependency(Boost 1.73)
+find_dependency(Eigen3)
+find_dependency(fmt 8)
+find_dependency(JsonCpp)
+find_dependency(spdlog 1.9)
+find_dependency(TBB 2020.1)
+find_dependency(tl-expected)
 
-if(@MESHLIB_USE_VCPKG@)
-  find_dependency(tl-expected CONFIG REQUIRED)
-  find_dependency(fmt CONFIG REQUIRED)
-  find_dependency(spdlog CONFIG REQUIRED)
-  find_dependency(libzip CONFIG REQUIRED)
-  find_dependency(Boost CONFIG REQUIRED)
-  find_dependency(jsoncpp CONFIG REQUIRED)
-  find_dependency(TBB CONFIG REQUIRED)
-  find_dependency(Eigen3 CONFIG REQUIRED)
+# static builds require to find private dependencies
+if(EMSCRIPTEN)
+  # libzip on Emscripten is unable to resolve its dependencies by itself
+  find_package(MbedTLS 1.0 REQUIRED)
+  find_package(ZLIB REQUIRED)
+  find_dependency(libzip)
 
-  if(NOT @MRMESH_NO_TIFF@)
-    find_dependency(TIFF REQUIRED)
-  endif()
-
-  if(NOT @MRMESH_NO_GTEST@)
-    find_dependency(GTest CONFIG REQUIRED)
+  set(MRMESH_NO_GTEST @MRMESH_NO_GTEST@)
+  if(NOT MRMESH_NO_GTEST)
+    find_dependency(GTest)
   endif()
 endif()
 

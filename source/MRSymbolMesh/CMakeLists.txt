@@ -5,48 +5,17 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
-ELSE()
-  find_package(Freetype REQUIRED)
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+find_package(Freetype REQUIRED)
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
     MRMesh
-    freetype
-    spdlog
-    jsoncpp
-    tbb
-  )
-ELSEIF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
+  PRIVATE
     Freetype::Freetype
-    JsonCpp::JsonCpp
-    fmt
-    spdlog
-    tbb
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    TBB::tbb
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    tbb
-  )
-ENDIF()
+)
 
 install(
   TARGETS ${PROJECT_NAME}
@@ -74,5 +43,5 @@ install(
 )
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

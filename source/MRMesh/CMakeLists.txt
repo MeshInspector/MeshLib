@@ -18,147 +18,86 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-set(MRMESH_OPTIONAL_DEPENDENCIES "")
-set(MRMESH_OPTIONAL_LIBRARY_DIRS "")
-set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
-
-IF(NOT MRMESH_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
-  ENDIF()
-ENDIF()
-
-IF(NOT MRMESH_NO_GTEST)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(GTest REQUIRED)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
-  ELSE()
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
-  ENDIF()
-ENDIF()
-
-# alternative Eigen include for external project
-find_package(Eigen3 NO_MODULE)
-IF(DEFINED EIGEN3_FOUND)
-  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
-ENDIF()
+# Emscripten's Boost package doesn't contain CMake config files
 IF(EMSCRIPTEN)
-  # FIXME: comment required
-  target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
+  IF(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+  ENDIF()
+  find_package(Boost 1.73 REQUIRED)
+ELSE()
+  find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
+ENDIF()
+find_package(Eigen3 REQUIRED)
+find_package(fmt 8 REQUIRED)
+find_package(JsonCpp REQUIRED)
+find_package(spdlog 1.9 REQUIRED)
+find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
+find_package(tl-expected REQUIRED)
+
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+    Boost::headers
+    Eigen3::Eigen
+    fmt::fmt
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    TBB::tbb
+    tl::expected
+  PRIVATE
+    ${CMAKE_DL_LIBS}
+)
+
+# libzip on Emscripten is unable to resolve its dependencies by itself
+IF(EMSCRIPTEN)
+  find_package(MbedTLS 1.0 REQUIRED)
+  find_package(ZLIB REQUIRED)
+ENDIF()
+# libzip prior to version 1.11.4 has incorrect CMake config that requires libzip tools to be installed
+IF(MESHLIB_USE_VCPKG OR APPLE OR EMSCRIPTEN)
+  # vcpkg, homebrew, and submodule versions are already updated
+  find_package(libzip REQUIRED)
+ELSE()
+  # on Ubuntu LTS (22.04, 24.04) we have to use pkg-config instead
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(libzip REQUIRED IMPORTED_TARGET libzip)
+  add_library(libzip::zip ALIAS PkgConfig::libzip)
+ENDIF()
+target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
+
+# TODO: CMake config
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+)
+
+IF(APPLE)
+  # for Boost.Stacktrace
+  target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
+
+  find_library(COCOA_LIBRARY Cocoa ONLY)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
 ENDIF()
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost 1.73 CONFIG REQUIRED)
-ELSE()
+IF(EMSCRIPTEN)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC
+    EIGEN_STACK_ALLOCATION_LIMIT=0
+  )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 ENDIF()
 
-IF(NOT EMSCRIPTEN)
-  # FIXME: the definition must be populated by spdlog
-  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-  ENDIF()
-ELSE()
-  target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
+IF(NOT MRMESH_NO_TIFF)
+  find_package(TIFF REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
 ENDIF()
 
-IF(APPLE OR MR_EMSCRIPTEN)
-  #jpeg-turbo is keg-only, which means it was not symlinked into /opt/homebrew,
-  #because libjpeg-turbo is not linked to prevent conflicts with the standard libjpeg.
-  #include_directories(/opt/homebrew/opt/jpeg-turbo/include)
-  #link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
-
-  IF(APPLE)
-    find_library(COCOA_LIBRARY Cocoa ONLY)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      zip
-      Boost::boost
-      jsoncpp
-      fmt
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-      ${COCOA_LIBRARY}
-      ${CMAKE_DL_LIBS}
-    )
-  ELSE()
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      fmt
-      blosc
-      mbedtls
-      mbedx509
-      mbedcrypto
-      zip
-      jsoncpp
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-    )
-  ENDIF()
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(tl-expected REQUIRED)
-  find_package(libzip REQUIRED)
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
-  target_link_libraries(${PROJECT_NAME} PUBLIC
-    tl::expected
-    fmt::fmt
-    spdlog::spdlog
-    libzip::zip
-    Boost::boost
-    JsonCpp::JsonCpp
-    TBB::tbb
-    ${CMAKE_DL_LIBS}
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
-  )
-ELSE()
-  find_package(tl-expected REQUIRED)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tl::expected
-    fmt
-    spdlog
-    zip
-    Boost::boost
-    JsonCpp::JsonCpp
-    tbb
-    ${CMAKE_DL_LIBS}
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
-  )
+IF(NOT MRMESH_NO_GTEST)
+  find_package(GTest REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
 ENDIF()
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
-
 
 install(
   FILES ${HEADERS} "config_cmake.h"

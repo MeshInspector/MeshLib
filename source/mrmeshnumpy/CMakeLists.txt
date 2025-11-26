@@ -23,49 +23,29 @@ ENDIF()
 
 IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRPython
-    spdlog
-    tbb
-    pybind11::module
-    pybind11nonlimitedapi_stubs
-    ${CMAKE_DL_LIBS}
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRPython
-    spdlog::spdlog
-    TBB::tbb
-    pybind11nonlimitedapi_stubs
-    ${CMAKE_DL_LIBS}
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    MRPython
-    spdlog
-    tbb
-    pybind11nonlimitedapi_stubs
-    ${CMAKE_DL_LIBS}
-  )
 ENDIF()
+
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    MRPython
+    ${CMAKE_DL_LIBS}
+)
 
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
 IF(MESHLIB_BUILD_VOXELS)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRVoxels
-  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
 ENDIF()
 
-install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_PY_LIB_DIR}")
+install(
+  TARGETS ${PROJECT_NAME}
+  DESTINATION "${MR_PY_LIB_DIR}"
+)
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

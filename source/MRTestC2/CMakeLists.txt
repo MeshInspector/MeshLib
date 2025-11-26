@@ -7,29 +7,14 @@ add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ../MeshLibC2/include)
 
-IF(MR_EMSCRIPTEN)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
-ENDIF()
-
-IF(NOT MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MeshLibC2
-  )
-ELSE()
-  set(CMAKE_EXECUTABLE_SUFFIX ".html")
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    gtest
-    -Wl,--whole-archive
-    MeshLibC2
-    -Wl,--no-whole-archive
-  )
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MeshLibC2
+)
+IF(NOT WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE m)
 ENDIF()
 
 add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}
 )
-
-IF(NOT WIN32)
-  target_link_libraries( ${PROJECT_NAME} PRIVATE m )
-ENDIF()

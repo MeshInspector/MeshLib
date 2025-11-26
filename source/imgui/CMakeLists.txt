@@ -50,29 +50,35 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${IMGUI_ROOT}>
 )
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_ENABLE_FREETYPE)
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+target_compile_definitions(${PROJECT_NAME} PUBLIC
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+  IMGUI_ENABLE_FREETYPE
+  IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\"
+)
 
-IF(MR_EMSCRIPTEN)
-  add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
+IF(EMSCRIPTEN)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    IMGUI_IMPL_OPENGL_ES3
+  )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
-  find_package(freetype QUIET)
-  IF(NOT TARGET Freetype::Freetype)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(Freetype REQUIRED IMPORTED_TARGET freetype2)
-    add_library(Freetype::Freetype ALIAS PkgConfig::Freetype)
-  ENDIF()
-
   find_package(glfw3 CONFIG REQUIRED)
-
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    glfw
-    Freetype::Freetype
-    ${CMAKE_DL_LIBS}
-  )
 ENDIF()
+
+find_package(Freetype REQUIRED)
+
+# ImGui doesn't depend on MRMesh directly but includes some of its files that require parallel-hashmap to be available
+# TODO: CMake config
+target_include_directories(${PROJECT_NAME}
+  PRIVATE
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  glfw
+  Freetype::Freetype
+  ${CMAKE_DL_LIBS}
+)
 
 install(
   TARGETS ${PROJECT_NAME}

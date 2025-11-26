@@ -9,6 +9,7 @@ IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
   target_link_libraries(${PROJECT_NAME}
     PRIVATE
+      MRIOExtras
       MRViewer
       cpr::cpr
       GTest::gtest

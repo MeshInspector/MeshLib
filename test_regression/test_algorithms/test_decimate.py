@@ -113,7 +113,7 @@ def test_decimate(tmp_path, dec_params):
         # if MeshLib was built with Clang 12 (but not with Clang >= 14) or with GCC 14.
         # Even verts_thresh=0.02 was not enough for Debug GCC11 Arm configuration.
         compare_meshes_similarity(mesh, ref_mesh,
-                                  verts_thresh=0.03, edges_thresh=0.03)
+                                  verts_thresh=0.01, edges_thresh=0.01)
     with check:
         self_col_tri = mrmeshpy.findSelfCollidingTriangles(mesh).size()
         assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"

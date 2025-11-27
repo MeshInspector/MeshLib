@@ -36,16 +36,16 @@ TEST(MRMesh, QuadraticForm)
 } //namespace MR
 
 struct __attribute__((visibility("default"))) A {
-    void foo() {}
-    void bar();
+    float foo( float x, float y ) { return x*x + y*y; }
+    float bar( float x, float y );
 };
 
-void A::bar() {}
+float A::bar( float x, float y ) { return x*x + y*y; }
 
 int main( int argc, char** argv )
 {
-    A{}.foo();
-    A{}.bar();
+    A{}.foo( 1, 2 );
+    A{}.bar( 1, 2 );
     //! If `flag` exists in `argv`, returns true and removes it from there.
     [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {

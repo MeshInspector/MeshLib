@@ -50,15 +50,6 @@ jobs:
         compiler: [Clang 19, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
-        exclude:
-          # Do not run Debug Clang 19 build on every commit (but only once a day)
-          - full_config_build: false
-            compiler: Clang 19
-            config: Debug
-          # Do not run Release GCC 11 build on every commit (but only once a day)
-          - full_config_build: false
-            compiler: GCC 11
-            config: Release
         include:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19

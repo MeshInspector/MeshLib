@@ -42,8 +42,8 @@ struct __attribute__((visibility("default"))) A {
     T bar() const;
 };
 
-float uu = A{ 1.0f, 2.0f }.foo();
-float vv = A{ 1.0f, 2.0f }.bar();
+auto pfoo = &A<float>::foo;
+auto pbar = &A<float>::bar;
 
 template<class T>
 T A<T>::bar() const { return x*x + y*y; }

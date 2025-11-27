@@ -35,17 +35,19 @@ TEST(MRMesh, QuadraticForm)
 
 } //namespace MR
 
+template<class T>
 struct __attribute__((visibility("default"))) A {
-    float foo( float x, float y ) { return x*x + y*y; }
-    float bar( float x, float y );
+    T foo( T x, T y ) { return x*x + y*y; }
+    T bar( T x, T y );
 };
 
-float A::bar( float x, float y ) { return x*x + y*y; }
+template<class T>
+T A<T>::bar( T x, T y ) { return x*x + y*y; }
 
 int main( int argc, char** argv )
 {
-    A{}.foo( 1, 2 );
-    A{}.bar( 1, 2 );
+    A<float>{}.foo( 1, 2 );
+    A<float>{}.bar( 1, 2 );
     //! If `flag` exists in `argv`, returns true and removes it from there.
     [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {

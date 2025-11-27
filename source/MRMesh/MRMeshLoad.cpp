@@ -20,6 +20,7 @@
 #include "MRPch/MRTBB.h"
 
 #include <array>
+#include <bit>
 #include <future>
 #include <sstream>
 
@@ -405,15 +406,17 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
     MeshBuilder::VertexIdentifier vi;
     vi.reserve( numTris );
 
-    #pragma pack(push, 1)
+    using Pos3f = std::array<char, 12>;
     struct StlTriangle
     {
-        Vector3f normal;
-        Vector3f vert[3];
-        std::uint16_t attr;
+        Pos3f normal;
+        Pos3f coords[3];
+        char attrs[2];
+        // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
+        Vector3f vertex( int i ) const { return std::bit_cast<Vector3f>( coords[i] ); }
     };
-    #pragma pack(pop)
-    static_assert( sizeof( StlTriangle ) == 50, "check your padding" );
+    static_assert( sizeof( StlTriangle ) == 50 );
+    static_assert( alignof( StlTriangle ) <= 2 );
 
     const auto itemsInBuffer = std::min( numTris, 32768u );
     std::vector<StlTriangle> buffer( itemsInBuffer ), nextBuffer( itemsInBuffer );
@@ -437,7 +440,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
             chunk.resize( buffer.size() );
             for ( int i = 0; i < buffer.size(); ++i )
                 for ( int j = 0; j < 3; ++j )
-                    chunk[i][j] = buffer[i].vert[j];
+                    chunk[i][j] = buffer[i].vertex( j );
             vi.addTriangles( chunk );
         } );
 

@@ -243,8 +243,8 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 
     if ( hasFaceColors )
         objectMesh->setFacesColorMap( std::move( faceColors ) );
-    else if ( !hasFaceColors )
-        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} triangles.\n", numFaces, numVerts );
+    else if ( !faceColors.empty() )
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} triangles.\n", faceColors.size(), numVerts );
 
     if ( hasUV )
         objectMesh->setUVCoords( std::move( uvCoords ) );

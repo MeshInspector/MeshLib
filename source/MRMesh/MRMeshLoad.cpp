@@ -412,7 +412,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
         Pos3f normal;
         Pos3f coords[3];
         char attrs[2];
-        // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast then in Vector3f on access
+        // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
         Vector3f vertex( int i ) const { return std::bit_cast<Vector3f>( coords[i] ); }
     };
     static_assert( sizeof( StlTriangle ) == 50 );

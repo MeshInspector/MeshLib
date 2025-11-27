@@ -35,19 +35,6 @@ TEST(MRMesh, QuadraticForm)
 
 } //namespace MR
 
-template<class T>
-struct __attribute__((visibility("default"))) A {
-    T x, y;
-    T foo() const { return x*x + y*y; }
-    T bar() const;
-};
-
-auto pfoo = &A<float>::foo;
-auto pbar = &A<float>::bar;
-
-template<class T>
-T A<T>::bar() const { return x*x + y*y; }
-
 int main( int argc, char** argv )
 {
     //! If `flag` exists in `argv`, returns true and removes it from there.

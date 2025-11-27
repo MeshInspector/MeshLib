@@ -384,18 +384,16 @@ AffineXf3f getAligningXf( const PointToPlaneAligningTransform & p2pl,
     return res;
 }
 
-template<class T>
 struct __attribute__((visibility("default"))) A {
-    T x, y;
-    T foo() const { return x*x + y*y; }
-    T bar() const;
+    float x, y;
+    float foo() const { return x*x + y*y; }
+    float bar() const;
 };
 
-auto pfoo = &A<float>::foo;
-auto pbar = &A<float>::bar;
+auto pfoo = &A::foo;
+auto pbar = &A::bar;
 
-template<class T>
-T A<T>::bar() const { return x*x + y*y; }
+float A::bar() const { return x*x + y*y; }
 
 bool ICP::p2plIter_()
 {

@@ -35,8 +35,17 @@ TEST(MRMesh, QuadraticForm)
 
 } //namespace MR
 
+struct __attribute__((visibility("default"))) A {
+    void foo() {}
+    void bar();
+};
+
+void A::bar() {}
+
 int main( int argc, char** argv )
 {
+    A{}.foo();
+    A{}.bar();
     //! If `flag` exists in `argv`, returns true and removes it from there.
     [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {

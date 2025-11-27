@@ -48,6 +48,7 @@
 #include "MRViewer/MRLambdaRibbonItem.h"
 #include "MRIOExtras/MRPng.h"
 #include "MRViewer/MRRibbonFontHolder.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -333,11 +334,10 @@ void OpenFilesMenuItem::preDraw_()
 
     auto mainColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     auto secondColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
-
-    ImVec2 min = ImVec2( 10.0f * UI::scale(), 10.0f * UI::scale() );
-    ImVec2 max = ImVec2( Vector2f( getViewerInstance().framebufferSize ) );
-    max.x -= min.x;
-    max.y -= min.y;
+    
+    ImVec2 offset = ImVec2( 10.0f, 10.0f ) * UI::scale();
+    ImVec2 min = ImGuiMV::Window2ScreenSpaceImVec2( offset );
+    ImVec2 max = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( Vector2f( getViewerInstance().framebufferSize ) ) - offset );
     drawList->AddRectFilled( min, max,
         ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
     drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
@@ -352,7 +352,7 @@ void OpenFilesMenuItem::preDraw_()
     {
         auto sceneBoxSize = menu->getSceneSize();
         min.y += ( getViewerInstance().framebufferSize.y - sceneBoxSize.y );
-        max.x = sceneBoxSize.x - min.x;
+        max.x = min.x + sceneBoxSize.x - offset.x * 2.f;
         drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
         drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 

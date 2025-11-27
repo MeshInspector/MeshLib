@@ -11,6 +11,7 @@
 #include "MRUIStyle.h"
 #include "MRRibbonFontHolder.h"
 #include "MRImGuiMultiViewport.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h>
 
 namespace MR
@@ -341,15 +342,17 @@ bool RibbonMenuSearch::smallSearchButton_()
 bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str )
 {
     ImGui::PushID( "searchInputText" );
-    const ImVec2 cursorPos = ImGui::GetCursorPos();
+    const ImVec2 cursorPosWindow = ImGui::GetCursorPos();
+    const ImVec2 cursorPosScreen = ImGuiMV::Window2ScreenSpaceImVec2( cursorPosWindow );
+
 
     const auto& style = ImGui::GetStyle();
 
     const float inputHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2.f;
     const auto drawList = ImGui::GetWindowDrawList();
-    drawList->AddRectFilled( cursorPos, ImVec2( cursorPos.x + cSearchSize * UI::scale(), cursorPos.y + inputHeight ),
+    drawList->AddRectFilled( cursorPosScreen, ImVec2( cursorPosScreen.x + cSearchSize * UI::scale(), cursorPosScreen.y + inputHeight ),
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelSearchBackground ).getUInt32(), style.FrameRounding );
-    drawList->AddRect( cursorPos, ImVec2( cursorPos.x + cSearchSize * UI::scale(), cursorPos.y + inputHeight ),
+    drawList->AddRect( cursorPosScreen, ImVec2( cursorPosScreen.x + cSearchSize * UI::scale(), cursorPosScreen.y + inputHeight ),
         ImGui::GetColorU32( ImGuiCol_Border ), style.FrameRounding );
 
     int colorNum = 0;
@@ -360,7 +363,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str )
     }
     RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
     const float inputWidth = cSearchSize * UI::scale() - style.FramePadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "\xef\x80\x82" ).x;
-    ImGui::SetCursorPos( ImVec2( cursorPos.x + inputWidth + style.ItemSpacing.x, cursorPos.y + style.FramePadding.y ) );
+    ImGui::SetCursorPos( ImVec2( cursorPosWindow.x + inputWidth + style.ItemSpacing.x, cursorPosWindow.y + style.FramePadding.y ) );
     ImGui::Text( "%s", "\xef\x80\x82" );
     font.popFont();
     if ( colorNum )
@@ -369,7 +372,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str )
     if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) )
         activate();
 
-    ImGui::SetCursorPos( cursorPos );
+    ImGui::SetCursorPos( cursorPosWindow );
     ImGui::SetNextItemWidth( inputWidth );
     ImGui::PushStyleColor( ImGuiCol_FrameBg, Color::transparent().getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Border, Color::transparent().getUInt32() );

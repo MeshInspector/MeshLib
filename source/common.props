@@ -48,7 +48,8 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <!-- for common precompiled header and to overcome errors C1090, LNK1318, see https://stackoverflow.com/q/68334645/7325599 -->
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <BuildStlModules>false</BuildStlModules>
       <!-- /utf-8 to resolve https://github.com/MeshInspector/MeshLib/issues/2780 -->

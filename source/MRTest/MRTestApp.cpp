@@ -37,17 +37,19 @@ TEST(MRMesh, QuadraticForm)
 
 template<class T>
 struct __attribute__((visibility("default"))) A {
-    T foo( T x, T y ) { return x*x + y*y; }
-    T bar( T x, T y );
+    T x, y;
+    T foo() const { return x*x + y*y; }
+    T bar() const;
 };
 
+float uu = A{ 1.0f, 2.0f }.foo();
+float vv = A{ 1.0f, 2.0f }.bar();
+
 template<class T>
-T A<T>::bar( T x, T y ) { return x*x + y*y; }
+T A<T>::bar() const { return x*x + y*y; }
 
 int main( int argc, char** argv )
 {
-    A<float>{}.foo( 1, 2 );
-    A<float>{}.bar( 1, 2 );
     //! If `flag` exists in `argv`, returns true and removes it from there.
     [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {

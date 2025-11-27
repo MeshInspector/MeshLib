@@ -466,8 +466,11 @@ static Vector3f pseudonormalLog( const MeshTopology& topology, const VertCoords&
     return sum.normalized();
 }
 
+inline void foo() {}
+
 AffineXf3f ICP::calculateTransformation()
 {
+    foo();
     MR::setupLoggerByDefault();
     spdlog::info( "fegetround() = {}", fegetround() );
 #ifndef __EMSCRIPTEN__

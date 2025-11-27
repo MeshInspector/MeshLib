@@ -177,7 +177,8 @@ jobs:
 
       - name: Unit Tests
         run: |
-          objdump -T ./build/${{ matrix.config }}/bin/MRTest
+          objdump -T ./build/Debug/bin/libMRMesh.so
+          objdump -T ./build/Debug/bin/libMRMesh.so | c++filt
           ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests (old bindings)

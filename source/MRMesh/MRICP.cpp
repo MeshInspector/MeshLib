@@ -389,6 +389,9 @@ struct __attribute__((visibility("default"))) A {
     void bar();
 };
 
+auto pfoo = &A::foo;
+auto pbar = &A::bar;
+
 void A::bar() {}
 
 bool ICP::p2plIter_()

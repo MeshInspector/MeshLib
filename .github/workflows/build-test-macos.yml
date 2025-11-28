@@ -169,6 +169,7 @@ jobs:
 
       - name: Unit Tests
         run: |
+          export PATH="$(brew --prefix llvm@18)/bin:$PATH"
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
           ./build/${{ matrix.config }}/bin/MRTest
 

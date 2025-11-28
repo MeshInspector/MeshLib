@@ -10,8 +10,10 @@ namespace MR
 /// \ingroup MathGroup
 /// \{
 
+// This class is skipped in the bindings, because the `RayOrigin<float>` specialization isn't portable.
+// The functions taking this class are also skipped.
 template<typename T>
-struct RayOrigin
+struct MR_BIND_IGNORE RayOrigin
 {
     Vector3<T> p;
     RayOrigin( const Vector3<T> & ro ) : p( ro ) { }
@@ -20,16 +22,16 @@ struct RayOrigin
 /* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
 #if defined(__x86_64__) || defined(_M_X64)
 template<>
-struct RayOrigin<float>
+struct MR_BIND_IGNORE RayOrigin<float>
 {
-    MR_BIND_IGNORE __m128 p;
+    __m128 p;
     RayOrigin( const Vector3f & ro ) { p = _mm_set_ps( ro.x, ro.y, ro.z, 0 ); }
 };
 
 /// finds intersection between the Ray and the Box.
 /// Precomputed values could be useful for several calls with the same direction,
 /// see "An Efficient and Robust Ray-Box Intersection Algorithm" at https://people.csail.mit.edu/amy/papers/box-jgt.pdf
-inline bool rayBoxIntersect( const Box3f& box, const RayOrigin<float> & rayOrigin, float & t0, float & t1, const IntersectionPrecomputes<float>& prec )
+MR_BIND_IGNORE inline bool rayBoxIntersect( const Box3f& box, const RayOrigin<float> & rayOrigin, float & t0, float & t1, const IntersectionPrecomputes<float>& prec )
 {
     __m128 l = _mm_set_ps( box.min.x, box.min.y, box.min.z, t0 );
     __m128 r = _mm_set_ps( box.max.x, box.max.y, box.max.z, t1 );
@@ -60,7 +62,7 @@ inline bool rayBoxIntersect( const Box3f& box, const RayOrigin<float> & rayOrigi
 #endif
 
 template<typename T>
-bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0, T & t1, const IntersectionPrecomputes<T>& prec )
+MR_BIND_IGNORE bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0, T & t1, const IntersectionPrecomputes<T>& prec )
 {
     const Vector3i& sign = prec.sign;
 

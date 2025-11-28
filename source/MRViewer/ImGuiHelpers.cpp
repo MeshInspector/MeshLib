@@ -25,6 +25,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonFontHolder.h"
+#include "MRImGuiMultiViewport.h"
 #include <imgui_internal.h>
 
 namespace ImGui
@@ -562,15 +563,16 @@ std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, ImGuiWindow* wind
     if ( !window || windowIsInactive )
     {
         auto ribMenu = std::dynamic_pointer_cast< MR::RibbonMenu >( menu );
-        float xPos = GetIO().DisplaySize.x - width;
-        float yPos = 0.0f;
+        const auto shiftMV = ImGuiMV::GetMainViewportShift();
+        float xPos = GetIO().DisplaySize.x - width + shiftMV.x;
+        float yPos = shiftMV.y;
         if ( position )
         {
             xPos = position->x;
             yPos = position->y;
         }
         else if ( ribMenu )
-            yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * UI::scale();
+            yPos += ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * UI::scale();
 
         auto& config = MR::Config::instance();
         if ( menu->isSavedDialogPositionsEnabled() && config.hasJsonValue( "DialogPositions" ) )
@@ -670,6 +672,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
                 }
             }
         }
+        else
+            maxHeight = FLT_MAX;
 
         SetNextWindowSizeConstraints( ImVec2( params.width, minHeight ), ImVec2( params.width, maxHeight ) );
     }

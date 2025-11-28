@@ -3,6 +3,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 
 #include <imgui_internal.h>
 
@@ -159,16 +160,20 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
     {
         // push into application window if it is out
         const Vector2f appWindowSize = Vector2f( getViewerInstance().framebufferSize );
+        const Box2f appWindowBox = Box2f::fromMinAndSize( ImGuiMV::GetMainViewportShift(), appWindowSize );
         auto windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
-        defaultPos.x = std::clamp( windowBox.min.x, 0.0f, std::max( 0.0f, windowBox.min.x - ( windowBox.max.x - appWindowSize.x ) ) );
-        defaultPos.y = std::clamp( windowBox.min.y, 0.0f, std::max( 0.0f, windowBox.min.y - ( windowBox.max.y - appWindowSize.y ) ) );
+        defaultPos.x = std::clamp( windowBox.min.x, appWindowBox.min.x, std::max( 0.0f, windowBox.min.x + appWindowBox.min.x - ( windowBox.max.x - appWindowBox.max.x ) ) );
+        defaultPos.y = std::clamp( windowBox.min.y, appWindowBox.min.y, std::max( 0.0f, windowBox.min.y + appWindowBox.min.y - ( windowBox.max.y - appWindowBox.max.y ) ) );
         windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
 
-
+        // convert viewport bounds from local to window space
         Box2f viewportBounds = getViewerInstance().getViewportsBounds();
         Box2f boundsFixed = viewportBounds;
         boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
         boundsFixed.max.y = boundsFixed.min.y + viewportBounds.size().y;
+        // convert viewport bounds from window to screen space
+        boundsFixed.min = ImGuiMV::Window2ScreenSpaceVector2f( boundsFixed.min );
+        boundsFixed.max = ImGuiMV::Window2ScreenSpaceVector2f( boundsFixed.max );
 
         auto result = findFreeRect( windowBox, boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
         {

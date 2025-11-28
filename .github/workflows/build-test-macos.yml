@@ -168,9 +168,11 @@ jobs:
         run: ./build/${{ matrix.config }}/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: |
+          objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.dylib | c++filt
+          ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: C Unit Tests (old bindings)
+       - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
 
       - name: C Unit Tests

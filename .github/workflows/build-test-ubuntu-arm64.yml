@@ -145,7 +145,7 @@ jobs:
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
       - name: MRMesh Exported Symbols
-        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
+        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}

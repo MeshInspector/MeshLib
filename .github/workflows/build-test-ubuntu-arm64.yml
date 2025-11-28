@@ -144,6 +144,9 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
+      - name: MRMesh Exported Symbols
+        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:

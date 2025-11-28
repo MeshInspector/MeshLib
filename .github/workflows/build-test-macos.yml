@@ -151,6 +151,11 @@ jobs:
             -DMR_CXX_STANDARD=23
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
+      - name: MRMesh Exported Symbols
+        run: |
+          export PATH="$(brew --prefix llvm@18)/bin:$PATH"
+          nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:

@@ -155,6 +155,9 @@ jobs:
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
 
+      - name: MRMesh Exported Symbols
+        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:

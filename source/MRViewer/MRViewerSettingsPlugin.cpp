@@ -31,6 +31,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewportGlobalBasis.h"
+#include "MRImGuiMultiViewport.h"
 #include "MRShortcutManager.h"
 
 namespace
@@ -78,7 +79,7 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
 {
     auto menuWidth = 400.0f * UI::scale();
 
-    ImVec2 position{ ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f };
+    ImVec2 position = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f ) );
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .position = &position } ) )
         return;
 

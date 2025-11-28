@@ -169,7 +169,7 @@ jobs:
 
       - name: Unit Tests
         run: |
-          nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | c++filt
+          nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
           ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests (old bindings)

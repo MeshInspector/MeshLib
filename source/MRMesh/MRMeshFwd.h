@@ -75,7 +75,7 @@
 #   else
 #       define MRMESH_API __declspec(dllimport)
 #   endif
-#   define MRMESH_CLASS
+#   define MRMESH_CLASS // VS implicitly exports typeinfo/vtable
 #else
 #   define MRMESH_API   __attribute__((visibility("default")))
 // to fix undefined reference to `typeinfo/vtable`

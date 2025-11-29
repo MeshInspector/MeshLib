@@ -14,6 +14,8 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectPoints )
 
+ObjectPoints::ObjectPoints() = default;
+
 ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals/*=true*/ )
 {
     if ( !objMesh.mesh() )

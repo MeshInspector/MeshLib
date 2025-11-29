@@ -61,7 +61,7 @@ protected:
 class MRMESH_CLASS Object : public ObjectChildrenHolder
 {
 public:
-    Object() = default;
+    MRMESH_API Object();
     Object( Object && ) noexcept = default;
     Object & operator = ( Object && ) noexcept = default;
     virtual ~Object() = default;

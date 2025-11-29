@@ -20,6 +20,8 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectMesh )
 
+ObjectMesh::ObjectMesh() = default;
+
 MeshIntersectionResult ObjectMesh::worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region ) const
 {
     MeshIntersectionResult res;

@@ -163,6 +163,8 @@ size_t ObjectChildrenHolder::heapBytes() const
     return res;
 }
 
+Object::Object() = default;
+
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
 {
     for ( const auto & child : children_ )

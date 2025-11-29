@@ -10,7 +10,7 @@ namespace MR
 class MRMESH_CLASS ObjectMesh : public ObjectMeshHolder
 {
 public:
-    ObjectMesh() = default;
+    MRMESH_API ObjectMesh();
 
     ObjectMesh( ObjectMesh&& ) noexcept = default;
     ObjectMesh& operator = ( ObjectMesh&& ) noexcept = default;

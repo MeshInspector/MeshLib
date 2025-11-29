@@ -10,7 +10,7 @@ struct RenderParams;
 class MRMESH_CLASS ObjectPoints : public ObjectPointsHolder
 {
 public:
-    ObjectPoints() = default;
+    MRMESH_API ObjectPoints();
     MRMESH_API explicit ObjectPoints( const ObjectMesh& objMesh, bool saveNormals = true );
     ObjectPoints& operator = ( ObjectPoints&& ) = default;
     ObjectPoints( ObjectPoints&& ) = default;

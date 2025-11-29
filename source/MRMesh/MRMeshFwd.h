@@ -81,7 +81,8 @@
 // to fix undefined reference to `typeinfo/vtable`
 // Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
 //   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
-#   define MRMESH_CLASS __attribute__((visibility("default")))
+//#   define MRMESH_CLASS __attribute__((visibility("default")))
+#   define MRMESH_CLASS
 #endif
 
 namespace MR

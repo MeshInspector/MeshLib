@@ -2413,6 +2413,9 @@ void RibbonMenu::drawTopPanel_( bool drawTabs, bool centerItems )
 
 void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
 {
+    if ( RibbonSchemaHolder::schema().tabsOrder.empty() )
+        return;
+
     beginTopPanel_();
 
     const auto& style = ImGui::GetStyle();

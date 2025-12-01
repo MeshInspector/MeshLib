@@ -14,17 +14,19 @@ var ComposeHTMLHead = function (styles, images) {
     }
 }
 
-var ComposeHTMLBody = function (scripts, asyncScripts) {
+var ComposeHTMLBody = function (scripts, deferScripts) {
     for (let i = 0; i < scripts.length; ++i) {
         var scr = document.createElement("script");
         scr.setAttribute("src", scripts[i] + window.location.search);
+        scr.async = false; // dynamic scripts are considered async, so explicitly disable it
         document.body.appendChild(scr);
     }
 
-    for (let i = 0; i < asyncScripts.length; ++i) {
+    for (let i = 0; i < deferScripts.length; ++i) {
         var scr = document.createElement("script");
-        scr.setAttribute("src", asyncScripts[i] + window.location.search);
-        scr.setAttribute("async", "");
+        scr.setAttribute("src", deferScripts[i] + window.location.search);
+        scr.setAttribute("defer", "");
+        scr.async = false; // dynamic scripts are considered async, so explicitly disable it
         document.body.appendChild(scr);
     }
 }

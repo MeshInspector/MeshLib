@@ -360,10 +360,13 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
+#if defined _WIN32 || defined MRVIEWER_WITH_BUNDLED_CURL
         if ( url.starts_with( "https" ) )
         {
             cpr::SslOptions sslOpts;
+#ifdef _WIN32
             sslOpts.SetOption( cpr::ssl::NoRevoke{ true } ); // needed to avoid some firewall issues "next InitializeSecurityContext failed: CRYPT_E_NO_REVOCATION_CHECK (0x80092012)"
+#endif
 #ifdef MRVIEWER_WITH_BUNDLED_CURL
             // set the certificate info manually; see getCaInfo for more info
             static const auto cCaInfo = getCaInfo( session );
@@ -374,6 +377,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
 #endif
             session.SetSslOptions( sslOpts );
         }
+#endif
 
         if ( ctx->input.has_value() )
         {

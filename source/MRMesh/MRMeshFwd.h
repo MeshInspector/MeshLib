@@ -82,7 +82,7 @@
 // Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
 //   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
 #   ifdef __clang__ // https://stackoverflow.com/q/29717029/7325599
-#       define MRMESH_CLASS __attribute__((type_visibility("default"))) //type_visibility does not make all member functions visible
+#       define MRMESH_CLASS __attribute__((type_visibility("default"))) //unlike `visibility`, `type_visibility` does not make all (including private) member functions visible
 #   else
 #       define MRMESH_CLASS __attribute__((visibility("default")))
 #   endif

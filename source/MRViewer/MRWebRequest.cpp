@@ -10,12 +10,24 @@
 #include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
+
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning( push )
+#pragma warning( disable: 5267 ) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #include <cpr/cpr.h>
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning( pop )
+#endif
+
 #include <fstream>
 #include <optional>
-#else
+
+#else // __EMSCRIPTEN__
+
 #include <mutex>
-#endif
+
+#endif // __EMSCRIPTEN__
 
 namespace
 {
@@ -360,6 +372,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
+        session.SetSslOptions( cpr::Ssl( cpr::ssl::NoRevoke{ true } ) ); // some clients complained on CRYPT_E_NO_REVOCATION_CHECK (0x80092012) error on Windows
 
 #ifdef MRVIEWER_WITH_BUNDLED_CURL
         if ( url.starts_with( "https" ) )

@@ -250,10 +250,6 @@ protected:
 
     RibbonMenuSearch searcher_;
 
-    int currentTopPanelHeight_ = 113;
-    int topPanelOpenedHeight_ = 113;
-    int topPanelHiddenHeight_ = 33;
-
 private:
     void changeTab_( int newTab );
 
@@ -270,6 +266,10 @@ private:
     void drawTopPanelOpened_( bool drawTabs, bool centerItems );
 
     std::string transformClipboardText_;
+
+    int currentTopPanelHeight_ = 113;
+    int topPanelOpenedHeight_ = 113;
+    int topPanelHiddenHeight_ = 33;
 
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };

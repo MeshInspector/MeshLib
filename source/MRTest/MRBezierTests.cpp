@@ -1,9 +1,22 @@
 #include <MRMesh/MRBezier.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRGTest.h>
+#include <MRPch/MRSpdlog.h>
+#include <cmath>
 
 namespace MR
 {
+
+float x = 1.f;
+float y = 7.f;
+
+TEST( MRMesh, Atan2 )
+{
+    float a = std::atan2( x, y );
+    spdlog::info( "a={}", a );
+    EXPECT_TRUE( a == 0.14189705f || a == 0.14189707f );
+    EXPECT_TRUE( a == 0.14189705f );
+}
 
 TEST( MRMesh, Bezier )
 {

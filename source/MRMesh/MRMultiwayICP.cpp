@@ -943,7 +943,7 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
             {
                 const auto& data = pairs[i][j].vec[idx];
                 if ( p2pl )
-                    mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
+                    mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.tgtNorm, data.weight );
                 else
                     mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.weight );
             }

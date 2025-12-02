@@ -19,8 +19,8 @@ TEST( MRMesh, MultiwayICPTorus )
     auto xf = AffineXf3f( Matrix3f::rotation( axis, 0.2f ), trans );
 
     ICPObjects objs;
-    objs.emplace_back( torusMove, xf );
-    objs.emplace_back( torusRef, AffineXf3f{} );
+    objs.push_back( { torusMove, xf } );
+    objs.push_back( { torusRef, AffineXf3f{} } );
     MultiwayICP icp( objs, MultiwayICPSamplingParameters{} );
 
     ICPProperties props

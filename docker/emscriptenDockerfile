@@ -54,8 +54,10 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 WORKDIR "/home/"
 RUN rm -rf MeshLib
 
-# Add a new user "actions-runner" with user id 8877
-RUN useradd -u 8877 -m user && \
+# Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
+# https://github.com/actions/checkout/issues/1014
+RUN groupadd -g 1001 user && \
+    useradd -m -u 1001 -g user -s /bin/bash user && \
     sudo chmod -R 777 /emsdk/upstream/emscripten/
 
 # Change to non-root privilege

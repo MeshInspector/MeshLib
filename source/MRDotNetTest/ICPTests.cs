@@ -41,7 +41,7 @@ namespace MR.Test
             var xfs = icp.CalculateTransformations();
             Assert.That(icp.GetNumActivePairs(), Is.EqualTo(1748));
             Assert.That(icp.GetNumSamples(), Is.EqualTo(1748));
-            Assert.That(icp.GetMeanSqDistToPoint(), Is.EqualTo(0.00226).Within(1e-5));
+            Assert.That(icp.GetMeanSqDistToPoint(), Is.EqualTo(0).Within(1e-5));
         }
 
         [Test]

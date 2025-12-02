@@ -59,8 +59,8 @@ public:
 /// Parameters that are used for sampling of the MultiwayICP objects
 struct MultiwayICPSamplingParameters
 {
-    /// sampling size of each object
-    float samplingVoxelSize = 0.0f;
+    /// sampling size of each object, 0 has special meaning "take all valid points"
+    float samplingVoxelSize = 0;
 
     /// size of maximum icp group to work with
     /// if number of objects exceeds this value, icp is applied in cascade mode

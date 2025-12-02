@@ -49,7 +49,9 @@ void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) c
 
 std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb ) const
 {
-    assert( voxelSize > 0 );
+    assert( voxelSize >= 0 );
+    if ( voxelSize == 0 )
+        return validPoints();
     assert( maxVoxels > 0 );
     auto box = computeBoundingBox();
     if ( !box.valid() )

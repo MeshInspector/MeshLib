@@ -1741,6 +1741,8 @@ bool Viewer::draw_( bool force )
 
     setupScene();
 
+    //spdlog::info( "DEBUG forceRedrawFramesWithoutSwap_ {}", forceRedrawFramesWithoutSwap_ );
+
     drawFull( needSceneRedraw );
 
     if ( forceRedrawFramesWithoutSwap_ > 0 )
@@ -2419,9 +2421,14 @@ void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*=
         forceRedrawFramesWithoutSwap_ = std::max( i, forceRedrawFramesWithoutSwap_ );
 }
 
+void Viewer::forceSwapOnFrame( int i /*= 0*/ )
+{
+    forceRedrawFramesWithoutSwap_ = std::min( i, forceRedrawFramesWithoutSwap_ );
+}
+
 bool Viewer::isCurrentFrameSwapping() const
 {
-    return forceRedrawFramesWithoutSwap_ == 0;
+    return forceRedrawFramesWithoutSwap_ <= 1;
 }
 
 size_t Viewer::getEventsCount( EventType type ) const

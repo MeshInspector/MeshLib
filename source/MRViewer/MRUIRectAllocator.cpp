@@ -138,10 +138,21 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
         if ( window )
         {
             // disable search free position if multi viewport and window not fully inside main window
-            const bool isMultiViewport = ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
-            const Box2f appWindowBox = Box2f::fromMinAndSize( ImGuiMV::GetMainViewportShift(), Vector2f( getViewerInstance().framebufferSize ) );
-            const Box2f windowBox = Box2f::fromMinAndSize( window->Pos, window->Size );
-            if ( !isMultiViewport || ( isMultiViewport && appWindowBox.contains( windowBox ) ) )
+            //const bool isMultiViewport = ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
+            //const Box2f appWindowBox = Box2f::fromMinAndSize( ImGuiMV::GetMainViewportShift(), Vector2f( getViewerInstance().framebufferSize ) );
+            //const Box2f windowBox = Box2f::fromMinAndSize( window->Pos, window->Size );
+                //ImGuiID parentId = window->Viewport ? window->Viewport->ParentViewportId : 0;
+                //while ( parentId || parentId != ImGui::GetMainViewport()->ID )
+                //{
+                //    auto viewport = ImGui::FindViewportByID( parentId );
+                //    if ( !viewport )
+                //        break;
+                //    parentId = viewport->ParentViewportId;
+                //}
+                //if ( window->Viewport )
+                //    spdlog::info( "test {} {}", , ImGui::GetMainViewport()->ID );
+            
+            //if ( !isMultiViewport || ( isMultiViewport && appWindowBox.contains( windowBox ) ) )
             {
                 auto [iter, isNew] = windows_.try_emplace( expectedWindowName );
                 if ( isNew )

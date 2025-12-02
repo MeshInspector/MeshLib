@@ -765,7 +765,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
 
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
-    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor,style.WindowRounding, ImDrawFlags_RoundCornersTop );
+    //window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor,style.WindowRounding, ImDrawFlags_RoundCornersTop );
 
     if ( params.collapsed )
     {
@@ -864,10 +864,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     {
         ImGui::PopStyleVar();
         ImGui::PopStyleColor( 2 );
-        const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
+        //const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
 
         //ImGui doesn't draw bottom border if window is collapsed, so add it manually
-        window->DrawList->AddLine( { window->Rect().Min.x, window->Rect().Max.y - borderSize }, { window->Rect().Max.x, window->Rect().Max.y - borderSize }, borderColor, borderSize );
+        //window->DrawList->AddLine( { window->Rect().Min.x, window->Rect().Max.y - borderSize }, { window->Rect().Max.x, window->Rect().Max.y - borderSize }, borderColor, borderSize );
         window->DrawList->PopClipRect();
         ImGui::End();
         return false;

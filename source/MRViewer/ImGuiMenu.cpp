@@ -293,8 +293,43 @@ void ImGuiMenu::startFrame()
             style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.9f, 0.9f, 0.9f, 0.5f );
 
     }
+
+    bool needIncrement = false;
+    if ( context_ )
+    {
+        if ( !context_->InputEventsQueue.empty() )
+        {
+            needIncrement = context_->InputEventsQueue.back().Type == ImGuiInputEventType_MouseButton ||
+                context_->InputEventsQueue.back().Type == ImGuiInputEventType_MouseWheel ||
+                context_->InputEventsQueue.back().Type == ImGuiInputEventType_Key;
+        }
+    }
+
     ImGui::NewFrame();
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
+
+    if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_ )
+    {
+        spdlog::info( "context_->Viewports count {}", context_->Viewports.Size );
+        for ( const auto* vp : context_->Viewports )
+        {
+            if ( vp->PlatformWindowCreated )
+            {
+                viewer->forceSwapOnFrame( 2 );
+                break;
+            }
+            else if ( vp->PlatformRequestClose )
+            {
+                viewer->forceSwapOnFrame();
+                break;
+            }
+        }
+
+        if ( context_->MouseViewport != ImGui::GetMainViewport() && needIncrement )
+        {
+            viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, true );
+        }
+    }
 }
 
 void ImGuiMenu::finishFrame()
@@ -323,7 +358,12 @@ void ImGuiMenu::finishFrame()
         {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
+            spdlog::info( "DEBUG UpdatePlatformWindows" );
+            if ( viewer->isCurrentFrameSwapping() )
+            {
+                ImGui::RenderPlatformWindowsDefault();
+                spdlog::info( "DEBUG RenderPlatformWindowsDefault" );
+            }
             glfwMakeContextCurrent( backup_current_context );
         }
     }

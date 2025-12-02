@@ -2436,9 +2436,10 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
     ImGuiTableFlags tableFlags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV;
 
     RibbonFontHolder font( RibbonFontManager::FontType::Small );
-    const auto& tab = RibbonSchemaHolder::schema().tabsOrder[activeTabIndex_].name;
-    if ( collapseState_ != CollapseState::Closed )
+    if ( collapseState_ != CollapseState::Closed && activeTabIndex_ < RibbonSchemaHolder::schema().tabsOrder.size() )
     {
+        const auto& tab = RibbonSchemaHolder::schema().tabsOrder[activeTabIndex_].name;
+
         auto tabIt = RibbonSchemaHolder::schema().tabsMap.find( tab );
         if ( tabIt != RibbonSchemaHolder::schema().tabsMap.end() )
         {

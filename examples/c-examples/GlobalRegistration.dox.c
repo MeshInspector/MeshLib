@@ -128,7 +128,7 @@ int main( int argc, char* argv[] )
 
     printf( "Calculating transformations...\n" );
     resetProgress();
-    MR_Vector_MR_AffineXf3f_MR_ObjId* xfs = MR_MultiwayICP_calculateTransformations( icp, MR_PassBy_Copy, cb );
+    MR_Vector_MR_AffineXf3f_MR_ObjId* xfs = MR_MultiwayICP_calculateTransformations( icp, cb );
     printStats( icp );
 
     MR_PointCloud* output = MR_PointCloud_DefaultConstruct();

@@ -121,7 +121,7 @@ void ICP::updatePointPairs()
 
 std::string getICPStatusInfo( int iterations, ICPExitType exitType )
 {
-    std::string result = "Performed " + std::to_string( iterations - 1 ) + " iterations.\n";
+    std::string result = "Performed " + std::to_string( iterations ) + " iterations.\n";
     switch ( exitType )
     {
     case MR::ICPExitType::NotFoundSolution:
@@ -444,9 +444,11 @@ void ICP::calcCombined_()
 
     prop_.iterLimit = 2;
     calcP2Pt_();
+    auto p2pItersDone = iter_;
 
     prop_.iterLimit = safeLimit - 2;
     calcP2Pl_();
+    iter_ += p2pItersDone;
 
     prop_.iterLimit = safeLimit;
 }

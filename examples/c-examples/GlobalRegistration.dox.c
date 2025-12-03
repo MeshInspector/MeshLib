@@ -123,7 +123,7 @@ int main( int argc, char* argv[] )
     MR_ICPProperties_Destroy( params );
 
     // gather statistics
-    MR_MultiwayICP_updateAllPointPairs( icp, MR_PassBy_DefaultArgument, NULL );
+    MR_MultiwayICP_updateAllPointPairs( icp, NULL );
     printStats( icp );
 
     printf( "Calculating transformations...\n" );

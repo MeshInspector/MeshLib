@@ -88,19 +88,19 @@ public:
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformations of all objects to reach registered state
     /// the transformation of the last object is fixed and does not change here
-    [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformations( ProgressCallback cb = {} );
+    [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformations( const ProgressCallback& cb = {} );
 
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformations of all objects to reach registered state
     /// the transformation of the first object is fixed and does not change here
-    [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformationsFixFirst( ProgressCallback cb = {} );
+    [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformationsFixFirst( const ProgressCallback& cb = {} );
 
     /// select pairs with origin samples on all objects
     MRMESH_API bool resamplePoints( const MultiwayICPSamplingParameters& samplingParams );
 
     /// in each pair updates the target data and performs basic filtering (activation)
     /// in cascade mode only useful for stats update
-    MRMESH_API bool updateAllPointPairs( ProgressCallback cb = {} );
+    MRMESH_API bool updateAllPointPairs( const ProgressCallback& cb = {} );
 
     /// tune algorithm params before run calculateTransformations()
     void setParams( const ICPProperties& prop ) { prop_ = prop; }
@@ -154,14 +154,14 @@ private:
 
     /// reserves memory for all pairs
     /// if currently in cascade mode (objs.size() > maxGroupSize_) reserves only for pairs inside groups
-    bool reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samples, ProgressCallback cb );
+    bool reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samples, const ProgressCallback& cb );
 
     using LayerSamples = Vector<Vector<MultiObjsSamples, ICPElementId>, ICPLayer>;
-    std::optional<LayerSamples> resampleUpperLayers_( ProgressCallback cb );
-    bool reserveUpperLayerPairs_( LayerSamples&& samples, ProgressCallback cb );
+    std::optional<LayerSamples> resampleUpperLayers_( const ProgressCallback& cb );
+    bool reserveUpperLayerPairs_( LayerSamples&& samples, const ProgressCallback& cb );
 
     /// calculates and updates pairs 2nd and next steps of cascade mode
-    bool updateLayerPairs_( ICPLayer l, ProgressCallback cb = {} );
+    bool updateLayerPairs_( ICPLayer l, const ProgressCallback& cb = {} );
     /// deactivate pairs that does not meet farDistFactor criterion, for given layer
     void deactivateFarDistPairs_( ICPLayer l );
 
@@ -182,6 +182,11 @@ private:
     bool p2plIter_();
     bool multiwayIter_( bool p2pl = true );
     bool cascadeIter_( bool p2pl = true );
+
+    void calcGen_( bool p2pl, const ProgressCallback& cb );
+    void calcP2Pt_( const ProgressCallback& cb );
+    void calcP2Pl_( const ProgressCallback& cb );
+    void calcCombined_( const ProgressCallback& cb );
 };
 
 }

@@ -266,6 +266,9 @@ public:
     // if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not
     MRVIEWER_API void incrementForceRedrawFrames( int i = 1, bool swapOnLastOnly = false );
 
+    // Forces redraw no later than the specified number of frames
+    MRVIEWER_API void forceSwapOnFrame( int i = 0 );
+
     // Returns true if current frame will be shown on display
     MRVIEWER_API bool isCurrentFrameSwapping() const;
 

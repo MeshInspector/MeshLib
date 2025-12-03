@@ -293,8 +293,28 @@ void ImGuiMenu::startFrame()
             style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.9f, 0.9f, 0.9f, 0.5f );
 
     }
+
+    // checking for mouse or keyboard events
+    // this will start drawing multiple frames without a swapping to render the interface elements without flickering
+    bool needIncrement = false;
+    if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_ )
+    {
+        if ( !context_->InputEventsQueue.empty() )
+        {
+            needIncrement = context_->InputEventsQueue.back().Type == ImGuiInputEventType_MouseButton ||
+                context_->InputEventsQueue.back().Type == ImGuiInputEventType_MouseWheel ||
+                context_->InputEventsQueue.back().Type == ImGuiInputEventType_Key;
+        }
+    }
+
     ImGui::NewFrame();
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
+
+    if ( needIncrement && context_->MouseViewport != ImGui::GetMainViewport() ) // needIncrement can be true only if ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_
+    {
+        // drawing multiple frames without a swapping to render the interface elements without flickering
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, true );
+    }
 }
 
 void ImGuiMenu::finishFrame()
@@ -323,7 +343,33 @@ void ImGuiMenu::finishFrame()
         {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
+
+            if ( context_ )
+            {
+                for ( int i = 1; i < context_->Viewports.Size; ++i )
+                {
+                    const auto* vp = context_->Viewports[i];
+                    // if non-main viewport will be deleted in following frames we force redraw of main frame
+                    // to ensure that there is at least one frame when both removed viewport and main viewport renders the window
+                    if ( vp->LastFrameActive < context_->FrameCount )
+                    {
+                        viewer->forceSwapOnFrame();
+                        break;
+                    }
+                }
+
+                if ( viewer->isCurrentFrameSwapping() )
+                {
+                    ImGui::RenderPlatformWindowsDefault();
+
+                    // if in swapping frame new viewport appears deffer swapping for main viewport for one frame
+                    // to ensure that there is at least one frame when both new viewport and main viewport renders the window
+                    static int prevViewports = context_->Viewports.Size;
+                    if ( context_->Viewports.Size > prevViewports )
+                        viewer->incrementForceRedrawFrames( 1, true );
+                    prevViewports = context_->Viewports.Size;
+                }
+            }
             glfwMakeContextCurrent( backup_current_context );
         }
     }

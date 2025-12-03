@@ -294,8 +294,10 @@ void ImGuiMenu::startFrame()
 
     }
 
+    // checking for mouse or keyboard events
+    // this will start drawing multiple frames without a swapping to render the interface elements without flickering
     bool needIncrement = false;
-    if ( context_ )
+    if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_ )
     {
         if ( !context_->InputEventsQueue.empty() )
         {
@@ -308,12 +310,10 @@ void ImGuiMenu::startFrame()
     ImGui::NewFrame();
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
 
-    if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_ )
+    if ( needIncrement && context_->MouseViewport != ImGui::GetMainViewport() ) // needIncrement can be true only if ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_
     {
-        if ( context_->MouseViewport != ImGui::GetMainViewport() && needIncrement )
-        {
-            viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, true );
-        }
+        // drawing multiple frames without a swapping to render the interface elements without flickering
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, true );
     }
 }
 

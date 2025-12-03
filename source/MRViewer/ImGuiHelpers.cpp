@@ -1377,9 +1377,8 @@ PaletteChanges Palette(
         buttonOnOneLine = false;
     }
 
-    auto popupName = saveModalSettings.popupName();
     if ( UI::button( "Save Palette as", Vector2f( widthButton, 0 ) ) )
-        ImGui::OpenPopup( popupName.c_str() );
+        saveModalSettings.triggerSave = true;
     UI::setTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset." );
     if ( buttonOnOneLine )
         ImGui::SameLine();

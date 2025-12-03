@@ -1,4 +1,4 @@
-#include <MRMesh/MRICP.h>
+#include <MRMesh/MRMultiwayICP.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, ICPTorus )
+TEST( MRMesh, MultiwayICPTorus )
 {
     auto torusRef = makeTorus( 2.5f, 0.7f, 48, 48 );
     auto torusMove = torusRef;
@@ -20,18 +20,22 @@ TEST( MRMesh, ICPTorus )
 
     auto run = [&] ( ICPMethod method, float eps )
     {
-        ICP icp(
-            torusMove, torusRef, xf, AffineXf3f(), torusMove.topology.getValidVerts(), torusRef.topology.getValidVerts()
-        );
+        ICPObjects objs;
+        objs.push_back( { torusMove, xf } );
+        objs.push_back( { torusRef, AffineXf3f{} } );
+        MultiwayICP icp( objs, MultiwayICPSamplingParameters{} );
+
         ICPProperties props
         {
             .method = method,
             .iterLimit = 20
         };
         icp.setParams( props );
-        auto newXf = icp.calculateTransformation();
+        auto newXfs = icp.calculateTransformations();
+        EXPECT_EQ( newXfs[ObjId( 1 )], AffineXf3f{} );
         std::cout << icp.getStatusInfo() << '\n';
 
+        auto newXf = newXfs[ObjId( 0 )];
         EXPECT_LT( ( newXf.A - Matrix3f::identity() ).norm(), eps );
         EXPECT_LT( newXf.b.length(), eps );
     };

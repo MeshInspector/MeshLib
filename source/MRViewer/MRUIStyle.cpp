@@ -2315,68 +2315,25 @@ std::string CustomConfigModalSettings::popupName() const
 
 void saveCustomConfigModal( const CustomConfigModalSettings& settings )
 {
-    auto popupName = settings.popupName();
-    ModalDialog saveDialog( popupName.c_str(), {
-        .headline = "Save " + settings.configName,
-    } );
-    if ( !saveDialog.beginPopup() )
-        return;
-
     const auto& style = ImGui::GetStyle();
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * UI::scale() } );
     static std::string currentConfigName;
 
-    ImGui::SetNextItemWidth( saveDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
-    if ( settings.inputName )
-    {
-        UI::inputText( "Name", *settings.inputName );
-        currentConfigName = *settings.inputName;
-    }
-    else
-        UI::inputText( "Name", currentConfigName );
-    ImGui::PopStyleVar();
-
-    const float btnWidth = cModalButtonWidth * UI::scale();
-
     auto existingPopupName = settings.configName + " already exists##" + settings.configName + "Helper";
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    bool valid = !currentConfigName.empty() && !hasProhibitedChars( currentConfigName );
-    if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
+    auto overrideExistingModal = [&] ()->bool
     {
-        std::error_code ec;
-        if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / ( currentConfigName + ".json" ), ec ) )
-        {
-            ImGui::OpenPopup( existingPopupName.c_str() );
-        }
-        else
-        {
-            assert( settings.onSave );
-            if ( settings.onSave && settings.onSave( currentConfigName ) )
-                ImGui::CloseCurrentPopup();
-        }
-    }
-    ImGui::PopStyleVar();
-    if ( !valid )
-    {
-        UI::setTooltipIfHovered( currentConfigName.empty() ?
-            "Cannot save " + settings.configName + " with empty name" :
-            "Please do not use any of these symbols: \? * / \\ \" < >" );
-    }
-
-    bool closeTopPopup = false;
-    ModalDialog warningPopup( existingPopupName, {
-        .text = settings.configName + " preset with this name already exists, override?",
-    } );
-    if ( warningPopup.beginPopup() )
-    {
+        ModalDialog warningPopup( existingPopupName, {
+            .text = settings.configName + " preset with this name already exists, override?",
+        } );
+        if ( !warningPopup.beginPopup() )
+            return false;
         auto w = ImGui::GetContentRegionAvail().x;
         auto p = style.FramePadding.x;
+        bool saved = false;
         if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
         {
             assert( settings.onSave );
-            closeTopPopup = settings.onSave && settings.onSave( currentConfigName );
+            saved = settings.onSave && settings.onSave( currentConfigName );
         }
         ImGui::SameLine( 0, p );
         if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Escape ) )
@@ -2384,19 +2341,95 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
             ImGui::CloseCurrentPopup();
         }
         warningPopup.endPopup();
+        return saved;
+    };
+
+    if ( settings.inputNameDialog || !settings.inputName )
+    {
+        auto popupName = settings.popupName();
+
+        if ( settings.triggerSave )
+        {
+            ImGui::OpenPopup( popupName.c_str() );
+        }
+
+        ModalDialog saveDialog( popupName.c_str(), {
+            .headline = "Save " + settings.configName,
+        } );
+        if ( !saveDialog.beginPopup() )
+            return;
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * UI::scale() } );
+
+        ImGui::SetNextItemWidth( saveDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+        if ( settings.inputName )
+        {
+            UI::inputText( "Name", *settings.inputName );
+            currentConfigName = *settings.inputName;
+        }
+        else
+            UI::inputText( "Name", currentConfigName );
+        ImGui::PopStyleVar();
+
+        const float btnWidth = cModalButtonWidth * UI::scale();
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+        bool valid = !currentConfigName.empty() && !hasProhibitedChars( currentConfigName );
+        if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
+        {
+            std::error_code ec;
+            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / ( currentConfigName + ".json" ), ec ) )
+            {
+                ImGui::OpenPopup( existingPopupName.c_str() );
+            }
+            else
+            {
+                assert( settings.onSave );
+                if ( settings.onSave && settings.onSave( currentConfigName ) )
+                    ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::PopStyleVar();
+        if ( !valid )
+        {
+            UI::setTooltipIfHovered( currentConfigName.empty() ?
+                "Cannot save " + settings.configName + " with empty name" :
+                "Please do not use any of these symbols: \? * / \\ \" < >" );
+        }
+
+        if ( overrideExistingModal() )
+            ImGui::CloseCurrentPopup();
+
+        ImGui::SameLine();
+
+        ImGui::SetCursorPosX( saveDialog.windowWidth() - btnWidth - style.WindowPadding.x );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+        if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
+            ImGui::CloseCurrentPopup();
+        ImGui::PopStyleVar();
+
+        saveDialog.endPopup();
     }
-    if ( closeTopPopup )
-        ImGui::CloseCurrentPopup();
+    else
+    {
+        if ( settings.triggerSave )
+        {
+            currentConfigName = replaceProhibitedChars( *settings.inputName );
 
-    ImGui::SameLine();
-
-    ImGui::SetCursorPosX( saveDialog.windowWidth() - btnWidth - style.WindowPadding.x );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
-        ImGui::CloseCurrentPopup();
-    ImGui::PopStyleVar();
-
-    saveDialog.endPopup();
+            std::error_code ec;
+            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / ( currentConfigName + ".json" ), ec ) )
+            {
+                ImGui::OpenPopup( existingPopupName.c_str() );
+            }
+            else
+            {
+                assert( settings.onSave );
+                if ( settings.onSave )
+                    settings.onSave( currentConfigName );
+            }
+        }
+        overrideExistingModal();
+    }
 }
 
 } // namespace UI

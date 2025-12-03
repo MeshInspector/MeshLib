@@ -33,6 +33,7 @@
     <ClCompile Include="MRMeshMeshDistanceTests.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRMeshTopologyTests.cpp" />
+    <ClCompile Include="MRMultiwayICPTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRObjectTests.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />

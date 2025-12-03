@@ -547,6 +547,10 @@ struct CustomConfigModalSettings
     std::filesystem::path configDirectory;
     /// String used by input 
     std::string* inputName{ nullptr };
+    /// If false, inputName is used (if inputName is nullptr this option is not used)
+    bool inputNameDialog = true;
+    /// if true - opens modal in this frame, or saves if (`!inputNameDialog` && inputName)
+    bool triggerSave = false;
     /// If true - warns user before overriding existing file, otherwise override without warning
     bool warnExisting = true;
     /// Callback that is called when save is requested->returns true if file saved successfully (to close modal)

@@ -117,44 +117,57 @@ struct NumSum
 [[nodiscard]] MRMESH_API AffineXf3d getAligningXf( const PointToPlaneAligningTransform & p2pl,
     ICPMode mode, float angleLimit, float scaleLimit, const Vector3f & fixedRotationAxis );
 
-
+/// parameters of ICP algorithm
 struct ICPProperties
 {
-    /// The method how to update transformation from point pairs
+    /// The method how to update transformation from point pairs, see description of each option in ICPMethod
     ICPMethod method = ICPMethod::PointToPlane;
 
-    /// Rotation angle during one iteration of PointToPlane will be limited by this value
+    /// Rotation angle during one iteration of ICPMethod::PointToPlane will be limited by this value.
+    /// This is to reduce possible instability.
     float p2plAngleLimit = PI_F / 6.0f; // [radians]
 
-    /// Scaling during one iteration of PointToPlane will be limited by this value
+    /// Scaling during one iteration of ICPMethod::PointToPlane will be limited by this value.
+    /// This is to reduce possible instability.
     float p2plScaleLimit = 2;
 
-    /// Points pair will be counted only if cosine between surface normals in points is higher
+    /// If source and target points in a pair both have normals, then dot-product of normals must be not smaller than (cosThreshold),
+    /// otherwise such point pair will be deactivated (ignored) during transformation computation.
+    /// This is to get rid of erroneous pairs on unrelated parts of objects, which are close only by chance.
     float cosThreshold = 0.7f; // in [-1,1]
 
-    /// Points pair will be counted only if squared distance between points is lower than
+    /// The squared distance between source and target points in a pair must be not greater than (distThresholdSq),
+    /// otherwise such point pair will be deactivated (ignored) during transformation computation.
+    /// This is to get rid of outliers in input objects.
     float distThresholdSq = 1.f; // [distance^2]
 
-    /// Points pair will be counted only if distance between points is lower than
-    /// root-mean-square distance times this factor
+    /// First, root-mean-square distance between points in all active pairs is computed as D.
+    /// Then, the distance between source and target points in a pair must be not greater than (farDistFactor * D),
+    /// otherwise such point pair will be deactivated (ignored) during transformation computation.
+    /// This is to progressively reduce the distance threshold as the algorithm converge to a solution.
     float farDistFactor = 3.f; // dimensionless
 
-    /// Finds only translation. Rotation part is identity matrix
+    /// Selects the group of transformations, where to find a solution (e.g. with scaling or without, with rotation or without, ...).
+    /// See the description of each option in ICPMode.
     ICPMode icpMode = ICPMode::AnyRigidXf;
 
-    /// If this vector is not zero then rotation is allowed relative to this axis only
+    /// Additional parameter for ICPMode::OrthogonalAxis and ICPMode::FixedAxis transformation groups.
     Vector3f fixedRotationAxis;
 
-    /// maximum iterations
+    /// The maximum number of iterations that the algorithm can perform.
+    /// Increase this parameter if you need a higher precision or if initial approximation is not very precise.
     int iterLimit = 10;
 
-    /// maximum iterations without improvements
+    /// The algorithm will stop before making all (iterLimit) iterations, if there were
+    /// consecutive (badIterStopCount) iterations, during which the average distance between points in active pairs did not diminish.
     int badIterStopCount = 3;
 
-    /// Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
+    /// The algorithm will stop before making all (iterLimit) iterations,
+    /// if the average distance between points in active pairs became smaller than this value.
     float exitVal = 0; // [distance]
 
-    /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
+    /// A pair of points is activated only if both points in the pair are mutually closest (reciprocity test passed),
+    /// some papers recommend this mode for filtering out wrong pairs, but it can be too aggressive and deactivate (almost) all pairs.
     bool mutualClosest = false;
 };
 

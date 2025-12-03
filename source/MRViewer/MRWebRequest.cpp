@@ -360,18 +360,22 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
-
-#ifdef MRVIEWER_WITH_BUNDLED_CURL
+#if defined _WIN32 || defined MRVIEWER_WITH_BUNDLED_CURL
         if ( url.starts_with( "https" ) )
         {
+            cpr::SslOptions sslOpts;
+#ifdef _WIN32
+            sslOpts.SetOption( cpr::ssl::NoRevoke{ true } ); // needed to avoid some firewall issues "next InitializeSecurityContext failed: CRYPT_E_NO_REVOCATION_CHECK (0x80092012)"
+#endif
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
             // set the certificate info manually; see getCaInfo for more info
             static const auto cCaInfo = getCaInfo( session );
             if ( !cCaInfo.empty() )
             {
-                session.SetSslOptions( cpr::Ssl(
-                    cpr::ssl::CaInfo{ std::string{ cCaInfo } }
-                ) );
+                sslOpts.SetOption( cpr::ssl::CaInfo{ std::string{ cCaInfo } } );
             }
+#endif
+            session.SetSslOptions( sslOpts );
         }
 #endif
 

@@ -47,6 +47,7 @@ public:
     /// performs sampling of vertices or points;
     /// subdivides bounding box of the object on voxels of approximately given size and returns at most one vertex per voxel;
     /// voxelSize is automatically increased to avoid more voxels than \param maxVoxels;
+    /// if voxelSize == 0 then all valid points are returned;
     /// returns std::nullopt if it was terminated by the callback
     [[nodiscard]] MRMESH_API std::optional<VertBitSet> pointsGridSampling( float voxelSize, size_t maxVoxels = 500000,
         const ProgressCallback & cb = {} ) const;

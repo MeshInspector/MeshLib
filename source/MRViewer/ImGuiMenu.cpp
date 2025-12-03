@@ -310,21 +310,6 @@ void ImGuiMenu::startFrame()
 
     if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_ )
     {
-        spdlog::info( "context_->Viewports count {}", context_->Viewports.Size );
-        for ( const auto* vp : context_->Viewports )
-        {
-            if ( vp->PlatformWindowCreated )
-            {
-                viewer->forceSwapOnFrame( 2 );
-                break;
-            }
-            else if ( vp->PlatformRequestClose )
-            {
-                viewer->forceSwapOnFrame();
-                break;
-            }
-        }
-
         if ( context_->MouseViewport != ImGui::GetMainViewport() && needIncrement )
         {
             viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, true );
@@ -353,17 +338,26 @@ void ImGuiMenu::finishFrame()
     {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
-
         if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
         {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
-            spdlog::info( "DEBUG UpdatePlatformWindows" );
-            if ( viewer->isCurrentFrameSwapping() )
+
+            if ( context_ )
             {
-                ImGui::RenderPlatformWindowsDefault();
-                spdlog::info( "DEBUG RenderPlatformWindowsDefault" );
+                for ( int i = 1; i < context_->Viewports.Size; ++i )
+                {
+                    const auto* vp = context_->Viewports[i];
+                    if ( vp->LastFrameActive < context_->FrameCount ) // this means that viewport will be deleted in the next frame, so we need to swap in this frame
+                    {
+                        viewer->forceSwapOnFrame();
+                        break;
+                    }
+                }
             }
+
+            if ( viewer->isCurrentFrameSwapping() )
+                ImGui::RenderPlatformWindowsDefault();
             glfwMakeContextCurrent( backup_current_context );
         }
     }

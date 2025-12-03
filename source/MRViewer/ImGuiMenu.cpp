@@ -348,16 +348,27 @@ void ImGuiMenu::finishFrame()
                 for ( int i = 1; i < context_->Viewports.Size; ++i )
                 {
                     const auto* vp = context_->Viewports[i];
-                    if ( vp->LastFrameActive < context_->FrameCount ) // this means that viewport will be deleted in the next frame, so we need to swap in this frame
+                    // if non-main viewport will be deleted in following frames we force redraw of main frame
+                    // to ensure that there is at least one frame when both removed viewport and main viewport renders the window
+                    if ( vp->LastFrameActive < context_->FrameCount )
                     {
                         viewer->forceSwapOnFrame();
                         break;
                     }
                 }
-            }
 
-            if ( viewer->isCurrentFrameSwapping() )
-                ImGui::RenderPlatformWindowsDefault();
+                if ( viewer->isCurrentFrameSwapping() )
+                {
+                    ImGui::RenderPlatformWindowsDefault();
+
+                    // if in swapping frame new viewport appears deffer swapping for main viewport for one frame
+                    // to ensure that there is at least one frame when both new viewport and main viewport renders the window
+                    static int prevViewports = context_->Viewports.Size;
+                    if ( context_->Viewports.Size > prevViewports )
+                        viewer->incrementForceRedrawFrames( 1, true );
+                    prevViewports = context_->Viewports.Size;
+                }
+            }
             glfwMakeContextCurrent( backup_current_context );
         }
     }

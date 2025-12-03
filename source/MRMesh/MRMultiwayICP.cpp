@@ -282,25 +282,18 @@ MultiwayICP::MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingPa
 
 void MultiwayICP::calcGen_( bool p2pl, const ProgressCallback& cb )
 {
-    float minDist = std::numeric_limits<float>::max();
+    updateAllPointPairs();
+    float minDist = p2pl ? getMeanSqDistToPlane() : getMeanSqDistToPoint();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
 
-    Vector<AffineXf3f, ObjId> resXfs;
-    resXfs.resize( objs_.size() );
+    Vector<AffineXf3f, ObjId> resXfs( objs_.size() );
     for ( int i = 0; i < objs_.size(); ++i )
         resXfs[ObjId( i )] = objs_[ObjId( i )].xf;
 
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        if ( iter_ == 1 )
-        {
-            // update metric before first iteration
-            updateAllPointPairs();
-            minDist = p2pl ? getMeanSqDistToPlane() : getMeanSqDistToPoint();
-        }
-
-        bool res = doIteration_( p2pl, iter_ != 1 );
+        bool res = doIteration_( p2pl );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -311,6 +304,9 @@ void MultiwayICP::calcGen_( bool p2pl, const ProgressCallback& cb )
             break;
         }
 
+        // without this call, getMeanSqDistToPoint()/getMeanSqDistToPlane() will ignore xf changed in doIteration_()
+        if ( pairsGridPerLayer_.size() <= 1 ) // in cascade mode the pairs are updated inside doIteration_()
+            updateAllPointPairs();
         const float curDist = p2pl ? getMeanSqDistToPlane() : getMeanSqDistToPoint();
 
         // exit if several(3) iterations didn't decrease minimization parameter
@@ -831,13 +827,10 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
     }
 }
 
-bool MultiwayICP::doIteration_( bool p2pl, bool updateAllParis )
+bool MultiwayICP::doIteration_( bool p2pl )
 {
     if ( pairsGridPerLayer_.size() > 1 )
         return cascadeIter_( p2pl );
-
-    if ( updateAllParis )
-        updateAllPointPairs();
 
     if ( maxGroupSize_ == 1 )
         return p2pl ? p2plIter_() : p2ptIter_();

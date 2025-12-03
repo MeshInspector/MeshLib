@@ -16,23 +16,34 @@ TEST( MRMesh, ICPTorus )
     auto axis = Vector3f( 1, 0, 0 );
     auto trans = Vector3f( 0, 0.2f, 0.105f );
 
-    auto xf = AffineXf3f( Matrix3f::rotation( axis, 0.2f ), trans );
+    const auto xf = AffineXf3f( Matrix3f::rotation( axis, 0.2f ), trans );
 
-    ICP icp(
-        torusMove, torusRef, xf, AffineXf3f(), torusMove.topology.getValidVerts(), torusRef.topology.getValidVerts()
-    );
-
-    ICPProperties props
+    auto run = [&] ( ICPMethod method, float eps )
     {
-        .iterLimit = 20
-    };
-    icp.setParams( props );
-    auto newXf = icp.calculateTransformation();
-    std::cout << icp.getStatusInfo() << '\n';
+        ICP icp(
+            torusMove, torusRef, xf, AffineXf3f(), torusMove.topology.getValidVerts(), torusRef.topology.getValidVerts()
+        );
+        ICPProperties props
+        {
+            .method = method,
+            .iterLimit = 20
+        };
+        icp.setParams( props );
+        auto newXf = icp.calculateTransformation();
+        std::cout << icp.getStatusInfo() << '\n';
 
-    constexpr float eps = 1e-6f;
-    EXPECT_NEAR( ( newXf.A - Matrix3f::identity() ).norm(), 0., eps );
-    EXPECT_NEAR( newXf.b.length(), 0., eps );
+        EXPECT_LT( ( newXf.A - Matrix3f::identity() ).norm(), eps );
+        EXPECT_LT( newXf.b.length(), eps );
+    };
+
+    std::cout << "running Point-to-Plane method\n";
+    run( ICPMethod::PointToPlane, 1e-6f );
+
+    std::cout << "running Point-to-Point method\n";
+    run( ICPMethod::PointToPoint, 1e-3f );
+
+    std::cout << "running Combined method\n";
+    run( ICPMethod::Combined, 1e-6f );
 }
 
 } //namespace MR

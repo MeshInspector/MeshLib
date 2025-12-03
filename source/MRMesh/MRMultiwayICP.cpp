@@ -305,7 +305,8 @@ void MultiwayICP::calcGen_( bool p2pl, const ProgressCallback& cb )
         }
 
         // without this call, getMeanSqDistToPoint()/getMeanSqDistToPlane() will ignore xf changed in doIteration_()
-        updateAllPointPairs();
+        if ( pairsGridPerLayer_.size() <= 1 ) // in cascade mode the pairs are updated inside doIteration_()
+            updateAllPointPairs();
         const float curDist = p2pl ? getMeanSqDistToPlane() : getMeanSqDistToPoint();
 
         // exit if several(3) iterations didn't decrease minimization parameter

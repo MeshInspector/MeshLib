@@ -338,6 +338,7 @@ void ImGuiMenu::finishFrame()
     {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+
         if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
         {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();

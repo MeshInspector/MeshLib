@@ -1741,8 +1741,6 @@ bool Viewer::draw_( bool force )
 
     setupScene();
 
-    //spdlog::info( "DEBUG forceRedrawFramesWithoutSwap_ {}", forceRedrawFramesWithoutSwap_ );
-
     drawFull( needSceneRedraw );
 
     if ( forceRedrawFramesWithoutSwap_ > 0 )

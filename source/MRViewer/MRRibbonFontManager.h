@@ -31,9 +31,7 @@ public:
     enum class FontFile
     {
         Regular,
-#ifndef __EMSCRIPTEN__
         RegularSC, // Regular with Simple Chinese
-#endif
         SemiBold,
         Monospace,
         Icons,
@@ -76,16 +74,10 @@ public:
 
 private:
 
-#ifndef __EMSCRIPTEN__
-    static constexpr RibbonFontManager::FontFile cFontFileRegular_ = RibbonFontManager::FontFile::RegularSC;
-#else
-    static constexpr RibbonFontManager::FontFile cFontFileRegular_ = RibbonFontManager::FontFile::Regular;
-#endif
-
     FontFilePaths fontPaths_;
     struct FontData
     {
-        FontFile fontFile{ cFontFileRegular_ }; // what file type to use for this font
+        FontFile fontFile{ FontFile::RegularSC }; // what file type to use for this font
         Vector2f scaledOffset; // offset that is used for each glyph while creating atlas (updates in `updateFontsScaledOffset_`), should respect font size with scaling
         ImFont* fontPtr{ nullptr }; // pointer to loaded font, nullptr means that font was not loaded
     };

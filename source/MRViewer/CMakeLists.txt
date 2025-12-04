@@ -108,8 +108,8 @@ ENDIF()
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
+file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
 IF(EMSCRIPTEN)
-  file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.ttf")
   file(
     COPY
       ${JSONS}
@@ -124,7 +124,6 @@ IF(EMSCRIPTEN)
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
   )
 ELSE()
-  file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
   file(
     COPY
       ${JSONS}

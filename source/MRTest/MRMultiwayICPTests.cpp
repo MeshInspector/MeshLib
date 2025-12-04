@@ -11,7 +11,7 @@ namespace MR
 TEST( MRMesh, MultiwayICPTorus )
 {
     // all objects have same shape but different transformations
-    const auto torus = makeTorus( 2.5f, 0.7f, 48, 48 );
+    const auto torus = makeTorus( 2.5f, 0.7f, 40, 10 );
 
     auto axis = Vector3f( 1, 0, 0 );
     auto trans = Vector3f( 0, 0.2f, 0.105f );
@@ -45,7 +45,7 @@ TEST( MRMesh, MultiwayICPTorus )
         EXPECT_LT( newXf1.b.length(), eps );
     };
 
-    for ( int maxGroupSize : { 0, 1 } )
+    for ( int maxGroupSize : { 0, 1, 2 } )
     {
         std::cout << "running Point-to-Plane method, maxGroupSize=" << maxGroupSize << "\n";
         run( ICPMethod::PointToPlane, maxGroupSize, 1e-6f );

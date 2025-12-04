@@ -18,12 +18,12 @@ TEST( MRMesh, MultiwayICPTorus )
 
     const auto xf = AffineXf3f( Matrix3f::rotation( axis, 0.2f ), trans );
 
-    auto run = [&] ( ICPMethod method, float eps )
+    auto run = [&] ( ICPMethod method, int maxGroupSize, float eps )
     {
         ICPObjects objs;
         objs.push_back( { torusMove, xf } );
         objs.push_back( { torusRef, AffineXf3f{} } );
-        MultiwayICP icp( objs, MultiwayICPSamplingParameters{} );
+        MultiwayICP icp( objs, MultiwayICPSamplingParameters{ .maxGroupSize = maxGroupSize } );
 
         ICPProperties props
         {
@@ -40,14 +40,17 @@ TEST( MRMesh, MultiwayICPTorus )
         EXPECT_LT( newXf.b.length(), eps );
     };
 
-    std::cout << "running Point-to-Plane method\n";
-    run( ICPMethod::PointToPlane, 1e-6f );
+    for ( int maxGroupSize : { 0, 1 } )
+    {
+        std::cout << "running Point-to-Plane method, maxGroupSize=" << maxGroupSize << "\n";
+        run( ICPMethod::PointToPlane, maxGroupSize, 1e-6f );
 
-    std::cout << "running Point-to-Point method\n";
-    run( ICPMethod::PointToPoint, 1e-3f );
+        std::cout << "running Point-to-Point method, maxGroupSize=" << maxGroupSize << "\n";
+        run( ICPMethod::PointToPoint, maxGroupSize, 1e-3f );
 
-    std::cout << "running Combined method\n";
-    run( ICPMethod::Combined, 1e-6f );
+        std::cout << "running Combined method, maxGroupSize=" << maxGroupSize << "\n";
+        run( ICPMethod::Combined, maxGroupSize, 1e-6f );
+    }
 }
 
 } //namespace MR

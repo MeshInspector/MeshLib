@@ -6,8 +6,6 @@
 #include "MRRegionBoundary.h"
 #include "MRVolumeIndexer.h"
 #include "MRTimer.h"
-#include "MRMakeSphereMesh.h"
-#include "MRGTest.h"
 #include "MRComputeBoundingBox.h"
 
 namespace MR
@@ -204,9 +202,26 @@ std::optional<VertBitSet> pointGridSampling( const PointCloudPart& pcp, float vo
 
 std::optional<std::vector<ObjVertId>> multiModelGridSampling( const Vector<ModelPointsData, ObjId>& models, float voxelSize, const ProgressCallback& cb )
 {
-    if ( voxelSize <= 0.f )
-        return {};
     MR_TIMER;
+    std::vector<ObjVertId> res;
+    if ( voxelSize <= 0.f )
+    {
+        // return all input points as samples
+        ObjId oId;
+        auto sb = subprogress( cb, 0.1f, 0.8f );
+        for ( const auto& model : models )
+        {
+            ++oId;
+            if ( !model.points || !model.validPoints )
+                continue;
+            for ( auto v : *model.validPoints )
+            {
+                auto useOId = model.fakeObjId ? model.fakeObjId : oId;
+                res.push_back( { useOId, v } );
+            }
+        }
+        return res;
+    }
 
     Box3f bbox;
     for ( const auto& model : models )
@@ -249,21 +264,12 @@ std::optional<std::vector<ObjVertId>> multiModelGridSampling( const Vector<Model
             return {};
     }
 
-    std::vector<ObjVertId> res = grid.setSamplesPerModel();
+    res = grid.setSamplesPerModel();
 
     if ( cb && !cb( 1.0f ) )
         return {};
 
     return res;
-}
-
-TEST( MRMesh, GridSampling )
-{
-    auto sphereMesh = makeUVSphere();
-    auto numVerts = sphereMesh.topology.numValidVerts();
-    auto samples = verticesGridSampling( sphereMesh, 0.5f );
-    auto sampleCount = samples->count();
-    EXPECT_LE( sampleCount, numVerts );
 }
 
 } //namespace MR

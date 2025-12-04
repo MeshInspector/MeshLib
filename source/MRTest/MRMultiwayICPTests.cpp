@@ -45,7 +45,7 @@ TEST( MRMesh, MultiwayICPTorus )
         EXPECT_LT( newXf1.b.length(), eps );
     };
 
-    for ( int maxGroupSize : { 0, 1 } )
+    for ( int maxGroupSize : { 0, 1, 2 } )
     {
         std::cout << "running Point-to-Plane method, maxGroupSize=" << maxGroupSize << "\n";
         run( ICPMethod::PointToPlane, maxGroupSize, 1e-6f );

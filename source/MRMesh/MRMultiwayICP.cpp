@@ -1046,7 +1046,7 @@ bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
                     {
                         const auto& data = pairs.vec[idx];
                         if ( p2pl )
-                            mat.add( indI, data.srcPoint, indJ, data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
+                            mat.add( indI, data.srcPoint, indJ, data.tgtPoint, data.tgtNorm, data.weight );
                         else
                             mat.add( indI, data.srcPoint, indJ, data.tgtPoint, data.weight );
                     }

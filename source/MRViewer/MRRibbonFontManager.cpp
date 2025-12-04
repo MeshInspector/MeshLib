@@ -106,7 +106,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-    return fontPaths_[int( cFontFileRegular_ )];
+    return fontPaths_[int( FontFile::RegularSC )];
 }
 
 void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )

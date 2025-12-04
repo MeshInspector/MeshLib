@@ -406,12 +406,12 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( const P
     /// apply the same (updateXf) to all objects to restore transformation of first object,
     /// and make relative position of others the same
     assert( res[ObjId( 0 )] == objs_[ObjId( 0 )].xf );
-    const auto updateXf = xf0 * res[ObjId( 0 )].inverse();
+    const auto updateXf = AffineXf3d( xf0 ) * AffineXf3d( res[ObjId( 0 )].inverse() );
     res[ObjId( 0 )] = objs_[ObjId( 0 )].xf = xf0;
     for ( int i = 1; i < objs_.size(); ++i )
     {
         assert( res[ObjId( i )] == objs_[ObjId( i )].xf );
-        res[ObjId( i )] = objs_[ObjId( i )].xf = updateXf * res[ObjId( i )];
+        res[ObjId( i )] = objs_[ObjId( i )].xf = AffineXf3f( updateXf * AffineXf3d( res[ObjId( i )] ) );
     }
 
     return res;

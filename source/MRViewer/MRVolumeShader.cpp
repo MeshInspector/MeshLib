@@ -39,7 +39,6 @@ static std::string getVolumeShaderCommonFunctions()
     if ( ray.z < 0.0 )
         swap( minInt.z, maxInt.z );
 
-    //minInt = minInt);
     bvec3 goodRayComp = greaterThan( abs( ray ), vec3(0.001,0.001,0.001) ); // discard small ray components
     float absMinInt = -1.0e20; // just some small value
     if ( goodRayComp.x && minInt.x > absMinInt )
@@ -427,7 +426,7 @@ R"(
             continue;
 
         if ( shadingMode == 1 && !normalEye(textCoord, dimStepVoxel, shadingMode == 2) )
-                continue;
+            continue;
 
         firstFound = true;
     }

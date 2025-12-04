@@ -11,7 +11,7 @@ namespace MR
 TEST( MRMesh, MultiwayICPTorus )
 {
     // all objects have same shape but different transformations
-    const auto torus = makeTorus( 2.5f, 0.7f, 48, 48 );
+    const auto torus = makeTorus( 2.5f, 0.7f, 40, 10 );
 
     auto axis = Vector3f( 1, 0, 0 );
     auto trans = Vector3f( 0, 0.2f, 0.105f );

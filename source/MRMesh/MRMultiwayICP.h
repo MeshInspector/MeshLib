@@ -62,8 +62,10 @@ struct MultiwayICPSamplingParameters
     /// sampling size of each object, 0 has special meaning "take all valid points"
     float samplingVoxelSize = 0;
 
-    /// size of maximum icp group to work with
-    /// if number of objects exceeds this value, icp is applied in cascade mode
+    /// size of maximum icp group to work with;
+    /// if the number of objects exceeds this value, icp is applied in cascade mode;
+    /// maxGroupSize = 1 means that every object is moved independently on half distance to the previous position of all other objects;
+    /// maxGroupSize = 0 means that a big system of equations for all objects is solved (force no cascading)
     int maxGroupSize = 64;
 
     enum class CascadeMode

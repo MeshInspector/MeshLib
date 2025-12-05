@@ -38,9 +38,7 @@ RibbonFontManager::RibbonFontManager()
     fontPaths_ =
     {
     SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf",
-#ifndef __EMSCRIPTEN__
     SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf",
-#endif
     SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf",
     SystemPath::getFontsDirectory() / "NotoSansMono-Regular.ttf",
     SystemPath::getFontsDirectory() / "fa-solid-900.ttf",
@@ -50,12 +48,12 @@ RibbonFontManager::RibbonFontManager()
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges )
 {
     fonts_ = {
-        FontData{.fontFile = cFontFileRegular_},
-        FontData{.fontFile = cFontFileRegular_},
-        FontData{.fontFile = cFontFileRegular_},
+        FontData{.fontFile = FontFile::RegularSC},
+        FontData{.fontFile = FontFile::RegularSC},
+        FontData{.fontFile = FontFile::RegularSC},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Icons},
-        FontData{.fontFile = cFontFileRegular_},
+        FontData{.fontFile = FontFile::RegularSC},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::SemiBold},
         FontData{.fontFile = FontFile::Monospace}
@@ -108,7 +106,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-    return fontPaths_[int( cFontFileRegular_ )];
+    return fontPaths_[int( FontFile::RegularSC )];
 }
 
 void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )
@@ -202,10 +200,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* )
         config.GlyphOffset = ImVec2( font.scaledOffset );
     }
 
-    bool addFont = false;
-#ifndef __EMSCRIPTEN__
-    addFont = font.fontFile == FontFile::RegularSC;
-#endif // !__EMSCRIPTEN__
+    bool addFont = font.fontFile == FontFile::RegularSC;
     font.fontPtr = loadFontChecked(
         utf8string( fontPath ).c_str(), fontSize,
         &config, nullptr, addFont ? utf8string( fontPaths_[0] ).c_str() : nullptr );

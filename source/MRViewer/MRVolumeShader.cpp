@@ -4,6 +4,81 @@
 namespace MR
 {
 
+static std::string getVolumeShaderCommonFunctions()
+{
+    return R"(
+  float getVal( in float value )
+  {
+    return (value - minValue) / (maxValue-minValue);
+  }
+
+  float getGradAlphaVal( in float value )
+  {
+    if ( value < 0.0 || value > 1.0 )
+      return 0.0;
+    return texture( denseMap, vec2( value, 0.5 ) ).a;
+  }
+
+  void swap( inout float a, inout float b )
+  {
+    float c = a;
+    a = b;
+    b = c;
+  }
+
+  void rayVoxelIntersection( in vec3 minCorner, inout vec3 voxelCoord, in vec3 voxelSize,inout vec3 rayOrg, in vec3 ray )
+  {
+    vec3 voxelMin = voxelCoord * voxelSize + minCorner - rayOrg;
+    vec3 voxelMax = (voxelCoord + vec3(1.0,1.0,1.0) ) * voxelSize + minCorner - rayOrg;
+    vec3 minInt = voxelMin / ray;
+    vec3 maxInt = voxelMax / ray;
+    if ( ray.x < 0.0 )
+        swap( minInt.x, maxInt.x );
+    if ( ray.y < 0.0 )
+        swap( minInt.y, maxInt.y );
+    if ( ray.z < 0.0 )
+        swap( minInt.z, maxInt.z );
+
+    bvec3 goodRayComp = greaterThan( abs( ray ), vec3(0.001,0.001,0.001) ); // discard small ray components
+    float absMinInt = -1.0e20; // just some small value
+    if ( goodRayComp.x && minInt.x > absMinInt )
+        absMinInt = minInt.x;
+    if ( goodRayComp.y && minInt.y > absMinInt )
+        absMinInt = minInt.y;
+    if ( goodRayComp.z && minInt.z > absMinInt )
+        absMinInt = minInt.z;
+
+    rayOrg = rayOrg + ray * absMinInt;
+
+    float absMaxInt = 1.0e20; // just some big value
+    int absMaxIntId = 3; // to have "else" block if ray is zero for some reason
+    if ( goodRayComp.x && maxInt.x < absMaxInt )
+    {
+        absMaxIntId = 0;
+        absMaxInt = maxInt.x;
+    }
+    if ( goodRayComp.y && maxInt.y < absMaxInt )
+    {
+        absMaxIntId = 1;
+        absMaxInt = maxInt.y;
+    }
+    if ( goodRayComp.z && maxInt.z < absMaxInt )
+    {
+        absMaxIntId = 2;
+        absMaxInt = maxInt.z;
+    }
+    if ( absMaxIntId == 0 )
+        voxelCoord.x = voxelCoord.x + sign(ray.x);
+    else if ( absMaxIntId == 1 )
+        voxelCoord.y = voxelCoord.y + sign(ray.y);
+    else if ( absMaxIntId == 2 )
+        voxelCoord.z = voxelCoord.z + sign(ray.z);
+    else
+        voxelCoord = voxelCoord + vec3(1.0,1.0,1.0);
+  }
+)";
+}
+
 std::string getTrivialVertexShader()
 {
     return MR_GLSL_VERSION_LINE R"(
@@ -57,19 +132,9 @@ std::string getVolumeFragmentShader()
   uniform vec4 clippingPlane;        // (in from base) clipping plane
 
   out vec4 outColor;
-
-  float getVal( in float value )
-  {
-    return (value - minValue) / (maxValue-minValue);
-  }
-
-  float getGradAlphaVal( in float value )
-  {
-    if ( value < 0.0 || value > 1.0 )
-      return 0.0;
-    return texture( denseMap, vec2( value, 0.5 ) ).a;
-  }
-
+)"
++ getVolumeShaderCommonFunctions() +
+R"(
   vec3 normalEye( in vec3 textCoord, in vec3 dimStepVoxel, in bool alphaGrad )
   {
     float minXVal = getVal( texture( volume, textCoord - vec3(dimStepVoxel.x,0,0)).r );
@@ -125,38 +190,6 @@ std::string getVolumeFragmentShader()
     color.rgb = ( ambient + diffuse + specular ) * color.rgb;
   }
 
-  void swap( inout float a, inout float b )
-  {
-    float c = a;
-    a = b;
-    b = c;
-  }
-
-  void rayVoxelIntersection( in vec3 minCorner, inout vec3 voxelCoord, in vec3 voxelSize,inout vec3 rayOrg, in vec3 ray )
-  {
-    vec3 voxelMin = voxelCoord * voxelSize + minCorner;
-    vec3 voxelMax = (voxelCoord + vec3(1.0,1.0,1.0) ) * voxelSize + minCorner;
-    vec3 minDot = (voxelMin - rayOrg) / ray;
-    vec3 maxDot = (voxelMax - rayOrg) / ray;
-    if ( ray.x < 0.0 )
-        swap( minDot.x, maxDot.x );
-    if ( ray.y < 0.0 )
-        swap( minDot.y, maxDot.y );
-    if ( ray.z < 0.0 )
-        swap( minDot.z, maxDot.z );
-
-    float absMinDot = max( max( minDot.x, minDot.y ), minDot.z );
-    rayOrg = rayOrg + ray * absMinDot;
-
-        
-    if ( maxDot.x <= maxDot.y && maxDot.x <= maxDot.z )
-        voxelCoord.x = voxelCoord.x + sign(ray.x);
-    else if ( maxDot.y <= maxDot.x && maxDot.y <= maxDot.z )
-        voxelCoord.y = voxelCoord.y + sign(ray.y);
-    else
-        voxelCoord.z = voxelCoord.z + sign(ray.z);
-  }
-
   void main()
   {
     mat4 eyeM = view * model;
@@ -207,7 +240,7 @@ std::string getVolumeFragmentShader()
             rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
         else
             rayStart = rayStart + normRayDir*step;
-        
+
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(-0.001,-0.001,-0.001) ) ) || any( greaterThan( textCoord, vec3(1.001,1.001,1.001) ) ) )
             break;
@@ -295,18 +328,9 @@ std::string getVolumePickerFragmentShader()
 
   uniform uint uniGeomId;
   out highp uvec4 outColor;
-
-  float getVal( in float value )
-  {
-    return (value - minValue) / (maxValue-minValue);
-  }
-
-  float getGradAlphaVal( in float value )
-  {
-    if ( value < 0.0 || value > 1.0 )
-      return 0.0;
-    return texture( denseMap, vec2( value, 0.5 ) ).a;
-  }
+)"
++ getVolumeShaderCommonFunctions() +
+R"(
 
   bool normalEye( in vec3 textCoord, in vec3 dimStepVoxel, in bool alphaGrad )
   {
@@ -327,38 +351,6 @@ std::string getVolumePickerFragmentShader()
     }
     vec3 grad = -vec3( maxXVal - minXVal, maxYVal - minYVal, maxZVal - minZVal );
     return dot( grad, grad ) >= 1.0e-5;
-  }
-
-  void swap( inout float a, inout float b )
-  {
-    float c = a;
-    a = b;
-    b = c;
-  }
-
-  void rayVoxelIntersection( in vec3 minCorner, inout vec3 voxelCoord, in vec3 voxelSize,inout vec3 rayOrg, in vec3 ray )
-  {
-    vec3 voxelMin = voxelCoord * voxelSize + minCorner;
-    vec3 voxelMax = (voxelCoord + vec3(1.0,1.0,1.0) ) * voxelSize + minCorner;
-    vec3 minDot = (voxelMin - rayOrg) / ray;
-    vec3 maxDot = (voxelMax - rayOrg) / ray;
-    if ( ray.x < 0.0 )
-        swap( minDot.x, maxDot.x );
-    if ( ray.y < 0.0 )
-        swap( minDot.y, maxDot.y );
-    if ( ray.z < 0.0 )
-        swap( minDot.z, maxDot.z );
-
-    float absMinDot = max( max( minDot.x, minDot.y ), minDot.z );
-    rayOrg = rayOrg + ray * absMinDot;
-
-        
-    if ( maxDot.x <= maxDot.y && maxDot.x <= maxDot.z )
-        voxelCoord.x = voxelCoord.x + sign(ray.x);
-    else if ( maxDot.y <= maxDot.x && maxDot.y <= maxDot.z )
-        voxelCoord.y = voxelCoord.y + sign(ray.y);
-    else
-        voxelCoord.z = voxelCoord.z + sign(ray.z);
   }
 
   void main()

@@ -106,8 +106,8 @@ MRVOXELS_API Expected<SimpleBinaryVolume> closeToMeshBinaryVolume( const MeshPar
         const auto pos = indexer.toPos( i );
         const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
         const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-        const auto proj = findProjection( voxelCenter, mp, closeDistSq );
-        if ( proj )
+        const auto anythingWithinCloseDist = findProjection( voxelCenter, mp, closeDistSq, nullptr, closeDistSq );
+        if ( anythingWithinCloseDist )
             res.data.set( i );
     }, params.cb ) )
         return unexpectedOperationCanceled();

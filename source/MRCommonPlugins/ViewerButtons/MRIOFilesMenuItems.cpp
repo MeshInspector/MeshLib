@@ -10,6 +10,8 @@
 #include "MRViewer/MRUnitSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRLinesLoad.h"
+#include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRSceneLoad.h"
 #include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRViewer/MRAppendHistory.h"
@@ -34,6 +36,7 @@
 #include "MRViewer/MRViewerSignals.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRViewer/MRSceneCache.h"
@@ -119,7 +122,7 @@ Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
 {
     Json::Value root;
     root["Name"] = obj.name();
-    for (const auto& child : obj.children())
+    for ( const auto& child : obj.children() )
     {
         root["Children"].append( prepareJsonObjHierarchyRecursive( *child ) );
     }
@@ -129,7 +132,7 @@ Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
 Json::Value prepareJsonObjsHierarchy( const std::vector<std::shared_ptr<MR::Object>>& objs )
 {
     Json::Value root;
-    for (const auto& obj : objs )
+    for ( const auto& obj : objs )
         root["Children"].append( prepareJsonObjHierarchyRecursive( *obj ) );
     return root;
 }
@@ -141,50 +144,50 @@ Json::Value prepareJsonObjsHierarchy( const std::vector<std::shared_ptr<MR::Obje
 #ifdef __EMSCRIPTEN__
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId )
-{
-    using namespace MR;
-    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
-#ifndef MRMESH_NO_OPENVDB
-        | VoxelsLoad::getFilters()
+    EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId )
+    {
+        using namespace MR;
+        auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
+#ifndef MESHLIB_NO_VOXELS
+            | VoxelsLoad::getFilters()
 #endif
-    ;
+            ;
 #ifdef __EMSCRIPTEN_PTHREADS__
         filters = filters | ObjectLoad::getFilters();
 #else
         filters = filters | AsyncObjectLoad::getFilters();
 #endif
-    std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
-    if ( !checkPaths( paths, filters ) )
-    {
-        showError( stringUnsupportedFileExtension() );
-        return;
-    }
-    FileLoadOptions opts;
-    opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
-    {
-        auto hierarchyRoot = prepareJsonObjsHierarchy(objs);
-        hierarchyRoot["Errors"] = errors;
-        hierarchyRoot["Warnings"] = warnings;
-        auto hierarchyLine = hierarchyRoot.toStyledString();
+        std::vector<std::filesystem::path> paths = { pathFromUtf8( filename ) };
+        if ( !checkPaths( paths, filters ) )
+        {
+            showError( stringUnsupportedFileExtension() );
+            return;
+        }
+        FileLoadOptions opts;
+        opts.loadedCallback = [contextId] ( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
+        {
+            auto hierarchyRoot = prepareJsonObjsHierarchy( objs );
+            hierarchyRoot["Errors"] = errors;
+            hierarchyRoot["Warnings"] = warnings;
+            auto hierarchyLine = hierarchyRoot.toStyledString();
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
-        EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarchyLine.c_str() );
+            EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString( $1 ) ), contextId, hierarchyLine.c_str() );
 #pragma GCC diagnostic pop
-    };
-    getViewerInstance().loadFiles( paths, opts );
-}
+        };
+        getViewerInstance().loadFiles( paths, opts );
+    }
 
-EMSCRIPTEN_KEEPALIVE void emsGetObjectFromScene( const char* objectName, const char* filename )
-{
-    using namespace MR;
-    auto obj = SceneRoot::get().find( objectName );
-    if ( !obj )
-        return;
-    auto res = saveObjectToFile( *obj, pathFromUtf8(filename), { .backupOriginalFile = false} );
-    if ( !res )
-        showError( res.error() );
-}
+    EMSCRIPTEN_KEEPALIVE void emsGetObjectFromScene( const char* objectName, const char* filename )
+    {
+        using namespace MR;
+        auto obj = SceneRoot::get().find( objectName );
+        if ( !obj )
+            return;
+        auto res = saveObjectToFile( *obj, pathFromUtf8( filename ), { .backupOriginalFile = false } );
+        if ( !res )
+            showError( res.error() );
+    }
 
 }
 #endif
@@ -203,7 +206,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open directory" );
         if ( openDirIt != RibbonSchemaHolder::schema().items.end() )
         {
-            openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirIt->second.item );
+            openDirectoryItem_ = std::dynamic_pointer_cast< OpenDirectoryMenuItem >( openDirIt->second.item );
         }
         else
         {
@@ -436,13 +439,13 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 }
 
 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-void sOpenDICOMs( const std::filesystem::path & directory )
+void sOpenDICOMs( const std::filesystem::path& directory )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory] () -> std::function<void()>
     {
         if ( auto loadRes = makeObjectTreeFromFolder( directory, true, ProgressBar::callBackSetProgress ) )
         {
-            return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
+            return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings )]
             {
                 sSelectRecursive( *obj );
                 AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
@@ -478,7 +481,10 @@ std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_pt
 
 bool OpenDirectoryMenuItem::action()
 {
-    openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
+    openFolderDialogAsync( [this] ( auto&& path )
+    {
+        openDirectory( path );
+    } );
     return false;
 }
 
@@ -494,7 +500,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
         {
             if ( auto loadRes = makeObjectTreeFromFolder( directory, false, ProgressBar::callBackSetProgress ) )
             {
-                return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
+                return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings )]
                 {
                     sSelectRecursive( *obj );
                     AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
@@ -535,7 +541,8 @@ bool OpenDICOMsMenuItem::action()
 }
 #endif
 
-namespace {
+namespace
+{
 
 struct SaveInfo
 {
@@ -544,35 +551,37 @@ struct SaveInfo
 };
 
 template<typename T>
-std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & objs )
+std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>>& objs )
 {
     std::optional<SaveInfo> res;
     // return nullopt if there is no single VisualObject in objs
-    if ( std::none_of( objs.begin(), objs.end(), [&]( const auto & pObj )
-        { return dynamic_cast<const VisualObject*>( pObj.get() ); } ) )
+    if ( std::none_of( objs.begin(), objs.end(), [&] ( const auto& pObj )
+    {
+        return dynamic_cast< const VisualObject* >( pObj.get() );
+    } ) )
         return res;
 
     auto checkObjects = [&]<class U>( SaveInfo info )
     {
-        for ( const auto & obj : objs )
+        for ( const auto& obj : objs )
         {
-            if ( !dynamic_cast<const VisualObject*>( obj.get() ) )
+            if ( !dynamic_cast< const VisualObject* >( obj.get() ) )
                 continue; // skip not VisualObjects
-            if ( !dynamic_cast<const U*>( obj.get() ) )
+            if ( !dynamic_cast< const U* >( obj.get() ) )
                 return false;
         }
         res.emplace( info );
         return true;
     };
 
-    checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() } )
-    || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
-    || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
-    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() } )
+    checkObjects.template operator() < ObjectMesh > ( { ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() } )
+        || checkObjects.template operator() < ObjectLines > ( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
+        || checkObjects.template operator() < ObjectPoints > ( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
+        || checkObjects.template operator() < ObjectDistanceMap > ( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() } )
 #ifndef MESHLIB_NO_VOXELS
-    || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
+        || checkObjects.template operator() < ObjectVoxels > ( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
 #endif
-    ;
+        ;
 
     return res;
 }
@@ -584,7 +593,7 @@ SaveObjectMenuItem::SaveObjectMenuItem() :
 {
 }
 
-std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>&objs ) const
+std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const
 {
 #ifdef __EMSCRIPTEN__
     if ( objs.size() != 1 || !getSaveInfo( objs ) )
@@ -600,16 +609,18 @@ bool SaveObjectMenuItem::action()
 {
     auto objs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     // erase not VisualObjects from objs
-    std::erase_if( objs, [&]( const auto & pObj )
-        { return !dynamic_cast<const VisualObject*>( pObj.get() ); } );
+    std::erase_if( objs, [&] ( const auto& pObj )
+    {
+        return !dynamic_cast< const VisualObject* >( pObj.get() );
+    } );
     if ( objs.empty() )
         return false;
     const auto optInfo = getSaveInfo( objs );
     if ( !optInfo )
         return false;
-    const auto & info = *optInfo;
+    const auto& info = *optInfo;
     const auto objType = info.objType;
-    const auto & baseFilters = info.baseFilters;
+    const auto& baseFilters = info.baseFilters;
 
     int firstFilterNum = 0;
     ViewerSettingsManager* settingsManager = dynamic_cast< ViewerSettingsManager* >( getViewerInstance().getViewerSettingsManager().get() );
@@ -648,7 +659,7 @@ bool SaveObjectMenuItem::action()
         int objTypeInt = int( objType );
         if ( settingsManager && objTypeInt >= 0 && objTypeInt < int( ViewerSettingsManager::ObjType::Count ) )
             settingsManager->setLastExtention( objType, utf8string( savePath0.extension() ) );
-        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [objs = std::move( objs ), savePath0]() -> std::function<void()>
+        ProgressBar::orderWithMainThreadPostProcessing( "Save object", [objs = std::move( objs ), savePath0] () -> std::function<void()>
         {
             const auto folder = savePath0.parent_path();
             const auto stem = utf8string( savePath0.stem() );
@@ -656,7 +667,10 @@ bool SaveObjectMenuItem::action()
             const auto prefix = ( stem == objs[0]->name() ) ? std::string{} : ( stem + "_" );
             const auto ext = utf8string( savePath0.extension() );
             if ( ext.empty() )
-                return [] { showError( "File name is not set" ); };
+                return []
+            {
+                showError( "File name is not set" );
+            };
 
             std::vector<std::filesystem::path> savePaths;
             std::unordered_set<std::string> usedNames;
@@ -681,12 +695,15 @@ bool SaveObjectMenuItem::action()
                 const auto sp = subprogress( ProgressBar::callBackSetProgress, float( i ) / objs.size(), float( i + 1 ) / objs.size() );
                 auto res = saveObjectToFile( *objs[i], path, { .backupOriginalFile = true, .callback = sp } );
                 if ( !res )
-                    return [error = std::move( res.error() )] { showError( error ); };
+                    return [error = std::move( res.error() )]
+                {
+                    showError( error );
+                };
                 savePaths.push_back( std::move( path ) );
             }
             return [savePaths = std::move( savePaths )]
             {
-                for ( const auto & sp : savePaths )
+                for ( const auto& sp : savePaths )
                     getViewerInstance().recentFilesStore().storeFile( sp );
             };
         } );
@@ -697,7 +714,7 @@ bool SaveObjectMenuItem::action()
     return false;
 }
 
-SaveSelectedMenuItem::SaveSelectedMenuItem():
+SaveSelectedMenuItem::SaveSelectedMenuItem() :
     RibbonMenuItem( "Save selected" )
 {
 }
@@ -740,7 +757,7 @@ bool SaveSelectedMenuItem::action()
 
     auto ext = savePath.extension().u8string();
     for ( auto& c : ext )
-        c = ( char ) tolower( c );
+        c = ( char )tolower( c );
 
     if ( ext != u8".obj" )
     {
@@ -749,7 +766,7 @@ bool SaveSelectedMenuItem::action()
         for ( auto& child : children )
             removeUnselectedRecursive( *child );
 
-        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone]()->std::function<void()>
+        ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone] ()->std::function<void()>
         {
             auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath,
                 {
@@ -757,10 +774,10 @@ bool SaveSelectedMenuItem::action()
                     .progress = ProgressBar::callBackSetProgress
                 } );
 
-            return[savePath, res]()
+            return[savePath, res] ()
             {
                 if ( res )
-                    getViewerInstance().recentFilesStore().storeFile(savePath);
+                    getViewerInstance().recentFilesStore().storeFile( savePath );
                 else
                     showError( "Error saving selected: " + res.error() );
             };
@@ -795,10 +812,13 @@ SaveSceneAsMenuItem::SaveSceneAsMenuItem( const std::string& pluginName ) :
 
 void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 {
-    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
+    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()] ()->std::function<void()>
     {
         if ( savePath.extension().empty() )
-            return [] { showError( "File name is not set" ); };
+            return []
+        {
+            showError( "File name is not set" );
+        };
 
         auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
             {
@@ -806,7 +826,7 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
                 .progress = ProgressBar::callBackSetProgress
             } );
 
-        return[savePath, res]()
+        return[savePath, res] ()
         {
             if ( res )
                 getViewerInstance().onSceneSaved( savePath );
@@ -865,7 +885,7 @@ bool SaveSceneMenuItem::action()
     return false;
 }
 
-CaptureScreenshotMenuItem::CaptureScreenshotMenuItem():
+CaptureScreenshotMenuItem::CaptureScreenshotMenuItem() :
     StatePlugin( "Capture screenshot" )
 {
     CommandLoop::appendCommand( [&] ()
@@ -926,8 +946,8 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
     ImGui::EndCustomStatePlugin();
 }
 
-CaptureUIScreenshotMenuItem::CaptureUIScreenshotMenuItem():
-    RibbonMenuItem("Capture UI screenshot")
+CaptureUIScreenshotMenuItem::CaptureUIScreenshotMenuItem() :
+    RibbonMenuItem( "Capture UI screenshot" )
 {
 }
 
@@ -1060,9 +1080,9 @@ bool CaptureScreenshotToClipBoardMenuItem::action()
     image_spec.alpha_shift = 24;
 
     // flip image
-    for (auto y1 = 0, y2 = image.resolution.y - 1; y1 < y2; y1++, y2--)
-        for (auto x = 0, width = image.resolution.x; x < width; x++)
-            std::swap(image.pixels[y1 * width + x], image.pixels[y2 * width + x]);
+    for ( auto y1 = 0, y2 = image.resolution.y - 1; y1 < y2; y1++, y2-- )
+        for ( auto x = 0, width = image.resolution.x; x < width; x++ )
+            std::swap( image.pixels[y1 * width + x], image.pixels[y2 * width + x] );
 
     clip::image img( image.pixels.data(), image_spec );
     clip::set_image( img );

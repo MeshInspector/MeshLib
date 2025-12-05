@@ -1,5 +1,6 @@
 #include "MRSaveObjects.h"
 #include "MRUnitSettings.h"
+#include "config.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
@@ -26,7 +27,7 @@
 namespace MR
 {
 
-Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, const SaveObjectSettings & settings )
+Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, const SaveObjectSettings& settings )
 {
     MR_TIMER;
     if ( !reportProgress( settings.callback, 0.f ) )

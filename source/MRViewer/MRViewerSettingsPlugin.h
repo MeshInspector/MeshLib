@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRViewerFwd.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRShadowsGL.h"
 #include "MRViewer/MRSpaceMouseParameters.h"
@@ -30,7 +31,10 @@ public:
 
     virtual void drawDialog( ImGuiContext* ctx ) override;
 
-    virtual bool blocking() const override { return false; }
+    virtual bool blocking() const override
+    {
+        return false;
+    }
 
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     MRVIEWER_API void updateThemes();
@@ -39,22 +43,29 @@ public:
     class ExternalSettings
     {
     public:
-        virtual ~ExternalSettings() {}
+        virtual ~ExternalSettings()
+        {
+        }
         // returns the name of the setting, which is a unique value
         virtual const std::string& getName() const = 0;
         // the function of drawing the configuration UI
         virtual void draw() = 0;
         // restore the settings to their default values
-        virtual void reset() {}
+        virtual void reset()
+        {
+        }
         // if not overriden this setting will be drawn in tools block
-        virtual const char* separatorName() const { return "Tools"; }
+        virtual const char* separatorName() const
+        {
+            return "Tools";
+        }
     };
 
     /// add external settings with UI combo box
     MRVIEWER_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings );
 
     /// delete external settings with UI combo box
-    MRVIEWER_API void delComboSettings( const TabType tab, const ExternalSettings * settings );
+    MRVIEWER_API void delComboSettings( const TabType tab, const ExternalSettings* settings );
 
     /// returns instance of this plugin if it is registered
     /// nullptr otherwise
@@ -119,7 +130,7 @@ private:
     TabType activeTab_ = TabType::Quick;
     TabType orderedTab_ = TabType::Count; // invalid
 
-    std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
+    std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t( TabType::Count )> comboSettings_;
 
     MruFormatParameters mruFormatParameters_;
 };

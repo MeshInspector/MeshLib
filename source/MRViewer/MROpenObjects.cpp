@@ -19,7 +19,7 @@ namespace MR
 {
 
 
-Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, bool dicomOnly, const ProgressCallback& callback )
+Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path& folder, bool dicomOnly, const ProgressCallback& callback )
 {
     MR_TIMER;
 
@@ -33,17 +33,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::filesystem::path path;
         std::vector<FilePathNode> subfolders;
         std::vector<FilePathNode> files;
-        #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-            bool dicomFolder = false;
-            VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
-        #endif
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+        bool dicomFolder = false;
+        VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
+#endif
 
         bool empty() const
         {
             return files.empty() && subfolders.empty()
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
                 && !dicomFolder
-            #endif
+#endif
                 ;
         }
     };
@@ -60,13 +60,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             {
                 node.subfolders.push_back( getFilePathNode( path ) );
             }
-            else if ( !node.dicomFolder && ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) ) )
+            else if (
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+                !node.dicomFolder &&
+#endif
+                ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) ) )
             {
                 auto ext = utf8string( path.extension() );
                 for ( auto& c : ext )
                     c = ( char )tolower( c );
 
-                #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
                 if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
                 {
                     node.dicomStatus = dicomStatus;
@@ -74,9 +78,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     node.files.clear();
                 }
                 else
-                #endif
-                if ( findFilter( filters, ext ) )
-                    node.files.push_back( { .path = path } );
+#endif
+                    if ( findFilter( filters, ext ) )
+                        node.files.push_back( { .path = path } );
             }
         }
         return node;
@@ -123,10 +127,10 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             for ( const FilePathNode& file : node.files )
                 nodes.push_back( { file, objPtr, cb.newTask() } );
 
-        #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
             nodes.push_back( { node, objPtr, cb.newTask( 10.f ) } );
-        #endif
+#endif
     };
     LoadedObject res;
     res.obj = std::make_shared<Object>();
@@ -158,33 +162,36 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         {
             if ( loadingCanceled.load( std::memory_order_relaxed ) )
                 return;
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+
             if ( !nodeAndRes.node.dicomFolder )
+#endif
             {
                 nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
             }
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             else
             {
                 if ( !nodeAndRes.node.dicomStatus )
                     nodeAndRes.result = loadObjResultType( unexpected( fmt::format( "Unsupported DICOM folder: {}", nodeAndRes.node.dicomStatus.reason ) ) );
                 else
                     nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                        [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType
-                        {
-                            // dicom is always opened in meters, and we can use this information to convert them properly
-                            for ( auto& obj : objs.objs )
-                                obj->applyScale( dicomScaleFactor );
-                            return std::move( objs );
-                        } );
+                        [&, dicomScaleFactor] ( LoadedObjects&& objs ) -> loadObjResultType
+                {
+                    // dicom is always opened in meters, and we can use this information to convert them properly
+                    for ( auto& obj : objs.objs )
+                        obj->applyScale( dicomScaleFactor );
+                    return std::move( objs );
+                } );
             }
-            #endif
+#endif
             completed += 1;
         } );
     }
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
     while ( !loadingCanceled && completed < nodes.size() )
     {
-        std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         loadingCanceled = !cb();
         if ( loadingCanceled )
         {
@@ -212,12 +219,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     {
         if ( taskRes.has_value() )
         {
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             if ( node.dicomFolder && taskRes->objs.size() == 1 )
             {
                 parent->parent()->addChild( taskRes->objs[0] );
                 parent->parent()->removeChild( parent );
             }
             else
+#endif
             {
                 for ( const auto& objPtr : taskRes->objs )
                     parent->addChild( objPtr );
@@ -287,6 +296,6 @@ Expected<LoadedObject> makeObjectTreeFromZip( const std::filesystem::path& zipPa
     return makeObjectTreeFromFolder( contentsFolder, false, callback );
 }
 
-MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectTreeFromZip )
+MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)", "*.zip" ), makeObjectTreeFromZip )
 
 } //namespace MR

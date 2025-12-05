@@ -23,7 +23,10 @@
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
+
+#ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace
 {
@@ -200,7 +203,9 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 
     setDefaultSerializeMeshFormat( ".ply" );
     setDefaultSerializePointsFormat( ".ply" );
+#ifndef MRVIEWER_NO_VOXELS
     setDefaultSerializeVoxelsFormat( ".vdb" );
+#endif
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -230,7 +235,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             gridVisible &= visible; // do not allow showing grid without basis because it is disabled by `viewer.globalBasis`
             viewer.globalBasis->setGridVisible( gridVisible );
             if ( visible )
-                CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
+                CommandLoop::appendCommand( [&] ()
+            {
+                viewer.preciseFitDataViewport( ViewportMask::all(), { 0.9f } );
+            } );
         }
         if ( val[cGlobalBasisScaleKey].isString() && val[cGlobalBasisScaleKey].asString() == "Auto" )
             params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Auto;
@@ -307,7 +315,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
     {
         CNCMachineSettings cncSettings;
-        cncSettings.loadFromJson( cfg.getJsonValue(cncMachineSettingsKey) );
+        cncSettings.loadFromJson( cfg.getJsonValue( cncMachineSettingsKey ) );
         SceneSettings::setCNCMachineSettings( cncSettings );
     }
 
@@ -424,7 +432,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     Json::Value lastExtentions = cfg.getJsonValue( lastExtensionsParamKey );
     if ( lastExtentions.isArray() )
     {
-        const int end = std::min( (int)lastExtentions.size(), (int)lastExtentions_.size() );
+        const int end = std::min( ( int )lastExtentions.size(), ( int )lastExtentions_.size() );
         for ( int i = 0; i < end; ++i )
             lastExtentions_[i] = lastExtentions[i].asString();
     }
@@ -442,7 +450,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 #ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
         {
-            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
+            if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
             {
                 auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
                 if ( hidapiHandler )
@@ -470,8 +478,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( object.isMember( "swipeMode" ) && object["swipeMode"].isInt() )
         {
             const auto swipeMode = object["swipeMode"].asInt();
-            if ( swipeMode >= 0 && swipeMode < (int)TouchpadParameters::SwipeMode::Count )
-                parameters.swipeMode = (TouchpadParameters::SwipeMode)swipeMode;
+            if ( swipeMode >= 0 && swipeMode < ( int )TouchpadParameters::SwipeMode::Count )
+                parameters.swipeMode = ( TouchpadParameters::SwipeMode )swipeMode;
             else
                 spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
         }
@@ -491,13 +499,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         // and setting the degrees mode automatically sets the preferred angle precision.
 
         { // Length unit.
-            static const std::unordered_map<std::string, LengthUnit> map = []{
+            static const std::unordered_map<std::string, LengthUnit> map = []
+            {
                 std::unordered_map<std::string, LengthUnit> ret;
                 for ( int i = 0; i < int( LengthUnit::_count ); i++ )
                     ret.try_emplace( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ), LengthUnit( i ) );
                 ret.try_emplace( cUnitsNoUnit, LengthUnit::_count );
                 return ret;
-            }();
+            }( );
             auto targetIt = map.find( loadString( cUnitsLenUnit, "" ) );
             UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::millimeters : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
             auto sourceIt = map.find( loadString( cUnitsModelLenUnit, "" ) );
@@ -513,12 +522,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         }
 
         { // Degrees mode.
-            static const std::unordered_map<std::string, DegreesMode> map = []{
+            static const std::unordered_map<std::string, DegreesMode> map = []
+            {
                 std::unordered_map<std::string, DegreesMode> ret;
                 for ( int i = 0; i < int( DegreesMode::_count ); i++ )
                     ret.try_emplace( std::string( toString( DegreesMode( i ) ) ), DegreesMode( i ) );
                 return ret;
-            }();
+            }( );
             auto it = map.find( loadString( cUnitsDegreesMode, "" ) );
             UnitSettings::setDegreesMode( it != map.end() ? it->second : DegreesMode::degrees, true );
         }
@@ -539,8 +549,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         setDefaultSerializeMeshFormat( format );
         format = loadString( cMruInnerPointsFormat, ".ply" );
         setDefaultSerializePointsFormat( format );
+#ifndef MRVIEWER_NO_VOXELS
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
+#endif
     }
 
     if ( cfg.hasJsonValue( cVisualObjectTags ) )
@@ -679,11 +691,11 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     const auto& touchpadParameters = viewer.getTouchpadParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
-    touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;
+    touchpadParametersJson["swipeMode"] = ( int )touchpadParameters.swipeMode;
     cfg.setJsonValue( cTouchpadSettings, touchpadParametersJson );
 
     Json::Value ambientCoefSelectedObj = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
-    cfg.setJsonValue( cAmbientCoefSelectedObj, ambientCoefSelectedObj);
+    cfg.setJsonValue( cAmbientCoefSelectedObj, ambientCoefSelectedObj );
 
     { // Measurement units.
         saveBool( cUnitsLeadingZero, UnitSettings::getShowLeadingZero() );
@@ -700,7 +712,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
         saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
+#ifndef MRVIEWER_NO_VOXELS
         saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
+#endif
     }
 
     {
@@ -711,7 +725,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
 }
 
-const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )
+const std::string& ViewerSettingsManager::getLastExtention( ObjType objType )
 {
     int objTypeInt = int( objType );
     if ( objTypeInt < 0 || objTypeInt >= int( ObjType::Count ) )

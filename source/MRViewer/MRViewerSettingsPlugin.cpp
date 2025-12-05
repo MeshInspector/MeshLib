@@ -18,7 +18,9 @@
 #include "MRUnitSettings.h"
 #include "MRShowModal.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
+#endif
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRLog.h"
@@ -92,7 +94,10 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
                 // Check if features are considered experimental
                 const auto& tabs = RibbonSchemaHolder::schema().tabsOrder;
                 auto itFeatures = std::find_if( tabs.begin(), tabs.end(),
-                    [] ( const RibbonTab& tab ) { return tab.name == "Features"; } );
+                    [] ( const RibbonTab& tab )
+                {
+                    return tab.name == "Features";
+                } );
                 if ( itFeatures != tabs.end() && itFeatures->experimental )
                     continue;
             }
@@ -160,21 +165,24 @@ void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<
     comboSettings_[size_t( tab )].push_back( settings );
 }
 
-void ViewerSettingsPlugin::delComboSettings( const TabType tab, const ExternalSettings * settings )
+void ViewerSettingsPlugin::delComboSettings( const TabType tab, const ExternalSettings* settings )
 {
-    [[maybe_unused]] auto c = std::erase_if( comboSettings_[size_t( tab )], [settings]( const auto & v ) { return v.get() == settings; } );
+    [[maybe_unused]] auto c = std::erase_if( comboSettings_[size_t( tab )], [settings] ( const auto& v )
+    {
+        return v.get() == settings;
+    } );
     assert( c == 1 );
 }
 
 ViewerSettingsPlugin* ViewerSettingsPlugin::instance()
 {
-    static ViewerSettingsPlugin* self = [&]()->ViewerSettingsPlugin*
+    static ViewerSettingsPlugin* self = [&] ()->ViewerSettingsPlugin*
     {
-      auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-      if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
-          return nullptr;
-      return dynamic_cast< ViewerSettingsPlugin* >( viewerSettingsIt->second.item.get() );
-      }();
+        auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+        if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+            return nullptr;
+        return dynamic_cast< ViewerSettingsPlugin* >( viewerSettingsIt->second.item.get() );
+    }( );
     return self;
 }
 
@@ -402,7 +410,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 1.5f * cButtonPadding * UI::scale(), cButtonPadding * UI::scale() } );
     UI::inputText( "##LogFolderPath", logFolderPath );
     ImGui::SameLine( 0, 1.5f * style.ItemInnerSpacing.x );
-    if ( ImGui::Link( "Logs folder") )
+    if ( ImGui::Link( "Logs folder" ) )
         OpenDocument( asU8String( logFolderPath ) );
     ImGui::PopStyleVar();
     ImGui::SameLine( 0.0f, 0.0f );
@@ -623,7 +631,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         // --- Units
 
-        auto makeLengthUnitsVec = []( const char * lastOption )
+        auto makeLengthUnitsVec = [] ( const char* lastOption )
         {
             std::vector<std::string> ret;
             ret.reserve( std::size_t( LengthUnit::_count ) + 1 );
@@ -671,13 +679,14 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         ImGui::PushItemWidth( 170.0f * UI::scale() );
         drawSeparator_( "Angular" );
 
-        static const std::vector<std::string> flavorOptions = []{
+        static const std::vector<std::string> flavorOptions = []
+        {
             std::vector<std::string> ret;
             ret.reserve( std::size_t( DegreesMode::_count ) );
             for ( std::size_t i = 0; i < std::size_t( DegreesMode::_count ); i++ )
                 ret.emplace_back( toString( DegreesMode( i ) ) );
             return ret;
-        }();
+        }( );
 
         int flavorOption = int( UnitSettings::getDegreesMode() );
 
@@ -964,7 +973,7 @@ void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float toolWidth 
     SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
     ImGui::SetNextItemWidth( toolWidth );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( inGroup ? "Shading Mode" : "Default Shading Mode", ( int* )&shadingMode, shadingModes);
+    UI::combo( inGroup ? "Shading Mode" : "Default Shading Mode", ( int* )&shadingMode, shadingModes );
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( "Shading mode for mesh objects imported from files\n"
         "Detection depends on source format and mesh shape\n"
@@ -981,7 +990,7 @@ void ViewerSettingsPlugin::drawProjectionModeSelector_( float toolWidth )
     static std::vector<std::string> projectionModes = { "Orthographic", "Perspective" };
     int projectionMode = viewer->viewport().getParameters().orthographic ? 0 : 1;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::combo( "Projection Mode", &projectionMode, projectionModes) )
+    if ( UI::combo( "Projection Mode", &projectionMode, projectionModes ) )
         viewer->viewport().setOrthographic( projectionMode == 0 );
     ImGui::PopStyleVar();
 }
@@ -1089,7 +1098,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
         }
 
         ImGui::SetCursorPosX( menuWidth - 120.0f * UI::scale() );
-		ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
+        ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
         UI::buttonCommonSize( fmt::format( "Set other##{}", i ).c_str(), Vector2f( 80 * UI::scale(), 0 ) );
         if ( ImGui::IsItemHovered() )
         {
@@ -1205,7 +1214,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
     drawSeparator_( "Touchpad" );
 
     const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
-    assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
+    assert( swipeModeList.size() == ( size_t )TouchpadParameters::SwipeMode::Count );
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     bool updateSettings = false;
@@ -1216,7 +1225,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
+    if ( UI::combo( "Swipe Mode", ( int* )&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;
     ImGui::PopStyleVar();
     if ( updateSettings )
@@ -1251,13 +1260,13 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ctm;
     else // format == ".ply"
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ply;
-
+#ifndef MRVIEWER_NO_VOXELS
     format = defaultSerializeVoxelsFormat();
     if ( format == ".raw" )
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Raw;
     else // format == ".vdb"
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Vdb;
-
+#endif
     ImGui::PushItemWidth( menuWidth * 0.5f );
     if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, meshFormatTooltips ) )
     {
@@ -1292,6 +1301,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         setDefaultSerializePointsFormat( format );
     }
 
+#ifndef MRVIEWER_NO_VOXELS
     if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )
@@ -1306,6 +1316,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         }
         setDefaultSerializeVoxelsFormat( format );
     }
+#endif
     ImGui::PopItemWidth();
 }
 
@@ -1360,7 +1371,7 @@ void ViewerSettingsPlugin::resetSettings_()
     viewer->getViewerSettingsManager()->resetSettings( *viewer );
 
     for ( size_t tabType = size_t( 0 ); tabType < size_t( TabType::Count ); tabType++ )
-        for ( auto& settings : comboSettings_[ tabType ] )
+        for ( auto& settings : comboSettings_[tabType] )
             settings->reset();
 
     CommandLoop::appendCommand( [shadowGl = shadowGl_.get()] ()

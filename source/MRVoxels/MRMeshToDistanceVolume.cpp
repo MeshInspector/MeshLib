@@ -90,26 +90,26 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     };
 }
 
-MRVOXELS_API Expected<SimpleBinaryVolume> closeToMeshBinaryVolume( const MeshPart& mp, float closeDist, const DistanceVolumeParams& params )
+Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params )
 {
     MR_TIMER;
-    assert( closeDist >= 0 );
+    assert( params.closeDist >= 0 );
     SimpleBinaryVolume res;
-    res.voxelSize = params.voxelSize;
-    res.dims = params.dimensions;
+    res.voxelSize = params.vol.voxelSize;
+    res.dims = params.vol.dimensions;
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size(), false );
 
     mp.mesh.getAABBTree();
-    if ( !BitSetParallelForAll( res.data, [&, closeDistSq = sqr( closeDist )] ( VoxelId i )
+    if ( !BitSetParallelForAll( res.data, [&, closeDistSq = sqr( params.closeDist )] ( VoxelId i )
     {
         const auto pos = indexer.toPos( i );
         const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-        const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-        const auto anythingWithinCloseDist = findProjection( voxelCenter, mp, closeDistSq, nullptr, closeDistSq );
+        const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+        const auto anythingWithinCloseDist = findProjection( voxelCenter, mp, closeDistSq, params.meshToWorld, closeDistSq );
         if ( anythingWithinCloseDist )
             res.data.set( i );
-    }, params.cb ) )
+    }, params.vol.cb ) )
         return unexpectedOperationCanceled();
 
     return res;

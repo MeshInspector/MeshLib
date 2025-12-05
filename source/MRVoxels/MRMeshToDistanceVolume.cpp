@@ -6,6 +6,7 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRParallelMinMax.h"
+#include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include <tuple>
@@ -87,6 +88,31 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize
     };
+}
+
+MRVOXELS_API Expected<SimpleBinaryVolume> closeToMeshBinaryVolume( const MeshPart& mp, float closeDist, const DistanceVolumeParams& params )
+{
+    MR_TIMER;
+    assert( closeDist >= 0 );
+    SimpleBinaryVolume res;
+    res.voxelSize = params.voxelSize;
+    res.dims = params.dimensions;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size(), false );
+
+    mp.mesh.getAABBTree();
+    if ( !BitSetParallelForAll( res.data, [&, closeDistSq = sqr( closeDist )] ( VoxelId i )
+    {
+        const auto pos = indexer.toPos( i );
+        const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+        const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
+        const auto proj = findProjection( voxelCenter, mp, closeDistSq );
+        if ( proj )
+            res.data.set( i );
+    }, params.cb ) )
+        return unexpectedOperationCanceled();
+
+    return res;
 }
 
 Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,

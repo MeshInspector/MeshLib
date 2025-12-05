@@ -8,7 +8,7 @@ REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 
 REM Check if AWS CLI is installed
-aws --version >nul 2>&1
+aws.exe --version >nul 2>&1
 if errorlevel 1 (
     echo AWS CLI v2: not found
     echo "Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source"

@@ -514,6 +514,9 @@ using TwoVertIds = std::array<VertId, 2>;
 /// three vertex ids describing a triangle with the corners in vertices given by their ids
 using ThreeVertIds = std::array<VertId, 3>;
 
+/// three UV-coordinates describing texturing of a triangle
+using ThreeUVCoords = std::array<UVCoord, 3>;
+
 struct MRMESH_CLASS Dipole;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
@@ -522,6 +525,9 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), V
 
     /// mapping from FaceId to a triple of vertex indices
     ( Triangulation,  Vector<ThreeVertIds, FaceId> )
+
+    /// mapping from FaceId to a triple of UV-coordinates
+    ( TriCornerUVCoords, Vector<ThreeUVCoords, FaceId> )
 
     ( Dipoles,  Vector<Dipole, NodeId> )
 

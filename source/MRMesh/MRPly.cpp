@@ -105,6 +105,16 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
                     ( *params.faceColors )[f] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
                 }
             }
+            if ( params.triCornerUvCoords && reader.find_properties( indecies, 1, "texcoord" ) )
+            {
+                Timer t( "extractFaceUVs" );
+                // the number of float-values in the property
+                const auto propSize = reader.sum_of_list_counts( indecies[0] );
+                // round upward to allocate not smaller amount of space
+                static_assert( sizeof( params.triCornerUvCoords->front() ) == 6 * sizeof( float ) );
+                params.triCornerUvCoords->resize( ( propSize + 5 ) / 6 );
+                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Float, params.triCornerUvCoords->data() );
+            }
 
             const auto posCurrent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress

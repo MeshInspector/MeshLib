@@ -594,6 +594,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     MR_TIMER;
 
     std::optional<Triangulation> tris;
+    TriCornerUVCoords triCornerUvCoords;
     PlyLoadParams params =
     {
         .tris = &tris,
@@ -601,6 +602,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
         .colors = settings.colors,
         .faceColors = settings.faceColors,
         .uvCoords = settings.uvCoords,
+        .triCornerUvCoords = ( settings.texture && settings.colors ) ? &triCornerUvCoords : nullptr,
         .normals = settings.normals,
         .texture = settings.texture,
         .dir = dir,
@@ -610,6 +612,25 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )
         return unexpected( std::move( maybePoints.error() ) );
+
+    // convert per-corner UVs into per-vertex colors by keeping the last value only
+    if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && tris && !tris->empty() && !triCornerUvCoords.empty() )
+    {
+        Timer t( "convert per-corner UVs" );
+        settings.colors->resize( maybePoints->size() );
+        const auto endTri = std::min( tris->size(), triCornerUvCoords.size() );
+        for ( FaceId tri( 0 ); tri < endTri; ++tri )
+        {
+            for ( int ic = 0; ic < 3; ++ic )
+            {
+                auto v = (*tris)[tri][ic];
+                if ( v < settings.colors->size() )
+                    ( *settings.colors )[v] = settings.texture->sampleBilinear( triCornerUvCoords[tri][ic] );
+            }
+        }
+        if ( !settings.uvCoords || settings.uvCoords->empty() )
+            *settings.texture = {}; // texture will not be used outside of this function
+    }
 
     Mesh res;
     res.points = std::move( *maybePoints );

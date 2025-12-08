@@ -594,6 +594,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     MR_TIMER;
 
     std::optional<Triangulation> tris;
+    TriCornerUVCoords triCornerUvCoords;
     PlyLoadParams params =
     {
         .tris = &tris,
@@ -601,6 +602,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
         .colors = settings.colors,
         .faceColors = settings.faceColors,
         .uvCoords = settings.uvCoords,
+        .triCornerUvCoords = &triCornerUvCoords,
         .normals = settings.normals,
         .texture = settings.texture,
         .dir = dir,

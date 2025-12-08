@@ -18,8 +18,10 @@ struct PlyLoadParams
     VertColors* colors = nullptr;    ///< optional load artifact: per-vertex color map
     FaceColors* faceColors = nullptr;///< optional load artifact: per-face color map
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
+    TriCornerUVCoords* triCornerUvCoords = nullptr;///< optional load artifact: per-corner uv-coordinates for each triangle
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals
     MeshTexture* texture = nullptr;  ///< optional load artifact: texture image
+
     std::filesystem::path dir;       ///< directory to load texture files from
     ProgressCallback callback;       ///< callback for set progress and stop process
 };

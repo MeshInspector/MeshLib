@@ -105,6 +105,29 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
                     ( *params.faceColors )[f] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
                 }
             }
+            if ( !res.empty() && !tris.empty() && params.uvCoords && reader.find_properties( indecies, 1, "texcoord" ) )
+            {
+                Timer t( "extractFaceUVs" );
+                // the number of float-values in the property
+                const auto propSize = reader.sum_of_list_counts( indecies[0] );
+                // round upward to allocate not smaller amount of space
+                const auto uvSize = ( propSize + 1 ) / 2;
+                std::vector<UVCoord> cornerUVs( uvSize );
+                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Float, cornerUVs.data() );
+
+                // convert per-corner UVs into per-vertex UVs by keeping the last value only
+                params.uvCoords->resize( res.size() );
+                const auto endTri = std::min( tris.size(), cornerUVs.size() / 3 );
+                for ( FaceId tri( 0 ); tri < endTri; ++tri )
+                {
+                    for ( int ic = 0; ic < 3; ++ic )
+                    {
+                        auto v = tris[tri][ic];
+                        if ( v < params.uvCoords->size() )
+                            (*params.uvCoords)[v] = cornerUVs[ size_t( tri ) * 3 + ic ];
+                    }
+                }
+            }
 
             const auto posCurrent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress

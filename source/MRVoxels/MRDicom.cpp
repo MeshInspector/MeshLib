@@ -19,6 +19,7 @@
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+#include <gdcmAnonymizer.h>
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmImageWriter.h>
@@ -1000,6 +1001,10 @@ Expected<void> toDicom( const VoxelsVolume<Vector<T,VoxelId>>& volume, const std
     image.SetDataElement( data );
 
     iw.SetImage( image );
+
+    gdcm::Anonymizer anon;
+    anon.SetFile( iw.GetFile() );
+    anon.Replace( gdcm::Keywords::PhotometricInterpretation::GetTag(), "MONOCHROME2" );
 
     std::ofstream fout( path, std::ios_base::binary );
     iw.SetStream( fout );

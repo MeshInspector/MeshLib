@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# run from repo root
-# NODE: using this script is deprecated! Better install meshlib(-dev).pkg package
 # This script installs requirements by `brew` if not already installed
 
-requirements_file=requirements/macos.txt
-brew install $(cat $requirements_file | tr '\n' ' ')
+BASEDIR=$(dirname $(realpath "$0"))
+MESHLIB_BREW_REQUIREMENTS=$(cat "$BASEDIR"/../requirements/macos.txt)
+if [ -n "$MESHLIB_EXTRA_BREW_REQUIREMENTS" ] ; then
+  MESHLIB_BREW_REQUIREMENTS=$MESHLIB_BREW_REQUIREMENTS$'\n'$MESHLIB_EXTRA_BREW_REQUIREMENTS
+fi
+
+brew install $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 
 brew install pybind11
 

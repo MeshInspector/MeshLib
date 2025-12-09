@@ -15,9 +15,12 @@ function checkPackage {
 }
 
 BASEDIR=$(dirname $(realpath "$0"))
-REQUIREMENTS_FILE="$BASEDIR"/../requirements/ubuntu.txt
+MESHLIB_APT_REQUIREMENTS=$(cat "$BASEDIR"/../requirements/ubuntu.txt)
+if [ -n "$MESHLIB_EXTRA_APT_REQUIREMENTS" ] ; then
+  MESHLIB_APT_REQUIREMENTS=$MESHLIB_APT_REQUIREMENTS$'\n'$MESHLIB_EXTRA_APT_REQUIREMENTS
+fi
 
-for req in `cat $REQUIREMENTS_FILE`; do
+for req in "$MESHLIB_APT_REQUIREMENTS"; do
   checkPackage "${req}"
 done
 

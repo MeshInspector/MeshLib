@@ -33,7 +33,7 @@ TEST( MRMesh, DicomSaveLoad )
     EXPECT_NEAR( a.voxelSize.y, b.voxelSize.y, 1e-6f );
     EXPECT_NEAR( a.voxelSize.z, b.voxelSize.z, 1e-6f );
     EXPECT_EQ( a.data.size(), b.data.size() );
-    for ( VoxelId i( 0ull ); i < a.data.size(); ++i )
+    for ( VoxelId i = 0_vox; i < a.data.size(); ++i )
         EXPECT_EQ( a.data[i], b.data[i] );
 }
 

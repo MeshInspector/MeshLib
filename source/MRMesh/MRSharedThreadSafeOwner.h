@@ -33,7 +33,7 @@ public:
     MRMESH_API const T & getOrCreate( const std::function<T()> & creator );
 
     /// if the object owns some T-instance, then updater function is applied to it;
-    /// get() and getPtr() return nullptr foe other threads during update()
+    /// get() and getPtr() return nullptr for other threads during update()
     MRMESH_API void update( const std::function<void(T&)> & updater );
 
     /// returns the amount of memory this object occupies on heap

@@ -8,10 +8,15 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <iosfwd>
 #include <utility>
 #if MR_HAS_REQUIRES
 #include <concepts>
+#endif
+
+#include <iosfwd>
+#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
+#include <istream>
+#include <ostream>
 #endif
 
 namespace MR

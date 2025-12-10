@@ -10,9 +10,10 @@
 #include <ostream>
 #endif
 
-#if MR_COMPILING_C_BINDINGS
-// Include the headers for the matrices that are otherwise missing in the C bindings.
-// I'm not sure how the binding generator could possibly guess that it needs to include those.
+#if MR_COMPILING_ANY_BINDINGS
+// In C: Include the headers for the matrices that are otherwise missing in the C bindings.
+//     I'm not sure how the binding generator could possibly guess that it needs to include those.
+// In Python: Need those headers to generate the implementation for `operator<<` and `operator>>`, which call into the same operators of matrices.
 #include "MRMatrix2.h"
 #include "MRMatrix3.h"
 #endif

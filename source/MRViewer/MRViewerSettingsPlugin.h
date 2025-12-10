@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRViewerFwd.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRShadowsGL.h"
 #include "MRViewer/MRSpaceMouseParameters.h"

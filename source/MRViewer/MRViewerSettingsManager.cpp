@@ -23,7 +23,9 @@
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
+#ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace
 {
@@ -200,7 +202,9 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 
     setDefaultSerializeMeshFormat( ".ply" );
     setDefaultSerializePointsFormat( ".ply" );
+#ifndef MRVIEWER_NO_VOXELS
     setDefaultSerializeVoxelsFormat( ".vdb" );
+#endif
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -700,7 +704,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
         saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
+#ifndef MRVIEWER_NO_VOXELS
         saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
+#endif
     }
 
     {

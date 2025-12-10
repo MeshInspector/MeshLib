@@ -33,18 +33,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::filesystem::path path;
         std::vector<FilePathNode> subfolders;
         std::vector<FilePathNode> files;
+        bool dicomFolder = false;
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-            bool dicomFolder = false;
             VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
         #endif
 
         bool empty() const
         {
-            return files.empty() && subfolders.empty()
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                && !dicomFolder
-            #endif
-                ;
+            return files.empty() && subfolders.empty() && !dicomFolder;
         }
     };
 

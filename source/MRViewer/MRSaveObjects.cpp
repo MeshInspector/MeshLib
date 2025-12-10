@@ -1,5 +1,6 @@
 #include "MRSaveObjects.h"
 #include "MRUnitSettings.h"
+#include "config.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>

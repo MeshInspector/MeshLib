@@ -140,18 +140,27 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
             auto [iter, isNew] = windows_.try_emplace( expectedWindowName );
             if ( isNew )
             {
-                // if new window, request position calculation in next frame
-                // to be sure that this frame action will not affect it (for example closing window that is present in this frame)
-                iter->second.state_ = AllocationState::Requested;
+                // the window has just appeared and may have the wrong size
+                // skip one frame to calculate the correct window size
+                iter->second.state_ = AllocationState::WaitAppearing;
             }
             else
             {
-                if ( iter->second.state_ == AllocationState::Requested )
+                if ( iter->second.state_ == AllocationState::WaitAppearing )
                 {
-                    findLocation = true;
-                    defaultPos = window->Pos;
+                    // if new window, request position calculation in next frame
+                    // to be sure that this frame action will not affect it (for example closing window that is present in this frame)
+                    iter->second.state_ = AllocationState::Requested;
                 }
-                iter->second.state_ = AllocationState::Set; // validate that window is still present
+                else
+                {
+                    if ( iter->second.state_ == AllocationState::Requested )
+                    {
+                        findLocation = true;
+                        defaultPos = window->Pos;
+                    }
+                    iter->second.state_ = AllocationState::Set; // validate that window is still present
+                }
             }
         }
     }
@@ -181,8 +190,12 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
             const Vector2f appWindowSize = Vector2f( getViewerInstance().framebufferSize );
             workBox = Box2f::fromMinAndSize( ImGuiMV::GetMainViewportShift(), appWindowSize );
         }
-        defaultPos.x = std::clamp( windowBox.min.x, workBox.min.x, std::max( 0.0f, workBox.max.x - windowBox.size().x ) );
-        defaultPos.y = std::clamp( windowBox.min.y, workBox.min.y, std::max( 0.0f, workBox.max.y - windowBox.size().y ) );
+        const float maxPosX = std::max( 0.0f, workBox.max.x - windowBox.size().x );
+        if ( maxPosX >= workBox.min.x )
+            defaultPos.x = std::clamp( windowBox.min.x, workBox.min.x, maxPosX );
+        const float maxPosY = std::max( 0.0f, workBox.max.y - windowBox.size().y );
+        if ( maxPosY >= workBox.min.y )
+            defaultPos.y = std::clamp( windowBox.min.y, workBox.min.y, maxPosY );
         windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
 
 

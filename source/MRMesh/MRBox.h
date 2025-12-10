@@ -6,6 +6,7 @@
 #include "MRVectorTraits.h"
 #include <algorithm>
 #include <cassert>
+#include <iosfwd>
 #include <limits>
 #include <type_traits>
 
@@ -270,6 +271,16 @@ public:
         { return min == a.min && max == a.max;  }
     bool operator != ( const Box & a ) const
         { return !( *this == a ); }
+
+    friend std::ostream& operator<<( std::ostream& s, const Box<V>& box )
+    {
+        return s << box.min << '\n' << box.max;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Box<V>& box )
+    {
+        return s >> box.min >> box.max;
+    }
 };
 
 template <typename T>

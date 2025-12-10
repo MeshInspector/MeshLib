@@ -1,6 +1,7 @@
 #include "MRBitSet.h"
 #include "MRGTest.h"
 #include <bit>
+#include <iostream>
 
 namespace MR
 {
@@ -270,6 +271,32 @@ auto BitSet::findSetBitAfter_( IndexType n ) const -> IndexType
         if ( auto c = std::countr_zero( blocks_[blockId] ); c < bits_per_block )
             return blockId * bits_per_block + c;
     return npos;
+}
+
+std::ostream& operator<<( std::ostream& s, const BitSet & bs )
+{
+    auto i = bs.size();
+    while ( i > 0 )
+    {
+        --i;
+        s.put( bs.test( i ) ? '1' : '0' );
+    }
+    return s;
+}
+
+std::istream& operator>>( std::istream& s, BitSet & bs )
+{
+    bs.clear();
+    while ( true )
+    {
+        auto c = s.peek();
+        if ( c != '0' && c != '1' )
+            break;
+        (void)s.get();
+        bs.push_back( c == '1' );
+    }
+    bs.reverse();
+    return s;
 }
 
 } //namespace MR

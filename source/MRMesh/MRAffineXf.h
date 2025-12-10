@@ -2,6 +2,7 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include <iosfwd>
 #include <type_traits>
 
 #if MR_COMPILING_C_BINDINGS
@@ -59,6 +60,16 @@ struct AffineXf
     friend bool operator != ( const AffineXf<V> & a, const AffineXf<V> & b )
     {
         return !( a == b );
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const AffineXf& xf )
+    {
+        return s << xf.A << xf.b;
+    }
+
+    friend std::istream& operator>>( std::istream& s, AffineXf& xf )
+    {
+        return s >> xf.A >> xf.b;
     }
 };
 

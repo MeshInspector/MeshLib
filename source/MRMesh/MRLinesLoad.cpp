@@ -4,7 +4,6 @@
 #include "MRPolyline.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
-#include "MRStreamOperators.h"
 #include "MRPly.h"
 #include "MRTimer.h"
 #include <fstream>

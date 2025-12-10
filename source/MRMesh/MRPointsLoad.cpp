@@ -4,7 +4,6 @@
 #include "MRColor.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
-#include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include "MRPointCloud.h"
 #include "MRIOParsing.h"

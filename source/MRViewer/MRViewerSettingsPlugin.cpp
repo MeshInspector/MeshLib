@@ -18,7 +18,9 @@
 #include "MRUnitSettings.h"
 #include "MRShowModal.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
+#endif
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRLog.h"
@@ -1251,11 +1253,13 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     else // format == ".ply"
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ply;
 
+    #ifndef MRVIEWER_NO_VOXELS
     format = defaultSerializeVoxelsFormat();
     if ( format == ".raw" )
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Raw;
     else // format == ".vdb"
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Vdb;
+    #endif
 
     ImGui::PushItemWidth( menuWidth * 0.5f );
     if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, meshFormatTooltips ) )
@@ -1289,8 +1293,8 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             break;
         }
         setDefaultSerializePointsFormat( format );
-    }
-
+    } 
+    #ifndef MRVIEWER_NO_VOXELS
     if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )
@@ -1305,6 +1309,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         }
         setDefaultSerializeVoxelsFormat( format );
     }
+    #endif
     ImGui::PopItemWidth();
 }
 

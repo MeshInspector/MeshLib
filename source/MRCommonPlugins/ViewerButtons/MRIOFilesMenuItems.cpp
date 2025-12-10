@@ -10,6 +10,8 @@
 #include "MRViewer/MRUnitSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRLinesLoad.h"
+#include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRSceneLoad.h"
 #include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRViewer/MRAppendHistory.h"
@@ -34,6 +36,7 @@
 #include "MRViewer/MRViewerSignals.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRViewer/MRSceneCache.h"
@@ -144,7 +147,7 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId
 {
     using namespace MR;
     auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
         | VoxelsLoad::getFilters()
 #endif
     ;

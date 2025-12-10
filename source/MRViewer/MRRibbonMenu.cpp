@@ -963,7 +963,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         {
             // move all children of selObj to its parent
             bool reorderDone = moveAllChildrenWithUndo( *selObj, *selObj->parent() );
-            assert( reorderDone );
+            // reorderDone == false if selected object does not have any child
             if ( reorderDone )
             {
                 // remove group folder (now empty)

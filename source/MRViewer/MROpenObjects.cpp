@@ -33,18 +33,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::filesystem::path path;
         std::vector<FilePathNode> subfolders;
         std::vector<FilePathNode> files;
+        bool dicomFolder = false;
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-            bool dicomFolder = false;
             VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
         #endif
 
         bool empty() const
         {
-            return files.empty() && subfolders.empty()
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                && !dicomFolder
-            #endif
-                ;
+            return files.empty() && subfolders.empty() && !dicomFolder;
         }
     };
 
@@ -60,11 +56,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             {
                 node.subfolders.push_back( getFilePathNode( path ) );
             }
-            else if (
-                #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                !node.dicomFolder &&
-                #endif
-                ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) ) )
+            else if ( !node.dicomFolder && ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) ) )
             {
                 auto ext = utf8string( path.extension() );
                 for ( auto& c : ext )
@@ -162,9 +154,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         {
             if ( loadingCanceled.load( std::memory_order_relaxed ) )
                 return;
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             if ( !nodeAndRes.node.dicomFolder )
-            #endif
             {
                 nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
             }
@@ -218,14 +208,12 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     {
         if ( taskRes.has_value() )
         {
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             if ( node.dicomFolder && taskRes->objs.size() == 1 )
             {
                 parent->parent()->addChild( taskRes->objs[0] );
                 parent->parent()->removeChild( parent );
             }
             else
-            #endif
             {
                 for ( const auto& objPtr : taskRes->objs )
                     parent->addChild( objPtr );

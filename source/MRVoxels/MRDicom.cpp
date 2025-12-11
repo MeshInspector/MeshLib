@@ -162,18 +162,17 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
     }
     if ( data.voxelSize[0] == 0.0f )
     {
+        // use "spacingVec.empty()" instead of "spacing == (1,1,1)" to handle case when spacing is actually (1,1,1)
+        auto spacingVec = gdcm::ImageHelper::GetSpacingValue( ir.GetFile() );
         const double* spacing = gimage.GetSpacing();
-        if ( spacing[0] == 1 && spacing[1] == 1 && spacing[2] == 1 )
+        if ( spacingVec.empty() && ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
         {
             // gdcm was unable to find the spacing, so find it by ourselves
-            if( ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
-            {
-                const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::PixelSpacing::GetTag() );
-                gdcm::Keywords::PixelSpacing desc;
-                desc.SetFromDataElement( de );
-                data.voxelSize.x = float( desc.GetValue(0) / 1000 );
-                data.voxelSize.y = float( desc.GetValue(1) / 1000 );
-            }
+            const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::PixelSpacing::GetTag() );
+            gdcm::Keywords::PixelSpacing desc;
+            desc.SetFromDataElement( de );
+            data.voxelSize.x = float( desc.GetValue( 0 ) / 1000 );
+            data.voxelSize.y = float( desc.GetValue( 1 ) / 1000 );
         }
         else
         {

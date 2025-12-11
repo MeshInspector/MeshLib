@@ -9,18 +9,16 @@ namespace MR
 
 bool sceneReorderWithUndo( const SceneReorder & task )
 {
-    const bool filledReorderCommand = !task.who.empty() && task.to;
-    const bool sourceNotTarget = std::all_of( task.who.begin(), task.who.end(), [target = task.to] ( auto it )
-    {
-        return it != target;
-    } );
-    const bool trueTarget = !task.before || task.to->parent();
-    const bool trueSource = std::all_of( task.who.begin(), task.who.end(), [] ( auto it )
-    {
-        return bool( it->parent() );
-    } );
-    if ( !( filledReorderCommand && sourceNotTarget && trueSource && trueTarget ) )
-        return false;
+    if ( task.who.empty() )
+        return false; // nothing to move
+    if ( !task.to )
+        return false; // nowhere to move
+    if ( task.before && !task.to->parent() )
+        return false; // task.to must have a parent
+    if ( std::any_of( task.who.begin(), task.who.end(), [target = task.to] ( auto it ) { return it == target; } ) )
+        return false; // one of moved object is task.to
+    if ( std::any_of( task.who.begin(), task.who.end(), [] ( auto it ) { return !it->parent(); } ) )
+        return false; // one of moved objects does not have a parent
 
     bool dragOrDropFailed = false;
     std::shared_ptr<Object> childTo = nullptr;

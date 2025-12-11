@@ -195,13 +195,19 @@ void ObjectMesh::serializeFields_( Json::Value& root ) const
 std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh, const ObjectMeshMergeOptions& options )
 {
     MR_TIMER;
+    std::shared_ptr<ObjectMesh> res;
+    const auto firstNotEmptyIt = std::find_if( objsMesh.begin(), objsMesh.end(), []( const auto & p ) { return p && p->mesh(); } );
+    if ( firstNotEmptyIt == objsMesh.end() )
+        return res; // if no input object, then no output
+    res = std::make_shared<ObjectMesh>();
+    res->copyAllSolidColors( **firstNotEmptyIt );
 
-        bool hasVertColorMap = false; // save if at least one has
+    bool hasVertColorMap = false;     // save if at least one has
     bool hasFaceColorMap = false;     // save if at least one has
     bool needSaveUVCoords = true;     // save if all have
 
     bool needSaveTextures = true;     // save if all have textures of same size
-    bool exactSameTextures = true;     // true if all object has identical textures
+    bool exactSameTextures = true;    // true if all object has identical textures
 
     const Vector<MeshTexture, TextureId>* prevObjTextures = nullptr;
 
@@ -378,24 +384,23 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     assert( totalVerts == mesh->topology.numValidVerts() );
     assert( totalFaces == mesh->topology.numValidFaces() );
 
-    auto objectMesh = std::make_shared<ObjectMesh>();
-    // if this data does not need to be set, it will be empty at this point
-    objectMesh->setVertsColorMap( std::move( vertColors ) );
-    objectMesh->setFacesColorMap( std::move( faceColors ) );
-    objectMesh->setMesh( std::move( mesh ) );
-    objectMesh->setTexturePerFace( std::move( texturePerFace ) );
+    // vertColors, faceColors can be empty
+    res->setVertsColorMap( std::move( vertColors ) );
+    res->setFacesColorMap( std::move( faceColors ) );
+    res->setMesh( std::move( mesh ) );
+    res->setTexturePerFace( std::move( texturePerFace ) );
     if ( needSaveTextures )
     {
         if ( exactSameTextures && prevObjTextures )
-            objectMesh->setTextures( *prevObjTextures );
+            res->setTextures( *prevObjTextures );
         else
-            objectMesh->setTextures( std::move( mergedTextures ) );
+            res->setTextures( std::move( mergedTextures ) );
     }
-    objectMesh->setUVCoords( std::move( uvCoords ) );
+    res->setUVCoords( std::move( uvCoords ) );
     if( hasVertColorMap )
-        objectMesh->setColoringType( ColoringType::VertsColorMap );
+        res->setColoringType( ColoringType::VertsColorMap );
     else if( hasFaceColorMap )
-        objectMesh->setColoringType( ColoringType::FacesColorMap );
+        res->setColoringType( ColoringType::FacesColorMap );
 
     ViewportMask flat = ViewportMask::all();
     ViewportMask smooth = ViewportMask::all();
@@ -409,14 +414,14 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     }
 
     if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat )
-        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, ~smooth );
+        res->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, ~smooth );
     else
-        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, flat );
+        res->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, flat );
 
-    if ( !objectMesh->getTextures().empty() )
-        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::Texture, textures );
+    if ( !res->getTextures().empty() )
+        res->setVisualizePropertyMask( MeshVisualizePropertyType::Texture, textures );
 
-    return objectMesh;
+    return res;
 }
 
 std::shared_ptr<MR::ObjectMesh> cloneRegion( const std::shared_ptr<ObjectMesh>& objMesh, const FaceBitSet& region, bool copyTexture /*= true */ )

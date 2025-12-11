@@ -19,6 +19,7 @@
     <ClCompile Include="MRChunkIterator.cpp" />
     <ClCompile Include="MRContoursCutTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />

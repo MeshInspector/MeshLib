@@ -44,7 +44,7 @@ public:
     MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
 
     // set path to the file to upload
-    MRVIEWER_API void setInputPath( std::string inputPath );
+    MRVIEWER_API void setInputPath( std::filesystem::path inputPath );
 
     // set progress callback for upload
     // NOTE: due to limitations, the upload callback won't work on web platforms when `setOutputPath` method is called
@@ -64,7 +64,7 @@ public:
     MRVIEWER_API void setBody( std::string body );
 
     // prefer to save the response to file
-    MRVIEWER_API void setOutputPath( std::string outputPath );
+    MRVIEWER_API void setOutputPath( std::filesystem::path outputPath );
 
     // set progress callback for download
     MRVIEWER_API void setDownloadProgressCallback( ProgressCallback callback );
@@ -95,10 +95,10 @@ private:
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;
-    std::string inputPath_;
+    std::filesystem::path inputPath_;
     std::vector<FormData> formData_;
     std::string body_;
-    std::string outputPath_;
+    std::filesystem::path outputPath_;
     ProgressCallback uploadCallback_;
     ProgressCallback downloadCallback_;
 };

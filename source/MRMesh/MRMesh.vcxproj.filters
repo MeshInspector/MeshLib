@@ -1373,6 +1373,9 @@
     <ClInclude Include="MRObjectSaveSettings.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRTextureColors.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2251,6 +2254,9 @@
     </ClCompile>
     <ClCompile Include="MRUnitInfo.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTextureColors.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

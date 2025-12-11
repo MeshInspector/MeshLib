@@ -1,6 +1,5 @@
-#ifndef MRVOXELS_NO_DICOM
-
 #include "MRVoxels/MRDicom.h"
+#ifndef MRVOXELS_NO_DICOM
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRStreamOperators.h"
 #include "MRMesh/MRGTest.h"

@@ -175,6 +175,11 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
                     break;
                 }
             }
+            if ( !workBox.valid() )
+            {
+                const auto& fallbackMonitor = ImGui::GetCurrentContext()->FallbackMonitor;
+                workBox = Box2f::fromMinAndSize( fallbackMonitor.WorkPos, fallbackMonitor.WorkSize );
+            }
         }
         else
         {

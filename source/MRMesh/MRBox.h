@@ -6,14 +6,9 @@
 #include "MRVectorTraits.h"
 #include <algorithm>
 #include <cassert>
+#include <iosfwd>
 #include <limits>
 #include <type_traits>
-
-#include <iosfwd>
-#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
-#include <istream>
-#include <ostream>
-#endif
 
 namespace MR
 {

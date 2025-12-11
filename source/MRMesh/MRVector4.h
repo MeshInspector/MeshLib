@@ -1,16 +1,11 @@
 #pragma once
 
 #include <cmath>
+#include <iosfwd>
 #include <type_traits>
 #include "MRPch/MRBindingMacros.h"
 #include "MRMesh/MRMacros.h"
 #include "MRVector3.h"
-
-#include <iosfwd>
-#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
-#include <istream>
-#include <ostream>
-#endif
 
 namespace MR
 {

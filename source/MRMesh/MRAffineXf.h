@@ -2,13 +2,8 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
-#include <type_traits>
-
 #include <iosfwd>
-#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
-#include <istream>
-#include <ostream>
-#endif
+#include <type_traits>
 
 #if MR_COMPILING_ANY_BINDINGS
 // In C: Include the headers for the matrices that are otherwise missing in the C bindings.

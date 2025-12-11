@@ -6,13 +6,8 @@
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
 #include <functional>
-#include <iterator>
-
 #include <iosfwd>
-#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
-#include <istream>
-#include <ostream>
-#endif
+#include <iterator>
 
 namespace MR
 {

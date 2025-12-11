@@ -7,13 +7,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <utility>
-
 #include <iosfwd>
-#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
-#include <istream>
-#include <ostream>
-#endif
+#include <utility>
 
 namespace MR
 {

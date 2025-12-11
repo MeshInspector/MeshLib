@@ -2,13 +2,8 @@
 
 #include "MRVector4.h"
 #include <cassert>
-#include <limits>
-
 #include <iosfwd>
-#if MR_PARSING_FOR_ANY_BINDINGS || MR_COMPILING_ANY_BINDINGS
-#include <istream>
-#include <ostream>
-#endif
+#include <limits>
 
 namespace MR
 {

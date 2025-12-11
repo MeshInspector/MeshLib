@@ -1,8 +1,9 @@
 #pragma once
 
 #include "MRVector4.h"
-#include <limits>
 #include <cassert>
+#include <iosfwd>
+#include <limits>
 
 namespace MR
 {
@@ -27,7 +28,7 @@ struct Matrix4
     Vector4<T> z{ 0, 0, 1, 0 };
     Vector4<T> w{ 0, 0, 0, 1 };
 
-    constexpr Matrix4() noexcept 
+    constexpr Matrix4() noexcept
     {
         static_assert( sizeof( Matrix4<ValueType> ) == 4 * sizeof( VectorType ), "Struct size invalid" );
     }
@@ -154,6 +155,16 @@ struct Matrix4
             for ( int j = 0; j < 4; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Matrix4& mat )
+    {
+        return s << mat.x << '\n' << mat.y << '\n' << mat.z << '\n' << mat.w << '\n';
+    }
+
+    friend std::istream& operator>>( std::istream& s, Matrix4& mat )
+    {
+        return s >> mat.x >> mat.y >> mat.z >> mat.w;
     }
 };
 

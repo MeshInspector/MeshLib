@@ -1,7 +1,16 @@
-#include <MRMesh/MRStreamOperators.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRGTest.h>
 #include <sstream>
+
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRVector4.h"
+#include "MRMesh/MRMatrix3.h"
+#include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRTriPoint.h"
+#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRPointOnFace.h"
 
 namespace MR
 {

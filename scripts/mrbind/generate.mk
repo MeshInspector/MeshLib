@@ -704,6 +704,10 @@ override define module_snippet_parse =
 $(call var,$1__CombinedHeaderOutput := $(TEMP_OUTPUT_DIR)/$1.combined.hpp)
 $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(file >$$@,#pragma once$$(lf))
+	$(call,### Special-case iostream, because a lot of our operators `<<` and `>>` are defined in headers with only `iosfwd` included, to avoid having `iostream` in our headers.)
+	$(call,### While we could conditionally include iostream in every header that does this, with an ifdef to only enable it for bindings, it's easier to do this globally here.)
+	$$(file >>$$@,#include <iostream>$$(lf))
+	$(call,### Write all our headers.)
 	$$(foreach f,$($1__InputFiles),$$(file >>$$@,#include "$$f"$$(lf)))
 	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
 	$(if $(is_py),\

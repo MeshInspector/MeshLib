@@ -2,6 +2,7 @@
 
 #include "MRVector3.h"
 #include "MRConstants.h"
+#include <iosfwd>
 
 namespace MR
 {
@@ -131,6 +132,16 @@ struct Matrix3
             for ( int j = 0; j < 3; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Matrix3& mat )
+    {
+        return s << mat.x << '\n' << mat.y << '\n' << mat.z << '\n';
+    }
+
+    friend std::istream& operator>>( std::istream& s, Matrix3& mat )
+    {
+        return s >> mat.x >> mat.y >> mat.z;
     }
 };
 

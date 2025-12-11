@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <iosfwd>
 #include <type_traits>
 #include "MRPch/MRBindingMacros.h"
 #include "MRMesh/MRMacros.h"
@@ -27,7 +28,7 @@ struct Vector4
 
     T x, y, z, w;
 
-    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 ) 
+    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 )
     {
         static_assert( sizeof( Vector4<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
         static_assert( elements == 4, "Invalid number of elements" );
@@ -109,6 +110,16 @@ struct Vector4
             { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }
         else
             return a *= ( 1 / b );
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector4& vec )
+    {
+        return s << vec.x << ' ' << vec.y << ' ' << vec.z << ' ' << vec.w;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector4& vec )
+    {
+        return s >> vec.x >> vec.y >> vec.z >> vec.w;
     }
 };
 

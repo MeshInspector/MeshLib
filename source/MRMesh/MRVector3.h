@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <iosfwd>
 #include <utility>
 #if MR_HAS_REQUIRES
 #include <concepts>
@@ -34,7 +35,7 @@ struct Vector3
 
     T x, y, z;
 
-    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) 
+    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 )
     {
         static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
         static_assert( elements == 3, "Invalid number of elements" );
@@ -134,6 +135,16 @@ struct Vector3
             { a.x /= b; a.y /= b; a.z /= b; return a; }
         else
             return a *= ( 1 / b );
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector3& vec )
+    {
+        return s << vec.x << ' ' << vec.y << ' ' << vec.z;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector3& vec )
+    {
+        return s >> vec.x >> vec.y >> vec.z;
     }
 };
 

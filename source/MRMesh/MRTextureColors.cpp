@@ -22,8 +22,7 @@ static UVCoord getUV( VertId v, const ThreeVertIds& tri, const ThreeUVCoords& uv
     return {};
 }
 
-Color sampleVertexColor( const Mesh& mesh, VertId v, const MeshTexture& tex,
-    const Triangulation & tris, const TriCornerUVCoords& triCornerUvCoords )
+Color sampleVertexColor( const Mesh& mesh, VertId v, const MeshTexture& tex, const TriCornerUVCoords& triCornerUvCoords )
 {
     Vector4f sumWC;
     float sumW = 0;
@@ -36,7 +35,7 @@ Color sampleVertexColor( const Mesh& mesh, VertId v, const MeshTexture& tex,
         const auto d0 = edgeVector( mesh.topology, mesh.points, e );
         const auto d1 = edgeVector( mesh.topology, mesh.points, mesh.topology.next( e ) );
         const auto angle = MR::angle( d0, d1 );
-        sumWC += angle * Vector4f( tex.sample( tex.filter, getUV( v, tris[l], triCornerUvCoords[l] ) ) );
+        sumWC += angle * Vector4f( tex.sample( tex.filter, getUV( v, mesh.topology.getTriVerts( l ), triCornerUvCoords[l] ) ) );
         sumW += angle;
     }
     if ( sumW > 0 )
@@ -44,15 +43,14 @@ Color sampleVertexColor( const Mesh& mesh, VertId v, const MeshTexture& tex,
     return {};
 }
 
-VertColors sampleVertexColors( const Mesh& mesh, const MeshTexture& tex,
-    const Triangulation & tris, const TriCornerUVCoords& triCornerUvCoords )
+VertColors sampleVertexColors( const Mesh& mesh, const MeshTexture& tex, const TriCornerUVCoords& triCornerUvCoords )
 {
     MR_TIMER;
     VertColors res;
     res.resizeNoInit( mesh.points.size() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
-        res[v] = sampleVertexColor( mesh, v, tex, tris, triCornerUvCoords );
+        res[v] = sampleVertexColor( mesh, v, tex, triCornerUvCoords );
     } );
     return res;
 }

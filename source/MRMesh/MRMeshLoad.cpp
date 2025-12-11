@@ -632,7 +632,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     // convert per-corner UVs into per-vertex colors by keeping the last value only
     if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && tris && !tris->empty() && !triCornerUvCoords.empty() )
     {
-        *settings.colors = sampleVertexColors( res, *settings.texture, *tris, triCornerUvCoords );
+        *settings.colors = sampleVertexColors( res, *settings.texture, triCornerUvCoords );
         if ( !settings.uvCoords || settings.uvCoords->empty() )
             *settings.texture = {}; // texture will not be used outside of this function
     }

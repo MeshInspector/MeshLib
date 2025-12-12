@@ -198,9 +198,13 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
         const float maxPosX = std::max( 0.0f, workBox.max.x - windowBox.size().x );
         if ( maxPosX >= workBox.min.x )
             defaultPos.x = std::clamp( windowBox.min.x, workBox.min.x, maxPosX );
+        else
+            defaultPos.x = workBox.min.x;
         const float maxPosY = std::max( 0.0f, workBox.max.y - windowBox.size().y );
         if ( maxPosY >= workBox.min.y )
             defaultPos.y = std::clamp( windowBox.min.y, workBox.min.y, maxPosY );
+        else
+            defaultPos.y = workBox.min.y;
         windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
 
 

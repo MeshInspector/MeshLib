@@ -89,7 +89,7 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["LeaderLine"] = leaderLine_.value();
 
     // append base type
-    root["Type"].append( ObjectLabel::TypeName() );
+    root["Type"].append( ObjectLabel::StaticTypeName() );
 
     root["SourcePointSize"] = sourcePointSize_;
     root["LeaderLineWidth"] = leaderLineWidth_;

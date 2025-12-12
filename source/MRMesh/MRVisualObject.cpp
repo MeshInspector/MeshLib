@@ -351,7 +351,7 @@ void VisualObject::serializeFields_( Json::Value& root ) const
     root["ShowName"] = showName_.value();
 
     // append base type
-    root["Type"].append( VisualObject::TypeName() );
+    root["Type"].append( VisualObject::StaticTypeName() );
 
     root["UseDefaultSceneProperties"] = useDefaultScenePropertiesOnDeserialization_;
 }

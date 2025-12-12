@@ -25,8 +25,8 @@ public:
     ObjectPointsHolder( ObjectPointsHolder&& ) noexcept = default;
     ObjectPointsHolder& operator = ( ObjectPointsHolder&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "PointsHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "PointsHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 

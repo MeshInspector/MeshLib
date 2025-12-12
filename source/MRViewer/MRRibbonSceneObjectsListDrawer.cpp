@@ -63,7 +63,7 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
 
     auto imageSize = ImGui::GetFrameHeight() - 2 * UI::scale();
     std::string name = obj.typeName();
-    if ( opened && name == Object::TypeName() )
+    if ( opened && name == Object::StaticTypeName() )
         name += "_open";
     auto* imageIcon = RibbonIcons::findByName( name, imageSize,
                                                RibbonIcons::ColorType::White,
@@ -176,26 +176,26 @@ bool RibbonSceneObjectsListDrawer::drawSkippedObject_( Object& object, const std
 
 const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std::string& typeName ) const
 {
-    if ( typeName == ObjectMesh::TypeName() )
+    if ( typeName == ObjectMesh::StaticTypeName() )
         return "\xef\x82\xac";
 #ifndef MRVIEWER_NO_VOXELS
-    if ( typeName == ObjectVoxels::TypeName() )
+    if ( typeName == ObjectVoxels::StaticTypeName() )
         return "\xef\x86\xb3";
 #endif
-    if ( typeName == ObjectPoints::TypeName() )
+    if ( typeName == ObjectPoints::StaticTypeName() )
         return "\xef\x84\x90";
-    if ( typeName == ObjectLines::TypeName() )
+    if ( typeName == ObjectLines::StaticTypeName() )
         return "\xef\x87\xa0";
-    if ( typeName == ObjectDistanceMap::TypeName() )
+    if ( typeName == ObjectDistanceMap::StaticTypeName() )
         return "\xef\xa1\x8c";
-    if ( typeName == ObjectLabel::TypeName() )
+    if ( typeName == ObjectLabel::StaticTypeName() )
         return "\xef\x81\xb5";
-    if ( ( typeName == SphereObject::TypeName() ) ||
-        ( typeName == PointObject::TypeName() ) ||
-        ( typeName == PlaneObject::TypeName() ) ||
-        ( typeName == LineObject::TypeName() ) ||
-        ( typeName == CylinderObject::TypeName() ) ||
-        ( typeName == ConeObject::TypeName() )
+    if ( ( typeName == SphereObject::StaticTypeName() ) ||
+        ( typeName == PointObject::StaticTypeName() ) ||
+        ( typeName == PlaneObject::StaticTypeName() ) ||
+        ( typeName == LineObject::StaticTypeName() ) ||
+        ( typeName == CylinderObject::StaticTypeName() ) ||
+        ( typeName == ConeObject::StaticTypeName() )
         )
         return "\xef\x98\x9f";
     return "\xef\x88\xad";

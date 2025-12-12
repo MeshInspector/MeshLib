@@ -1,0 +1,5 @@
+/home/user/repos/MeshInspectorCode-2/MeshLib/source/MRDotNet2/obj/Debug/net8.0/MRDotNet2.GeneratedMSBuildEditorConfig.editorconfig
+/home/user/repos/MeshInspectorCode-2/MeshLib/source/MRDotNet2/obj/Debug/net8.0/MRDotNet2.AssemblyInfoInputs.cache
+/home/user/repos/MeshInspectorCode-2/MeshLib/source/MRDotNet2/obj/Debug/net8.0/MRDotNet2.AssemblyInfo.cs
+/home/user/repos/MeshInspectorCode-2/MeshLib/source/MRDotNet2/obj/Debug/net8.0/MRDotNet2.csproj.CoreCompileInputs.cache
+/home/user/repos/MeshInspectorCode-2/MeshLib/source/MRDotNet2/obj/Debug/net8.0/MRDotNet2.sourcelink.json

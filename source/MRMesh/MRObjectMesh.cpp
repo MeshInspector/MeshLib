@@ -189,7 +189,7 @@ void ObjectMesh::swapSignals_( Object& other )
 void ObjectMesh::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
-    root["Type"].append( ObjectMesh::TypeName() );
+    root["Type"].append( ObjectMesh::StaticTypeName() );
 }
 
 std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh, const ObjectMeshMergeOptions& options )

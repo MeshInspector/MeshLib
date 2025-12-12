@@ -140,7 +140,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 
     root["PointSize"] = pointSize_;
 
-    root["Type"].append( ObjectMeshHolder::TypeName() );
+    root["Type"].append( ObjectMeshHolder::StaticTypeName() );
 }
 
 size_t ObjectMeshHolder::getModelHash() const

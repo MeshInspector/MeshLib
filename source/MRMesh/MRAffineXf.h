@@ -27,8 +27,12 @@ struct AffineXf
 
     constexpr AffineXf() noexcept = default;
     constexpr AffineXf( const M & A, const V & b ) noexcept : A( A ), b( b ) { }
-    template <typename U>
+
+    // Here `U == V` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<U, V> )
     constexpr explicit AffineXf( const AffineXf<U> & xf ) noexcept : A( xf.A ), b( xf.b ) { }
+
     /// creates translation-only transformation (with identity linear component)
     [[nodiscard]] static constexpr AffineXf translation( const V & b ) noexcept { return AffineXf{ M{}, b }; }
     /// creates linear-only transformation (without translation)

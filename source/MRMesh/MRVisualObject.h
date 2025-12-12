@@ -124,14 +124,14 @@ public:
     VisualObject& operator = ( VisualObject&& ) = default;
     virtual ~VisualObject() = default;
 
-    constexpr static const char* TypeName() noexcept { return "VisualObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "VisualObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Visual Object"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Visual Object"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Visual Objects"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Visual Objects"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
     [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;

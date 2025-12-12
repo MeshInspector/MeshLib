@@ -15,14 +15,14 @@ public:
     AngleMeasurementObject( AngleMeasurementObject&& ) noexcept = default;
     AngleMeasurementObject& operator=( AngleMeasurementObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "AngleMeasurementObject"; }
-    const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "AngleMeasurementObject"; }
+    const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Angle"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Angle"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Angles"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Angles"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     // For `std::make_shared()` in `clone()`.
     AngleMeasurementObject( ProtectedStruct, const AngleMeasurementObject& obj ) : AngleMeasurementObject( obj ) {}

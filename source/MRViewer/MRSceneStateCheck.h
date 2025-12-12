@@ -18,16 +18,16 @@ std::string getNObjectsLine( unsigned n )
     switch ( n )
     {
     case 1:
-        return std::string( "one " ) + ObjectT::ClassName();
+        return std::string( "one " ) + ObjectT::StaticClassName();
     case 2:
-        return std::string( "two " ) + ObjectT::ClassNameInPlural();
+        return std::string( "two " ) + ObjectT::StaticClassNameInPlural();
     case 3:
-        return std::string( "three " ) + ObjectT::ClassNameInPlural();
+        return std::string( "three " ) + ObjectT::StaticClassNameInPlural();
     case 4:
-        return std::string( "four " ) + ObjectT::ClassNameInPlural();
+        return std::string( "four " ) + ObjectT::StaticClassNameInPlural();
     default:
-        return std::to_string( n ) + " " + ObjectT::ClassNameInPlural();
-    }    
+        return std::to_string( n ) + " " + ObjectT::StaticClassNameInPlural();
+    }
 }
 
 // check that given vector has exactly N objects if type ObjectT
@@ -41,7 +41,7 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
     {
         auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
-            return std::string( "Selected object(s) must be " ) + ObjectT::ClassName();
+            return std::string( "Selected object(s) must be " ) + ObjectT::StaticClassName();
 
         if constexpr ( modelCheck )
             if ( !tObj->hasModel() )
@@ -77,8 +77,8 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
                 continue;
         ++i;
     }
-    return ( i >= n ) ? 
-        "" : 
+    return ( i >= n ) ?
+        "" :
         ( "Select at least " + getNObjectsLine<ObjectT>( n ) + " with valid model" );
 }
 

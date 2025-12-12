@@ -168,7 +168,8 @@ MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const Ve
 }
 
 /// computes the area of given face-region
-[[nodiscard]] MRMESH_API double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
 
 /// computes the area of given face-region (or whole mesh)
 [[nodiscard]] inline double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * fs = nullptr )
@@ -177,7 +178,8 @@ MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const Ve
 }
 
 /// computes the sum of directed areas for faces from given region
-[[nodiscard]] MRMESH_API Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
 
 /// computes the sum of directed areas for faces from given region (or whole mesh)
 [[nodiscard]] inline Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * fs = nullptr )
@@ -186,7 +188,8 @@ MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const Ve
 }
 
 /// computes the sum of absolute projected area of faces from given region as visible if look from given direction
-[[nodiscard]] MRMESH_API double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet & fs );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet & fs );
 
 /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
 [[nodiscard]] inline double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet * fs = nullptr )

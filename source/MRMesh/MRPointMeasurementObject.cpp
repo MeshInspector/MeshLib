@@ -204,7 +204,7 @@ void PointMeasurementObject::swapBase_( Object& other )
 void PointMeasurementObject::serializeFields_( Json::Value& root ) const
 {
     MeasurementObject::serializeFields_( root );
-    root["Type"].append( TypeName() );
+    root["Type"].append( StaticTypeName() );
 
     if ( referencePos_ )
         serializeToJson( *referencePos_, root["ReferencePos"] );

@@ -287,7 +287,7 @@ void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
     }
 
     // Type
-    root["Type"].append( ObjectLinesHolder::TypeName() ); // will be appended in derived calls
+    root["Type"].append( ObjectLinesHolder::StaticTypeName() ); // will be appended in derived calls
 }
 
 Expected<void> ObjectLinesHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )

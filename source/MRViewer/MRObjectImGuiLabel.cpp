@@ -45,7 +45,7 @@ void ObjectImGuiLabel::swapBase_( Object& other )
 void ObjectImGuiLabel::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
-    root["Type"].append( TypeName() );
+    root["Type"].append( StaticTypeName() );
 
     root["LabelText"] = labelText_;
 }

@@ -115,7 +115,7 @@ void LineObject::swapBase_( Object& other )
 void LineObject::serializeFields_( Json::Value& root ) const
 {
     FeatureObject::serializeFields_( root );
-    root["Type"].append( LineObject::TypeName() );
+    root["Type"].append( LineObject::StaticTypeName() );
 }
 
 void LineObject::setupRenderObject_() const

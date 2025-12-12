@@ -20,8 +20,12 @@ struct Plane3
 
     constexpr Plane3() noexcept = default;
     constexpr Plane3( const Vector3<T> & n, T d ) noexcept : n( n ), d( d ) { }
-    template <typename U>
+
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Plane3( const Plane3<U> & p ) noexcept : n( p.n ), d( T( p.d ) ) { }
+
     [[nodiscard]] constexpr static Plane3 fromDirAndPt( const Vector3<T> & n, const Vector3<T> & p ) { return { n, dot( n, p ) }; }
 
     /// returns distance from given point to this plane (if n is a unit vector)

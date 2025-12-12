@@ -131,7 +131,7 @@ void ObjectPoints::serializeFields_( Json::Value& root ) const
 {
     ObjectPointsHolder::serializeFields_( root );
 
-    root["Type"].append( ObjectPoints::TypeName() );
+    root["Type"].append( ObjectPoints::StaticTypeName() );
 }
 
 std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoints>>& objsPoints )

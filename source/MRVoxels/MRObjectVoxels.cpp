@@ -636,7 +636,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
 
     root["IsoValue"] = isoValue_;
     root["DualMarchingCubes"] = dualMarchingCubes_;
-    root["Type"].append( ObjectVoxels::TypeName() );
+    root["Type"].append( ObjectVoxels::StaticTypeName() );
 }
 
 Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const

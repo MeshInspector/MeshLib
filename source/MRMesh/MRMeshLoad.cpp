@@ -629,7 +629,16 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
             *settings.skippedFaceCount += mySkippedFaceCount;
     }
 
-    // convert per-corner UVs into per-vertex colors by keeping the last value only
+    // try converting per-corner UVs into per-vertex UVs
+    if ( settings.uvCoords && tris && !tris->empty() && !triCornerUvCoords.empty() )
+    {
+        if ( auto vertUVs = findVertexUVs( res.topology, triCornerUvCoords ) )
+        {
+            *settings.uvCoords = std::move( *vertUVs );
+            triCornerUvCoords.clear(); // not to sample colors from UVs below
+        }
+    }
+    // convert per-corner UVs into per-vertex colors by averaging the value
     if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && tris && !tris->empty() && !triCornerUvCoords.empty() )
     {
         *settings.colors = sampleVertexColors( res, *settings.texture, triCornerUvCoords );

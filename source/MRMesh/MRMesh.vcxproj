@@ -251,6 +251,7 @@
     <ClInclude Include="MRSystemPath.h" />
     <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
     <ClInclude Include="MRTelemetry.h" />
+    <ClInclude Include="MRTextureColors.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -392,7 +393,6 @@
     <ClInclude Include="MRVector4.h" />
     <ClInclude Include="MRTriDist.h" />
     <ClInclude Include="MRPointOnFace.h" />
-    <ClInclude Include="MRStreamOperators.h" />
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRWatershedGraph.h" />
@@ -570,6 +570,7 @@
     <ClCompile Include="MRPly.cpp" />
     <ClCompile Include="MRPointCloudDistance.cpp" />
     <ClCompile Include="MRClosestWeightedPoint.cpp" />
+    <ClCompile Include="MRPointOnFace.cpp" />
     <ClCompile Include="MRPointOnObject.cpp" />
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
     <ClCompile Include="MRPointsComponents.cpp" />
@@ -636,6 +637,7 @@
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTelemetry.cpp" />
+    <ClCompile Include="MRTextureColors.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
@@ -666,7 +668,6 @@
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
     <ClCompile Include="MRQuadraticForm.cpp" />
     <ClCompile Include="MRFreeFormDeformer.cpp" />
-    <ClCompile Include="MRStreamOperators.cpp" />
     <ClCompile Include="MRSurfaceDistance.cpp" />
     <ClCompile Include="MRStringConvert.cpp" />
     <ClCompile Include="MRSurfacePath.cpp" />

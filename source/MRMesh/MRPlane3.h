@@ -2,6 +2,7 @@
 
 #include "MRVector3.h"
 
+#include <iosfwd>
 #if MR_HAS_REQUIRES
 #include "MRVectorTraits.h"
 #include <concepts>
@@ -43,6 +44,16 @@ struct Plane3
 
     /// finds the closest point on plane
     [[nodiscard]] Vector3<T> project( const Vector3<T> & p ) const { return p - distance( p ) / n.lengthSq() * n; }
+
+    friend std::ostream& operator<<( std::ostream& s, const Plane3& pl )
+    {
+        return s << pl.n << '\n' << pl.d;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Plane3& pl )
+    {
+        return s >> pl.n >> pl.d;
+    }
 };
 
 /// \related Plane3

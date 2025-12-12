@@ -5,8 +5,9 @@
 #include "MRphmap.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
-#include <iterator>
 #include <functional>
+#include <iosfwd>
+#include <iterator>
 
 namespace MR
 {
@@ -200,6 +201,9 @@ private:
 
     /// return the smallest index i>=n such that bit i is set, or npos if *this has no on bits.
     MRMESH_API IndexType findSetBitAfter_( IndexType n ) const;
+
+    MRMESH_API friend std::ostream& operator<<( std::ostream& s, const BitSet & bs );
+    MRMESH_API friend std::istream& operator>>( std::istream& s, BitSet & bs );
 
 private:
     std::vector<block_type> blocks_;

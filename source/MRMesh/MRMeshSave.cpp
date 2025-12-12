@@ -411,12 +411,10 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
 
     static_assert( sizeof( UVCoord ) == 8, "wrong size of UVCoord" );
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
-#pragma pack(push, 1)
     struct PlyColor
     {
         unsigned char r = 0, g = 0, b = 0;
     };
-#pragma pack(pop)
     static_assert( sizeof( PlyColor ) == 3, "check your padding" );
 
     // write vertices
@@ -444,16 +442,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     }
 
     // write triangles
-    #pragma pack(push, 1)
-    struct PlyTriangle
-    {
-        char cnt = 3;
-        int v[3];
-    };
-    #pragma pack(pop)
-    static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
-
-    PlyTriangle tri;
+    Vector3i tri;
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
@@ -462,13 +451,15 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             VertId vs[3];
             mesh.topology.getTriVerts( f, vs );
             for ( int i = 0; i < 3; ++i )
-                tri.v[i] = vertRenumber( vs[i] );
+                tri[i] = vertRenumber( vs[i] );
         }
         else if ( !settings.packPrimitives )
-            tri.v[0] = tri.v[1] = tri.v[2] = 0;
+            tri[0] = tri[1] = tri[2] = 0;
         else
             continue;
-        out.write( (const char *)&tri, sizeof( PlyTriangle ) );
+        out.put( char( 3 ) );
+        static_assert( sizeof( Vector3i ) == 12 );
+        out.write( (const char *)&tri, sizeof( Vector3i ) );
         if ( saveFaceColors )
         {
             const auto c = getAt( *settings.primitiveColors, f );

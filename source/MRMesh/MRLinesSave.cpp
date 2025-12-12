@@ -4,7 +4,6 @@
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"
-#include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include "MRPch/MRFmt.h"
 #include <fstream>

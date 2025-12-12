@@ -14,7 +14,6 @@
 #include "MRPointOnFace.h"
 #include "MRMeshTriPoint.h"
 #include "MRMesh.h"
-#include "MRStreamOperators.h"
 #include "MRStringConvert.h"
 #include "MRMeshTexture.h"
 #include "MRDirectory.h"

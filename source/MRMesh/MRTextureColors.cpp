@@ -22,6 +22,61 @@ static UVCoord getUV( VertId v, const ThreeVertIds& tri, const ThreeUVCoords& uv
     return {};
 }
 
+std::optional<UVCoord> findVertexUV( const MeshTopology& topology, VertId v, const TriCornerUVCoords& triCornerUvCoords )
+{
+    std::optional<UVCoord> res;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        auto l = topology.left( e );
+        if ( !l )
+            continue;
+        const auto uv = getUV( v, topology.getTriVerts( l ), triCornerUvCoords[l] );
+        if ( !res )
+        {
+            res = uv;
+            continue;
+        }
+        if ( *res != uv )
+        {
+            res = std::nullopt;
+            return res;
+        }
+        // *res == uv, continue
+    }
+    return res;
+}
+
+std::optional<VertUVCoords> findVertexUVs( const MeshTopology& topology, const TriCornerUVCoords& triCornerUvCoords )
+{
+    MR_TIMER;
+    VertUVCoords res;
+    res.resizeNoInit( topology.vertSize() );
+    tbb::task_group_context ctx;
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( topology.vertSize() ) ),
+        [&] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( auto v = range.begin(); v < range.end(); ++v )
+        {
+            if ( ctx.is_group_execution_cancelled() )
+                break;
+            auto maybeUV = findVertexUV( topology, v, triCornerUvCoords );
+            if ( maybeUV )
+            {
+                res[v] = *maybeUV;
+            }
+            else
+            {
+                ctx.cancel_group_execution();
+                break;
+            }
+        }
+    }, ctx );
+
+    if ( ctx.is_group_execution_cancelled() )
+        return std::nullopt;
+    return res;
+}
+
 Color sampleVertexColor( const Mesh& mesh, VertId v, const MeshTexture& tex, const TriCornerUVCoords& triCornerUvCoords )
 {
     Vector4f sumWC;

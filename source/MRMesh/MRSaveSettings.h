@@ -35,6 +35,9 @@ struct SaveSettings
     /// optional per-vertex uv coordinate to save with the geometry
     const VertUVCoords * uvMap = nullptr;
 
+    /// if a format supports both per-vertex and per-tri-corner UV-coordinates, then prefer the later option
+    bool saveTriCornerUVCoords = false;
+
     /// optional texture to save with the geometry
     const MeshTexture * texture = nullptr;
 

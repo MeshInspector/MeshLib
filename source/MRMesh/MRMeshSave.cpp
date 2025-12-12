@@ -399,7 +399,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     out << "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
-    if ( saveUV )
+    if ( saveUV && !settings.saveTriCornerUVCoords )
         out << "property float texture_u\nproperty float texture_v\n";
 
     const auto fLast = mesh.topology.lastValidFace();
@@ -407,6 +407,8 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     out << "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\n";
     if ( saveFaceColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
+    if ( saveUV && settings.saveTriCornerUVCoords )
+        out << "property list uchar float texcoord\n";
     out << "end_header\n";
 
     static_assert( sizeof( UVCoord ) == 8, "wrong size of UVCoord" );
@@ -431,7 +433,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }
-        if ( saveUV )
+        if ( saveUV && !settings.saveTriCornerUVCoords )
         {
             const auto uv = getAt( *settings.uvMap, i );
             out.write( ( const char* )&uv, sizeof( UVCoord ) );
@@ -446,9 +448,9 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
+        VertId vs[3];
         if ( mesh.topology.hasFace( f ) )
         {
-            VertId vs[3];
             mesh.topology.getTriVerts( f, vs );
             for ( int i = 0; i < 3; ++i )
                 tri[i] = vertRenumber( vs[i] );
@@ -465,6 +467,15 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             const auto c = getAt( *settings.primitiveColors, f );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
+        }
+        if ( saveUV && settings.saveTriCornerUVCoords )
+        {
+            UVCoord uvs[3];
+            for ( int i = 0; i < 3; ++i )
+                uvs[i] = getAt( *settings.uvMap, vs[i] );
+            out.put( char( 6 ) );
+            static_assert( sizeof( uvs ) == 3 * 2 * 4 );
+            out.write( (const char *)uvs, sizeof( uvs ) );
         }
         ++savedFaces;
         if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )

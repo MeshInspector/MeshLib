@@ -19,14 +19,14 @@ public:
     /// \note this ctor is public only for std::make_shared used inside clone()
     SceneRootObject( ProtectedStruct, const SceneRootObject& obj ) : SceneRootObject( obj ) {}
 
-    constexpr static const char* TypeName() noexcept { return "RootObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "RootObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Root"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Root"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Roots"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Roots"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     constexpr static const char* RootName() noexcept { return "Root"; }
 

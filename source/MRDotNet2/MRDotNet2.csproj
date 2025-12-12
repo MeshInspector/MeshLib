@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Suppressed warnings:
+        CS0661 - Missing `GetHashCode()` override when a custom `==` is provided.
+        CS0659 - Missing `GetHashCode()` override when a custom `Equals(object)` is provided. (We add this automatically along with `==`, since skipping it causes a warning too.)
+    -->
+    <NoWarn>CS0659;CS0661</NoWarn>
+  </PropertyGroup>
+
+</Project>

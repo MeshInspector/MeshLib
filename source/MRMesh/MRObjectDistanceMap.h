@@ -20,14 +20,14 @@ public:
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectDistanceMap( ProtectedStruct, const ObjectDistanceMap& obj ) : ObjectDistanceMap( obj ) {}
 
-    constexpr static const char* TypeName() noexcept { return "ObjectDistanceMap"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ObjectDistanceMap"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Distance Map"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Distance Map"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Distance Maps"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Distance Maps"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
@@ -43,14 +43,14 @@ public:
     MRMESH_API bool setDistanceMap(
         const std::shared_ptr<DistanceMap>& dmap,
         const AffineXf3f& dmap2local,
-        bool needUpdateMesh = true, 
+        bool needUpdateMesh = true,
         ProgressCallback cb = {} );
 
     /// creates a grid for this object
     MRMESH_API std::shared_ptr<Mesh> calculateMesh( ProgressCallback cb = {} ) const;
     /// updates the grid to the current one
     MRMESH_API void updateMesh( const std::shared_ptr<Mesh>& mesh );
-    
+
     [[nodiscard]] const std::shared_ptr<DistanceMap>& getDistanceMap() const { return dmap_; }
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( dmap_ ); }

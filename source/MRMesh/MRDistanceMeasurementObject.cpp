@@ -211,7 +211,7 @@ void DistanceMeasurementObject::swapBase_( Object& other )
 void DistanceMeasurementObject::serializeFields_( Json::Value& root ) const
 {
     MeasurementObject::serializeFields_( root );
-    root["Type"].append( TypeName() );
+    root["Type"].append( StaticTypeName() );
 
     root["DrawAsNegative"] = isNegative_;
 

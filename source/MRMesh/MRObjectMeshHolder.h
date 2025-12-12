@@ -36,8 +36,8 @@ public:
     ObjectMeshHolder( ObjectMeshHolder&& ) noexcept = default;
     ObjectMeshHolder& operator = ( ObjectMeshHolder&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "MeshHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 

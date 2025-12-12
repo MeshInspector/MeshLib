@@ -91,11 +91,12 @@ endif
 # What target language?
 TARGET=python
 #TARGET=c
-override known_target_languages := python c
+override known_target_languages := python c csharp
 override TARGET := $(strip $(TARGET))
 $(if $(filter-out 1,$(words $(TARGET)))$(filter-out $(known_target_languages),$(TARGET)),$(error Wrong value of `TARGET`, must be one of: $(known_target_languages)))
 override is_py := $(filter python,$(TARGET))
 override is_c := $(filter c,$(TARGET))
+override is_csharp := $(filter csharp,$(TARGET))
 
 
 ifeq ($(TARGET),python)
@@ -183,6 +184,7 @@ MRBIND_SOURCE := $(makefile_dir)../../thirdparty/mrbind
 # MRBind executable .
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 MRBIND_GEN_C_EXE = $(MRBIND_EXE)_gen_c
+MRBIND_GEN_CSHARP_EXE = $(MRBIND_EXE)_gen_csharp
 
 
 # Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
@@ -467,16 +469,22 @@ endif
 ifeq ($(TARGET),c)
 C_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2
 endif
+ifeq ($(TARGET),csharp)
+CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2/src
+endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
-ifeq ($(TARGET),c)
+ifneq ($(filter c csharp,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
 else ifneq ($(IS_WINDOWS),)
 TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds
 endif
+
+ifneq ($(TARGET),csharp) # Stuff below is for all languages except C#. C# logic is at the bottom of this makefile.
+
 INPUT_GLOBS := *.h
 
 ifeq ($(TARGET),python)
@@ -533,6 +541,19 @@ ifeq ($(TARGET),c)
 #   whether the integerl types smaller than 64 bits are replaced with the typedefs or not. The 64-bit ones always need to be replaced.
 MRBIND_FLAGS += --canonicalize-64-to-fixed-size-typedefs --canonicalize-size_t-to-uint64_t --implicit-enum-underlying-type-is-always-int
 MRBIND_GEN_C_FLAGS += --reject-long-and-long-long --use-size_t-typedef-for-uint64_t
+endif
+
+# Inherit class members.
+ifeq ($(TARGET),c)
+MRBIND_FLAGS += --copy-inherited-members
+endif
+
+ifeq ($(TARGET),c)
+# Output interop description JSON for C#.
+MRBIND_GEN_C_FLAGS += --output-desc-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json)
+# Those are required when generating C, if we then want to produce C# from it.
+# But even ignoring C#, they make C code look better.
+MRBIND_GEN_C_FLAGS += --bind-shared-ptr-virally --force-emit-common-helpers
 endif
 
 
@@ -858,3 +879,20 @@ endif # $(TARGET) == python
 .DEFAULT_GOAL := all
 .PHONY: all
 all: $(all_outputs)
+
+else # If C#:
+
+# C# needs almost none of the logic in this file, just one simple rule.
+
+.DEFAULT_GOAL := generate
+.PHONY: generate
+generate:
+	$(MRBIND_GEN_CSHARP_EXE) \
+		--input-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json) \
+    	--output-dir $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) \
+    	--clean-output-dir \
+    	--imported-lib-name MRMesh \
+    	--helpers-namespace MR::Misc \
+    	--force-namespace MR
+
+endif

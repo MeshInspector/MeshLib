@@ -30,8 +30,8 @@ public:
     ObjectLinesHolder( ObjectLinesHolder&& ) = default;
     ObjectLinesHolder& operator=( ObjectLinesHolder&& ) = default;
 
-    constexpr static const char* TypeName() noexcept { return "LinesHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "LinesHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 

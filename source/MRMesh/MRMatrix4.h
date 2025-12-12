@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRVector4.h"
 #include <limits>
 #include <cassert>
@@ -27,7 +28,7 @@ struct Matrix4
     Vector4<T> z{ 0, 0, 1, 0 };
     Vector4<T> w{ 0, 0, 0, 1 };
 
-    constexpr Matrix4() noexcept 
+    constexpr Matrix4() noexcept
     {
         static_assert( sizeof( Matrix4<ValueType> ) == 4 * sizeof( VectorType ), "Struct size invalid" );
     }
@@ -48,8 +49,11 @@ struct Matrix4
     template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)>
     constexpr Matrix4( const AffineXf3<TT>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
 
-    template <typename U>
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Matrix4( const Matrix4<U> & m ) : x( m.x ), y( m.y ), z( m.z ), w( m.w ) { }
+
     static constexpr Matrix4 zero() noexcept { return Matrix4( Vector4<T>(), Vector4<T>(), Vector4<T>(), Vector4<T>() ); }
     static constexpr Matrix4 identity() noexcept { return Matrix4(); }
     /// returns a matrix that scales uniformly

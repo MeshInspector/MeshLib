@@ -76,19 +76,19 @@ struct vector_ref_wrapper : public vector_wrapper_base<T>
     { }
 };
 
-#define MR_VECTOR_LIKE_IMPL( ClassName, Type )                                               \
-static_assert( sizeof( MR_CONCAT( MR, ClassName ) ) == sizeof( vector_ref_wrapper<Type> ) ); \
-void MR_CONCAT( MR_CONCAT( mr, ClassName ), Invalidate )( MR_CONCAT( MR, ClassName )* vec )  \
+#define MR_VECTOR_LIKE_IMPL( StaticClassName, Type )                                               \
+static_assert( sizeof( MR_CONCAT( MR, StaticClassName ) ) == sizeof( vector_ref_wrapper<Type> ) ); \
+void MR_CONCAT( MR_CONCAT( mr, StaticClassName ), Invalidate )( MR_CONCAT( MR, StaticClassName )* vec )  \
 {                                                                                            \
     reinterpret_cast<vector_ref_wrapper<Type>*>( vec )->invalidate();                        \
 }                                                                                            \
-void MR_CONCAT( MR_CONCAT( mr, ClassName ), Free )( MR_CONCAT( MR, ClassName )* vec )        \
+void MR_CONCAT( MR_CONCAT( mr, StaticClassName ), Free )( MR_CONCAT( MR, StaticClassName )* vec )        \
 {                                                                                            \
     delete reinterpret_cast<vector_wrapper<Type>*>( vec );                                   \
 }                                                                                            \
-MR_CONCAT( MR, ClassName )* MR_CONCAT( MR_CONCAT( mr, ClassName ), New )(void)               \
+MR_CONCAT( MR, StaticClassName )* MR_CONCAT( MR_CONCAT( mr, StaticClassName ), New )(void)               \
 {                                                                                            \
-    return reinterpret_cast<MR_CONCAT( MR, ClassName )*>( new vector_wrapper<Type>( std::vector<Type>() ) ); \
+    return reinterpret_cast<MR_CONCAT( MR, StaticClassName )*>( new vector_wrapper<Type>( std::vector<Type>() ) ); \
 }
 
 #define MR_VECTOR_IMPL( Type ) MR_VECTOR_LIKE_IMPL( MR_CONCAT( Vector, Type ), Type )
@@ -96,10 +96,10 @@ MR_CONCAT( MR, ClassName )* MR_CONCAT( MR_CONCAT( mr, ClassName ), New )(void)  
 #define VECTOR_WRAPPER( Type ) vector_wrapper<typename Type::value_type>
 #define VECTOR_REF_WRAPPER( Type ) vector_ref_wrapper<typename Type::value_type>
 
-#define REGISTER_VECTOR_LIKE( ClassName, Type )       \
-ADD_AUTO_CAST( ClassName, vector_ref_wrapper<Type> ); \
-ADD_AUTO_CAST( vector_ref_wrapper<Type>, ClassName ); \
-ADD_AUTO_CAST( vector_wrapper<Type>, ClassName );
+#define REGISTER_VECTOR_LIKE( StaticClassName, Type )       \
+ADD_AUTO_CAST( StaticClassName, vector_ref_wrapper<Type> ); \
+ADD_AUTO_CAST( vector_ref_wrapper<Type>, StaticClassName ); \
+ADD_AUTO_CAST( vector_wrapper<Type>, StaticClassName );
 
 #define REGISTER_VECTOR( Type )                                     \
 ADD_AUTO_CAST( MR_CONCAT( MR, Type ), VECTOR_REF_WRAPPER( Type ) ); \

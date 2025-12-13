@@ -328,6 +328,7 @@ Expected<void> ObjectPointsHolder::deserializeModel_( const std::filesystem::pat
     auto res = PointsLoad::fromAnySupportedFormat( modelPath, {
         .colors = &vertsColorMap_,
         .callback = progressCb,
+        .telemetrySignal = false
     } );
     if ( !res.has_value() )
         return unexpected( std::move( res.error() ) );

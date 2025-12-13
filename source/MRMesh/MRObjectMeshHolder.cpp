@@ -270,7 +270,7 @@ Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path&
         if ( modelPath.empty() )
             return unexpected( "No mesh file found: " + utf8string( path ) );
     }
-    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &data_.vertColors, .callback = progressCb } );
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &data_.vertColors, .callback = progressCb, .telemetrySignal = false } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 

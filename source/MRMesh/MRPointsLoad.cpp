@@ -217,7 +217,8 @@ Expected<PointCloud> fromPly( std::istream& in, const PointsLoadSettings& settin
     {
         .colors = settings.colors,
         .normals = &res.normals,
-        .callback = settings.callback
+        .callback = settings.callback,
+        .telemetrySignal = settings.telemetrySignal
     };
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )

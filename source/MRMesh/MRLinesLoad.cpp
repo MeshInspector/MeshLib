@@ -139,7 +139,8 @@ Expected<Polyline3> fromPly( std::istream& in, const LinesLoadSettings& settings
         .edges = &edges,
         .colors = settings.colors,
         // suppose that reading is 10% of progress and building polyline is 90% of progress
-        .callback = subprogress( settings.callback, 0.0f, 0.1f )
+        .callback = subprogress( settings.callback, 0.0f, 0.1f ),
+        .telemetrySignal = settings.telemetrySignal
     };
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )

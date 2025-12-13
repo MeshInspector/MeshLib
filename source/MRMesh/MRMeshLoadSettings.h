@@ -19,6 +19,7 @@ struct MeshLoadSettings
     int* duplicatedVertexCount = nullptr; ///< optional output: counter of duplicated vertices (that created for resolve non-manifold geometry)
     AffineXf3f* xf = nullptr;        ///< optional output: transform for the loaded mesh to improve precision of vertex coordinates
     ProgressCallback callback;       ///< callback for set progress and stop process
+    bool telemetrySignal = true;     ///< permit telemetry signal about loading
 };
 
 } //namespace MR

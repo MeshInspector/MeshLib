@@ -10,6 +10,7 @@ struct LinesLoadSettings
 {
     VertColors* colors = nullptr;    ///< optional load artifact: per-vertex color map
     ProgressCallback callback;       ///< callback for set progress and stop process
+    bool telemetrySignal = true;     ///< permit telemetry signal about loading
 };
 
 } //namespace MR

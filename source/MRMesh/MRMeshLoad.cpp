@@ -488,7 +488,8 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
     if ( !reportProgress( settings.callback , 1.0f ) )
         return unexpectedOperationCanceled();
 
-    TelemetrySignal( std::string( "STL head " ) + header );
+    if ( settings.telemetrySignal )
+        TelemetrySignal( std::string( "STL head " ) + header );
 
     return res;
 }
@@ -585,7 +586,8 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
 
-    TelemetrySignal( "STL ASCII" + header );
+    if ( settings.telemetrySignal )
+        TelemetrySignal( "STL ASCII" + header );
 
     return res;
 }
@@ -608,7 +610,8 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
         .texture = settings.texture,
         .dir = dir,
         // suppose that reading is 10% of progress and building mesh is 90% of progress
-        .callback = subprogress( settings.callback, 0.0f, 0.1f )
+        .callback = subprogress( settings.callback, 0.0f, 0.1f ),
+        .telemetrySignal = settings.telemetrySignal
     };
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )

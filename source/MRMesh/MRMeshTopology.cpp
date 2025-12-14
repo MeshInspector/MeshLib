@@ -2158,7 +2158,12 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER;
 
-    Vector<NoDefInit<HalfEdgeRecord>, UndirectedEdgeId> tmp( map.e.tsize );
+    Vector<EdgeId, EdgeId> oldNext;
+    oldNext.resizeNoInit( edges_.size() );
+    ParallelFor( oldNext, [&]( EdgeId oldE )
+    {
+        oldNext[oldE] = edges_[oldE].next;
+    } );
     auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
     {
         HalfEdgeRecord res;
@@ -2169,88 +2174,57 @@ void MeshTopology::pack( const PackMapping & map )
         return res;
     };
 
-    // translate even half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    if ( edges_.size() != 2 * map.e.tsize )
     {
-        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
-        {
-            auto newUe = map.e.b[oldUe];
-            if ( !newUe )
-                continue;
-            tmp[ newUe ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
-        }
-    } );
-    // copy back even half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+        assert( edges_.size() > 2 * map.e.tsize );
+        edges_ = {}; // free memory
+        edges_.resizeNoInit( 2 * map.e.tsize );
+    }
+    ParallelFor( 0_ue, UndirectedEdgeId( oldNext.size() / 2 ), [&]( UndirectedEdgeId oldUe )
     {
-        for ( auto newUe = range.begin(); newUe < range.end(); ++newUe )
-        {
-            edges_[ EdgeId{newUe} ] = tmp[ newUe ];
-        }
-    } );
+        UndirectedEdgeId newUe = map.e.b[oldUe];
+        if ( !newUe )
+            return;
+        EdgeId newE0 = newUe;
+        EdgeId oldE0 = oldUe;
+        edges_[newE0].next = getAt( map.e.b, oldNext[oldE0] );
 
-    // translate odd half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
-    {
-        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
-        {
-            auto newUe = map.e.b[oldUe];
-            if ( !newUe )
-                continue;
-            tmp[ newUe ] = translateHalfEdge( edges_[ EdgeId{oldUe}.sym() ] );
-        }
+        EdgeId newE1 = newE0.sym();
+        EdgeId oldE1 = oldE0.sym();
+        edges_[newE1].next = getAt( map.e.b, oldNext[oldE1] );
     } );
-    // copy back odd half-edges
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
-    {
-        for ( auto newUe = range.begin(); newUe < range.end(); ++newUe )
-        {
-            edges_[ EdgeId{newUe}.sym() ] = tmp[ newUe ];
-        }
-    } );
-
-    tmp = {};
-    edges_.resize( 2 * map.e.tsize );
+    fillPrevCleanOrgLeft_();
 
     Vector<EdgeId, FaceId> newEdgePerFace;
     newEdgePerFace.resizeNoInit( map.f.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( faceSize() ) ),
-        [&]( const tbb::blocked_range<FaceId> & range )
+    ParallelFor( edgePerFace_, [&]( FaceId oldf )
     {
-        for ( auto oldf = range.begin(); oldf < range.end(); ++oldf )
-        {
-            auto newf = map.f.b[oldf];
-            if ( !newf )
-                continue;
-            newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
-        }
+        auto newf = map.f.b[oldf];
+        if ( !newf )
+            return;
+        newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
     } );
     edgePerFace_ = std::move( newEdgePerFace );
     assert( edgePerFace_.size() == numValidFaces_ );
+    fillLeft_();
     validFaces_.clear();
     validFaces_.resize( edgePerFace_.size(), true );
 
     Vector<EdgeId, VertId> newEdgePerVertex;
     newEdgePerVertex.resizeNoInit( map.v.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( vertSize() ) ),
-        [&]( const tbb::blocked_range<VertId> & range )
+    ParallelFor( edgePerVertex_, [&]( VertId oldv )
     {
-        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
-        {
-            auto newv = map.v.b[oldv];
-            if ( !newv )
-                continue;
-            newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
-        }
+        auto newv = map.v.b[oldv];
+        if ( !newv )
+            return;
+        newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
     } );
     edgePerVertex_ = std::move( newEdgePerVertex );
     assert( edgePerVertex_.size() == numValidVerts_ );
+    fillOrg_();
     validVerts_.clear();
     validVerts_.resize( edgePerVertex_.size(), true );
+
     updateValids_ = true;
 }
 

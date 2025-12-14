@@ -2158,41 +2158,33 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER;
 
-    Vector<EdgeId, EdgeId> oldNext;
-    oldNext.resizeNoInit( edges_.size() );
-    ParallelFor( oldNext, [&]( EdgeId oldE )
-    {
-        oldNext[oldE] = edges_[oldE].next;
-    } );
-    auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
-    {
-        HalfEdgeRecord res;
-        res.next = getAt( map.e.b, he.next );
-        res.prev = getAt( map.e.b, he.prev );
-        res.org = getAt( map.v.b, he.org );
-        res.left = getAt( map.f.b, he.left );
-        return res;
-    };
-
-    if ( edges_.size() != 2 * map.e.tsize )
-    {
-        assert( edges_.size() > 2 * map.e.tsize );
-        edges_ = {}; // free memory
-        edges_.resizeNoInit( 2 * map.e.tsize );
-    }
-    ParallelFor( 0_ue, UndirectedEdgeId( oldNext.size() / 2 ), [&]( UndirectedEdgeId oldUe )
+    Vector<EdgeId, EdgeId> newNext;
+    newNext.resizeNoInit( 2 * map.e.tsize );
+    ParallelFor( 0_ue, UndirectedEdgeId( edges_.size() / 2 ), [&]( UndirectedEdgeId oldUe )
     {
         UndirectedEdgeId newUe = map.e.b[oldUe];
         if ( !newUe )
             return;
         EdgeId newE0 = newUe;
         EdgeId oldE0 = oldUe;
-        edges_[newE0].next = getAt( map.e.b, oldNext[oldE0] );
+        newNext[newE0] = getAt( map.e.b, edges_[oldE0].next );
 
         EdgeId newE1 = newE0.sym();
         EdgeId oldE1 = oldE0.sym();
-        edges_[newE1].next = getAt( map.e.b, oldNext[oldE1] );
+        newNext[newE1] = getAt( map.e.b, edges_[oldE1].next );
     } );
+
+    if ( edges_.size() != newNext.size() )
+    {
+        assert( edges_.size() > newNext.size() );
+        edges_ = {}; // free memory
+        edges_.resizeNoInit( newNext.size() );
+    }
+    ParallelFor( newNext, [&]( EdgeId e )
+    {
+        edges_[e].next = newNext[e];
+    } );
+    newNext = {}; // free memory
     fillPrevCleanOrgLeft_();
 
     Vector<EdgeId, FaceId> newEdgePerFace;

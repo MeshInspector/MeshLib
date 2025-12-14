@@ -174,6 +174,7 @@ struct ElementGroup
 template <typename Element>
 std::vector<ElementGroup<Element>> groupLines( const char* data, size_t, const std::vector<size_t>& newlines )
 {
+    MR_TIMER;
     const auto lineCount = newlines.size() - 1;
 
     std::vector<ElementGroup<Element>> groups{ { Element(), 0, 0 } }; // emplace stub initial group
@@ -753,7 +754,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    timer.restart( "triangulate" );
+    timer.finish();
     std::vector<MeshBuilder::VertDuplication> dups;
     res.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( coords ), t, &dups,
         { .skippedFaceCount = settings.countSkippedFaces ? &res.skippedFaceCount : nullptr } );
@@ -1019,7 +1020,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( parseError );
     }
 
-    timer.restart( "triangulate models" );
+    timer.finish();
 
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;
@@ -1095,13 +1096,11 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 {
     MR_TIMER;
 
-    Timer timer( "split by lines" );
     const auto newlines = splitByLines( data, size );
 
     if ( !reportProgress( settings.callback, 0.15f ) )
         return unexpectedOperationCanceled();
 
-    timer.restart( "group element lines" );
     const auto groups = groupLines<ObjElement>( data, size, newlines );
 
     if ( !reportProgress( settings.callback, 0.3f ) )

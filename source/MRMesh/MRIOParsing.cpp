@@ -40,6 +40,7 @@ namespace MR
 
 std::vector<size_t> splitByLines( const char* data, size_t size )
 {
+    MR_TIMER;
     constexpr size_t blockSize = 4096;
     const auto blockCount = ( size_t )std::ceil( ( float )size / blockSize );
 

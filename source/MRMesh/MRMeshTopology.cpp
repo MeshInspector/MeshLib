@@ -995,6 +995,54 @@ void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
     }
 }
 
+void MeshTopology::fillPrevCleanOrgLeft_()
+{
+    MR_TIMER;
+    ParallelFor( edges_, [&]( EdgeId e )
+    {
+        auto en = edges_[e].next;
+        auto n = edges_[en];
+        n.prev = e;
+        n.org = VertId{};
+        n.left = FaceId{};
+        edges_[en] = n;
+    } );
+}
+
+void MeshTopology::fillOrg_()
+{
+    MR_TIMER;
+    ParallelFor( edgePerVertex_, [&]( VertId v )
+    {
+        EdgeId e0 = edgePerVertex_[v];
+        if ( !e0 )
+            return;
+        EdgeId e = e0;
+        do
+        {
+            edges_[e].org = v;
+            e = edges_[e].next;
+        } while ( e != e0 );
+    } );
+}
+
+void MeshTopology::fillLeft_()
+{
+    MR_TIMER;
+    ParallelFor( edgePerFace_, [&]( FaceId f )
+    {
+        EdgeId e0 = edgePerFace_[f];
+        if ( !e0 )
+            return;
+        EdgeId e = e0;
+        do
+        {
+            edges_[e].left = f;
+            e = edges_[e].next.sym();
+        } while ( e != e0 );
+    } );
+}
+
 void MeshTopology::flipEdge( EdgeId e )
 {
     assert( isLeftTri( e ) );

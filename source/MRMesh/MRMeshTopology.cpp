@@ -2182,10 +2182,13 @@ void MeshTopology::pack( const PackMapping & map )
     }
     ParallelFor( newNext, [&]( EdgeId e )
     {
-        edges_[e].next = newNext[e];
+        const auto ne = newNext[e];
+        edges_[e].next = ne;
+        edges_[e].org = VertId{};
+        edges_[e].left = FaceId{};
+        edges_[ne].prev = e;
     } );
     newNext = {}; // free memory
-    fillPrevCleanOrgLeft_();
 
     Vector<EdgeId, FaceId> newEdgePerFace;
     newEdgePerFace.resizeNoInit( map.f.tsize );

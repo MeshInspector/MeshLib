@@ -256,7 +256,7 @@ jobs:
           vcpkg.exe integrate install
 
       - name: Restore Vcpkg Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: vcpkg-cache
         with:
           key: vcpkg-cache-${{env.VCPKG-VERSION}}
@@ -281,7 +281,7 @@ jobs:
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
 
       - name: Restore CUDA Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cuda-cache
         with:
           key: cuda-${{env.CUDA-VERSION}}

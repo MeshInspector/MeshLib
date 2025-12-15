@@ -7,7 +7,7 @@
 # C++ Distribution Example Plugin
 
 ## Introduction
-This page describes what is present in `example_plugin` directory of the Windows distribution archive and how to use it.
+This page describes what is present in `example_plugin` directory of the Windows and WebAssembly distribution archive and how to use it.
 \note Please have a look at [MeshLib С++ setup guide](\ref CppSetupWindows) first.
 
 ## Content
@@ -18,13 +18,16 @@ This example contains several files:
 4. `MyPlugin.ui.json` - tools visualization in MeshLib/MeshInspector viewer
 5. `resource` - directory with icons in four different sizes for menu in viewer
 6. `MyPlugin.cpp` - source code with actual (demo) tools
+7. `CMakeLists.txt` - CMake project file
+8. `ViewerApp.cpp` - sample viewer app that has enough functionality to load and test the tools
+9. `wasm/compose_html.js` - (WebAssembly only) JavaScript file modified for loading the sample viewer app
 
 Lets have a closer look at each of these points:
 
-### Solution File
+### Visual Studio Solution File
 `example_plugin.sln` - This can be used to build an example with Visual Studio, it only includes `example_plugin.vcxproj` in it.
 
-### Project File
+### Visual Studio Project File
 `example_plugin.vcxproj` - This file is configured so project can work with MeshLib distribuiton \include{doc} CommonDistributionProperties.dox \n
        - Define `IMGUI_DISABLE_OBSOLETE_FUNCTIONS`
        - Copy other files to target directory:
@@ -124,12 +127,33 @@ Lets have a closer look at each of these points:
 
 For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 
+### CMake Project File
+...
+
+### Sample Viewer App
+...
+
+### 
+9. `wasm/compose_html.js` - (WebAssembly only) JavaScript file modified for loading the sample viewer app
+
 ## Usage
+
+### Windows
 1. Open solution file with Visual Studio
 2. Compile it
 3. Copy content of just appeared `x64\Release\` folder to MeshLib or MeshInspector app folder
   - MeshLib: `install\app\Release`
   - MeshInspector: `C:\Program Files\MeshInspector\MeshInspector`, please note that you should use same version of MeshLib that is used in MeshInspector to avoid unexpected errors
 \note take `x64\Debug\` if you want to test it in MeshLib debug app folder: `install\app\Debug`
+
+### WebAssembly
+1. [Install and activate Emscripten SDK](https://emscripten.org/docs/tools_reference/emsdk.html#emsdk-howto)
+2. [Download and unpack MeshLib SDK](https://github.com/MeshInspector/MeshLib/releases)
+3. Configure and build the project using CMake and emcmake:
+\code{.sh}
+emcmake cmake -S example_plugin -B example_plugin_build -D CMAKE_FIND_ROOT_PATH=/path/to/meshlib/sdk/
+cmake --build example_plugin_build --config Release
+\endcode
+4. Copy the result files from the `example_plugin_build/html` directory to your web server location.
 
 */

@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+project(example_plugin CXX)
+
 if(EMSCRIPTEN)
     set(HTML_DIR "${CMAKE_BINARY_DIR}/html")
     # place built Wasm/JS files to `html' directory
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HTML_DIR})
 endif()
-
-project(example_plugin CXX)
 
 find_package(MeshLib REQUIRED)
 include_directories(${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
@@ -44,6 +44,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         # place HTML/JS files to `html' directory
         file(GLOB MESHLIB_WASM_FILES "${MESHLIB_DATA_DIR}/wasm/*.*")
         file(GLOB LOCAL_WASM_FILES   "${CMAKE_CURRENT_SOURCE_DIR}/wasm/*.*")
+        file(MAKE_DIRECTORY ${HTML_DIR})
         file(
             COPY
                 ${MESHLIB_WASM_FILES}
@@ -55,6 +56,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         file(GLOB MESHLIB_JSONS "${MESHLIB_DATA_DIR}/*.json")
         file(GLOB MESHLIB_FONTS "${MESHLIB_DATA_DIR}/fonts/*.ttf")
         file(GLOB LOCAL_JSONS   "${CMAKE_CURRENT_SOURCE_DIR}/*.json")
+        file(MAKE_DIRECTORY "${HTML_DIR}/assets")
         file(
             COPY
                 ${MESHLIB_DATA_DIR}/resource

@@ -548,54 +548,55 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     Timer timer( "prepare unique vertices" );
 
+    auto getVertexRepr = [&] ( size_t fId, int ind ) -> Expected<VertexRepr>
+    {
+        VertexRepr repr;
+        repr.vId = faces.vertices[faces.face2vert[fId] + ind];
+        if ( repr.vId < 0 )
+            repr.vId = int( points.size() ) + repr.vId;
+        else
+            --repr.vId;
+        if ( repr.vId < 0 || repr.vId >= points.size() )
+            return unexpected( std::string( "Out of bounds Vertex ID in OBJ-file" ) );
+
+        if ( faces.face2texv[fId] + ind < faces.face2texv[fId + 1] )
+        {
+            repr.vtId = faces.textures[faces.face2texv[fId] + ind];
+            if ( repr.vtId < 0 )
+                repr.vtId = int( uvCoords.size() ) + repr.vtId;
+            else
+                --repr.vtId;
+            if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
+                return unexpected( std::string( "Out of bounds Texture Vertex ID in OBJ-file" ) );
+        }
+        return repr;
+    };
+
     std::string error;
     tbb::task_group_context ctx;
     tbb::enumerable_thread_specific<std::vector<VertexRepr>> tlOrderedPoints;
     tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         auto& local = tlOrderedPoints.local();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        for ( size_t fId = range.begin(); fId < range.end(); ++fId )
         {
-            if ( faces.numVerts( i ) < 3 )
+            const auto nv = faces.numVerts( fId );
+            if ( nv < 3 )
             {
                 if ( ctx.cancel_group_execution() )
                     error = "Face with less than 3 vertices in OBJ-file";
                 return;
             }
-            int iv = faces.face2vert[i];
-            const int ivLast = faces.face2vert[i + 1];
-            int it = faces.face2texv[i];
-            const int itLast = faces.face2texv[i + 1];
-            for ( ; iv < ivLast; ++iv, ++it )
+            for ( int ind = 0; ind < nv; ++ind )
             {
-                VertexRepr repr;
-                repr.vId = faces.vertices[iv];
-                if ( repr.vId < 0 )
-                    repr.vId = int( points.size() ) + repr.vId;
-                else
-                    --repr.vId;
-                if ( repr.vId < 0 || repr.vId >= points.size() )
+                auto repr = getVertexRepr( fId, ind );
+                if ( !repr )
                 {
                     if ( ctx.cancel_group_execution() )
-                        error = "Out of bounds Vertex ID in OBJ-file";
+                        error = std::move( repr.error() );
                     return;
                 }
-                if ( it < itLast )
-                {
-                    repr.vtId = faces.textures[it];
-                    if ( repr.vtId < 0 )
-                        repr.vtId = int( uvCoords.size() ) + repr.vtId;
-                    else
-                        --repr.vtId;
-                    if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
-                    {
-                        if ( ctx.cancel_group_execution() )
-                            error = "Out of bounds Texture Vertex ID in OBJ-file";
-                        return;
-                    }
-                }
-
-                local.emplace_back( repr );
+                local.emplace_back( *repr );
             }
         }
     }, ctx );
@@ -682,21 +683,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     auto getReprVertId = [&] ( size_t fId, int ind )->VertId
     {
-        VertexRepr repr;
-        repr.vId = faces[fId].vertices[ind];
-        if ( repr.vId < 0 )
-            repr.vId = int( points.size() ) + repr.vId;
-        else
-            --repr.vId;
-        if ( ind < faces[fId].textures.size() )
-        {
-            repr.vtId = faces[fId].textures[ind];
-            if ( repr.vtId < 0 )
-                repr.vtId = int( uvCoords.size() ) + repr.vtId;
-            else
-                --repr.vtId;
-        }
-        auto it = map.find( repr );
+        auto repr = getVertexRepr( fId, ind );
+        assert( repr.has_value() );
+        auto it = map.find( *repr );
         assert( it != map.end() );
         return it->second;
     };

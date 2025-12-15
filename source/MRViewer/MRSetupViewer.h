@@ -43,6 +43,9 @@ public:
     /// free all libraries loaded in setupExtendedLibraries()
     MRVIEWER_API virtual void unloadExtendedLibraries() const;
 
+    // functor to setup custom log sink, i.e. sending logs to web
+    std::function<void()> setupCustomLogSink;
+
 private:
 #ifndef __EMSCRIPTEN__
     struct LoadedModule

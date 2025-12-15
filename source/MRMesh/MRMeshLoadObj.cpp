@@ -231,11 +231,11 @@ Expected<ObjFaceInfo> parseObjFaceInfo( const std::string_view& str )
     using namespace boost::spirit::x3;
 
     ObjFaceInfo res;
-    auto v = [&] ( auto& ctx )
+    auto v = [&] ( auto& )
     {
         ++res.numVerts;
     };
-    auto vt = [&] ( auto& ctx )
+    auto vt = [&] ( auto& )
     {
         ++res.numTexVerts;
     };
@@ -888,7 +888,6 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     Vector<Vector3d,VertId> points; // flat list of all points in this object scope
     std::vector<Color> colors; // flat list of all colors in this object scope
     std::vector<UVCoord> uvCoords; // flat list of all uv coords in this object scope
-    std::vector<ObjFace> faces; // flat list of face elements in this list
 
     size_t numPoints = 0;
     size_t numUVs = 0;
@@ -951,7 +950,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( hasColors )
         colors.reserve( numPoints );
     uvCoords.reserve( numUVs );
-    faces.reserve( numFaces );
+    std::vector<ObjFaceInfo> faceInfos;
+    faceInfos.reserve( numFaces + 1 );
 
     if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
@@ -1012,11 +1012,11 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         }, ctx );
     };
 
-    // simply read all faces in vector
+    // simply read all face infos in vector
     auto fillFaces = [&] ( size_t begin, size_t end )
     {
-        size_t facesSize = faces.size();
-        faces.resize( facesSize + end - begin );
+        size_t facesSize = faceInfos.size();
+        faceInfos.resize( facesSize + end - begin );
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
@@ -1024,13 +1024,14 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             {
                 auto id = li - begin + facesSize;
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseObjFace( line, faces[id] );
+                auto res = parseObjFaceInfo( line );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
                         parseError = std::move( res.error() );
                     return;
                 }
+                faceInfos[id] = *res;
             }
         }, ctx );
     };
@@ -1052,7 +1053,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& objData = oScopes.emplace_back();
             objData.objName = line.substr( strlen( "o" ), std::string_view::npos );
-            objData.fId = faces.size();
+            objData.fId = faceInfos.size();
             boost::trim( objData.objName );
             break;
         }
@@ -1064,7 +1065,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& mtlData = mScopes.emplace_back();
             mtlData.mtName = line.substr( strlen( "usemtl" ), std::string_view::npos );
-            mtlData.fId = faces.size();
+            mtlData.fId = faceInfos.size();
             boost::trim( mtlData.mtName );
             break;
         }
@@ -1076,6 +1077,12 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         if ( !parseError.empty() )
             return unexpected( parseError );
     }
+
+    timer.restart( "load faces" );
+
+    ObjFaces faces; // flat list of face elements in this list
+    faces.face2vert.reserve( numFaces + 1 );
+    faces.face2texv.reserve( numFaces + 1 );
 
     timer.finish();
 

@@ -188,7 +188,7 @@ jobs:
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
 
      - name: Upload NuGet Package
-       uses: actions/upload-artifact@v5
+       uses: actions/upload-artifact@v6
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg
@@ -391,7 +391,7 @@ jobs:
           fi
 
       - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: time_log
           path: time_log.tar.gz

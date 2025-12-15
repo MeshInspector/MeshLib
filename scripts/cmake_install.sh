@@ -19,6 +19,7 @@ cmake_install () {
 }
 
 cmake_install ${BASE_DIR}/build/Release
+cmake_install ${BASE_DIR}/build/Debug
 cmake_install ${BASE_DIR}/thirdparty_build
 # Emscripten dependencies
 for BUILD_DIR in ${BASE_DIR}/thirdparty_build/*_build ; do

@@ -5,6 +5,7 @@
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"

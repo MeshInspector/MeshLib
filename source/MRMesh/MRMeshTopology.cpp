@@ -995,54 +995,6 @@ void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
     }
 }
 
-void MeshTopology::fillPrevCleanOrgLeft_()
-{
-    MR_TIMER;
-    ParallelFor( edges_, [&]( EdgeId e )
-    {
-        auto en = edges_[e].next;
-        auto n = edges_[en];
-        n.prev = e;
-        n.org = VertId{};
-        n.left = FaceId{};
-        edges_[en] = n;
-    } );
-}
-
-void MeshTopology::fillOrg_()
-{
-    MR_TIMER;
-    ParallelFor( edgePerVertex_, [&]( VertId v )
-    {
-        EdgeId e0 = edgePerVertex_[v];
-        if ( !e0 )
-            return;
-        EdgeId e = e0;
-        do
-        {
-            edges_[e].org = v;
-            e = edges_[e].next;
-        } while ( e != e0 );
-    } );
-}
-
-void MeshTopology::fillLeft_()
-{
-    MR_TIMER;
-    ParallelFor( edgePerFace_, [&]( FaceId f )
-    {
-        EdgeId e0 = edgePerFace_[f];
-        if ( !e0 )
-            return;
-        EdgeId e = e0;
-        do
-        {
-            edges_[e].left = f;
-            e = edges_[e].next.sym();
-        } while ( e != e0 );
-    } );
-}
-
 void MeshTopology::flipEdge( EdgeId e )
 {
     assert( isLeftTri( e ) );
@@ -2197,11 +2149,10 @@ void MeshTopology::pack( const PackMapping & map )
         auto newf = map.f.b[oldf];
         if ( !newf )
             return;
-        newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
+        setLeft_( newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] ), newf );
     } );
     edgePerFace_ = std::move( newEdgePerFace );
     assert( edgePerFace_.size() == numValidFaces_ );
-    fillLeft_();
     validFaces_.clear();
     validFaces_.resize( edgePerFace_.size(), true );
 
@@ -2212,14 +2163,12 @@ void MeshTopology::pack( const PackMapping & map )
         auto newv = map.v.b[oldv];
         if ( !newv )
             return;
-        newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
+        setOrg_( newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] ), newv );
     } );
     edgePerVertex_ = std::move( newEdgePerVertex );
     assert( edgePerVertex_.size() == numValidVerts_ );
-    fillOrg_();
     validVerts_.clear();
     validVerts_.resize( edgePerVertex_.size(), true );
-
     updateValids_ = true;
 }
 

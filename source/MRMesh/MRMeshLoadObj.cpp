@@ -220,11 +220,65 @@ Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
     return {};
 }
 
-struct ObjFace
+struct ObjFaceInfo
+{
+    uint32_t numVerts = 0;
+    uint32_t numTexVerts = 0;
+};
+
+Expected<ObjFaceInfo> parseObjFaceInfo( const std::string_view& str )
+{
+    using namespace boost::spirit::x3;
+
+    ObjFaceInfo res;
+    auto v = [&] ( auto& ctx )
+    {
+        ++res.numVerts;
+    };
+    auto vt = [&] ( auto& ctx )
+    {
+        ++res.numTexVerts;
+    };
+    auto vn = [&] ( auto& )
+    {
+        // normals are not used currently
+    };
+
+    bool r = phrase_parse(
+        str.begin(),
+        str.end(),
+        // NOTE: actions are not being reverted after backtracking
+        // https://github.com/boostorg/spirit/issues/378
+        ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
+        ascii::space
+    );
+    if ( !r )
+        return unexpected( "Failed to parse face in OBJ-file" );
+
+    if ( !res.numVerts )
+        return unexpected( "Invalid face vertex count in OBJ-file" );
+    if ( res.numTexVerts && f.numVerts != f.numTexVerts )
+        return unexpected( "Invalid face texture count in OBJ-file" );
+    return res;
+}
+
+struct SpanInVector
+{
+    uint32_t first = 0, last = 0;
+};
+
+/*struct ObjFaceSpans
+{
+    SpanInVector vertSpan, texSpan;
+};*/
+
+struct ObjFaces
 {
     std::vector<int> vertices;
+    std::vector<SpanInVector> face2verts;
+
     std::vector<int> textures;
-    std::vector<int> normals;
+    std::vector<SpanInVector> face2tex;
 };
 
 Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )

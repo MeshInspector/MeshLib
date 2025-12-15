@@ -53,7 +53,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
         # pack assets
         file(GLOB MESHLIB_JSONS "${MESHLIB_DATA_DIR}/*.json")
-        file(GLOB MESHLIB_FONTS "${MESHLIB_DATA_DIR}/fonts/*.ttf")
+        file(GLOB MESHLIB_FONTS "${MESHLIB_DATA_DIR}/fonts/*.*")
         file(GLOB LOCAL_JSONS   "${CMAKE_CURRENT_SOURCE_DIR}/*.json")
         file(
             COPY

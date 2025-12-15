@@ -103,14 +103,13 @@ struct MR_BIND_IGNORE ProccessMemoryInfo
 [[nodiscard]] MRMESH_API MR_BIND_IGNORE ProccessMemoryInfo getProccessMemoryInfo();
 #endif //_WIN32
 
-MRMESH_API void registerCustomLogSinkAdder( std::function<void()> sinkAdder );
-
 /// Setups logger:
 /// 1) makes stdout sink
 /// 2) makes file sink (MRLog.txt)
 /// 3) redirect std streams to logger
-/// 4) print stacktrace on crash (not in wasm)
+/// 4) add custom sink if provided
+/// 5) print stacktrace on crash (not in wasm)
 /// log level - trace
-MRMESH_API void setupLoggerByDefault();
+MRMESH_API void setupLoggerByDefault( std::function<void()> customLogSinkAdder = {} );
 
 } // namespace MR

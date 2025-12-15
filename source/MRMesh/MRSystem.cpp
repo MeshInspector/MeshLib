@@ -594,18 +594,7 @@ ProccessMemoryInfo getProccessMemoryInfo()
 }
 #endif //_WIN32
 
-std::function<void()>& customLogSinkAdder()
-{
-    static std::function<void()> customLogSinkAdder;
-    return customLogSinkAdder;
-}
-
-void registerCustomLogSinkAdder( std::function<void()> sinkAdder )
-{
-    customLogSinkAdder() = sinkAdder;
-}
-
-void setupLoggerByDefault( )
+void setupLoggerByDefault( std::function<void()> customLogSinkAdder )
 {
     auto logger = Logger::instance().getSpdLogger();
     if ( logger )
@@ -618,8 +607,8 @@ void setupLoggerByDefault( )
 #endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
 
-    if ( customLogSinkAdder() )
-        customLogSinkAdder()();
+    if ( customLogSinkAdder )
+        customLogSinkAdder();
 
 #ifndef NDEBUG
     const auto minLevel = spdlog::level::trace;

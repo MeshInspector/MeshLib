@@ -303,7 +303,7 @@ void parseObjFace( const std::string_view& str, size_t f, ObjFaces & target )
     };
     auto vt = [&] ( auto& ctx )
     {
-        target.vertices[nextTexv++] = _attr( ctx );
+        target.textures[nextTexv++] = _attr( ctx );
     };
     auto vn = [&] ( auto& )
     {
@@ -535,7 +535,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( minFace < faces.size() ) // do not crash if minFace = 0 and faces are empty
     {
         haveUVs = faces.numTexVerts( minFace ) != 0;
-        firstVert = faces.face2vert[minFace];
+        firstVert = faces.vertices[faces.face2vert[minFace]];
     }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) + firstVert;
@@ -1099,7 +1099,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         faces.face2vert.push_back( faces.face2vert.back() + info.numVerts );
         faces.face2texv.push_back( faces.face2texv.back() + info.numTexVerts );
     }
-    ...
+    faces.vertices.resize( faces.face2vert.back() );
+    faces.textures.resize( faces.face2texv.back() );
 
     for ( const auto& faceRange : faceRanges )
     {

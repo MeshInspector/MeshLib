@@ -542,8 +542,14 @@ private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
+    /// writes all valid edge_.org by calling setOrg_ for each valid edgePerVertex_
+    void fillOrg_();
+
     /// sets new left face to the full left ring including this edge, without updating edgePerFace_ table
     void setLeft_( EdgeId a, FaceId f );
+
+    /// writes all valid edge_.left by calling setLeft_ for each valid edgePerFace_
+    void fillLeft_();
 
     /// data of every half-edge, align to put whole record in one cache line
     struct alignas( 16 ) HalfEdgeRecord

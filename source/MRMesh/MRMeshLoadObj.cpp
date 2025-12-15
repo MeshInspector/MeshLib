@@ -222,8 +222,8 @@ Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
 
 struct ObjFaceInfo
 {
-    uint32_t numVerts = 0;
-    uint32_t numTexVerts = 0;
+    int numVerts = 0;
+    int numTexVerts = 0;
 };
 
 Expected<ObjFaceInfo> parseObjFaceInfo( const std::string_view& str )
@@ -257,48 +257,60 @@ Expected<ObjFaceInfo> parseObjFaceInfo( const std::string_view& str )
 
     if ( !res.numVerts )
         return unexpected( "Invalid face vertex count in OBJ-file" );
-    if ( res.numTexVerts && f.numVerts != f.numTexVerts )
+    if ( res.numTexVerts && res.numVerts != res.numTexVerts )
         return unexpected( "Invalid face texture count in OBJ-file" );
     return res;
 }
 
-struct SpanInVector
-{
-    uint32_t first = 0, last = 0;
-};
-
-/*struct ObjFaceSpans
-{
-    SpanInVector vertSpan, texSpan;
-};*/
-
 struct ObjFaces
 {
     std::vector<int> vertices;
-    std::vector<SpanInVector> face2verts;
+    std::vector<int> face2vert; // face2vert[f] -> first vertex of face #f in vertices
 
     std::vector<int> textures;
-    std::vector<SpanInVector> face2tex;
+    std::vector<int> face2texv; // face2texv[f] -> first tex-vertex of face #f in textures
+
+    /// returns the total number of faces
+    auto size() const
+    {
+        assert( face2vert.size() >= 1 );
+        assert( face2vert.size() == face2texv.size() );
+        return face2vert.size() - 1; // ignore one record at the end
+    }
+
+    auto numVerts( size_t face ) const
+    {
+        assert( face + 1 < face2vert.size() );
+        return face2vert[face + 1] - face2vert[face];
+    }
+
+    auto numTexVerts( size_t face ) const
+    {
+        assert( face + 1 < face2texv.size() );
+        return face2texv[face + 1] - face2texv[face];
+    }
 };
 
-Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
+void parseObjFace( const std::string_view& str, int f, ObjFaces & target )
 {
     using namespace boost::spirit::x3;
 
+    int nextVert = target.face2vert[f];
+    int nextTexv = target.face2texv[f];
     auto v = [&] ( auto& ctx )
     {
-        f.vertices.emplace_back( _attr( ctx ) );
+        target.vertices[nextVert++] = _attr( ctx );
     };
     auto vt = [&] ( auto& ctx )
     {
-        f.textures.emplace_back( _attr( ctx ) );
+        target.vertices[nextTexv++] = _attr( ctx );
     };
-    auto vn = [&] ( auto& ctx )
+    auto vn = [&] ( auto& )
     {
-        f.normals.emplace_back( _attr( ctx ) );
+        // normals are not used currently
     };
 
-    bool r = phrase_parse(
+    [[maybe_unused]] bool r = phrase_parse(
         str.begin(),
         str.end(),
         // NOTE: actions are not being reverted after backtracking
@@ -306,16 +318,9 @@ Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
         ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
         ascii::space
     );
-    if ( !r )
-        return unexpected( "Failed to parse face in OBJ-file" );
-
-    if ( f.vertices.empty() )
-        return unexpected( "Invalid face vertex count in OBJ-file" );
-    if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
-        return unexpected( "Invalid face texture count in OBJ-file" );
-    if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
-        return unexpected( "Invalid face normal count in OBJ-file" );
-    return {};
+    assert( r );
+    assert( nextVert == target.face2vert[f + 1] );
+    assert( nextTexv == target.face2texv[f + 1] );
 }
 
 Expected<void> parseMtlColor( const std::string_view& str, Vector3f& color )
@@ -515,21 +520,22 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const Vector<Vector3d, VertId>& points,  // all points from file
     const std::vector<Color>& colors,     // all colors from file
     const std::vector<UVCoord>& uvCoords, // all uvs from file
-    const std::vector<ObjFace>& faces,    // all faces from file
+    const ObjFaces& faces,                // all faces from file
     const std::vector<MaterialScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
     const MtlLibrary* mtl ) // optional materials, if nullptr `materialScope` will be ignored
 {
     MR_TIMER;
+    assert( faces.face2vert.size() == faces.face2texv.size() );
 
     bool haveColors = false;
     bool haveUVs = false;
     int firstVert = -1;
     if ( minFace < faces.size() ) // do not crash if minFace = 0 and faces are empty
     {
-        haveUVs = !faces[minFace].textures.empty();
-        firstVert = faces[minFace].vertices.front();
+        haveUVs = faces.numTexVerts( minFace ) != 0;
+        firstVert = faces.face2vert[minFace];
     }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) + firstVert;
@@ -550,16 +556,20 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         auto& local = tlOrderedPoints.local();
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            if ( faces[i].vertices.size() < 3 )
+            if ( faces.numVerts( i ) < 3 )
             {
                 if ( ctx.cancel_group_execution() )
                     error = "Face with less than 3 vertices in OBJ-file";
                 return;
             }
-            for ( int v = 0; v < faces[i].vertices.size(); ++v )
+            int iv = faces.face2vert[i];
+            const int ivLast = faces.face2vert[i + 1];
+            int it = faces.face2texv[i];
+            const int itLast = faces.face2texv[i + 1];
+            for ( ; iv < ivLast; ++iv, ++it )
             {
                 VertexRepr repr;
-                repr.vId = faces[i].vertices[v];
+                repr.vId = faces.vertices[iv];
                 if ( repr.vId < 0 )
                     repr.vId = int( points.size() ) + repr.vId;
                 else
@@ -570,9 +580,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                         error = "Out of bounds Vertex ID in OBJ-file";
                     return;
                 }
-                if ( v < faces[i].textures.size() )
+                if ( it < itLast )
                 {
-                    repr.vtId = faces[i].textures[v];
+                    repr.vtId = faces.textures[it];
                     if ( repr.vtId < 0 )
                         repr.vtId = int( uvCoords.size() ) + repr.vtId;
                     else

@@ -103,6 +103,8 @@ struct MR_BIND_IGNORE ProccessMemoryInfo
 [[nodiscard]] MRMESH_API MR_BIND_IGNORE ProccessMemoryInfo getProccessMemoryInfo();
 #endif //_WIN32
 
+MRMESH_API void registerCustomLogSinkAdder( std::function<void()> sinkAdder );
+
 /// Setups logger:
 /// 1) makes stdout sink
 /// 2) makes file sink (MRLog.txt)

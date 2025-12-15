@@ -614,7 +614,13 @@ int Viewer::launch( const LaunchParams& params )
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     experimentalFeatures = params.developerFeatures;
-    multiViewport_ = params.multiViewport;
+    
+    if ( Config::instance().hasBool( cDefaultMultiViewport ) )
+    {
+        defaultMultiViewport_ = Config::instance().getBool( cDefaultMultiViewport );
+    }
+    multiViewport_ = defaultMultiViewport_ && params.multiViewport;
+    
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;
@@ -1808,10 +1814,15 @@ void Viewer::drawUiRenderObjects()
 
 bool Viewer::isMultiViewport()
 {
+    return isMultiViewportAvailable() && multiViewport_;
+}
+
+bool Viewer::isMultiViewportAvailable()
+{
 #ifdef __EMSCRIPTEN__
     return false;
 #else
-    return multiViewport_ && !hasScaledFramebuffer_;
+    return !hasScaledFramebuffer_;
 #endif
 }
 

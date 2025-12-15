@@ -525,9 +525,15 @@ public:
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
 
-    /// return true if imgui multi viewport enabled
+    // set / get default state of ImGui Multi Viewport
+    void setDefaultMultiViewport( bool defaultMultiViewport ) { defaultMultiViewport_ = defaultMultiViewport; }
+    bool getDefaultMultiViewport() const { return defaultMultiViewport_; }
+    /// return true if ImGui Multi Viewport enabled
     /// (disabled for Apple, Wayland and Emscripten)
-    bool isMultiViewport();
+    MRVIEWER_API bool isMultiViewport();
+    /// return true if ImGui Multi Viewport is available
+    /// (it is unavailalbe for Apple, Wayland and Emscripten)
+    MRVIEWER_API bool isMultiViewportAvailable();
 private:
     Viewer();
     ~Viewer();
@@ -561,9 +567,6 @@ private:
     int forceRedrawFrames_{ 0 };
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
     int forceRedrawFramesWithoutSwap_{ 0 };
-
-    // if this flag is set shows some developer features useful for debugging
-    bool enableDeveloperFeatures_{ false };
 
     std::unique_ptr<ViewerEventQueue> eventQueue_;
 
@@ -638,7 +641,10 @@ private:
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
 
-    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
+    // default state of ImGui Multi Viewport
+    // can be overrided by startup settings
+    bool defaultMultiViewport_{ true };
+    // allows to move the imgui (tool) windows outside the main window (enable ImGui Multi Viewport)
     // (disabled for Apple, Wayland and Emscripten)
     bool multiViewport_{ true };
 

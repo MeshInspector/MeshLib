@@ -7,6 +7,8 @@
 namespace MR
 {
 
+const std::string cDefaultMultiViewport = "defaultMultiViewport";
+
 // This class manages local user settings of viewer
 // loading it when the app starts and saving it when it ends
 class IViewerSettingsManager

@@ -298,6 +298,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     if ( savedDialogsVal != savedDialogsBackUp )
         viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
 
+    if ( viewer->isMultiViewportAvailable() )
+    {
+        UI::checkbox( "Enable multi-windows",
+                                                std::bind( &Viewer::getDefaultMultiViewport, viewer ),
+                                                std::bind( &Viewer::setDefaultMultiViewport, viewer, std::placeholders::_1 ) );
+        UI::setTooltipIfHovered( "Allow move tool windows outside from main window. For apply changes need restart application."
+            "Value can be overrided by startup flag." );
+    }
+
     if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();
 

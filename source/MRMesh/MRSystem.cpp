@@ -594,7 +594,7 @@ ProccessMemoryInfo getProccessMemoryInfo()
 }
 #endif //_WIN32
 
-void setupLoggerByDefault( std::function<void()> customLogSinkAdder )
+void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
 {
     auto logger = Logger::instance().getSpdLogger();
     if ( logger )

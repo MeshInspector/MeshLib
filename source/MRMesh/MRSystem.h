@@ -110,6 +110,6 @@ struct MR_BIND_IGNORE ProccessMemoryInfo
 /// 4) add custom sink if provided
 /// 5) print stacktrace on crash (not in wasm)
 /// log level - trace
-MRMESH_API void setupLoggerByDefault( std::function<void()> customLogSinkAdder = {} );
+MRMESH_API void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder = {} );
 
 } // namespace MR

@@ -1092,6 +1092,13 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     ObjFaces faces; // flat list of face elements in this list
     faces.face2vert.reserve( numFaces + 1 );
     faces.face2texv.reserve( numFaces + 1 );
+    faces.face2vert.push_back( 0 );
+    faces.face2texv.push_back( 0 );
+    for ( const auto & info : faceInfos )
+    {
+        faces.face2vert.push_back( faces.face2vert.back() + info.numVerts );
+        faces.face2texv.push_back( faces.face2texv.back() + info.numTexVerts );
+    }
     ...
 
     for ( const auto& faceRange : faceRanges )

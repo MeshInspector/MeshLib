@@ -52,11 +52,7 @@ ObjectLabel::ObjectLabel()
     setDefaultSceneProperties_();
 
     // set default path to font if available
-#ifndef __EMSCRIPTEN__
     pathToFont_ = SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf";
-#else
-    pathToFont_ = SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf";
-#endif
     std::error_code ec;
     if ( !std::filesystem::is_regular_file( pathToFont_, ec ) )
         pathToFont_.clear();

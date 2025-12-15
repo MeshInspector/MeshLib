@@ -748,7 +748,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                     }
                 }
             }
-            for ( int j = 1; j + 1 < faces[i].vertices.size(); ++j )
+            const auto nv = faces.numVerts( i );
+            assert ( nv >= 3 );
+            for ( int j = 1; j + 1 < nv; ++j )
                 thisOT.t.push_back( { getReprVertId( i, 0 ), getReprVertId( i, j ), getReprVertId( i, j + 1 ) } );
         }
     } );

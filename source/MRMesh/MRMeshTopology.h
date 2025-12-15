@@ -584,6 +584,12 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
+
+    /// computes valid edge_.org from edgePerVertex_ and edges_.next
+    void fillOrg_();
+
+    /// computes valid edge_.left from edgePerFace_ and edges_.next
+    void fillLeft_();
 };
 
 template <typename T>

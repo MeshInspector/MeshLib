@@ -995,6 +995,26 @@ void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
     }
 }
 
+void MeshTopology::fillOrg_()
+{
+    MR_TIMER;
+    ParallelFor( edgePerVertex_, [&]( VertId v )
+    {
+        if ( auto e0 = edgePerVertex_[v] )
+            setOrg_( e0, v );
+    } );
+}
+
+void MeshTopology::fillLeft_()
+{
+    MR_TIMER;
+    ParallelFor( edgePerFace_, [&]( FaceId f )
+    {
+        if ( auto e0 = edgePerFace_[f] )
+            setLeft_( e0, f );
+    } );
+}
+
 void MeshTopology::flipEdge( EdgeId e )
 {
     assert( isLeftTri( e ) );
@@ -2149,10 +2169,12 @@ void MeshTopology::pack( const PackMapping & map )
         auto newf = map.f.b[oldf];
         if ( !newf )
             return;
-        setLeft_( newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] ), newf );
+        newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
+        // calling setLeft_() here is slower, then fillLeft_() below
     } );
     edgePerFace_ = std::move( newEdgePerFace );
     assert( edgePerFace_.size() == numValidFaces_ );
+    fillLeft_();
     validFaces_.clear();
     validFaces_.resize( edgePerFace_.size(), true );
 
@@ -2163,12 +2185,15 @@ void MeshTopology::pack( const PackMapping & map )
         auto newv = map.v.b[oldv];
         if ( !newv )
             return;
-        setOrg_( newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] ), newv );
+        newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
+        // calling setOrg_() here is slower, then fillOrg_() below
     } );
     edgePerVertex_ = std::move( newEdgePerVertex );
     assert( edgePerVertex_.size() == numValidVerts_ );
+    fillOrg_();
     validVerts_.clear();
     validVerts_.resize( edgePerVertex_.size(), true );
+
     updateValids_ = true;
 }
 

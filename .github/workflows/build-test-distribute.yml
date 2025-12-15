@@ -156,21 +156,21 @@ jobs:
        uses: actions/checkout@v6
 
      - name: Download NuGet Windows Patch Archive
-       uses: actions/download-artifact@v6
+       uses: actions/download-artifact@v7
        with:
          pattern: DotNetPatchArchiveWindows*
          path: windows_runtime
          merge-multiple: true
 
      - name: Download NuGet Linux Patch Archive
-       uses: actions/download-artifact@v6
+       uses: actions/download-artifact@v7
        with:
          pattern: DotNetPatchArchiveLinux*
          path: linux_runtime
          merge-multiple: true
 
      - name: Download NuGet DLL
-       uses: actions/download-artifact@v6
+       uses: actions/download-artifact@v7
        with:
          pattern: DotNetDll*
          path: dotnet_dll
@@ -213,7 +213,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: Distributives*
           merge-multiple: true
@@ -294,13 +294,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download runners' system stats
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: RunnerSysStats*
           merge-multiple: true
 
       - name: Download artifact stats
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: ArtifactStats*
           merge-multiple: true
@@ -374,7 +374,7 @@ jobs:
 
       # generate timing logs archive
       - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: Timing_Logs*
           merge-multiple: true

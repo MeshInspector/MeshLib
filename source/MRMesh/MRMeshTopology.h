@@ -542,8 +542,14 @@ private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
+    /// writes all valid edge_.org by calling setOrg_ for each valid edgePerVertex_
+    void fillOrg_();
+
     /// sets new left face to the full left ring including this edge, without updating edgePerFace_ table
     void setLeft_( EdgeId a, FaceId f );
+
+    /// writes all valid edge_.left by calling setLeft_ for each valid edgePerFace_
+    void fillLeft_();
 
     /// data of every half-edge, align to put whole record in one cache line
     struct alignas( 16 ) HalfEdgeRecord
@@ -584,12 +590,6 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
-
-    /// computes valid edge_.org from edgePerVertex_ and edges_.next
-    void fillOrg_();
-
-    /// computes valid edge_.left from edgePerFace_ and edges_.next
-    void fillLeft_();
 };
 
 template <typename T>

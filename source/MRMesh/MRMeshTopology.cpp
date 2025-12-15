@@ -529,6 +529,26 @@ void MeshTopology::setLeft( EdgeId a, FaceId f )
     }
 }
 
+void MeshTopology::fillOrg_()
+{
+    MR_TIMER;
+    ParallelFor( edgePerVertex_, [&]( VertId v )
+    {
+        if ( auto e0 = edgePerVertex_[v] )
+            setOrg_( e0, v );
+    } );
+}
+
+void MeshTopology::fillLeft_()
+{
+    MR_TIMER;
+    ParallelFor( edgePerFace_, [&]( FaceId f )
+    {
+        if ( auto e0 = edgePerFace_[f] )
+            setLeft_( e0, f );
+    } );
+}
+
 bool MeshTopology::isInnerOrBdVertex( VertId v, const FaceBitSet * region ) const
 {
     for ( auto e : orgRing( *this, v ) )
@@ -993,26 +1013,6 @@ void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
         std::swap( rsym.prev, rsym.next );
         std::swap( r.left, rsym.left );
     }
-}
-
-void MeshTopology::fillOrg_()
-{
-    MR_TIMER;
-    ParallelFor( edgePerVertex_, [&]( VertId v )
-    {
-        if ( auto e0 = edgePerVertex_[v] )
-            setOrg_( e0, v );
-    } );
-}
-
-void MeshTopology::fillLeft_()
-{
-    MR_TIMER;
-    ParallelFor( edgePerFace_, [&]( FaceId f )
-    {
-        if ( auto e0 = edgePerFace_[f] )
-            setLeft_( e0, f );
-    } );
 }
 
 void MeshTopology::flipEdge( EdgeId e )

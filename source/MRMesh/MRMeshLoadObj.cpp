@@ -291,7 +291,7 @@ struct ObjFaces
     }
 };
 
-void parseObjFace( const std::string_view& str, int f, ObjFaces & target )
+void parseObjFace( const std::string_view& str, size_t f, ObjFaces & target )
 {
     using namespace boost::spirit::x3;
 
@@ -1012,10 +1012,19 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         }, ctx );
     };
 
+    struct FaceRange
+    {
+        size_t beginLine = 0;
+        size_t endLine = 0;
+        size_t firstFace = 0;
+    };
+    std::vector<FaceRange> faceRanges;
+
     // simply read all face infos in vector
     auto fillFaces = [&] ( size_t begin, size_t end )
     {
         size_t facesSize = faceInfos.size();
+        faceRanges.push_back( { begin, end, facesSize } );
         faceInfos.resize( facesSize + end - begin );
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -1083,6 +1092,17 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     ObjFaces faces; // flat list of face elements in this list
     faces.face2vert.reserve( numFaces + 1 );
     faces.face2texv.reserve( numFaces + 1 );
+    ...
+
+    for ( const auto& faceRange : faceRanges )
+    {
+        ParallelFor( faceRange.beginLine, faceRange.endLine, [&]( size_t li )
+        {
+            auto f = li - faceRange.beginLine + faceRange.firstFace;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            parseObjFace( line, f, faces );
+        } );
+    };
 
     timer.finish();
 

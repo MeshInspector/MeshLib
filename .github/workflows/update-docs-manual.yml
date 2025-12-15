@@ -85,7 +85,7 @@ jobs:
         run: python3 ./scripts/wheel/create_stubs.py
 
       - name: Upload Python Stubs
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -97,7 +97,7 @@ jobs:
         run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
 
       - name: Upload C bindings headers
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: CBindings
           path: ./source/MeshLibC2/include

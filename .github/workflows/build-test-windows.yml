@@ -181,7 +181,7 @@ jobs:
           # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
           #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
-        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+        run: cd & call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate C bindings
         if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}

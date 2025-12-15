@@ -21,9 +21,11 @@
 
 #include <map>
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
 
 enum class ObjElement
 {
@@ -1054,10 +1056,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     return res;
 }
 
-}
-
-namespace MR
-{
+} //anonymous namespace
 
 namespace MeshLoad
 {

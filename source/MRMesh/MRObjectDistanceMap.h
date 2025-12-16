@@ -61,6 +61,8 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API void resetFrontColor() override;
 protected:
     ObjectDistanceMap( const ObjectDistanceMap& other ) = default;
 
@@ -74,10 +76,6 @@ protected:
     MRMESH_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     MRMESH_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
-
-    /// reset basic object colors to their default values from the current theme
-    MRMESH_API void resetFrontColor() override;
-
 private:
     std::shared_ptr<DistanceMap> dmap_;
     AffineXf3f dmap2local_;

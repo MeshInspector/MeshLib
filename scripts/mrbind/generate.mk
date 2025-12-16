@@ -888,7 +888,6 @@ else # If C#:
 
 # C# needs almost none of the logic in this file, just one simple rule.
 
-.DEFAULT_GOAL := generate
 .PHONY: generate
 generate:
 	$(MRBIND_GEN_CSHARP_EXE) \
@@ -898,5 +897,10 @@ generate:
     	--imported-lib-name MRMesh \
     	--helpers-namespace MR::Misc \
     	--force-namespace MR
+
+.DEFAULT_GOAL := build
+.PHONY: build
+build:
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/..)
 
 endif

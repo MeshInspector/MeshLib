@@ -2,8 +2,9 @@
 
 #include "MRMacros.h"
 #include "MRVector4.h"
-#include <limits>
 #include <cassert>
+#include <iosfwd>
+#include <limits>
 
 namespace MR
 {
@@ -158,6 +159,16 @@ struct Matrix4
             for ( int j = 0; j < 4; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Matrix4& mat )
+    {
+        return s << mat.x << '\n' << mat.y << '\n' << mat.z << '\n' << mat.w << '\n';
+    }
+
+    friend std::istream& operator>>( std::istream& s, Matrix4& mat )
+    {
+        return s >> mat.x >> mat.y >> mat.z >> mat.w;
     }
 };
 

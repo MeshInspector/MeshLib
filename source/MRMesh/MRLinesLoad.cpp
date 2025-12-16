@@ -4,7 +4,6 @@
 #include "MRPolyline.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
-#include "MRStreamOperators.h"
 #include "MRPly.h"
 #include "MRTimer.h"
 #include <fstream>
@@ -82,7 +81,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, const LinesLoadSettings& sett
         if ( !isPolylineBlock )
         {
             if ( line != "BEGIN_Polyline" )
-                return unexpected( "Not valid .pts format" );
+                return unexpected( stringUnsupportedFileFormat() + " for .PTS file with polylines" );
             else
             {
                 isPolylineBlock = true;
@@ -104,7 +103,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, const LinesLoadSettings& sett
         std::istringstream iss( line );
         Vector3f point;
         if ( !( iss >> point ) )
-            return unexpected( "Not valid .pts format" );
+            return unexpected( stringUnsupportedFileFormat() + " for .PTS file with polylines" );
         points.push_back( point );
         ++pointCount;
 
@@ -116,7 +115,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, const LinesLoadSettings& sett
         }
     }
     if ( isPolylineBlock )
-        return unexpected( "Not valid .pts format" );
+        return unexpected( stringUnsupportedFileFormat() + " for .PTS file with polylines" );
 
     return polyline;
 }
@@ -140,7 +139,8 @@ Expected<Polyline3> fromPly( std::istream& in, const LinesLoadSettings& settings
         .edges = &edges,
         .colors = settings.colors,
         // suppose that reading is 10% of progress and building polyline is 90% of progress
-        .callback = subprogress( settings.callback, 0.0f, 0.1f )
+        .callback = subprogress( settings.callback, 0.0f, 0.1f ),
+        .telemetrySignal = settings.telemetrySignal
     };
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )

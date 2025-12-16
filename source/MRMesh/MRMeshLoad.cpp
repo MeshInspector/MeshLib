@@ -17,6 +17,7 @@
 #include "MRParallelFor.h"
 #include "MRImageLoad.h"
 #include "MRTelemetry.h"
+#include "MRTextureColors.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -487,7 +488,8 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
     if ( !reportProgress( settings.callback , 1.0f ) )
         return unexpectedOperationCanceled();
 
-    TelemetrySignal( std::string( "STL head " ) + header );
+    if ( settings.telemetrySignal )
+        TelemetrySignal( std::string( "STL head " ) + header );
 
     return res;
 }
@@ -584,7 +586,8 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
 
-    TelemetrySignal( "STL ASCII" + header );
+    if ( settings.telemetrySignal )
+        TelemetrySignal( "STL ASCII" + header );
 
     return res;
 }
@@ -607,30 +610,12 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
         .texture = settings.texture,
         .dir = dir,
         // suppose that reading is 10% of progress and building mesh is 90% of progress
-        .callback = subprogress( settings.callback, 0.0f, 0.1f )
+        .callback = subprogress( settings.callback, 0.0f, 0.1f ),
+        .telemetrySignal = settings.telemetrySignal
     };
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )
         return unexpected( std::move( maybePoints.error() ) );
-
-    // convert per-corner UVs into per-vertex colors by keeping the last value only
-    if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && tris && !tris->empty() && !triCornerUvCoords.empty() )
-    {
-        Timer t( "convert per-corner UVs" );
-        settings.colors->resize( maybePoints->size() );
-        const auto endTri = std::min( tris->size(), triCornerUvCoords.size() );
-        for ( FaceId tri( 0 ); tri < endTri; ++tri )
-        {
-            for ( int ic = 0; ic < 3; ++ic )
-            {
-                auto v = (*tris)[tri][ic];
-                if ( v < settings.colors->size() )
-                    ( *settings.colors )[v] = settings.texture->sampleBilinear( triCornerUvCoords[tri][ic] );
-            }
-        }
-        if ( !settings.uvCoords || settings.uvCoords->empty() )
-            *settings.texture = {}; // texture will not be used outside of this function
-    }
 
     Mesh res;
     res.points = std::move( *maybePoints );
@@ -645,6 +630,23 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
             return unexpected( "vertex id is larger than total point coordinates" );
         if ( settings.skippedFaceCount )
             *settings.skippedFaceCount += mySkippedFaceCount;
+    }
+
+    // try converting per-corner UVs into per-vertex UVs
+    if ( settings.uvCoords && tris && !tris->empty() && !triCornerUvCoords.empty() )
+    {
+        if ( auto vertUVs = findVertexUVs( res.topology, triCornerUvCoords ) )
+        {
+            *settings.uvCoords = std::move( *vertUVs );
+            triCornerUvCoords.clear(); // not to sample colors from UVs below
+        }
+    }
+    // convert per-corner UVs into per-vertex colors by averaging the value
+    if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && tris && !tris->empty() && !triCornerUvCoords.empty() )
+    {
+        *settings.colors = sampleVertexColors( res, *settings.texture, triCornerUvCoords );
+        if ( !settings.uvCoords || settings.uvCoords->empty() )
+            *settings.texture = {}; // texture will not be used outside of this function
     }
 
     if ( !reportProgress( settings.callback, 1.0f ) )

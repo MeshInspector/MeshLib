@@ -3,6 +3,7 @@
 #include "MRVector3.h"
 #include "MRSegmPoint.h"
 #include "MRMesh/MRMacros.h"
+#include <iosfwd>
 
 namespace MR
 {
@@ -51,6 +52,17 @@ struct TriPoint
 
     /// returns true if two points have equal (a,b) representation
     [[nodiscard]] constexpr bool operator==( const TriPoint& rhs ) const = default;
+
+    friend std::ostream& operator<<( std::ostream& s, const TriPoint& tp )
+    {
+        return s << tp.a << ' ' << tp.b;
+    }
+
+    friend std::istream& operator>>( std::istream& s, TriPoint& tp )
+    {
+        s >> tp.a >> tp.b;
+        return s;
+    }
 };
 
 /// \related TriPoint

@@ -24,6 +24,7 @@ struct PlyLoadParams
 
     std::filesystem::path dir;       ///< directory to load texture files from
     ProgressCallback callback;       ///< callback for set progress and stop process
+    bool telemetrySignal = true;     ///< permit telemetry signal about loading
 };
 
 [[nodiscard]] MRMESH_API Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params );

@@ -2,11 +2,13 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include <iosfwd>
 #include <type_traits>
 
-#if MR_COMPILING_C_BINDINGS
-// Include the headers for the matrices that are otherwise missing in the C bindings.
-// I'm not sure how the binding generator could possibly guess that it needs to include those.
+#if MR_COMPILING_ANY_BINDINGS
+// In C: Include the headers for the matrices that are otherwise missing in the C bindings.
+//     I'm not sure how the binding generator could possibly guess that it needs to include those.
+// In Python: Need those headers to generate the implementation for `operator<<` and `operator>>`, which call into the same operators of matrices.
 #include "MRMatrix2.h"
 #include "MRMatrix3.h"
 #endif
@@ -63,6 +65,16 @@ struct AffineXf
     friend bool operator != ( const AffineXf<V> & a, const AffineXf<V> & b )
     {
         return !( a == b );
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const AffineXf& xf )
+    {
+        return s << xf.A << xf.b;
+    }
+
+    friend std::istream& operator>>( std::istream& s, AffineXf& xf )
+    {
+        return s >> xf.A >> xf.b;
     }
 };
 

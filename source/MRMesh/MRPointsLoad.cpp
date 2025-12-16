@@ -4,7 +4,6 @@
 #include "MRColor.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
-#include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include "MRPointCloud.h"
 #include "MRIOParsing.h"
@@ -218,7 +217,8 @@ Expected<PointCloud> fromPly( std::istream& in, const PointsLoadSettings& settin
     {
         .colors = settings.colors,
         .normals = &res.normals,
-        .callback = settings.callback
+        .callback = settings.callback,
+        .telemetrySignal = settings.telemetrySignal
     };
     auto maybePoints = loadPly( in, params );
     if ( !maybePoints )

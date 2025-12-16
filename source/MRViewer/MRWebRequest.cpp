@@ -5,6 +5,7 @@
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -233,10 +234,10 @@ void WebRequest::clear()
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
-    inputPath_ = {};
+    inputPath_ = std::filesystem::path{};
     formData_ = {};
     body_ = {};
-    outputPath_ = {};
+    outputPath_ = std::filesystem::path{};
     uploadCallback_ = {};
     downloadCallback_ = {};
 }
@@ -261,7 +262,7 @@ void WebRequest::setHeaders( std::unordered_map<std::string, std::string> header
     headers_ = std::move( headers );
 }
 
-void WebRequest::setInputPath( std::string inputPath )
+void WebRequest::setInputPath( std::filesystem::path inputPath )
 {
     inputPath_ = std::move( inputPath );
 }
@@ -281,7 +282,7 @@ void WebRequest::setBody( std::string body )
     body_ = std::move( body );
 }
 
-void WebRequest::setOutputPath( std::string outputPath )
+void WebRequest::setOutputPath( std::filesystem::path outputPath )
 {
     outputPath_ = std::move( outputPath );
 }
@@ -495,7 +496,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     },
         timeout_,
         body_.c_str(),
-        inputPath_.c_str(),
+        utf8string( inputPath_ ).c_str(),
         method.c_str(),
         (bool)uploadCallback_,
         (bool)downloadCallback_,
@@ -528,7 +529,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     if ( outputPath_.empty() )
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
     else
-        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), outputPath_.c_str(), ctxId );
+        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), utf8string( outputPath_ ).c_str(), ctxId );
 #pragma clang diagnostic pop
 #endif
 }

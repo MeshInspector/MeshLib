@@ -947,9 +947,20 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         }
     }
 
-    // allow Ungroup if at least one selected object has children
-    const bool canUngroup = std::any_of( selected.begin(), selected.end(),
-        []( const std::shared_ptr<Object>& selObj ) { return !selObj->children().empty(); } );
+    // allow Ungroup if at least one selected object has not-ancillary child
+    bool canUngroup = false;
+    for ( const auto& selObj : selected )
+    {
+        if ( canUngroup )
+            break;
+        for ( const auto& child : selObj->children() )
+        {
+            if ( canUngroup )
+                break;
+            if ( child && !child->isAncillary() )
+                canUngroup = true;
+        }
+    }
     if ( canUngroup && UI::button( "Ungroup", Vector2f( -1, 0 ) ) )
     {
         someChanges |= true;
@@ -963,7 +974,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         {
             // move all children of selObj to its parent
             bool reorderDone = moveAllChildrenWithUndo( *selObj, *selObj->parent() );
-            assert( reorderDone );
+            // reorderDone == false if selected object does not have any child
             if ( reorderDone )
             {
                 // remove group folder (now empty)

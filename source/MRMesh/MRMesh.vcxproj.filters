@@ -309,9 +309,6 @@
     <ClInclude Include="MRLog.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRStreamOperators.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRMatrix4.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1376,6 +1373,9 @@
     <ClInclude Include="MRObjectSaveSettings.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRTextureColors.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1506,9 +1506,6 @@
     </ClCompile>
     <ClCompile Include="MRLog.cpp">
       <Filter>Source Files\Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="MRStreamOperators.cpp">
-      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRImageSave.cpp">
       <Filter>Source Files\IO</Filter>
@@ -2029,6 +2026,9 @@
     <ClCompile Include="MRPointsComponents.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointOnFace.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointOnObject.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
@@ -2254,6 +2254,9 @@
     </ClCompile>
     <ClCompile Include="MRUnitInfo.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTextureColors.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

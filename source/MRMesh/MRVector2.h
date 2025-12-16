@@ -4,9 +4,10 @@
 #include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRPch/MRBindingMacros.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <iosfwd>
 #include <utility>
 
 namespace MR
@@ -33,7 +34,7 @@ struct Vector2
 
     T x, y;
 
-    constexpr Vector2() noexcept : x( 0 ), y( 0 ) 
+    constexpr Vector2() noexcept : x( 0 ), y( 0 )
     {
         static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
         static_assert( elements == 2, "Invalid number of elements" );
@@ -115,6 +116,16 @@ struct Vector2
             { a.x /= b; a.y /= b; return a; }
         else
             return a *= ( 1 / b );
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector2& vec )
+    {
+        return s << vec.x << ' ' << vec.y;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector2& vec )
+    {
+        return s >> vec.x >> vec.y;
     }
 };
 

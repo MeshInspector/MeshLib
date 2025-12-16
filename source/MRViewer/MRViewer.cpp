@@ -365,7 +365,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 
     auto& viewer = MR::Viewer::instanceRef();
 
-    MR::setupLoggerByDefault();
+    MR::setupLoggerByDefault( setup.setupCustomLogSink );
 
     setup.setupBasePlugins( &viewer );
     setup.setupCommonModifiers( &viewer );

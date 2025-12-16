@@ -81,7 +81,8 @@ private:
     enum class AllocationState
     {
         None, // This window wasn't yet drawn during this frame. If it's not drawn until the end of frame, it will be deleted from this map.
-        Requested, // This window has just appeared and a free position will be selected for it in the next frame
+        Requested, // This window has appeared recently and a free position will be selected for it in the next frame
+        WaitAppearing, // This window has just appeared and need one frame to calculate true size
         Set // This window has set position and was already drawn in this frame
     };
 

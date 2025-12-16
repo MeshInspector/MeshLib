@@ -399,7 +399,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     out << "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
-    if ( saveUV )
+    if ( saveUV && !settings.saveTriCornerUVCoords )
         out << "property float texture_u\nproperty float texture_v\n";
 
     const auto fLast = mesh.topology.lastValidFace();
@@ -407,16 +407,16 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     out << "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\n";
     if ( saveFaceColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
+    if ( saveUV && settings.saveTriCornerUVCoords )
+        out << "property list uchar float texcoord\n";
     out << "end_header\n";
 
     static_assert( sizeof( UVCoord ) == 8, "wrong size of UVCoord" );
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
-#pragma pack(push, 1)
     struct PlyColor
     {
         unsigned char r = 0, g = 0, b = 0;
     };
-#pragma pack(pop)
     static_assert( sizeof( PlyColor ) == 3, "check your padding" );
 
     // write vertices
@@ -433,7 +433,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }
-        if ( saveUV )
+        if ( saveUV && !settings.saveTriCornerUVCoords )
         {
             const auto uv = getAt( *settings.uvMap, i );
             out.write( ( const char* )&uv, sizeof( UVCoord ) );
@@ -444,36 +444,38 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     }
 
     // write triangles
-    #pragma pack(push, 1)
-    struct PlyTriangle
-    {
-        char cnt = 3;
-        int v[3];
-    };
-    #pragma pack(pop)
-    static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
-
-    PlyTriangle tri;
+    Vector3i tri;
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
+        VertId vs[3];
         if ( mesh.topology.hasFace( f ) )
         {
-            VertId vs[3];
             mesh.topology.getTriVerts( f, vs );
             for ( int i = 0; i < 3; ++i )
-                tri.v[i] = vertRenumber( vs[i] );
+                tri[i] = vertRenumber( vs[i] );
         }
         else if ( !settings.packPrimitives )
-            tri.v[0] = tri.v[1] = tri.v[2] = 0;
+            tri[0] = tri[1] = tri[2] = 0;
         else
             continue;
-        out.write( (const char *)&tri, sizeof( PlyTriangle ) );
+        out.put( char( 3 ) );
+        static_assert( sizeof( Vector3i ) == 12 );
+        out.write( (const char *)&tri, sizeof( Vector3i ) );
         if ( saveFaceColors )
         {
             const auto c = getAt( *settings.primitiveColors, f );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
+        }
+        if ( saveUV && settings.saveTriCornerUVCoords )
+        {
+            UVCoord uvs[3];
+            for ( int i = 0; i < 3; ++i )
+                uvs[i] = getAt( *settings.uvMap, vs[i] );
+            out.put( char( 6 ) );
+            static_assert( sizeof( uvs ) == 3 * 2 * 4 );
+            out.write( (const char *)uvs, sizeof( uvs ) );
         }
         ++savedFaces;
         if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )

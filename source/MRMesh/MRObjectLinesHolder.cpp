@@ -302,7 +302,7 @@ Expected<void> ObjectLinesHolder::deserializeModel_( const std::filesystem::path
     if ( modelPath.empty() )
         return {};
 
-    auto res = LinesLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
+    auto res = LinesLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb, .telemetrySignal = false } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 

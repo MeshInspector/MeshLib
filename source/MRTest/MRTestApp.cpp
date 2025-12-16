@@ -1,45 +1,135 @@
-#include "MRMesh/MRTorus.h"
+#include <gtest/gtest.h>
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRParallelFor.h"
-#include "MRVoxels/MRWeightedPointsShell.h"
-#include "MRVoxels/MROffset.h"
-#include "MRMesh/MRMeshSave.h"
-#include <iostream>
- 
-int main()
+#include "MRMesh/MRLog.h"
+#include "MRMesh/MRGTest.h"
+#include "MRMesh/MRQuadraticForm.h"
+#include "MRMesh/MRMeshBoolean.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
+#include "MRViewer/MRGetSystemInfoJson.h"
+#include "MRViewer/MRCommandLoop.h"
+#include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
+
+#ifndef MESHLIB_NO_PYTHON
+#include "MRPython/MRPython.h"
+#include "MREmbeddedPython/MREmbeddedPython.h"
+#endif
+
+#if !defined(__EMSCRIPTEN__) && !defined(_WIN32)
+#include <dlfcn.h>
+#endif
+
+namespace MR
 {
-    // Create some mesh
-    auto mesh = MR::makeTorus();
- 
-    // Create VertScalars obj with weights for every vertex
-    auto vertSize = mesh.topology.vertSize();
-    MR::VertScalars scalars( vertSize );
-    MR::ParallelFor( scalars, [&] ( MR::VertId v )
+
+TEST(MRMesh, QuadraticForm)
+{
+    QuadraticForm3f q0, q1;
+    q0.addDistToOrigin( 1 );
+    q1.addDistToOrigin( 1 );
+    auto r = sum( q0, Vector3f{0,0,0}, q1, Vector3f{2,0,0} );
+
+    EXPECT_EQ( r.second, (Vector3f{1,0,0}) );
+}
+
+} //namespace MR
+
+int main( int argc, char** argv )
+{
+    //! If `flag` exists in `argv`, returns true and removes it from there.
+    [[maybe_unused]] auto consumeFlag = [&]( std::string_view flag ) -> bool
     {
-        scalars[v] = std::abs( mesh.points[v].x / 5.0f ); // Individual extra offset sizes for points
-    } );
- 
-    auto params = MR::WeightedShell::ParametersMetric();
-    // Algorithm is voxel based, voxel size affects performance and form of result mesh
-    params.voxelSize = MR::suggestVoxelSize( mesh, 1000 );
-    // common basic offset applied for all point
-    // Vertex-specific weighted offsets applied after the basic one
-    params.offset = 0.2f;
-    params.dist.maxWeight = *std::max_element( MR::begin( scalars ), MR::end( scalars ) ); // should always have maximum between weights provided
-    params.dist.bidirectionalMode = false;
- 
-    auto res = MR::WeightedShell::meshShell( mesh, scalars, params );
-    if ( !res.has_value() )
+        if ( argc < 1 )
+            return false;
+        char **end = argv + argc;
+        auto it = std::find( argv + 1, end, flag );
+        if ( it == end )
+            return false;
+        *std::rotate( it, it + 1, end ) = nullptr;
+        argc--;
+        return true;
+    };
+
+    MR::setupLoggerByDefault();
+
+    // print compiler info
+#ifdef __clang__
+    spdlog::info( "{}", __VERSION__ );
+#elif defined __GNUC__
+    spdlog::info( "GCC {}", __VERSION__ );
+#else
+    spdlog::info( "MSVC {}", _MSC_FULL_VER );
+#endif
+
+    // print standard library info
+#ifdef _MSVC_STL_UPDATE
+    // https://github.com/microsoft/STL/wiki/Macro-_MSVC_STL_UPDATE
+    spdlog::info( "Microsoft's STL version {}", _MSVC_STL_UPDATE );
+#endif
+#ifdef __GLIBCXX__
+    spdlog::info( "GNU libstdc++ version {}", __GLIBCXX__ );
+#endif
+#ifdef _LIBCPP_VERSION
+    spdlog::info( "Clang's libc++ version {}", _LIBCPP_VERSION );
+#endif
+
+    spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
+#ifndef MESHLIB_NO_PYTHON
+    if ( !consumeFlag( "--no-python-tests" ) )
     {
-        std::cerr << res.error();
-        return 1;
+        // Load mrmeshpy. We do it here instead of linking against it for two reasons:
+        // 1. To allow not building the Python modules.
+        // 2. To allow building them separately, after this executable.
+        #ifdef _WIN32
+        auto lib = LoadLibraryA( "mrmeshpy.pyd" );
+        if ( !lib )
+        {
+            spdlog::error( "Unable to load the Python module mrmeshpy.pyd error: {}", GetLastError() );
+            std::exit(1);
+        }
+        #else // if not on Windows:
+        auto mrmeshpyPath = MR::SystemPath::getExecutablePath().value().parent_path() / "meshlib/mrmeshpy.so";
+        auto lib = dlopen( mrmeshpyPath.c_str(), RTLD_NOW | RTLD_GLOBAL );
+        if ( !lib )
+        {
+            spdlog::error( "Unable to load the Python module {} error: {}", mrmeshpyPath.c_str(), dlerror() );
+            std::exit(1);
+        }
+        #endif
+
+        //Test python mrmeshpy
+        {
+            auto str = "import mrmeshpy\n"
+                "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
+                "funcs = dir( mrmeshpy )\n"
+                "for f in funcs :\n"
+                " if not f.startswith( '_' ) :\n"
+                "  print( \"mrmeshpy.\" + f )\n"
+                "print()"; // one empty line
+
+            spdlog::info( "Running embedded python" );
+            bool ok = MR::EmbeddedPython::runString( str );
+            if ( ok )
+                spdlog::info( "Embedded python run passed" );
+            else
+                spdlog::error( "Embedded python run failed" );
+            MR::EmbeddedPython::shutdown();
+            spdlog::info( "Embedded python shut down" );
+
+            if ( !ok )
+                return 1;
+        }
+
+        if ( StderrPyRedirector::getNumWritten() > 0 )
+        {
+            spdlog::error( "Some errors reported from python" );
+            return 1;
+        }
     }
- 
-    auto saveRes = MR::MeshSave::toAnySupportedFormat( *res, "D:\\Temp\\offset_weighted\\offset_weighted.ctm" );
-    if ( !saveRes.has_value() )
-    {
-        std::cerr << saveRes.error();
-        return 1;
-    }
-    return 0;
+#endif
+
+    ::testing::InitGoogleTest(&argc, argv);
+    MR::CommandLoop::removeCommands( false ); // that are added there by plugin constructors
+    return RUN_ALL_TESTS();
 }

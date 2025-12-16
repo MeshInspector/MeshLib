@@ -616,9 +616,7 @@ int Viewer::launch( const LaunchParams& params )
     animationMaxFps = params.animationMaxFps;
     experimentalFeatures = params.developerFeatures;
     
-    bool defaultMultiViewport = true;
-    if ( Config::instance().hasBool( cDefaultMultiViewport ) )
-        defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewport, true );
+    bool defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewportKey, true );
     multiViewport_ = defaultMultiViewport && params.multiViewport;
     
     auto res = launchInit_( params );
@@ -1812,7 +1810,7 @@ void Viewer::drawUiRenderObjects()
     }
 }
 
-bool Viewer::isMultiViewport()
+bool Viewer::isMultiViewportEnabled()
 {
     return isMultiViewportAvailable() && multiViewport_;
 }

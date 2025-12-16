@@ -302,11 +302,9 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     if ( viewer->isMultiViewportAvailable() )
     {
         auto& config = Config::instance();
-        bool value = true;
-        if ( config.hasBool( cDefaultMultiViewport ) )
-            value = config.getBool( cDefaultMultiViewport, true );
+        bool value = config.getBool( cDefaultMultiViewportKey, true );
         if ( UI::checkbox( "Enable multi-windows", &value ) )
-            config.setBool( cDefaultMultiViewport, value );
+            config.setBool( cDefaultMultiViewportKey, value );
         UI::setTooltipIfHovered( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." );
     }
 

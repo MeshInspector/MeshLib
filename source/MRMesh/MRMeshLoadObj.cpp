@@ -273,9 +273,11 @@ struct ObjFaces
     /// returns the total number of faces
     auto size() const
     {
+        // face2vert and face2texv both have one extra record at the end
+        // with the total number of (texture) vertices in all faces
         assert( face2vert.size() >= 1 );
         assert( face2vert.size() == face2texv.size() );
-        return face2vert.size() - 1; // ignore one record at the end
+        return face2vert.size() - 1;
     }
 
     auto numVerts( size_t face ) const
@@ -288,6 +290,16 @@ struct ObjFaces
     {
         assert( face + 1 < face2texv.size() );
         return face2texv[face + 1] - face2texv[face];
+    }
+
+    auto getVert( size_t face, size_t vert ) const
+    {
+        return vertices[face2vert[face] + vert];
+    }
+
+    auto getTexVert( size_t face, size_t vert ) const
+    {
+        return textures[face2texv[face] + vert];
     }
 };
 
@@ -535,7 +547,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( minFace < faces.size() ) // do not crash if minFace = 0 and faces are empty
     {
         haveUVs = faces.numTexVerts( minFace ) != 0;
-        firstVert = faces.vertices[faces.face2vert[minFace]];
+        firstVert = faces.getVert( minFace, 0 );
     }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) + firstVert;
@@ -551,7 +563,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     auto getVertexRepr = [&] ( size_t fId, int ind ) -> Expected<VertexRepr>
     {
         VertexRepr repr;
-        repr.vId = faces.vertices[faces.face2vert[fId] + ind];
+        repr.vId = faces.getVert( fId, ind );
         if ( repr.vId < 0 )
             repr.vId = int( points.size() ) + repr.vId;
         else
@@ -561,7 +573,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
         if ( faces.face2texv[fId] + ind < faces.face2texv[fId + 1] )
         {
-            repr.vtId = faces.textures[faces.face2texv[fId] + ind];
+            repr.vtId = faces.getTexVert( fId, ind );
             if ( repr.vtId < 0 )
                 repr.vtId = int( uvCoords.size() ) + repr.vtId;
             else

@@ -7,6 +7,8 @@
 #include <MRVoxels/MRWeightedPointsShell.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRParallelFor.h>
+#include "MRMesh/MRTorus.h"
+#include "MRVoxels/MROffset.h"
 
 namespace MR
 {
@@ -111,6 +113,34 @@ TEST( MRMesh, weightedMeshShell )
     ASSERT_TRUE( offCube );
     EXPECT_EQ( MeshComponents::getNumComponents( *offCube ), 1 );
     EXPECT_EQ( offCube->topology.findNumHoles(), 0 );
+}
+
+TEST( MRMesh, negWeightedMeshShell )
+{
+    // Create some mesh
+    auto mesh = MR::makeTorus();
+ 
+    // Create VertScalars obj with weights for every vertex
+    auto vertSize = mesh.topology.vertSize();
+    MR::VertScalars scalars( vertSize );
+    MR::ParallelFor( scalars, [&] ( MR::VertId v )
+    {
+        scalars[v] = mesh.points[v].x / 5.0f; // Individual extra offset sizes for points
+    } );
+ 
+    auto params = MR::WeightedShell::ParametersMetric();
+    // Algorithm is voxel based, voxel size affects performance and form of result mesh
+    params.voxelSize = MR::suggestVoxelSize( mesh, 1000 );
+    // common basic offset applied for all point
+    // Vertex-specific weighted offsets applied after the basic one
+    params.offset = 0.2f;
+    params.dist.minWeight = *std::min_element( MR::begin( scalars ), MR::end( scalars ) );
+    params.dist.maxWeight = *std::max_element( MR::begin( scalars ), MR::end( scalars ) ); // should always have maximum between weights provided
+    params.dist.bidirectionalMode = false;
+ 
+    auto res = MR::WeightedShell::meshShell( mesh, scalars, params );
+    EXPECT_TRUE( res.has_value() );
+    EXPECT_TRUE( res->topology.isClosed() );
 }
 
 static void testClosestWeightedMeshPointContinuity( bool bidir )

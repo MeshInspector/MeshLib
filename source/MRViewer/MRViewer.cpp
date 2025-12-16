@@ -1810,11 +1810,6 @@ void Viewer::drawUiRenderObjects()
     }
 }
 
-bool Viewer::isMultiViewportEnabled()
-{
-    return isMultiViewportAvailable() && multiViewport_;
-}
-
 bool Viewer::isMultiViewportAvailable()
 {
 #ifdef __EMSCRIPTEN__

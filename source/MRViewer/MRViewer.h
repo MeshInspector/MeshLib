@@ -525,9 +525,6 @@ public:
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
 
-    /// return true if ImGui Multi Viewport enabled
-    /// (disabled for Apple, Wayland and Emscripten)
-    MRVIEWER_API bool isMultiViewportEnabled();
     /// return true if ImGui Multi Viewport is available
     /// (it is unavailalbe for Apple, Wayland and Emscripten)
     MRVIEWER_API bool isMultiViewportAvailable();

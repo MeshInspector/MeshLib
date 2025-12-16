@@ -658,7 +658,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         float minHeight = 0;
         float maxHeight = ImGui::GetIO().DisplaySize.y;
 
-        if ( !MR::getViewerInstance().isMultiViewportEnabled() )
+        if ( !isMultiViewportEnabled() )
         {
             if ( params.height > 0.0f )
             {
@@ -1621,6 +1621,11 @@ bool ModalExitButton()
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar();
     return false;
+}
+
+bool isMultiViewportEnabled()
+{
+    return ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
 }
 
 #ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS

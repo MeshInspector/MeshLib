@@ -1,8 +1,9 @@
 #pragma once
 
 #include "MRHistoryAction.h"
-#include "MRObjectMesh.h"
+#include "MRMesh.h"
 #include "MRMeshDiff.h"
+#include "MRObjectMesh.h"
 #include <cassert>
 
 namespace MR

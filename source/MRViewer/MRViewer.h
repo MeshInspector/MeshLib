@@ -525,9 +525,6 @@ public:
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
 
-    // set / get default state of ImGui Multi Viewport
-    void setDefaultMultiViewport( bool defaultMultiViewport ) { defaultMultiViewport_ = defaultMultiViewport; }
-    bool getDefaultMultiViewport() const { return defaultMultiViewport_; }
     /// return true if ImGui Multi Viewport enabled
     /// (disabled for Apple, Wayland and Emscripten)
     MRVIEWER_API bool isMultiViewport();
@@ -641,9 +638,6 @@ private:
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
 
-    // default state of ImGui Multi Viewport
-    // can be overrided by startup settings
-    bool defaultMultiViewport_{ true };
     // allows to move the imgui (tool) windows outside the main window (enable ImGui Multi Viewport)
     // (disabled for Apple, Wayland and Emscripten)
     bool multiViewport_{ true };

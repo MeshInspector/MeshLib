@@ -35,6 +35,7 @@
 #include "MRViewportGlobalBasis.h"
 #include "MRImGuiMultiViewport.h"
 #include "MRShortcutManager.h"
+#include "MRViewerConfigConstants.h"
 
 namespace
 {
@@ -300,11 +301,13 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
 
     if ( viewer->isMultiViewportAvailable() )
     {
-        UI::checkbox( "Enable multi-windows",
-                                                std::bind( &Viewer::getDefaultMultiViewport, viewer ),
-                                                std::bind( &Viewer::setDefaultMultiViewport, viewer, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Allow move tool windows outside from main window. For apply changes need restart application."
-            "Value can be overrided by startup flag." );
+        auto& config = Config::instance();
+        bool value = true;
+        if ( config.hasBool( cDefaultMultiViewport ) )
+            value = config.getBool( cDefaultMultiViewport, true );
+        if ( UI::checkbox( "Enable multi-windows", &value ) )
+            config.setBool( cDefaultMultiViewport, value );
+        UI::setTooltipIfHovered( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." );
     }
 
     if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )

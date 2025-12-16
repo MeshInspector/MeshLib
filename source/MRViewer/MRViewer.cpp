@@ -70,6 +70,7 @@
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
+#include "MRViewerConfigConstants.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -615,11 +616,10 @@ int Viewer::launch( const LaunchParams& params )
     animationMaxFps = params.animationMaxFps;
     experimentalFeatures = params.developerFeatures;
     
+    bool defaultMultiViewport = true;
     if ( Config::instance().hasBool( cDefaultMultiViewport ) )
-    {
-        defaultMultiViewport_ = Config::instance().getBool( cDefaultMultiViewport );
-    }
-    multiViewport_ = defaultMultiViewport_ && params.multiViewport;
+        defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewport, true );
+    multiViewport_ = defaultMultiViewport && params.multiViewport;
     
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )

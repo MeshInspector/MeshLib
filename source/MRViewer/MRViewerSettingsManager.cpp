@@ -552,9 +552,6 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         auto& manager = VisualObjectTagManager::instance();
         deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
     }
-    
-    // we dont load this parameter in this place because it's too late
-    // viewer.setDefaultMultiViewport( loadBool( cDefaultMultiViewport, true ) );
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -718,8 +715,6 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         serializeToJson( manager, visualObjectTagsJson );
         cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
-
-    saveBool( cDefaultMultiViewport, viewer.getDefaultMultiViewport() );
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

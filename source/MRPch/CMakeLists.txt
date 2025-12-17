@@ -34,6 +34,12 @@ IF(MR_PCH)
     TBB::tbb
   )
 
+  # GTest module defines a macro for MRMesh and PCH must match it
+  IF(BUILD_TESTING AND NOT MRMESH_NO_GTEST)
+    find_package(GTest REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
+  ENDIF()
+
   # TODO: CMake config
   target_include_directories(${PROJECT_NAME}
     PRIVATE

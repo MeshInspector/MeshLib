@@ -297,6 +297,11 @@ struct ObjFaces
         return vertices[face2vert[face] + vert];
     }
 
+    auto& getVert( size_t face, size_t vert )
+    {
+        return vertices[face2vert[face] + vert];
+    }
+
     auto getTexVert( size_t face, size_t vert ) const
     {
         return textures[face2texv[face] + vert];
@@ -532,7 +537,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const Vector<Vector3d, VertId>& points,  // all points from file
     const std::vector<Color>& colors,     // all colors from file
     const std::vector<UVCoord>& uvCoords, // all uvs from file
-    const ObjFaces& faces,                // all faces from file
+    ObjFaces& faces,                      // all faces from file, this object's vertex ids will be replaced with new unique values
     const std::vector<MaterialScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
@@ -693,15 +698,24 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( !reportProgress( settings.callback, 0.4f ) )
         return unexpectedOperationCanceled();
 
-    auto getReprVertId = [&] ( size_t fId, int ind )->VertId
+    timer.restart( "replace vertex ids" );
+    // replace global vertex id with this object's vertex id
+    ParallelFor( minFace, maxFace, [&]( size_t f )
     {
-        auto repr = getVertexRepr( fId, ind );
-        assert( repr.has_value() );
-        auto it = map.find( *repr );
-        assert( it != map.end() );
-        return it->second;
-    };
+        const auto nv = faces.numVerts( f );
+        assert ( nv >= 3 );
+        for ( int v = 0; v < nv; ++v )
+        {
+            auto repr = getVertexRepr( f, v );
+            assert( repr.has_value() );
+            auto it = map.find( *repr );
+            assert( it != map.end() );
+            faces.getVert( f, v ) = it->second;
+        }
+    } );
 
+    if ( !reportProgress( settings.callback, 0.45f ) )
+        return unexpectedOperationCanceled();
 
     timer.restart( "prepare model triangulation" );
 
@@ -763,7 +777,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             const auto nv = faces.numVerts( i );
             assert ( nv >= 3 );
             for ( int j = 1; j + 1 < nv; ++j )
-                thisOT.t.push_back( { getReprVertId( i, 0 ), getReprVertId( i, j ), getReprVertId( i, j + 1 ) } );
+                thisOT.t.push_back( { VertId( faces.getVert( i, 0 ) ),
+                                      VertId( faces.getVert( i, j ) ),
+                                      VertId( faces.getVert( i, j + 1 ) ) } );
         }
     } );
 

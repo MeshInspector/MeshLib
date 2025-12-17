@@ -157,7 +157,7 @@ jobs:
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
         with:
           msystem: clang64
@@ -181,7 +181,7 @@ jobs:
           # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
           #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
-        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+        run: cd & call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate C bindings
         if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}

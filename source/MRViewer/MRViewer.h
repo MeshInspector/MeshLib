@@ -635,10 +635,6 @@ private:
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
 
-    // allows to move the imgui (tool) windows outside the main window (enable ImGui Multi Viewport)
-    // (disabled for Apple, Wayland and Emscripten)
-    bool multiViewport_{ true };
-
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;

@@ -24,6 +24,18 @@ DistanceVolumeCreationParams getDistanceFieldParams( const Box3f& bbox, const Pa
 {
     const auto box = bbox.expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
+    const auto minDist = params.offset - params.numLayers * params.voxelSize;
+    const auto maxDist = params.offset + params.numLayers * params.voxelSize;
+
+    // bidirDist = abs( dist + w ) - w
+    const auto maxBidirWeight = std::max( std::abs( maxDist + params.dist.maxWeight ),
+                                   std::abs( minDist + params.dist.minWeight ) ) - params.dist.minWeight;
+
+    const auto minBidirWeight = ( std::signbit( maxDist + params.dist.maxWeight ) == std::signbit( minDist + params.dist.minWeight ) ) ?
+        ( std::min( std::abs( maxDist + params.dist.minWeight ),
+                    std::abs( minDist + params.dist.maxWeight ) ) - params.dist.maxWeight )
+        : -params.dist.maxWeight;
+    
     return DistanceVolumeCreationParams
     {
         .vol =
@@ -35,8 +47,8 @@ DistanceVolumeCreationParams getDistanceFieldParams( const Box3f& bbox, const Pa
         .dist =
         {
             params.dist,
-            params.offset - params.numLayers * params.voxelSize, //minDistance
-            params.offset + params.numLayers * params.voxelSize  //maxDistance
+            minBidirWeight,
+            maxBidirWeight
         }
     };
 }

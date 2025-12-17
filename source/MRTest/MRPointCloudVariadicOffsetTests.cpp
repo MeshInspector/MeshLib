@@ -140,7 +140,8 @@ TEST( MRMesh, negWeightedMeshShell )
  
     auto res = MR::WeightedShell::meshShell( mesh, scalars, params );
     EXPECT_TRUE( res.has_value() );
-    EXPECT_TRUE( res->topology.isClosed() );
+    EXPECT_EQ( MeshComponents::getNumComponents( *res ), 1 );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
 }
 
 static void testClosestWeightedMeshPointContinuity( bool bidir )

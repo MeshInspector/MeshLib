@@ -21,9 +21,11 @@
 
 #include <map>
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
 
 enum class ObjElement
 {
@@ -218,28 +220,28 @@ Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
     return {};
 }
 
-struct ObjFace
+struct ObjFaceInfo
 {
-    std::vector<int> vertices;
-    std::vector<int> textures;
-    std::vector<int> normals;
+    int numVerts = 0;
+    int numTexVerts = 0;
 };
 
-Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
+Expected<ObjFaceInfo> parseObjFaceInfo( const std::string_view& str )
 {
     using namespace boost::spirit::x3;
 
-    auto v = [&] ( auto& ctx )
+    ObjFaceInfo res;
+    auto v = [&] ( auto& )
     {
-        f.vertices.emplace_back( _attr( ctx ) );
+        ++res.numVerts;
     };
-    auto vt = [&] ( auto& ctx )
+    auto vt = [&] ( auto& )
     {
-        f.textures.emplace_back( _attr( ctx ) );
+        ++res.numTexVerts;
     };
-    auto vn = [&] ( auto& ctx )
+    auto vn = [&] ( auto& )
     {
-        f.normals.emplace_back( _attr( ctx ) );
+        // normals are not used currently
     };
 
     bool r = phrase_parse(
@@ -253,13 +255,84 @@ Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
     if ( !r )
         return unexpected( "Failed to parse face in OBJ-file" );
 
-    if ( f.vertices.empty() )
+    if ( !res.numVerts )
         return unexpected( "Invalid face vertex count in OBJ-file" );
-    if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
+    if ( res.numTexVerts && res.numVerts != res.numTexVerts )
         return unexpected( "Invalid face texture count in OBJ-file" );
-    if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
-        return unexpected( "Invalid face normal count in OBJ-file" );
-    return {};
+    return res;
+}
+
+struct ObjFaces
+{
+    std::vector<int> vertices;
+    std::vector<int> face2vert; // face2vert[f] -> first vertex of face #f in vertices
+
+    std::vector<int> textures;
+    std::vector<int> face2texv; // face2texv[f] -> first tex-vertex of face #f in textures
+
+    /// returns the total number of faces
+    auto size() const
+    {
+        // face2vert and face2texv both have one extra record at the end
+        // with the total number of (texture) vertices in all faces
+        assert( face2vert.size() >= 1 );
+        assert( face2vert.size() == face2texv.size() );
+        return face2vert.size() - 1;
+    }
+
+    auto numVerts( size_t face ) const
+    {
+        assert( face + 1 < face2vert.size() );
+        return face2vert[face + 1] - face2vert[face];
+    }
+
+    auto numTexVerts( size_t face ) const
+    {
+        assert( face + 1 < face2texv.size() );
+        return face2texv[face + 1] - face2texv[face];
+    }
+
+    auto getVert( size_t face, size_t vert ) const
+    {
+        return vertices[face2vert[face] + vert];
+    }
+
+    auto getTexVert( size_t face, size_t vert ) const
+    {
+        return textures[face2texv[face] + vert];
+    }
+};
+
+void parseObjFace( const std::string_view& str, size_t f, ObjFaces & target )
+{
+    using namespace boost::spirit::x3;
+
+    int nextVert = target.face2vert[f];
+    int nextTexv = target.face2texv[f];
+    auto v = [&] ( auto& ctx )
+    {
+        target.vertices[nextVert++] = _attr( ctx );
+    };
+    auto vt = [&] ( auto& ctx )
+    {
+        target.textures[nextTexv++] = _attr( ctx );
+    };
+    auto vn = [&] ( auto& )
+    {
+        // normals are not used currently
+    };
+
+    [[maybe_unused]] bool r = phrase_parse(
+        str.begin(),
+        str.end(),
+        // NOTE: actions are not being reverted after backtracking
+        // https://github.com/boostorg/spirit/issues/378
+        ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
+        ascii::space
+    );
+    assert( r );
+    assert( nextVert == target.face2vert[f + 1] );
+    assert( nextTexv == target.face2texv[f + 1] );
 }
 
 Expected<void> parseMtlColor( const std::string_view& str, Vector3f& color )
@@ -459,21 +532,22 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const Vector<Vector3d, VertId>& points,  // all points from file
     const std::vector<Color>& colors,     // all colors from file
     const std::vector<UVCoord>& uvCoords, // all uvs from file
-    const std::vector<ObjFace>& faces,    // all faces from file
+    const ObjFaces& faces,                // all faces from file
     const std::vector<MaterialScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
     const MtlLibrary* mtl ) // optional materials, if nullptr `materialScope` will be ignored
 {
     MR_TIMER;
+    assert( faces.face2vert.size() == faces.face2texv.size() );
 
     bool haveColors = false;
     bool haveUVs = false;
     int firstVert = -1;
     if ( minFace < faces.size() ) // do not crash if minFace = 0 and faces are empty
     {
-        haveUVs = !faces[minFace].textures.empty();
-        firstVert = faces[minFace].vertices.front();
+        haveUVs = faces.numTexVerts( minFace ) != 0;
+        firstVert = faces.getVert( minFace, 0 );
     }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) + firstVert;
@@ -486,50 +560,55 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     Timer timer( "prepare unique vertices" );
 
+    auto getVertexRepr = [&] ( size_t fId, int ind ) -> Expected<VertexRepr>
+    {
+        VertexRepr repr;
+        repr.vId = faces.getVert( fId, ind );
+        if ( repr.vId < 0 )
+            repr.vId = int( points.size() ) + repr.vId;
+        else
+            --repr.vId;
+        if ( repr.vId < 0 || repr.vId >= points.size() )
+            return unexpected( std::string( "Out of bounds Vertex ID in OBJ-file" ) );
+
+        if ( faces.face2texv[fId] + ind < faces.face2texv[fId + 1] )
+        {
+            repr.vtId = faces.getTexVert( fId, ind );
+            if ( repr.vtId < 0 )
+                repr.vtId = int( uvCoords.size() ) + repr.vtId;
+            else
+                --repr.vtId;
+            if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
+                return unexpected( std::string( "Out of bounds Texture Vertex ID in OBJ-file" ) );
+        }
+        return repr;
+    };
+
     std::string error;
     tbb::task_group_context ctx;
     tbb::enumerable_thread_specific<std::vector<VertexRepr>> tlOrderedPoints;
     tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         auto& local = tlOrderedPoints.local();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        for ( size_t fId = range.begin(); fId < range.end(); ++fId )
         {
-            if ( faces[i].vertices.size() < 3 )
+            const auto nv = faces.numVerts( fId );
+            if ( nv < 3 )
             {
                 if ( ctx.cancel_group_execution() )
                     error = "Face with less than 3 vertices in OBJ-file";
                 return;
             }
-            for ( int v = 0; v < faces[i].vertices.size(); ++v )
+            for ( int ind = 0; ind < nv; ++ind )
             {
-                VertexRepr repr;
-                repr.vId = faces[i].vertices[v];
-                if ( repr.vId < 0 )
-                    repr.vId = int( points.size() ) + repr.vId;
-                else
-                    --repr.vId;
-                if ( repr.vId < 0 || repr.vId >= points.size() )
+                auto repr = getVertexRepr( fId, ind );
+                if ( !repr )
                 {
                     if ( ctx.cancel_group_execution() )
-                        error = "Out of bounds Vertex ID in OBJ-file";
+                        error = std::move( repr.error() );
                     return;
                 }
-                if ( v < faces[i].textures.size() )
-                {
-                    repr.vtId = faces[i].textures[v];
-                    if ( repr.vtId < 0 )
-                        repr.vtId = int( uvCoords.size() ) + repr.vtId;
-                    else
-                        --repr.vtId;
-                    if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
-                    {
-                        if ( ctx.cancel_group_execution() )
-                            error = "Out of bounds Texture Vertex ID in OBJ-file";
-                        return;
-                    }
-                }
-
-                local.emplace_back( repr );
+                local.emplace_back( *repr );
             }
         }
     }, ctx );
@@ -616,21 +695,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     auto getReprVertId = [&] ( size_t fId, int ind )->VertId
     {
-        VertexRepr repr;
-        repr.vId = faces[fId].vertices[ind];
-        if ( repr.vId < 0 )
-            repr.vId = int( points.size() ) + repr.vId;
-        else
-            --repr.vId;
-        if ( ind < faces[fId].textures.size() )
-        {
-            repr.vtId = faces[fId].textures[ind];
-            if ( repr.vtId < 0 )
-                repr.vtId = int( uvCoords.size() ) + repr.vtId;
-            else
-                --repr.vtId;
-        }
-        auto it = map.find( repr );
+        auto repr = getVertexRepr( fId, ind );
+        assert( repr.has_value() );
+        auto it = map.find( *repr );
         assert( it != map.end() );
         return it->second;
     };
@@ -693,7 +760,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                     }
                 }
             }
-            for ( int j = 1; j + 1 < faces[i].vertices.size(); ++j )
+            const auto nv = faces.numVerts( i );
+            assert ( nv >= 3 );
+            for ( int j = 1; j + 1 < nv; ++j )
                 thisOT.t.push_back( { getReprVertId( i, 0 ), getReprVertId( i, j ), getReprVertId( i, j + 1 ) } );
         }
     } );
@@ -831,7 +900,6 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     Vector<Vector3d,VertId> points; // flat list of all points in this object scope
     std::vector<Color> colors; // flat list of all colors in this object scope
     std::vector<UVCoord> uvCoords; // flat list of all uv coords in this object scope
-    std::vector<ObjFace> faces; // flat list of face elements in this list
 
     size_t numPoints = 0;
     size_t numUVs = 0;
@@ -894,7 +962,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( hasColors )
         colors.reserve( numPoints );
     uvCoords.reserve( numUVs );
-    faces.reserve( numFaces );
+    std::vector<ObjFaceInfo> faceInfos;
+    faceInfos.reserve( numFaces + 1 );
 
     if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
@@ -955,11 +1024,20 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         }, ctx );
     };
 
-    // simply read all faces in vector
+    struct FaceRange
+    {
+        size_t beginLine = 0;
+        size_t endLine = 0;
+        size_t firstFace = 0;
+    };
+    std::vector<FaceRange> faceRanges;
+
+    // simply read all face infos in vector
     auto fillFaces = [&] ( size_t begin, size_t end )
     {
-        size_t facesSize = faces.size();
-        faces.resize( facesSize + end - begin );
+        size_t facesSize = faceInfos.size();
+        faceRanges.push_back( { begin, end, facesSize } );
+        faceInfos.resize( facesSize + end - begin );
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
@@ -967,13 +1045,14 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             {
                 auto id = li - begin + facesSize;
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseObjFace( line, faces[id] );
+                auto res = parseObjFaceInfo( line );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
                         parseError = std::move( res.error() );
                     return;
                 }
+                faceInfos[id] = *res;
             }
         }, ctx );
     };
@@ -995,7 +1074,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& objData = oScopes.emplace_back();
             objData.objName = line.substr( strlen( "o" ), std::string_view::npos );
-            objData.fId = faces.size();
+            objData.fId = faceInfos.size();
             boost::trim( objData.objName );
             break;
         }
@@ -1007,7 +1086,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& mtlData = mScopes.emplace_back();
             mtlData.mtName = line.substr( strlen( "usemtl" ), std::string_view::npos );
-            mtlData.fId = faces.size();
+            mtlData.fId = faceInfos.size();
             boost::trim( mtlData.mtName );
             break;
         }
@@ -1019,6 +1098,31 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         if ( !parseError.empty() )
             return unexpected( parseError );
     }
+
+    timer.restart( "load faces" );
+
+    ObjFaces faces; // flat list of face elements in this list
+    faces.face2vert.reserve( numFaces + 1 );
+    faces.face2texv.reserve( numFaces + 1 );
+    faces.face2vert.push_back( 0 );
+    faces.face2texv.push_back( 0 );
+    for ( const auto & info : faceInfos )
+    {
+        faces.face2vert.push_back( faces.face2vert.back() + info.numVerts );
+        faces.face2texv.push_back( faces.face2texv.back() + info.numTexVerts );
+    }
+    faces.vertices.resize( faces.face2vert.back() );
+    faces.textures.resize( faces.face2texv.back() );
+
+    for ( const auto& faceRange : faceRanges )
+    {
+        ParallelFor( faceRange.beginLine, faceRange.endLine, [&]( size_t li )
+        {
+            auto f = li - faceRange.beginLine + faceRange.firstFace;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            parseObjFace( line, f, faces );
+        } );
+    };
 
     timer.finish();
 
@@ -1054,10 +1158,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     return res;
 }
 
-}
-
-namespace MR
-{
+} //anonymous namespace
 
 namespace MeshLoad
 {

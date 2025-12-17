@@ -988,6 +988,9 @@
     <ClInclude Include="MRImGuiMultiViewport.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRViewerConfigConstants.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

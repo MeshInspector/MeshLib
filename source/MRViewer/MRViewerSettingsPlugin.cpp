@@ -35,6 +35,7 @@
 #include "MRViewportGlobalBasis.h"
 #include "MRImGuiMultiViewport.h"
 #include "MRShortcutManager.h"
+#include "MRViewerConfigConstants.h"
 
 namespace
 {
@@ -297,6 +298,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
 
     if ( savedDialogsVal != savedDialogsBackUp )
         viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
+
+    if ( viewer->isMultiViewportAvailable() )
+    {
+        auto& config = Config::instance();
+        bool value = config.getBool( cDefaultMultiViewportKey, true );
+        if ( UI::checkbox( "Enable multi-windows", &value ) )
+            config.setBool( cDefaultMultiViewportKey, value );
+        UI::setTooltipIfHovered( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." );
+    }
 
     if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();

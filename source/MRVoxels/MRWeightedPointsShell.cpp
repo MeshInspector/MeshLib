@@ -28,10 +28,10 @@ DistanceVolumeCreationParams getDistanceFieldParams( const Box3f& bbox, const Pa
     const auto maxDist = params.offset + params.numLayers * params.voxelSize;
 
     // bidirDist = abs( dist + w ) - w
-    const auto minBidirDist = std::max( std::abs( maxDist + params.dist.maxWeight ),
+    const auto maxBidirDist = std::max( std::abs( maxDist + params.dist.maxWeight ),
                                    std::abs( minDist + params.dist.minWeight ) ) - params.dist.minWeight;
 
-    const auto maxBidirDist = ( std::signbit( maxDist + params.dist.maxWeight ) == std::signbit( minDist + params.dist.minWeight ) ) ?
+    const auto minBidirDist = ( std::signbit( maxDist + params.dist.maxWeight ) == std::signbit( minDist + params.dist.minWeight ) ) ?
         ( std::min( std::abs( maxDist + params.dist.minWeight ),
                     std::abs( minDist + params.dist.maxWeight ) ) - params.dist.maxWeight )
         : -params.dist.maxWeight;

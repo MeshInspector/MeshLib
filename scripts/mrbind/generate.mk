@@ -896,11 +896,12 @@ generate:
     	--clean-output-dir \
     	--imported-lib-name MRMesh \
     	--helpers-namespace MR::Misc \
-    	--force-namespace MR
+    	--force-namespace MR \
+		--dotnet-version=std2.0
 
 .DEFAULT_GOAL := build
 .PHONY: build
-build:
+build: generate
 	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/..)
 
 endif

@@ -76,6 +76,10 @@ struct DistanceFromWeightedPointsParams
     /// function returning the weight of each point, must be set by the user
     VertMetric pointWeight;
 
+    /// minimal weight among all points in the cloud;
+    /// if this value is imprecise, then more computations will be made by algorithm
+    float minWeight = 0;
+
     /// maximal weight among all points in the cloud;
     /// if this value is imprecise, then more computations will be made by algorithm
     float maxWeight = 0;

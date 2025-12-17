@@ -894,7 +894,7 @@ generate:
 		--input-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json) \
     	--output-dir $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) \
     	--clean-output-dir \
-    	--imported-lib-name MRMesh \
+    	--imported-lib-name MeshLibC2 \
     	--helpers-namespace MR::Misc \
     	--force-namespace MR \
 		--dotnet-version=std2.0

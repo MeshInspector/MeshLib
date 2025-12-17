@@ -35,8 +35,8 @@ DistanceVolumeCreationParams getDistanceFieldParams( const Box3f& bbox, const Pa
         .dist =
         {
             params.dist,
-            params.offset - params.numLayers * params.voxelSize - params.dist.maxWeight, //minDistance
-            params.offset + params.numLayers * params.voxelSize - params.dist.minWeight //maxDistance
+            params.offset - params.numLayers * params.voxelSize, //minDistance
+            params.offset + params.numLayers * params.voxelSize  //maxDistance
         }
     };
 }

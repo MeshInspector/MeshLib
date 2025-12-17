@@ -21,6 +21,14 @@ struct MovementBuildBodyParams
     /// if not set body accumulative normal is used
     std::optional<Vector3f> bodyNormal;
 
+    /// up direction of body contours, will correspond with
+    /// corresponds with `trajectoryNormals` if both are present and `allowRotation` is set
+    std::optional<Vector3f> bodyUpDir;
+
+    /// optional normal directions in each trajectory point
+    /// bodyUpDir corresponds to it if both are present and `allowRotation` is set
+    const Contours3f* trajectoryNormals{ nullptr };
+
     /// optional transform body space to trajectory space
     const AffineXf3f* b2tXf{ nullptr };
 

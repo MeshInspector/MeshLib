@@ -15,17 +15,49 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
 {
     MR_TIMER;
 
+    bool hasUpControl = params.bodyUpDir && params.trajectoryNormals;
+
     // copy to clear duplicates (mb leave it to user?)
     auto trajectoryContours = trajectoryContoursOrg;
+    Contours3f trajNormals;
     // filter same points in trajectory
-    for ( auto& trajC : trajectoryContours )
-        trajC.erase( std::unique( trajC.begin(), trajC.end() ), trajC.end() );
+    if ( !hasUpControl )
+    {
+        for ( auto& trajC : trajectoryContours )
+            trajC.erase( std::unique( trajC.begin(), trajC.end() ), trajC.end() );
+    }
+    else
+    {
+        trajNormals = *params.trajectoryNormals;
+        assert( trajNormals.size() == trajectoryContours.size() );
+        for ( int i = 0; i < trajectoryContours.size(); ++i )
+        {
+            auto& trajC = trajectoryContours[i];
+            auto& normals = trajNormals[i];
+            assert( trajC.size() == normals.size() );
+            Vector3f prevUnique = trajC.back();
+            for ( int j = int( trajC.size() ) - 2; j >= 0; --j )
+            {
+                auto coord = trajC[j];
+                if ( prevUnique == coord )
+                {
+                    trajC.erase( trajC.begin() + j + 1 );
+                    normals.erase( normals.begin() + j + 1 );
+                }
+                else
+                {
+                    prevUnique = coord;
+                }
+            }
+        }
+    }
 
     AffineXf3f xf;
     std::optional<AffineXf3f> xf0Inv;
     Vector3f trans;
     Matrix3f prevHalfRot;
     Matrix3f accumRot;
+    Matrix3f accumUpControlledRot;
     Vector3f center;
     Matrix3f scaling;
     if ( params.center )
@@ -48,8 +80,14 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
         for ( const auto& bc : bodyContours )
             normal += calcOrientedArea( bc );
     }
+    Vector3f upVec = params.bodyUpDir.value_or( Vector3f() );
     if ( params.b2tXf )
-        normal = params.b2tXf->A.inverse().transposed() * normal;
+    {
+        auto nm = params.b2tXf->A.inverse().transposed();
+        normal = nm * normal;
+        if ( hasUpControl )
+            upVec = ( nm * upVec ).normalized();
+    }
     // minus to have correct orientation of result mesh
     normal = -normal.normalized();
 
@@ -115,8 +153,9 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
             tp.setLeft( newEdge.sym(), tp.addFaceId() );
         }
     };
-    for ( const auto& trajectoryCont : trajectoryContours )
+    for ( int c = 0; c < trajectoryContours.size(); ++c )
     {
+        const auto& trajectoryCont = trajectoryContours[c];
         bool closed = trajectoryCont.size() > 2 && trajectoryCont.front() == trajectoryCont.back();
         EdgeId firstBodyEdge;
         EdgeId prevBodyEdge;
@@ -154,9 +193,20 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
                 accumRot = curHalfRot * prevHalfRot * accumRot;
                 prevHalfRot = curHalfRot;
                 scaling = Matrix3f{};
+
+                accumUpControlledRot = accumRot;
+                if ( hasUpControl )
+                {
+                    auto trajNormal = trajNormals[c][i];
+                    auto trajVec = accumRot * normal;
+                    auto bodyUpVec = accumRot * upVec;
+                    trajNormal -= trajVec * dot( trajNormal, trajVec ) / trajVec.lengthSq();
+                    bodyUpVec -= trajVec * dot( bodyUpVec, trajVec ) / trajVec.lengthSq();
+                    accumUpControlledRot = Matrix3f::rotation( bodyUpVec, trajNormal ) * accumRot;
+                }
                 if ( axis.lengthSq() > 0 )
                 {
-                    auto scaleDir = cross( axis, accumRot * normal );
+                    auto scaleDir = cross( axis, accumUpControlledRot * normal );
                     Vector3f basisVec = Vector3f::plusX();
                     if ( std::abs( scaleDir.y ) > std::abs( scaleDir.x ) &&
                         std::abs( scaleDir.y ) > std::abs( scaleDir.z ) )
@@ -173,7 +223,7 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
                         Matrix3f::rotation( scaleDir, basisVec );
                 }
             }
-            xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( scaling * accumRot, center );
+            xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( scaling * accumUpControlledRot, center );
             if ( params.startMeshFromBody )
             {
                 if ( !xf0Inv )

@@ -34,8 +34,8 @@ IF(MR_PCH)
     TBB::tbb
   )
 
-  # GTest module defines a macro for MRMesh and PCH must match it
-  IF(BUILD_TESTING AND NOT MRMESH_NO_GTEST)
+  # GTest module defines a macro for MRMesh and PCH must match it (but not for MSVC)
+  IF(BUILD_TESTING AND NOT MRMESH_NO_GTEST AND NOT MSVC)
     find_package(GTest REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
   ENDIF()

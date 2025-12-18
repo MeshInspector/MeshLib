@@ -525,16 +525,6 @@ struct VertexRepr
     }
 };
 
-struct VertexReprHasher
-{
-    size_t operator()( VertexRepr const& vr ) const noexcept
-    {
-        std::uint64_t vvt;
-        std::memcpy( &vvt, &vr.vId, sizeof( std::uint64_t ) );
-        return size_t( vvt );
-    }
-};
-
 Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const std::filesystem::path& dir,
     const Vector<Vector3d, VertId>& points,  // all points from file
@@ -694,7 +684,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             auto repr = getVertexRepr( f, v );
             assert( repr.has_value() );
             auto it = std::lower_bound( orderedPoints.begin(), orderedPoints.end(), *repr );
-            assert( it != orderedPoints.end() );
+            assert( it != orderedPoints.end() && *it == repr );
             faces.getVert( f, v ) = VertId( it - orderedPoints.begin() );
         }
     } );

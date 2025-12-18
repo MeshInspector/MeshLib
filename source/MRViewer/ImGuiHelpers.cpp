@@ -133,7 +133,7 @@ bool drawCrossButton( float btnSize )
     auto drawList = GetWindowDrawList();
     const auto pos = GetCursorScreenPos();
 
-    auto res = Button( "##ExitButton", ImVec2( btnSize, btnSize ) ) || IsKeyPressed( ImGuiKey_Escape );
+    auto res = Button( "##ExitButton", ImVec2( btnSize, btnSize ) );
     const float crossSize = btnSize * 0.65f;
     auto shift = ( btnSize - crossSize ) * 0.5f;
     const auto& textColor = ColorConvertFloat4ToU32( GetStyleColorVec4( ImGuiCol_Text ) );

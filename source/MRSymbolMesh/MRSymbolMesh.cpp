@@ -7,7 +7,6 @@
 #include "MRMesh/MRMeshFillHole.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
-#include "MRMesh/MRGTest.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRTimer.h"

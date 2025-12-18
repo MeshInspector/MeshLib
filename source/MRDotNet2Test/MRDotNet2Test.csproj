@@ -5,7 +5,7 @@
     <TargetFramework>net8</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <BaseOutputPath>..\..\source</BaseOutputPath>
+    <BaseOutputPath>..\x64</BaseOutputPath>
     <Platforms>x64</Platforms>
 	<LangVersion>12</LangVersion>
   </PropertyGroup>

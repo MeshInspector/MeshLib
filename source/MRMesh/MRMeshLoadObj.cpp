@@ -512,9 +512,12 @@ struct ObjectScope
 
 struct VertexRepr
 {
-    int vId{ 0 };
-    int vtId{ 0 };
+    int vId;
+    int vtId;
     // int vnId{0}; // not used yet
+    VertexRepr( int vId = 0, int vtId = 0 ) : vId( vId ), vtId( vtId ) {}
+    VertexRepr( NoInit ) {}
+
     bool operator==( const VertexRepr& o ) const = default;
     bool operator<( const VertexRepr& o ) const
     {
@@ -591,10 +594,15 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     std::string error;
     tbb::task_group_context ctx;
-    tbb::enumerable_thread_specific<std::vector<VertexRepr>> tlOrderedPoints;
+
+    std::vector<VertexRepr> orderedPoints;
+    const auto minObjVert = faces.face2vert[minFace];
+    const auto maxObjVert = faces.face2vert[maxFace];
+    resizeNoInit( orderedPoints, maxObjVert - minObjVert );
+
     tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& local = tlOrderedPoints.local();
+        auto pos = faces.face2vert[range.begin()] - minObjVert;
         for ( size_t fId = range.begin(); fId < range.end(); ++fId )
         {
             const auto nv = faces.numVerts( fId );
@@ -606,6 +614,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             }
             for ( int ind = 0; ind < nv; ++ind )
             {
+                assert( pos + minObjVert == faces.face2vert[fId] + ind );
                 auto repr = getVertexRepr( fId, ind );
                 if ( !repr )
                 {
@@ -613,7 +622,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                         error = std::move( repr.error() );
                     return;
                 }
-                local.emplace_back( *repr );
+                orderedPoints[pos++] = *repr;
             }
         }
     }, ctx );
@@ -624,14 +633,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( !error.empty() )
         return unexpected( error );
 
-    size_t sumOVsSize = 0;
-    for ( const auto& localPoints : tlOrderedPoints )
-        sumOVsSize += localPoints.size();
-    std::vector<VertexRepr> orderedPoints;
-    orderedPoints.reserve( sumOVsSize );
-    for ( auto& localPoints : tlOrderedPoints )
-        orderedPoints.insert( orderedPoints.end(), std::make_move_iterator( localPoints.begin() ), std::make_move_iterator( localPoints.end() ) );
-    tlOrderedPoints = {}; // reduce peak memory
     tbb::parallel_sort( orderedPoints.begin(), orderedPoints.end() );
 
     orderedPoints.erase( std::unique( orderedPoints.begin(), orderedPoints.end() ), orderedPoints.end() );

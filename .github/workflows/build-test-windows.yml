@@ -148,12 +148,6 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore Dependencies
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@7a827ce5193af33b950d0fedfc0277cab2ff8887 # v2
-        with:
-          projects: 'source/**/*.csproj'
-
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
@@ -202,7 +196,7 @@ jobs:
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
 
       - name: Build
         shell: cmd
@@ -226,10 +220,6 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
           )
-
-      - name: Build .NET MRBind bindings
-        if: ${{ env.BUILD_C_SHARP == 'true' }}
-        run: msbuild -m source\MRDotNet2\MRDotNet2.csproj -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind}}
@@ -259,7 +249,7 @@ jobs:
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
-        run: py -3 scripts\run_c_sharp2_unit_test_script.py ${{ matrix.config }}
+        run: dotnet run --project source/MRDotNet2Test -c ${{ matrix.config }}
 
       - name: Python Sanity Tests
         timeout-minutes: 8

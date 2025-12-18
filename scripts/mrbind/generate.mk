@@ -245,6 +245,12 @@ $(error Unknown MODE=$(MODE))
 endif
 $(info MODE: $(MODE))
 
+ifeq ($(MODE),release)
+CSHARP_MODE=Release
+else
+CSHARP_MODE=Debug
+endif
+
 
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
@@ -902,6 +908,6 @@ generate:
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/..)
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/..) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))
 
 endif

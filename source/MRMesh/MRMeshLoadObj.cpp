@@ -602,7 +602,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto pos = faces.face2vert[range.begin()];
+        auto pos = faces.face2vert[range.begin()] - minObjVert;
         for ( size_t fId = range.begin(); fId < range.end(); ++fId )
         {
             const auto nv = faces.numVerts( fId );
@@ -614,7 +614,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             }
             for ( int ind = 0; ind < nv; ++ind )
             {
-                assert( pos == faces.face2vert[fId] + ind );
+                assert( pos + minObjVert == faces.face2vert[fId] + ind );
                 auto repr = getVertexRepr( fId, ind );
                 if ( !repr )
                 {

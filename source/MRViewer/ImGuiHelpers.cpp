@@ -134,11 +134,11 @@ bool drawCrossButton( float btnSize )
     const auto pos = GetCursorScreenPos();
 
     auto res = Button( "##ExitButton", ImVec2( btnSize, btnSize ) );
-    const float crossSize = btnSize * 0.65f;
+    const float crossSize = btnSize * 0.58f;
     auto shift = ( btnSize - crossSize ) * 0.5f;
     const auto& textColor = ColorConvertFloat4ToU32( GetStyleColorVec4( ImGuiCol_Text ) );
-    drawList->AddLine( ImVec2( pos.x + shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ) - ImVec2( 0.15f, 0.15f ), ImVec2( pos.x + btnSize - shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ) + ImVec2( 0.15f, 0.15f ), textColor, 2.0f * UI::scale() );
-    drawList->AddLine( ImVec2( pos.x + shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ), ImVec2( pos.x + btnSize - shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ), textColor, 2.0f * UI::scale() );
+    drawList->AddLine( ImVec2( pos.x + shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ), ImVec2( pos.x + btnSize - shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ), textColor, 2.4f * UI::scale() );
+    drawList->AddLine( ImVec2( pos.x + shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ), ImVec2( pos.x + btnSize - shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ), textColor, 2.4f * UI::scale() );
 
     PopStyleVar();
     return res;

@@ -617,7 +617,7 @@ int Viewer::launch( const LaunchParams& params )
     experimentalFeatures = params.developerFeatures;
     
     bool defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewportKey, true );
-    multiViewport_ = defaultMultiViewport && params.multiViewport;
+    launchParams_.multiViewport = defaultMultiViewport && params.multiViewport;
     
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )

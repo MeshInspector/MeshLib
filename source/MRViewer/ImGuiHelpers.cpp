@@ -126,6 +126,24 @@ static float calculateLabelsSizes( const std::vector<HistogramGridLine> &grid, i
     return maxCoord;
 }
 
+bool drawCrossButton( float btnSize )
+{
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 3.0f * UI::scale() );
+
+    auto drawList = GetWindowDrawList();
+    const auto pos = GetCursorScreenPos();
+
+    auto res = Button( "##ExitButton", ImVec2( btnSize, btnSize ) );
+    const float crossSize = btnSize * 0.65f;
+    auto shift = ( btnSize - crossSize ) * 0.5f;
+    const auto& textColor = ColorConvertFloat4ToU32( GetStyleColorVec4( ImGuiCol_Text ) );
+    drawList->AddLine( ImVec2( pos.x + shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ) - ImVec2( 0.15f, 0.15f ), ImVec2( pos.x + btnSize - shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ) + ImVec2( 0.15f, 0.15f ), textColor, 2.0f * UI::scale() );
+    drawList->AddLine( ImVec2( pos.x + shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ), ImVec2( pos.x + btnSize - shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ), textColor, 2.0f * UI::scale() );
+
+    PopStyleVar();
+    return res;
+}
+
 void PlotCustomHistogram( const char* str_id,
                                  std::function<float( int idx )> values_getter,
                                  std::function<void( int idx )> tooltip,
@@ -843,7 +861,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
     if ( escapeClose && menu )
         escapeClose = window == menu->getLastFocusedPlugin();
-    if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) || escapeClose ) //close button
+    if ( ImGui::drawCrossButton( buttonSize ) || escapeClose ) //close button
     {
         *open = false;
 

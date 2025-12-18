@@ -24,7 +24,6 @@ IF(MR_PCH)
   find_package(JsonCpp REQUIRED)
   find_package(spdlog 1.9 REQUIRED)
   find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
-  find_package(GTest REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE
     Boost::boost
@@ -33,7 +32,6 @@ IF(MR_PCH)
     JsonCpp::JsonCpp
     spdlog::spdlog
     TBB::tbb
-    GTest::gtest
   )
 
   # GTest module defines a macro for MRMesh and PCH must match it (but not for MSVC)

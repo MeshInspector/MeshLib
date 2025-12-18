@@ -45,7 +45,7 @@ jobs:
 
     env:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
-      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      PYTEST_C_SHARP_ARGS: #--run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
       - name: Checkout

@@ -102,7 +102,7 @@ public:
         {
             const auto& object = loadedObjects_.front();
             auto typeName = std::string( object->typeName() );
-            if ( typeName == SceneRootObject::TypeName() || ( typeName == Object::TypeName() && object->xf() == AffineXf3f() ) )
+            if ( typeName == SceneRootObject::StaticTypeName() || ( typeName == Object::StaticTypeName() && object->xf() == AffineXf3f() ) )
             {
                 scene = createRootFormObject( object );
                 constructed = false;

@@ -23,14 +23,14 @@ public:
     PointMeasurementObject( PointMeasurementObject&& ) noexcept = default;
     PointMeasurementObject& operator =( PointMeasurementObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "PointMeasurementObject"; }
-    const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "PointMeasurementObject"; }
+    const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Measure Point"; }
-    std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Measure Point"; }
+    std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Measure Points"; }
-    std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Measure Points"; }
+    std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     PointMeasurementObject( ProtectedStruct, const PointMeasurementObject& obj ) : PointMeasurementObject( obj )

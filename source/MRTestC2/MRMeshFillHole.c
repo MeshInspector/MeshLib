@@ -89,7 +89,7 @@ void testMeshFillHoleNicely( void )
 void testRightBoundary( void )
 {
     MR_Mesh* mesh = createMeshWithHoles();
-    MR_std_vector_std_vector_MR_EdgeId* loops = MR_findRightBoundary_const_MR_FaceBitSet_ptr( MR_Mesh_Get_topology( mesh ), NULL );
+    MR_std_vector_std_vector_MR_EdgeId* loops = MR_findRightBoundary( MR_Mesh_Get_topology( mesh ), NULL );
 
     TEST_ASSERT( MR_std_vector_std_vector_MR_EdgeId_Size( loops ) == 2 );
     const MR_std_vector_MR_EdgeId* loop = MR_std_vector_std_vector_MR_EdgeId_At( loops, 0 );

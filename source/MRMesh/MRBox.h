@@ -55,7 +55,9 @@ public:
     explicit Box( NoInit ) { }
     #endif
 
-    template <typename U>
+    // Here `V == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<V, U> )
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
 
     static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min, V( min + size ) }; }

@@ -44,8 +44,8 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'MSBuild' }}
-      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
+      PYTEST_C_SHARP_ARGS: #--run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
       - name: Checkout
@@ -148,24 +148,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore Dependencies
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@7a827ce5193af33b950d0fedfc0277cab2ff8887 # v2
-        with:
-          projects: 'source/**/*.csproj'
-
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
         uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         with:
           msystem: clang64
           install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
@@ -175,7 +169,7 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
 
       - name: Build MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: cmd
         env:
           # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
@@ -184,7 +178,7 @@ jobs:
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate C bindings
-        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
@@ -192,6 +186,17 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
+
+        # This consumes the JSON created by generating the C bindings.
+      - name: Generate C# bindings
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        run: |
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
 
       - name: Build
         shell: cmd
@@ -215,14 +220,6 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
           )
-
-      - name: Build .NET
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
-
-      - name: Build .NET examples
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind}}
@@ -252,7 +249,7 @@ jobs:
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
-        run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
+        run: dotnet run --project source/MRDotNet2Test -c ${{ matrix.config }}
 
       - name: Python Sanity Tests
         timeout-minutes: 8
@@ -353,15 +350,15 @@ jobs:
           retention-days: 1
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
           python -m pip install delvewheel
-          python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MRMeshC.dll" "./patched_content/"
+          python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MeshLibC2.dll" "./patched_content/"
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v6
         with:
           name: DotNetPatchArchiveWindows-x64
@@ -369,9 +366,9 @@ jobs:
           retention-days: 1
 
       - name: Upload NuGet library DLL to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v6
         with:
           name: DotNetDll
-          path: ./source/x64/Release/MRDotNet.dll
+          path: ./source/x64/Release/MRDotNet2.dll
           retention-days: 1

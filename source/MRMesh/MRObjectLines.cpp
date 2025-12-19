@@ -78,7 +78,7 @@ void ObjectLines::swapSignals_( Object& other )
 void ObjectLines::serializeFields_( Json::Value& root ) const
 {
     ObjectLinesHolder::serializeFields_( root );
-    root["Type"].append( ObjectLines::TypeName() );
+    root["Type"].append( ObjectLines::StaticTypeName() );
 }
 
 std::vector<std::string> ObjectLines::getInfoLines() const

@@ -229,7 +229,7 @@ std::optional<Vector3<T>> findTriangleTriangleIntersection(
 }
 
 template <typename T>
-std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
+std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
     const IntersectionPrecomputes<T>& prec )
 {
     const T& Sx = prec.Sx;
@@ -270,30 +270,19 @@ std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA,
     return TriIntersectResult( float( V * invDet ), float( W * invDet ), float( t * invDet ) );
 }
 
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3f& oriA, const Vector3f& oriB, const Vector3f& oriC,
-    const IntersectionPrecomputes<float>& prec )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<float >& oriA, const Vector3<float >& oriB, const Vector3<float >& oriC, const IntersectionPrecomputes<float >& prec ) )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<double>& oriA, const Vector3<double>& oriB, const Vector3<double>& oriC, const IntersectionPrecomputes<double>& prec ) )
+
+template <typename T>
+std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
+    const Vector3<T>& dir )
 {
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
-}
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3f& oriA, const Vector3f& oriB, const Vector3f& oriC,
-    const Vector3f& dir )
-{
-    const IntersectionPrecomputes<float> prec( dir );
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
+    const IntersectionPrecomputes<T> prec( dir );
+    return rayTriangleIntersect( oriA, oriB, oriC, prec );
 }
 
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3d& oriA, const Vector3d& oriB, const Vector3d& oriC,
-    const IntersectionPrecomputes<double>& prec )
-{
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
-}
-
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3d& oriA, const Vector3d& oriB, const Vector3d& oriC,
-    const Vector3d& dir )
-{
-    const IntersectionPrecomputes<double> prec( dir );
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
-}
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<float >& oriA, const Vector3<float >& oriB, const Vector3<float >& oriC, const Vector3<float >& dir ) )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<double>& oriA, const Vector3<double>& oriB, const Vector3<double>& oriC, const Vector3<double>& dir ) )
 
 /// \}
 

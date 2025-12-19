@@ -696,6 +696,43 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     timer.restart( "prepare model triangulation" );
 
+    assert( !materialScope.empty() );
+    assert( materialScope.back().fId >= maxFace );
+    size_t materialScopeId = 0;
+    while ( materialScope[materialScopeId].fId < minFace && materialScope[materialScopeId + 1].fId < minFace )
+        ++materialScopeId;
+
+    bool contradictingDiffuseColors = false;
+    auto addCurrentMaterial = [&]()
+    {
+        if ( !mtl )
+            return;
+        auto mIt = mtl->find( materialScope[materialScopeId].mtName );
+        if ( mIt == mtl->end() )
+            return;
+        if ( !contradictingDiffuseColors )
+        {
+            if ( mIt->second.diffuseColor == Vector3f::diagonal( -1.0f ) )
+            {
+                res.diffuseColor.reset();
+                contradictingDiffuseColors = true;
+                return;
+            }
+            if ( !res.diffuseColor )
+            {
+                res.diffuseColor = Color( mIt->second.diffuseColor );
+                return;
+            }
+            else if ( *res.diffuseColor != Color( mIt->second.diffuseColor ) )
+            {
+                res.diffuseColor.reset();
+                contradictingDiffuseColors = true;
+                return;
+            }
+        }
+    };
+    addCurrentMaterial();
+
     const auto numFaces = maxFace - minFace;
     assert( maxObjVert - minObjVert >= 3 * numFaces );
     const auto numTris = numFaces + ( maxObjVert - minObjVert - 3 * numFaces );
@@ -703,6 +740,11 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     t.reserve( numTris );
     for ( size_t i = minFace; i < maxFace; ++i )
     {
+        if ( i == materialScope[materialScopeId + 1].fId )
+        {
+            ++materialScopeId;
+            addCurrentMaterial();
+        }
         const auto nv = faces.numVerts( i );
         assert ( nv >= 3 );
         for ( int j = 1; j + 1 < nv; ++j )
@@ -711,24 +753,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                            VertId( faces.getVert( i, j + 1 ) ) } );
     }
     assert( t.size() == numTris );
-
-/*    for ( const auto& mf : materialFaces )
-    {
-        auto mIt = mtl->find( materialScope[mf.mScopeId].mtName );
-        if ( mIt == mtl->end() )
-            break;
-        if ( mIt->second.diffuseColor == Vector3f::diagonal( -1.0f ) )
-            break;
-        if ( !res.diffuseColor )
-        {
-            res.diffuseColor = Color( mIt->second.diffuseColor );
-        }
-        else if ( *res.diffuseColor != Color( mIt->second.diffuseColor ) )
-        {
-            res.diffuseColor = std::nullopt;
-            break;
-        }
-    }*/
 
     if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
@@ -1038,6 +1062,9 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     };
 
     timer.finish();
+
+    // put sentinel at the end
+    mScopes.push_back( { .fId = faces.size() } );
 
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;

@@ -20,6 +20,7 @@ constexpr int MaxErrorStringLen = 80;
 template <typename T>
 Expected<void> readFromStream( std::istream& in, T& out )
 {
+    MR_TIMER;
     const auto streamSize = getStreamSize( in );
     if ( !in )
         return unexpected( std::string( "File read error" ) );

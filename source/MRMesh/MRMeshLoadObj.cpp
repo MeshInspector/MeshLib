@@ -761,7 +761,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         res.texturePerFace.reserve( numTris );
     for ( size_t i = minFace; i < maxFace; ++i )
     {
-        if ( i == materialScope[materialScopeId + 1].fId )
+        if ( materialScope[materialScopeId].fId < i && i == materialScope[materialScopeId + 1].fId )
         {
             ++materialScopeId;
             addCurrentMaterial();

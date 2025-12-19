@@ -702,6 +702,10 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     while ( materialScope[materialScopeId].fId < minFace && materialScope[materialScopeId + 1].fId < minFace )
         ++materialScopeId;
 
+    HashMap<std::string, TextureId> texMap;
+    TextureId currTextureId;
+    auto nextTextureId = TextureId( 0 );
+    bool missingTextureFiles = false;
     bool contradictingDiffuseColors = false;
     auto addCurrentMaterial = [&]()
     {
@@ -729,6 +733,19 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                 contradictingDiffuseColors = true;
                 return;
             }
+        }
+        if ( !missingTextureFiles )
+        {
+            if ( mIt->second.diffuseTextureFile.empty() )
+            {
+                texMap.clear();
+                missingTextureFiles = true;
+                return;
+            }
+            auto [it, inserted] = texMap.insert( { mIt->second.diffuseTextureFile, nextTextureId } );
+            currTextureId = it->second;
+            if ( inserted )
+                ++nextTextureId;
         }
     };
     addCurrentMaterial();
@@ -787,7 +804,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             return unexpectedOperationCanceled();
 
         timer.restart( "update textures" );
-        HashMap<std::string, TextureId>  texMap;
         for ( const auto& mf : materialFaces )
         {
             auto mIt = mtl->find( materialScope[mf.mScopeId].mtName );

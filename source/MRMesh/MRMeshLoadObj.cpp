@@ -829,7 +829,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    Expected<MtlLibrary> mtl; // all materials
+    Expected<MtlLibrary> mtl = unexpected( "absent" ); // all materials
 
     std::string parseError;
 

@@ -91,13 +91,13 @@ using RequirementsFunction = std::function<std::string( const std::shared_ptr<Ri
 using FontAndSize = std::pair<ImFont*, float>;
 
 // this is needed as far as MAKE_SLOT cannot be used with movable classes
-#define MR_DELETE_MOVE(ClassName)\
-ClassName(ClassName&&)noexcept = delete;\
-ClassName& operator=(ClassName&&)noexcept = delete
+#define MR_DELETE_MOVE(StaticClassName)\
+StaticClassName(StaticClassName&&)noexcept = delete;\
+StaticClassName& operator=(StaticClassName&&)noexcept = delete
 
-#define MR_ADD_CTOR_DELETE_MOVE(ClassName)\
-ClassName()=default;\
-ClassName(ClassName&&)noexcept = delete;\
-ClassName& operator=(ClassName&&)noexcept = delete
+#define MR_ADD_CTOR_DELETE_MOVE(StaticClassName)\
+StaticClassName()=default;\
+StaticClassName(StaticClassName&&)noexcept = delete;\
+StaticClassName& operator=(StaticClassName&&)noexcept = delete
 
 } //namespace MR

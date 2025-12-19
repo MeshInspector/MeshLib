@@ -163,19 +163,22 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float area( FaceId f ) const { return MR::area( topology, points, f ); }
 
     /// computes the area of given face-region
-    [[nodiscard]] double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
 
     /// computes the area of given face-region (or whole mesh)
     [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return MR::area( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region
-    [[nodiscard]] Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region (or whole mesh)
     [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region as visible if look from given direction
-    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
     [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return MR::projArea( topology, points, dir, fs ); }

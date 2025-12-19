@@ -125,7 +125,7 @@ void ObjectDistanceMap::serializeFields_( Json::Value& root ) const
     serializeToJson( dmap2local_.A.col( 2 ), root["DepthVec"] );
     serializeToJson( dmap2local_.b, root["OriginWorld"] );
 
-    root["Type"].append( ObjectDistanceMap::TypeName() );
+    root["Type"].append( ObjectDistanceMap::StaticTypeName() );
 }
 
 void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
@@ -162,7 +162,7 @@ Expected<void> ObjectDistanceMap::deserializeModel_( const std::filesystem::path
     auto res = DistanceMapLoad::fromAnySupportedFormat( modelPath, { .progress = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
-    
+
     dmap_ = std::make_shared<DistanceMap>( res.value() );
     return {};
 }

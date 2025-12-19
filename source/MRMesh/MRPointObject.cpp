@@ -67,7 +67,7 @@ void PointObject::swapBase_( Object& other )
 void PointObject::serializeFields_( Json::Value& root ) const
 {
     FeatureObject::serializeFields_( root );
-    root["Type"].append( PointObject::TypeName() );
+    root["Type"].append( PointObject::StaticTypeName() );
 }
 
 void PointObject::setupRenderObject_() const

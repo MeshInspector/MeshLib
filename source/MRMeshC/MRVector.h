@@ -16,18 +16,18 @@ MR_EXTERN_C_BEGIN
 ///    to deallocate it manually
 ///  - if any operation resizes the underlying vector, the data pointer might be invalidated; it's better to call
 ///    mrVector*Invalidate to update the pointer after any operation with the vector
-#define MR_VECTOR_LIKE_DECL_NONS( ClassName, Type )   \
-typedef struct MR_VECTOR_CONCAT( MR, ClassName ) \
+#define MR_VECTOR_LIKE_DECL_NONS( StaticClassName, Type )   \
+typedef struct MR_VECTOR_CONCAT( MR, StaticClassName ) \
 {                                                \
     Type* data;                                  \
     size_t size;                                 \
     void* reserved1;                             \
-} MR_VECTOR_CONCAT( MR, ClassName );             \
-MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), Invalidate )( MR_VECTOR_CONCAT( MR, ClassName )* ); \
-MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), Free )( MR_VECTOR_CONCAT( MR, ClassName )* ); \
-MRMESHC_API MR_VECTOR_CONCAT( MR, ClassName )* MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), New )(void);
+} MR_VECTOR_CONCAT( MR, StaticClassName );             \
+MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, StaticClassName ), Invalidate )( MR_VECTOR_CONCAT( MR, StaticClassName )* ); \
+MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, StaticClassName ), Free )( MR_VECTOR_CONCAT( MR, StaticClassName )* ); \
+MRMESHC_API MR_VECTOR_CONCAT( MR, StaticClassName )* MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, StaticClassName ), New )(void);
 
-#define MR_VECTOR_LIKE_DECL( ClassName, Type ) MR_VECTOR_LIKE_DECL_NONS( ClassName, MR_VECTOR_CONCAT( MR, Type ) )
+#define MR_VECTOR_LIKE_DECL( StaticClassName, Type ) MR_VECTOR_LIKE_DECL_NONS( StaticClassName, MR_VECTOR_CONCAT( MR, Type ) )
 #define MR_VECTOR_DECL( Type ) MR_VECTOR_LIKE_DECL_NONS( MR_VECTOR_CONCAT( Vector, Type ), MR_VECTOR_CONCAT( MR, Type ) )
 
 MR_VECTOR_DECL( AffineXf3f )

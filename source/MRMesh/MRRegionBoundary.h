@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRId.h"
 
@@ -21,20 +22,23 @@ namespace MR
 /// returns all region boundary loops;
 /// every loop has region faces on the left, and not-region faces or holes on the right
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
-[[nodiscard]] inline std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet & region )
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MR_BIND_IGNORE inline std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet & region )
     { return findLeftBoundary( topology, &region ); }
 
 /// returns all region boundary loops;
 /// every loop has region faces on the right, and not-region faces or holes on the left
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
-[[nodiscard]] inline std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet & region )
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MR_BIND_IGNORE inline std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet & region )
     { return findRightBoundary( topology, &region ); }
 
 /// deletes all region faces, inner edges and vertices, but keeps boundary edges and vertices of the region (or whole mesh if region is null);
 /// if `keepLoneHoles` is set - keeps boundary even if it has no valid faces on other side
 /// returns edge loops, each having deleted region faces on the left, and not-region faces or holes on the right
 MRMESH_API std::vector<EdgeLoop> delRegionKeepBd( Mesh& mesh, const FaceBitSet* region = nullptr, bool keepLoneHoles = false );
-inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet & region, bool keepLoneHoles = false )
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+MR_BIND_IGNORE inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet & region, bool keepLoneHoles = false )
     { return delRegionKeepBd( mesh, &region, keepLoneHoles ); }
 
 /// returns all region boundary paths;
@@ -58,7 +62,8 @@ inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet & re
 [[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * region = nullptr );
 
 /// composes the set of all vertices not on the boundary of a hole and with all their adjacent faces in given set
-[[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & region );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & region );
 
 /// composes the set of all boundary vertices for given region (or whole mesh if !region)
 [[nodiscard]] MRMESH_API VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region = nullptr );

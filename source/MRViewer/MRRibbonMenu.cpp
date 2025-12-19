@@ -531,6 +531,7 @@ void RibbonMenu::drawHeaderPannel_()
 
     float availWidth = 0.0f;
     {
+        font.popFont();
         auto backupPos = ImGui::GetCursorPos();
         ImGui::PopStyleVar( 2 ); // draw helpers with default style
         availWidth = drawHeaderHelpers_( summaryTabPannelSize );
@@ -538,6 +539,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImGui::PushStyleVar( ImGuiStyleVar_TabRounding, cTabFrameRounding * UI::scale() );
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
         ImGui::SetCursorPos( backupPos );
+        font.pushFont();
     }
 
     float scrollMax = summaryTabPannelSize - availWidth;

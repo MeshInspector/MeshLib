@@ -512,23 +512,16 @@ struct ObjectScope
 
 struct VertexRepr
 {
-    int vId{ 0 };
-    int vtId{ 0 };
+    int vId;
+    int vtId;
     // int vnId{0}; // not used yet
+    VertexRepr( int vId = 0, int vtId = 0 ) : vId( vId ), vtId( vtId ) {}
+    VertexRepr( NoInit ) {}
+
     bool operator==( const VertexRepr& o ) const = default;
     bool operator<( const VertexRepr& o ) const
     {
         return std::tuple( vId, vtId ) < std::tuple( o.vId, o.vtId );
-    }
-};
-
-struct VertexReprHasher
-{
-    size_t operator()( VertexRepr const& vr ) const noexcept
-    {
-        std::uint64_t vvt;
-        std::memcpy( &vvt, &vr.vId, sizeof( std::uint64_t ) );
-        return size_t( vvt );
     }
 };
 
@@ -563,7 +556,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     haveColors = firstVert < colors.size();
 
 
-    Timer timer( "prepare unique vertices" );
+    Timer timer( "prepare VertexRepr" );
 
     auto getVertexRepr = [&] ( size_t fId, int ind ) -> Expected<VertexRepr>
     {
@@ -591,10 +584,15 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     std::string error;
     tbb::task_group_context ctx;
-    tbb::enumerable_thread_specific<std::vector<VertexRepr>> tlOrderedPoints;
+
+    std::vector<VertexRepr> orderedPoints;
+    const auto minObjVert = faces.face2vert[minFace];
+    const auto maxObjVert = faces.face2vert[maxFace];
+    resizeNoInit( orderedPoints, maxObjVert - minObjVert );
+
     tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& local = tlOrderedPoints.local();
+        auto pos = faces.face2vert[range.begin()] - minObjVert;
         for ( size_t fId = range.begin(); fId < range.end(); ++fId )
         {
             const auto nv = faces.numVerts( fId );
@@ -606,6 +604,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             }
             for ( int ind = 0; ind < nv; ++ind )
             {
+                assert( pos + minObjVert == faces.face2vert[fId] + ind );
                 auto repr = getVertexRepr( fId, ind );
                 if ( !repr )
                 {
@@ -613,61 +612,41 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                         error = std::move( repr.error() );
                     return;
                 }
-                local.emplace_back( *repr );
+                orderedPoints[pos++] = *repr;
             }
         }
     }, ctx );
 
-    if ( !reportProgress( settings.callback, 0.2f ) )
-        return unexpectedOperationCanceled();
-
     if ( !error.empty() )
         return unexpected( error );
 
-    size_t sumOVsSize = 0;
-    for ( const auto& localPoints : tlOrderedPoints )
-        sumOVsSize += localPoints.size();
-    std::vector<VertexRepr> orderedPoints;
-    orderedPoints.reserve( sumOVsSize );
-    for ( auto& localPoints : tlOrderedPoints )
-        orderedPoints.insert( orderedPoints.end(), std::make_move_iterator( localPoints.begin() ), std::make_move_iterator( localPoints.end() ) );
-    tlOrderedPoints = {}; // reduce peak memory
+    if ( !reportProgress( settings.callback, 0.2f ) )
+        return unexpectedOperationCanceled();
+
+    timer.restart( "keep unique VertexRepr" );
+
     tbb::parallel_sort( orderedPoints.begin(), orderedPoints.end() );
 
     orderedPoints.erase( std::unique( orderedPoints.begin(), orderedPoints.end() ), orderedPoints.end() );
 
-    using ParallelIndicesMap = ParallelHashMap<VertexRepr, VertId, VertexReprHasher>;
-    ParallelIndicesMap map;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, map.subcnt(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        for ( size_t mId = range.begin(); mId < range.end(); ++mId )
-        {
-            for ( size_t i = 0; i < orderedPoints.size(); ++i )
-            {
-                auto hash = map.hash( orderedPoints[i] );
-                if ( mId != map.subidx( hash ) )
-                    continue;
-                map.insert( { orderedPoints[i],VertId( i ) } );
-            }
-        }
-    } );
-
-    size_t numCoords = orderedPoints.size();
-    if ( numCoords == 0 )
+    size_t numOrderedPoints = orderedPoints.size();
+    if ( numOrderedPoints == 0 )
         return unexpected( "No vertex found in OBJ-file" );
+
+    if ( !reportProgress( settings.callback, 0.25f ) )
+        return unexpectedOperationCanceled();
+
+    timer.restart( "copy vertex attributes" );
+
+    MeshLoad::NamedMesh res;
+    VertCoords coords;
+    coords.resizeNoInit( numOrderedPoints );
+    res.colors.resize( haveColors ? coords.size() : 0 );
+    res.uvCoords.resize( haveUVs ? coords.size() : 0 );
 
     MinMax<int> minmaxV;
     minmaxV.min = orderedPoints.front().vId;
     minmaxV.max = orderedPoints.back().vId;
-    orderedPoints = {}; // reduce peak memory
-
-    if ( !reportProgress( settings.callback, 0.3f ) )
-        return unexpectedOperationCanceled();
-
-    MeshLoad::NamedMesh res;
-    VertCoords coords( numCoords );
-    res.colors.resize( haveColors ? coords.size() : 0 );
-    res.uvCoords.resize( haveUVs ? coords.size() : 0 );
 
     // set vertices and attributes first
     Vector3d pointOffset;
@@ -680,22 +659,18 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         res.xf = AffineXf3f::translation( Vector3f( pointOffset ) );
     }
 
-    ParallelFor( size_t( 0 ), map.subcnt(), [&] ( size_t id )
+    ParallelFor( orderedPoints, [&] ( size_t i )
     {
-        map.with_submap( id, [&] ( const ParallelIndicesMap::EmbeddedSet& subset )
-        {
-            for ( const auto& [repr, vId] : subset )
-            {
-                coords[vId] = Vector3f( points[VertId( repr.vId )] - pointOffset );
-                if ( haveColors && repr.vId < colors.size() )
-                    res.colors[vId] = colors[repr.vId];
-                if ( haveUVs && repr.vtId < uvCoords.size() )
-                    res.uvCoords[vId] = uvCoords[repr.vtId];
-            }
-        } );
+        const auto & repr = orderedPoints[i];
+        VertId vId( i );
+        coords[vId] = Vector3f( points[VertId( repr.vId )] - pointOffset );
+        if ( haveColors && repr.vId < colors.size() )
+            res.colors[vId] = colors[repr.vId];
+        if ( haveUVs && repr.vtId < uvCoords.size() )
+            res.uvCoords[vId] = uvCoords[repr.vtId];
     } );
 
-    if ( !reportProgress( settings.callback, 0.4f ) )
+    if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
 
     timer.restart( "replace vertex ids" );
@@ -708,13 +683,15 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         {
             auto repr = getVertexRepr( f, v );
             assert( repr.has_value() );
-            auto it = map.find( *repr );
-            assert( it != map.end() );
-            faces.getVert( f, v ) = it->second;
+            auto it = std::lower_bound( orderedPoints.begin(), orderedPoints.end(), *repr );
+            assert( it != orderedPoints.end() && *it == repr );
+            faces.getVert( f, v ) = VertId( it - orderedPoints.begin() );
         }
     } );
 
-    if ( !reportProgress( settings.callback, 0.45f ) )
+    orderedPoints = {}; // reduce peak memory
+
+    if ( !reportProgress( settings.callback, 0.4f ) )
         return unexpectedOperationCanceled();
 
     timer.restart( "prepare model triangulation" );

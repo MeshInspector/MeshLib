@@ -696,106 +696,23 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     timer.restart( "prepare model triangulation" );
 
-    // triangulation
-    struct OrderedMaterial
-    {
-        int mScopeId{ 0 };
-        size_t fId{ 0 };
-        // for ordering
-        size_t orderedTriangulationStartF = 0;
-        size_t orderedTriangulationOffset = 0;
-    };
-    std::vector<OrderedMaterial> materialFaces;
-    if ( mtl )
-    {
-        MinMax<int> minmaxMtl;
-        for ( int i = 0; i < materialScope.size(); ++i )
-        {
-            if ( materialScope[i].fId >= maxFace )
-                break;
-            if ( materialScope[i].fId <= minFace )
-                minmaxMtl.max = minmaxMtl.min = i;
-            else if ( materialScope[i].fId < maxFace )
-                minmaxMtl.max = i;
-        }
-        if ( minmaxMtl.valid() )
-        {
-            materialFaces.resize( minmaxMtl.max - minmaxMtl.min + 1 );
-            for ( int i = minmaxMtl.min; i <= minmaxMtl.max; ++i )
-                materialFaces[i - minmaxMtl.min] = { i,materialScope[i].fId };
-        }
-    }
-
-    struct OrderedTriangulation
-    {
-        size_t startF{ 0 };
-        Triangulation t;
-    };
-    tbb::enumerable_thread_specific<std::vector<OrderedTriangulation>> tls;
-    tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        auto& local = tls.local();
-        auto& thisOT = local.emplace_back();
-        thisOT.startF = range.begin();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            if ( !materialFaces.empty() && i <= materialFaces.back().fId )
-            {
-                for ( int mi = 0; mi < materialFaces.size(); ++mi )
-                {
-                    if ( i == materialFaces[mi].fId )
-                    {
-                        // should be thread safe
-                        materialFaces[mi].orderedTriangulationStartF = thisOT.startF;
-                        materialFaces[mi].orderedTriangulationOffset = thisOT.t.size();
-                    }
-                }
-            }
-            const auto nv = faces.numVerts( i );
-            assert ( nv >= 3 );
-            for ( int j = 1; j + 1 < nv; ++j )
-                thisOT.t.push_back( { VertId( faces.getVert( i, 0 ) ),
-                                      VertId( faces.getVert( i, j ) ),
-                                      VertId( faces.getVert( i, j + 1 ) ) } );
-        }
-    } );
-
-    if ( !reportProgress( settings.callback, 0.5f ) )
-        return unexpectedOperationCanceled();
-
-    size_t sumOTsSize = 0;
-    for ( const auto& local : tls )
-        sumOTsSize += local.size();
-
-    std::vector<OrderedTriangulation> mergedOT;
-    mergedOT.reserve( sumOTsSize );
-    for ( auto& local : tls )
-        mergedOT.insert( mergedOT.end(), std::make_move_iterator( local.begin() ), std::make_move_iterator( local.end() ) );
-
-    tls = {}; // reduce peak memory
-
-    tbb::parallel_sort( mergedOT.begin(), mergedOT.end(), [] ( const auto& l, const auto& r ) { return l.startF < r.startF; } );
-    size_t sumFaceSize = 0;
-    for ( const auto& ot : mergedOT )
-    {
-        if ( !materialFaces.empty() && ot.startF <= materialFaces.back().orderedTriangulationStartF )
-        {
-            for ( int mi = 0; mi < materialFaces.size(); ++mi )
-            {
-                if ( ot.startF == materialFaces[mi].orderedTriangulationStartF )
-                    materialFaces[mi].orderedTriangulationOffset += sumFaceSize;
-            }
-        }
-        sumFaceSize += ot.t.size();
-    }
+    const auto numFaces = maxFace - minFace;
+    assert( maxObjVert - minObjVert >= 3 * numFaces );
+    const auto numTris = numFaces + ( maxObjVert - minObjVert - 3 * numFaces );
     Triangulation t;
-    t.reserve( sumFaceSize );
-    for ( auto& ot : mergedOT )
-        t.vec_.insert( t.vec_.end(), std::make_move_iterator( ot.t.vec_.begin() ), std::make_move_iterator( ot.t.vec_.end() ) );
+    t.reserve( numTris );
+    for ( size_t i = minFace; i < maxFace; ++i )
+    {
+        const auto nv = faces.numVerts( i );
+        assert ( nv >= 3 );
+        for ( int j = 1; j + 1 < nv; ++j )
+            t.push_back( { VertId( faces.getVert( i, 0 ) ),
+                           VertId( faces.getVert( i, j ) ),
+                           VertId( faces.getVert( i, j + 1 ) ) } );
+    }
+    assert( t.size() == numTris );
 
-    mergedOT = {}; // reduce peak memory
-
-    for ( const auto& mf : materialFaces )
+/*    for ( const auto& mf : materialFaces )
     {
         auto mIt = mtl->find( materialScope[mf.mScopeId].mtName );
         if ( mIt == mtl->end() )
@@ -811,7 +728,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             res.diffuseColor = std::nullopt;
             break;
         }
-    }
+    }*/
 
     if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
@@ -837,7 +754,10 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         }
     }
 
-    if ( mtl )
+    (void)mtl;
+    (void)materialScope;
+    (void)dir;
+/*    if ( mtl )
     {
         if ( !reportProgress( settings.callback, 0.9f ) )
             return unexpectedOperationCanceled();
@@ -876,7 +796,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                 res.texturePerFace.vec_.insert( res.texturePerFace.vec_.end(), numFaces, textId );
             }
         }
-    }
+    }*/
 
     return res;
 }

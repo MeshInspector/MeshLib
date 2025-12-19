@@ -20,6 +20,7 @@
 #include <boost/spirit/home/x3.hpp>
 
 #include <map>
+#include <iostream>
 
 namespace MR
 {
@@ -701,6 +702,14 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     size_t materialScopeId = 0;
     while ( materialScope[materialScopeId].fId < minFace && materialScope[materialScopeId + 1].fId < minFace )
         ++materialScopeId;
+    std::cout << "materialScopeId=" << materialScopeId << std::endl;
+    std::cout << "materialScope.size()=" << materialScope.size() << std::endl;
+    std::cout << "materialScope[materialScopeId].mtName=" << materialScope[materialScopeId].mtName << std::endl;
+    std::cout << "mtl=" << mtl << std::endl;
+    if ( mtl )
+    {
+        std::cout << "mtlFind=" << ( mtl->find( materialScope[materialScopeId].mtName ) == mtl->end() ) << std::endl;
+    }
 
     HashMap<std::string, TextureId> texMap;
     TextureId currTextureId;
@@ -829,7 +838,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    Expected<MtlLibrary> mtl = unexpected( "absent" ); // all materials
+    Expected<MtlLibrary> mtl; // all materials
 
     std::string parseError;
 

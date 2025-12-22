@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Reflection;
-using static MR.DotNet;
 
 public class MeshOffsetExample
 {
@@ -19,17 +18,25 @@ public class MeshOffsetExample
                       CultureInfo.InvariantCulture);
 
             // Load mesh
-            MeshPart mp = new MeshPart(MeshLoad.FromAnySupportedFormat("mesh.stl"));
+            MR.Expected_MRMesh_StdString mesh_ex = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
+            if (mesh_ex.GetError() is var mesh_error and not null)
+                throw new Exception(mesh_error);
+
+            MR.MeshPart mp = new(mesh_ex.GetValue()!);
 
             // Setup parameters
-            OffsetParameters op = new OffsetParameters();
-            op.voxelSize = Offset.SuggestVoxelSize(mp, 1e6f);
+            MR.OffsetParameters op = new();
+            op.VoxelSize = MR.SuggestVoxelSize(mp, 1e6f);
 
             // Make offset mesh
-            var result = Offset.OffsetMesh(mp, offsetValue, op);
+            MR.Expected_MRMesh_StdString result_ex = MR.OffsetMesh(mp, offsetValue, op);
+            if (result_ex.GetError() is var result_error and not null)
+                throw new Exception(result_error);
 
             // Save result
-            MeshSave.ToAnySupportedFormat(result, "mesh_offset.stl");
+            MR.Expected_Void_StdString save_ex = MR.MeshSave.ToAnySupportedFormat(result_ex.GetValue()!, "mesh_offset.stl");
+            if (save_ex.GetError() is var save_error and not null)
+                throw new Exception(save_error);
         }
         catch (Exception e)
         {

@@ -1,23 +1,23 @@
-﻿using static MR.DotNet;
-
-public static class MeshExportExample
+﻿public static class MeshExportExample
 {
     public static void Run(string[] args)
     {
         try
         {
-            var mesh = Mesh.MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
+            MR.Mesh mesh = MR.MakeCube(MR.Vector3f.Diagonal(1), MR.Vector3f.Diagonal(-0.5f));
             Console.WriteLine("Vertices coordinates:");
-            for ( int i = 0; i < mesh.Points.Count; ++i )
+            for (ulong i = 0; i < mesh.Points.Size(); ++i)
             {
-                var p = mesh.Points[i];
-                Console.WriteLine( "Vertex {0} coordinates: {1}; {2}; {3}", i, p.X, p.Y, p.Z );
+                var p = mesh.Points.Index(new MR.VertId(i));
+                Console.WriteLine("Vertex {0} coordinates: {1}; {2}; {3}", i, p.X, p.Y, p.Z);
             }
 
-            for ( int i = 0; i < mesh.Triangulation.Count; ++i )
+            MR.Triangulation tri = mesh.Topology.GetTriangulation();
+
+            for (ulong i = 0; i < tri.Size(); ++i)
             {
-                var t = mesh.Triangulation[i];
-                Console.WriteLine( "Triangle {0} vertices: {1}; {2}; {3}", i, t.v0.Id, t.v1.Id, t.v2.Id );
+                var t = tri.Index(new MR.FaceId(i));
+                Console.WriteLine("Triangle {0} vertices: {1}; {2}; {3}", i, t.Elems._0.Id, t.Elems._1.Id, t.Elems._2.Id);
             }
         }
         catch (Exception e)

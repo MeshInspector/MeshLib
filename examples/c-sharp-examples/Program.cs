@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Globalization;
+using System.Reflection;
 
 internal class Program
 {
@@ -8,7 +9,7 @@ internal class Program
         var types = assembly.GetTypes();
         var exampleNames = types.Select(t => t.Name).Where(t => t.EndsWith("Example"));
 
-        if (args.Length < 1 || exampleNames.Contains(args[0]) == false )
+        if (args.Length < 1 || exampleNames.Contains(args[0]) == false)
         {
             Console.WriteLine("Usage: {0} EXAMPLE_NAME [ARGS...]", Assembly.GetExecutingAssembly().GetName().Name);
             Console.WriteLine("Available examples:");
@@ -17,13 +18,13 @@ internal class Program
                 Console.WriteLine("\t{0}", exampleName);
             }
             return;
-        }        
+        }
 
         foreach (var type in types)
         {
             if (type.Name == args[0])
             {
-                MethodInfo runMethod = type.GetMethod("Run", BindingFlags.Static | BindingFlags.Public);
+                MethodInfo? runMethod = type.GetMethod("Run", BindingFlags.Static | BindingFlags.Public);
                 if (runMethod == null)
                 {
                     Console.WriteLine($"Run Method not found in {type.Name}.");

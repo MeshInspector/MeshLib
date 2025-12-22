@@ -36,6 +36,7 @@ enum class ObjElement
     TextureVertex,
     MaterialLibrary,
     MaterialName,
+    Comment
 };
 
 enum class MtlElement
@@ -90,6 +91,8 @@ ObjElement parseToken<ObjElement>( std::string_view line )
         if ( line.starts_with( "mtllib" ) )
             return ObjElement::MaterialLibrary;
         return ObjElement::Unknown;
+    case '#':
+        return ObjElement::Comment;
     default:
         return ObjElement::Unknown;
     }
@@ -1027,7 +1030,34 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         }, ctx );
     };
 
+    auto telemetryCommentSignal = [&] ( size_t begin, size_t end )
+    {
+        for ( size_t li = begin; li < end; ++li )
+        {
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            while ( !line.empty() && ( line[0] == '#' || line[0] == ' ' || line[0] == '\t' ) )
+                line.remove_prefix( 1 );
+            while ( !line.empty() && ( line.back() == ' ' || line.back() == '\t' || line.back() == '\r' || line.back() == '\n' ) )
+                line.remove_suffix( 1 );
+            if ( line.empty() )
+                continue;
+            TelemetrySignal( "OBJ comment " + std::string( line ) );
+            break;
+        }
+    };
+
     sb = subprogress( settings.callback, 0.3f, 0.5f );
+    if ( settings.telemetrySignal )
+    {
+        for ( const auto& g : groups )
+        {
+            if ( g.element == ObjElement::Unknown )
+                continue;
+            if ( g.element == ObjElement::Comment )
+                telemetryCommentSignal( g.begin, g.end );
+            break;
+        }
+    }
     groupId = 0;
     for ( const auto& g : groups )
     {

@@ -214,7 +214,7 @@ jobs:
             if errorlevel 1 exit 1
             if not exist source\x64 mkdir source\x64
             if errorlevel 1 exit 1
-            move source\TempOutput\bin source\x64\${{matrix.config}}
+            move source\TempOutput\bin\* source\x64\${{matrix.config}}
             if errorlevel 1 exit 1
           ) else (
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}

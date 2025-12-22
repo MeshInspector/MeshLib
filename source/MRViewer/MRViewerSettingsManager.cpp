@@ -543,8 +543,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         setDefaultSerializeMeshFormat( format );
         format = loadString( cMruInnerPointsFormat, ".ply" );
         setDefaultSerializePointsFormat( format );
+        #ifndef MRVIEWER_NO_VOXELS
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
+        #endif
     }
 
     if ( cfg.hasJsonValue( cVisualObjectTags ) )

@@ -12,9 +12,9 @@
 #include "MRTimer.h"
 #include "MRphmap.h"
 #include "MRString.h"
-#include "MRPch/MRFmt.h"
-#include "MRPch/MRTBB.h"
 #include "MRParallelFor.h"
+#include "MRTelemetry.h"
+#include "MRPch/MRFmt.h"
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
@@ -525,6 +525,35 @@ struct VertexRepr
     }
 };
 
+/// same as std::unqiue( vec.begin(), vec.end() ), but also checks whether all
+/// vertices have unique UV-coordinates, or per-corner texture rendering is required (perVertexUVs = false)
+auto uniqueOrderedPoints( std::vector<VertexRepr> & vec, bool& perVertexUVs )
+{
+    MR_TIMER;
+    perVertexUVs = true;
+    auto next = vec.begin();
+    auto last = vec.end();
+    if ( next == last )
+        return last;
+
+    for ( auto prev = next; ++next != last; prev = next )
+    {
+        if ( *prev == *next )
+        {
+            while ( ++next != last )
+                if ( *prev != *next )
+                {
+                    if ( perVertexUVs && prev->vId == next->vId )
+                        perVertexUVs = false;
+                    *++prev = std::move( *next );
+                }
+            return ++prev;
+        }
+    }
+
+    return last;
+}
+
 Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const std::filesystem::path& dir,
     const Vector<Vector3d, VertId>& points,  // all points from file
@@ -554,7 +583,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( firstVert < 0 || firstVert >= points.size() )
         return unexpected( "Out of bounds Vertex ID in OBJ-file" );
     haveColors = firstVert < colors.size();
-
 
     Timer timer( "prepare VertexRepr" );
 
@@ -627,7 +655,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     tbb::parallel_sort( orderedPoints.begin(), orderedPoints.end() );
 
-    orderedPoints.erase( std::unique( orderedPoints.begin(), orderedPoints.end() ), orderedPoints.end() );
+    bool perVertexUVs = true;
+    orderedPoints.erase( uniqueOrderedPoints( orderedPoints, perVertexUVs ), orderedPoints.end() );
 
     size_t numOrderedPoints = orderedPoints.size();
     if ( numOrderedPoints == 0 )
@@ -635,6 +664,12 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     if ( !reportProgress( settings.callback, 0.25f ) )
         return unexpectedOperationCanceled();
+
+    std::string signalString = "OBJ V";
+    if ( haveColors )
+        signalString += 'C';
+    if ( haveUVs && perVertexUVs )
+        signalString += "UV";
 
     timer.restart( "copy vertex attributes" );
 
@@ -754,7 +789,11 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     const auto numFaces = maxFace - minFace;
     assert( maxObjVert - minObjVert >= 3 * numFaces );
+    signalString += ( maxObjVert - minObjVert > 3 * numFaces ) ? " POLY" : " TRI";
+    if ( haveUVs && !perVertexUVs )
+        signalString += "UV";
     const auto numTris = numFaces + ( maxObjVert - minObjVert - 3 * numFaces );
+
     Triangulation t;
     t.reserve( numTris );
     if ( currTextureId )
@@ -806,6 +845,15 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                 res.uvCoords[dup] = res.uvCoords[src];
         }
     }
+
+    if ( !res.textureFiles.empty() )
+    {
+        signalString += " TEX";
+        if ( res.textureFiles.size() > 1 )
+            signalString += std::to_string( res.textureFiles.size() );
+    }
+    if ( settings.telemetrySignal )
+        TelemetrySignal( signalString );
 
     return res;
 }

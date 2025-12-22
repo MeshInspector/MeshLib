@@ -13,6 +13,8 @@ typedef struct MRMeshLoadObjLoadSettings
     bool countSkippedFaces;
     /// callback for set progress and stop process
     MRProgressCallback callback;
+    /// permit telemetry signal about loading
+    bool telemetrySignal;
 }
 MRMeshLoadObjLoadSettings;
 

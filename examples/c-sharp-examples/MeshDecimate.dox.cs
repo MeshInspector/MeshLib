@@ -1,5 +1,3 @@
-using static MR.DotNet;
-
 public class MeshDecimateExample
 {
     public static void Run(string[] args)
@@ -7,20 +5,26 @@ public class MeshDecimateExample
         try
         {
             // Load mesh
-            var mesh = MeshLoad.FromAnySupportedFormat("mesh.stl");
+            MR.Expected_MRMesh_StdString mesh_ex = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
+            if (mesh_ex.GetError() is var mesh_error and not null)
+                throw new Exception(mesh_error);
+
+            MR.Mesh mesh = mesh_ex.GetValue()!;
 
             // Setup decimate parameters
-            DecimateParameters dp = new DecimateParameters();
-            dp.strategy = DecimateStrategy.MinimizeError;
-            dp.maxError = 1e-5f * mesh.BoundingBox.Diagonal();
-            dp.tinyEdgeLength = 1e-3f;
-            dp.packMesh = true;
+            MR.DecimateSettings ds = new();
+            ds.Strategy = MR.DecimateStrategy.MinimizeError;
+            ds.MaxError = 1e-5f * mesh.ComputeBoundingBox().Diagonal();
+            ds.TinyEdgeLength = 1e-3f;
+            ds.PackMesh = true;
 
             // Decimate mesh
-            var result = Decimate(ref mesh, dp);
+            MR.DecimateResult result = MR.DecimateMesh(mesh, ds);
 
             // Save result
-            MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
+            MR.Expected_Void_StdString save_ex = MR.MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
+            if (save_ex.GetError() is var save_error and not null)
+                throw new Exception(save_error);
         }
         catch (Exception e)
         {

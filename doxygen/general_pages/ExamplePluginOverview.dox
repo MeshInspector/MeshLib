@@ -20,7 +20,7 @@ This example contains several files:
 6. `MyPlugin.cpp` - source code with actual (demo) tools
 7. `CMakeLists.txt` - CMake project file
 8. `ViewerApp.cpp` - sample viewer app that has enough functionality to load and test the tools
-9. `wasm/compose_html.js` - (WebAssembly only) JavaScript file modified for loading the sample viewer app
+9. `wasm/index.html` - (WebAssembly only) sample HTML page for loading the sample viewer app
 
 Lets have a closer look at each of these points:
 
@@ -127,14 +127,9 @@ Lets have a closer look at each of these points:
 
 For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 
-### CMake Project File
-...
-
 ### Sample Viewer App
-...
-
-### 
-9. `wasm/compose_html.js` - (WebAssembly only) JavaScript file modified for loading the sample viewer app
+`ViewerApp.cpp` - source file for running the viewer instance. You can set your own
+[viewer launch parameters](\ref LaunchParams) and alterate [viewer setup process](\ref ViewerSetup).
 
 ## Usage
 
@@ -155,5 +150,6 @@ emcmake cmake -S example_plugin -B example_plugin_build -D CMAKE_FIND_ROOT_PATH=
 cmake --build example_plugin_build --config Release
 \endcode
 4. Copy the result files from the `example_plugin_build/html` directory to your web server location.
+\note Make sure your web server enables [cross-origin isolation](https://web.dev/articles/coop-coep) for these files.
 
 */

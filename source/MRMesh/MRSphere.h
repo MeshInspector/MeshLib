@@ -16,7 +16,10 @@ struct Sphere
 
     constexpr Sphere() noexcept = default;
     constexpr Sphere( const V & c, T r ) noexcept : center( c ), radius( r ) { }
-    template <typename U>
+
+    // Here `V == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<V, U> )
     constexpr explicit Sphere( const Sphere<U> & l ) noexcept : center( l.center ), radius( T( l.radius ) ) { }
 
     /// finds the closest point on sphere

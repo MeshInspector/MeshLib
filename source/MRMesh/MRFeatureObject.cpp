@@ -48,7 +48,7 @@ void FeatureObject::serializeFields_( Json::Value& root ) const
     VisualObject::serializeFields_( root );
 
     // append base type
-    root["Type"].append( VisualObject::TypeName() );
+    root["Type"].append( VisualObject::StaticTypeName() );
 
     root["SubfeatureVisibility"] = subfeatureVisibility_.value();
     root["DetailsOnNameTag"] = detailsOnNameTag_.value();

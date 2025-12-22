@@ -21,9 +21,11 @@
 
 #include <map>
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
 
 enum class ObjElement
 {
@@ -218,28 +220,28 @@ Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
     return {};
 }
 
-struct ObjFace
+struct ObjFaceInfo
 {
-    std::vector<int> vertices;
-    std::vector<int> textures;
-    std::vector<int> normals;
+    int numVerts = 0;
+    int numTexVerts = 0;
 };
 
-Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
+Expected<ObjFaceInfo> parseObjFaceInfo( const std::string_view& str )
 {
     using namespace boost::spirit::x3;
 
-    auto v = [&] ( auto& ctx )
+    ObjFaceInfo res;
+    auto v = [&] ( auto& )
     {
-        f.vertices.emplace_back( _attr( ctx ) );
+        ++res.numVerts;
     };
-    auto vt = [&] ( auto& ctx )
+    auto vt = [&] ( auto& )
     {
-        f.textures.emplace_back( _attr( ctx ) );
+        ++res.numTexVerts;
     };
-    auto vn = [&] ( auto& ctx )
+    auto vn = [&] ( auto& )
     {
-        f.normals.emplace_back( _attr( ctx ) );
+        // normals are not used currently
     };
 
     bool r = phrase_parse(
@@ -253,13 +255,89 @@ Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
     if ( !r )
         return unexpected( "Failed to parse face in OBJ-file" );
 
-    if ( f.vertices.empty() )
+    if ( !res.numVerts )
         return unexpected( "Invalid face vertex count in OBJ-file" );
-    if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
+    if ( res.numTexVerts && res.numVerts != res.numTexVerts )
         return unexpected( "Invalid face texture count in OBJ-file" );
-    if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
-        return unexpected( "Invalid face normal count in OBJ-file" );
-    return {};
+    return res;
+}
+
+struct ObjFaces
+{
+    std::vector<int> vertices;
+    std::vector<int> face2vert; // face2vert[f] -> first vertex of face #f in vertices
+
+    std::vector<int> textures;
+    std::vector<int> face2texv; // face2texv[f] -> first tex-vertex of face #f in textures
+
+    /// returns the total number of faces
+    auto size() const
+    {
+        // face2vert and face2texv both have one extra record at the end
+        // with the total number of (texture) vertices in all faces
+        assert( face2vert.size() >= 1 );
+        assert( face2vert.size() == face2texv.size() );
+        return face2vert.size() - 1;
+    }
+
+    auto numVerts( size_t face ) const
+    {
+        assert( face + 1 < face2vert.size() );
+        return face2vert[face + 1] - face2vert[face];
+    }
+
+    auto numTexVerts( size_t face ) const
+    {
+        assert( face + 1 < face2texv.size() );
+        return face2texv[face + 1] - face2texv[face];
+    }
+
+    auto getVert( size_t face, size_t vert ) const
+    {
+        return vertices[face2vert[face] + vert];
+    }
+
+    auto& getVert( size_t face, size_t vert )
+    {
+        return vertices[face2vert[face] + vert];
+    }
+
+    auto getTexVert( size_t face, size_t vert ) const
+    {
+        return textures[face2texv[face] + vert];
+    }
+};
+
+void parseObjFace( const std::string_view& str, size_t f, ObjFaces & target )
+{
+    using namespace boost::spirit::x3;
+
+    int nextVert = target.face2vert[f];
+    int nextTexv = target.face2texv[f];
+    auto v = [&] ( auto& ctx )
+    {
+        target.vertices[nextVert++] = _attr( ctx );
+    };
+    auto vt = [&] ( auto& ctx )
+    {
+        target.textures[nextTexv++] = _attr( ctx );
+    };
+    auto vn = [&] ( auto& )
+    {
+        // normals are not used currently
+    };
+
+    [[maybe_unused]] bool r = phrase_parse(
+        str.begin(),
+        str.end(),
+        // NOTE: actions are not being reverted after backtracking
+        // https://github.com/boostorg/spirit/issues/378
+        ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
+        ascii::space
+    );
+    assert( r );
+    assert( nextVert == target.face2vert[f + 1] );
+    assert( nextTexv == target.face2texv[f + 1] );
 }
 
 Expected<void> parseMtlColor( const std::string_view& str, Vector3f& color )
@@ -434,23 +512,16 @@ struct ObjectScope
 
 struct VertexRepr
 {
-    int vId{ 0 };
-    int vtId{ 0 };
+    int vId;
+    int vtId;
     // int vnId{0}; // not used yet
+    VertexRepr( int vId = 0, int vtId = 0 ) : vId( vId ), vtId( vtId ) {}
+    VertexRepr( NoInit ) {}
+
     bool operator==( const VertexRepr& o ) const = default;
     bool operator<( const VertexRepr& o ) const
     {
         return std::tuple( vId, vtId ) < std::tuple( o.vId, o.vtId );
-    }
-};
-
-struct VertexReprHasher
-{
-    size_t operator()( VertexRepr const& vr ) const noexcept
-    {
-        std::uint64_t vvt;
-        std::memcpy( &vvt, &vr.vId, sizeof( std::uint64_t ) );
-        return size_t( vvt );
     }
 };
 
@@ -459,21 +530,22 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const Vector<Vector3d, VertId>& points,  // all points from file
     const std::vector<Color>& colors,     // all colors from file
     const std::vector<UVCoord>& uvCoords, // all uvs from file
-    const std::vector<ObjFace>& faces,    // all faces from file
+    ObjFaces& faces,                      // all faces from file, this object's vertex ids will be replaced with new unique values
     const std::vector<MaterialScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
     const MtlLibrary* mtl ) // optional materials, if nullptr `materialScope` will be ignored
 {
     MR_TIMER;
+    assert( faces.face2vert.size() == faces.face2texv.size() );
 
     bool haveColors = false;
     bool haveUVs = false;
     int firstVert = -1;
     if ( minFace < faces.size() ) // do not crash if minFace = 0 and faces are empty
     {
-        haveUVs = !faces[minFace].textures.empty();
-        firstVert = faces[minFace].vertices.front();
+        haveUVs = faces.numTexVerts( minFace ) != 0;
+        firstVert = faces.getVert( minFace, 0 );
     }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) + firstVert;
@@ -484,106 +556,97 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     haveColors = firstVert < colors.size();
 
 
-    Timer timer( "prepare unique vertices" );
+    Timer timer( "prepare VertexRepr" );
+
+    auto getVertexRepr = [&] ( size_t fId, int ind ) -> Expected<VertexRepr>
+    {
+        VertexRepr repr;
+        repr.vId = faces.getVert( fId, ind );
+        if ( repr.vId < 0 )
+            repr.vId = int( points.size() ) + repr.vId;
+        else
+            --repr.vId;
+        if ( repr.vId < 0 || repr.vId >= points.size() )
+            return unexpected( std::string( "Out of bounds Vertex ID in OBJ-file" ) );
+
+        if ( faces.face2texv[fId] + ind < faces.face2texv[fId + 1] )
+        {
+            repr.vtId = faces.getTexVert( fId, ind );
+            if ( repr.vtId < 0 )
+                repr.vtId = int( uvCoords.size() ) + repr.vtId;
+            else
+                --repr.vtId;
+            if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
+                return unexpected( std::string( "Out of bounds Texture Vertex ID in OBJ-file" ) );
+        }
+        return repr;
+    };
 
     std::string error;
     tbb::task_group_context ctx;
-    tbb::enumerable_thread_specific<std::vector<VertexRepr>> tlOrderedPoints;
+
+    std::vector<VertexRepr> orderedPoints;
+    const auto minObjVert = faces.face2vert[minFace];
+    const auto maxObjVert = faces.face2vert[maxFace];
+    resizeNoInit( orderedPoints, maxObjVert - minObjVert );
+
     tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& local = tlOrderedPoints.local();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        auto pos = faces.face2vert[range.begin()] - minObjVert;
+        for ( size_t fId = range.begin(); fId < range.end(); ++fId )
         {
-            if ( faces[i].vertices.size() < 3 )
+            const auto nv = faces.numVerts( fId );
+            if ( nv < 3 )
             {
                 if ( ctx.cancel_group_execution() )
                     error = "Face with less than 3 vertices in OBJ-file";
                 return;
             }
-            for ( int v = 0; v < faces[i].vertices.size(); ++v )
+            for ( int ind = 0; ind < nv; ++ind )
             {
-                VertexRepr repr;
-                repr.vId = faces[i].vertices[v];
-                if ( repr.vId < 0 )
-                    repr.vId = int( points.size() ) + repr.vId;
-                else
-                    --repr.vId;
-                if ( repr.vId < 0 || repr.vId >= points.size() )
+                assert( pos + minObjVert == faces.face2vert[fId] + ind );
+                auto repr = getVertexRepr( fId, ind );
+                if ( !repr )
                 {
                     if ( ctx.cancel_group_execution() )
-                        error = "Out of bounds Vertex ID in OBJ-file";
+                        error = std::move( repr.error() );
                     return;
                 }
-                if ( v < faces[i].textures.size() )
-                {
-                    repr.vtId = faces[i].textures[v];
-                    if ( repr.vtId < 0 )
-                        repr.vtId = int( uvCoords.size() ) + repr.vtId;
-                    else
-                        --repr.vtId;
-                    if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
-                    {
-                        if ( ctx.cancel_group_execution() )
-                            error = "Out of bounds Texture Vertex ID in OBJ-file";
-                        return;
-                    }
-                }
-
-                local.emplace_back( repr );
+                orderedPoints[pos++] = *repr;
             }
         }
     }, ctx );
 
-    if ( !reportProgress( settings.callback, 0.2f ) )
-        return unexpectedOperationCanceled();
-
     if ( !error.empty() )
         return unexpected( error );
 
-    size_t sumOVsSize = 0;
-    for ( const auto& localPoints : tlOrderedPoints )
-        sumOVsSize += localPoints.size();
-    std::vector<VertexRepr> orderedPoints;
-    orderedPoints.reserve( sumOVsSize );
-    for ( auto& localPoints : tlOrderedPoints )
-        orderedPoints.insert( orderedPoints.end(), std::make_move_iterator( localPoints.begin() ), std::make_move_iterator( localPoints.end() ) );
-    tlOrderedPoints = {}; // reduce peak memory
+    if ( !reportProgress( settings.callback, 0.2f ) )
+        return unexpectedOperationCanceled();
+
+    timer.restart( "keep unique VertexRepr" );
+
     tbb::parallel_sort( orderedPoints.begin(), orderedPoints.end() );
 
     orderedPoints.erase( std::unique( orderedPoints.begin(), orderedPoints.end() ), orderedPoints.end() );
 
-    using ParallelIndicesMap = ParallelHashMap<VertexRepr, VertId, VertexReprHasher>;
-    ParallelIndicesMap map;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, map.subcnt(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        for ( size_t mId = range.begin(); mId < range.end(); ++mId )
-        {
-            for ( size_t i = 0; i < orderedPoints.size(); ++i )
-            {
-                auto hash = map.hash( orderedPoints[i] );
-                if ( mId != map.subidx( hash ) )
-                    continue;
-                map.insert( { orderedPoints[i],VertId( i ) } );
-            }
-        }
-    } );
-
-    size_t numCoords = orderedPoints.size();
-    if ( numCoords == 0 )
+    size_t numOrderedPoints = orderedPoints.size();
+    if ( numOrderedPoints == 0 )
         return unexpected( "No vertex found in OBJ-file" );
+
+    if ( !reportProgress( settings.callback, 0.25f ) )
+        return unexpectedOperationCanceled();
+
+    timer.restart( "copy vertex attributes" );
+
+    MeshLoad::NamedMesh res;
+    VertCoords coords;
+    coords.resizeNoInit( numOrderedPoints );
+    res.colors.resize( haveColors ? coords.size() : 0 );
+    res.uvCoords.resize( haveUVs ? coords.size() : 0 );
 
     MinMax<int> minmaxV;
     minmaxV.min = orderedPoints.front().vId;
     minmaxV.max = orderedPoints.back().vId;
-    orderedPoints = {}; // reduce peak memory
-
-    if ( !reportProgress( settings.callback, 0.3f ) )
-        return unexpectedOperationCanceled();
-
-    MeshLoad::NamedMesh res;
-    VertCoords coords( numCoords );
-    res.colors.resize( haveColors ? coords.size() : 0 );
-    res.uvCoords.resize( haveUVs ? coords.size() : 0 );
 
     // set vertices and attributes first
     Vector3d pointOffset;
@@ -596,160 +659,129 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         res.xf = AffineXf3f::translation( Vector3f( pointOffset ) );
     }
 
-    ParallelFor( size_t( 0 ), map.subcnt(), [&] ( size_t id )
+    ParallelFor( orderedPoints, [&] ( size_t i )
     {
-        map.with_submap( id, [&] ( const ParallelIndicesMap::EmbeddedSet& subset )
-        {
-            for ( const auto& [repr, vId] : subset )
-            {
-                coords[vId] = Vector3f( points[VertId( repr.vId )] - pointOffset );
-                if ( haveColors && repr.vId < colors.size() )
-                    res.colors[vId] = colors[repr.vId];
-                if ( haveUVs && repr.vtId < uvCoords.size() )
-                    res.uvCoords[vId] = uvCoords[repr.vtId];
-            }
-        } );
+        const auto & repr = orderedPoints[i];
+        VertId vId( i );
+        coords[vId] = Vector3f( points[VertId( repr.vId )] - pointOffset );
+        if ( haveColors && repr.vId < colors.size() )
+            res.colors[vId] = colors[repr.vId];
+        if ( haveUVs && repr.vtId < uvCoords.size() )
+            res.uvCoords[vId] = uvCoords[repr.vtId];
     } );
+
+    if ( !reportProgress( settings.callback, 0.3f ) )
+        return unexpectedOperationCanceled();
+
+    timer.restart( "replace vertex ids" );
+    // replace global vertex id with this object's vertex id
+    ParallelFor( minFace, maxFace, [&]( size_t f )
+    {
+        const auto nv = faces.numVerts( f );
+        assert ( nv >= 3 );
+        for ( int v = 0; v < nv; ++v )
+        {
+            auto repr = getVertexRepr( f, v );
+            assert( repr.has_value() );
+            auto it = std::lower_bound( orderedPoints.begin(), orderedPoints.end(), *repr );
+            assert( it != orderedPoints.end() && *it == repr );
+            faces.getVert( f, v ) = VertId( it - orderedPoints.begin() );
+        }
+    } );
+
+    orderedPoints = {}; // reduce peak memory
 
     if ( !reportProgress( settings.callback, 0.4f ) )
         return unexpectedOperationCanceled();
 
-    auto getReprVertId = [&] ( size_t fId, int ind )->VertId
-    {
-        VertexRepr repr;
-        repr.vId = faces[fId].vertices[ind];
-        if ( repr.vId < 0 )
-            repr.vId = int( points.size() ) + repr.vId;
-        else
-            --repr.vId;
-        if ( ind < faces[fId].textures.size() )
-        {
-            repr.vtId = faces[fId].textures[ind];
-            if ( repr.vtId < 0 )
-                repr.vtId = int( uvCoords.size() ) + repr.vtId;
-            else
-                --repr.vtId;
-        }
-        auto it = map.find( repr );
-        assert( it != map.end() );
-        return it->second;
-    };
-
-
     timer.restart( "prepare model triangulation" );
 
-    // triangulation
-    struct OrderedMaterial
+    assert( !materialScope.empty() );
+    assert( materialScope.back().fId >= maxFace );
+    size_t materialScopeId = 0;
+    while ( materialScope[materialScopeId].fId < minFace && materialScope[materialScopeId + 1].fId < minFace )
+        ++materialScopeId;
+
+    HashMap<std::string, TextureId> texMap;
+    TextureId currTextureId;
+    res.textureFiles.clear();
+    bool missingTextureFiles = false;
+    bool contradictingDiffuseColors = false;
+    auto addCurrentMaterial = [&]()
     {
-        int mScopeId{ 0 };
-        size_t fId{ 0 };
-        // for ordering
-        size_t orderedTriangulationStartF = 0;
-        size_t orderedTriangulationOffset = 0;
-    };
-    std::vector<OrderedMaterial> materialFaces;
-    if ( mtl )
-    {
-        MinMax<int> minmaxMtl;
-        for ( int i = 0; i < materialScope.size(); ++i )
-        {
-            if ( materialScope[i].fId >= maxFace )
-                break;
-            if ( materialScope[i].fId <= minFace )
-                minmaxMtl.max = minmaxMtl.min = i;
-            else if ( materialScope[i].fId < maxFace )
-                minmaxMtl.max = i;
-        }
-        if ( minmaxMtl.valid() )
-        {
-            materialFaces.resize( minmaxMtl.max - minmaxMtl.min + 1 );
-            for ( int i = minmaxMtl.min; i <= minmaxMtl.max; ++i )
-                materialFaces[i - minmaxMtl.min] = { i,materialScope[i].fId };
-        }
-    }
-
-    struct OrderedTriangulation
-    {
-        size_t startF{ 0 };
-        Triangulation t;
-    };
-    tbb::enumerable_thread_specific<std::vector<OrderedTriangulation>> tls;
-    tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        auto& local = tls.local();
-        auto& thisOT = local.emplace_back();
-        thisOT.startF = range.begin();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            if ( !materialFaces.empty() && i <= materialFaces.back().fId )
-            {
-                for ( int mi = 0; mi < materialFaces.size(); ++mi )
-                {
-                    if ( i == materialFaces[mi].fId )
-                    {
-                        // should be thread safe
-                        materialFaces[mi].orderedTriangulationStartF = thisOT.startF;
-                        materialFaces[mi].orderedTriangulationOffset = thisOT.t.size();
-                    }
-                }
-            }
-            for ( int j = 1; j + 1 < faces[i].vertices.size(); ++j )
-                thisOT.t.push_back( { getReprVertId( i, 0 ), getReprVertId( i, j ), getReprVertId( i, j + 1 ) } );
-        }
-    } );
-
-    if ( !reportProgress( settings.callback, 0.5f ) )
-        return unexpectedOperationCanceled();
-
-    size_t sumOTsSize = 0;
-    for ( const auto& local : tls )
-        sumOTsSize += local.size();
-
-    std::vector<OrderedTriangulation> mergedOT;
-    mergedOT.reserve( sumOTsSize );
-    for ( auto& local : tls )
-        mergedOT.insert( mergedOT.end(), std::make_move_iterator( local.begin() ), std::make_move_iterator( local.end() ) );
-
-    tls = {}; // reduce peak memory
-
-    tbb::parallel_sort( mergedOT.begin(), mergedOT.end(), [] ( const auto& l, const auto& r ) { return l.startF < r.startF; } );
-    size_t sumFaceSize = 0;
-    for ( const auto& ot : mergedOT )
-    {
-        if ( !materialFaces.empty() && ot.startF <= materialFaces.back().orderedTriangulationStartF )
-        {
-            for ( int mi = 0; mi < materialFaces.size(); ++mi )
-            {
-                if ( ot.startF == materialFaces[mi].orderedTriangulationStartF )
-                    materialFaces[mi].orderedTriangulationOffset += sumFaceSize;
-            }
-        }
-        sumFaceSize += ot.t.size();
-    }
-    Triangulation t;
-    t.reserve( sumFaceSize );
-    for ( auto& ot : mergedOT )
-        t.vec_.insert( t.vec_.end(), std::make_move_iterator( ot.t.vec_.begin() ), std::make_move_iterator( ot.t.vec_.end() ) );
-
-    mergedOT = {}; // reduce peak memory
-
-    for ( const auto& mf : materialFaces )
-    {
-        auto mIt = mtl->find( materialScope[mf.mScopeId].mtName );
+        if ( !mtl )
+            return;
+        auto mIt = mtl->find( materialScope[materialScopeId].mtName );
         if ( mIt == mtl->end() )
-            break;
-        if ( mIt->second.diffuseColor == Vector3f::diagonal( -1.0f ) )
-            break;
-        if ( !res.diffuseColor )
+            return;
+        if ( !contradictingDiffuseColors )
         {
-            res.diffuseColor = Color( mIt->second.diffuseColor );
+            if ( mIt->second.diffuseColor == Vector3f::diagonal( -1.0f ) )
+            {
+                res.diffuseColor.reset();
+                contradictingDiffuseColors = true;
+            }
+            else if ( !res.diffuseColor )
+            {
+                res.diffuseColor = Color( mIt->second.diffuseColor );
+            }
+            else if ( *res.diffuseColor != Color( mIt->second.diffuseColor ) )
+            {
+                res.diffuseColor.reset();
+                contradictingDiffuseColors = true;
+            }
         }
-        else if ( *res.diffuseColor != Color( mIt->second.diffuseColor ) )
+        if ( !missingTextureFiles )
         {
-            res.diffuseColor = std::nullopt;
-            break;
+            if ( mIt->second.diffuseTextureFile.empty() )
+            {
+                texMap.clear();
+                res.textureFiles.clear();
+                currTextureId = {};
+                missingTextureFiles = true;
+            }
+            else
+            {
+                auto [it, inserted] = texMap.insert( { mIt->second.diffuseTextureFile, res.textureFiles.endId() } );
+                currTextureId = it->second;
+                assert( currTextureId );
+                if ( inserted )
+                    res.textureFiles.push_back( dir / mIt->second.diffuseTextureFile );
+            }
+        }
+    };
+    addCurrentMaterial();
+
+    const auto numFaces = maxFace - minFace;
+    assert( maxObjVert - minObjVert >= 3 * numFaces );
+    const auto numTris = numFaces + ( maxObjVert - minObjVert - 3 * numFaces );
+    Triangulation t;
+    t.reserve( numTris );
+    if ( currTextureId )
+        res.texturePerFace.reserve( numTris );
+    for ( size_t i = minFace; i < maxFace; ++i )
+    {
+        if ( materialScope[materialScopeId].fId < i && i == materialScope[materialScopeId + 1].fId )
+        {
+            ++materialScopeId;
+            addCurrentMaterial();
+        }
+        const auto nv = faces.numVerts( i );
+        assert ( nv >= 3 );
+        for ( int j = 1; j + 1 < nv; ++j )
+        {
+            t.push_back( { VertId( faces.getVert( i, 0 ) ),
+                           VertId( faces.getVert( i, j ) ),
+                           VertId( faces.getVert( i, j + 1 ) ) } );
+            if ( currTextureId )
+                res.texturePerFace.push_back( currTextureId );
         }
     }
+    assert( t.size() == numTris );
+    if ( !currTextureId )
+        res.texturePerFace = {};
+    else
+        assert( res.texturePerFace.size() == numTris );
 
     if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
@@ -775,47 +807,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         }
     }
 
-    if ( mtl )
-    {
-        if ( !reportProgress( settings.callback, 0.9f ) )
-            return unexpectedOperationCanceled();
-
-        timer.restart( "update textures" );
-        HashMap<std::string, TextureId>  texMap;
-        for ( const auto& mf : materialFaces )
-        {
-            auto mIt = mtl->find( materialScope[mf.mScopeId].mtName );
-            if ( mIt == mtl->end() )
-                break;
-            if ( mIt->second.diffuseTextureFile.empty() )
-            {
-                texMap.clear();
-                break;
-            }
-            texMap[mIt->second.diffuseTextureFile] = TextureId();
-        }
-        if ( !texMap.empty() )
-        {
-            for ( auto& [tName, id] : texMap )
-            {
-                id = res.textureFiles.endId();
-                res.textureFiles.push_back( dir / tName );
-            }
-        }
-        if ( texMap.size() > 1 )
-        {
-            res.texturePerFace.reserve( res.mesh.topology.lastValidFace() + 1 );
-            for ( int i = 0; i < materialFaces.size(); ++i )
-            {
-                auto mIt = mtl->find( materialScope[materialFaces[i].mScopeId].mtName );
-                auto textId = texMap[mIt->second.diffuseTextureFile];
-                size_t endFaceId = i + 1 < materialFaces.size() ? materialFaces[i + 1].orderedTriangulationOffset : size_t( res.mesh.topology.lastValidFace() + 1 );
-                auto numFaces = endFaceId - materialFaces[i].orderedTriangulationOffset;
-                res.texturePerFace.vec_.insert( res.texturePerFace.vec_.end(), numFaces, textId );
-            }
-        }
-    }
-
     return res;
 }
 
@@ -831,7 +822,6 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     Vector<Vector3d,VertId> points; // flat list of all points in this object scope
     std::vector<Color> colors; // flat list of all colors in this object scope
     std::vector<UVCoord> uvCoords; // flat list of all uv coords in this object scope
-    std::vector<ObjFace> faces; // flat list of face elements in this list
 
     size_t numPoints = 0;
     size_t numUVs = 0;
@@ -839,7 +829,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    Expected<MtlLibrary> mtl; // all materials
+    Expected<MtlLibrary> mtl = unexpected( "absent" ); // all materials
 
     std::string parseError;
 
@@ -894,7 +884,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( hasColors )
         colors.reserve( numPoints );
     uvCoords.reserve( numUVs );
-    faces.reserve( numFaces );
+    std::vector<ObjFaceInfo> faceInfos;
+    faceInfos.reserve( numFaces + 1 );
 
     if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
@@ -955,11 +946,20 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         }, ctx );
     };
 
-    // simply read all faces in vector
+    struct FaceRange
+    {
+        size_t beginLine = 0;
+        size_t endLine = 0;
+        size_t firstFace = 0;
+    };
+    std::vector<FaceRange> faceRanges;
+
+    // simply read all face infos in vector
     auto fillFaces = [&] ( size_t begin, size_t end )
     {
-        size_t facesSize = faces.size();
-        faces.resize( facesSize + end - begin );
+        size_t facesSize = faceInfos.size();
+        faceRanges.push_back( { begin, end, facesSize } );
+        faceInfos.resize( facesSize + end - begin );
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
@@ -967,13 +967,14 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             {
                 auto id = li - begin + facesSize;
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseObjFace( line, faces[id] );
+                auto res = parseObjFaceInfo( line );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
                         parseError = std::move( res.error() );
                     return;
                 }
+                faceInfos[id] = *res;
             }
         }, ctx );
     };
@@ -995,7 +996,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& objData = oScopes.emplace_back();
             objData.objName = line.substr( strlen( "o" ), std::string_view::npos );
-            objData.fId = faces.size();
+            objData.fId = faceInfos.size();
             boost::trim( objData.objName );
             break;
         }
@@ -1007,7 +1008,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& mtlData = mScopes.emplace_back();
             mtlData.mtName = line.substr( strlen( "usemtl" ), std::string_view::npos );
-            mtlData.fId = faces.size();
+            mtlData.fId = faceInfos.size();
             boost::trim( mtlData.mtName );
             break;
         }
@@ -1020,7 +1021,35 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( parseError );
     }
 
+    timer.restart( "load faces" );
+
+    ObjFaces faces; // flat list of face elements in this list
+    faces.face2vert.reserve( numFaces + 1 );
+    faces.face2texv.reserve( numFaces + 1 );
+    faces.face2vert.push_back( 0 );
+    faces.face2texv.push_back( 0 );
+    for ( const auto & info : faceInfos )
+    {
+        faces.face2vert.push_back( faces.face2vert.back() + info.numVerts );
+        faces.face2texv.push_back( faces.face2texv.back() + info.numTexVerts );
+    }
+    faces.vertices.resize( faces.face2vert.back() );
+    faces.textures.resize( faces.face2texv.back() );
+
+    for ( const auto& faceRange : faceRanges )
+    {
+        ParallelFor( faceRange.beginLine, faceRange.endLine, [&]( size_t li )
+        {
+            auto f = li - faceRange.beginLine + faceRange.firstFace;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            parseObjFace( line, f, faces );
+        } );
+    };
+
     timer.finish();
+
+    // put sentinel at the end
+    mScopes.push_back( { .fId = faces.size() } );
 
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;
@@ -1054,10 +1083,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     return res;
 }
 
-}
-
-namespace MR
-{
+} //anonymous namespace
 
 namespace MeshLoad
 {

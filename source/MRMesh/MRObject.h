@@ -67,16 +67,16 @@ public:
     virtual ~Object() = default;
 
     // return name of subtype for serialization purposes
-    constexpr static const char* TypeName() noexcept { return "Object"; }
-    virtual const char* typeName() const { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "Object"; }
+    virtual const char* typeName() const { return StaticTypeName(); }
 
     /// return human readable name of subclass
-    constexpr static const char* ClassName() noexcept { return "Object"; }
-    virtual std::string className() const { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Object"; }
+    virtual std::string className() const { return StaticClassName(); }
 
     /// return human readable name of subclass in plural form
-    constexpr static const char* ClassNameInPlural() noexcept { return "Objects"; }
-    virtual std::string classNameInPlural() const { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Objects"; }
+    virtual std::string classNameInPlural() const { return StaticClassNameInPlural(); }
 
     template <typename T>
     T * asType() { return dynamic_cast<T*>( this ); }

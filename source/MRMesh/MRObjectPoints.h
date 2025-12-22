@@ -15,14 +15,14 @@ public:
     ObjectPoints& operator = ( ObjectPoints&& ) = default;
     ObjectPoints( ObjectPoints&& ) = default;
 
-    constexpr static const char* TypeName() noexcept { return "ObjectPoints"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ObjectPoints"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Point Cloud"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Point Cloud"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Point Clouds"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Point Clouds"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// returns variable point cloud, if const point cloud is needed use `pointCloud()` instead
     virtual const std::shared_ptr<PointCloud>& varPointCloud() { return points_; }

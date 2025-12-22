@@ -533,7 +533,7 @@ void Object::serializeFields_( Json::Value& root ) const
     serializeToJson( xf_.get(), root["XF"] );
 
     // Type
-    root["Type"].append( Object::TypeName() ); // will be appended in derived calls
+    root["Type"].append( Object::StaticTypeName() ); // will be appended in derived calls
 
     // tags
     auto& tagsJson = root["Tags"] = Json::arrayValue;

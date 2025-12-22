@@ -187,7 +187,7 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
 #ifdef NDEBUG
         ImGui::GetIO().ConfigDebugHighlightIdConflicts = false;
 #endif
-        if ( _viewer->isMultiViewport() )
+        if ( _viewer->isMultiViewportAvailable() && _viewer->getLaunchParams().multiViewport )
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable multi viewports in ImGui
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();

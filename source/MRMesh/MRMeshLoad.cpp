@@ -304,7 +304,8 @@ static Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& setting
     {
         .customXf = settings.xf != nullptr,
         .countSkippedFaces = settings.skippedFaceCount != nullptr,
-        .callback = settings.callback
+        .callback = settings.callback,
+        .telemetrySignal = settings.telemetrySignal
     };
     auto objs = fromSceneObjFile( in, true, dir, objLoadSettings );
     if ( !objs.has_value() )

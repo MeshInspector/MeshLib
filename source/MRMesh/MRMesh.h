@@ -52,7 +52,7 @@ struct [[nodiscard]] Mesh
 
     /// construct mesh from point triples;
     /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;
-    /// \param duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates
+    ///        duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates
     [[nodiscard]] MRMESH_API static Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices );
 
     /// compare that two meshes are exactly the same
@@ -429,7 +429,7 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
-    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepFaces
+    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
     MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;

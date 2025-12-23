@@ -9,7 +9,7 @@
 namespace MR
 {
 
-/// Parameters for aligning 2d contour onto mesh surface
+/// Parameters for aligning 2d contours onto mesh surface
 struct ContoursMeshAlignParams
 {
     /// Point coordinate on mesh, represent position of contours box 'pivotPoint' on mesh
@@ -35,6 +35,26 @@ struct ContoursMeshAlignParams
 
 /// Creates planar mesh out of given contour and aligns it to given surface
 MRMESH_API Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours, const ContoursMeshAlignParams& params );
+
+/// Parameters for aligning 2d contours onto mesh surface along given curve
+struct ContoursMeshCurvedAlignParams
+{
+    /// Relative position of curve line (y=pivotY) in contours bounding box:
+    /// 0 - bottom, 0.5 - center, 1 - top
+    float pivotY = 0;
+
+    /// converts (x, pivotY) into position on curve, which must be close enough to the mesh
+    std::function<Vector3f(float x)> curvePos;
+
+    /// converts (x, pivotY) into unit direction along curve
+    std::function<Vector3f(float x)> curveDir;
+
+    /// Contours extrusion outside of mesh
+    float extrusion{ 1.0f };
+};
+
+/// Converts contours in thick mesh, and deforms it to be properly aligned on the surface of given mesh
+MRMESH_API Expected<Mesh> curvedAlignContoursToMesh( const Mesh& mesh, const Contours2f& contours, const ContoursMeshCurvedAlignParams& params );
 
 /// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset (along -Z if zOffset is negative) to make a volumetric closed mesh
 /// note that this function also packs the mesh

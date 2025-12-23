@@ -8,6 +8,9 @@
 #include "MRQuaternion.h"
 #include "MRMeshIntersect.h"
 #include "MRBox.h"
+#include "MRMeshComponents.h"
+#include "MRParallelFor.h"
+#include "MRRegionBoundary.h"
 
 namespace MR
 {
@@ -38,6 +41,7 @@ void addBaseToPlanarMesh( Mesh& mesh, float zOffset )
 
 Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours, const ContoursMeshAlignParams& params )
 {
+    MR_TIMER;
     auto contoursMesh = PlanarTriangulation::triangulateContours( contours );
     auto bbox = contoursMesh.computeBoundingBox();
     if ( !bbox.valid() )
@@ -105,4 +109,77 @@ Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours
 
 }
 
+Expected<Mesh> curvedAlignContoursToMesh( const Mesh& mesh, const Contours2f& contours, const ContoursMeshCurvedAlignParams& params )
+{
+    MR_TIMER;
+    auto contoursMesh = PlanarTriangulation::triangulateContours( contours );
+    auto bbox = contoursMesh.computeBoundingBox();
+    if ( !bbox.valid() )
+        return unexpected( "Contours mesh is empty" );
+
+    const float cStartDepth = bbox.diagonal() * 0.05f; // use relative depth to avoid floating errors
+    addBaseToPlanarMesh( contoursMesh, -cStartDepth );
+    contoursMesh.invalidateCaches();
+    auto diagonal = bbox.size(); diagonal.z = cStartDepth;
+
+    const float plusOffset = std::abs( params.extrusion );
+    const float minusOffset = cStartDepth - std::abs( params.extrusion );
+
+    auto& contoursMeshPoints = contoursMesh.points;
+    VertId firstBottomVert( contoursMeshPoints.size() / 2 );
+
+    const auto components = MeshComponents::getAllComponents( contoursMesh );
+    // independently for each component of contoursMesh
+    (void)mesh.getAABBTree();
+    ParallelFor( components, [&]( size_t icomp )
+    {
+        const auto & compFaces = components[icomp];
+        const auto compCenter = contoursMesh.computeBoundingBox( &compFaces ).center();
+        const float pivotX = ( compCenter.x - bbox.min.x ) / diagonal.x;
+
+        const auto pos = params.curvePos( pivotX );
+        const auto proj = findProjection( pos, mesh );
+
+        const auto vecx = params.curveDir( pivotX );
+        const auto norm = mesh.pseudonormal( proj.mtp );
+        const auto vecy = cross( vecx, -norm ).normalized();
+
+        const Vector3f pivotCoord{ compCenter.x,
+                                   bbox.min.y + diagonal.y * params.pivotY,
+                                   0.0f };
+
+        auto rotQ = Quaternionf( Vector3f::plusX(), vecx );
+        // handle degenerated case
+        auto newY = rotQ( Vector3f::plusY() );
+        auto dotY = dot( newY, vecy );
+        if ( std::abs( std::abs( dotY ) - 1.0f ) < 10.0f * std::numeric_limits<float>::epsilon() )
+        {
+            if ( dotY < 0.0f )
+                rotQ = Quaternionf( vecx, PI_F ) * rotQ;
+        }
+        else
+            rotQ = Quaternionf( newY, vecy ) * rotQ;
+        AffineXf3f rot = AffineXf3f::linear( rotQ );
+
+        const AffineXf3f transformTop =
+            AffineXf3f::translation( proj.proj.point ) *
+            rot
+            * AffineXf3f::translation( Vector3f{ -compCenter.x, -bbox.min.y - diagonal.y * params.pivotY, plusOffset } );
+
+        const AffineXf3f transformBottom =
+            AffineXf3f::translation( proj.proj.point ) *
+            rot
+            * AffineXf3f::translation( Vector3f{ -compCenter.x, -bbox.min.y - diagonal.y * params.pivotY, minusOffset } );
+
+        for ( auto v : getIncidentVerts( contoursMesh.topology, compFaces ) )
+        {
+            if ( v < firstBottomVert )
+                contoursMeshPoints[v] = transformTop( contoursMeshPoints[v] );
+            else
+                contoursMeshPoints[v] = transformBottom( contoursMeshPoints[v] );
+        }
+    } );
+    return contoursMesh;
 }
+
+} //namespace MR

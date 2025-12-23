@@ -87,4 +87,44 @@ Expected<Mesh> alignTextToMesh(
         } );
 }
 
+Expected<Mesh> curvedAlignTextToMesh( const Mesh& mesh, const TextMeshCurvedAlignParams& params )
+{
+    MR_TIMER;
+    auto contoursOrError = createSymbolContours( params );
+    if ( !contoursOrError.has_value() )
+        return unexpected( std::move( contoursOrError.error() ) );
+
+    auto& conts = *contoursOrError;
+
+    auto bbox = findContoursBBox( conts );
+    if ( !bbox.valid() )
+        return unexpected( "Symbols mesh is empty" );
+
+    int numLines = 1;
+    for ( auto c : params.text )
+        if ( c == '\n' )
+            ++numLines;
+
+    auto diagonal = bbox.size();
+
+    const float symbolDependentMultiplier = params.fontBasedSizeCalc ? diagonal.y / params.MaxGeneratedFontHeight / numLines : 1.0f;
+    auto scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
+    scaleContours( conts, scale );
+
+    auto pivotY = params.pivotY;
+    if ( params.fontBasedSizeCalc )
+    {
+        float absYPivot =
+            ( 1 - numLines ) * params.MaxGeneratedFontHeight * ( 1 - params.pivotY ) + params.MaxGeneratedFontHeight * params.pivotY;
+        pivotY = ( absYPivot - bbox.min.y ) / diagonal.y;
+    }
+
+    return curvedAlignContoursToMesh( mesh, conts, {
+        .pivotY = params.pivotY,
+        .curvePos = params.curvePos,
+        .curveDir = params.curveDir,
+        .extrusion = params.surfaceOffset
+        } );
+}
+
 } //namespace MR

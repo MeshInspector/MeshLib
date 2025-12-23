@@ -7,6 +7,7 @@
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRMeshTriPoint.h"
+#include "MRMesh/MRCurve.h"
 
 namespace MR
 {
@@ -32,6 +33,29 @@ struct TextMeshAlignParams : SymbolMeshParams
     bool fontBasedSizeCalc{ false };
 };
 
-// Creates symbol mesh and aligns it to given surface
+/// Creates symbol mesh and aligns it to given surface
 MRSYMBOLMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
-}
+
+struct BendTextAlongCurveParams : SymbolMeshParams
+{
+    /// Relative position of curve line (y=pivotY) in contours bounding box:
+    /// 0 - bottom, 0.5 - center, 1 - top
+    float pivotY = 0;
+
+    /// converts (x in [0,1], pivotY) into position on curve
+    CurveFunc curve;
+
+    // Font height, meters
+    float fontHeight{1.0f};
+
+    // Text mesh inside and outside offset of curve's surface
+    float surfaceOffset{1.0f};
+
+    // If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text
+    bool fontBasedSizeCalc{ false };
+};
+
+/// Creates symbol mesh and deforms it along given curve
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params );
+
+} // namespace MR

@@ -5,21 +5,17 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRMatrix2.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRTimer.h"
 
 namespace MR
 {
 
-Expected<Mesh> alignTextToMesh( 
-    const Mesh& mesh, const TextMeshAlignParams& params )
+namespace
 {
-    auto contoursOrError = createSymbolContours( params );
-    if ( !contoursOrError.has_value() )
-    {
-        return unexpected( std::move( contoursOrError.error() ) );
-    }
 
-    auto& conts = *contoursOrError;
-
+Box2f findContoursBBox( const Contours2f& conts )
+{
+    MR_TIMER;
     tbb::enumerable_thread_specific<Box2f> tls;
     ParallelFor( conts, [&] ( size_t i )
     {
@@ -31,7 +27,34 @@ Expected<Mesh> alignTextToMesh(
     Box2f bbox;
     for ( const auto& tlsBox : tls )
         bbox.include( tlsBox );
+    return bbox;
+}
 
+void scaleContours( Contours2f& conts, float scale )
+{
+    MR_TIMER;
+    ParallelFor( conts, [&] ( size_t i )
+    {
+        ParallelFor( conts[i], [&] ( size_t j )
+        {
+            conts[i][j] = scale * conts[i][j];
+        } );
+    } );
+}
+
+} //anonymous namespace
+
+Expected<Mesh> alignTextToMesh(
+    const Mesh& mesh, const TextMeshAlignParams& params )
+{
+    MR_TIMER;
+    auto contoursOrError = createSymbolContours( params );
+    if ( !contoursOrError.has_value() )
+        return unexpected( std::move( contoursOrError.error() ) );
+
+    auto& conts = *contoursOrError;
+
+    auto bbox = findContoursBBox( conts );
     if ( !bbox.valid() )
         return unexpected( "Symbols mesh is empty" );
 
@@ -43,15 +66,8 @@ Expected<Mesh> alignTextToMesh(
     auto diagonal = bbox.size();
 
     const float symbolDependentMultiplier = params.fontBasedSizeCalc ? diagonal.y / params.MaxGeneratedFontHeight / numLines : 1.0f;
-    auto scaleXf = Matrix2f::scale( symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y );
-
-    ParallelFor( conts, [&] ( size_t i )
-    {
-        ParallelFor( conts[i], [&] ( size_t j )
-        {
-            conts[i][j] = scaleXf * conts[i][j];
-        } );
-    } );
+    auto scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
+    scaleContours( conts, scale );
 
     Vector2f relPivot = params.pivotPoint;
     if ( params.fontBasedSizeCalc )
@@ -71,4 +87,43 @@ Expected<Mesh> alignTextToMesh(
         } );
 }
 
+Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params )
+{
+    MR_TIMER;
+    auto contoursOrError = createSymbolContours( params );
+    if ( !contoursOrError.has_value() )
+        return unexpected( std::move( contoursOrError.error() ) );
+
+    auto& conts = *contoursOrError;
+
+    auto bbox = findContoursBBox( conts );
+    if ( !bbox.valid() )
+        return unexpected( "Symbols mesh is empty" );
+
+    int numLines = 1;
+    for ( auto c : params.text )
+        if ( c == '\n' )
+            ++numLines;
+
+    auto diagonal = bbox.size();
+
+    const float symbolDependentMultiplier = params.fontBasedSizeCalc ? diagonal.y / params.MaxGeneratedFontHeight / numLines : 1.0f;
+    auto scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
+    scaleContours( conts, scale );
+
+    auto pivotY = params.pivotY;
+    if ( params.fontBasedSizeCalc )
+    {
+        float absYPivot =
+            ( 1 - numLines ) * params.MaxGeneratedFontHeight * ( 1 - params.pivotY ) + params.MaxGeneratedFontHeight * params.pivotY;
+        pivotY = ( absYPivot - bbox.min.y ) / diagonal.y;
+    }
+
+    return bendContoursAlongCurve( conts, {
+        .pivotY = pivotY,
+        .curve = params.curve,
+        .extrusion = params.surfaceOffset
+        } );
 }
+
+} //namespace MR

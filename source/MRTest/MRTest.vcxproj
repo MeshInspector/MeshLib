@@ -60,7 +60,7 @@
     <ClCompile Include="MRCylinderApproximation.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRFillingSurface.cpp" />
-    <ClCompile Include="TextToMeshTests.cpp" />
+    <ClCompile Include="BendTextAlongCurveTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

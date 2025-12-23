@@ -33,10 +33,10 @@ struct TextMeshAlignParams : SymbolMeshParams
     bool fontBasedSizeCalc{ false };
 };
 
-// Creates symbol mesh and aligns it to given surface
+/// Creates symbol mesh and aligns it to given surface
 MRSYMBOLMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
 
-struct CurvedAlignTextToPathParams : SymbolMeshParams
+struct BendTextAlongCurveParams : SymbolMeshParams
 {
     /// Relative position of curve line (y=pivotY) in contours bounding box:
     /// 0 - bottom, 0.5 - center, 1 - top
@@ -48,14 +48,14 @@ struct CurvedAlignTextToPathParams : SymbolMeshParams
     // Font height, meters
     float fontHeight{1.0f};
 
-    // Text mesh inside and outside offset of input mesh
+    // Text mesh inside and outside offset of curve's surface
     float surfaceOffset{1.0f};
 
     // If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text
     bool fontBasedSizeCalc{ false };
 };
 
-// Creates symbol mesh and aligns along given path
-MRSYMBOLMESH_API Expected<Mesh> curvedAlignTextToPath( const CurvedAlignTextToPathParams& params );
+/// Creates symbol mesh and deforms it along given curve
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params );
 
 } // namespace MR

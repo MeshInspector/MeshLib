@@ -109,7 +109,7 @@ Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours
 
 }
 
-Expected<Mesh> curvedAlignContoursToCurve( const Contours2f& contours, const CurvedAlignContoursToCurveParams& params )
+Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendContoursAlongCurveParams& params )
 {
     MR_TIMER;
     auto contoursMesh = PlanarTriangulation::triangulateContours( contours );
@@ -139,7 +139,7 @@ Expected<Mesh> curvedAlignContoursToCurve( const Contours2f& contours, const Cur
         const auto pos = params.curve( pivotX );
 
         const auto vecx = pos.dir;
-        const auto norm = pos.norm;
+        const auto norm = pos.snorm;
         const auto vecy = cross( vecx, -norm ).normalized();
 
         const Vector3f pivotCoord{ compCenter.x,

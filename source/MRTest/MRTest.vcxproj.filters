@@ -154,7 +154,7 @@
     <ClCompile Include="MRDicomTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TextToMeshTests.cpp">
+    <ClCompile Include="BendTextAlongCurveTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -8,9 +8,9 @@ namespace MR
 
 struct CurvePoint
 {
-    Vector3f pos;
-    Vector3f dir;  // along curve
-    Vector3f norm; // upward from the surface
+    Vector3f pos;  ///< position on the curve
+    Vector3f dir;  ///< direction along the curve
+    Vector3f snorm;///< the normal of the surface where the curve is located
 };
 
 using CurveFunc = std::function<CurvePoint(float)>;

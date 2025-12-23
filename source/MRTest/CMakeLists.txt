@@ -11,6 +11,7 @@ IF(NOT EMSCRIPTEN)
     PRIVATE
       MRIOExtras
       MRViewer
+      MRSymbolMesh
       cpr::cpr
       GTest::gtest
       ${CMAKE_DL_LIBS}
@@ -23,6 +24,7 @@ ELSE()
       -Wl,--whole-archive
       MRViewer
       -Wl,--no-whole-archive
+      MRSymbolMesh
       GTest::gtest
       ${CMAKE_DL_LIBS}
   )

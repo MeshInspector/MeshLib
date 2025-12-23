@@ -120,7 +120,7 @@ Expected<Mesh> curvedAlignTextToMesh( const Mesh& mesh, const TextMeshCurvedAlig
     }
 
     return curvedAlignContoursToMesh( mesh, conts, {
-        .pivotY = params.pivotY,
+        .pivotY = pivotY,
         .curvePos = params.curvePos,
         .curveDir = params.curveDir,
         .extrusion = params.surfaceOffset

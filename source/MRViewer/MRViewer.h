@@ -526,7 +526,7 @@ public:
     MRVIEWER_API void drawUiRenderObjects();
 
     /// return true if ImGui Multi Viewport is available
-    /// (it is unavailalbe for Apple, Wayland and Emscripten)
+    /// (it is unavailable for macOS, Linux, and Emscripten)
     MRVIEWER_API bool isMultiViewportAvailable();
 private:
     Viewer();

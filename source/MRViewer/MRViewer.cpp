@@ -1814,6 +1814,12 @@ bool Viewer::isMultiViewportAvailable()
 {
 #ifdef __EMSCRIPTEN__
     return false;
+#elif GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    // ImGui multi-viewport has unresolved issues with tooltips on X11 (incorrect window class?)
+    // See also:
+    //  - https://github.com/ocornut/imgui/issues/7950
+    //  - https://github.com/ocornut/imgui/issues/8252
+    return !hasScaledFramebuffer_ && glfwGetPlatform() != GLFW_PLATFORM_X11;
 #else
     return !hasScaledFramebuffer_;
 #endif

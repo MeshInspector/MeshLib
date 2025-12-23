@@ -109,7 +109,7 @@ Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours
 
 }
 
-Expected<Mesh> curvedAlignContoursToMesh( const Mesh& mesh, const Contours2f& contours, const ContoursMeshCurvedAlignParams& params )
+Expected<Mesh> curvedAlignContoursToCurve( const Contours2f& contours, const CurvedAlignContoursToCurveParams& params )
 {
     MR_TIMER;
     auto contoursMesh = PlanarTriangulation::triangulateContours( contours );
@@ -130,18 +130,16 @@ Expected<Mesh> curvedAlignContoursToMesh( const Mesh& mesh, const Contours2f& co
 
     const auto components = MeshComponents::getAllComponents( contoursMesh );
     // independently for each component of contoursMesh
-    (void)mesh.getAABBTree();
     ParallelFor( components, [&]( size_t icomp )
     {
         const auto & compFaces = components[icomp];
         const auto compCenter = contoursMesh.computeBoundingBox( &compFaces ).center();
         const float pivotX = ( compCenter.x - bbox.min.x ) / diagonal.x;
 
-        const auto pos = params.curvePos( pivotX );
-        const auto proj = findProjection( pos, mesh );
+        const auto pos = params.curve( pivotX );
 
-        const auto vecx = params.curveDir( pivotX );
-        const auto norm = mesh.pseudonormal( proj.mtp );
+        const auto vecx = pos.dir;
+        const auto norm = pos.norm;
         const auto vecy = cross( vecx, -norm ).normalized();
 
         const Vector3f pivotCoord{ compCenter.x,
@@ -162,12 +160,12 @@ Expected<Mesh> curvedAlignContoursToMesh( const Mesh& mesh, const Contours2f& co
         AffineXf3f rot = AffineXf3f::linear( rotQ );
 
         const AffineXf3f transformTop =
-            AffineXf3f::translation( proj.proj.point ) *
+            AffineXf3f::translation( pos.pos ) *
             rot
             * AffineXf3f::translation( Vector3f{ -compCenter.x, -bbox.min.y - diagonal.y * params.pivotY, plusOffset } );
 
         const AffineXf3f transformBottom =
-            AffineXf3f::translation( proj.proj.point ) *
+            AffineXf3f::translation( pos.pos ) *
             rot
             * AffineXf3f::translation( Vector3f{ -compCenter.x, -bbox.min.y - diagonal.y * params.pivotY, minusOffset } );
 

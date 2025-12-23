@@ -87,7 +87,7 @@ Expected<Mesh> alignTextToMesh(
         } );
 }
 
-Expected<Mesh> curvedAlignTextToMesh( const Mesh& mesh, const TextMeshCurvedAlignParams& params )
+Expected<Mesh> curvedAlignTextToPath( const CurvedAlignTextToPathParams& params )
 {
     MR_TIMER;
     auto contoursOrError = createSymbolContours( params );
@@ -119,10 +119,9 @@ Expected<Mesh> curvedAlignTextToMesh( const Mesh& mesh, const TextMeshCurvedAlig
         pivotY = ( absYPivot - bbox.min.y ) / diagonal.y;
     }
 
-    return curvedAlignContoursToMesh( mesh, conts, {
+    return curvedAlignContoursToCurve( conts, {
         .pivotY = pivotY,
-        .curvePos = params.curvePos,
-        .curveDir = params.curveDir,
+        .curve = params.curve,
         .extrusion = params.surfaceOffset
         } );
 }

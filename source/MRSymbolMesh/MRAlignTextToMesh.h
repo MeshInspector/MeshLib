@@ -7,6 +7,7 @@
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRMeshTriPoint.h"
+#include "MRMesh/MRCurve.h"
 
 namespace MR
 {
@@ -35,17 +36,14 @@ struct TextMeshAlignParams : SymbolMeshParams
 // Creates symbol mesh and aligns it to given surface
 MRSYMBOLMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
 
-struct TextMeshCurvedAlignParams : SymbolMeshParams
+struct CurvedAlignTextToPathParams : SymbolMeshParams
 {
     /// Relative position of curve line (y=pivotY) in contours bounding box:
     /// 0 - bottom, 0.5 - center, 1 - top
     float pivotY = 0;
 
-    /// converts (x, pivotY) into position on curve, which must be close enough to the mesh
-    std::function<Vector3f(float x)> curvePos;
-
-    /// converts (x, pivotY) into unit direction along curve
-    std::function<Vector3f(float x)> curveDir;
+    /// converts (x in [0,1], pivotY) into position on curve
+    CurveFunc curve;
 
     // Font height, meters
     float fontHeight{1.0f};
@@ -57,7 +55,7 @@ struct TextMeshCurvedAlignParams : SymbolMeshParams
     bool fontBasedSizeCalc{ false };
 };
 
-// Creates symbol mesh and aligns it to given surface
-MRSYMBOLMESH_API Expected<Mesh> curvedAlignTextToMesh( const Mesh& mesh, const TextMeshCurvedAlignParams& params );
+// Creates symbol mesh and aligns along given path
+MRSYMBOLMESH_API Expected<Mesh> curvedAlignTextToPath( const CurvedAlignTextToPathParams& params );
 
 } // namespace MR

@@ -1376,6 +1376,9 @@
     <ClInclude Include="MRTextureColors.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRCurve.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

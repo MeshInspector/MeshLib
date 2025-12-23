@@ -34,4 +34,30 @@ struct TextMeshAlignParams : SymbolMeshParams
 
 // Creates symbol mesh and aligns it to given surface
 MRSYMBOLMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
-}
+
+struct TextMeshCurvedAlignParams : SymbolMeshParams
+{
+    /// Relative position of curve line (y=pivotY) in contours bounding box:
+    /// 0 - bottom, 0.5 - center, 1 - top
+    float pivotY = 0;
+
+    /// converts (x, pivotY) into position on curve, which must be close enough to the mesh
+    std::function<Vector3f(float x)> curvePos;
+
+    /// converts (x, pivotY) into unit direction along curve
+    std::function<Vector3f(float x)> curveDir;
+
+    // Font height, meters
+    float fontHeight{1.0f};
+
+    // Text mesh inside and outside offset of input mesh
+    float surfaceOffset{1.0f};
+
+    // If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text
+    bool fontBasedSizeCalc{ false };
+};
+
+// Creates symbol mesh and aligns it to given surface
+MRSYMBOLMESH_API Expected<Mesh> curvedAlignTextToMesh( const Mesh& mesh, const TextMeshCurvedAlignParams& params );
+
+} // namespace MR

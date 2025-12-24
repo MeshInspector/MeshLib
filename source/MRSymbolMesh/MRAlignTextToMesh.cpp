@@ -87,7 +87,7 @@ Expected<Mesh> alignTextToMesh(
         } );
 }
 
-Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params )
+Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
     auto contoursOrError = createSymbolContours( params );
@@ -121,7 +121,7 @@ Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params )
 
     return bendContoursAlongCurve( conts, {
         .pivotY = pivotY,
-        .curve = params.curve,
+        .curve = curve,
         .extrusion = params.surfaceOffset
         } );
 }

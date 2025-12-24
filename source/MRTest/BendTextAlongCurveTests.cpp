@@ -34,7 +34,7 @@ TEST( MRMesh, BendTextAlongCurve )
         };
     };
 
-    auto maybeText = bendTextAlongCurve( { s, 0, curve, 0.2f, 0.03f } );
+    auto maybeText = bendTextAlongCurve( curve, { s, 0, 0.2f, 0.03f } );
     EXPECT_TRUE( maybeText.has_value() );
     EXPECT_TRUE( maybeText->topology.numValidFaces() > 0 );
 }

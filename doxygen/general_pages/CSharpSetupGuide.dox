@@ -19,15 +19,15 @@ available, so make sure your project is configured accordingly to avoid compatib
 Before installing MeshLib, ensure you have the following tools installed:
 
 ### .NET SDK
- - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website. 
+ - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
  MeshLib is compatible with .NET Framework 4.7 and higher, as well as .NET 5.0, 6.0, 7.0, 8.0, and additional versions outlined below.
  - Verify your installation by running:
-\code{.cmd} 
+\code{.cmd}
 dotnet --version
 \endcode
 
 ### Visual Studio
-For a more integrated development experience, you can use Visual Studio 2019 or later. 
+For a more integrated development experience, you can use Visual Studio 2019 or later.
 Make sure to install the **.NET desktop development** workload.
 
 ## Installation via NuGet
@@ -47,7 +47,7 @@ To install MeshLib via Visual Studio, follow these steps:
   - Select the MeshLib package from the search results.
   - Click "Install" and follow any prompts to complete the installation.
  5. **Start Using MeshLib**:
-  - Add `using static MR.DotNet;` at the top of your C# files to start using MeshLib features.
+  - You should now have access to the static class `MR` and its members.
 
 ## Installation from a Downloaded NuGet Package
 If you prefer to download the MeshLib package directly from the NuGet website, follow these steps:
@@ -57,23 +57,23 @@ If you prefer to download the MeshLib package directly from the NuGet website, f
   - Click "Download Package" to get the `.nupkg` file.
  2. **Create a Local Directory for NuGet Packages**:
   - Choose or create a directory on your system where you will store the `.nupkg` file. For example:
-\code{.cmd} 
+\code{.cmd}
 mkdir ~/LocalNuGetPackages
 \endcode
   - Move the downloaded `MeshLib.nupkg` file to this directory.
  3. **Install the MeshLib Package Locally**:
   - Use the command below to install the package:
-\code{.cmd} 
+\code{.cmd}
 dotnet add package MeshLib --source /path/to/LocalNuGetPackages
 \endcode
  4. **Alternative: Configure Local Source Globally**:
   - Add the local directory as a source using:
-\code{.cmd} 
+\code{.cmd}
 dotnet nuget add source \path\to\LocalNuGetPackages --name LocalPackages
 \endcode
   - After this, you can install the package normally without specifying `-source`.
  5. **Build and Run Your Project**:
-\code{.cmd} 
+\code{.cmd}
 dotnet build
 dotnet run
 \endcode
@@ -84,23 +84,23 @@ To install MeshLib via the .NET CLI, follow these steps:
   - **On Windows**, use Command Prompt, PowerShell, or the Windows Terminal.
  2. **Create a New Project Directory**:
  \n Run the following commands to create a new directory for your project and navigate into it:
-\code{.cmd} 
+\code{.cmd}
 mkdir TestProject
 cd TestProject
 \endcode
  3. **Create a New .NET Console Project**:
  \n Inside the new directory, initialize a .NET console project by running:
-\code{.cmd} 
+\code{.cmd}
 dotnet new console
 \endcode
  4. **Install the MeshLib Package**:
  \n Use the following command to add MeshLib to your project:
-\code{.cmd} 
+\code{.cmd}
 dotnet add package MeshLib
 \endcode
  5. **Build and Run Your Project**:
  \n After installing MeshLib, you can build and run your project using:
-\code{.cmd} 
+\code{.cmd}
 dotnet run
 \endcode
 

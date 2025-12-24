@@ -17,11 +17,6 @@ class Program
             Environment.Exit(1);
         }
 
-        MR.Expected_Void_StdString save_result = MR.MeshSave.ToAnySupportedFormat(boolean_result.Mesh, "out_boolean.stl");
-        if (save_result.GetError() is var error and not null)
-        {
-            Console.WriteLine($"Failed to save file: {(string)error}");
-            Environment.Exit(1);
-        }
+        MR.MeshSave.ToAnySupportedFormat(boolean_result.Mesh, "out_boolean.stl");
     }
 }

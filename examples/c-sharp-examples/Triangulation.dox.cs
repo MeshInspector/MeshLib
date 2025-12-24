@@ -27,7 +27,7 @@ public class TriangulationExample
 
             // Triangulate it
             MR.TriangulationParameters parameters = new();
-            MR.Mesh? triangulated = MR.TriangulatePointCloud(pc, parameters).Value.Value();
+            MR.Mesh? triangulated = MR.TriangulatePointCloud(pc, parameters).Value();
             if (triangulated is null)
             {
                 Console.WriteLine("Error during triangulation");
@@ -38,14 +38,10 @@ public class TriangulationExample
             MR.OffsetParameters offsetParameters = new();
             MR.MeshPart mp = new(triangulated);
             offsetParameters.VoxelSize = MR.SuggestVoxelSize(mp, 5e+6f);
-            MR.Expected_MRMesh_StdString offset_ex = MR.OffsetMesh(mp, 0f, offsetParameters);
-            if (offset_ex.GetError() is var offset_error and not null)
-                throw new Exception(offset_error);
+            var offset = MR.OffsetMesh(mp, 0f, offsetParameters);
 
             // Save result
-            MR.Expected_Void_StdString save_ex = MR.MeshSave.ToAnySupportedFormat(offset_ex.GetValue()!, "meshA_icp.stl");
-            if (save_ex.GetError() is var save_error and not null)
-                throw new Exception(save_error);
+            MR.MeshSave.ToAnySupportedFormat(offset, "meshA_icp.stl");
         }
         catch (Exception e)
         {

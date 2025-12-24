@@ -396,6 +396,8 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 #endif
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
+    if ( setup.shutdownCustomLogSink )
+        setup.shutdownCustomLogSink();
     return res;
 }
 

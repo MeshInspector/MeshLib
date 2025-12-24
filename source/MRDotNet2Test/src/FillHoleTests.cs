@@ -6,26 +6,35 @@ namespace MRTest
     [TestFixture]
     internal class FillHoleTests
     {
-        /*
+        private static void updateTri(Std.Mut_Array_MRVertId_3 tri, int v0, int v1, int v2)
+        {
+            tri.Elems._0 = new VertId(v0);
+            tri.Elems._1 = new VertId(v1);
+            tri.Elems._2 = new VertId(v2);
+        }
+
         private static Mesh CreateMeshWithHoles()
         {
-            List<Vector3f> points = new List<Vector3f>();
-            points.Add(new Vector3f(0, 0, 0));
-            points.Add(new Vector3f(1, 0, 0));
-            points.Add(new Vector3f(0, 1, 0));
-            points.Add(new Vector3f(0, 0, 1));
-            points.Add(new Vector3f(1, 0, 1));
-            points.Add(new Vector3f(0, 1, 1));
+            var points = new VertCoords();
+            points.PushBack(new Vector3f(0, 0, 0));
+            points.PushBack(new Vector3f(1, 0, 0));
+            points.PushBack(new Vector3f(0, 1, 0));
+            points.PushBack(new Vector3f(0, 0, 1));
+            points.PushBack(new Vector3f(1, 0, 1));
+            points.PushBack(new Vector3f(0, 1, 1));
 
-            List<ThreeVertIds> triangles = new List<ThreeVertIds>();
-            triangles.Add(new ThreeVertIds(0, 2, 1));
-            triangles.Add(new ThreeVertIds(3, 4, 5));
-            triangles.Add(new ThreeVertIds(0, 1, 3));
-            triangles.Add(new ThreeVertIds(2, 5, 4));
-            triangles.Add(new ThreeVertIds(2, 3, 5));
+            var triangles = new Triangulation(5);
+            updateTri(triangles.Index(new FaceId(0)), 0, 2, 1);
+            updateTri(triangles.Index(new FaceId(1)), 3, 4, 5);
+            updateTri(triangles.Index(new FaceId(2)), 0, 1, 3);
+            updateTri(triangles.Index(new FaceId(3)), 2, 5, 4);
+            updateTri(triangles.Index(new FaceId(4)), 2, 3, 5);
 
             return Mesh.FromTriangles(points, triangles);
         }
+
+        /*
+         * TODO: fix struct field assignment
         [Test]
         public void TestFillHole()
         {
@@ -38,7 +47,10 @@ namespace MRTest
             FillHoles(ref mesh, mesh.HoleRepresentiveEdges.ToList(), param);
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(0));
         }
+        */
 
+        /*
+         * TODO: fix struct field assignment
         [Test]
         public void TestFillHoleNicely()
         {
@@ -52,15 +64,16 @@ namespace MRTest
             Assert.That( patch.Count, Is.EqualTo(1887) );
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(1));
         }
+        */
 
         [Test]
         public void TestRightBoundary()
         {
             var mesh = CreateMeshWithHoles();
-            var loops = RegionBoundary.FindRightBoundary(mesh);
-            Assert.That(loops.Count, Is.EqualTo(2));
-            Assert.That(loops[0].Count, Is.EqualTo(3));
-            Assert.That(loops[1].Count, Is.EqualTo(4));
+            var loops = FindRightBoundary(mesh.Topology);
+            Assert.That(loops.Size(), Is.EqualTo(2));
+            Assert.That(loops.At(0).Size(), Is.EqualTo(3));
+            Assert.That(loops.At(1).Size(), Is.EqualTo(4));
         }
 
         [Test]
@@ -70,6 +83,5 @@ namespace MRTest
             var complicatedFaces = FindHoleComplicatingFaces(mesh);
             Assert.That(complicatedFaces.Count(), Is.EqualTo(0));
         }
-        */
     }
 }

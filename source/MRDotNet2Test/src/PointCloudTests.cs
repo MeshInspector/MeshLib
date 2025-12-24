@@ -9,7 +9,6 @@ namespace MRTest
     [TestFixture]
     internal class PoitCloudTests
     {
-        /*
         static PointCloud MakeCube()
         {
             var points = new PointCloud();
@@ -29,10 +28,10 @@ namespace MRTest
         {
             var points = MakeCube();
 
-            Assert.That(points.Points.Count == 8);
-            Assert.That(points.Normals.Count == 0);
+            Assert.That(points.Points.Size() == 8);
+            Assert.That(points.Normals.Size() == 0);
 
-            var bbox = points.BoundingBox;
+            var bbox = points.GetBoundingBox();
             Assert.That(bbox.Min == new Vector3f(0, 0, 0));
             Assert.That(bbox.Max == new Vector3f(1, 1, 1));
         }
@@ -55,20 +54,8 @@ namespace MRTest
             points.AddPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1));
             points.AddPoint(new Vector3f(0, 1, 0), new Vector3f(0, 0, 1));
 
-            Assert.That(points.Points.Count == 2);
-            Assert.That(points.Points.Count == 2);
-        }
-
-        [Test]
-        public void TestNormalsError()
-        {
-            var points = new PointCloud();
-            points.AddPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1));
-            Assert.Throws<InvalidOperationException>(() => points.AddPoint(new Vector3f(0, 0, 0)));
-
-            points = new PointCloud();
-            points.AddPoint(new Vector3f(0, 0, 0));
-            Assert.Throws<InvalidOperationException>(() => points.AddPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1)));
+            Assert.That(points.Points.Size() == 2);
+            Assert.That(points.Points.Size() == 2);
         }
 
         [Test]
@@ -79,9 +66,10 @@ namespace MRTest
             PointsSave.ToAnySupportedFormat(points, tempFile);
 
             var readPoints = PointsLoad.FromAnySupportedFormat(tempFile);
-            Assert.That(points.Points.Count == readPoints.Points.Count);
+            Assert.That(points.Points.Size() == readPoints.Points.Size());
         }
 
+        /*
         [Test]
         public void TestEmptyFile()
         {
@@ -91,40 +79,25 @@ namespace MRTest
             Assert.Throws<SystemException>(() => PointsLoad.FromAnySupportedFormat(path));
             File.Delete(path);
         }
+        */
 
         [Test]
         public void TestTriangulation()
         {
-            var mesh = Mesh.MakeTorus(2.0f, 1.0f, 32, 32);
-            var pc = Mesh.MeshToPointCloud(mesh);
-            var restored = TriangulatePointCloud(pc, new TriangulationParameters());
+            var mesh = MakeTorus(2.0f, 1.0f, 32, 32);
+            var pc = MeshToPointCloud(mesh);
+            var restored = TriangulatePointCloud(pc, new TriangulationParameters()).Value();
             Assert.That(restored is not null);
             if (restored is not null)
             {
-                Assert.That(restored.Points.Count, Is.EqualTo(1024));
-                Assert.That(restored.ValidPoints.Count(), Is.EqualTo(1024));
-                Assert.That(restored.HoleRepresentiveEdges.Count == 0);
+                Assert.That(restored.Points.Size(), Is.EqualTo(1024));
+                Assert.That(restored.Topology.GetValidVerts().Count(), Is.EqualTo(1024));
+                Assert.That(restored.Topology.FindHoleRepresentiveEdges().Size() == 0);
             }
         }
 
-        [Test]
-        public void TestCreatingFromPointList()
-        {
-            var points = new List<Vector3f>(8);
-            points.Add(new Vector3f(0, 0, 0));
-            points.Add(new Vector3f(0, 1, 0));
-            points.Add(new Vector3f(1, 1, 0));
-            points.Add(new Vector3f(1, 0, 0));
-            points.Add(new Vector3f(0, 0, 1));
-            points.Add(new Vector3f(0, 1, 1));
-            points.Add(new Vector3f(1, 1, 1));
-            points.Add(new Vector3f(1, 0, 1));
-
-            var pc = PointCloud.FromPoints(points);
-            Assert.That(pc.Points.Count == 8);
-            Assert.That(pc.Normals.Count == 0);
-        }
-
+        /*
+         * TODO: fix struct field assignment
         [Test]
         public void TestSaveLoadWithColors()
         {
@@ -159,15 +132,15 @@ namespace MRTest
 
             File.Delete(path);
         }
+        */
 
         [Test]
         public void TestCachedPoints()
         {
             var points = MakeCube();
-            Assert.That(points.Points.Count == 8);
+            Assert.That(points.Points.Size() == 8);
             points.AddPoint(new Vector3f(0, 0, 0));
-            Assert.That(points.Points.Count == 9);
+            Assert.That(points.Points.Size() == 9);
         }
-        */
     }
 }

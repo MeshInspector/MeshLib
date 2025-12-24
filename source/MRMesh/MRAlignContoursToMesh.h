@@ -5,11 +5,12 @@
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRMeshTriPoint.h"
+#include "MRCurve.h"
 
 namespace MR
 {
 
-/// Parameters for aligning 2d contour onto mesh surface
+/// Parameters for aligning 2d contours onto mesh surface
 struct ContoursMeshAlignParams
 {
     /// Point coordinate on mesh, represent position of contours box 'pivotPoint' on mesh
@@ -35,6 +36,23 @@ struct ContoursMeshAlignParams
 
 /// Creates planar mesh out of given contour and aligns it to given surface
 MRMESH_API Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours, const ContoursMeshAlignParams& params );
+
+/// Parameters for aligning 2d contours along given curve
+struct BendContoursAlongCurveParams
+{
+    /// Relative position of curve line (y=pivotY) in contours bounding box:
+    /// 0 - bottom, 0.5 - center, 1 - top
+    float pivotY = 0;
+
+    /// converts (x in [0,1], pivotY) into position on curve
+    CurveFunc curve;
+
+    /// Contours extrusion outside of curve level
+    float extrusion{ 1.0f };
+};
+
+/// Converts contours in thick mesh, and deforms it along given path
+MRMESH_API Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendContoursAlongCurveParams& params );
 
 /// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset (along -Z if zOffset is negative) to make a volumetric closed mesh
 /// note that this function also packs the mesh

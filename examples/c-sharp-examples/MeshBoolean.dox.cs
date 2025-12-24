@@ -13,15 +13,11 @@ public class MeshBooleanExample
         try
         {
             // load mesh
-            MR.Expected_MRMesh_StdString mesh_a_ex = MR.MeshLoad.FromAnySupportedFormat(args[1]);
-            if (mesh_a_ex.GetError() is var error_a and not null)
-                throw new Exception(error_a);
-            MR.Expected_MRMesh_StdString mesh_b_ex = MR.MeshLoad.FromAnySupportedFormat(args[2]);
-            if (mesh_b_ex.GetError() is var error_b and not null)
-                throw new Exception(error_b);
+            var mesh_a = MR.MeshLoad.FromAnySupportedFormat(args[1]);
+            var mesh_b = MR.MeshLoad.FromAnySupportedFormat(args[2]);
 
             // perform boolean operation
-            MR.BooleanResult res = MR.Boolean(mesh_a_ex.GetValue()!, mesh_b_ex.GetValue()!, MR.BooleanOperation.Intersection);
+            MR.BooleanResult res = MR.Boolean(mesh_a, mesh_b, MR.BooleanOperation.Intersection);
 
             // save result to STL file
             MR.MeshSave.ToAnySupportedFormat(res.Mesh, "out_boolean.stl");

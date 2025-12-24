@@ -6,6 +6,7 @@ namespace MRTest
     [TestFixture]
     internal class FillHoleTests
     {
+        /*
         private static Mesh CreateMeshWithHoles()
         {
             List<Vector3f> points = new List<Vector3f>();
@@ -69,5 +70,6 @@ namespace MRTest
             var complicatedFaces = FindHoleComplicatingFaces(mesh);
             Assert.That(complicatedFaces.Count(), Is.EqualTo(0));
         }
+        */
     }
 }

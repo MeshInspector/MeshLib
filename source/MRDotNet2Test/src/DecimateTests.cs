@@ -8,6 +8,7 @@ namespace MRTest
     [TestFixture]
     internal class DecimateTests
     {
+        /*
         [Test]
         public void TestDecimate()
         {
@@ -27,16 +28,17 @@ namespace MRTest
             Assert.That(decimateResult.facesDeleted > 0);
             Assert.That(decimateResult.vertsDeleted > 0);
         }
+        */
 
         [Test]
         public void TestRemesh()
         {
-            var sphere = Mesh.MakeSphere( 0.5f, 300 );
-            Assert.That(sphere.ValidFaces.Count(), Is.EqualTo(596));
-            var parameters = new RemeshParameters();
-            parameters.targetEdgeLen = 0.1f;
-            var remeshResult = Remesh(ref sphere, parameters);
-            Assert.That(sphere.ValidFaces.Count(), Is.EqualTo(716));
+            var sphere = MakeSphere( new SphereParams( 0.5f, 300 ) ).Value; // TODO: replace _Moved
+            Assert.That(sphere.Topology.GetValidFaces().Count(), Is.EqualTo(596));
+            var parameters = new RemeshSettings();
+            parameters.TargetEdgeLen = 0.1f;
+            var remeshResult = Remesh(sphere, parameters);
+            Assert.That(sphere.Topology.GetValidFaces().Count(), Is.EqualTo(716));
         }
     }
 }

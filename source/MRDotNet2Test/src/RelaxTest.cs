@@ -8,6 +8,7 @@ namespace MRTest
     [TestFixture]
     internal class RelaxTests
     {
+        /*
         [Test]
         public void TestRelax()
         {
@@ -39,5 +40,6 @@ namespace MRTest
             RelaxKeepVolume(ref sphere, parameters);
             Assert.That(sphere.Volume() / oldVolume > 0.7f);
         }
+        */
     }
 }

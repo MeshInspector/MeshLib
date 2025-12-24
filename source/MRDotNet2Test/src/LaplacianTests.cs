@@ -14,31 +14,32 @@ namespace MRTest
         [Test]
         public void TestLaplacian()
         {
-            var mesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f)).Value; // TODO: replace _Moved
             var laplacian = new Laplacian(mesh);
 
             // initialize laplacian
-            var i0 = mesh.Triangulation.FirstOrDefault().v0;
-            var i1 = mesh.Triangulation.LastOrDefault().v0;
+            var triangulation = mesh.Topology.GetTriangulation().Value; // TODO: replace _Moved
+            var i0 = triangulation.Front().Elems._0;
+            var i1 = triangulation.Back().Elems._0;
 
-            var ancV0 = mesh.Points[i0.Id];
-            var ancV1 = mesh.Points[i1.Id];
+            var ancV0 = mesh.Points.Index(i0);
+            var ancV1 = mesh.Points.Index(i1);
 
             EdgeWeights edgeWeights = EdgeWeights.Unit;
             VertexMass vertexMass = VertexMass.Unit;
-            LaplacianRememberShape rememberShape = LaplacianRememberShape.No;
+            Laplacian.RememberShape rememberShape = Laplacian.RememberShape.No;
 
             // fix specific vertices
             VertBitSet freeVerts = new VertBitSet();
-            freeVerts.Resize(mesh.ValidPoints.Count());
-            freeVerts.Set(i0.Id, true);
-            freeVerts.Set(i1.Id, true);
+            freeVerts.Resize(mesh.Topology.GetValidVerts().Count());
+            freeVerts.Set(i0, true);
+            freeVerts.Set(i1, true);
 
             laplacian.Init(freeVerts, edgeWeights, vertexMass, rememberShape);
 
             // apply laplacian
-            laplacian.FixVertex(i0, ref ancV0);
-            laplacian.FixVertex(i1, ref ancV1);
+            laplacian.FixVertex(i0, ancV0);
+            laplacian.FixVertex(i1, ancV1);
 
             laplacian.Apply();
 

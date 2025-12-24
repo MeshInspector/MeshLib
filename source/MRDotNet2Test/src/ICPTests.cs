@@ -12,23 +12,23 @@ namespace MRTest
         [Test]
         public void TestMultiwayICP()
         {
-            List<MeshOrPointsXf> inputs = new List<MeshOrPointsXf>(2);
+            var inputs = new Std.Vector_MRMeshOrPointsXf();
             Box3f maxBBox = new Box3f();
 
-            inputs.Add( new MeshOrPointsXf(Mesh.MakeSphere(1.0f, 1000), new AffineXf3f()));
-            Box3f bbox = inputs[0].obj.BoundingBox;
+            inputs.PushBack( new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)).Value, new AffineXf3f())); // TODO: replace _Moved
+            Box3f bbox = inputs.At(0).Obj.GetObjBoundingBox();
             if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                 maxBBox = bbox;
 
-            inputs.Add(new MeshOrPointsXf(Mesh.MakeSphere(1.0f, 1000), new AffineXf3f(Matrix3f.Rotation(Vector3f.PlusZ(), 0.1f))));
-            bbox = inputs[1].obj.BoundingBox;
+            inputs.PushBack(new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)).Value, AffineXf3f.Linear(Matrix3f.Rotation(Vector3f.PlusZ(), 0.1f)))); // TODO: replace _Moved
+            bbox = inputs.At(1).Obj.GetObjBoundingBox();
             if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                 maxBBox = bbox;
 
             MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
-            samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
+            samplingParams.SamplingVoxelSize = maxBBox.Diagonal() * 0.03f;
 
-            MultiwayICP icp = new MultiwayICP(inputs, samplingParams);
+            MultiwayICP icp = new MultiwayICP(new Vector_MRMeshOrPointsXf_MRObjId(Misc.Move(inputs)), samplingParams);
             ICPProperties iCPProperties = new ICPProperties();
             icp.SetParams(iCPProperties);
             icp.UpdateAllPointPairs();
@@ -47,8 +47,8 @@ namespace MRTest
         [Test]
         public void TestICP()
         {
-            var torusRef = Mesh.MakeTorus(2, 1, 32, 32);
-            var torusMove = Mesh.MakeTorus(2, 1, 32, 32);
+            var torusRef = MakeTorus(2, 1, 32, 32).Value; // TODO: replace _Moved
+            var torusMove = MakeTorus(2, 1, 32, 32).Value; // TODO: replace _Moved
 
             var axis = Vector3f.PlusX();
             var trans = new Vector3f(0.0f, 0.2f, 0.105f);
@@ -57,8 +57,8 @@ namespace MRTest
             MeshOrPointsXf flt = new MeshOrPointsXf(torusMove, xf );
             MeshOrPointsXf refer = new MeshOrPointsXf( torusRef, new AffineXf3f());
 
-            var fltSamples = torusMove.ValidPoints as VertBitSet;
-            var referSamples = torusRef.ValidPoints as VertBitSet;
+            var fltSamples = torusMove.Topology.GetValidVerts();
+            var referSamples = torusRef.Topology.GetValidVerts();
             Assert.That(fltSamples is not null);
             Assert.That(referSamples is not null);
 
@@ -68,7 +68,7 @@ namespace MRTest
             var icp = new ICP(flt, refer, fltSamples, referSamples);
 
             var newXf = icp.CalculateTransformation();
-            Console.WriteLine(icp.GetStatusInfo());
+            Console.WriteLine(icp.GetStatusInfo().Value); // TODO: replace _Moved
 
             var diffXf = new AffineXf3f();
             diffXf.A -= newXf.A;
@@ -89,10 +89,10 @@ namespace MRTest
             Assert.That(Math.Abs(diffXf.B.Z), Is.LessThan(1e-6f));
 
             var pairs = icp.GetRef2FltPairs();
-            Assert.That(pairs.pairs.Count, Is.EqualTo(1024));
+            Assert.That(pairs.Size(), Is.EqualTo(1024));
 
             pairs = icp.GetFlt2RefPairs();
-            Assert.That(pairs.pairs.Count, Is.EqualTo(1024));
+            Assert.That(pairs.Size(), Is.EqualTo(1024));
         }
     }
 }

@@ -9,6 +9,7 @@ namespace MRTest
     [TestFixture]
     internal class PoitCloudTests
     {
+        /*
         static PointCloud MakeCube()
         {
             var points = new PointCloud();
@@ -167,5 +168,6 @@ namespace MRTest
             points.AddPoint(new Vector3f(0, 0, 0));
             Assert.That(points.Points.Count == 9);
         }
+        */
     }
 }

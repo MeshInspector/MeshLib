@@ -29,7 +29,7 @@ namespace MRTest
         public void TestLinearConstructor()
         {
             var A = new Matrix3f( new Vector3f( 1, 2, 3 ), new Vector3f( 4, 5, 6 ), new Vector3f( 7, 8, 9 ) );
-            var a = new AffineXf3f( A );
+            var a = AffineXf3f.Linear( A );
             Assert.That( a.A == A );
             Assert.That( a.B == new Vector3f() );
         }
@@ -38,7 +38,7 @@ namespace MRTest
         public void TestTranslationConstructor()
         {
             var b = new Vector3f( 10, 11, 12 );
-            var a = new AffineXf3f( b );
+            var a = AffineXf3f.Translation( b );
             Assert.That( a.A == new Matrix3f() );
             Assert.That( a.B == b );
         }

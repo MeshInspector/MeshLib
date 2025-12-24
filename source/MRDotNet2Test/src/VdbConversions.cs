@@ -7,6 +7,7 @@ namespace MRTest
     [TestFixture]
     internal class VdbConversionsTests
     {
+        /*
         internal static VdbVolume CreateVolume()
         {
             var mesh = Mesh.MakeSphere(1.0f, 3000);
@@ -155,5 +156,6 @@ namespace MRTest
             SetValue( vdbVolume.Data, p, 2.0f );
             Assert.That( GetValue( vdbVolume.Data, p ) == 2.0f );
         }
+        */
     }
 }

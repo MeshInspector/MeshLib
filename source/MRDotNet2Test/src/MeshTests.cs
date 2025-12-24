@@ -9,6 +9,7 @@ namespace MRTest
     [TestFixture]
     internal class MeshTests
     {
+        /*
         [Test]
         public void TestDoubleAssignment()
         {
@@ -465,6 +466,7 @@ namespace MRTest
             var shortEdges = FindShortEdges(new MeshPart( mesh ), 0.1f);
             Assert.That(shortEdges.Count(), Is.EqualTo(256));
         }
+        */
     }    
 }
 

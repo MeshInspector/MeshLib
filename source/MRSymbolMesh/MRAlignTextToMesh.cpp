@@ -187,7 +187,7 @@ Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
     curve[0].dir = ( curve[1].pos - curve[0].pos ).normalized();
     for ( int i = 1; i + 1 < curve.size(); ++i )
         curve[i].dir = ( curve[i + 1].pos - curve[i - 1].pos ).normalized();
-    curve[1].dir = ( curve[curve.size() - 1].pos - curve[curve.size() - 2].pos ).normalized();
+    curve.back().dir = ( curve[curve.size() - 1].pos - curve[curve.size() - 2].pos ).normalized();
 
     return bendTextAlongCurve( curve, params );
 }

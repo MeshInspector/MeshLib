@@ -1319,7 +1319,7 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 totalVerts += polyline->topology.numValidVerts();
                 totalEdges += lObj->numUndirectedEdges();
-                totalLength += lengthScale * polyline->totalLength();
+                totalLength += lengthScale * lObj->totalLength();
                 avgEdgeLen = lengthScale * lObj->avgEdgeLen();
                 components += lObj->numComponents();
             }

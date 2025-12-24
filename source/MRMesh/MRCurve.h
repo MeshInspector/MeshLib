@@ -16,12 +16,7 @@ struct CurvePoint
 /// curve given as a function: time -> point
 using CurveFunc = std::function<CurvePoint(float)>;
 
-struct CurvePointTime : CurvePoint
-{
-    float time = 0;
-};
-
-/// curve given as vector of points in ascending time values
-using CurvePoints = std::vector<CurvePointTime>;
+/// curve given as a number of points on it samples at arbitrary steps
+using CurvePoints = std::vector<CurvePoint>;
 
 } //namespace MR

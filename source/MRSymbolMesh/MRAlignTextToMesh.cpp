@@ -1,11 +1,11 @@
 #include "MRAlignTextToMesh.h"
 #include "MRMesh/MRAlignContoursToMesh.h"
-
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRMatrix2.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTimer.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -132,14 +132,41 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
 Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
-    if ( curve.empty() )
-        return unexpected( "no curve provided" );
-    assert( std::is_sorted( curve.begin(), curve.end(), []( const auto& a, const auto& b ) { return a.time < b.time; } ) );
-    if ( curve.front().time > 0 || curve.back().time < 1 )
-        return unexpected( "curve does not include [0,1] interval" );
+    if ( curve.size() < 2 )
+        return unexpected( "curve is too short" );
 
-    std::vector<float> len;
-    len.reserve( curve.size() );
+    std::vector<float> lens;
+    lens.reserve( curve.size() );
+    lens.push_back( 0 );
+    for ( int i = 0; i + 1 < curve.size(); ++i )
+        lens.push_back( lens.back() + distance( curve[i].pos, curve[i+1].pos ) );
+    assert( lens.size() == curve.size() );
+    // to relative lengths
+    const auto factor = 1 / lens.back();
+    for ( auto & l : lens )
+        l *= factor;
+
+    auto curveFunc = [&]( float p ) -> CurvePoint
+    { 
+        if ( p <= lens.front() )
+            return curve.front();
+        if ( p >= lens.back() )
+            return curve.back();
+        auto i = std::lower_bound( lens.begin(), lens.end(), p ) - lens.begin();
+        assert( lens[i] >= p );
+        if ( lens[i] == p )
+            return curve[i];
+        assert( lens[i-1] < p );
+        auto f = ( p - lens[i-1] ) / ( lens[i] - lens[i-1] );
+        return CurvePoint
+        {
+            .pos = lerp( curve[i-1].pos, curve[i].pos, f ),
+            .dir = lerp( curve[i-1].dir, curve[i].dir, f ),
+            .snorm = lerp( curve[i-1].snorm, curve[i].snorm, f )
+        };
+    };
+
+    return bendTextAlongCurve( curveFunc, params );
 }
 
 } //namespace MR

@@ -9,10 +9,10 @@ namespace MRTest
         [Test]
         public void TestSelfIntersections() 
         {
-            var mesh = MakeTorusWithSelfIntersections(1.0f, 0.2f, 32, 16).Value; // TODO: replace _Moved
+            var mesh = MakeTorusWithSelfIntersections(1.0f, 0.2f, 32, 16);
             Assert.That( mesh.Topology.GetValidFaces().Count(), Is.EqualTo(1024) );
 
-            var intersections = SelfIntersections.GetFaces(mesh).Value.GetValue(); // TODO: replace _Moved
+            var intersections = SelfIntersections.GetFaces(mesh);
             Assert.That( intersections.Count, Is.EqualTo(128) );
 
             var settings = new SelfIntersections.Settings();
@@ -20,8 +20,8 @@ namespace MRTest
 
             Assert.DoesNotThrow(() => SelfIntersections.Fix(mesh, settings) );
             Assert.That(mesh.Topology.GetValidFaces().Count(), Is.EqualTo(1194));
-            
-            intersections = SelfIntersections.GetFaces(mesh).Value.GetValue(); // TODO: replace _Moved
+
+            intersections = SelfIntersections.GetFaces(mesh);
             Assert.That(intersections.Count, Is.EqualTo(0));
         }
     }

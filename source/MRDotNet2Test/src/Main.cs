@@ -22,12 +22,7 @@ namespace MRTest
                 Environment.Exit(1);
             }
 
-            Expected_Void_StdString save_result = MeshSave.ToAnySupportedFormat(boolean_result.Mesh, "out_boolean.stl");
-            if (save_result.GetError() is var error and not null)
-            {
-                Console.WriteLine($"Failed to save file: {(string)error}");
-                Environment.Exit(1);
-            }
+            MeshSave.ToAnySupportedFormat(boolean_result.Mesh, "out_boolean.stl");
 
             /// ...
 

@@ -53,7 +53,7 @@ namespace MRTest
             a.Set(6);
             var b = new BitSet( 10 );
             b.Set( 6 );
-            BitSet c = a - b; // TODO: replace _Moved
+            var c = a - b;
             Assert.That( c.Test( 5 ) );
             Assert.That( !c.Test( 6 ) );
         }
@@ -65,7 +65,7 @@ namespace MRTest
             a.Set( 5 );            
             var b = new BitSet( 10 );
             b.Set( 6 );
-            BitSet c = a | b; // TODO: replace _Moved
+            var c = a | b;
             Assert.That( c.Test( 5 ) );
             Assert.That( c.Test( 6 ) );
         }

@@ -15,12 +15,12 @@ namespace MRTest
             var inputs = new Std.Vector_MRMeshOrPointsXf();
             Box3f maxBBox = new Box3f();
 
-            inputs.PushBack( new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)).Value, new AffineXf3f())); // TODO: replace _Moved
+            inputs.PushBack( new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)), new AffineXf3f()));
             Box3f bbox = inputs.At(0).Obj.GetObjBoundingBox();
             if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                 maxBBox = bbox;
 
-            inputs.PushBack(new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)).Value, AffineXf3f.Linear(Matrix3f.Rotation(Vector3f.PlusZ(), 0.1f)))); // TODO: replace _Moved
+            inputs.PushBack(new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)), AffineXf3f.Linear(Matrix3f.Rotation(Vector3f.PlusZ(), 0.1f))));
             bbox = inputs.At(1).Obj.GetObjBoundingBox();
             if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                 maxBBox = bbox;
@@ -47,8 +47,8 @@ namespace MRTest
         [Test]
         public void TestICP()
         {
-            var torusRef = MakeTorus(2, 1, 32, 32).Value; // TODO: replace _Moved
-            var torusMove = MakeTorus(2, 1, 32, 32).Value; // TODO: replace _Moved
+            var torusRef = MakeTorus(2, 1, 32, 32);
+            var torusMove = MakeTorus(2, 1, 32, 32);
 
             var axis = Vector3f.PlusX();
             var trans = new Vector3f(0.0f, 0.2f, 0.105f);
@@ -68,7 +68,7 @@ namespace MRTest
             var icp = new ICP(flt, refer, fltSamples, referSamples);
 
             var newXf = icp.CalculateTransformation();
-            Console.WriteLine(icp.GetStatusInfo().Value); // TODO: replace _Moved
+            Console.WriteLine(icp.GetStatusInfo());
 
             var diffXf = new AffineXf3f();
             diffXf.A -= newXf.A;

@@ -33,7 +33,7 @@ namespace MRTest
         [Test]
         public void TestRemesh()
         {
-            var sphere = MakeSphere( new SphereParams( 0.5f, 300 ) ).Value; // TODO: replace _Moved
+            var sphere = MakeSphere( new SphereParams( 0.5f, 300 ) );
             Assert.That(sphere.Topology.GetValidFaces().Count(), Is.EqualTo(596));
             var parameters = new RemeshSettings();
             parameters.TargetEdgeLen = 0.1f;

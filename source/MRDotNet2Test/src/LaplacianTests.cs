@@ -14,11 +14,11 @@ namespace MRTest
         [Test]
         public void TestLaplacian()
         {
-            var mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f)).Value; // TODO: replace _Moved
+            var mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var laplacian = new Laplacian(mesh);
 
             // initialize laplacian
-            var triangulation = mesh.Topology.GetTriangulation().Value; // TODO: replace _Moved
+            var triangulation = mesh.Topology.GetTriangulation();
             var i0 = triangulation.Front().Elems._0;
             var i1 = triangulation.Back().Elems._0;
 

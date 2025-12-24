@@ -57,7 +57,10 @@ struct BendTextAlongCurveParams : SymbolMeshParams
 MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCurveParams& params );
 
 /// Creates symbol mesh and deforms it along given curve
-/// \param curve must contain points in ascending order, with curve.front().time <= 0 and curve.back().time >= 1
 MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params );
+
+/// Creates symbol mesh and deforms it along given surface path
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
+    const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params );
 
 } // namespace MR

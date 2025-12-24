@@ -141,6 +141,9 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlong
     for ( int i = 0; i + 1 < curve.size(); ++i )
         lens.push_back( lens.back() + distance( curve[i].pos, curve[i+1].pos ) );
     assert( lens.size() == curve.size() );
+    if ( lens.back() <= 0 )
+        return unexpected( "curve has zero length" );
+
     // to relative lengths
     const auto factor = 1 / lens.back();
     for ( auto & l : lens )
@@ -167,6 +170,26 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlong
     };
 
     return bendTextAlongCurve( curveFunc, params );
+}
+
+Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
+    const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params )
+{
+    MR_TIMER;
+    CurvePoints curve;
+    curve.reserve( path.size() + 2 );
+    curve.push_back( { .pos = mesh.triPoint( start ), .snorm = mesh.normal( start ) } );
+    for ( const auto & ep : path )
+        curve.push_back( { .pos = mesh.triPoint( ep ), .snorm = mesh.normal( ep ) } );
+    curve.push_back( { .pos = mesh.triPoint( end ), .snorm = mesh.normal( end ) } );
+    assert( curve.size() == path.size() + 2 );
+
+    curve[0].dir = ( curve[1].pos - curve[0].pos ).normalized();
+    for ( int i = 1; i + 1 < curve.size(); ++i )
+        curve[i].dir = ( curve[i + 1].pos - curve[i - 1].pos ).normalized();
+    curve[1].dir = ( curve[curve.size() - 1].pos - curve[curve.size() - 2].pos ).normalized();
+
+    return bendTextAlongCurve( curve, params );
 }
 
 } //namespace MR

@@ -5,11 +5,7 @@ public class MeshDecimateExample
         try
         {
             // Load mesh
-            MR.Expected_MRMesh_StdString mesh_ex = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
-            if (mesh_ex.GetError() is var mesh_error and not null)
-                throw new Exception(mesh_error);
-
-            MR.Mesh mesh = mesh_ex.GetValue()!;
+            var mesh = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
 
             // Setup decimate parameters
             MR.DecimateSettings ds = new();
@@ -22,9 +18,7 @@ public class MeshDecimateExample
             MR.DecimateResult result = MR.DecimateMesh(mesh, ds);
 
             // Save result
-            MR.Expected_Void_StdString save_ex = MR.MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
-            if (save_ex.GetError() is var save_error and not null)
-                throw new Exception(save_error);
+            MR.MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
         }
         catch (Exception e)
         {

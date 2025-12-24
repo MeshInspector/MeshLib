@@ -5,11 +5,7 @@
         try
         {
             // Load mesh
-            MR.Expected_MRMesh_StdString mesh_ex = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
-            MR.Mesh? mesh = mesh_ex.GetValue();
-            if (mesh is null)
-                throw new Exception(mesh_ex.GetError()!);
-
+            var mesh = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
 
             // Compute mesh bounding box
             MR.Box3f box = mesh.GetBoundingBox();
@@ -35,9 +31,7 @@
             mesh.InvalidateCaches();
 
             // Save deformed mesh
-            MR.Expected_Void_StdString save_ex = MR.MeshSave.ToAnySupportedFormat(mesh, "deformed_mesh.stl");
-            if (save_ex.GetError() is var error and not null)
-                throw new Exception(error);
+            MR.MeshSave.ToAnySupportedFormat(mesh, "deformed_mesh.stl");
         }
         catch (Exception e)
         {

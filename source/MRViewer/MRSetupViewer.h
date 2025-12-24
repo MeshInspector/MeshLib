@@ -46,6 +46,9 @@ public:
     // functor to setup custom log sink, i.e. sending logs to web
     std::function<void()> setupCustomLogSink;
 
+    // functor to shutdown custom log sink, i.e. send all remaining logs to web before exit
+    std::function<void()> shutdownCustomLogSink;
+
 private:
 #ifndef __EMSCRIPTEN__
     struct LoadedModule

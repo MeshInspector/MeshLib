@@ -90,6 +90,9 @@ Expected<Mesh> alignTextToMesh(
 Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
+    if ( !curve )
+        return unexpected( "no curve provided" );
+
     auto contoursOrError = createSymbolContours( params );
     if ( !contoursOrError.has_value() )
         return unexpected( std::move( contoursOrError.error() ) );
@@ -124,6 +127,19 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         .curve = curve,
         .extrusion = params.surfaceOffset
         } );
+}
+
+Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params )
+{
+    MR_TIMER;
+    if ( curve.empty() )
+        return unexpected( "no curve provided" );
+    assert( std::is_sorted( curve.begin(), curve.end(), []( const auto& a, const auto& b ) { return a.time < b.time; } ) );
+    if ( curve.front().time > 0 || curve.back().time < 1 )
+        return unexpected( "curve does not include [0,1] interval" );
+
+    std::vector<float> len;
+    len.reserve( curve.size() );
 }
 
 } //namespace MR

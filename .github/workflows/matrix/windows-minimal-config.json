@@ -26,7 +26,7 @@
     },
     {
       "cxx_compiler": "msvc-2022",
-      "config": "Debug",
+      "config": "Release",
       "build_system": "CMake",
       "vcpkg-version": "__VCPKG_VERSION_VS22__",
       "runner": ["windows-2025"],

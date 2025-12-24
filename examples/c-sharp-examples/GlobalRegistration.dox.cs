@@ -30,15 +30,14 @@ public class GlobalRegistrationExample
         try
         {
             int inputNum = args.Length - 2;
+            List<MR.PointCloud> input_pointclouds = new();
             MR.Vector_MRMeshOrPointsXf_MRObjId inputs = new();
             MR.Box3f maxBBox = new();
             for (int i = 0; i < inputNum; ++i)
             {
-                MR.Expected_MRPointCloud_StdString file_ex = MR.PointsLoad.FromAnySupportedFormat(args[i + 1]);
-                if (file_ex.GetError() is var error and not null)
-                    throw new Exception(error);
-
-                MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(file_ex.GetValue()!, new MR.AffineXf3f());
+                var pc = MR.PointsLoad.FromAnySupportedFormat(args[i + 1]);
+                input_pointclouds.Add(pc); // Need this to prevent the point-cloud object from dying too early.
+                MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
                 inputs.PushBack(obj);
                 maxBBox.Include(obj.Obj.ComputeBoundingBox());
             }

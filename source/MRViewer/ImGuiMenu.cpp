@@ -109,6 +109,11 @@
 #include <fmt/chrono.h>
 #endif
 
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#endif
+
 #include "MRPch/MRWinapi.h"
 
 #include <bitset>
@@ -557,6 +562,35 @@ bool ImGuiMenu::touchpadZoomGestureUpdate_( float, bool )
 bool ImGuiMenu::touchpadZoomGestureEnd_()
 {
     return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+}
+
+void ImGuiMenu::postFocus_( bool focused )
+{
+    (void) focused;
+#ifdef _WIN32
+    if ( focused && ImGui::isMultiViewportEnabled() )
+    {
+        std::vector<GLFWwindow*> processedWindow;
+        for ( ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
+        {
+            if ( !win->Viewport )
+                continue;
+            GLFWwindow* glfwWindow = ( GLFWwindow* )win->Viewport->PlatformHandle;
+            if ( !glfwWindow || getViewerInstance().window == glfwWindow )
+                continue;
+
+            auto findIt = std::find( processedWindow.begin(), processedWindow.end(), glfwWindow );
+            if ( findIt != processedWindow.end() )
+                continue;
+
+            processedWindow.push_back( glfwWindow );
+            {
+                HWND hwnd = glfwGetWin32Window( glfwWindow );
+                SetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE );
+            }
+        }
+    }
+#endif
 }
 
 void ImGuiMenu::rescaleStyle_()

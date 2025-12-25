@@ -134,9 +134,11 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
     {
         const auto & compFaces = components[icomp];
         const auto compCenter = contoursMesh.computeBoundingBox( &compFaces ).center();
-        const float pivotX = ( compCenter.x - bbox.min.x ) / diagonal.x;
+        float curveTime = compCenter.x - bbox.min.x;
+        if ( params.stretch )
+            curveTime /= diagonal.x;
 
-        const auto pos = params.curve( pivotX );
+        const auto pos = params.curve( curveTime );
 
         const auto vecx = pos.dir;
         const auto norm = pos.snorm;

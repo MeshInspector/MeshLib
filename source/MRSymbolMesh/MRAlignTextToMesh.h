@@ -50,6 +50,9 @@ struct BendTextAlongCurveParams : SymbolMeshParams
 
     // If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text
     bool fontBasedSizeCalc{ false };
+
+    /// stretch whole text on curve's [0,1] even if it is shorter or longer
+    bool stretchText = true;
 };
 
 /// Creates symbol mesh and deforms it along given curve

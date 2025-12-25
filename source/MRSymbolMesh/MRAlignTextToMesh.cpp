@@ -128,6 +128,7 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
     return bendContoursAlongCurve( conts, {
         .pivotY = pivotY,
         .curve = curve,
+        .stretch = params.stretchText,
         .extrusion = params.surfaceOffset
         } );
 }
@@ -150,10 +151,13 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlong
     if ( lens.back() <= 0 )
         return unexpected( "curve has zero length" );
 
-    // to relative lengths
-    const auto factor = 1 / lens.back();
-    for ( auto & l : lens )
-        l *= factor;
+    if ( params.stretchText )
+    {
+        // to relative lengths
+        const auto factor = 1 / lens.back();
+        for ( auto & l : lens )
+            l *= factor;
+    }
 
     auto curveFunc = [&]( float p ) -> CurvePoint
     { 

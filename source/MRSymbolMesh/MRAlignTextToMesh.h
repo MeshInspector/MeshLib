@@ -42,9 +42,6 @@ struct BendTextAlongCurveParams : SymbolMeshParams
     /// 0 - bottom, 0.5 - center, 1 - top
     float pivotY = 0;
 
-    /// converts (x in [0,1], pivotY) into position on curve
-    CurveFunc curve;
-
     // Font height, meters
     float fontHeight{1.0f};
 
@@ -56,6 +53,14 @@ struct BendTextAlongCurveParams : SymbolMeshParams
 };
 
 /// Creates symbol mesh and deforms it along given curve
-MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params );
+/// \param curve converts (x in [0,1], pivotY) into position on curve
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCurveParams& params );
+
+/// Creates symbol mesh and deforms it along given curve
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params );
+
+/// Creates symbol mesh and deforms it along given surface path
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
+    const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params );
 
 } // namespace MR

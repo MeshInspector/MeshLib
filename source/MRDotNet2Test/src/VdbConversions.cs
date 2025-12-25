@@ -7,13 +7,18 @@ namespace MRTest
     [TestFixture]
     internal class VdbConversionsTests
     {
-        /*
         internal static VdbVolume CreateVolume()
         {
-            var mesh = Mesh.MakeSphere(1.0f, 3000);
-            var settings = new MeshToVolumeSettings();
-            settings.voxelSize = Vector3f.Diagonal(0.1f);
-            return MeshToVolume(mesh, settings);
+            var mesh = MakeSphere(new SphereParams(1.0f, 3000));
+            var settings = new MeshToVolumeParams();
+            /*
+             * TODO: fix struct field assignment
+            settings.VoxelSize = Vector3f.Diagonal(0.1f);
+             */
+            settings.VoxelSize.X = 0.1f;
+            settings.VoxelSize.Y = 0.1f;
+            settings.VoxelSize.Z = 0.1f;
+            return MeshToVolume(new MeshPart(mesh), settings);
         }
 
         [Test]
@@ -27,19 +32,26 @@ namespace MRTest
             Assert.That(vdbVolume.Dims.Z, Is.EqualTo(26));
 
             var gridToMeshSettings = new GridToMeshSettings();
-            gridToMeshSettings.voxelSize = Vector3f.Diagonal(0.1f);
-            gridToMeshSettings.isoValue = 1;
+            /*
+             * TODO: fix struct field assignment
+            gridToMeshSettings.VoxelSize = Vector3f.Diagonal(0.1f);
+             */
+            gridToMeshSettings.VoxelSize.X = 0.1f;
+            gridToMeshSettings.VoxelSize.Y = 0.1f;
+            gridToMeshSettings.VoxelSize.Z = 0.1f;
+            gridToMeshSettings.IsoValue = 1;
 
             var restored = GridToMesh(vdbVolume.Data, gridToMeshSettings);
+            var bbox = restored.GetBoundingBox();
 
-            Assert.That(restored.Points.Count, Is.EqualTo(3748));
-            Assert.That(restored.BoundingBox.Min.X, Is.EqualTo(0.2).Within(0.001));
-            Assert.That(restored.BoundingBox.Min.Y, Is.EqualTo(0.2).Within(0.001));
-            Assert.That(restored.BoundingBox.Min.Z, Is.EqualTo(0.2).Within(0.001));
+            Assert.That(restored.Points.Size(), Is.EqualTo(3748));
+            Assert.That(bbox.Min.X, Is.EqualTo(0.2).Within(0.001));
+            Assert.That(bbox.Min.Y, Is.EqualTo(0.2).Within(0.001));
+            Assert.That(bbox.Min.Z, Is.EqualTo(0.2).Within(0.001));
 
-            Assert.That(restored.BoundingBox.Max.X, Is.EqualTo(2.395).Within(0.001));
-            Assert.That(restored.BoundingBox.Max.Y, Is.EqualTo(2.395).Within(0.001));
-            Assert.That(restored.BoundingBox.Max.Z, Is.EqualTo(2.395).Within(0.001));
+            Assert.That(bbox.Max.X, Is.EqualTo(2.395).Within(0.001));
+            Assert.That(bbox.Max.Y, Is.EqualTo(2.395).Within(0.001));
+            Assert.That(bbox.Max.Z, Is.EqualTo(2.395).Within(0.001));
         }
 
         [Test]
@@ -55,9 +67,9 @@ namespace MRTest
             if (restored is null)
                 return;
 
-            Assert.That(restored.Count, Is.EqualTo(1));
+            Assert.That(restored.Size(), Is.EqualTo(1));
 
-            var readVolume = restored[0];
+            var readVolume = restored.At(0);
             Assert.That(readVolume.Dims.X, Is.EqualTo(26));
             Assert.That(readVolume.Dims.Y, Is.EqualTo(26));
             Assert.That(readVolume.Dims.Z, Is.EqualTo(26));
@@ -73,7 +85,13 @@ namespace MRTest
             var vdbVolume = CreateVolume();
             var resampledGrid = Resampled(vdbVolume.Data, 2);
             var resampledVolume = FloatGridToVdbVolume(resampledGrid);
+            /*
+             * TODO: fix struct field assignment
             resampledVolume.VoxelSize = vdbVolume.VoxelSize * 2;
+             */
+            resampledVolume.VoxelSize.X = vdbVolume.VoxelSize.X * 2;
+            resampledVolume.VoxelSize.Y = vdbVolume.VoxelSize.Y * 2;
+            resampledVolume.VoxelSize.Z = vdbVolume.VoxelSize.Z * 2;
 
             Assert.That(resampledVolume.Dims.X, Is.EqualTo(13));
             Assert.That(resampledVolume.Dims.Y, Is.EqualTo(13));
@@ -111,9 +129,9 @@ namespace MRTest
             if (restored is null)
                 return;
 
-            Assert.That(restored.Count, Is.EqualTo(1));
+            Assert.That(restored.Size(), Is.EqualTo(1));
 
-            var readVolume = restored[0];
+            var readVolume = restored.At(0);
             Assert.That(readVolume.VoxelSize.X, Is.EqualTo(0.2f).Within(0.001f));
             Assert.That(readVolume.VoxelSize.Y, Is.EqualTo(0.1f).Within(0.001f));
             Assert.That(readVolume.VoxelSize.Z, Is.EqualTo(0.05f).Within(0.001f));
@@ -148,14 +166,13 @@ namespace MRTest
             var p = new Vector3i();
             Assert.That( GetValue( vdbVolume.Data, p ) == 3.0f );
 
-            var region = new VoxelBitSet( vdbVolume.Dims.X * vdbVolume.Dims.Y * vdbVolume.Dims.Z );
-            region.Set(0);
+            var region = new VoxelBitSet( (ulong)( vdbVolume.Dims.X * vdbVolume.Dims.Y * vdbVolume.Dims.Z ) );
+            region.Set(new VoxelId(0));
             SetValue( vdbVolume.Data, region, 1.0f );
             Assert.That( GetValue( vdbVolume.Data, p ) == 1.0f );
 
             SetValue( vdbVolume.Data, p, 2.0f );
             Assert.That( GetValue( vdbVolume.Data, p ) == 2.0f );
         }
-        */
     }
 }

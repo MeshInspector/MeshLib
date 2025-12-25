@@ -33,38 +33,33 @@ namespace MRTest
             return Mesh.FromTriangles(points, triangles);
         }
 
-        /*
-         * TODO: fix struct field assignment
         [Test]
         public void TestFillHole()
         {
             var mesh = CreateMeshWithHoles();
-            Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(2) );
+            var holes = mesh.Topology.FindHoleRepresentiveEdges();
+            Assert.That(holes.Size(), Is.EqualTo(2) );
 
             var param = new FillHoleParams();
-            param.OutNewFaces = new FaceBitSet();
 
-            FillHoles(ref mesh, mesh.HoleRepresentiveEdges.ToList(), param);
-            Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(0));
+            FillHoles(mesh, holes, param);
+            Assert.That(mesh.Topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(0));
         }
-        */
 
-        /*
-         * TODO: fix struct field assignment
         [Test]
         public void TestFillHoleNicely()
         {
             var mesh = CreateMeshWithHoles();
-            Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(2));
+            var holes = mesh.Topology.FindHoleRepresentiveEdges();
+            Assert.That(holes.Size(), Is.EqualTo(2));
 
-            var param = new FillHoleNicelyParams();
+            var param = new FillHoleNicelySettings();
 
-            var patch = FillHoleNicely(ref mesh, mesh.HoleRepresentiveEdges[0], param);
+            var patch = FillHoleNicely(mesh, holes.At(0), param);
 
             Assert.That( patch.Count, Is.EqualTo(1887) );
-            Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(1));
+            Assert.That(mesh.Topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(1));
         }
-        */
 
         [Test]
         public void TestRightBoundary()

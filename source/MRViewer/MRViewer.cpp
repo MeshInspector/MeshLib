@@ -991,10 +991,10 @@ void Viewer::launchShut()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
-    signals_->preShutdownSignal();
-
     if ( window )
         glfwHideWindow( window );
+
+    signals_->preShutdownSignal();
 
     if ( settingsMng_ )
     {

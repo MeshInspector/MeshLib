@@ -38,6 +38,7 @@
 #include "MRFileLoadOptions.h"
 #include "MRWebRequest.h"
 #include "MRUnitSettings.h"
+#include "MROpenObjects.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
@@ -1367,21 +1368,33 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         }
     };
 
+    auto openFolder = []( const std::filesystem::path& filename, const ProgressCallback& callback ) -> Expected<LoadedObjects>
+    {
+        auto loadRes = makeObjectTreeFromFolder( filename, false, callback );
+        if ( !loadRes )
+            return unexpected( std::move( loadRes.error() ) );
+        return LoadedObjects{
+            .objs = { loadRes->obj },
+            .warnings = std::move( loadRes->warnings ),
+            .lengthUnit = std::move( loadRes->lengthUnit )
+        };
+    };
+
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess, openFolder]
     {
         SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::Result result )
         {
             postProcess( result );
             ProgressBar::finish();
         },
-        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
+        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
     } );
 #else
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder]
     {
         auto result = SceneLoad::fromAnySupportedFormat( filesList,
-            { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
+            { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
         return [result = std::move( result ), postProcess]
         {
             postProcess( result );

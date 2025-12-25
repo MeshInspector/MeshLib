@@ -994,6 +994,8 @@ void Viewer::launchShut()
     if ( window )
         glfwHideWindow( window );
 
+    signals_->preShutdownSignal();
+
     if ( settingsMng_ )
     {
         spdlog::info( "Save user settings." );

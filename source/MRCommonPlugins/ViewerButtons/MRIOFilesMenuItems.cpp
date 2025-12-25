@@ -108,6 +108,9 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
 {
     return std::any_of( paths.begin(), paths.end(), [&] ( auto&& path )
     {
+        std::error_code ec;
+        if ( is_directory( path, ec ) )
+            return true;
         const auto ext = toLower( utf8string( path.extension() ) );
         return std::any_of( filters.begin(), filters.end(), [&ext] ( auto&& filter )
         {

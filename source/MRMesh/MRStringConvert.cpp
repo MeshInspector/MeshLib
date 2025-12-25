@@ -130,6 +130,11 @@ std::string commonFilesName( const std::vector<std::filesystem::path> & files )
     if ( files.empty() )
         return "Empty";
 
+    if ( std::all_of( files.begin(), files.end(), [&] ( auto&& path ) { std::error_code ec; return is_directory( path, ec ); } ) )
+    {
+        return files.size() == 1 ? "Directory" : "Directories";
+    }
+
     auto getUpperExt = []( const std::filesystem::path & file )
     {
         auto ext = utf8string( file.extension() );

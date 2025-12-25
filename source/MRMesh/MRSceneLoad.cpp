@@ -194,9 +194,24 @@ Result fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, 
         const auto& path = files[index];
         if ( path.empty() )
             continue;
+        const auto subProgress = subprogress( settings.progress, index, files.size() );
 
-        spdlog::info( "Loading file {}", utf8string( path ) );
-        constructor.process( path, loadObjectFromFile( path, subprogress( settings.progress, index, files.size() ) ) );
+        std::error_code ec;
+        if ( is_directory( path, ec ) )
+        {
+            if ( settings.openFolder )
+            {
+                spdlog::info( "Loading directory {}", utf8string( path ) );
+                constructor.process( path, settings.openFolder( path, subProgress ) );
+            }
+            else
+                spdlog::info( "Skipping directory {}", utf8string( path ) );
+        }
+        else
+        {
+            spdlog::info( "Loading file {}", utf8string( path ) );
+            constructor.process( path, loadObjectFromFile( path, subProgress ) );
+        }
     }
     return constructor.construct();
 }

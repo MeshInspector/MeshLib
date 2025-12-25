@@ -1381,14 +1381,14 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess, openFolder]
     {
         SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::Result result )
         {
             postProcess( result );
             ProgressBar::finish();
         },
-        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
+        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
     } );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder]

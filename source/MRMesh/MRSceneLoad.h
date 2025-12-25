@@ -18,7 +18,8 @@ struct Settings
 
     /// if provided then folders will be open using this functions and added to scene,
     /// otherwise folders will be skipped
-    std::function<Expected<LoadedObjects>( const std::filesystem::path&, const ProgressCallback& )> openFolder;
+    using OpenFolder = std::function<Expected<LoadedObjects>( const std::filesystem::path&, const ProgressCallback& )>;
+    OpenFolder openFolder;
 };
 
 /// Scene loading result

@@ -1004,6 +1004,12 @@ void ImGuiMenu::draw_helpers()
     drawModalMessage_();
 }
 
+void ImGuiMenu::expandObjectTreeAndScroll( const Object* obj )
+{
+    if ( sceneObjectsList_ )
+        sceneObjectsList_->expandObjectTreeAndScroll( obj );
+}
+
 UiRenderManager& ImGuiMenu::getUiRenderManager()
 {
     if ( !uiRenderManager_ )

@@ -10,6 +10,7 @@
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRViewer/ImGuiMenu.h"
 
 namespace MR
 {
@@ -86,10 +87,17 @@ void SelectObjectByClick::select_( bool up )
         newSelection = getViewerInstance().viewport().findObjectsInRect( rect );
     }
 
+    std::shared_ptr<Object> highlightInTreeObj;
     if ( up && smallPick && ctrl_ )
     {
+
         for ( auto obj : newSelection )
-            obj->select( !obj->isSelected() );
+        {
+            bool select = !obj->isSelected();
+            obj->select( select );
+            if ( !highlightInTreeObj && select )
+                highlightInTreeObj = obj;
+        }
     }
     else
     {
@@ -98,7 +106,16 @@ void SelectObjectByClick::select_( bool up )
             object->select( false );
 
         for ( auto obj : newSelection )
+        {
+            if ( !highlightInTreeObj )
+                highlightInTreeObj = obj;
             obj->select( true );
+        }
+    }
+    if ( highlightInTreeObj )
+    {
+        if ( auto menu = getViewerInstance().getMenuPlugin() )
+            menu->expandObjectTreeAndScroll( highlightInTreeObj.get() );
     }
 }
 

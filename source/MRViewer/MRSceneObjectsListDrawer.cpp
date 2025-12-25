@@ -18,6 +18,7 @@
 #include "imgui.h"
 #include <stack>
 #include <iterator>
+#include "MRCommandLoop.h"
 
 namespace MR
 {
@@ -233,9 +234,31 @@ void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
         sceneOpenCommands_[obj] = open;
 }
 
+void SceneObjectsListDrawer::expandObjectTreeAndScroll( const Object* obj )
+{
+    if ( !obj )
+        return;
+    auto parent = obj->parent();
+    while ( parent )
+    {
+        setObjectTreeState( parent, true );
+        parent = parent->parent();
+    }
+
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto itAll = std::find( all.begin(), all.end(), obj->getSharedPtr() );
+    nextVisible_.index = int( std::distance( all.begin(), itAll ) );
+    setNextFrameFixScroll( 2 );
+}
+
 void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 {
     allowSceneReorder_ = allow;
+}
+
+void SceneObjectsListDrawer::setNextFrameFixScroll( int skipFrames /*= 1 */ )
+{
+    framesTillFixScroll_ = std::max( framesTillFixScroll_, skipFrames );
 }
 
 void SceneObjectsListDrawer::drawObjectsList_()
@@ -406,8 +429,24 @@ bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uni
 bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int )
 {
     const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
-    return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
+    auto openCommandIt = sceneOpenCommands_.find( &object );
+    bool resetOpenFlag = false;
+    if ( openCommandIt != sceneOpenCommands_.end() )
+    {
+        resetOpenFlag = true;
+        ImGui::SetNextItemOpen( openCommandIt->second );
+    }
+    auto res = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
                     ( hasRealChildren ? sDefaultGroupState : 0 ) );
+    if ( resetOpenFlag )
+    {
+        // as far as `TreeNodeUpdateNextOpen` uses `SetNextItemOpen` but does not clear it, we clear it manually
+        auto ctx = ImGui::GetCurrentContext();
+        ctx->NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasOpen;
+        ctx->NextItemData.OpenVal = sDefaultGroupState;
+        ctx->NextItemData.OpenCond = ImGuiCond_None;
+    }
+    return res;
 }
 
 void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr )
@@ -613,21 +652,24 @@ void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()
             getViewerInstance().incrementForceRedrawFrames();
         }
     }
-    else if ( nextFrameFixScroll_ )
+    else if ( framesTillFixScroll_ > 0 )
     {
-        nextFrameFixScroll_ = false;
-        float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;
-        float addScroll = 0.0f;
-        if ( absPos < 15 * UI::scale() )
-            addScroll = absPos - 15 * UI::scale();
-        else if ( absPos > window->Size.y - 15 * UI::scale() )
-            addScroll = absPos - ( window->Size.y - 15 * UI::scale() );
-        auto newScroll = std::clamp( window->Scroll.y + addScroll, 0.0f, window->ScrollMax.y );
-        if ( newScroll != window->Scroll.y )
+        --framesTillFixScroll_;
+        if ( framesTillFixScroll_ == 0 )
         {
-            window->Scroll.y = newScroll;
-            getViewerInstance().incrementForceRedrawFrames();
+            float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;
+            float addScroll = 0.0f;
+            if ( absPos < 15 * UI::scale() )
+                addScroll = absPos - 15 * UI::scale();
+            else if ( absPos > window->Size.y - 15 * UI::scale() )
+                addScroll = absPos - ( window->Size.y - 15 * UI::scale() );
+            auto newScroll = std::clamp( window->Scroll.y + addScroll, 0.0f, window->ScrollMax.y );
+            if ( newScroll != window->Scroll.y )
+            {
+                window->Scroll.y = newScroll;
+            }
         }
+        getViewerInstance().incrementForceRedrawFrames();
     }
 
     const ImGuiPayload* payloadCheck = ImGui::GetDragDropPayload();

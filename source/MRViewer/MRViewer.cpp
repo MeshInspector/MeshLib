@@ -71,9 +71,10 @@
 #include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
 #include "MRViewerConfigConstants.h"
-#include "imgui/imgui_internal.h"
 
 #ifdef _WIN32
+#include <imgui_internal.h>
+#include "ImGuiHelpers.h"
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
@@ -2025,7 +2026,7 @@ void Viewer::postSetIconified( bool iconified )
 void Viewer::postFocus( bool focused )
 {
 #ifdef _WIN32
-    if ( focused )
+    if ( focused && ImGui::isMultiViewportEnabled() )
     {
         std::vector<GLFWwindow*> processedWindow;
         for ( ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )

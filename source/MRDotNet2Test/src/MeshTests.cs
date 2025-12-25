@@ -32,7 +32,6 @@ namespace MRTest
             File.Delete(tempFile);
         }
 
-        /*
         [Test]
         public void TestSaveLoadException()
         {
@@ -57,7 +56,6 @@ namespace MRTest
                 Assert.That(e.Message.Contains("Unsupported file extension"));
             }
         }
-        */
 
         [Test]
         public void TestSaveLoadCtm()

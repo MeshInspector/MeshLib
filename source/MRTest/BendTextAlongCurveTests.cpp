@@ -35,7 +35,12 @@ TEST( MRMesh, BendTextAlongCurve )
         };
     };
 
-    auto maybeText = bendTextAlongCurve( curve, { s, 0, 0.2f, 0.03f } );
+    auto maybeText = bendTextAlongCurve( curve,
+        BendTextAlongCurveParams{
+            .symbolMesh = s,
+            .fontHeight = 0.2f,
+            .surfaceOffset = 0.03f
+        } );
     EXPECT_TRUE( maybeText.has_value() );
     EXPECT_GT( maybeText->topology.numValidFaces(), 0 );
 
@@ -45,7 +50,12 @@ TEST( MRMesh, BendTextAlongCurve )
     EXPECT_TRUE( maybePath.has_value() );
     EXPECT_GT( maybePath->size(), 0 );
 
-    maybeText = bendTextAlongSurfacePath( sphere, start, *maybePath, end, { s, 0, 0.1f, 0.02f } );
+    maybeText = bendTextAlongSurfacePath( sphere, start, *maybePath, end,
+        BendTextAlongCurveParams{
+            .symbolMesh = s,
+            .fontHeight = 0.1f,
+            .surfaceOffset = 0.02f
+        } );
     EXPECT_TRUE( maybeText.has_value() );
     EXPECT_GT( maybeText->topology.numValidFaces(), 0 );
 }

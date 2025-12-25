@@ -96,7 +96,7 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         return unexpected( "No curve provided" );
     }
 
-    auto contoursOrError = createSymbolContours( params );
+    auto contoursOrError = createSymbolContours( params.symbolMesh );
     if ( !contoursOrError.has_value() )
         return unexpected( std::move( contoursOrError.error() ) );
 
@@ -107,28 +107,29 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         return unexpected( "Symbols mesh is empty" );
 
     int numLines = 1;
-    for ( auto c : params.text )
+    for ( auto c : params.symbolMesh.text )
         if ( c == '\n' )
             ++numLines;
 
     auto diagonal = bbox.size();
 
-    const float symbolDependentMultiplier = params.fontBasedSizeCalc ? diagonal.y / params.MaxGeneratedFontHeight / numLines : 1.0f;
-    auto scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
+    const float symbolDependentMultiplier = params.fontBasedSizeCalc ? diagonal.y / params.symbolMesh.MaxGeneratedFontHeight / numLines : 1.0f;
+    auto scale = symbolDependentMultiplier * ( params.fontHeight * numLines * ( 1.0f + params.symbolMesh.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
     scaleContours( conts, scale );
 
-    auto pivotY = params.pivotY;
+    Vector2f relPivot = params.pivotBoxPoint;
     if ( params.fontBasedSizeCalc )
     {
         float absYPivot =
-            ( 1 - numLines ) * params.MaxGeneratedFontHeight * ( 1 - params.pivotY ) + params.MaxGeneratedFontHeight * params.pivotY;
-        pivotY = ( absYPivot - bbox.min.y ) / diagonal.y;
+            ( 1 - numLines ) * params.symbolMesh.MaxGeneratedFontHeight * ( 1 - params.pivotBoxPoint.y ) + params.symbolMesh.MaxGeneratedFontHeight * params.pivotBoxPoint.y;
+        relPivot.y = ( absYPivot - bbox.min.y ) / diagonal.y;
     }
 
     return bendContoursAlongCurve( conts, {
-        .pivotY = pivotY,
+        .pivotCurveTime = params.pivotCurveTime,
+        .pivotBoxPoint = params.pivotBoxPoint,
         .curve = curve,
-        .stretch = params.stretchText,
+        .stretch = params.stretch,
         .extrusion = params.surfaceOffset
         } );
 }
@@ -151,7 +152,7 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlong
     if ( lens.back() <= 0 )
         return unexpected( "curve has zero length" );
 
-    if ( params.stretchText )
+    if ( params.stretch )
     {
         // to relative lengths
         const auto factor = 1 / lens.back();

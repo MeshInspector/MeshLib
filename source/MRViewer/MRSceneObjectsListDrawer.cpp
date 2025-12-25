@@ -239,7 +239,7 @@ void SceneObjectsListDrawer::expandObjectTreeAndScroll( const Object* obj )
     if ( !obj )
         return;
     auto parent = obj->parent();
-    while ( parent )
+    while ( parent && parent != &SceneRoot::get() )
     {
         setObjectTreeState( parent, true );
         parent = parent->parent();

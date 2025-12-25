@@ -93,9 +93,9 @@ void SelectObjectByClick::select_( bool up )
 
         for ( auto obj : newSelection )
         {
-            bool select = !obj->isSelected();
-            obj->select( select );
-            if ( !highlightInTreeObj && select )
+            bool newSelectionState = !obj->isSelected();
+            obj->select( newSelectionState );
+            if ( !highlightInTreeObj && newSelectionState )
                 highlightInTreeObj = obj;
         }
     }

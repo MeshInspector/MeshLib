@@ -69,17 +69,15 @@ namespace MRTest
             Assert.That(points.Points.Size() == readPoints.Points.Size());
         }
 
-        /*
         [Test]
         public void TestEmptyFile()
         {
             string path = Path.GetTempFileName() + ".ply";
             var file = File.Create(path);
             file.Close();
-            Assert.Throws<SystemException>(() => PointsLoad.FromAnySupportedFormat(path));
+            Assert.Throws<Misc.UnexpectedResultException>(() => PointsLoad.FromAnySupportedFormat(path));
             File.Delete(path);
         }
-        */
 
         [Test]
         public void TestTriangulation()

@@ -139,17 +139,15 @@ namespace MRTest
         }
         */
 
-        /*
         [Test]
         public void TestEmptyFile()
         {
             string path = Path.GetTempFileName() + ".mrmesh";
             var file = File.Create(path);
             file.Close();
-            Assert.Throws<SystemException>(() => MeshLoad.FromAnySupportedFormat(path));
+            Assert.Throws<Misc.UnexpectedResultException>(() => MeshLoad.FromAnySupportedFormat(path));
             File.Delete(path);
         }
-        */
 
         [Test]
         public void TestTransform()

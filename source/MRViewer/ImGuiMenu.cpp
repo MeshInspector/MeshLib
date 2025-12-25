@@ -566,6 +566,7 @@ bool ImGuiMenu::touchpadZoomGestureEnd_()
 
 void ImGuiMenu::postFocus_( bool focused )
 {
+    (void) focused;
 #ifdef _WIN32
     if ( focused && ImGui::isMultiViewportEnabled() )
     {

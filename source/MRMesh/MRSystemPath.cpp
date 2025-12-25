@@ -167,6 +167,7 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
         if ( maybeRes )
         {
             spdlog::info( "Executable path: {}", utf8string( *maybeRes ) );
+#ifndef __EMSCRIPTEN__ // in Wasm the path is not a file name, but starts with https://
             std::error_code ec;
             auto canonicalPath = canonical( *maybeRes, ec );
             if ( ec )
@@ -176,6 +177,7 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
                 *maybeRes = canonicalPath;
                 spdlog::info( "Executable path in canonical form: {}", utf8string( *maybeRes ) );
             }
+#endif
         }
         return maybeRes;
     }();

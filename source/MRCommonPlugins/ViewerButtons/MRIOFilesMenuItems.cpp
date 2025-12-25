@@ -106,7 +106,7 @@ bool isMobileBrowser()
 
 bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFilters& filters )
 {
-    return std::any_of( paths.begin(), paths.end(), [&] ( auto&& path )
+    if ( std::any_of( paths.begin(), paths.end(), [&] ( auto&& path )
     {
         std::error_code ec;
         if ( is_directory( path, ec ) )
@@ -116,7 +116,13 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
         {
             return filter.isSupportedExtension( ext );
         } );
-    } );
+    } ) )
+        return true;
+
+    for ( int i = 0; i < paths.size(); ++i )
+        spdlog::info( "path #{}: {}", i, utf8string( paths[i] ) );
+    showError( stringUnsupportedFileExtension() );
+    return false;
 }
 
 #ifdef __EMSCRIPTEN__
@@ -162,10 +168,7 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId
 #endif
     std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
     if ( !checkPaths( paths, filters ) )
-    {
-        showError( stringUnsupportedFileExtension() );
         return;
-    }
     FileLoadOptions opts;
     opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
     {
@@ -244,10 +247,7 @@ bool OpenFilesMenuItem::action()
         if ( filenames.empty() )
             return;
         if ( !checkPaths( filenames, filters_ ) )
-        {
-            showError( stringUnsupportedFileExtension() );
             return;
-        }
         getViewerInstance().loadFiles( filenames );
     }, { .filters = filters_ } );
     return false;
@@ -288,10 +288,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     }
 
     if ( !checkPaths( paths, filters_ ) )
-    {
-        showError( stringUnsupportedFileExtension() );
         return false;
-    }
 
     FileLoadOptions options{ .undoPrefix = "Drop " };
     if ( menu )

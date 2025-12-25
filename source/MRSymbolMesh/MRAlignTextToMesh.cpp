@@ -91,7 +91,10 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
 {
     MR_TIMER;
     if ( !curve )
-        return unexpected( "no curve provided" );
+    {
+        assert( false );
+        return unexpected( "No curve provided" );
+    }
 
     auto contoursOrError = createSymbolContours( params );
     if ( !contoursOrError.has_value() )

@@ -138,9 +138,13 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::Drop(/* [unique][in] */ __RPC__in_opt I
     if ( !pdwEffect )
         return E_INVALIDARG;
     *pdwEffect = DROPEFFECT_NONE;
-    assert( false );
+
     // glfw_drop_callback still takes this, so we are never here
-    spdlog::warn( "Windows drag&drop handler overtook \"Drop\" event" );
+    // EDIT: apparently we can get here in some cases, for example Drag&Drop from windows explorer "Recent"
+    //       but glfw_drop_callback will also get the event so it works fine anyway 
+    //       (assert removed due to new information)
+    spdlog::debug( "Windows drag&drop handler overtook \"Drop\" event" );
+
     ( void )pDataObj;
     ( void )grfKeyState;
     ( void )pt;

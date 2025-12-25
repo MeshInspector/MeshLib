@@ -135,6 +135,7 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
 Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
+    if ( curve.size() < 2 )
     {
         assert( false );
         return unexpected( "Curve is too short" );

@@ -282,6 +282,9 @@ public:
 
   MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+  /// expands all `obj`s parents in tree and scroll scene tree window so selection becomes visible
+  MRVIEWER_API void expandObjectTreeAndScroll( const Object* obj );
+
   //set show shortcuts state (enable / disable)
   MRVIEWER_API void setShowShortcuts( bool val );
   //return show shortcuts state (enable / disable)

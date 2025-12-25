@@ -127,7 +127,7 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
 
     return bendContoursAlongCurve( conts, {
         .pivotCurveTime = params.pivotCurveTime,
-        .pivotBoxPoint = params.pivotBoxPoint,
+        .pivotBoxPoint = relPivot,
         .curve = curve,
         .stretch = params.stretch,
         .extrusion = params.surfaceOffset

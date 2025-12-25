@@ -3,6 +3,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRSystemPath.h>
+#include <MRMesh/MRSurfacePath.h>
 
 namespace MR
 {
@@ -34,9 +35,19 @@ TEST( MRMesh, BendTextAlongCurve )
         };
     };
 
-    auto maybeText = bendTextAlongCurve( { s, 0, curve, 0.2f, 0.03f } );
+    auto maybeText = bendTextAlongCurve( curve, { s, 0, 0.2f, 0.03f } );
     EXPECT_TRUE( maybeText.has_value() );
-    EXPECT_TRUE( maybeText->topology.numValidFaces() > 0 );
+    EXPECT_GT( maybeText->topology.numValidFaces(), 0 );
+
+    const auto start = findProjection( { 0, 0, 1 }, sphere ).mtp;
+    const auto end = findProjection( { 0, 0, -1 }, sphere ).mtp;
+    auto maybePath = computeGeodesicPath( sphere, start, end );
+    EXPECT_TRUE( maybePath.has_value() );
+    EXPECT_GT( maybePath->size(), 0 );
+
+    maybeText = bendTextAlongSurfacePath( sphere, start, *maybePath, end, { s, 0, 0.1f, 0.02f } );
+    EXPECT_TRUE( maybeText.has_value() );
+    EXPECT_GT( maybeText->topology.numValidFaces(), 0 );
 }
 
 } //namespace MR

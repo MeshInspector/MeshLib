@@ -839,7 +839,9 @@ void RibbonMenu::drawActiveList_()
         }
         sbFont.popFont();
 
-        auto blockSize = ImVec2( 2 * winPadding.x + maxSize + 2 * ImGui::GetStyle().ItemSpacing.x + btnSize.x,
+        const bool needFocusBtn = ImGui::isMultiViewportEnabled();
+
+        auto blockSize = ImVec2( 2 * winPadding.x + maxSize + 2 * itemSpacing.x + btnSize.x + ( itemSpacing.x + btnSize.x ) * needFocusBtn,
             btnSize.y + winPadding.y * 2 );
         auto dotShift = ( blockSize.y - 2 * UI::scale() ) * 0.5f;
         blockSize.x = blockSize.x - winPadding.x + dotShift;
@@ -866,9 +868,34 @@ void RibbonMenu::drawActiveList_()
             ImGui::SetCursorPosY( 0.5f * ( blockSize.y - ImGui::GetFontSize() ) );
             ImGui::Text( "%s", name.c_str() );
             sbFont.popFont();
-            ImGui::SameLine( blockSize.x - btnSize.x - winPadding.x );
+            ImGui::SameLine( blockSize.x - btnSize.x - winPadding.x - ( btnSize.x + itemSpacing.x ) * needFocusBtn );
             ImGui::SetCursorPosY( savedPos );
-            auto btnText = "Close" + childName;
+            
+            std::string btnText;
+            if ( needFocusBtn )
+            {
+                btnText = "Focus" + childName;
+                if ( UI::button( btnText.c_str(), btnSize ) )
+                    [&]
+                {
+                    auto* imguiWindow = ImGui::FindWindowByName( ( item->name() + "##CustomStatePlugin" ).c_str() );
+                    if ( !imguiWindow )
+                        return;
+                    auto* imguiViewport = imguiWindow->Viewport;
+                    if ( !imguiViewport )
+                        return;
+                    auto* window = ( GLFWwindow* )imguiViewport->PlatformHandle;
+                    if ( !window )
+                        return;
+
+                    glfwFocusWindow( window );
+                }( );
+
+                ImGui::SameLine( 0.f, ImGui::GetStyle().ItemSpacing.x );
+                ImGui::SetCursorPosY( savedPos );
+            }
+
+            btnText = "Close" + childName;
             if ( UI::button( btnText.c_str(), btnSize ) )
                 close = true;
             ImGui::EndChild();

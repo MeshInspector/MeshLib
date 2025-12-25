@@ -13,6 +13,10 @@ struct CurvePoint
     Vector3f snorm;///< the normal of the surface where the curve is located
 };
 
+/// curve given as a function: time -> point
 using CurveFunc = std::function<CurvePoint(float)>;
+
+/// curve given as a number of points on it samples at arbitrary steps
+using CurvePoints = std::vector<CurvePoint>;
 
 } //namespace MR

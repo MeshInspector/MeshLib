@@ -49,7 +49,8 @@ public:
     void process( const std::filesystem::path& path, Expected<LoadedObjects> res )
     {
         const auto fileName = utf8string( path );
-        spdlog::info( "Load file {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
+        if ( !res.has_value() || !res->objs.empty() ) // if not skipped folder
+            spdlog::info( "Load {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
         if ( !res.has_value() )
         {
             // TODO: user-defined error format
@@ -184,6 +185,25 @@ struct AsyncLoadContext
     }
 };
 
+Expected<LoadedObjects> sLoadPath( const std::filesystem::path& path, const Settings::OpenFolder& openFolder, const ProgressCallback& callback )
+{
+    std::error_code ec;
+    if ( is_directory( path, ec ) )
+    {
+        if ( !openFolder )
+        {
+            spdlog::info( "Skipping directory {}", utf8string( path ) );
+            return {};
+        }
+
+        spdlog::info( "Loading directory {}", utf8string( path ) );
+        return openFolder( path, callback );
+    }
+
+    spdlog::info( "Loading file {}", utf8string( path ) );
+    return loadObjectFromFile( path, callback );
+}
+
 } // anonymous namespace
 
 Result fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const Settings& settings )
@@ -194,9 +214,7 @@ Result fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, 
         const auto& path = files[index];
         if ( path.empty() )
             continue;
-
-        spdlog::info( "Loading file {}", utf8string( path ) );
-        constructor.process( path, loadObjectFromFile( path, subprogress( settings.progress, index, files.size() ) ) );
+        constructor.process( path, sLoadPath( path, settings.openFolder, subprogress( settings.progress, index, files.size() ) ) );
     }
     return constructor.construct();
 }
@@ -223,7 +241,7 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         else
         {
             spdlog::info( "Loading file {}", utf8string( path ) );
-            ctx->results[index] = loadObjectFromFile( path, subprogress( settings.progress, syncIndex++, count ) );
+            ctx->results[index] = sLoadPath( path, settings.openFolder, subprogress( settings.progress, syncIndex++, count ) );
         }
     }
     assert( syncIndex + asyncBitSet.count() == count );

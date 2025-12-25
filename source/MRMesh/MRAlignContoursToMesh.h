@@ -47,6 +47,9 @@ struct BendContoursAlongCurveParams
     /// converts (x in [0,1], pivotY) into position on curve
     CurveFunc curve;
 
+    /// stretch all contours on curve's [0,1] even if they are shorter or longer
+    bool stretch = true;
+
     /// Contours extrusion outside of curve level
     float extrusion{ 1.0f };
 };

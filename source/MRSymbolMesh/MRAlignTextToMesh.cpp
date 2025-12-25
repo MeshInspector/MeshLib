@@ -1,11 +1,11 @@
 #include "MRAlignTextToMesh.h"
 #include "MRMesh/MRAlignContoursToMesh.h"
-
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRMatrix2.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTimer.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -87,9 +87,15 @@ Expected<Mesh> alignTextToMesh(
         } );
 }
 
-Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params )
+Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
+    if ( !curve )
+    {
+        assert( false );
+        return unexpected( "No curve provided" );
+    }
+
     auto contoursOrError = createSymbolContours( params );
     if ( !contoursOrError.has_value() )
         return unexpected( std::move( contoursOrError.error() ) );
@@ -121,9 +127,79 @@ Expected<Mesh> bendTextAlongCurve( const BendTextAlongCurveParams& params )
 
     return bendContoursAlongCurve( conts, {
         .pivotY = pivotY,
-        .curve = params.curve,
+        .curve = curve,
+        .stretch = params.stretchText,
         .extrusion = params.surfaceOffset
         } );
+}
+
+Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params )
+{
+    MR_TIMER;
+    if ( curve.size() < 2 )
+    {
+        assert( false );
+        return unexpected( "Curve is too short" );
+    }
+
+    std::vector<float> lens;
+    lens.reserve( curve.size() );
+    lens.push_back( 0 );
+    for ( int i = 0; i + 1 < curve.size(); ++i )
+        lens.push_back( lens.back() + distance( curve[i].pos, curve[i+1].pos ) );
+    assert( lens.size() == curve.size() );
+    if ( lens.back() <= 0 )
+        return unexpected( "curve has zero length" );
+
+    if ( params.stretchText )
+    {
+        // to relative lengths
+        const auto factor = 1 / lens.back();
+        for ( auto & l : lens )
+            l *= factor;
+    }
+
+    auto curveFunc = [&]( float p ) -> CurvePoint
+    { 
+        if ( p <= lens.front() )
+            return curve.front();
+        if ( p >= lens.back() )
+            return curve.back();
+        auto i = std::lower_bound( lens.begin(), lens.end(), p ) - lens.begin();
+        assert( lens[i] >= p );
+        if ( lens[i] == p )
+            return curve[i];
+        assert( lens[i-1] < p );
+        auto f = ( p - lens[i-1] ) / ( lens[i] - lens[i-1] );
+        return CurvePoint
+        {
+            .pos = lerp( curve[i-1].pos, curve[i].pos, f ),
+            .dir = lerp( curve[i-1].dir, curve[i].dir, f ),
+            .snorm = lerp( curve[i-1].snorm, curve[i].snorm, f )
+        };
+    };
+
+    return bendTextAlongCurve( curveFunc, params );
+}
+
+Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
+    const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params )
+{
+    MR_TIMER;
+    CurvePoints curve;
+    curve.reserve( path.size() + 2 );
+    curve.push_back( { .pos = mesh.triPoint( start ), .snorm = mesh.normal( start ) } );
+    for ( const auto & ep : path )
+        curve.push_back( { .pos = mesh.triPoint( ep ), .snorm = mesh.normal( ep ) } );
+    curve.push_back( { .pos = mesh.triPoint( end ), .snorm = mesh.normal( end ) } );
+    assert( curve.size() == path.size() + 2 );
+
+    curve[0].dir = ( curve[1].pos - curve[0].pos ).normalized();
+    for ( int i = 1; i + 1 < curve.size(); ++i )
+        curve[i].dir = ( curve[i + 1].pos - curve[i - 1].pos ).normalized();
+    curve.back().dir = ( curve[curve.size() - 1].pos - curve[curve.size() - 2].pos ).normalized();
+
+    return bendTextAlongCurve( curve, params );
 }
 
 } //namespace MR

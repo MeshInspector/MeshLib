@@ -87,6 +87,9 @@ struct ViewerSignals
     // Window focus signal
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;
+    // Before shutdown signal
+    using PreShutdownSignal = boost::signals2::signal<void()>;
+    PreShutdownSignal preShutdownSignal; // signal is called before shutdown after window is hidden
 };
 
 } //namespace MR

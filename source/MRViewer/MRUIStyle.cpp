@@ -243,6 +243,14 @@ ImGuiKey getImGuiModPrimaryCtrl()
         return ImGuiMod_Super;
 }
 
+const char* getImGuiPrimaryCtrlName()
+{
+    if ( ImGui::GetIO().ConfigMacOSXBehaviors )
+        return getSuperModName();
+    else
+        return "Ctrl";
+}
+
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
     bool simulateClick = customParams.enableTestEngine && TestEngine::createButton( customParams.testEngineName.empty() ? label : customParams.testEngineName );
@@ -938,7 +946,7 @@ static std::string modifiersToString( int modifiers )
 {
     std::string modsText;
     for ( const auto& [bit, name] : {
-        std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+        std::pair( ImGuiMod_Ctrl, getImGuiPrimaryCtrlName() ),
         std::pair( ImGuiMod_Super, getSuperModName() ),
         std::pair( ImGuiMod_Shift, "Shift" ),
         std::pair( ImGuiMod_Alt, getAltModName() ),

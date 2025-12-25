@@ -72,13 +72,6 @@
 #include "MRMesh/MRCube.h"
 #include "MRViewerConfigConstants.h"
 
-#ifdef _WIN32
-#include <imgui_internal.h>
-#include "ImGuiHelpers.h"
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-#endif
-
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #endif
@@ -2025,30 +2018,6 @@ void Viewer::postSetIconified( bool iconified )
 
 void Viewer::postFocus( bool focused )
 {
-#ifdef _WIN32
-    if ( focused && ImGui::isMultiViewportEnabled() )
-    {
-        std::vector<GLFWwindow*> processedWindow;
-        for ( ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
-        {
-            if ( !win->Viewport )
-                continue;
-            GLFWwindow* glfwWindow = ( GLFWwindow* )win->Viewport->PlatformHandle;
-            if ( !glfwWindow || getViewerInstance().window == glfwWindow )
-                continue;
-
-            auto findIt = std::find( processedWindow.begin(), processedWindow.end(), glfwWindow );
-            if ( findIt != processedWindow.end() )
-                continue;
-
-            processedWindow.push_back( glfwWindow );
-            {
-                HWND hwnd = glfwGetWin32Window( glfwWindow );
-                SetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE );
-            }
-        }
-    }
-#endif
 #ifndef __EMSCRIPTEN__
     // it is needed ImGui to correctly capture events after refocusing
     if ( focused && focusRedrawReady_ && !isInDraw_ )

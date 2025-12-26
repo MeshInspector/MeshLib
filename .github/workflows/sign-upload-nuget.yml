@@ -13,7 +13,7 @@ on:
         description: If true - loads given nuget as beta version
         required: false
         type: boolean
-        default: false  
+        default: true # Temporarily true.
 
 jobs:
   setup:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions-ecosystem/action-get-latest-tag@v1
         if: ${{ github.event_name != 'workflow_dispatch' }}
         id: get-latest-tag
-      
+
       - name: Output tag from ENV
         id: get-tag
         run: |
@@ -45,24 +45,24 @@ jobs:
     steps:
       - name: Remove old local NuGet packages
         run: Remove-Item "MeshLib_*.nupkg"
-        
+
       - name: Download NuGet package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download ${{needs.setup.outputs.version_tag}} `
                               --repo $env:GITHUB_REPOSITORY `
-                              --pattern "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"    
-     
+                              --pattern "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"
+
       - name: Make Beta
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.beta }}
+        if: ${{ inputs.beta }}
         run: py -3 scripts\nuget_patch\nuget_make_beta.py "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"
 
       - name: Sign NuGet package with certificate
         run: |
           jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib_${{needs.setup.outputs.version_tag}}.nupkg
           nuget verify -All -Verbosity detailed MeshLib_${{needs.setup.outputs.version_tag}}.nupkg
-      
+
       - name: Upload signed NuGet package
         run: |
           nuget push MeshLib_${{needs.setup.outputs.version_tag}}.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json

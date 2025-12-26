@@ -120,7 +120,10 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
     const float cStartDepth = bbox.diagonal() * 0.05f; // use relative depth to avoid floating errors
     addBaseToPlanarMesh( contoursMesh, -cStartDepth );
     contoursMesh.invalidateCaches();
-    auto diagonal = bbox.size(); diagonal.z = cStartDepth;
+    auto diagonal = bbox.size();
+    diagonal.z = cStartDepth;
+    const float pivotInBoxX = lerp( bbox.min.x, bbox.max.x, params.pivotBoxPoint.x );
+    const float pivotInBoxY = lerp( bbox.min.y, bbox.max.y, params.pivotBoxPoint.y );
 
     const float plusOffset = std::abs( params.extrusion );
     const float minusOffset = cStartDepth - std::abs( params.extrusion );
@@ -134,19 +137,16 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
     {
         const auto & compFaces = components[icomp];
         const auto compCenter = contoursMesh.computeBoundingBox( &compFaces ).center();
-        float curveTime = compCenter.x - bbox.min.x;
+        float xInBoxRelPivot = compCenter.x - pivotInBoxX;
         if ( params.stretch )
-            curveTime /= diagonal.x;
+            xInBoxRelPivot /= diagonal.x;
 
+        const float curveTime = params.pivotCurveTime + xInBoxRelPivot;
         const auto pos = params.curve( curveTime );
 
         const auto vecx = pos.dir;
         const auto norm = pos.snorm;
         const auto vecy = cross( vecx, -norm ).normalized();
-
-        const Vector3f pivotCoord{ compCenter.x,
-                                   bbox.min.y + diagonal.y * params.pivotY,
-                                   0.0f };
 
         auto rotQ = Quaternionf( Vector3f::plusX(), vecx );
         // handle degenerated case
@@ -164,12 +164,12 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
         const AffineXf3f transformTop =
             AffineXf3f::translation( pos.pos ) *
             rot
-            * AffineXf3f::translation( Vector3f{ -compCenter.x, -bbox.min.y - diagonal.y * params.pivotY, plusOffset } );
+            * AffineXf3f::translation( Vector3f{ -compCenter.x, -pivotInBoxY, plusOffset } );
 
         const AffineXf3f transformBottom =
             AffineXf3f::translation( pos.pos ) *
             rot
-            * AffineXf3f::translation( Vector3f{ -compCenter.x, -bbox.min.y - diagonal.y * params.pivotY, minusOffset } );
+            * AffineXf3f::translation( Vector3f{ -compCenter.x, -pivotInBoxY, minusOffset } );
 
         for ( auto v : getIncidentVerts( contoursMesh.topology, compFaces ) )
         {

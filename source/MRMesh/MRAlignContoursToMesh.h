@@ -40,14 +40,17 @@ MRMESH_API Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2
 /// Parameters for aligning 2d contours along given curve
 struct BendContoursAlongCurveParams
 {
-    /// Relative position of curve line (y=pivotY) in contours bounding box:
-    /// 0 - bottom, 0.5 - center, 1 - top
-    float pivotY = 0;
+    /// Position on the curve, where bounding box's pivot point is mapped
+    float pivotCurveTime = 0;
+
+    /// Position of the curve(pivotCurveTime) in the contours' bounding box:
+    /// (0, 0) - bottom left, (0, 1) - bottom right, (0.5, 0.5) - center, (1, 1) - top right
+    Vector2f pivotBoxPoint{0.0f, 0.0f};
 
     /// converts (x in [0,1], pivotY) into position on curve
     CurveFunc curve;
 
-    /// stretch all contours on curve's [0,1] even if they are shorter or longer
+    /// stretch all contours along curve to fit in unit curve range
     bool stretch = true;
 
     /// Contours extrusion outside of curve level

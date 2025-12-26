@@ -11,6 +11,7 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 
@@ -329,6 +330,9 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
     res.vol = std::move( vol );
     res.name = utf8string( file.stem() );
     res.xf = fileRes.xf;
+
+    TelemetrySignal( fmt::format( "Open DICOM file {}x{}x{}", res.vol.dims.x, res.vol.dims.y, res.vol.dims.z ) );
+
     return res;
 }
 
@@ -654,6 +658,9 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     else
          res.name = firstRes.seriesDescription;
     res.xf = firstRes.xf;
+
+    TelemetrySignal( fmt::format( "Open DICOM folder {}x{}x{}", res.vol.dims.x, res.vol.dims.y, res.vol.dims.z ) );
+
     return res;
 }
 

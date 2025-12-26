@@ -134,7 +134,7 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         } );
 }
 
-Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params )
+Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params0 )
 {
     MR_TIMER;
     if ( curve.size() < 2 )
@@ -152,6 +152,7 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlong
     if ( lens.back() <= 0 )
         return unexpected( "curve has zero length" );
 
+    BendTextAlongCurveParams params = params0;
     if ( params.stretch )
     {
         // to relative lengths
@@ -159,25 +160,43 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlong
         for ( auto & l : lens )
             l *= factor;
     }
+    else
+    {
+        // pivotCurveTime from relative [0,1] into actual [0,len]
+        params.pivotCurveTime *= lens.back();
+    }
 
-    auto curveFunc = [&]( float p ) -> CurvePoint
+    auto curveFunc = [&]( float p )
     { 
+        CurvePoint res;
         if ( p <= lens.front() )
-            return curve.front();
+        {
+            // extrapolate
+            res = curve.front();
+            res.pos += ( p - lens.front() ) * res.dir;
+            return res;
+        }
         if ( p >= lens.back() )
-            return curve.back();
+        {
+            // extrapolate
+            res = curve.back();
+            res.pos += ( p - lens.back() ) * res.dir;
+            return res;
+        }
+        // interpolate
         auto i = std::lower_bound( lens.begin(), lens.end(), p ) - lens.begin();
         assert( lens[i] >= p );
         if ( lens[i] == p )
             return curve[i];
         assert( lens[i-1] < p );
         auto f = ( p - lens[i-1] ) / ( lens[i] - lens[i-1] );
-        return CurvePoint
+        res = CurvePoint
         {
             .pos = lerp( curve[i-1].pos, curve[i].pos, f ),
             .dir = lerp( curve[i-1].dir, curve[i].dir, f ),
             .snorm = lerp( curve[i-1].snorm, curve[i].snorm, f )
         };
+        return res;
     };
 
     return bendTextAlongCurve( curveFunc, params );

@@ -311,8 +311,8 @@ void ImGuiMenu::startFrame()
                 eq.back().Type == ImGuiInputEventType_MouseWheel ||
                 eq.back().Type == ImGuiInputEventType_Key;
 
-            // add focused event at the and if we swiched from child viewport to main one
-            // in order to keep focused state valid and alos don't lose valid g.IO.MousePos
+            // add focused event at the and if we switched from child viewport to main one
+            // in order to keep focused state valid and also don't lose valid g.IO.MousePos
             int focused = glfwGetWindowAttrib( viewer->window, GLFW_FOCUSED );
             if ( focused )
             {

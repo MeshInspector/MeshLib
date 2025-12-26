@@ -137,7 +137,7 @@ public:
             if ( !ret.errorSummary.empty() )
             {
                 if ( ret.warningSummary.empty() )
-                    ret.warningSummary = std::move( ret.warningSummary );
+                    ret.warningSummary = std::move( ret.errorSummary );
                 else
                 {
                     ret.warningSummary += "\n\n";

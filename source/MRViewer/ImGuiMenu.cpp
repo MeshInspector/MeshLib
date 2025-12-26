@@ -304,11 +304,27 @@ void ImGuiMenu::startFrame()
     bool needIncrement = false;
     if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_ )
     {
-        if ( !context_->InputEventsQueue.empty() )
+        const auto& eq = context_->InputEventsQueue;
+        if ( !eq.empty() )
         {
-            needIncrement = context_->InputEventsQueue.back().Type == ImGuiInputEventType_MouseButton ||
-                context_->InputEventsQueue.back().Type == ImGuiInputEventType_MouseWheel ||
-                context_->InputEventsQueue.back().Type == ImGuiInputEventType_Key;
+            needIncrement = eq.back().Type == ImGuiInputEventType_MouseButton ||
+                eq.back().Type == ImGuiInputEventType_MouseWheel ||
+                eq.back().Type == ImGuiInputEventType_Key;
+
+            // add focused event at the and if we switched from child viewport to main one
+            // in order to keep focused state valid and also don't lose valid g.IO.MousePos
+            int focused = glfwGetWindowAttrib( viewer->window, GLFW_FOCUSED );
+            if ( focused )
+            {
+                for ( int i = int( eq.size() ) - 1; i >= 0; --i )
+                {
+                    if ( eq[i].Type != ImGuiInputEventType_Focus )
+                        continue;
+                    if ( !eq[i].AppFocused.Focused )
+                        ImGui::GetIO().AddFocusEvent( true );
+                    break;
+                }
+            }
         }
     }
 
@@ -566,7 +582,7 @@ bool ImGuiMenu::touchpadZoomGestureEnd_()
 
 void ImGuiMenu::postFocus_( bool focused )
 {
-    (void) focused;
+    ImGui_ImplGlfw_WindowFocusCallback( viewer->window, focused );
 #ifdef _WIN32
     if ( focused && ImGui::isMultiViewportEnabled() )
     {

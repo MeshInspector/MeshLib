@@ -116,12 +116,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
     {
         shaderType = GLStaticHolder::Lines;
         if ( desiredPass == RenderModelPassMask::Transparent )
-        {
-            if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-                shaderType = GLStaticHolder::AlphaSortLines;
-            else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-                shaderType = GLStaticHolder::DepthPeelLines;
-        }
+            shaderType = GLStaticHolder::getTransparentLinesShader( renderParams.transparencyMode );
     }
     bindLines_( shaderType );
 

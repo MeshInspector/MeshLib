@@ -7,6 +7,8 @@
 #include "MRLinesShader.h"
 #include "MRShaderBlocks.h"
 #include "MRPointsShader.h"
+#include "MRMesh/MRRenderModelParameters.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -640,4 +642,46 @@ RenderObjectBuffer &GLStaticHolder::getStaticGLBuffer()
     return instance_().glBuffer_;
 }
 
+GLStaticHolder::ShaderType GLStaticHolder::getTransparentPointsShader( TransparencyMode m )
+{
+    if ( m.isAlphaSortEnabled() )
+        return AlphaSortPoints;
+    if ( m.isDepthPeelingEnabled() )
+        return DepthPeelPoints;
+    static bool b = []
+    {
+        TelemetrySignal( "Naive rendering of transparent points" );
+        return true;
+    }();
+    return Points;
 }
+
+GLStaticHolder::ShaderType GLStaticHolder::getTransparentLinesShader( TransparencyMode m )
+{
+    if ( m.isAlphaSortEnabled() )
+        return AlphaSortLines;
+    if ( m.isDepthPeelingEnabled() )
+        return DepthPeelLines;
+    static bool b = []
+    {
+        TelemetrySignal( "Naive rendering of transparent lines" );
+        return true;
+    }();
+    return Lines;
+}
+
+GLStaticHolder::ShaderType GLStaticHolder::getTransparentMeshShader( TransparencyMode m )
+{
+    if ( m.isAlphaSortEnabled() )
+        return AlphaSortMesh;
+    if ( m.isDepthPeelingEnabled() )
+        return DepthPeelMesh;
+    static bool b = []
+    {
+        TelemetrySignal( "Naive rendering of transparent mesh" );
+        return true;
+    }();
+    return Mesh;
+}
+
+} //namespace MR

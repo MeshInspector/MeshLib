@@ -1,5 +1,6 @@
 #include "MRCreateShader.h"
 #include "MRGLMacro.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRSpdlog.h"
 #include <sstream>
 #include <string>
@@ -97,7 +98,7 @@ GLuint compileShader( const std::string& vertSource, const std::string& fragSour
 namespace MR
 {
 
-void createShader( [[maybe_unused]]const std::string& shader_name,
+void createShader( const std::string& shader_name,
     const std::string& vert_source,
     const std::string& frag_source,
     GLuint& prog_id,
@@ -106,6 +107,7 @@ void createShader( [[maybe_unused]]const std::string& shader_name,
 #ifdef LOG_SHADERS
     spdlog::info( "Creating shader: {}", shader_name );
 #endif
+    TelemetrySignal( "Creating shader: " + shader_name );
     std::string shaderLog;
     prog_id = compileShader( vert_source, frag_source, shaderLog );
     if ( shaderLog.empty() )

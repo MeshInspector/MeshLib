@@ -648,7 +648,7 @@ GLStaticHolder::ShaderType GLStaticHolder::getTransparentPointsShader( Transpare
         return AlphaSortPoints;
     if ( m.isDepthPeelingEnabled() )
         return DepthPeelPoints;
-    static bool b = []
+    [[maybe_unused]] static bool b = []
     {
         TelemetrySignal( "Naive rendering of transparent points" );
         return true;
@@ -662,7 +662,7 @@ GLStaticHolder::ShaderType GLStaticHolder::getTransparentLinesShader( Transparen
         return AlphaSortLines;
     if ( m.isDepthPeelingEnabled() )
         return DepthPeelLines;
-    static bool b = []
+    [[maybe_unused]] static bool b = []
     {
         TelemetrySignal( "Naive rendering of transparent lines" );
         return true;
@@ -676,7 +676,7 @@ GLStaticHolder::ShaderType GLStaticHolder::getTransparentMeshShader( Transparenc
         return AlphaSortMesh;
     if ( m.isDepthPeelingEnabled() )
         return DepthPeelMesh;
-    static bool b = []
+    [[maybe_unused]] static bool b = []
     {
         TelemetrySignal( "Naive rendering of transparent mesh" );
         return true;

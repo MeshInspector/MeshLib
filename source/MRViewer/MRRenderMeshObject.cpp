@@ -51,13 +51,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 
     GLStaticHolder::ShaderType shaderType = GLStaticHolder::Mesh;
     if ( desiredPass == RenderModelPassMask::Transparent )
-    {
-        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-            shaderType = GLStaticHolder::AlphaSortMesh;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-            shaderType = GLStaticHolder::DepthPeelMesh;
-    }
-
+        shaderType = GLStaticHolder::getTransparentMeshShader( renderParams.transparencyMode );
 
     update_( renderParams.viewportId );
 
@@ -219,12 +213,7 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, Rend
 
     auto shaderType = GLStaticHolder::Lines;
     if ( desiredPass == RenderModelPassMask::Transparent )
-    {
-        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-            shaderType = GLStaticHolder::AlphaSortLines;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-            shaderType = GLStaticHolder::DepthPeelLines;
-    }
+        shaderType = GLStaticHolder::getTransparentLinesShader( renderParams.transparencyMode );
 
     auto shader = GLStaticHolder::getShaderId( shaderType );
 
@@ -292,12 +281,7 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, 
 
     auto shaderType = GLStaticHolder::Lines;
     if ( desiredPass == RenderModelPassMask::Transparent )
-    {
-        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-            shaderType = GLStaticHolder::AlphaSortLines;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-            shaderType = GLStaticHolder::DepthPeelLines;
-    }
+        shaderType = GLStaticHolder::getTransparentLinesShader( renderParams.transparencyMode );
 
     auto shader = GLStaticHolder::getShaderId( shaderType );
 
@@ -346,12 +330,7 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
 {
     auto shaderType = GLStaticHolder::Points;
     if ( desiredPass == RenderModelPassMask::Transparent )
-    {
-        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-            shaderType = GLStaticHolder::AlphaSortPoints;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-            shaderType = GLStaticHolder::DepthPeelPoints;
-    }
+        shaderType = GLStaticHolder::getTransparentPointsShader( renderParams.transparencyMode );
 
     bindPoints_( shaderType );
 

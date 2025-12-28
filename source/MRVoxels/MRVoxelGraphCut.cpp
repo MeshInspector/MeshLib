@@ -1189,7 +1189,7 @@ Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolum
         }
         total.log( fmt::format( " after {} parts", parts.size() ) );
         parts.resize( parts.size() / 2 );
-        if ( !reportProgress( cb, 1.0f / ( power + 1 ) ) )
+        if ( !reportProgress( sp, 1.0f / ( power + 1 ) ) )
             return unexpectedOperationCanceled();
     }
     //auto cflow = vgc.computeFlow();

@@ -51,7 +51,7 @@ jobs:
           
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        id: bunmp-vcpkg
+        id: bump-vcpkg
         env:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
         run: |
@@ -72,10 +72,14 @@ jobs:
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
 
           # Push the changes
-          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
+          # git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
           git push origin ${new_branch}
-      
-          # Create a pull request using GitHub CLI
+
+      - name: Create pull request
+        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
+        run: |
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base master \

@@ -61,6 +61,7 @@ jobs:
           
           # Create new branch
           new_branch="vcpkg-update-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+          echo "new_branch=${new_branch}" >> "$GITHUB_OUTPUT"
           git checkout -b ${new_branch}
 
           # Search and replace in all files except /thirdparty folder
@@ -84,7 +85,7 @@ jobs:
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base master \
-                       --head ${new_branch} \
+                       --head ${{ steps.bump-vcpkg.outputs.new_branch }} \
                        --label bump-vcpkg \
                        --reviewer MaxRayskiy,Grantim
 

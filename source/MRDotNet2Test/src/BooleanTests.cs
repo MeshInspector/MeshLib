@@ -8,15 +8,13 @@ namespace MRTest
     [TestFixture]
     internal class BooleanTests
     {
-        /*
-         * TODO: fix struct field assignment
         [Test]
         public void TestOperations()
         {
             const float PI = 3.14159265f;
-            Mesh meshA = Mesh.MakeTorus(1.1f, 0.5f, 8, 8);
-            Mesh meshB = Mesh.MakeTorus(1.0f, 0.2f, 8, 8);
-            meshB.Transform( new AffineXf3f( Matrix3f.Rotation( Vector3f.PlusZ(), Vector3f.PlusY() ) ) );
+            Mesh meshA = MakeTorus(1.1f, 0.5f, 8, 8);
+            Mesh meshB = MakeTorus(1.0f, 0.2f, 8, 8);
+            meshB.Transform( AffineXf3f.Linear( Matrix3f.Rotation( Vector3f.PlusZ(), Vector3f.PlusY() ) ) );
 
             const float shiftStep = 0.2f;
             const float angleStep = PI;
@@ -41,7 +39,7 @@ namespace MRTest
                                     rotation = Matrix3f.Rotation( baseAxis[i], angle ) * rotation; 
 
                             BooleanParameters parameters = new BooleanParameters();
-                            parameters.rigidB2A = new AffineXf3f(shiftVec) * new AffineXf3f(rotation);
+                            parameters.RigidB2A = AffineXf3f.Translation(shiftVec) * AffineXf3f.Linear(rotation);
 
                             Assert.DoesNotThrow(() => Boolean(meshA, meshB, BooleanOperation.Union, parameters));
                             Assert.DoesNotThrow(() => Boolean(meshA, meshB, BooleanOperation.Intersection, parameters));
@@ -50,36 +48,26 @@ namespace MRTest
                 }
             }
         }
-        */
 
-        /*
-         * TODO: fix struct field assignment
         [Test]
         public void TestMapper()
         {
-            Mesh meshA = Mesh.MakeTorus(1.1f, 0.5f, 8, 8);
-            Mesh meshB = Mesh.MakeTorus(1.0f, 0.2f, 8, 8);
-            meshB.Transform(new AffineXf3f(Matrix3f.Rotation(Vector3f.PlusZ(), Vector3f.PlusY())));
+            Mesh meshA = MakeTorus(1.1f, 0.5f, 8, 8);
+            Mesh meshB = MakeTorus(1.0f, 0.2f, 8, 8);
+            meshB.Transform(AffineXf3f.Linear(Matrix3f.Rotation(Vector3f.PlusZ(), Vector3f.PlusY())));
 
             var parameters = new BooleanParameters();
-            parameters.mapper = new BooleanResultMapper();
-            var booleanResult = Boolean(meshA, meshB, BooleanOperation.Union, parameters );
-            var validPointsA = meshA.ValidPoints as VertBitSet;
-            var validPointsB = meshB.ValidPoints as VertBitSet;
-            var validFacesA = meshA.ValidFaces as FaceBitSet;
-            var validFacesB = meshB.ValidFaces as FaceBitSet;
+            parameters.Mapper = new BooleanResultMapper();
+            var booleanResult = Boolean(meshA, meshB, BooleanOperation.Union, parameters);
 
-            Assert.That(validPointsA is not null);
-            Assert.That(validPointsB is not null);
-            Assert.That(validFacesA is not null);
-            Assert.That(validFacesB is not null);
+            var validPointsA = meshA.Topology.GetValidVerts();
+            var validPointsB = meshB.Topology.GetValidVerts();
+            var validFacesA = meshA.Topology.GetValidFaces();
+            var validFacesB = meshB.Topology.GetValidFaces();
 
-            if (validPointsA is null || validPointsB is null || validFacesA is null || validFacesB is null)
-                return;
-
-            var old2NewVerts = parameters.mapper.GetMaps(MapObject.A).Old2NewVerts;
-            var vMapA = parameters.mapper.VertMap(validPointsA, MapObject.A);
-            var vMapB = parameters.mapper.VertMap(validPointsB, MapObject.B);
+            var old2NewVerts = parameters.Mapper.GetMaps(BooleanResultMapper.MapObject.A).Old2newVerts;
+            var vMapA = parameters.Mapper.Map(validPointsA, BooleanResultMapper.MapObject.A);
+            var vMapB = parameters.Mapper.Map(validPointsB, BooleanResultMapper.MapObject.B);
 
             Assert.That(vMapA.Size(), Is.EqualTo(60) );
             Assert.That(vMapA.Count(), Is.EqualTo(60));
@@ -87,30 +75,29 @@ namespace MRTest
             Assert.That(vMapB.Count(), Is.EqualTo(48));
 
 
-            var fMapA = parameters.mapper.FaceMap(validFacesA, MapObject.A);
-            var fMapB = parameters.mapper.FaceMap(validFacesB, MapObject.B);
+            var fMapA = parameters.Mapper.Map(validFacesA, BooleanResultMapper.MapObject.A);
+            var fMapB = parameters.Mapper.Map(validFacesB, BooleanResultMapper.MapObject.B);
 
             Assert.That(fMapA.Size(), Is.EqualTo(224) );
             Assert.That(fMapA.Count(), Is.EqualTo(224));
             Assert.That(fMapB.Size(), Is.EqualTo(416) );
             Assert.That(fMapB.Count(), Is.EqualTo(192));
 
-            var newFaces = parameters.mapper.NewFaces();
+            var newFaces = parameters.Mapper.NewFaces();
             Assert.That(newFaces.Size(), Is.EqualTo(416) );
             Assert.That(newFaces.Count(), Is.EqualTo(252));
 
-            var mapsA = parameters.mapper.GetMaps( MapObject.A );
+            var mapsA = parameters.Mapper.GetMaps( BooleanResultMapper.MapObject.A );
             Assert.That(!mapsA.Identity);
-            Assert.That( mapsA.Old2NewVerts.Count, Is.EqualTo(160) );
-            Assert.That( mapsA.Cut2NewFaces.Count, Is.EqualTo(348) );
-            Assert.That( mapsA.Cut2Origin.Count, Is.EqualTo(348) );
+            Assert.That( mapsA.Old2newVerts.Size(), Is.EqualTo(160) );
+            Assert.That( mapsA.Cut2newFaces.Size(), Is.EqualTo(348) );
+            Assert.That( mapsA.Cut2origin.Size(), Is.EqualTo(348) );
 
-            var mapsB = parameters.mapper.GetMaps( MapObject.B );
+            var mapsB = parameters.Mapper.GetMaps( BooleanResultMapper.MapObject.B );
             Assert.That(!mapsB.Identity);
-            Assert.That( mapsB.Old2NewVerts.Count, Is.EqualTo(160) );
-            Assert.That( mapsB.Cut2NewFaces.Count, Is.EqualTo(384) );
-            Assert.That( mapsB.Cut2Origin.Count, Is.EqualTo(384) );
+            Assert.That( mapsB.Old2newVerts.Size(), Is.EqualTo(160) );
+            Assert.That( mapsB.Cut2newFaces.Size(), Is.EqualTo(384) );
+            Assert.That( mapsB.Cut2origin.Size(), Is.EqualTo(384) );
         }
-        */
     }
 }

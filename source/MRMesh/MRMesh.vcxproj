@@ -438,6 +438,7 @@
     <ClInclude Include="MRObjectTagEventDispatcher.h" />
     <ClInclude Include="MRObjectComparableWithReference.h" />
     <ClInclude Include="MRPointMeasurementObject.h" />
+    <ClInclude Include="MRFormat.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
@@ -734,6 +735,7 @@
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRObjectTagEventDispatcher.cpp" />
     <ClCompile Include="MRPointMeasurementObject.cpp" />
+    <ClCompile Include="MRFormat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

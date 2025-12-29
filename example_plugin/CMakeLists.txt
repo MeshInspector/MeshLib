@@ -43,13 +43,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
         # place HTML/JS files to `html' directory
         file(GLOB MESHLIB_WASM_FILES "${MESHLIB_DATA_DIR}/wasm/*.*")
-        file(GLOB LOCAL_WASM_FILES   "${CMAKE_CURRENT_SOURCE_DIR}/wasm/*.*")
         file(
-            COPY
-                ${MESHLIB_WASM_FILES}
-                ${LOCAL_WASM_FILES}
+            COPY ${MESHLIB_WASM_FILES}
             DESTINATION ${HTML_DIR}
         )
+        # overwrite index.html file
+        file(COPY_FILE wasm/index.html ${HTML_DIR}/index.html)
 
         # pack assets
         file(GLOB MESHLIB_JSONS "${MESHLIB_DATA_DIR}/*.json")

@@ -8,27 +8,25 @@ namespace MRTest
     [TestFixture]
     internal class DecimateTests
     {
-        /*
         [Test]
         public void TestDecimate()
         {
-            var sphere = Mesh.MakeSphere( 0.5f, 30000 );
+            Mesh sphere = MakeSphere( new SphereParams( 0.5f, 30000 ) );
 
-            BitSetReadOnly savedRegion = sphere.ValidFaces.Clone();
+            var savedRegion = new FaceBitSet((Const_BitSet)sphere.Topology.GetValidFaces());
 
-            var parameters = new DecimateParameters();
-            FaceBitSet? region = sphere.ValidFaces as FaceBitSet;
+            var parameters = new DecimateSettings();
+            var region = new FaceBitSet((Const_BitSet)sphere.Topology.GetValidFaces());
             if ( region is not null )
-                parameters.region = region.Clone() as FaceBitSet;
+                parameters.Region = region;
 
-            parameters.maxTriangleAspectRatio = 80;
+            parameters.MaxTriangleAspectRatio = 80;
 
-            var decimateResult = Decimate(ref sphere, parameters);
-            Assert.That(parameters.region is not null && parameters.region != savedRegion );
-            Assert.That(decimateResult.facesDeleted > 0);
-            Assert.That(decimateResult.vertsDeleted > 0);
+            var decimateResult = DecimateMesh(sphere, parameters);
+            Assert.That(parameters.Region is not null && !parameters.Region.Equals( savedRegion ) );
+            Assert.That(decimateResult.FacesDeleted > 0);
+            Assert.That(decimateResult.VertsDeleted > 0);
         }
-        */
 
         [Test]
         public void TestRemesh()

@@ -58,12 +58,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
     GLStaticHolder::ShaderType shaderType = GLStaticHolder::Points;
     if ( desiredPass == RenderModelPassMask::Transparent )
-    {
-        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-            shaderType = GLStaticHolder::AlphaSortPoints;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-            shaderType = GLStaticHolder::DepthPeelPoints;
-    }
+        shaderType = GLStaticHolder::getTransparentPointsShader( renderParams.transparencyMode );
 
     objectPreRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 

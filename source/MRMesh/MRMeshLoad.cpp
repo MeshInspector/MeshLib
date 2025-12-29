@@ -738,6 +738,55 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     return Mesh::fromPointTriples( triangles, true );
 }
 
+static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const MeshLoadSettings& settings )
+{
+    if ( !settings.telemetrySignal )
+        return;
+
+    std::string signalString = "Open " + ext;
+
+    if ( auto lv = mesh.topology.lastValidVert() )
+    {
+        signalString += " VP";
+        if ( settings.normals && settings.normals->size() >= lv )
+            signalString += 'N';
+        if ( settings.colors && settings.colors->size() >= lv )
+            signalString += 'C';
+        if ( settings.uvCoords && settings.uvCoords->size() >= lv )
+            signalString += "UV";
+    }
+
+    if ( auto lf = mesh.topology.lastValidFace() )
+    {
+        signalString += " TRI";
+        if ( settings.faceColors && settings.faceColors->size() >= lf )
+            signalString += 'C';
+    }
+
+    if ( settings.texture && !settings.texture->pixels.empty() )
+        signalString += " TEX";
+
+    if ( settings.skippedFaceCount && *settings.skippedFaceCount > 0 )
+        signalString += " SKIPF";
+
+    if ( settings.duplicatedVertexCount && *settings.duplicatedVertexCount > 0 )
+        signalString += " DUPV";
+
+    if ( settings.xf && *settings.xf != AffineXf3f{} )
+        signalString += " XF";
+
+    TelemetrySignal( signalString );
+
+    int l = 0;
+    int n = mesh.topology.numValidFaces();
+    while ( n > 0 )
+    {
+        ++l;
+        n /= 2;
+    }
+    TelemetrySignal( "Open Mesh Log Tris " + std::to_string( l ) );
+}
+
 Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto ext = utf8string( file.extension() );
@@ -762,7 +811,10 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
         return unexpected( err );
     }
 
-    return loader.fileLoad( file, settings );
+    auto res = loader.fileLoad( file, settings );
+    if ( res )
+        telemetryOpenMesh( ext, *res, settings );
+    return res;
 }
 
 Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
@@ -783,7 +835,10 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
         return unexpected( err );
     }
 
-    return loader.streamLoad( in, settings );
+    auto res = loader.streamLoad( in, settings );
+    if ( res )
+        telemetryOpenMesh( ext, *res, settings );
+    return res;
 }
 
 /*

@@ -131,6 +131,21 @@ public:
 
         if ( ret.loadedFiles.empty() )
             ret.scene = nullptr; // Don't emit the root object on failure.
+        else
+        {
+            // If something is loaded, consider errors as warnings
+            if ( !ret.errorSummary.empty() )
+            {
+                if ( ret.warningSummary.empty() )
+                    ret.warningSummary = std::move( ret.errorSummary );
+                else
+                {
+                    ret.warningSummary += "\n\n";
+                    ret.warningSummary += ret.errorSummary;
+                }
+                ret.errorSummary.clear();
+            }
+        }
 
         return ret;
     }

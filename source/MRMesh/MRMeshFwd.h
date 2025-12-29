@@ -745,6 +745,8 @@ enum class FilterType : char;
 enum class WrapType : char;
 enum class Reorder : char;
 
+struct TransparencyMode;
+
 /// squared value
 template <typename T>
 constexpr inline T sqr( T x ) noexcept { return x * x; }

@@ -14,6 +14,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: "master"
+          token: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
 
       - name: Search for Tag in .github/workflows/config.yml
         id: extract-tag
@@ -51,7 +52,7 @@ jobs:
           
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        id: bunmp-vcpkg
+        id: bump-vcpkg
         env:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
         run: |
@@ -60,6 +61,7 @@ jobs:
           
           # Create new branch
           new_branch="vcpkg-update-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+          echo "new_branch=${new_branch}" >> "$GITHUB_OUTPUT"
           git checkout -b ${new_branch}
 
           # Search and replace in all files except /thirdparty folder
@@ -72,14 +74,18 @@ jobs:
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
 
           # Push the changes
-          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
+          # git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
           git push origin ${new_branch}
-      
-          # Create a pull request using GitHub CLI
+
+      - name: Create pull request
+        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
+        run: |
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base master \
-                       --head ${new_branch} \
+                       --head ${{ steps.bump-vcpkg.outputs.new_branch }} \
                        --label bump-vcpkg \
                        --reviewer MaxRayskiy,Grantim
 

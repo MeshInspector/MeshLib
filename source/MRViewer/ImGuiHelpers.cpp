@@ -1509,7 +1509,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     ImGui::SameLine();
     ImGui::PopItemFlag();
 
-    ImGui::SetNextItemWidth( 80.0f * UI::scale() );
+    ImGui::SetNextItemWidth( 132.0f * UI::scale() );
     UI::drag<LengthUnit>( "Shift", shift, dragspeed );
 
     ImGui::SameLine();

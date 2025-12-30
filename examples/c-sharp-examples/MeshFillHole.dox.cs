@@ -17,10 +17,10 @@ public static class MeshFillHoleExample
 
             var mesh = MR.MeshLoad.FromAnySupportedFormat(inputFile);
 
-            MR.Std.Vector_MREdgeId holes = mesh.Topology.FindHoleRepresentiveEdges();
+            MR.Std.Vector_MREdgeId holes = mesh.topology.FindHoleRepresentiveEdges();
 
             MR.FillHoleParams fillHoleParams = new();
-            fillHoleParams.Metric.Assign(MR.GetUniversalMetric(mesh));
+            fillHoleParams.metric.Assign(MR.GetUniversalMetric(mesh));
             MR.FaceBitSet outfaces = new();
             // TODO
             // fillHoleParams.OutNewFaces = ...

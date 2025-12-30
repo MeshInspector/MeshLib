@@ -16,17 +16,17 @@ namespace MRTest
             Box3f maxBBox = new Box3f();
 
             inputs.PushBack( new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)), new AffineXf3f()));
-            Box3f bbox = inputs.At(0).Obj.GetObjBoundingBox();
+            Box3f bbox = inputs.At(0).obj.GetObjBoundingBox();
             if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                 maxBBox = bbox;
 
             inputs.PushBack(new MeshOrPointsXf(MakeSphere(new SphereParams(1.0f, 1000)), AffineXf3f.Linear(Matrix3f.Rotation(Vector3f.PlusZ(), 0.1f))));
-            bbox = inputs.At(1).Obj.GetObjBoundingBox();
+            bbox = inputs.At(1).obj.GetObjBoundingBox();
             if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                 maxBBox = bbox;
 
             MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
-            samplingParams.SamplingVoxelSize = maxBBox.Diagonal() * 0.03f;
+            samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
 
             MultiwayICP icp = new MultiwayICP(new Vector_MRMeshOrPointsXf_MRObjId(Misc.Move(inputs)), samplingParams);
             ICPProperties iCPProperties = new ICPProperties();
@@ -57,8 +57,8 @@ namespace MRTest
             MeshOrPointsXf flt = new MeshOrPointsXf(torusMove, xf );
             MeshOrPointsXf refer = new MeshOrPointsXf( torusRef, new AffineXf3f());
 
-            var fltSamples = torusMove.Topology.GetValidVerts();
-            var referSamples = torusRef.Topology.GetValidVerts();
+            var fltSamples = torusMove.topology.GetValidVerts();
+            var referSamples = torusRef.topology.GetValidVerts();
             Assert.That(fltSamples is not null);
             Assert.That(referSamples is not null);
 
@@ -71,22 +71,22 @@ namespace MRTest
             Console.WriteLine(icp.GetStatusInfo());
 
             var diffXf = new AffineXf3f();
-            diffXf.A -= newXf.A;
-            diffXf.B -= newXf.B;
+            diffXf.a -= newXf.a;
+            diffXf.b -= newXf.b;
 
-            Assert.That(Math.Abs(diffXf.A.X.X), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.X.Y), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.X.Z), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.Y.X), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.Y.Y), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.Y.Z), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.Z.X), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.Z.Y), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.A.Z.Z), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.x.x), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.x.y), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.x.z), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.y.x), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.y.y), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.y.z), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.z.x), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.z.y), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.a.z.z), Is.LessThan(1e-6f));
 
-            Assert.That(Math.Abs(diffXf.B.X), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.B.Y), Is.LessThan(1e-6f));
-            Assert.That(Math.Abs(diffXf.B.Z), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.b.x), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.b.y), Is.LessThan(1e-6f));
+            Assert.That(Math.Abs(diffXf.b.z), Is.LessThan(1e-6f));
 
             var pairs = icp.GetRef2FltPairs();
             Assert.That(pairs.Size(), Is.EqualTo(1024));

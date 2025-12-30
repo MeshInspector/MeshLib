@@ -18,12 +18,12 @@ namespace MRTest
             var laplacian = new Laplacian(mesh);
 
             // initialize laplacian
-            var triangulation = mesh.Topology.GetTriangulation();
-            var i0 = triangulation.Front().Elems._0;
-            var i1 = triangulation.Back().Elems._0;
+            var triangulation = mesh.topology.GetTriangulation();
+            var i0 = triangulation.Front().elems._0;
+            var i1 = triangulation.Back().elems._0;
 
-            var ancV0 = mesh.Points.Index(i0);
-            var ancV1 = mesh.Points.Index(i1);
+            var ancV0 = mesh.points.Index(i0);
+            var ancV1 = mesh.points.Index(i1);
 
             EdgeWeights edgeWeights = EdgeWeights.Unit;
             VertexMass vertexMass = VertexMass.Unit;
@@ -31,7 +31,7 @@ namespace MRTest
 
             // fix specific vertices
             VertBitSet freeVerts = new VertBitSet();
-            freeVerts.Resize(mesh.Topology.GetValidVerts().Count());
+            freeVerts.Resize(mesh.topology.GetValidVerts().Count());
             freeVerts.Set(i0, true);
             freeVerts.Set(i1, true);
 

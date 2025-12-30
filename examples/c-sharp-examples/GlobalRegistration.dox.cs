@@ -39,11 +39,11 @@ public class GlobalRegistrationExample
                 input_pointclouds.Add(pc); // Need this to prevent the point-cloud object from dying too early.
                 MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
                 inputs.PushBack(obj);
-                maxBBox.Include(obj.Obj.ComputeBoundingBox());
+                maxBBox.Include(obj.obj.ComputeBoundingBox());
             }
 
             MR.MultiwayICPSamplingParameters samplingParams = new();
-            samplingParams.SamplingVoxelSize = maxBBox.Diagonal() * 0.03f;
+            samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
 
             MR.MultiwayICP icp = new(inputs, samplingParams);
             MR.ICPProperties iCPProperties = new();
@@ -59,8 +59,8 @@ public class GlobalRegistrationExample
             {
                 MR.ObjId id = new(i);
                 var xf = xfs.Index(id);
-                for (ulong j = 0; j < inputs.Index(id).Obj.Points().Size(); j++)
-                    output.AddPoint(xf.Call(inputs.Index(id).Obj.Points().Index(new MR.VertId(j))));
+                for (ulong j = 0; j < inputs.Index(id).obj.Points().Size(); j++)
+                    output.AddPoint(xf.Call(inputs.Index(id).obj.Points().Index(new MR.VertId(j))));
             }
 
             MR.PointsSave.ToAnySupportedFormat(output, args[args.Length - 1]);

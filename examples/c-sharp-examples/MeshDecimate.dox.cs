@@ -9,10 +9,10 @@ public class MeshDecimateExample
 
             // Setup decimate parameters
             MR.DecimateSettings ds = new();
-            ds.Strategy = MR.DecimateStrategy.MinimizeError;
-            ds.MaxError = 1e-5f * mesh.ComputeBoundingBox().Diagonal();
-            ds.TinyEdgeLength = 1e-3f;
-            ds.PackMesh = true;
+            ds.strategy = MR.DecimateStrategy.MinimizeError;
+            ds.maxError = 1e-5f * mesh.ComputeBoundingBox().Diagonal();
+            ds.tinyEdgeLength = 1e-3f;
+            ds.packMesh = true;
 
             // Decimate mesh
             MR.DecimateResult result = MR.DecimateMesh(mesh, ds);

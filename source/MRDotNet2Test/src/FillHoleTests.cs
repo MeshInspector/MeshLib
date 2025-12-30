@@ -8,9 +8,9 @@ namespace MRTest
     {
         private static void updateTri(Std.Mut_Array_MRVertId_3 tri, int v0, int v1, int v2)
         {
-            tri.Elems._0 = new VertId(v0);
-            tri.Elems._1 = new VertId(v1);
-            tri.Elems._2 = new VertId(v2);
+            tri.elems._0 = new VertId(v0);
+            tri.elems._1 = new VertId(v1);
+            tri.elems._2 = new VertId(v2);
         }
 
         private static Mesh CreateMeshWithHoles()
@@ -37,20 +37,20 @@ namespace MRTest
         public void TestFillHole()
         {
             var mesh = CreateMeshWithHoles();
-            var holes = mesh.Topology.FindHoleRepresentiveEdges();
+            var holes = mesh.topology.FindHoleRepresentiveEdges();
             Assert.That(holes.Size(), Is.EqualTo(2) );
 
             var param = new FillHoleParams();
 
             FillHoles(mesh, holes, param);
-            Assert.That(mesh.Topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(0));
+            Assert.That(mesh.topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(0));
         }
 
         [Test]
         public void TestFillHoleNicely()
         {
             var mesh = CreateMeshWithHoles();
-            var holes = mesh.Topology.FindHoleRepresentiveEdges();
+            var holes = mesh.topology.FindHoleRepresentiveEdges();
             Assert.That(holes.Size(), Is.EqualTo(2));
 
             var param = new FillHoleNicelySettings();
@@ -58,14 +58,14 @@ namespace MRTest
             var patch = FillHoleNicely(mesh, holes.At(0), param);
 
             Assert.That( patch.Count, Is.EqualTo(1887) );
-            Assert.That(mesh.Topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(1));
+            Assert.That(mesh.topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(1));
         }
 
         [Test]
         public void TestRightBoundary()
         {
             var mesh = CreateMeshWithHoles();
-            var loops = FindRightBoundary(mesh.Topology);
+            var loops = FindRightBoundary(mesh.topology);
             Assert.That(loops.Size(), Is.EqualTo(2));
             Assert.That(loops.At(0).Size(), Is.EqualTo(3));
             Assert.That(loops.At(1).Size(), Is.EqualTo(4));

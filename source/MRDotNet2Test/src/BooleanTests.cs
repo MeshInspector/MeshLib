@@ -36,10 +36,10 @@ namespace MRTest
                             Matrix3f rotation = new Matrix3f();
                             for (int i = 0; i < 3; ++i)
                                 if ( ( maskRot & (1 << i) ) > 0 )
-                                    rotation = Matrix3f.Rotation( baseAxis[i], angle ) * rotation; 
+                                    rotation = Matrix3f.Rotation( baseAxis[i], angle ) * rotation;
 
                             BooleanParameters parameters = new BooleanParameters();
-                            parameters.RigidB2A = AffineXf3f.Translation(shiftVec) * AffineXf3f.Linear(rotation);
+                            parameters.rigidB2A = AffineXf3f.Translation(shiftVec) * AffineXf3f.Linear(rotation);
 
                             Assert.DoesNotThrow(() => Boolean(meshA, meshB, BooleanOperation.Union, parameters));
                             Assert.DoesNotThrow(() => Boolean(meshA, meshB, BooleanOperation.Intersection, parameters));
@@ -57,17 +57,17 @@ namespace MRTest
             meshB.Transform(AffineXf3f.Linear(Matrix3f.Rotation(Vector3f.PlusZ(), Vector3f.PlusY())));
 
             var parameters = new BooleanParameters();
-            parameters.Mapper = new BooleanResultMapper();
+            parameters.mapper = new BooleanResultMapper();
             var booleanResult = Boolean(meshA, meshB, BooleanOperation.Union, parameters);
 
-            var validPointsA = meshA.Topology.GetValidVerts();
-            var validPointsB = meshB.Topology.GetValidVerts();
-            var validFacesA = meshA.Topology.GetValidFaces();
-            var validFacesB = meshB.Topology.GetValidFaces();
+            var validPointsA = meshA.topology.GetValidVerts();
+            var validPointsB = meshB.topology.GetValidVerts();
+            var validFacesA = meshA.topology.GetValidFaces();
+            var validFacesB = meshB.topology.GetValidFaces();
 
-            var old2NewVerts = parameters.Mapper.GetMaps(BooleanResultMapper.MapObject.A).Old2newVerts;
-            var vMapA = parameters.Mapper.Map(validPointsA, BooleanResultMapper.MapObject.A);
-            var vMapB = parameters.Mapper.Map(validPointsB, BooleanResultMapper.MapObject.B);
+            var old2NewVerts = parameters.mapper.GetMaps(BooleanResultMapper.MapObject.A).old2newVerts;
+            var vMapA = parameters.mapper.Map(validPointsA, BooleanResultMapper.MapObject.A);
+            var vMapB = parameters.mapper.Map(validPointsB, BooleanResultMapper.MapObject.B);
 
             Assert.That(vMapA.Size(), Is.EqualTo(60) );
             Assert.That(vMapA.Count(), Is.EqualTo(60));
@@ -75,29 +75,29 @@ namespace MRTest
             Assert.That(vMapB.Count(), Is.EqualTo(48));
 
 
-            var fMapA = parameters.Mapper.Map(validFacesA, BooleanResultMapper.MapObject.A);
-            var fMapB = parameters.Mapper.Map(validFacesB, BooleanResultMapper.MapObject.B);
+            var fMapA = parameters.mapper.Map(validFacesA, BooleanResultMapper.MapObject.A);
+            var fMapB = parameters.mapper.Map(validFacesB, BooleanResultMapper.MapObject.B);
 
             Assert.That(fMapA.Size(), Is.EqualTo(224) );
             Assert.That(fMapA.Count(), Is.EqualTo(224));
             Assert.That(fMapB.Size(), Is.EqualTo(416) );
             Assert.That(fMapB.Count(), Is.EqualTo(192));
 
-            var newFaces = parameters.Mapper.NewFaces();
+            var newFaces = parameters.mapper.NewFaces();
             Assert.That(newFaces.Size(), Is.EqualTo(416) );
             Assert.That(newFaces.Count(), Is.EqualTo(252));
 
-            var mapsA = parameters.Mapper.GetMaps( BooleanResultMapper.MapObject.A );
-            Assert.That(!mapsA.Identity);
-            Assert.That( mapsA.Old2newVerts.Size(), Is.EqualTo(160) );
-            Assert.That( mapsA.Cut2newFaces.Size(), Is.EqualTo(348) );
-            Assert.That( mapsA.Cut2origin.Size(), Is.EqualTo(348) );
+            var mapsA = parameters.mapper.GetMaps( BooleanResultMapper.MapObject.A );
+            Assert.That(!mapsA.identity);
+            Assert.That( mapsA.old2newVerts.Size(), Is.EqualTo(160) );
+            Assert.That( mapsA.cut2newFaces.Size(), Is.EqualTo(348) );
+            Assert.That( mapsA.cut2origin.Size(), Is.EqualTo(348) );
 
-            var mapsB = parameters.Mapper.GetMaps( BooleanResultMapper.MapObject.B );
-            Assert.That(!mapsB.Identity);
-            Assert.That( mapsB.Old2newVerts.Size(), Is.EqualTo(160) );
-            Assert.That( mapsB.Cut2newFaces.Size(), Is.EqualTo(384) );
-            Assert.That( mapsB.Cut2origin.Size(), Is.EqualTo(384) );
+            var mapsB = parameters.mapper.GetMaps( BooleanResultMapper.MapObject.B );
+            Assert.That(!mapsB.identity);
+            Assert.That( mapsB.old2newVerts.Size(), Is.EqualTo(160) );
+            Assert.That( mapsB.cut2newFaces.Size(), Is.EqualTo(384) );
+            Assert.That( mapsB.cut2origin.Size(), Is.EqualTo(384) );
         }
     }
 }

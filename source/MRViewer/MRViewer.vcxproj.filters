@@ -502,6 +502,9 @@
     <ClCompile Include="MRImGuiMultiViewport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneControlMenuItems.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -991,6 +994,7 @@
     <ClInclude Include="MRViewerConfigConstants.h">
       <Filter>Viewer</Filter>
     </ClInclude>
+    <ClInclude Include="MRSceneControlMenuItems.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

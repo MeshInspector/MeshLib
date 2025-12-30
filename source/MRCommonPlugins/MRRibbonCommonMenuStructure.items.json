@@ -1,6 +1,16 @@
 {
   "Items": [
     {
+      "Name": "Undo",
+      "Tooltip": "Undo the last action.",
+      "Icon": "\uF0E2"
+    },
+    {
+      "Name": "Redo",
+      "Tooltip": "Redo last undone action.",
+      "Icon": "\uF01E"
+    }, 
+    {
       "Name": "New",
       "Tooltip": "Remove all objects from the scene.",
       "Icon": "\uF021"

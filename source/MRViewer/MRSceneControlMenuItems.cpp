@@ -24,10 +24,10 @@ namespace MR
 
 // Remove `##` and everything after it from the string.
 // If the string doesn't contain it, return sit unchanged.
-static std::string trimHashHashSuffix(std::string str)
+static std::string trimHashHashSuffix( std::string str )
 {
-    if (auto sep = str.find("##"); sep != std::string::npos)
-        str.resize(sep);
+    if ( auto sep = str.find( "##" ); sep != std::string::npos )
+        str.resize( sep );
     return str;
 }
 
@@ -57,7 +57,7 @@ bool UndoMenuItem::action()
 
 std::string UndoMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    const auto & history = Viewer::instanceRef().getGlobalHistoryStore();
+    const auto& history = Viewer::instanceRef().getGlobalHistoryStore();
     if ( !history )
         return "Internal history stack is unavailable.";
     if ( dropList_.empty() )
@@ -68,7 +68,7 @@ std::string UndoMenuItem::isAvailable( const std::vector<std::shared_ptr<const O
 std::string UndoMenuItem::getDynamicTooltip() const
 {
     std::string res;
-    if ( const auto & history = Viewer::instanceRef().getGlobalHistoryStore() )
+    if ( const auto& history = Viewer::instanceRef().getGlobalHistoryStore() )
         res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Undo ) );
     return res;
 }
@@ -133,7 +133,7 @@ std::string RedoMenuItem::isAvailable( const std::vector<std::shared_ptr<const O
 std::string RedoMenuItem::getDynamicTooltip() const
 {
     std::string res;
-    if ( const auto & history = Viewer::instanceRef().getGlobalHistoryStore() )
+    if ( const auto& history = Viewer::instanceRef().getGlobalHistoryStore() )
         res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Redo ) );
     return res;
 }

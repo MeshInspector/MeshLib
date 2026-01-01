@@ -14,6 +14,9 @@ Following code presents example of finding collision triangles of two meshes
 - <b class="tab-title">C</b>
 \include Collision.dox.c
 
+- <b class="tab-title">C#</b>
+\include Collision.dox.cs
+
 </div>
 
  */

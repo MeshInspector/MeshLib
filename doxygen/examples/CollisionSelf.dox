@@ -14,6 +14,9 @@ Following code presents example of finding self-intersecting triangles of single
 - <b class="tab-title">C</b>
 \include CollisionSelf.dox.c
 
+- <b class="tab-title">C#</b>
+\include CollisionSelf.dox.cs
+
 </div>
 
  */

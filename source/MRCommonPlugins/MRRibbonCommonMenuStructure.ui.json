@@ -206,12 +206,6 @@
 	],
 	"Header Quick Access": [
 		{
-			"Name": "Undo"
-		},
-		{
-			"Name": "Redo"
-		},
-		{
 			"Name": "Open files"
 		},
 		{
@@ -222,6 +216,12 @@
 		},
 		{
 			"Name": "Save object"
+		},
+		{
+			"Name": "Undo"
+		},
+		{
+			"Name": "Redo"
 		}
 	],
 	"Scene Buttons": [

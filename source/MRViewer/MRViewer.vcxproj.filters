@@ -503,7 +503,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneControlMenuItems.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Plugins</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -994,7 +994,9 @@
     <ClInclude Include="MRViewerConfigConstants.h">
       <Filter>Viewer</Filter>
     </ClInclude>
-    <ClInclude Include="MRSceneControlMenuItems.h" />
+    <ClInclude Include="MRSceneControlMenuItems.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

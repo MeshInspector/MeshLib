@@ -12,7 +12,7 @@ namespace MRTest
             var bigCube = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var smallCube = MakeCube(Vector3f.Diagonal(0.1f), Vector3f.Diagonal(1.0f));
             var boolResult = Boolean(bigCube, smallCube, BooleanOperation.Union);
-            return new MeshPart(boolResult.Mesh);
+            return new MeshPart(boolResult.mesh);
         }
 
         [Test]
@@ -25,8 +25,8 @@ namespace MRTest
 
             Assert.That(numComponents == 2);
             Assert.That(map.Size() == 24);
-            Assert.That(map.Index(new FaceId(0)).Id == 0);
-            Assert.That(map.Index(new FaceId(12)).Id == 1);
+            Assert.That(map.Index(new FaceId(0)).id == 0);
+            Assert.That(map.Index(new FaceId(12)).id == 1);
         }
 
         [Test]

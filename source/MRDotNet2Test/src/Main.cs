@@ -13,16 +13,16 @@ namespace MRTest
             // Copy it into another mesh.
             Mesh sphere2 = new Mesh(sphere1);
             // Apply some offset.
-            sphere2.Transform(AffineXf3f.Translation(new Vector3f { X = 0.7f }));
+            sphere2.Transform(AffineXf3f.Translation(new Vector3f { x = 0.7f }));
 
             BooleanResult boolean_result = Boolean(sphere1, sphere2, BooleanOperation.Intersection);
             if (!boolean_result)
             {
-                Console.WriteLine($"Failed to perform boolean: {(string)boolean_result.ErrorString}");
+                Console.WriteLine($"Failed to perform boolean: {(string)boolean_result.errorString}");
                 Environment.Exit(1);
             }
 
-            MeshSave.ToAnySupportedFormat(boolean_result.Mesh, "out_boolean.stl");
+            MeshSave.ToAnySupportedFormat(boolean_result.mesh, "out_boolean.stl");
 
             /// ...
 

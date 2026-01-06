@@ -37,7 +37,7 @@ public class TriangulationExample
             // Fix possible issues
             MR.OffsetParameters offsetParameters = new();
             MR.MeshPart mp = new(triangulated);
-            offsetParameters.VoxelSize = MR.SuggestVoxelSize(mp, 5e+6f);
+            offsetParameters.voxelSize = MR.SuggestVoxelSize(mp, 5e+6f);
             var offset = MR.OffsetMesh(mp, 0f, offsetParameters);
 
             // Save result

@@ -813,6 +813,7 @@ void RibbonMenu::drawActiveList_()
         ImGuiWindowFlags_NoMove;
     ImGui::PushStyleVar( ImGuiStyleVar_PopupBorderSize, 0.0f );
     ImGui::PushStyleColor( ImGuiCol_PopupBg, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::SetNextWindowViewport( ImGui::GetMainViewport()->ID );
     ImGui::Begin( nameWindow, NULL, window_flags );
     if ( popupOpened )
     {

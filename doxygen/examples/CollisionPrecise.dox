@@ -14,6 +14,9 @@ Following code presents example of finding preceise collision triangles and edge
 - <b class="tab-title">C</b>
 \include CollisionPrecise.dox.c
 
+- <b class="tab-title">C#</b>
+\include CollisionPrecise.dox.cs
+
 </div>
 
  */

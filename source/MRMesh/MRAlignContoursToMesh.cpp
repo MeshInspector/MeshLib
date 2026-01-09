@@ -141,7 +141,9 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
         if ( params.stretch )
             xInBoxRelPivot /= diagonal.x;
 
-        const float curveTime = params.pivotCurveTime + xInBoxRelPivot;
+        float curveTime = params.pivotCurveTime + xInBoxRelPivot;
+        if ( params.periodicCurve )
+            curveTime = curveTime - std::floor( curveTime );
         const auto pos = params.curve( curveTime );
 
         const auto vecx = pos.dir;

@@ -64,6 +64,9 @@ struct BendTextAlongCurveParams
     // If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text
     bool fontBasedSizeCalc{ false };
 
+    /// if true, curve parameter will be always within [0,1) with repetition: xr := x - floor(x)
+    bool periodicCurve = false;
+
     /// stretch whole text along curve to fit in unit curve range
     bool stretch = true;
 };

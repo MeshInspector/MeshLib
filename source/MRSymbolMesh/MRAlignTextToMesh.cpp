@@ -223,4 +223,24 @@ Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
     return bendTextAlongCurve( curve, params );
 }
 
+Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
+    const SurfacePath& path, const BendTextAlongCurveParams& params )
+{
+    MR_TIMER;
+    if ( path.size() < 2 )
+        return unexpected( "too short path" );
+    CurvePoints curve;
+    curve.reserve( path.size() );
+    for ( const auto & ep : path )
+        curve.push_back( { .pos = mesh.triPoint( ep ), .snorm = mesh.normal( ep ) } );
+    assert( curve.size() == path.size() );
+
+    curve[0].dir = ( curve[1].pos - curve[0].pos ).normalized();
+    for ( int i = 1; i + 1 < curve.size(); ++i )
+        curve[i].dir = ( curve[i + 1].pos - curve[i - 1].pos ).normalized();
+    curve.back().dir = ( curve[curve.size() - 1].pos - curve[curve.size() - 2].pos ).normalized();
+
+    return bendTextAlongCurve( curve, params );
+}
+
 } //namespace MR

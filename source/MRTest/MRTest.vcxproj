@@ -61,6 +61,7 @@
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRFillingSurface.cpp" />
     <ClCompile Include="BendTextAlongCurveTests.cpp" />
+    <ClCompile Include="MRFormatTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

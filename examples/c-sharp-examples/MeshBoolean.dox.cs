@@ -20,7 +20,7 @@ public class MeshBooleanExample
             MR.BooleanResult res = MR.Boolean(mesh_a, mesh_b, MR.BooleanOperation.Intersection);
 
             // save result to STL file
-            MR.MeshSave.ToAnySupportedFormat(res.Mesh, "out_boolean.stl");
+            MR.MeshSave.ToAnySupportedFormat(res.mesh, "out_boolean.stl");
         }
         catch (Exception e)
         {

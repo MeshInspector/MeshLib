@@ -18,7 +18,7 @@ namespace MRTest
 
             var conv = GetVectorConverters(mpA, mpB);
 
-            var intersections = FindCollidingEdgeTrisPrecise(mpA, mpB, conv.ToInt);
+            var intersections = FindCollidingEdgeTrisPrecise(mpA, mpB, conv.toInt);
             Assert.That(intersections.Size(), Is.EqualTo(152));
             var edgeATriBCount = 0;
             var edgeBTriACount = 0;
@@ -32,7 +32,7 @@ namespace MRTest
             Assert.That(edgeATriBCount, Is.EqualTo(80));
             Assert.That(edgeBTriACount, Is.EqualTo(72));
 
-            var contours = OrderIntersectionContours(meshA.Topology, meshB.Topology, intersections);
+            var contours = OrderIntersectionContours(meshA.topology, meshB.topology, intersections);
 
             Assert.That(contours.Size(), Is.EqualTo(4));
             Assert.That(contours.At(0).Size(), Is.EqualTo(71));
@@ -49,7 +49,7 @@ namespace MRTest
             ulong posCount = 0;
             for (ulong i = 0; i < aConts.Size(); i++)
             {
-                posCount += aConts.At(i).Intersections.Size();
+                posCount += aConts.At(i).intersections.Size();
             }
 
             Assert.That(posCount, Is.EqualTo(156) );

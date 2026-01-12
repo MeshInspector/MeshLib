@@ -14,8 +14,8 @@ namespace MRTest
         {
             var mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            Assert.That(mesh.Points.Size() == 8);
-            Assert.That(mesh.Topology.GetValidFaces().Count() == 12);
+            Assert.That(mesh.points.Size() == 8);
+            Assert.That(mesh.topology.GetValidFaces().Count() == 12);
         }
 
         [Test]
@@ -26,8 +26,8 @@ namespace MRTest
             MeshSave.ToAnySupportedFormat(cubeMesh, tempFile);
 
             var readMesh = MeshLoad.FromAnySupportedFormat(tempFile);
-            Assert.That(cubeMesh.Points.Size() == readMesh.Points.Size());
-            Assert.That(cubeMesh.Topology.GetValidFaces().Count() == readMesh.Topology.GetValidFaces().Count());
+            Assert.That(cubeMesh.points.Size() == readMesh.points.Size());
+            Assert.That(cubeMesh.topology.GetValidFaces().Count() == readMesh.topology.GetValidFaces().Count());
 
             File.Delete(tempFile);
         }
@@ -65,8 +65,8 @@ namespace MRTest
             MeshSave.ToAnySupportedFormat(cubeMesh, tempFile);
 
             var readMesh = MeshLoad.FromAnySupportedFormat(tempFile);
-            Assert.That(readMesh.Points.Size() == 8);
-            Assert.That(readMesh.Topology.GetValidFaces().Count() == 12);
+            Assert.That(readMesh.points.Size() == 8);
+            Assert.That(readMesh.topology.GetValidFaces().Count() == 12);
 
             File.Delete(tempFile);
         }
@@ -100,7 +100,7 @@ namespace MRTest
             triangles.Add(new ThreeVertIds(3, 2, 6));
 
             var mesh = Mesh.FromTriangles(points, triangles);
-            Assert.That(mesh.Points.Count == 8);
+            Assert.That(mesh.points.Count == 8);
             Assert.That(mesh.Triangulation.Count == 12);
         }
 
@@ -132,7 +132,7 @@ namespace MRTest
             triangles.Add(new ThreeVertIds(3, 2, 6));
 
             var mesh = Mesh.FromTrianglesDuplicatingNonManifoldVertices(points, triangles);
-            Assert.That(mesh.Points.Count == 8);
+            Assert.That(mesh.points.Count == 8);
             Assert.That(mesh.Triangulation.Count == 12);
         }
         */
@@ -154,14 +154,14 @@ namespace MRTest
             var xf = AffineXf3f.Translation(Vector3f.Diagonal(1.0f));
             cubeMesh.Transform(xf);
 
-            Assert.That(cubeMesh.Points.Vec.At(0) == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(1) == new Vector3f(0.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(2) == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(3) == new Vector3f(1.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(4) == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.Points.Vec.At(5) == new Vector3f(0.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.Points.Vec.At(6) == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.Points.Vec.At(7) == new Vector3f(1.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec.At(0) == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(1) == new Vector3f(0.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(2) == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(3) == new Vector3f(1.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(4) == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec.At(5) == new Vector3f(0.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec.At(6) == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec.At(7) == new Vector3f(1.5f, 0.5f, 1.5f));
         }
 
         [Test]
@@ -177,29 +177,29 @@ namespace MRTest
             var xf = AffineXf3f.Translation(Vector3f.Diagonal(1.0f));
             cubeMesh.Transform(xf, region);
 
-            Assert.That(cubeMesh.Points.Vec.At(0) == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(1) == new Vector3f(-0.5f, 0.5f, -0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(2) == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(3) == new Vector3f(0.5f, -0.5f, -0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(4) == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.Points.Vec.At(5) == new Vector3f(-0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.Points.Vec.At(6) == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.Points.Vec.At(7) == new Vector3f(0.5f, -0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(0) == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(1) == new Vector3f(-0.5f, 0.5f, -0.5f));
+            Assert.That(cubeMesh.points.vec.At(2) == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(3) == new Vector3f(0.5f, -0.5f, -0.5f));
+            Assert.That(cubeMesh.points.vec.At(4) == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec.At(5) == new Vector3f(-0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec.At(6) == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec.At(7) == new Vector3f(0.5f, -0.5f, 0.5f));
         }
 
         [Test]
         public void TestLeftTriVerts()
         {
             var cubeMesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            var triVerts = cubeMesh.Topology.GetLeftTriVerts(new EdgeId(0));
-            Assert.That(triVerts.Elems[0].Id, Is.EqualTo(0));
-            Assert.That(triVerts.Elems[1].Id, Is.EqualTo(1));
-            Assert.That(triVerts.Elems[2].Id, Is.EqualTo(2));
+            var triVerts = cubeMesh.topology.GetLeftTriVerts(new EdgeId(0));
+            Assert.That(triVerts.elems[0].id, Is.EqualTo(0));
+            Assert.That(triVerts.elems[1].id, Is.EqualTo(1));
+            Assert.That(triVerts.elems[2].id, Is.EqualTo(2));
 
-            triVerts = cubeMesh.Topology.GetLeftTriVerts(new EdgeId(6));
-            Assert.That(triVerts.Elems[0].Id, Is.EqualTo(2));
-            Assert.That(triVerts.Elems[1].Id, Is.EqualTo(3));
-            Assert.That(triVerts.Elems[2].Id, Is.EqualTo(0));
+            triVerts = cubeMesh.topology.GetLeftTriVerts(new EdgeId(6));
+            Assert.That(triVerts.elems[0].id, Is.EqualTo(2));
+            Assert.That(triVerts.elems[1].id, Is.EqualTo(3));
+            Assert.That(triVerts.elems[2].id, Is.EqualTo(0));
         }
 
         /*
@@ -234,7 +234,7 @@ namespace MRTest
                 if ( loadedMesh is null || loadedXf is null)
                     return;
 
-                Assert.That(loadedMesh.Points.Count == 8);
+                Assert.That(loadedMesh.points.Count == 8);
                 Assert.That(loadedObjs[0].name == "Cube");
                 Assert.That(loadedXf.B.X == 0.0f);
 
@@ -245,7 +245,7 @@ namespace MRTest
                 if (loadedMesh is null || loadedXf is null)
                     return;
 
-                Assert.That(loadedMesh.Points.Count == 100);
+                Assert.That(loadedMesh.points.Count == 100);
                 Assert.That(loadedObjs[1].name == "LongSphereName");
                 Assert.That(loadedXf.B.X == 0.0f);
 
@@ -260,7 +260,7 @@ namespace MRTest
                 if (loadedMesh is null || loadedXf is null)
                     return;
 
-                Assert.That(loadedMesh.Points.Count == 8);
+                Assert.That(loadedMesh.points.Count == 8);
                 Assert.That(loadedObjs[0].name == "Cube");
                 Assert.That(loadedXf.B.X == 1.0f);
 
@@ -271,12 +271,12 @@ namespace MRTest
                 if (loadedMesh is null || loadedXf is null)
                     return;
 
-                Assert.That(loadedMesh.Points.Count == 100);
+                Assert.That(loadedMesh.points.Count == 100);
                 Assert.That(loadedObjs[1].name == "LongSphereName");
                 Assert.That(loadedXf.B.X == -2.0f);
 
                 loadedMesh = loadedObjs[0].mesh;
-                if (loadedMesh is not null) 
+                if (loadedMesh is not null)
                     loadedMesh.Dispose();
 
                 loadedMesh = loadedObjs[1].mesh;
@@ -292,11 +292,11 @@ namespace MRTest
         public void TestToTriPoint()
         {
             var cubeMesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            var triVerts = cubeMesh.Topology.GetTriVerts(new FaceId(0));
-            var centerPoint = (cubeMesh.Points.Index(triVerts.Elems[1]) + cubeMesh.Points.Index(triVerts.Elems[2])) * 0.5f;
+            var triVerts = cubeMesh.topology.GetTriVerts(new FaceId(0));
+            var centerPoint = (cubeMesh.points.Index(triVerts.elems[1]) + cubeMesh.points.Index(triVerts.elems[2])) * 0.5f;
             var triPoint = cubeMesh.ToTriPoint(new FaceId(0), centerPoint);
-            Assert.That(triPoint.Bary.A, Is.EqualTo(0.5f));
-            Assert.That(triPoint.Bary.B, Is.EqualTo(0.5f));
+            Assert.That(triPoint.bary.a, Is.EqualTo(0.5f));
+            Assert.That(triPoint.bary.b, Is.EqualTo(0.5f));
         }
 
         [Test]
@@ -320,15 +320,15 @@ namespace MRTest
         public void TestAddMesh()
         {
             var cubeMesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            Assert.That(cubeMesh.Topology.GetValidFaces().Count() == 12);
+            Assert.That(cubeMesh.topology.GetValidFaces().Count() == 12);
             var cpyMesh = new Mesh(cubeMesh);
             cubeMesh.AddMesh(cpyMesh);
-            Assert.That(cubeMesh.Topology.GetValidFaces().Count() == 24);
+            Assert.That(cubeMesh.topology.GetValidFaces().Count() == 24);
             FaceBitSet bs = new FaceBitSet(12);
             bs.Set(new FaceId(0));
             MeshPart mp = new MeshPart(cpyMesh, bs);
             cubeMesh.AddMeshPart(mp);
-            Assert.That(cubeMesh.Topology.GetValidFaces().Count() == 25);
+            Assert.That(cubeMesh.topology.GetValidFaces().Count() == 25);
         }
 
         [Test]
@@ -337,28 +337,28 @@ namespace MRTest
             var p = new Vector3f(1, 2, 3);
             var mp = new MeshPart(MakeSphere(new SphereParams(1.0f, 1000)));
             var projRes = FindProjection(p, mp);
-            Assert.That(projRes.DistSq, Is.EqualTo(7.529f).Within(1e-3));
+            Assert.That(projRes.distSq, Is.EqualTo(7.529f).Within(1e-3));
 
-            Assert.That(projRes.Proj.Face.Id, Is.EqualTo(904));
-            Assert.That(projRes.Proj.Point.X, Is.EqualTo(0.310).Within(1e-3));
-            Assert.That(projRes.Proj.Point.Y, Is.EqualTo(0.507).Within(1e-3));
-            Assert.That(projRes.Proj.Point.Z, Is.EqualTo(0.803).Within(1e-3));
+            Assert.That(projRes.proj.face.id, Is.EqualTo(904));
+            Assert.That(projRes.proj.point.x, Is.EqualTo(0.310).Within(1e-3));
+            Assert.That(projRes.proj.point.y, Is.EqualTo(0.507).Within(1e-3));
+            Assert.That(projRes.proj.point.z, Is.EqualTo(0.803).Within(1e-3));
 
-            Assert.That(projRes.Mtp.E.Id, Is.EqualTo(1640));
-            Assert.That(projRes.Mtp.Bary.A, Is.EqualTo(0.053).Within(1e-3));
-            Assert.That(projRes.Mtp.Bary.B, Is.EqualTo(0.946).Within(1e-3));
+            Assert.That(projRes.mtp.e.id, Is.EqualTo(1640));
+            Assert.That(projRes.mtp.bary.a, Is.EqualTo(0.053).Within(1e-3));
+            Assert.That(projRes.mtp.bary.b, Is.EqualTo(0.946).Within(1e-3));
 
             var xf = AffineXf3f.Translation(Vector3f.Diagonal(1.0f));
             projRes = FindProjection(p, mp, float.MaxValue, xf);
 
-            Assert.That(projRes.Proj.Face.Id, Is.EqualTo(632));
-            Assert.That(projRes.Proj.Point.X, Is.EqualTo(1.000).Within(1e-3));
-            Assert.That(projRes.Proj.Point.Y, Is.EqualTo(1.439).Within(1e-3));
-            Assert.That(projRes.Proj.Point.Z, Is.EqualTo(1.895).Within(1e-3));
+            Assert.That(projRes.proj.face.id, Is.EqualTo(632));
+            Assert.That(projRes.proj.point.x, Is.EqualTo(1.000).Within(1e-3));
+            Assert.That(projRes.proj.point.y, Is.EqualTo(1.439).Within(1e-3));
+            Assert.That(projRes.proj.point.z, Is.EqualTo(1.895).Within(1e-3));
 
-            Assert.That(projRes.Mtp.E.Id, Is.EqualTo(1898));
-            Assert.That(projRes.Mtp.Bary.A, Is.EqualTo(0.5).Within(1e-3));
-            Assert.That(projRes.Mtp.Bary.B, Is.EqualTo(0.0).Within(1e-3));
+            Assert.That(projRes.mtp.e.id, Is.EqualTo(1898));
+            Assert.That(projRes.mtp.bary.a, Is.EqualTo(0.5).Within(1e-3));
+            Assert.That(projRes.mtp.bary.b, Is.EqualTo(0.0).Within(1e-3));
         }
 
         [Test]
@@ -368,17 +368,17 @@ namespace MRTest
 
             var wholeSphere1 = new MeshPart(sphere1);
             var d11 = FindDistance(wholeSphere1, wholeSphere1);
-            Assert.That(d11.DistSq, Is.EqualTo(0));
+            Assert.That(d11.distSq, Is.EqualTo(0));
 
             var zShift = AffineXf3f.Translation(new Vector3f(0.0f, 0.0f, 3.0f));
             var d1z = FindDistance(wholeSphere1, wholeSphere1, zShift);
-            Assert.That(d1z.DistSq, Is.EqualTo(1));
+            Assert.That(d1z.distSq, Is.EqualTo(1));
 
             Mesh sphere2 = MakeUVSphere(2, 8, 8);
 
             var wholeSphere2 = new MeshPart(sphere2);
             var d12 = FindDistance(wholeSphere1, wholeSphere2);
-            var dist12 = Math.Sqrt(d12.DistSq);
+            var dist12 = Math.Sqrt(d12.distSq);
             Assert.That(dist12, Is.InRange(0.9, 1.0));
         }
 
@@ -388,7 +388,7 @@ namespace MRTest
             Assert.DoesNotThrow(() =>
             {
                 var mesh = MakeSphere(new SphereParams(1.0f, 3000));
-                var count = mesh.Topology.GetValidVerts().Count();
+                var count = mesh.topology.GetValidVerts().Count();
                 Assert.That(count, Is.EqualTo(3000));
                 mesh.Dispose();
             });
@@ -400,8 +400,8 @@ namespace MRTest
             var mesh = MakeSphere(new SphereParams(1.0f, 3000));
             var clone = new Mesh(mesh);
             Assert.That(clone, Is.Not.SameAs(mesh));
-            Assert.That(clone.Points.Size(), Is.EqualTo(mesh.Points.Size()));
-            Assert.That(clone.Topology.GetValidFaces().Count(), Is.EqualTo(mesh.Topology.GetValidFaces().Count()));
+            Assert.That(clone.points.Size(), Is.EqualTo(mesh.points.Size()));
+            Assert.That(clone.topology.GetValidFaces().Count(), Is.EqualTo(mesh.topology.GetValidFaces().Count()));
             mesh.Dispose();
             clone.Dispose();
         }
@@ -410,12 +410,12 @@ namespace MRTest
         public void TestUniteCloseVertices()
         {
             var mesh = MakeSphere(new SphereParams(1.0f, 3000));
-            Assert.That(mesh.Topology.GetValidVerts().Count() == 3000);
+            Assert.That(mesh.topology.GetValidVerts().Count() == 3000);
             var old2new = new VertMap();
             var unitedCount = MeshBuilder.UniteCloseVertices(mesh, 0.1f, false, old2new);
             Assert.That(unitedCount, Is.EqualTo(2230));
-            Assert.That(old2new.Index(new VertId(1000)).Id, Is.EqualTo(42));
-            Assert.That(mesh.Topology.GetValidVerts().Count() < 3000);
+            Assert.That(old2new.Index(new VertId(1000)).id, Is.EqualTo(42));
+            Assert.That(mesh.topology.GetValidVerts().Count() < 3000);
             mesh.Dispose();
         }
 
@@ -434,15 +434,15 @@ namespace MRTest
             cubeMesh.DeleteFaces(faces);
             Assert.That(cubeMesh.Area(), Is.EqualTo(3.0).Within(0.001));
 
-            var holes = FindRightBoundary(cubeMesh.Topology);
+            var holes = FindRightBoundary(cubeMesh.topology);
             Assert.That(holes.Size(), Is.EqualTo(1));
             Assert.That(holes.At(0).Size(), Is.EqualTo(6));
 
-            var hole0 = TrackRightBoundaryLoop(cubeMesh.Topology, holes.At(0).At(0));
+            var hole0 = TrackRightBoundaryLoop(cubeMesh.topology, holes.At(0).At(0));
             Assert.That(hole0.Size(), Is.EqualTo(holes.At(0).Size()));
             for (ulong i = 0; i < hole0.Size(); i++)
             {
-                Assert.That(hole0.At(i).Id, Is.EqualTo(holes.At(0).At(i).Id));
+                Assert.That(hole0.At(i).id, Is.EqualTo(holes.At(0).At(i).id));
             }
         }
 
@@ -452,7 +452,7 @@ namespace MRTest
             var cubeMesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var verts = new VertBitSet(8, false);
             verts.Set(new VertId(0), true);
-            var faces = GetIncidentFaces(cubeMesh.Topology, verts);
+            var faces = GetIncidentFaces(cubeMesh.topology, verts);
             Assert.That(faces.Count(), Is.EqualTo(6));
         }
 
@@ -462,7 +462,7 @@ namespace MRTest
             var cubeMesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var edges = new UndirectedEdgeBitSet(12, false);
             edges.Set(new EdgeId(0), true);
-            var faces = GetIncidentFaces(cubeMesh.Topology, edges);
+            var faces = GetIncidentFaces(cubeMesh.topology, edges);
             Assert.That(faces.Count(), Is.EqualTo(8));
         }
 
@@ -473,6 +473,5 @@ namespace MRTest
             var shortEdges = FindShortEdges(new MeshPart( mesh ), 0.1f);
             Assert.That(shortEdges.Count(), Is.EqualTo(256));
         }
-    }    
+    }
 }
-

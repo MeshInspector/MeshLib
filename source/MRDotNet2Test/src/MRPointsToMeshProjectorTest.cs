@@ -11,14 +11,14 @@ namespace MRTest
         {
             var meshA = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(0));
             var meshB = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(0));
-            
+
             var parameters = new MeshProjectionParameters();
             var shift = new Vector3f(1, 2, 3);
 
-            parameters.Xf = AffineXf3f.Translation(shift);
+            parameters.xf = AffineXf3f.Translation(shift);
 
             var res = FindSignedDistances(meshA, meshB, parameters);
-            Assert.That(res.Size(), Is.EqualTo(meshB.Topology.GetValidVerts().Count()));
+            Assert.That(res.Size(), Is.EqualTo(meshB.topology.GetValidVerts().Count()));
 
             // TODO: iteration
             float resMax = 0f;

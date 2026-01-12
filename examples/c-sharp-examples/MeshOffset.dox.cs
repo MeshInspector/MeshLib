@@ -24,7 +24,7 @@ public class MeshOffsetExample
 
             // Setup parameters
             MR.OffsetParameters op = new();
-            op.VoxelSize = MR.SuggestVoxelSize(mp, 1e6f);
+            op.voxelSize = MR.SuggestVoxelSize(mp, 1e6f);
 
             // Make offset mesh
             var result = MR.OffsetMesh(mp, offsetValue, op);

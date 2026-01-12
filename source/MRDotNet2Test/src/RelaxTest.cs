@@ -14,7 +14,7 @@ namespace MRTest
             var sphere = MakeSphere(new SphereParams(1.0f, 200));
 
             var parameters = new MeshRelaxParams();
-            parameters.Iterations = 20;
+            parameters.iterations = 20;
 
             var oldVolume = sphere.Volume();
 
@@ -28,7 +28,7 @@ namespace MRTest
             var sphere = MakeSphere(new SphereParams(1.0f, 200));
 
             var parameters = new MeshRelaxParams();
-            parameters.Iterations = 20;
+            parameters.iterations = 20;
 
             var oldVolume = sphere.Volume();
 

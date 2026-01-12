@@ -8,7 +8,7 @@
 namespace MR
 {
 
-const std::shared_ptr<HistoryStore>& HistoryStore::getViewerInstance()
+HistoryStore* HistoryStore::getViewerInstance()
 {
     return MR::getViewerInstance().getGlobalHistoryStore();
 }

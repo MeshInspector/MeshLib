@@ -82,7 +82,7 @@ public:
     const std::shared_ptr<CombinedHistoryAction>& combinedAction() const { return combinedAction_; }
 
 private:
-    std::shared_ptr<HistoryStore> store_;
+    HistoryStore* store_{ nullptr };
     std::shared_ptr<CombinedHistoryAction> combinedAction_;
     HistoryActionsVector* parentScopePtr_{ nullptr };
 };

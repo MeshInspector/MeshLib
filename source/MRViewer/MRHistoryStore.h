@@ -16,7 +16,7 @@ class MRVIEWER_CLASS HistoryStore
 {
 public:
     /// returns the instance (if any) of HistoryStore from the viewer
-    [[nodiscard]] MRVIEWER_API static const std::shared_ptr<HistoryStore>& getViewerInstance();
+    [[nodiscard]] MRVIEWER_API static HistoryStore* getViewerInstance();
 
     MRVIEWER_API virtual ~HistoryStore();
 

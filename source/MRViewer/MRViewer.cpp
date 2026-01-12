@@ -2813,7 +2813,7 @@ void Viewer::enableGlobalHistory( bool on )
         return;
     if ( on )
     {
-        globalHistoryStore_ = std::make_shared<HistoryStore>();
+        globalHistoryStore_ = std::make_unique<HistoryStore>();
         globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
         {
             if ( type == HistoryStore::ChangeType::PostUndo ||

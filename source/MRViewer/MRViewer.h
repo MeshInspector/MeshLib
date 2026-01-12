@@ -402,7 +402,7 @@ public:
     // return true if redo was applied
     MRVIEWER_API bool globalHistoryRedo();
     // Returns global history store
-    const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
+    MRVIEWER_API HistoryStore* getGlobalHistoryStore() const { return globalHistoryStore_.get(); }
     // Return spacemouse handler
     const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
@@ -637,7 +637,7 @@ private:
 
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
-    std::shared_ptr<HistoryStore> globalHistoryStore_;
+    std::unique_ptr<HistoryStore> globalHistoryStore_;
 
     std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 

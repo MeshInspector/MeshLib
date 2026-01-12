@@ -103,13 +103,12 @@ RedoMenuItem::RedoMenuItem() :
     // deferred to be sure that viewer history is initialized
     CommandLoop::appendCommand( [&]
     {
-        auto history = getViewerInstance().getGlobalHistoryStore();
-        if ( !history )
+        if ( !HistoryStore::getViewerInstance() )
             return;
         if ( !historyStoreConnection_.connected() )
         {
-            historyStoreConnection_ = history->changedSignal.connect( MAKE_SLOT( &RedoMenuItem::updateRedoListCache_ ) );
-            updateRedoListCache_( *history, HistoryStore::ChangeType::AppendAction ); // can by any type
+            historyStoreConnection_ = HistoryStore::getViewerInstance()->changedSignal.connect( MAKE_SLOT( &RedoMenuItem::updateRedoListCache_ ) );
+            updateRedoListCache_( *HistoryStore::getViewerInstance(), HistoryStore::ChangeType::AppendAction ); // can by any type
         }
     } );
 }
@@ -122,8 +121,7 @@ bool RedoMenuItem::action()
 
 std::string RedoMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    auto history = Viewer::instanceRef().getGlobalHistoryStore();
-    if ( !history )
+    if ( !HistoryStore::getViewerInstance() )
         return "Internal history stack is unavailable.";
     if ( dropList_.empty() )
         return "Nothing to redo.";
@@ -133,7 +131,7 @@ std::string RedoMenuItem::isAvailable( const std::vector<std::shared_ptr<const O
 std::string RedoMenuItem::getDynamicTooltip() const
 {
     std::string res;
-    if ( const auto& history = Viewer::instanceRef().getGlobalHistoryStore() )
+    if ( auto history = HistoryStore::getViewerInstance() )
         res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Redo ) );
     return res;
 }
@@ -151,12 +149,12 @@ void RedoMenuItem::updateRedoListCache_( const HistoryStore& store, HistoryStore
     for ( int i = 0; i < lastRedos.size(); ++i )
     {
         dropList_[i] = std::make_shared<LambdaRibbonItem>( lastRedos[i] + "##" + std::to_string( i ),
-            [history = Viewer::instanceRef().getGlobalHistoryStore(), i] ()
+            [i] ()
         {
-            if ( !history )
+            if ( !HistoryStore::getViewerInstance() )
                 return;
             for ( int j = 0; j <= i; ++j )
-                history->redo();
+                HistoryStore::getViewerInstance()->redo();
         } );
     }
 }

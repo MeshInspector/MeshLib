@@ -20,6 +20,7 @@ namespace MRTest
             if ( region is not null )
                 parameters.region = region;
 
+            parameters.maxError = 1e-3f;
             parameters.maxTriangleAspectRatio = 80;
 
             var decimateResult = DecimateMesh(sphere, parameters);

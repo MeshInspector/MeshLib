@@ -103,12 +103,13 @@ RedoMenuItem::RedoMenuItem() :
     // deferred to be sure that viewer history is initialized
     CommandLoop::appendCommand( [&]
     {
-        if ( !HistoryStore::getViewerInstance() )
+        auto* history = HistoryStore::getViewerInstance();
+        if ( !history )
             return;
         if ( !historyStoreConnection_.connected() )
         {
-            historyStoreConnection_ = HistoryStore::getViewerInstance()->changedSignal.connect( MAKE_SLOT( &RedoMenuItem::updateRedoListCache_ ) );
-            updateRedoListCache_( *HistoryStore::getViewerInstance(), HistoryStore::ChangeType::AppendAction ); // can by any type
+            historyStoreConnection_ = history->changedSignal.connect( MAKE_SLOT( &RedoMenuItem::updateRedoListCache_ ) );
+            updateRedoListCache_( *history, HistoryStore::ChangeType::AppendAction ); // can by any type
         }
     } );
 }

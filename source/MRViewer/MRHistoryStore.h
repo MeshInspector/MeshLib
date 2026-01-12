@@ -16,6 +16,7 @@ class MRVIEWER_CLASS HistoryStore
 {
 public:
     /// returns the instance (if any) of HistoryStore from the viewer
+    /// returns nullptr if history store is not available
     [[nodiscard]] MRVIEWER_API static HistoryStore* getViewerInstance();
 
     MRVIEWER_API virtual ~HistoryStore();

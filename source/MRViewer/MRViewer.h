@@ -401,8 +401,11 @@ public:
     // Applies redo if global history is enabled
     // return true if redo was applied
     MRVIEWER_API bool globalHistoryRedo();
-    // Returns global history store
+
+    /// Returns global history store
+    /// returns nullptr if history store is not available
     MRVIEWER_API HistoryStore* getGlobalHistoryStore() const { return globalHistoryStore_.get(); }
+    
     // Return spacemouse handler
     const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 

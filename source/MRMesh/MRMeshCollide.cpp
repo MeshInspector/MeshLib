@@ -4,10 +4,10 @@
 #include "MRTriangleIntersection.h"
 #include "MREnums.h"
 #include "MRTimer.h"
-#include "MRGTest.h"
-#include "MRPch/MRTBB.h"
+#include "MRTriMath.h"
 #include "MRExpected.h"
 #include "MRProcessSelfTreeSubtasks.h"
+#include "MRPch/MRTBB.h"
 #include <atomic>
 #include <thread>
 
@@ -230,7 +230,7 @@ Expected<bool> findSelfCollidingTriangles(
                         return Processing::Continue;
 
                     VertId av[3], bv[3];
-                    Vector3d ap[3], bp[3];
+                    Triangle3d ap, bp;
 
                     auto se = mp.mesh.topology.sharedEdge( aFace, bFace );
                     if ( se )
@@ -251,7 +251,7 @@ Expected<bool> findSelfCollidingTriangles(
                     if ( se )
                     {
                         // check coplanar
-                        if ( !touchIsIntersection || ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) ) )
+                        if ( !touchIsIntersection || dot( dirDblArea( ap ), dirDblArea( bp ) ) > 0 )
                             return Processing::Continue;
                         // else not coplanar
                     }
@@ -393,25 +393,6 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
 
     auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
     return signDist && signDist < 0;
-}
-
-TEST( MRMesh, DegenerateTrianglesIntersect )
-{
-    Vector3f a{-24.5683002f,-17.7052994f,-21.3701000f};
-    Vector3f b{-24.6611996f,-17.7504997f,-21.3423004f};
-    Vector3f c{-24.6392994f,-17.7071991f,-21.3542995f};
-
-    Vector3f d{-24.5401993f,-17.7504997f,-21.3390007f};
-    Vector3f e{-24.5401993f,-17.7504997f,-21.3390007f};
-    Vector3f f{-24.5862007f,-17.7504997f,-21.3586998f};
-
-    bool intersection = doTrianglesIntersect(
-        Vector3d{a}, Vector3d{b}, Vector3d{c},
-        Vector3d{d}, Vector3d{e}, Vector3d{f} );
-
-    // in float arithmetic this test fails unfortunately
-
-    EXPECT_FALSE( intersection );
 }
 
 } //namespace MR

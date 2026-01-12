@@ -40,11 +40,20 @@ TEST( MRMesh, findSelfCollidingTriangles )
         {-1.f, 0.f, 0.f }  // 3_v
     };
     Mesh mesh = Mesh::fromTriangles( std::move( ps ), tris );
+    // co-planar triangles with same orientation
     auto maybeColl = findSelfCollidingTriangles( mesh, nullptr, ProgressCallback{}, nullptr, true );
     EXPECT_TRUE( maybeColl.has_value() );
     EXPECT_FALSE( *maybeColl );
 
-    mesh.points[3_v].x = 1.f;
+    // not co-planar triangles
+    mesh.points[3_v] = Vector3f{ 1.f, 0.f, 1.f };
+    mesh.invalidateCaches();
+    maybeColl = findSelfCollidingTriangles( mesh, nullptr, ProgressCallback{}, nullptr, true );
+    EXPECT_TRUE( maybeColl.has_value() );
+    EXPECT_FALSE( *maybeColl );
+
+    // co-planar triangles with opposite orientation
+    mesh.points[3_v] = Vector3f{ 1.f, 0.f, 0.f };
     mesh.invalidateCaches();
 
     maybeColl = findSelfCollidingTriangles( mesh, nullptr, ProgressCallback{}, nullptr, false );

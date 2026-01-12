@@ -250,10 +250,18 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     if ( se )
                     {
-                        // check coplanar
-                        if ( !touchIsIntersection || dot( dirDblArea( ap ), dirDblArea( bp ) ) > 0 )
-                            return Processing::Continue;
-                        // else not coplanar
+                        if ( !touchIsIntersection )
+                            return Processing::Continue; // triangles sharing an edge may only touch one another
+
+                        const auto na = dirDblArea( ap );
+                        const auto nb = dirDblArea( bp );
+                        if ( cross( na, nb ).lengthSq() > 0 )
+                            return Processing::Continue; // triangles are not coplanar
+
+                        if ( dot( na, nb ) > 0 )
+                            return Processing::Continue; // triangles are coplanar, but same-oriented, so they are separated by the shared edge
+
+                        // triangles overlap in one plane
                     }
                     else if ( auto sv = sharedVertex( av, bv ); sv.first >= 0 )
                     {

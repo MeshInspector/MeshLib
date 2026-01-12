@@ -53,6 +53,7 @@
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonRegisterItem.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
+    <ClCompile Include="MRSceneControlMenuItems.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="MRRibbonRegisterItem.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
     <ClInclude Include="MRMruFormatParameters.h" />
+    <ClInclude Include="MRSceneControlMenuItems.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />

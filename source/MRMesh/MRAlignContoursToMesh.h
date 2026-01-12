@@ -50,6 +50,9 @@ struct BendContoursAlongCurveParams
     /// converts (x in [0,1], pivotY) into position on curve
     CurveFunc curve;
 
+    /// if true, curve parameter will be always within [0,1) with repetition: xr := x - floor(x)
+    bool periodicCurve = false;
+
     /// stretch all contours along curve to fit in unit curve range
     bool stretch = true;
 

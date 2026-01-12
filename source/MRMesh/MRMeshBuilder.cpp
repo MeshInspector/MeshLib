@@ -713,10 +713,12 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 {
     MR_TIMER;
     if ( t.empty() )
-        return 0;
+        return 0; // input triangulation is empty
 
     std::vector<IncidentVert> incidentItemsVector;
     preprocessTriangles( t, region, incidentItemsVector );
+    if ( incidentItemsVector.empty() )
+        return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
 
     if ( !lastValidVert )
         lastValidVert = incidentItemsVector.back().srcVert;

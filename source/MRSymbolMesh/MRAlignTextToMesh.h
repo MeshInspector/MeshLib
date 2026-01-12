@@ -64,6 +64,9 @@ struct BendTextAlongCurveParams
     // If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text
     bool fontBasedSizeCalc{ false };
 
+    /// if true, curve parameter will be always within [0,1) with repetition: xr := x - floor(x)
+    bool periodicCurve = false;
+
     /// stretch whole text along curve to fit in unit curve range
     bool stretch = true;
 };
@@ -75,8 +78,12 @@ MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, cons
 /// Creates symbol mesh and deforms it along given curve
 MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params );
 
-/// Creates symbol mesh and deforms it along given surface path
+/// Creates symbol mesh and deforms it along given surface path: start->path->end
 MRSYMBOLMESH_API Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
     const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params );
+
+/// Creates symbol mesh and deforms it along given surface path, this function is designed for closed paths (periodicCurve=true option)
+MRSYMBOLMESH_API Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
+    const SurfacePath& path, const BendTextAlongCurveParams& params );
 
 } // namespace MR

@@ -47,22 +47,22 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 11]
+        compiler: [Clang 20, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
-          # Do not run Debug Clang 19 build on every commit (but only once a day)
+          # Do not run Debug Clang 20 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 19
+            compiler: Clang 20
             config: Debug
           # Do not run Release GCC 11 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 11
             config: Release
         include:
-          - compiler: Clang 19
-            cxx-compiler: /usr/bin/clang++-19
-            c-compiler: /usr/bin/clang-19
+          - compiler: Clang 20
+            cxx-compiler: /usr/bin/clang++-20
+            c-compiler: /usr/bin/clang-20
             cxx-standard: 23
           - compiler: GCC 11
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
@@ -206,19 +206,19 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         run: |
           ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
           mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
       - name: Extract Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         run: |
           mkdir meshlib_install
           tar -xf meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz -C meshlib_install
 
       - name: Build C++ examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -230,7 +230,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20'}}
         run: |
           cmake \
             -S examples/c-examples \
@@ -242,7 +242,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload vcpkg Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         uses: actions/upload-artifact@v6
         with:
           name: Distributives_linux-vcpkg-${{ matrix.arch }}
@@ -259,7 +259,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.arch == 'x64' && matrix.compiler == 'Clang 19' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.arch == 'x64' && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -268,7 +268,7 @@ jobs:
           python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.so" "./patched_content/"
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.arch == 'x64' && matrix.compiler == 'Clang 19' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.arch == 'x64' && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v6
         with:
           name: DotNetPatchArchiveLinux-x64

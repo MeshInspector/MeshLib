@@ -157,6 +157,13 @@ template<typename T>
     return normal( q - p, r - p );
 }
 
+/// computes unit normal of the given triangle
+template<typename T>
+[[nodiscard]] inline Vector3<T> normal( const Triangle3<T> & t )
+{
+    return normal( t[1] - t[0], t[2] - t[0] );
+}
+
 /// computes the square of double area of given triangle
 template<typename T>
 [[nodiscard]] inline T dblAreaSq( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )

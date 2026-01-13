@@ -45,11 +45,11 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
     ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 
     // restore ImGui context
-    ImGui::SetCurrentContext( backupCtx );
     ctx->IO.BackendFlags = 0;
     ctx->IO.BackendLanguageUserData = nullptr;
     ctx->IO.BackendPlatformUserData = nullptr;
     ctx->IO.BackendRendererUserData = nullptr;
+    ImGui::SetCurrentContext( backupCtx );
     ImGui::DestroyContext( ctx );
 }
 

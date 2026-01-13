@@ -738,6 +738,17 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     return Mesh::fromPointTriples( triangles, true );
 }
 
+static int intLog2( int n )
+{
+    int l = 0;
+    while ( n > 0 )
+    {
+        ++l;
+        n /= 2;
+    }
+    return l;
+}
+
 static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const MeshLoadSettings& settings )
 {
     if ( !settings.telemetrySignal )
@@ -745,7 +756,7 @@ static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const M
 
     std::string signalString = "Open " + ext;
 
-    if ( auto lv = mesh.topology.lastValidVert() )
+    if ( auto lv = mesh.points.size() ) // not lv = mesh.topology.lastValidVert(), since topology can be empty
     {
         signalString += " VP";
         if ( settings.normals && settings.normals->size() >= lv )
@@ -777,14 +788,10 @@ static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const M
 
     TelemetrySignal( signalString );
 
-    int l = 0;
-    int n = mesh.topology.numValidFaces();
-    while ( n > 0 )
-    {
-        ++l;
-        n /= 2;
-    }
-    TelemetrySignal( "Open Mesh Log Tris " + std::to_string( l ) );
+    if ( int logFaces = intLog2( mesh.topology.numValidFaces() ) )
+        TelemetrySignal( "Open Mesh Log Tris " + std::to_string( logFaces ) );
+    else if ( int logPoints = intLog2( (int)mesh.points.size() ) ) // if opened file contains no triangles but only points
+        TelemetrySignal( "Open Mesh Log Pnts " + std::to_string( logPoints ) );
 }
 
 Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )

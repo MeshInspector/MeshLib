@@ -20,6 +20,11 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
     // backup ImGui context
     auto* backupCtx = ImGui::GetCurrentContext();
     auto* ctx = ImGui::CreateContext( backupCtx->IO.Fonts );
+    ctx->IO.BackendFlags = ImGui::GetIO().BackendFlags;
+    ctx->IO.BackendLanguageUserData = ImGui::GetIO().BackendLanguageUserData;
+    ctx->IO.BackendPlatformName = ImGui::GetIO().BackendPlatformName;
+    ctx->IO.BackendPlatformUserData = ImGui::GetIO().BackendPlatformUserData;
+    ctx->IO.BackendRendererName = ImGui::GetIO().BackendRendererName;
     ctx->IO.BackendRendererUserData = ImGui::GetIO().BackendRendererUserData;
     ctx->Style = backupCtx->Style;
     ImGui::SetCurrentContext( ctx );
@@ -41,6 +46,10 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
 
     // restore ImGui context
     ImGui::SetCurrentContext( backupCtx );
+    ctx->IO.BackendFlags = 0;
+    ctx->IO.BackendLanguageUserData = nullptr;
+    ctx->IO.BackendPlatformUserData = nullptr;
+    ctx->IO.BackendRendererUserData = nullptr;
     ImGui::DestroyContext( ctx );
 }
 

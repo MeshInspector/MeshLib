@@ -14,6 +14,7 @@
 #include "MRString.h"
 #include "MRParallelFor.h"
 #include "MRTelemetry.h"
+#include "MRMeshLoad.h"
 #include "MRPch/MRFmt.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -1229,6 +1230,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         for ( int i = 0; i < res.objs.size(); ++i )
         {
             auto& result = results[i];
+            telemetryLogSize( result.mesh );
 
             std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
             if ( result.name.empty() )

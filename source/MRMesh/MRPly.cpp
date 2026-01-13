@@ -12,6 +12,34 @@
 namespace MR
 {
 
+namespace
+{
+
+/// meaningless or case-specific comments to skip
+bool ignoreComment( const std::string & comment )
+{
+    return comment == "File generated"
+        || ( comment.starts_with( "Created 20" ) && comment.size() > 12 && comment[12] == '-' ) // e.g. "Created 2025-12-19T22:09:05"
+        || comment.starts_with( "scalex " )
+        || comment.starts_with( "scaley " )
+        || comment.starts_with( "scalez " )
+        || comment.starts_with( "shiftx " )
+        || comment.starts_with( "shifty " )
+        || comment.starts_with( "shiftz " )
+        || comment.starts_with( "minx " )
+        || comment.starts_with( "miny " )
+        || comment.starts_with( "minz " )
+        || comment.starts_with( "maxx " )
+        || comment.starts_with( "maxy " )
+        || comment.starts_with( "maxz " )
+        || comment.starts_with( "offsetx " )
+        || comment.starts_with( "offsety " )
+        || comment.starts_with( "offsetz " )
+        ;
+}
+
+} // anonymous namespace
+
 Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
 {
     MR_TIMER;
@@ -190,7 +218,7 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
     {
         if ( !comment.starts_with( "TextureFile" ) )
         {
-            if ( params.telemetrySignal )
+            if ( params.telemetrySignal && !ignoreComment( comment ) )
                 TelemetrySignal( "PLY comment " + comment );
             continue;
         }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRViewerEventsListener.h"
+#include "MRImGuiMenuListeners.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRVector2.h"
@@ -9,7 +10,7 @@ namespace MR
 {
 // Visual widget to draw a plane
 // present in scene (ancillary), subscribes to viewer events
-class MRVIEWER_CLASS PlaneWidget : public MultiListener<DragStartListener, DragListener, DragEndListener>
+class MRVIEWER_CLASS PlaneWidget : public MultiListener<DragStartListener, DragListener, DragEndListener, NameTagClickListener>
 {
     std::shared_ptr<ObjectMesh> planeObj_;
     Plane3f plane_;
@@ -77,5 +78,8 @@ private:
     MRVIEWER_API virtual bool onDragStart_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onDragEnd_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onDrag_( int mouse_x, int mouse_y ) override;
+    MRVIEWER_API virtual bool onNameTagClicked_( Object& object, ImGuiMenu::NameTagSelectionMode ) override;
+
+    bool importPlaneObj_( Object& obj );
 };
 }

@@ -63,6 +63,15 @@ void CudaAccessor::setCudaComputeToolDistanceConstructor( CudaComputeToolDistanc
 }
 #endif
 
+bool CudaAccessor::isCudaSupportedByPlarform()
+{
+#if defined(__APPLE__) || defined(__EMSCRIPTEN__)
+    return false;
+#else
+    return true;
+#endif
+}
+
 bool CudaAccessor::isCudaAvailable()
 {
     auto& inst = instance_();

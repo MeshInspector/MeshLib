@@ -25,6 +25,7 @@ public:
 
     MRVOXELS_API void reset() noexcept;
     MRVOXELS_API void swap( FloatGrid& other ) noexcept;
+    MRVOXELS_API static FloatGrid deepCopy( const FloatGrid& other ) noexcept;
 
     MRVOXELS_API OpenVdbFloatGrid* get() const noexcept;
     MRVOXELS_API OpenVdbFloatGrid& operator *() const noexcept;
@@ -68,14 +69,29 @@ MRVOXELS_API void setValue( FloatGrid & grid, const VoxelBitSet& region, float v
 /// sets type of this grid as LEVEL SET (for normal flipping)
 MRVOXELS_API void setLevelSetType( FloatGrid & grid );
 
-// union operation on volumetric representation of two meshes
-MRVOXELS_API FloatGrid operator += ( FloatGrid & a, const FloatGrid& b );
+/// union operation on two signed distance fields
+/// \note this operation consumes FloatGrid b
+MRVOXELS_API FloatGrid operator += ( FloatGrid & a, FloatGrid&& b );
 
-// difference operation on volumetric representation of two meshes
-MRVOXELS_API FloatGrid operator -= ( FloatGrid & a, const FloatGrid& b );
+/// difference operation on two signed distance fields
+/// \note this operation consumes FloatGrid b
+MRVOXELS_API FloatGrid operator -= ( FloatGrid & a, FloatGrid&& b );
 
-// intersection operation on volumetric representation of two meshes
-MRVOXELS_API FloatGrid operator *= ( FloatGrid & a, const FloatGrid& b );
+/// intersection operation on two signed distance fields
+/// \note this operation consumes FloatGrid b
+MRVOXELS_API FloatGrid operator *= ( FloatGrid & a, FloatGrid&& b );
+
+/// union operation on two signed distance fields
+/// \note this operation returns new FloatGrid keeping a,b untouched
+MRVOXELS_API FloatGrid operator + ( const FloatGrid& a, const FloatGrid& b );
+
+/// difference operation on two signed distance fields
+/// \note this operation returns new FloatGrid keeping a,b untouched
+MRVOXELS_API FloatGrid operator - ( const FloatGrid& a, const FloatGrid& b );
+
+/// intersection operation on two signed distance fields
+/// \note this operation returns new FloatGrid keeping a,b untouched
+MRVOXELS_API FloatGrid operator * ( const FloatGrid& a, const FloatGrid& b );
 
 /// \}
 

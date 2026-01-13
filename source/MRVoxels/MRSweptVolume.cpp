@@ -274,7 +274,7 @@ Expected<Mesh> computeSweptVolumeWithMeshMovement( const ComputeSweptVolumeParam
         auto ls = meshToLevelSet( vol, {}, Vector3f::diagonal( params.voxelSize ), 3.f, cbi );
         if ( !ls )
             return unexpectedOperationCanceled();
-        grid += ls;
+        grid += std::move( ls );
     }
 
     auto mesh = gridToMesh( grid, {

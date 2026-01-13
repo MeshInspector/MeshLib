@@ -510,8 +510,7 @@ std::shared_ptr<Object> ObjectVoxels::clone() const
     auto res = std::make_shared<ObjectVoxels>( ProtectedStruct{}, *this );
     if ( data_.mesh )
         res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
-    if ( vdbVolume_.data )
-        res->vdbVolume_.data = MakeFloatGrid( vdbVolume_.data->deepCopy() );
+    res->vdbVolume_.data = FloatGrid::deepCopy( vdbVolume_.data );
     return res;
 }
 

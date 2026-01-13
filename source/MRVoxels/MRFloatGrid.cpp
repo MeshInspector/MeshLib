@@ -30,6 +30,13 @@ void FloatGrid::swap( FloatGrid& other ) noexcept
     ptr_.swap( other.ptr_ );
 }
 
+FloatGrid FloatGrid::deepCopy( const FloatGrid& other ) noexcept
+{
+    if ( other )
+        return MakeFloatGrid( other->deepCopy() );
+    return other;
+}
+
 OpenVdbFloatGrid* FloatGrid::get() const noexcept
 {
     return ptr_.get();
@@ -215,25 +222,43 @@ void setLevelSetType( FloatGrid & grid )
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
 }
 
-FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )
+FloatGrid operator += ( FloatGrid & a, FloatGrid&& b )
 {
     MR_TIMER;
     openvdb::tools::csgUnion( ovdb( *a ), ovdb( *b ) );
     return a;
 }
 
-FloatGrid operator -= ( FloatGrid & a, const FloatGrid & b )
+FloatGrid operator+( const FloatGrid& a, const FloatGrid& b )
+{
+    MR_TIMER;
+    return MakeFloatGrid( openvdb::tools::csgUnionCopy( ovdb( *a ), ovdb( *b ) ) );
+}
+
+FloatGrid operator -= ( FloatGrid & a, FloatGrid&& b )
 {
     MR_TIMER;
     openvdb::tools::csgDifference( ovdb( *a ), ovdb( *b ) );
     return a;
 }
 
-FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
+FloatGrid operator-( const FloatGrid& a, const FloatGrid& b )
+{
+    MR_TIMER;
+    return MakeFloatGrid( openvdb::tools::csgDifferenceCopy( ovdb( *a ), ovdb( *b ) ) );
+}
+
+FloatGrid operator *= ( FloatGrid & a, FloatGrid&& b )
 {
     MR_TIMER;
     openvdb::tools::csgIntersection( ovdb( *a ), ovdb( *b ) );
     return a;
+}
+
+FloatGrid operator*( const FloatGrid& a, const FloatGrid& b )
+{
+    MR_TIMER;
+    return MakeFloatGrid( openvdb::tools::csgIntersectionCopy( ovdb( *a ), ovdb( *b ) ) );
 }
 
 } //namespace MR

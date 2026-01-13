@@ -253,9 +253,10 @@ Expected<bool> findSelfCollidingTriangles(
                         if ( !touchIsIntersection )
                             return Processing::Continue; // triangles sharing an edge may only touch one another
 
-                        const auto na = dirDblArea( ap );
-                        const auto nb = dirDblArea( bp );
-                        if ( cross( na, nb ).lengthSq() > 0 )
+                        const auto na = normal( ap );
+                        const auto nb = normal( bp );
+                        constexpr auto epsSq = sqr( 1e-5 ); // angle must less than 5.73e-4 deg to consider two faces coplanar
+                        if ( cross( na, nb ).lengthSq() > epsSq )
                             return Processing::Continue; // triangles are not coplanar
 
                         if ( dot( na, nb ) > 0 )

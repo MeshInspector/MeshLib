@@ -94,7 +94,7 @@ size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector3i& block
 
 std::string getError( cudaError_t code )
 {
-    return fmt::format( "CUDA error: {}", cudaGetErrorString( code ) );
+    return fmt::format( "NVIDIA GPU error: {}", cudaGetErrorString( code ) );
 }
 
 cudaError_t logError( cudaError_t code, const char * file, int line )

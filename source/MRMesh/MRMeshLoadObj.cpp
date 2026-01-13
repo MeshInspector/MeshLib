@@ -873,7 +873,7 @@ void trimComment( std::string_view& line )
         return;
 
     //'1068822 vertices, 2102387 faces'
-    if ( line.ends_with( " faces" ) && line.contains( " vertices, " ) )
+    if ( line.ends_with( " faces" ) && line.find( " vertices, " ) != std::string_view::npos )
     {
         line = std::string_view{};
         return;

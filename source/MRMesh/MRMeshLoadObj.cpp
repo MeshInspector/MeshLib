@@ -862,6 +862,38 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     return res;
 }
 
+/// remove white spaces, meaningless or case-specific information from a comment line
+void trimComment( std::string_view& line )
+{
+    while ( !line.empty() && ( line[0] == '#' || line[0] == ' ' || line[0] == '\t' ) )
+        line.remove_prefix( 1 );
+    while ( !line.empty() && ( line.back() == ' ' || line.back() == '\t' || line.back() == '\r' || line.back() == '\n' ) )
+        line.remove_suffix( 1 );
+    if ( line.empty() )
+        return;
+
+    //'1068822 vertices, 2102387 faces'
+    if ( line.ends_with( " faces" ) && line.find( " vertices, " ) != std::string_view::npos )
+    {
+        line = std::string_view{};
+        return;
+    }
+    
+    //'URANIUM OBJ EXPORT Mon 12 Jan 2026 20:26:57'
+    if ( line.starts_with( "URANIUM OBJ EXPORT " ) )
+    {
+        line = line.substr( 0, 18 );
+        return;
+    }
+
+    //'BlueSkyPlan 5.0.29.1 08/01/2026 15:04:20 UTC'
+    if ( line.starts_with( "BlueSkyPlan " ) )
+    {
+        line = line.substr( 0, line.find_first_of( ' ', 13 ) ); // till the space after version
+        return;
+    }
+}
+
 Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     const std::filesystem::path& dir,
     bool mergeAllObjects,
@@ -1036,10 +1068,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         for ( size_t li = begin; li < end; ++li )
         {
             std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-            while ( !line.empty() && ( line[0] == '#' || line[0] == ' ' || line[0] == '\t' ) )
-                line.remove_prefix( 1 );
-            while ( !line.empty() && ( line.back() == ' ' || line.back() == '\t' || line.back() == '\r' || line.back() == '\n' ) )
-                line.remove_suffix( 1 );
+            trimComment( line );
             if ( line.empty() )
                 continue;
             TelemetrySignal( "OBJ comment " + std::string( line ) );

@@ -749,6 +749,14 @@ static int intLog2( int n )
     return l;
 }
 
+void telemetryLogSize( const Mesh& mesh )
+{
+    if ( int logFaces = intLog2( mesh.topology.numValidFaces() ) )
+        TelemetrySignal( "Open Mesh Log Tris " + std::to_string( logFaces ) );
+    else if ( int logPoints = intLog2( (int)mesh.points.size() ) ) // if opened file contains no triangles but only points
+        TelemetrySignal( "Open Mesh Log Pnts " + std::to_string( logPoints ) );
+}
+
 static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const MeshLoadSettings& settings )
 {
     if ( !settings.telemetrySignal )
@@ -787,11 +795,7 @@ static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const M
         signalString += " XF";
 
     TelemetrySignal( signalString );
-
-    if ( int logFaces = intLog2( mesh.topology.numValidFaces() ) )
-        TelemetrySignal( "Open Mesh Log Tris " + std::to_string( logFaces ) );
-    else if ( int logPoints = intLog2( (int)mesh.points.size() ) ) // if opened file contains no triangles but only points
-        TelemetrySignal( "Open Mesh Log Pnts " + std::to_string( logPoints ) );
+    telemetryLogSize( mesh );
 }
 
 Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )

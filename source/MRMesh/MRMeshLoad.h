@@ -143,6 +143,9 @@ MRMESH_API Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& f
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings = {} );
 
+/// emits telemetry signal with the integer logarithm of mesh size
+MR_BIND_IGNORE MRMESH_API void telemetryLogSize( const Mesh& mesh );
+
 /// \}
 
 } // namespace MeshLoad

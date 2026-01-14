@@ -45,20 +45,28 @@
 namespace MR
 {
 
-/// \brief computes the closest points on two triangles, and returns the 
+// This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
+MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
+
+/// \brief computes the closest points on two triangles, and returns the
 /// squared distance between them.
-/// 
+///
 /// \param s,t are the triangles, stored tri[point][dimension].
 ///
-/// \details If the triangles are disjoint, p and q give the closest points of 
-/// s and t respectively. However, if the triangles overlap, p and q 
-/// are basically a random pair of points from the triangles, not 
-/// coincident points on the intersection of the triangles, as might 
+/// \details If the triangles are disjoint, p and q give the closest points of
+/// s and t respectively. However, if the triangles overlap, p and q
+/// are basically a random pair of points from the triangles, not
+/// coincident points on the intersection of the triangles, as might
 /// be expected.
-MRMESH_API float TriDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
+inline float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t )
+{
+    return triDist( p, q, s.data(), t.data() );
+}
+
+
 
 /// Returns closest points between an segment pair.
-MRMESH_API void SegPoints(
+MRMESH_API void segPoints(
           // if both closest points are in segment endpoints, then directed from closest point 1 to closest point 2,
           // if both closest points are inner to the segments, then its orthogonal to both segments and directed from 1 to 2,
           // otherwise it is orthogonal to the segment with inner closest point and rotated toward/away the other closest point in endpoint

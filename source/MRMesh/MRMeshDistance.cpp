@@ -106,14 +106,14 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
                 continue;
             const auto leafTriangle = mp.mesh.getTriPoints( face );
             Vector3f p, q;
-            const float distSq = TriDist( p, q, t.data(), leafTriangle.data() );
+            const float distSq = triDist( p, q, t.data(), leafTriangle.data() );
             if ( distSq > rangeSq )
                 continue;
             if ( call( p, face, q, distSq ) == ProcessOneResult::ContinueProcessing )
                 continue;
             break;
         }
-        
+
         addSubTask( getSubTask( node.r ) ); // right to look later
         addSubTask( getSubTask( node.l ) ); // left to look first
     }

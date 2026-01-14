@@ -119,7 +119,7 @@ bool checkDeloneQuadrangleInMesh( const MeshTopology & topology, const VertCoord
     if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
         Vector3f vec, closestOnAC, closestOnBD;
-        SegPoints( vec, closestOnAC, closestOnBD,
+        segPoints( vec, closestOnAC, closestOnBD,
             ap, cp - ap,   // first diagonal segment
             bp, dp - bp ); // second diagonal segment
         const auto distSq = ( closestOnAC - closestOnBD ).lengthSq();

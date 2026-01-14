@@ -1402,7 +1402,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     } );
 #endif
 
-    MR::FileDialog::setLastUsedDir( utf8string( filesList[0].parent_path() ) );
+    MR::FileDialog::setLastUsedDir( filesList[0].parent_path() );
     return true;
 }
 

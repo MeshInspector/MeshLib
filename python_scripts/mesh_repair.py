@@ -42,7 +42,7 @@ def close_small_holes(mesh : mm.Mesh, maxParimeter : float):
     holeIds = mesh.topology.findHoleRepresentiveEdges()
     smallHoleIds = []
     for i in range(len(holeIds)):
-        if mesh.holePerimiter(holeIds[i]) < maxParimeter:
+        if mesh.holePerimeter(holeIds[i]) < maxParimeter:
             smallHoleIds.append(holeIds[i])
     fillSettings = mm.FillHoleNicelySettings()
     fillSettings.triangulateParams.metric = mm.getMinAreaMetric(mesh)
@@ -110,7 +110,7 @@ def has_issues(mesh : mm.Mesh,minAreaRatio,maxHolePerimeter,tolerance):
         return True
     holeIds = mesh.topology.findHoleRepresentiveEdges()
     for i in range(len(holeIds)):
-        if mesh.holePerimiter(holeIds[i]) < maxHolePerimeter:
+        if mesh.holePerimeter(holeIds[i]) < maxHolePerimeter:
             return True
     selfies = mm.SelfIntersections.getFaces(mesh)
     if selfies.count() > 0:
@@ -143,7 +143,7 @@ def has_big_holes(mesh : mm.Mesh, critHoleLength : float)->bool:
 		return False
 	holeIds = mesh.topology.findHoleRepresentiveEdges()
 	for holeId in holeIds:
-		if ( mesh.holePerimiter( holeId ) >= critHoleLength ):
+		if ( mesh.holePerimeter( holeId ) >= critHoleLength ):
 			return True
 	return False
 

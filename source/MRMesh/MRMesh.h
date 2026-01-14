@@ -188,7 +188,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] double volume( const FaceBitSet* region = nullptr ) const { return MR::volume( topology, points, region ); }
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-    [[nodiscard]] double holePerimiter( EdgeId e ) const { return MR::holePerimiter( topology, points, e ); }
+    [[nodiscard]] double holePerimeter( EdgeId e ) const { return MR::holePerimeter( topology, points, e ); }
 
     /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area

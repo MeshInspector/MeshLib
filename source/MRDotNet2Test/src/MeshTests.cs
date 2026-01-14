@@ -293,7 +293,7 @@ namespace MRTest
         {
             var cubeMesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var triVerts = cubeMesh.topology.GetTriVerts(new FaceId(0));
-            var centerPoint = (cubeMesh.points.Index(triVerts.elems[1]) + cubeMesh.points.Index(triVerts.elems[2])) * 0.5f;
+            var centerPoint = (cubeMesh.points[triVerts.elems[1]] + cubeMesh.points[triVerts.elems[2]]) * 0.5f;
             var triPoint = cubeMesh.ToTriPoint(new FaceId(0), centerPoint);
             Assert.That(triPoint.bary.a, Is.EqualTo(0.5f));
             Assert.That(triPoint.bary.b, Is.EqualTo(0.5f));
@@ -414,7 +414,7 @@ namespace MRTest
             var old2new = new VertMap();
             var unitedCount = MeshBuilder.UniteCloseVertices(mesh, 0.1f, false, old2new);
             Assert.That(unitedCount, Is.EqualTo(2230));
-            Assert.That(old2new.Index(new VertId(1000)).id, Is.EqualTo(42));
+            Assert.That(old2new[new VertId(1000)].id, Is.EqualTo(42));
             Assert.That(mesh.topology.GetValidVerts().Count() < 3000);
             mesh.Dispose();
         }

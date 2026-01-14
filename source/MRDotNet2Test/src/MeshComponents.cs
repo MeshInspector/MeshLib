@@ -25,8 +25,8 @@ namespace MRTest
 
             Assert.That(numComponents == 2);
             Assert.That(map.Size() == 24);
-            Assert.That(map.Index(new FaceId(0)).id == 0);
-            Assert.That(map.Index(new FaceId(12)).id == 1);
+            Assert.That(map[new FaceId(0)].id == 0);
+            Assert.That(map[new FaceId(12)].id == 1);
         }
 
         [Test]

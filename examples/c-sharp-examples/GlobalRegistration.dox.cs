@@ -58,9 +58,9 @@ public class GlobalRegistrationExample
             for (int i = 0; i < inputNum; ++i)
             {
                 MR.ObjId id = new(i);
-                var xf = xfs.Index(id);
-                for (ulong j = 0; j < inputs.Index(id).obj.Points().Size(); j++)
-                    output.AddPoint(xf.Call(inputs.Index(id).obj.Points().Index(new MR.VertId(j))));
+                var xf = xfs[id];
+                for (ulong j = 0; j < inputs[id].obj.Points().Size(); j++)
+                    output.AddPoint(xf.Call(inputs[id].obj.Points()[new MR.VertId(j)]));
             }
 
             MR.PointsSave.ToAnySupportedFormat(output, args[args.Length - 1]);

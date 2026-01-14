@@ -22,8 +22,8 @@ namespace MRTest
             var i0 = triangulation.Front().elems._0;
             var i1 = triangulation.Back().elems._0;
 
-            var ancV0 = mesh.points.Index(i0);
-            var ancV1 = mesh.points.Index(i1);
+            var ancV0 = mesh.points[i0];
+            var ancV1 = mesh.points[i1];
 
             EdgeWeights edgeWeights = EdgeWeights.Unit;
             VertexMass vertexMass = VertexMass.Unit;

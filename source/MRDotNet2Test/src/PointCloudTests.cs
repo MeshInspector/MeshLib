@@ -123,7 +123,7 @@ namespace MRTest
             Assert.That(colors.Size() == readColors.Size());
             for (ulong i = 0; i < colors.Size(); i++)
             {
-                Assert.That(colors.Index(new VertId(i)) == readColors.Index(new VertId(i)));
+                Assert.That(colors[new VertId(i)] == readColors[new VertId(i)]);
             }
 
             File.Delete(path);

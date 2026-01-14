@@ -508,6 +508,9 @@ endif
 MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makefile_dir)mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)../../source
+# Add `-frelaxed-template-template-args` if Clang is old enough to support it. Newer versions have this behavior by default.
+# Clang 18 and older need this flag. Clang 19 and 20 do the right thing by default, but still allow the flag with a deprecation warning. Clang 21 and newer consider this an unknown flag and error.
+COMPILER_FLAGS += $(shell $(CXX_FOR_BINDINGS) --help | grep -o -- -frelaxed-template-template-args)
 # TODO: use system Eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include

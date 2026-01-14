@@ -24,7 +24,7 @@ namespace MRTest
             float resMax = 0f;
             for (ulong i = 0; i < res.Size(); i++)
             {
-                resMax = Math.Max(resMax, res.Index(new VertId(i)));
+                resMax = Math.Max(resMax, res[new VertId(i)]);
             }
             Assert.That(resMax, Is.InRange(shift.Length()-1e-6, shift.Length() + 1e-6));
         }

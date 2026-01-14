@@ -490,9 +490,6 @@
     <ClCompile Include="MRRibbonFontHolder.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
-    <ClCompile Include="MRFileDialogPortal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MRAncillaryPlane.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -504,6 +501,9 @@
     </ClCompile>
     <ClCompile Include="MRSceneControlMenuItems.cpp">
       <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFileDialogPortal.cpp">
+      <Filter>CustomOpenDialog</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -981,7 +981,6 @@
     <ClInclude Include="MRRibbonFontHolder.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
-    <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRAncillaryPlane.h">
       <Filter>Helpers</Filter>
     </ClInclude>
@@ -997,11 +996,20 @@
     <ClInclude Include="MRSceneControlMenuItems.h">
       <Filter>Plugins</Filter>
     </ClInclude>
+    <ClInclude Include="MRFileDialogPortal.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogCocoa.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <Filter>Viewer</Filter>
+    </None>
+    <None Include="MRFileDialogCocoa.mm">
+      <Filter>CustomOpenDialog</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -156,6 +156,7 @@
     <ClCompile Include="MRFileDialogPortal.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRFileDialogCocoa.h" />
     <ClInclude Include="MRImGuiMultiViewport.h" />
     <ClInclude Include="MRAlphaSortGL.h" />
     <ClInclude Include="MRAncillaryLabels.h" />
@@ -339,6 +340,7 @@
     <CopyFileToFolders Include="MRLightTheme.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <None Include="MRFileDialogCocoa.mm" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

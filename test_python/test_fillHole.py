@@ -12,7 +12,7 @@ def test_fill_hole():
     torus.topology.deleteFaces(faceBitSetToDelete)
 
     holes = torus.topology.findHoleRepresentiveEdges()
-    assert torus.holePerimiter(holes[0]) > 0.0
+    assert torus.holePerimeter(holes[0]) > 0.0
     assert torus.holeDirArea(holes[0]).lengthSq() > 0.0
 
     mrmesh.fillHole(torus, holes[0])

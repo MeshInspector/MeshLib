@@ -24,11 +24,11 @@ namespace MRTest
             points.PushBack(new Vector3f(0, 1, 1));
 
             var triangles = new Triangulation(5);
-            updateTri(triangles.Index(new FaceId(0)), 0, 2, 1);
-            updateTri(triangles.Index(new FaceId(1)), 3, 4, 5);
-            updateTri(triangles.Index(new FaceId(2)), 0, 1, 3);
-            updateTri(triangles.Index(new FaceId(3)), 2, 5, 4);
-            updateTri(triangles.Index(new FaceId(4)), 2, 3, 5);
+            updateTri(triangles[new FaceId(0)], 0, 2, 1);
+            updateTri(triangles[new FaceId(1)], 3, 4, 5);
+            updateTri(triangles[new FaceId(2)], 0, 1, 3);
+            updateTri(triangles[new FaceId(3)], 2, 5, 4);
+            updateTri(triangles[new FaceId(4)], 2, 3, 5);
 
             return Mesh.FromTriangles(points, triangles);
         }

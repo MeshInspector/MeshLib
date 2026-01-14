@@ -30,6 +30,10 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh );
 /// finds faces having aspect ratio >= criticalAspectRatio
 [[nodiscard]] MRMESH_API Expected<FaceBitSet> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio = FLT_MAX, ProgressCallback cb = {} );
 
+/// find inner faces of the given mesh part, which has large angles with its 3 neighbours
+/// \param minAngle threshold in radians, which is used in comparison of angles of face's planes, the large minAngle the less number of faces will be found
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> findNotSmoothFaces( const MeshPart& mp, float minAngle = 0.3f, ProgressCallback cb = {} );
+
 /// finds edges having length <= criticalLength
 [[nodiscard]] MRMESH_API Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb = {} );
 

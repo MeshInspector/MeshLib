@@ -424,6 +424,38 @@ Expected<FaceBitSet> findDegenerateFaces( const MeshPart& mp, float criticalAspe
     return res;
 }
 
+Expected<FaceBitSet> findNotSmoothFaces( const MeshPart& mp, float minAngle, ProgressCallback cb )
+{
+    MR_TIMER;
+    FaceBitSet res( mp.mesh.topology.faceSize() );
+    auto completed = BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
+    {
+        if ( !mp.mesh.topology.hasFace( f ) )
+            return;
+        EdgeId es[3];
+        mp.mesh.topology.getTriEdges( f, es );
+        Vector3f nc = mp.mesh.normal( f );
+        Vector3f n[3];
+        float a0 = 0;
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto r = mp.mesh.topology.right( es[i] );
+            if ( !r )
+                return; // f is boundary triangle
+            n[i] = mp.mesh.normal( r );
+            a0 += angle( nc, n[i] );
+        }
+        float a1 = angle( n[0], n[1] ) + angle( n[1], n[2] ) + angle( n[2], n[0] );
+        if ( a0 > a1 + minAngle )
+            res.set( f );
+    }, cb );
+
+    if ( !completed )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
 Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
 {
     MR_TIMER;

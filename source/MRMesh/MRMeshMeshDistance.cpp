@@ -93,7 +93,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 bv[2] = ( *rigidB2A )( bv[2] );
             }
 
-            float distSq = TriDist( aPt, bPt, av, bv );
+            float distSq = triDist( aPt, bPt, av, bv );
             if ( distSq < res.distSq )
             {
                 res.distSq = distSq;
@@ -279,7 +279,7 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
     return tbb::parallel_reduce
     (
         tbb::blocked_range( vertBitSet.find_first(), vertBitSet.find_last() + 1 ),
-        0.0f, 
+        0.0f,
         [&] ( const tbb::blocked_range<VertId>& range, float init )
         {
         for ( VertId i = range.begin(); i < range.end(); ++i )
@@ -290,10 +290,10 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
             auto distSq = findProjection( rigidB2A ? (*rigidB2A)( bMeshVerts[i] ) : bMeshVerts[i], a, maxDistanceSq ).distSq;
             if ( distSq > init )
                 init = distSq;
-        }           
+        }
 
         return  init;
-        }, 
+        },
         [] ( float a, float b ) -> float
         {
             return a > b ? a : b;

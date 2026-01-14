@@ -108,6 +108,14 @@ To fix this:
 
 * If the function **can** be called without it and you don't want that include, you can wrap it in `#if MR_PARSING_FOR_PB11_BINDINGS`.
 
+### Pointers are always assumed to point to single elements
+
+Function parameters, return values, and class fields of pointer types are assumed to point to single objects, not arrays.
+
+Eventually we want to support `std::span`, but for now use `std::vector` and `std::array` to pass arrays.
+
+Note that function parameters that look like arrays: `void foo(int a[42])` (or `[]` without size) are actually pointers in C++, equivalent to `void foo(int *a)`.
+
 ## How the C++ templates have to be written
 
 Templates are more affected more than other things. There are some limitations on how you write them:

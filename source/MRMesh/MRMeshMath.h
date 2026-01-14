@@ -202,7 +202,7 @@ MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const Ve
 [[nodiscard]] MRMESH_API double volume( const MeshTopology & topology, const VertCoords & points, const FaceBitSet* region = nullptr );
 
 /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-[[nodiscard]] MRMESH_API double holePerimiter( const MeshTopology & topology, const VertCoords & points, EdgeId e );
+[[nodiscard]] MRMESH_API double holePerimeter( const MeshTopology & topology, const VertCoords & points, EdgeId e );
 
 /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
 /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area

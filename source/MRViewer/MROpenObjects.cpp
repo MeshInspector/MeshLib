@@ -232,7 +232,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             else
             {
                 std::error_code ec;
-                allErrors[taskRes.error()] = { 1, utf8string( std::filesystem::relative( node.path, folder, ec ) ) };
+                allErrors[taskRes.error()] = { 1, std::filesystem::relative( node.path, folder, ec ) };
                 if ( ec )
                     spdlog::warn( "Filesystem error when trying to obtain {} relative to {}: {}", utf8string( node.path ), utf8string( folder ), ec.message() );
             }

@@ -183,7 +183,7 @@ std::filesystem::path getUserConfigDir()
     filepath /= ".local";
     filepath /= "share";
 #endif
-    filepath /= std::string( Config::instance().getAppName() );
+    filepath /= asU8String( Config::instance().getAppName() );
     std::error_code ec;
     if ( !std::filesystem::is_directory( filepath, ec ) || ec )
     {

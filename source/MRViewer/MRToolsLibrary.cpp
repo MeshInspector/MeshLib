@@ -215,7 +215,7 @@ void GcodeToolsLibrary::setAutoSize( float size )
 
 std::filesystem::path GcodeToolsLibrary::getFolder_()
 {
-    const std::filesystem::path path = getUserConfigDir() / libraryName_;
+    const std::filesystem::path path = getUserConfigDir() / asU8String( libraryName_ );
 
     std::error_code ec;
     if ( std::filesystem::exists( path, ec ) )

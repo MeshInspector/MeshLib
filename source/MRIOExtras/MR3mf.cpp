@@ -346,7 +346,7 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
     if ( !pathAttr )
         return unexpected( "Invalid 'p:path attribute'" );
 
-    std::filesystem::path path = rootPath_ / ( "./" + std::string( pathAttr ) );
+    std::filesystem::path path = rootPath_ / asU8String( "./" + std::string( pathAttr ) );
     auto docIt = xmlDocuments_.find( utf8string( path.lexically_normal() ) );
     if ( docIt == xmlDocuments_.end() )
         return unexpected( "Cannot find file specified in p:path" );

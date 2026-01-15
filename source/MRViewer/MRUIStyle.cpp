@@ -2386,7 +2386,7 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
         if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
         {
             std::error_code ec;
-            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / ( currentConfigName + ".json" ), ec ) )
+            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / asU8String( currentConfigName + ".json" ), ec ) )
             {
                 ImGui::OpenPopup( existingPopupName.c_str() );
             }
@@ -2425,7 +2425,7 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
             currentConfigName = replaceProhibitedChars( *settings.inputName );
 
             std::error_code ec;
-            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / ( currentConfigName + ".json" ), ec ) )
+            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / asU8String( currentConfigName + ".json" ), ec ) )
             {
                 ImGui::OpenPopup( existingPopupName.c_str() );
             }

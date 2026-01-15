@@ -44,7 +44,7 @@ MRMESH_API Expected<void> toObj( const Mesh & mesh, std::ostream & out, const Sa
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
-/// saver in binary .stl format that can write triangles one by one not knowning their number beforehand
+/// saver in binary .stl format that can write triangles one by one not knowing their number beforehand
 class BinaryStlSaver
 {
 public:

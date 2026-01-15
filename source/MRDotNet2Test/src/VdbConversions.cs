@@ -26,13 +26,7 @@ namespace MRTest
             Assert.That(vdbVolume.dims.z, Is.EqualTo(26));
 
             var gridToMeshSettings = new GridToMeshSettings();
-            /*
-             * TODO: fix struct field assignment
             gridToMeshSettings.voxelSize = Vector3f.diagonal(0.1f);
-             */
-            gridToMeshSettings.voxelSize.x = 0.1f;
-            gridToMeshSettings.voxelSize.y = 0.1f;
-            gridToMeshSettings.voxelSize.z = 0.1f;
             gridToMeshSettings.isoValue = 1;
 
             var restored = gridToMesh(vdbVolume.data, gridToMeshSettings);
@@ -79,13 +73,7 @@ namespace MRTest
             var vdbVolume = CreateVolume();
             var resampledGrid = resampled(vdbVolume.data, 2);
             var resampledVolume = floatGridToVdbVolume(resampledGrid);
-            /*
-             * TODO: fix struct field assignment
             resampledVolume.voxelSize = vdbVolume.voxelSize * 2;
-             */
-            resampledVolume.voxelSize.x = vdbVolume.voxelSize.x * 2;
-            resampledVolume.voxelSize.y = vdbVolume.voxelSize.y * 2;
-            resampledVolume.voxelSize.z = vdbVolume.voxelSize.z * 2;
 
             Assert.That(resampledVolume.dims.x, Is.EqualTo(13));
             Assert.That(resampledVolume.dims.y, Is.EqualTo(13));

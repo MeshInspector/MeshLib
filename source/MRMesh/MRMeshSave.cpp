@@ -122,12 +122,12 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
     {
         if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
         {
-            auto mtlPath = file.parent_path() / ( settings.materialName + ".mtl" );
+            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
             std::ofstream ofMtl( mtlPath, std::ofstream::binary );
             if ( ofMtl )
             {
                 ofMtl << "newmtl Texture\n";
-                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / ( settings.materialName + ".png" ) ).has_value() )
+                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
                     ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
             }
         }
@@ -374,7 +374,7 @@ Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, con
     if ( settings.texture && !settings.texture->pixels.empty() )
     {
         if ( auto texSaver = ImageSave::getImageSaver( "*.jpg" ) ) // MeshLab cannot open textures from .PNG
-            (void)texSaver( *settings.texture, file.parent_path() / ( settings.materialName + ".jpg" ) );
+            (void)texSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".jpg" ) );
     }
 #endif
     return toPly( mesh, out, settings );

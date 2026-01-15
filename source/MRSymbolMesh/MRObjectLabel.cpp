@@ -112,7 +112,7 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     if ( root["Text"].isString() )
         label_.text = root["Text"].asString();
     if ( root["PathToFontFile"].isString() )
-        pathToFont_ = root["PathToFontFile"].asString();
+        pathToFont_ = pathFromUtf8( root["PathToFontFile"].asString() );
 
     if ( root["SourcePoint"].isUInt() )
         sourcePoint_ = ViewportMask( root["SourcePoint"].asUInt() );

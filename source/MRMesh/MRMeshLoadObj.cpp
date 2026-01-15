@@ -785,7 +785,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
                 currTextureId = it->second;
                 assert( currTextureId );
                 if ( inserted )
-                    res.textureFiles.push_back( dir / mIt->second.diffuseTextureFile );
+                    res.textureFiles.push_back( dir / asU8String( mIt->second.diffuseTextureFile ) );
             }
         }
     };

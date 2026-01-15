@@ -685,7 +685,7 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( 
         {
             const Object* firstSerializedObject = it->second.first;
             // we use name of first object as name of shared model
-            const auto link = cSharedFolder / composeKey( firstSerializedObject->name(), it->second.second );
+            const auto link = cSharedFolder / asU8String( composeKey( firstSerializedObject->name(), it->second.second ) );
             if ( it->first == firstSerializedObject )
                 pathToSerializeModel = mapSharedObjects->rootFolder / link; // serialize model only one time
             else

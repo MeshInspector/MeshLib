@@ -211,7 +211,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     auto & saveModelFutures = expectedSaveModelFutures.value();
 
     assert( !object.name().empty() );
-    auto paramsFile = scenePath / ( object.name() + ".json" );
+    auto paramsFile = scenePath / asU8String( object.name() + ".json" );
     if ( !serializeJsonValue( root, paramsFile ) )
         return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
 

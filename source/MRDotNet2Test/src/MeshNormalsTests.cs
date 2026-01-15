@@ -9,17 +9,17 @@ namespace MRTest
         [Test]
         public void TestVertNormals()
         {
-            var mesh = MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
-            var normals = ComputePerVertNormals( mesh );
-            Assert.That( normals.Size(), Is.EqualTo( 8 ) );
+            var mesh = makeCube( Vector3f.diagonal(1), Vector3f.diagonal(-0.5f) );
+            var normals = computePerVertNormals( mesh );
+            Assert.That( normals.size(), Is.EqualTo( 8 ) );
         }
 
         [Test]
         public void TestFaceNormals()
         {
-            var mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            var normals = ComputePerFaceNormals(mesh);
-            Assert.That(normals.Size(), Is.EqualTo(12));
+            var mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
+            var normals = computePerFaceNormals(mesh);
+            Assert.That(normals.size(), Is.EqualTo(12));
         }
     }
 }

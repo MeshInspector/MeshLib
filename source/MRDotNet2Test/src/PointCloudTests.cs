@@ -12,14 +12,14 @@ namespace MRTest
         static PointCloud MakeCube()
         {
             var points = new PointCloud();
-            points.AddPoint(new Vector3f(0, 0, 0));
-            points.AddPoint(new Vector3f(0, 1, 0));
-            points.AddPoint(new Vector3f(1, 1, 0));
-            points.AddPoint(new Vector3f(1, 0, 0));
-            points.AddPoint(new Vector3f(0, 0, 1));
-            points.AddPoint(new Vector3f(0, 1, 1));
-            points.AddPoint(new Vector3f(1, 1, 1));
-            points.AddPoint(new Vector3f(1, 0, 1));
+            points.addPoint(new Vector3f(0, 0, 0));
+            points.addPoint(new Vector3f(0, 1, 0));
+            points.addPoint(new Vector3f(1, 1, 0));
+            points.addPoint(new Vector3f(1, 0, 0));
+            points.addPoint(new Vector3f(0, 0, 1));
+            points.addPoint(new Vector3f(0, 1, 1));
+            points.addPoint(new Vector3f(1, 1, 1));
+            points.addPoint(new Vector3f(1, 0, 1));
             return points;
         }
 
@@ -28,10 +28,10 @@ namespace MRTest
         {
             var points = MakeCube();
 
-            Assert.That(points.points.Size() == 8);
-            Assert.That(points.normals.Size() == 0);
+            Assert.That(points.points.size() == 8);
+            Assert.That(points.normals.size() == 0);
 
-            var bbox = points.GetBoundingBox();
+            var bbox = points.getBoundingBox();
             Assert.That(bbox.min == new Vector3f(0, 0, 0));
             Assert.That(bbox.max == new Vector3f(1, 1, 1));
         }
@@ -42,7 +42,7 @@ namespace MRTest
             Assert.DoesNotThrow(() =>
             {
                 var points = MakeCube();
-                Assert.That(points.validPoints.Count() == 8);
+                Assert.That(points.validPoints.count() == 8);
                 points.Dispose();
             });
         }
@@ -51,11 +51,11 @@ namespace MRTest
         public void TestPointCloudNormals()
         {
             var points = new PointCloud();
-            points.AddPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1));
-            points.AddPoint(new Vector3f(0, 1, 0), new Vector3f(0, 0, 1));
+            points.addPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1));
+            points.addPoint(new Vector3f(0, 1, 0), new Vector3f(0, 0, 1));
 
-            Assert.That(points.points.Size() == 2);
-            Assert.That(points.points.Size() == 2);
+            Assert.That(points.points.size() == 2);
+            Assert.That(points.points.size() == 2);
         }
 
         [Test]
@@ -63,10 +63,10 @@ namespace MRTest
         {
             var points = MakeCube();
             var tempFile = Path.GetTempFileName() + ".ply";
-            PointsSave.ToAnySupportedFormat(points, tempFile);
+            PointsSave.toAnySupportedFormat(points, tempFile);
 
-            var readPoints = PointsLoad.FromAnySupportedFormat(tempFile);
-            Assert.That(points.points.Size() == readPoints.points.Size());
+            var readPoints = PointsLoad.fromAnySupportedFormat(tempFile);
+            Assert.That(points.points.size() == readPoints.points.size());
         }
 
         [Test]
@@ -75,22 +75,22 @@ namespace MRTest
             string path = Path.GetTempFileName() + ".ply";
             var file = File.Create(path);
             file.Close();
-            Assert.Throws<Misc.UnexpectedResultException>(() => PointsLoad.FromAnySupportedFormat(path));
+            Assert.Throws<Misc.UnexpectedResultException>(() => PointsLoad.fromAnySupportedFormat(path));
             File.Delete(path);
         }
 
         [Test]
         public void TestTriangulation()
         {
-            var mesh = MakeTorus(2.0f, 1.0f, 32, 32);
-            var pc = MeshToPointCloud(mesh);
-            var restored = TriangulatePointCloud(pc, new TriangulationParameters()).Value();
+            var mesh = makeTorus(2.0f, 1.0f, 32, 32);
+            var pc = meshToPointCloud(mesh);
+            var restored = triangulatePointCloud(pc, new TriangulationParameters()).value();
             Assert.That(restored is not null);
             if (restored is not null)
             {
-                Assert.That(restored.points.Size(), Is.EqualTo(1024));
-                Assert.That(restored.topology.GetValidVerts().Count(), Is.EqualTo(1024));
-                Assert.That(restored.topology.FindHoleRepresentiveEdges().Size() == 0);
+                Assert.That(restored.points.size(), Is.EqualTo(1024));
+                Assert.That(restored.topology.getValidVerts().count(), Is.EqualTo(1024));
+                Assert.That(restored.topology.findHoleRepresentiveEdges().size() == 0);
             }
         }
 
@@ -99,29 +99,29 @@ namespace MRTest
         {
             var points = MakeCube();
             var colors = new VertColors();
-            colors.PushBack(new Color(1.0f, 0.0f, 0.0f));
-            colors.PushBack(new Color(0.0f, 1.0f, 0.0f));
-            colors.PushBack(new Color(0.0f, 0.0f, 1.0f));
-            colors.PushBack(new Color(1.0f, 1.0f, 0.0f));
-            colors.PushBack(new Color(1.0f, 0.0f, 1.0f));
-            colors.PushBack(new Color(0.0f, 1.0f, 1.0f));
-            colors.PushBack(new Color(1.0f, 1.0f, 1.0f));
-            colors.PushBack(new Color(0.0f, 0.0f, 0.0f));
+            colors.pushBack(new Color(1.0f, 0.0f, 0.0f));
+            colors.pushBack(new Color(0.0f, 1.0f, 0.0f));
+            colors.pushBack(new Color(0.0f, 0.0f, 1.0f));
+            colors.pushBack(new Color(1.0f, 1.0f, 0.0f));
+            colors.pushBack(new Color(1.0f, 0.0f, 1.0f));
+            colors.pushBack(new Color(0.0f, 1.0f, 1.0f));
+            colors.pushBack(new Color(1.0f, 1.0f, 1.0f));
+            colors.pushBack(new Color(0.0f, 0.0f, 0.0f));
 
             var saveSettings = new SaveSettings();
             saveSettings.colors = colors;
 
             string path = Path.GetTempFileName() + ".ply";
-            PointsSave.ToAnySupportedFormat(points, path, saveSettings);
+            PointsSave.toAnySupportedFormat(points, path, saveSettings);
 
             var loadSettings = new PointsLoadSettings();
             loadSettings.colors = new VertColors();
-            var readPoints = PointsLoad.FromAnySupportedFormat(path, loadSettings);
-            Assert.That(points.points.Size() == 8);
+            var readPoints = PointsLoad.fromAnySupportedFormat(path, loadSettings);
+            Assert.That(points.points.size() == 8);
 
             var readColors = loadSettings.colors;
-            Assert.That(colors.Size() == readColors.Size());
-            for (ulong i = 0; i < colors.Size(); i++)
+            Assert.That(colors.size() == readColors.size());
+            for (ulong i = 0; i < colors.size(); i++)
             {
                 Assert.That(colors[new VertId(i)] == readColors[new VertId(i)]);
             }
@@ -133,9 +133,9 @@ namespace MRTest
         public void TestCachedPoints()
         {
             var points = MakeCube();
-            Assert.That(points.points.Size() == 8);
-            points.AddPoint(new Vector3f(0, 0, 0));
-            Assert.That(points.points.Size() == 9);
+            Assert.That(points.points.size() == 8);
+            points.addPoint(new Vector3f(0, 0, 0));
+            Assert.That(points.points.size() == 9);
         }
     }
 }

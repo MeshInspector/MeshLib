@@ -4,18 +4,18 @@ public class GlobalRegistrationExample
 {
     static void PrintStats(MR.MultiwayICP icp)
     {
-        ulong numActivePairs = icp.GetNumActivePairs();
-        Console.WriteLine($"Number of samples: {icp.GetNumSamples()}");
+        ulong numActivePairs = icp.getNumActivePairs();
+        Console.WriteLine($"Number of samples: {icp.getNumSamples()}");
         Console.WriteLine($"Number of active pairs: {numActivePairs}");
 
         if (numActivePairs > 0)
         {
-            double p2ptMetric = icp.GetMeanSqDistToPoint();
-            double p2ptInaccuracy = icp.GetMeanSqDistToPoint(p2ptMetric);
+            double p2ptMetric = icp.getMeanSqDistToPoint();
+            double p2ptInaccuracy = icp.getMeanSqDistToPoint(p2ptMetric);
             Console.WriteLine($"RMS point-to-point distance: {p2ptMetric} ± {p2ptInaccuracy}");
 
-            double p2plMetric = icp.GetMeanSqDistToPlane();
-            double p2plInaccuracy = icp.GetMeanSqDistToPlane(p2ptMetric);
+            double p2plMetric = icp.getMeanSqDistToPlane();
+            double p2plInaccuracy = icp.getMeanSqDistToPlane(p2ptMetric);
             Console.WriteLine($"RMS point-to-plane distance: {p2plMetric} ± {p2plInaccuracy}");
         }
     }
@@ -35,35 +35,35 @@ public class GlobalRegistrationExample
             MR.Box3f maxBBox = new();
             for (int i = 0; i < inputNum; ++i)
             {
-                var pc = MR.PointsLoad.FromAnySupportedFormat(args[i + 1]);
+                var pc = MR.PointsLoad.fromAnySupportedFormat(args[i + 1]);
                 input_pointclouds.Add(pc); // Need this to prevent the point-cloud object from dying too early.
                 MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
-                inputs.PushBack(obj);
-                maxBBox.Include(obj.obj.ComputeBoundingBox());
+                inputs.pushBack(obj);
+                maxBBox.include(obj.obj.computeBoundingBox());
             }
 
             MR.MultiwayICPSamplingParameters samplingParams = new();
-            samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
+            samplingParams.samplingVoxelSize = maxBBox.diagonal() * 0.03f;
 
             MR.MultiwayICP icp = new(inputs, samplingParams);
             MR.ICPProperties iCPProperties = new();
-            icp.SetParams(iCPProperties);
-            icp.UpdateAllPointPairs();
+            icp.setParams(iCPProperties);
+            icp.updateAllPointPairs();
             PrintStats(icp);
 
             Console.WriteLine("Calculating transformations...");
-            MR.Vector_MRAffineXf3f_MRObjId xfs = icp.CalculateTransformations();
+            MR.Vector_MRAffineXf3f_MRObjId xfs = icp.calculateTransformations();
             PrintStats(icp);
             MR.PointCloud output = new();
             for (int i = 0; i < inputNum; ++i)
             {
                 MR.ObjId id = new(i);
                 var xf = xfs[id];
-                for (ulong j = 0; j < inputs[id].obj.Points().Size(); j++)
-                    output.AddPoint(xf.Call(inputs[id].obj.Points()[new MR.VertId(j)]));
+                for (ulong j = 0; j < inputs[id].obj.points().size(); j++)
+                    output.addPoint(xf.call(inputs[id].obj.points()[new MR.VertId(j)]));
             }
 
-            MR.PointsSave.ToAnySupportedFormat(output, args[args.Length - 1]);
+            MR.PointsSave.toAnySupportedFormat(output, args[args.Length - 1]);
         }
         catch (Exception e)
         {

@@ -12,29 +12,29 @@ namespace MRTest
         [Test]
         public void TestCubeShape()
         {
-            var cube = MakeCube(new Vector3f(1.0f, 1.0f, 1.0f), new Vector3f(0, 0, 0));
-            Assert.That(cube.points.Size() == 8);
+            var cube = makeCube(new Vector3f(1.0f, 1.0f, 1.0f), new Vector3f(0, 0, 0));
+            Assert.That(cube.points.size() == 8);
         }
 
         [Test]
         public void TestCylinderShape()
         {
-            var cylinder = MakeCylinderAdvanced(1.0f, 1.0f, 0.0f, (float)Math.PI * 2, 2.0f, 16);
-            Assert.That(cylinder.points.Size() == 34 );
+            var cylinder = makeCylinderAdvanced(1.0f, 1.0f, 0.0f, (float)Math.PI * 2, 2.0f, 16);
+            Assert.That(cylinder.points.size() == 34 );
         }
 
         [Test]
         public void TestSphereShape()
         {
-            var sphere = MakeSphere(new SphereParams(1.0f, 64));
-            Assert.That(sphere.points.Size() == 64);
+            var sphere = makeSphere(new SphereParams(1.0f, 64));
+            Assert.That(sphere.points.size() == 64);
         }
 
         [Test]
         public void TestTorusShape()
         {
-            var torus = MakeTorus(1.0f, 2.0f, 16, 16);
-            Assert.That(torus.points.Size() == 256);
+            var torus = makeTorus(1.0f, 2.0f, 16, 16);
+            Assert.That(torus.points.size() == 256);
         }
     }
 }

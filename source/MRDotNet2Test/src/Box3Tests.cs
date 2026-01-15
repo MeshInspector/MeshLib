@@ -10,7 +10,7 @@ namespace MRTest
         public void TestDefaultConstructor()
         {
             var box = new Box3f();
-            Assert.That(!box.Valid());
+            Assert.That(!box.valid());
         }
 
         [Test]
@@ -25,20 +25,20 @@ namespace MRTest
             Assert.That(box.max.y == 5);
             Assert.That(box.max.z == 6);
 
-            var center = box.Center();
+            var center = box.center();
             Assert.That(center.x == 2.5);
             Assert.That(center.y == 3.5);
             Assert.That(center.z == 4.5);
 
-            var size = box.Size();
+            var size = box.size();
             Assert.That(size.x == 3);
             Assert.That(size.y == 3);
             Assert.That(size.z == 3);
 
-            float diagonal = box.Diagonal();
+            float diagonal = box.diagonal();
             Assert.That(diagonal, Is.EqualTo(5.19).Within(0.01));
 
-            float volume = box.Volume();
+            float volume = box.volume();
             Assert.That(volume, Is.EqualTo(27).Within(0.01));
         }
     }

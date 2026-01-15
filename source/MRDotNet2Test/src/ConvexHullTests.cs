@@ -11,12 +11,12 @@ namespace MRTest
         [Test]
         public void TestConvexHull()
         {
-            var meshA = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            var meshB = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(0.0f));
-            var union = Boolean(meshA, meshB, BooleanOperation.Union);
-            var convexHull = MakeConvexHull(union.mesh);
+            var meshA = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
+            var meshB = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(0.0f));
+            var union = boolean(meshA, meshB, BooleanOperation.Union);
+            var convexHull = makeConvexHull(union.mesh);
 
-            Assert.That(convexHull.points.Size() == 14);
+            Assert.That(convexHull.points.size() == 14);
         }
     }
 }

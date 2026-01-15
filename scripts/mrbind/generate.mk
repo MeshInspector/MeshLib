@@ -906,7 +906,8 @@ generate:
     	--imported-lib-name MeshLibC2 \
     	--helpers-namespace MR::Misc \
     	--force-namespace MR \
-		--dotnet-version=std2.0
+		--dotnet-version=std2.0 \
+		--begin-func-names-with-lowercase
 
 .DEFAULT_GOAL := build
 .PHONY: build

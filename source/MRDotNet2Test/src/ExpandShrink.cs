@@ -9,25 +9,25 @@ namespace MRTest
         [Test]
         public void TestExpandShrink()
         {
-            var mesh = MakeSphere(new SphereParams(1.0f, 3000));
-            var region = Expand(mesh.topology, new FaceId(0), 3);
-            Assert.That(region.Count, Is.EqualTo(75));
-            Expand(mesh.topology, region, 3);
-            Assert.That(region.Count, Is.GreaterThan(75));
-            Shrink(mesh.topology, region, 3);
-            Assert.That(region.Count, Is.EqualTo(75));
+            var mesh = makeSphere(new SphereParams(1.0f, 3000));
+            var region = expand(mesh.topology, new FaceId(0), 3);
+            Assert.That(region.count, Is.EqualTo(75));
+            expand(mesh.topology, region, 3);
+            Assert.That(region.count, Is.GreaterThan(75));
+            shrink(mesh.topology, region, 3);
+            Assert.That(region.count, Is.EqualTo(75));
         }
 
         [Test]
         public void TestExpandShrinkVerts()
         {
-            var mesh = MakeSphere(new SphereParams(1.0f, 3000));
-            var region = Expand(mesh.topology, new VertId(0), 3);
-            Assert.That(region.Count, Is.EqualTo(37));
-            Expand(mesh.topology, region, 3);
-            Assert.That(region.Count, Is.GreaterThan(37));
-            Shrink(mesh.topology, region, 3);
-            Assert.That(region.Count, Is.EqualTo(37));
+            var mesh = makeSphere(new SphereParams(1.0f, 3000));
+            var region = expand(mesh.topology, new VertId(0), 3);
+            Assert.That(region.count, Is.EqualTo(37));
+            expand(mesh.topology, region, 3);
+            Assert.That(region.count, Is.GreaterThan(37));
+            shrink(mesh.topology, region, 3);
+            Assert.That(region.count, Is.EqualTo(37));
         }
 
     }

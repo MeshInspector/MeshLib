@@ -14,13 +14,13 @@ namespace MRTest
         [Test]
         public void TestLaplacian()
         {
-            var mesh = MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
             var laplacian = new Laplacian(mesh);
 
             // initialize laplacian
-            var triangulation = mesh.topology.GetTriangulation();
-            var i0 = triangulation.Front().elems._0;
-            var i1 = triangulation.Back().elems._0;
+            var triangulation = mesh.topology.getTriangulation();
+            var i0 = triangulation.front().elems._0;
+            var i1 = triangulation.back().elems._0;
 
             var ancV0 = mesh.points[i0];
             var ancV1 = mesh.points[i1];
@@ -31,17 +31,17 @@ namespace MRTest
 
             // fix specific vertices
             VertBitSet freeVerts = new VertBitSet();
-            freeVerts.Resize(mesh.topology.GetValidVerts().Count());
-            freeVerts.Set(i0, true);
-            freeVerts.Set(i1, true);
+            freeVerts.resize(mesh.topology.getValidVerts().count());
+            freeVerts.set(i0, true);
+            freeVerts.set(i1, true);
 
-            laplacian.Init(freeVerts, edgeWeights, vertexMass, rememberShape);
+            laplacian.init(freeVerts, edgeWeights, vertexMass, rememberShape);
 
             // apply laplacian
-            laplacian.FixVertex(i0, ancV0);
-            laplacian.FixVertex(i1, ancV1);
+            laplacian.fixVertex(i0, ancV0);
+            laplacian.fixVertex(i1, ancV1);
 
-            laplacian.Apply();
+            laplacian.apply();
 
             Assert.That(laplacian is not null);
         }

@@ -45,6 +45,7 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
     ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 
     // restore ImGui context
+    // reset ctx settings to avoid assert in ImGui::Shutdown()
     ctx->IO.BackendFlags = 0;
     ctx->IO.BackendLanguageUserData = nullptr;
     ctx->IO.BackendPlatformUserData = nullptr;

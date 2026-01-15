@@ -1364,9 +1364,6 @@
     <ClInclude Include="MRUnsigned.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRTelemetry.h">
-      <Filter>Source Files\System</Filter>
-    </ClInclude>
     <ClInclude Include="MRUnitInfo.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -1377,6 +1374,12 @@
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRCurve.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTelemetry.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFormat.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2243,9 +2246,6 @@
     <ClCompile Include="MRPartMappingAdapters.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="MRTelemetry.cpp">
-      <Filter>Source Files\System</Filter>
-    </ClCompile>
     <ClCompile Include="MRProjectionMeshAttribute.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
@@ -2260,6 +2260,15 @@
     </ClCompile>
     <ClCompile Include="MRTextureColors.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTelemetry.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTelemetryStlHead.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFormat.cpp">
+      <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

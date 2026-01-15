@@ -639,6 +639,7 @@
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTelemetry.cpp" />
+    <ClCompile Include="MRTelemetryStlHead.cpp" />
     <ClCompile Include="MRTextureColors.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />

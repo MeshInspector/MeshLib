@@ -390,6 +390,8 @@ Expected<Mesh> fromBinaryStl( const std::filesystem::path & file, const MeshLoad
     return addFileNameInError( fromBinaryStl( in, settings ), file );
 }
 
+void telemetryStlHead( std::string_view s );
+
 Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
@@ -490,7 +492,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
         return unexpectedOperationCanceled();
 
     if ( settings.telemetrySignal )
-        TelemetrySignal( std::string( "STL head " ) + header );
+        telemetryStlHead( header );
 
     return res;
 }

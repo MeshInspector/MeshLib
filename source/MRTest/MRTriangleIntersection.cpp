@@ -126,4 +126,73 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesIntersectTestFixture, testing::Values
     , TrianglesIntersectParameters { true, T1, T3 }
 ) );
 
+using TrianglesOverlapParameters = std::tuple<bool, Vector2f, Vector2f, Vector2f, Vector2f, Vector2f, Vector2f>;
+class TrianglesOverlapTestFixture : public testing::TestWithParam<TrianglesOverlapParameters> { };
+
+/// check all vertex triplet configurations
+TEST_P( TrianglesOverlapTestFixture, TrianglesOverlap )
+{
+    using VertexOrder = std::array<size_t, 3>;
+    constexpr std::array<VertexOrder, 6> permutations{
+        VertexOrder { 0, 1, 2 },
+        VertexOrder { 0, 2, 1 },
+        VertexOrder { 1, 0, 2 },
+        VertexOrder { 1, 2, 0 },
+        VertexOrder { 2, 0, 1 },
+        VertexOrder { 2, 1, 0 },
+    };
+
+    Vector2f triA[3];
+    Vector2f triB[3];
+    const auto& [result,_a,_b,_c,_d,_e,_f] = GetParam();
+    triA[0] = _a; triA[1] = _b; triA[2] = _c;
+    triB[0] = _d; triB[1] = _e; triB[2] = _f;
+    for ( const auto& orderA : permutations )
+    {
+        for ( const auto& orderB : permutations )
+        {
+            const auto& a = triA[orderA[0]];
+            const auto& b = triA[orderA[1]];
+            const auto& c = triA[orderA[2]];
+            const auto& d = triB[orderB[0]];
+            const auto& e = triB[orderB[1]];
+            const auto& f = triB[orderB[2]];
+            EXPECT_EQ( result, doTrianglesOverlap( a, b, c, d, e, f ) );
+            EXPECT_EQ( result, doTrianglesOverlap( d, e, f, a, b, c ) ); // test symmetry
+        }
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesOverlapTestFixture, testing::Values(
+    /*
+     * no overlap
+     */
+    // both degenerated, far away
+      TrianglesOverlapParameters{ false, Vector2f(), Vector2f(), Vector2f(), Vector2f(5,5), Vector2f( 5,5 ), Vector2f( 5,5 ) }
+    // general case, both valid, far away
+    , TrianglesOverlapParameters{ false, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( 5,5 ), Vector2f( 5,6 ), Vector2f( 6,6 ) }
+    // one degenerated one valid far away
+    , TrianglesOverlapParameters{ false, Vector2f(), Vector2f(), Vector2f(), Vector2f( 5,5 ), Vector2f( 5,6 ), Vector2f( 6,6 ) }
+
+    /*
+     * overlap
+     */
+    // both degenerated, same coord
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f(), Vector2f(), Vector2f(), Vector2f(), Vector2f() }
+    // one degenerated toching
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f(), Vector2f(), Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ) }
+    // both valid touching
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.5f,0 ), Vector2f( 0.5f,0 ), Vector2f( 0,-1 ) }
+    // both valid one point inside
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.5f,0.5f ), Vector2f( 0.5f,0 ), Vector2f( 0,-1 ) }
+    // both valid two points inside
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.5f,0.5f ), Vector2f( 1,1.5f ), Vector2f( 0,-1 ) }
+    // both valid full inside
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.5f,1 ), Vector2f( 2,2 ), Vector2f( 0,-1 ) }
+    // both valid none inside (3 inters)
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.25f,0.5f ), Vector2f( 0.5,1.25f ), Vector2f( 1,0 ) }
+    // both valid none inside (2 inters)
+    , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.25f,0.5f ), Vector2f( 0.5,1.25f ), Vector2f( 1,1.25f ) }
+) );
+
 } // namespace MR

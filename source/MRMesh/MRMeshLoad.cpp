@@ -29,6 +29,8 @@
 namespace MR
 {
 
+void telemetryStlHead( std::string s );
+
 Expected<Mesh> loadMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings )
 {
     return MeshLoad::fromMrmesh( file, settings );
@@ -389,8 +391,6 @@ Expected<Mesh> fromBinaryStl( const std::filesystem::path & file, const MeshLoad
 
     return addFileNameInError( fromBinaryStl( in, settings ), file );
 }
-
-void telemetryStlHead( std::string_view s );
 
 Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {

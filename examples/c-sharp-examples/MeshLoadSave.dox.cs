@@ -4,8 +4,8 @@
     {
         try
         {
-            var mesh = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
-            MR.MeshSave.ToAnySupportedFormat(mesh, "mesh.ply");
+            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh, "mesh.ply");
         }
         catch (Exception e)
         {

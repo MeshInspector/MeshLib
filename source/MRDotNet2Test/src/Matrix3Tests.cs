@@ -41,7 +41,7 @@ namespace MRTest
         [Test]
         public void TestZeroMatrix()
         {
-            var a = Matrix3f.Zero();
+            var a = Matrix3f.zero();
 
             Assert.That(0 == a.x.x);
             Assert.That(0 == a.x.y);
@@ -57,7 +57,7 @@ namespace MRTest
         [Test]
         public void TestRotationAroundAxis()
         {
-            var a = Matrix3f.Rotation( new Vector3f( 1, 1, 1 ), 1.0f ) ;
+            var a = Matrix3f.rotation( new Vector3f( 1, 1, 1 ), 1.0f ) ;
             Assert.That( 0.69, Is.EqualTo( a.x.x ).Within( 0.01 ) );
             Assert.That( -0.33, Is.EqualTo( a.x.y ).Within( 0.01 ) );
             Assert.That( 0.64, Is.EqualTo( a.x.z ).Within( 0.01 ) );
@@ -72,7 +72,7 @@ namespace MRTest
         [Test]
         public void TestRotationBetweenTwoVectors()
         {
-            var a = Matrix3f.Rotation( new Vector3f( 1, 0, 1), new Vector3f( 0, 1, 1 ) );
+            var a = Matrix3f.rotation( new Vector3f( 1, 0, 1), new Vector3f( 0, 1, 1 ) );
             Assert.That(0.67, Is.EqualTo(a.x.x).Within(0.01));
             Assert.That(-0.33, Is.EqualTo(a.x.y).Within(0.01));
             Assert.That(-0.67, Is.EqualTo(a.x.z).Within(0.01));

@@ -16,7 +16,7 @@ public class TriangulationExample
                 {
                     float v = vConst * j;
 
-                    pc.AddPoint(new(
+                    pc.addPoint(new(
                         MathF.Cos(u) * MathF.Sin(v),
                         MathF.Sin(u) * MathF.Sin(v),
                         MathF.Cos(v)
@@ -27,7 +27,7 @@ public class TriangulationExample
 
             // Triangulate it
             MR.TriangulationParameters parameters = new();
-            MR.Mesh? triangulated = MR.TriangulatePointCloud(pc, parameters).Value();
+            MR.Mesh? triangulated = MR.triangulatePointCloud(pc, parameters).value();
             if (triangulated is null)
             {
                 Console.WriteLine("Error during triangulation");
@@ -37,11 +37,11 @@ public class TriangulationExample
             // Fix possible issues
             MR.OffsetParameters offsetParameters = new();
             MR.MeshPart mp = new(triangulated);
-            offsetParameters.voxelSize = MR.SuggestVoxelSize(mp, 5e+6f);
-            var offset = MR.OffsetMesh(mp, 0f, offsetParameters);
+            offsetParameters.voxelSize = MR.suggestVoxelSize(mp, 5e+6f);
+            var offset = MR.offsetMesh(mp, 0f, offsetParameters);
 
             // Save result
-            MR.MeshSave.ToAnySupportedFormat(offset, "meshA_icp.stl");
+            MR.MeshSave.toAnySupportedFormat(offset, "meshA_icp.stl");
         }
         catch (Exception e)
         {

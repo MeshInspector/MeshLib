@@ -9,10 +9,10 @@ namespace MRTest
     {
         internal static VdbVolume CreateVolume()
         {
-            var mesh = MakeSphere(new SphereParams(1.0f, 3000));
+            var mesh = makeSphere(new SphereParams(1.0f, 3000));
             var settings = new MeshToVolumeParams();
-            settings.voxelSize = Vector3f.Diagonal(0.1f);
-            return MeshToVolume(new MeshPart(mesh), settings);
+            settings.voxelSize = Vector3f.diagonal(0.1f);
+            return meshToVolume(new MeshPart(mesh), settings);
         }
 
         [Test]
@@ -28,17 +28,17 @@ namespace MRTest
             var gridToMeshSettings = new GridToMeshSettings();
             /*
              * TODO: fix struct field assignment
-            gridToMeshSettings.voxelSize = Vector3f.Diagonal(0.1f);
+            gridToMeshSettings.voxelSize = Vector3f.diagonal(0.1f);
              */
             gridToMeshSettings.voxelSize.x = 0.1f;
             gridToMeshSettings.voxelSize.y = 0.1f;
             gridToMeshSettings.voxelSize.z = 0.1f;
             gridToMeshSettings.isoValue = 1;
 
-            var restored = GridToMesh(vdbVolume.data, gridToMeshSettings);
-            var bbox = restored.GetBoundingBox();
+            var restored = gridToMesh(vdbVolume.data, gridToMeshSettings);
+            var bbox = restored.getBoundingBox();
 
-            Assert.That(restored.points.Size(), Is.EqualTo(3748));
+            Assert.That(restored.points.size(), Is.EqualTo(3748));
             Assert.That(bbox.min.x, Is.EqualTo(0.2).Within(0.001));
             Assert.That(bbox.min.y, Is.EqualTo(0.2).Within(0.001));
             Assert.That(bbox.min.z, Is.EqualTo(0.2).Within(0.001));
@@ -54,16 +54,16 @@ namespace MRTest
             var vdbVolume = CreateVolume();
 
             var tempFile = Path.GetTempFileName() + ".vdb";
-            VoxelsSave.ToAnySupportedFormat(vdbVolume, tempFile);
+            VoxelsSave.toAnySupportedFormat(vdbVolume, tempFile);
 
-            var restored = VoxelsLoad.FromAnySupportedFormat(tempFile);
+            var restored = VoxelsLoad.fromAnySupportedFormat(tempFile);
             Assert.That(restored is not null);
             if (restored is null)
                 return;
 
-            Assert.That(restored.Size(), Is.EqualTo(1));
+            Assert.That(restored.size(), Is.EqualTo(1));
 
-            var readVolume = restored.At(0);
+            var readVolume = restored.at(0);
             Assert.That(readVolume.dims.x, Is.EqualTo(26));
             Assert.That(readVolume.dims.y, Is.EqualTo(26));
             Assert.That(readVolume.dims.z, Is.EqualTo(26));
@@ -77,8 +77,8 @@ namespace MRTest
         public void TestUniformResampling()
         {
             var vdbVolume = CreateVolume();
-            var resampledGrid = Resampled(vdbVolume.data, 2);
-            var resampledVolume = FloatGridToVdbVolume(resampledGrid);
+            var resampledGrid = resampled(vdbVolume.data, 2);
+            var resampledVolume = floatGridToVdbVolume(resampledGrid);
             /*
              * TODO: fix struct field assignment
             resampledVolume.voxelSize = vdbVolume.voxelSize * 2;
@@ -100,8 +100,8 @@ namespace MRTest
         public void TestResampling()
         {
             var vdbVolume = CreateVolume();
-            var resampledGrid = Resampled(vdbVolume.data, new Vector3f( 2.0f, 1.0f, 0.5f ) );
-            var resampledVolume = FloatGridToVdbVolume(resampledGrid);
+            var resampledGrid = resampled(vdbVolume.data, new Vector3f( 2.0f, 1.0f, 0.5f ) );
+            var resampledVolume = floatGridToVdbVolume(resampledGrid);
 
             resampledVolume.voxelSize.x = vdbVolume.voxelSize.x * 2;
             resampledVolume.voxelSize.y = vdbVolume.voxelSize.y * 1;
@@ -116,16 +116,16 @@ namespace MRTest
             Assert.That(resampledVolume.voxelSize.z, Is.EqualTo(0.05f).Within(0.001f));
 
             var tempFile = Path.GetTempFileName() + ".vdb";
-            VoxelsSave.ToAnySupportedFormat(resampledVolume, tempFile);
+            VoxelsSave.toAnySupportedFormat(resampledVolume, tempFile);
 
-            var restored = VoxelsLoad.FromAnySupportedFormat(tempFile);
+            var restored = VoxelsLoad.fromAnySupportedFormat(tempFile);
             Assert.That(restored is not null);
             if (restored is null)
                 return;
 
-            Assert.That(restored.Size(), Is.EqualTo(1));
+            Assert.That(restored.size(), Is.EqualTo(1));
 
-            var readVolume = restored.At(0);
+            var readVolume = restored.at(0);
             Assert.That(readVolume.voxelSize.x, Is.EqualTo(0.2f).Within(0.001f));
             Assert.That(readVolume.voxelSize.y, Is.EqualTo(0.1f).Within(0.001f));
             Assert.That(readVolume.voxelSize.z, Is.EqualTo(0.05f).Within(0.001f));
@@ -145,8 +145,8 @@ namespace MRTest
             box.max.y = 13;
             box.max.z = 23;
 
-            var croppedGrid = Cropped(vdbVolume.data, box);
-            var croppedVolume = FloatGridToVdbVolume(croppedGrid);
+            var croppedGrid = cropped(vdbVolume.data, box);
+            var croppedVolume = floatGridToVdbVolume(croppedGrid);
 
             Assert.That(croppedVolume.dims.x, Is.EqualTo(16));
             Assert.That(croppedVolume.dims.y, Is.EqualTo(8));
@@ -158,15 +158,15 @@ namespace MRTest
         {
             var vdbVolume = CreateVolume();
             var p = new Vector3i();
-            Assert.That( GetValue( vdbVolume.data, p ) == 3.0f );
+            Assert.That( getValue( vdbVolume.data, p ) == 3.0f );
 
             var region = new VoxelBitSet( (ulong)( vdbVolume.dims.x * vdbVolume.dims.y * vdbVolume.dims.z ) );
-            region.Set(new VoxelId(0));
-            SetValue( vdbVolume.data, region, 1.0f );
-            Assert.That( GetValue( vdbVolume.data, p ) == 1.0f );
+            region.set(new VoxelId(0));
+            setValue( vdbVolume.data, region, 1.0f );
+            Assert.That( getValue( vdbVolume.data, p ) == 1.0f );
 
-            SetValue( vdbVolume.data, p, 2.0f );
-            Assert.That( GetValue( vdbVolume.data, p ) == 2.0f );
+            setValue( vdbVolume.data, p, 2.0f );
+            Assert.That( getValue( vdbVolume.data, p ) == 2.0f );
         }
     }
 }

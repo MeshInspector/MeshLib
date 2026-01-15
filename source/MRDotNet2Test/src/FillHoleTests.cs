@@ -16,12 +16,12 @@ namespace MRTest
         private static Mesh CreateMeshWithHoles()
         {
             var points = new VertCoords();
-            points.PushBack(new Vector3f(0, 0, 0));
-            points.PushBack(new Vector3f(1, 0, 0));
-            points.PushBack(new Vector3f(0, 1, 0));
-            points.PushBack(new Vector3f(0, 0, 1));
-            points.PushBack(new Vector3f(1, 0, 1));
-            points.PushBack(new Vector3f(0, 1, 1));
+            points.pushBack(new Vector3f(0, 0, 0));
+            points.pushBack(new Vector3f(1, 0, 0));
+            points.pushBack(new Vector3f(0, 1, 0));
+            points.pushBack(new Vector3f(0, 0, 1));
+            points.pushBack(new Vector3f(1, 0, 1));
+            points.pushBack(new Vector3f(0, 1, 1));
 
             var triangles = new Triangulation(5);
             updateTri(triangles[new FaceId(0)], 0, 2, 1);
@@ -30,53 +30,53 @@ namespace MRTest
             updateTri(triangles[new FaceId(3)], 2, 5, 4);
             updateTri(triangles[new FaceId(4)], 2, 3, 5);
 
-            return Mesh.FromTriangles(points, triangles);
+            return Mesh.fromTriangles(points, triangles);
         }
 
         [Test]
         public void TestFillHole()
         {
             var mesh = CreateMeshWithHoles();
-            var holes = mesh.topology.FindHoleRepresentiveEdges();
-            Assert.That(holes.Size(), Is.EqualTo(2) );
+            var holes = mesh.topology.findHoleRepresentiveEdges();
+            Assert.That(holes.size(), Is.EqualTo(2) );
 
             var param = new FillHoleParams();
 
-            FillHoles(mesh, holes, param);
-            Assert.That(mesh.topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(0));
+            fillHoles(mesh, holes, param);
+            Assert.That(mesh.topology.findHoleRepresentiveEdges().size(), Is.EqualTo(0));
         }
 
         [Test]
         public void TestFillHoleNicely()
         {
             var mesh = CreateMeshWithHoles();
-            var holes = mesh.topology.FindHoleRepresentiveEdges();
-            Assert.That(holes.Size(), Is.EqualTo(2));
+            var holes = mesh.topology.findHoleRepresentiveEdges();
+            Assert.That(holes.size(), Is.EqualTo(2));
 
             var param = new FillHoleNicelySettings();
 
-            var patch = FillHoleNicely(mesh, holes.At(0), param);
+            var patch = fillHoleNicely(mesh, holes.at(0), param);
 
-            Assert.That( patch.Count, Is.EqualTo(1887) );
-            Assert.That(mesh.topology.FindHoleRepresentiveEdges().Size(), Is.EqualTo(1));
+            Assert.That( patch.count, Is.EqualTo(1887) );
+            Assert.That(mesh.topology.findHoleRepresentiveEdges().size(), Is.EqualTo(1));
         }
 
         [Test]
         public void TestRightBoundary()
         {
             var mesh = CreateMeshWithHoles();
-            var loops = FindRightBoundary(mesh.topology);
-            Assert.That(loops.Size(), Is.EqualTo(2));
-            Assert.That(loops.At(0).Size(), Is.EqualTo(3));
-            Assert.That(loops.At(1).Size(), Is.EqualTo(4));
+            var loops = findRightBoundary(mesh.topology);
+            Assert.That(loops.size(), Is.EqualTo(2));
+            Assert.That(loops.at(0).size(), Is.EqualTo(3));
+            Assert.That(loops.at(1).size(), Is.EqualTo(4));
         }
 
         [Test]
         public void TestFindHoleComplicatedFaces()
         {
             var mesh = CreateMeshWithHoles();
-            var complicatedFaces = FindHoleComplicatingFaces(mesh);
-            Assert.That(complicatedFaces.Count(), Is.EqualTo(0));
+            var complicatedFaces = findHoleComplicatingFaces(mesh);
+            Assert.That(complicatedFaces.count(), Is.EqualTo(0));
         }
     }
 }

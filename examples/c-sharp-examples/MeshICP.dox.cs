@@ -6,14 +6,14 @@ public class MeshICPExample
         {
             // Load meshes
 
-            var mesh_floating = MR.MeshLoad.FromAnySupportedFormat("meshA.stl");
-            var mesh_fixed = MR.MeshLoad.FromAnySupportedFormat("meshB.stl");
+            var mesh_floating = MR.MeshLoad.fromAnySupportedFormat("meshA.stl");
+            var mesh_fixed = MR.MeshLoad.fromAnySupportedFormat("meshB.stl");
 
             MR.MeshOrPointsXf mesh_xf_floating = new(mesh_floating, new MR.AffineXf3f());
             MR.MeshOrPointsXf mesh_xf_fixed = new(mesh_fixed, new MR.AffineXf3f());
 
             // Prepare ICP parameters
-            float diagonal = mesh_xf_fixed.obj.ComputeBoundingBox().Diagonal();
+            float diagonal = mesh_xf_fixed.obj.computeBoundingBox().diagonal();
             float icpSamplingVoxelSize = diagonal * 0.01f; // To sample points from object
             MR.ICPProperties icpParams = new();
             icpParams.distThresholdSq = diagonal * diagonal * 0.01f; // Use points pairs with maximum distance specified
@@ -21,17 +21,17 @@ public class MeshICPExample
 
             // Calculate transformation
             MR.ICP icp = new(mesh_xf_floating, mesh_xf_fixed, icpSamplingVoxelSize);
-            icp.SetParams(icpParams);
-            MR.AffineXf3f xf = icp.CalculateTransformation();
+            icp.setParams(icpParams);
+            MR.AffineXf3f xf = icp.calculateTransformation();
 
             // Transform floating mesh
-            mesh_floating.Transform(xf);
+            mesh_floating.transform(xf);
 
             // Output information string
-            Console.WriteLine("info {0}", icp.GetStatusInfo());
+            Console.WriteLine("info {0}", icp.getStatusInfo());
 
             // Save result
-            MR.MeshSave.ToAnySupportedFormat(mesh_floating, "meshA_icp.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh_floating, "meshA_icp.stl");
         }
         catch (Exception e)
         {

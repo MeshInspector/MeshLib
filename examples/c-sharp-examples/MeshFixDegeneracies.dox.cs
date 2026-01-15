@@ -15,14 +15,14 @@ public static class MeshFixDegeneraciesExample
             string inputFile = args[1];
             string outputFile = args.Length == 3 ? args[2] : inputFile;
 
-            var mesh = MR.MeshLoad.FromAnySupportedFormat(inputFile);
+            var mesh = MR.MeshLoad.fromAnySupportedFormat(inputFile);
 
             MR.FixMeshDegeneraciesParams parameters = new();
-            parameters.maxDeviation = mesh.ComputeBoundingBox().Diagonal() * 1e-5f;
+            parameters.maxDeviation = mesh.computeBoundingBox().diagonal() * 1e-5f;
             parameters.tinyEdgeLength = 1e-3f;
 
-            MR.FixMeshDegeneracies(mesh, parameters);
-            MR.MeshSave.ToAnySupportedFormat(mesh, outputFile);
+            MR.fixMeshDegeneracies(mesh, parameters);
+            MR.MeshSave.toAnySupportedFormat(mesh, outputFile);
         }
         catch (Exception e)
         {

@@ -5,33 +5,33 @@
         try
         {
             // Load mesh
-            var mesh = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
+            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
 
             // Compute mesh bounding box
-            MR.Box3f box = mesh.GetBoundingBox();
+            MR.Box3f box = mesh.getBoundingBox();
 
             // Construct deformer on mesh vertices
             MR.FreeFormDeformer ffDeformer = new(mesh);
 
             // Init deformer with 3x3 grid on mesh box
-            ffDeformer.Init(MR.Vector3i.Diagonal(3), box);
+            ffDeformer.init(MR.Vector3i.diagonal(3), box);
 
             // Move some control points of the grid to the center
-            ffDeformer.SetRefGridPointPosition(new MR.Vector3i(1, 1, 0), box.Center());
-            ffDeformer.SetRefGridPointPosition(new MR.Vector3i(1, 1, 2), box.Center());
-            ffDeformer.SetRefGridPointPosition(new MR.Vector3i(0, 1, 1), box.Center());
-            ffDeformer.SetRefGridPointPosition(new MR.Vector3i(2, 1, 1), box.Center());
-            ffDeformer.SetRefGridPointPosition(new MR.Vector3i(1, 0, 1), box.Center());
-            ffDeformer.SetRefGridPointPosition(new MR.Vector3i(1, 2, 1), box.Center());
+            ffDeformer.setRefGridPointPosition(new MR.Vector3i(1, 1, 0), box.center());
+            ffDeformer.setRefGridPointPosition(new MR.Vector3i(1, 1, 2), box.center());
+            ffDeformer.setRefGridPointPosition(new MR.Vector3i(0, 1, 1), box.center());
+            ffDeformer.setRefGridPointPosition(new MR.Vector3i(2, 1, 1), box.center());
+            ffDeformer.setRefGridPointPosition(new MR.Vector3i(1, 0, 1), box.center());
+            ffDeformer.setRefGridPointPosition(new MR.Vector3i(1, 2, 1), box.center());
 
             // Apply the deformation to the mesh vertices
-            ffDeformer.Apply();
+            ffDeformer.apply();
 
             // Invalidate the mesh because of external vertex changes
-            mesh.InvalidateCaches();
+            mesh.invalidateCaches();
 
             // Save deformed mesh
-            MR.MeshSave.ToAnySupportedFormat(mesh, "deformed_mesh.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh, "deformed_mesh.stl");
         }
         catch (Exception e)
         {

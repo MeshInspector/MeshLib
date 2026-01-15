@@ -5,20 +5,20 @@ public class MeshDecimateExample
         try
         {
             // Load mesh
-            var mesh = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
+            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
 
             // Setup decimate parameters
             MR.DecimateSettings ds = new();
             ds.strategy = MR.DecimateStrategy.MinimizeError;
-            ds.maxError = 1e-5f * mesh.ComputeBoundingBox().Diagonal();
+            ds.maxError = 1e-5f * mesh.computeBoundingBox().diagonal();
             ds.tinyEdgeLength = 1e-3f;
             ds.packMesh = true;
 
             // Decimate mesh
-            MR.DecimateResult result = MR.DecimateMesh(mesh, ds);
+            MR.DecimateResult result = MR.decimateMesh(mesh, ds);
 
             // Save result
-            MR.MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh, "decimated_mesh.stl");
         }
         catch (Exception e)
         {

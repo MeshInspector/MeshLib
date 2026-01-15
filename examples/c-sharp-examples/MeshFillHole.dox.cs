@@ -15,21 +15,21 @@ public static class MeshFillHoleExample
             string inputFile = args[1];
             string outputFile = args.Length == 3 ? args[2] : inputFile;
 
-            var mesh = MR.MeshLoad.FromAnySupportedFormat(inputFile);
+            var mesh = MR.MeshLoad.fromAnySupportedFormat(inputFile);
 
-            MR.Std.Vector_MREdgeId holes = mesh.topology.FindHoleRepresentiveEdges();
+            MR.Std.Vector_MREdgeId holes = mesh.topology.findHoleRepresentiveEdges();
 
             MR.FillHoleParams fillHoleParams = new();
-            fillHoleParams.metric.Assign(MR.GetUniversalMetric(mesh));
+            fillHoleParams.metric.assign(MR.getUniversalMetric(mesh));
             MR.FaceBitSet outfaces = new();
             // TODO
             // fillHoleParams.OutNewFaces = ...
 
-            MR.FillHoles(mesh, holes, fillHoleParams);
+            MR.fillHoles(mesh, holes, fillHoleParams);
             // TODO
             // Console.WriteLine("Number of new faces: {0}", fillHoleParams.OutNewFaces.Count());
 
-            MR.MeshSave.ToAnySupportedFormat(mesh, outputFile);
+            MR.MeshSave.toAnySupportedFormat(mesh, outputFile);
         }
         catch (Exception e)
         {

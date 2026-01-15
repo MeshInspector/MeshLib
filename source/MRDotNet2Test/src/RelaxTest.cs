@@ -11,29 +11,29 @@ namespace MRTest
         [Test]
         public void TestRelax()
         {
-            var sphere = MakeSphere(new SphereParams(1.0f, 200));
+            var sphere = makeSphere(new SphereParams(1.0f, 200));
 
             var parameters = new MeshRelaxParams();
             parameters.iterations = 20;
 
-            var oldVolume = sphere.Volume();
+            var oldVolume = sphere.volume();
 
-            Relax(sphere, parameters);
-            Assert.That( sphere.Volume() / oldVolume < 0.7f );
+            relax(sphere, parameters);
+            Assert.That( sphere.volume() / oldVolume < 0.7f );
         }
 
         [Test]
         public void TestRelaxKeppVolume()
         {
-            var sphere = MakeSphere(new SphereParams(1.0f, 200));
+            var sphere = makeSphere(new SphereParams(1.0f, 200));
 
             var parameters = new MeshRelaxParams();
             parameters.iterations = 20;
 
-            var oldVolume = sphere.Volume();
+            var oldVolume = sphere.volume();
 
-            RelaxKeepVolume(sphere, parameters);
-            Assert.That(sphere.Volume() / oldVolume > 0.7f);
+            relaxKeepVolume(sphere, parameters);
+            Assert.That(sphere.volume() / oldVolume > 0.7f);
         }
     }
 }

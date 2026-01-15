@@ -18,19 +18,19 @@ public class MeshOffsetExample
                       CultureInfo.InvariantCulture);
 
             // Load mesh
-            var mesh = MR.MeshLoad.FromAnySupportedFormat("mesh.stl");
+            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
 
             MR.MeshPart mp = new(mesh);
 
             // Setup parameters
             MR.OffsetParameters op = new();
-            op.voxelSize = MR.SuggestVoxelSize(mp, 1e6f);
+            op.voxelSize = MR.suggestVoxelSize(mp, 1e6f);
 
             // Make offset mesh
-            var result = MR.OffsetMesh(mp, offsetValue, op);
+            var result = MR.offsetMesh(mp, offsetValue, op);
 
             // Save result
-            MR.MeshSave.ToAnySupportedFormat(result, "mesh_offset.stl");
+            MR.MeshSave.toAnySupportedFormat(result, "mesh_offset.stl");
         }
         catch (Exception e)
         {

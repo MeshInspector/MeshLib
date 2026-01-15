@@ -63,7 +63,7 @@ public:
 
 private:
     std::ostream & out_;
-    const SaveSettings & settings_;
+    SaveSettings settings_;
     std::ostream::pos_type numTrisPos_ = 0; ///< the location in the stream where the number of triangles is stored
     std::uint32_t headNumTris_ = 0;  ///< what was written in the header
     std::uint32_t savedNumTris_ = 0; ///< how many triangles were actually written in the stream

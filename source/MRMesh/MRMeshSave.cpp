@@ -268,46 +268,76 @@ Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSet
 {
     MR_TIMER;
 
-    char header[80] = "MeshInspector.com";
-    out.write( header, 80 );
-
     auto notDegenTris = getNotDegenTris( mesh );
     auto numTris = (std::uint32_t)notDegenTris.count();
-    out.write( ( const char* )&numTris, 4 );
+    BinaryStlSaver saver( out, settings, numTris );
 
-    const float trisNum = float( notDegenTris.count() );
+    const float trisNum = float( numTris );
     int trisIndex = 0;
     for ( auto f : notDegenTris )
     {
-        VertId a, b, c;
-        mesh.topology.getTriVerts( f, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-
-        // perform normal computation in double-precision to get exactly the same single-precision result on all platforms
-        const Vector3d ad = applyDouble( settings.xf, mesh.points[a] );
-        const Vector3d bd = applyDouble( settings.xf, mesh.points[b] );
-        const Vector3d cd = applyDouble( settings.xf, mesh.points[c] );
-        const Vector3f normal( cross( bd - ad, cd - ad ).normalized() );
-        const Vector3f ap( ad );
-        const Vector3f bp( bd );
-        const Vector3f cp( cd );
-
-        out.write( (const char*)&normal, 12 );
-        out.write( (const char*)&ap, 12 );
-        out.write( (const char*)&bp, 12 );
-        out.write( (const char*)&cp, 12 );
-        std::uint16_t attr{ 0 };
-        out.write( ( const char* )&attr, 2 );
+        saver.writeTri( mesh.getTriPoints( f ) );
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
             return unexpectedOperationCanceled();
         ++trisIndex;
     }
 
-    if ( !out )
+    if ( !saver.updateHeadCounter() )
         return unexpected( std::string( "Error saving in binary STL-format" ) );
 
     reportProgress( settings.progress, 1.f );
     return {};
+}
+
+BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & settings, std::uint32_t expectedNumTris )
+    : out_( out )
+    , settings_( settings )
+{
+    char header[80] = "MeshInspector.com";
+    out.write( header, 80 );
+
+    numTrisPos_ = out.tellp();
+    out.write( ( const char* )&expectedNumTris, 4 );
+    headNumTris_ = expectedNumTris;
+}
+
+bool BinaryStlSaver::writeTri( const Triangle3f& tri )
+{
+    // perform normal computation in double-precision to get exactly the same single-precision result on all platforms
+    const Vector3d ad = applyDouble( settings_.xf, tri[0] );
+    const Vector3d bd = applyDouble( settings_.xf, tri[1] );
+    const Vector3d cd = applyDouble( settings_.xf, tri[2] );
+    const Vector3f normal( cross( bd - ad, cd - ad ).normalized() );
+    const Vector3f ap( ad );
+    const Vector3f bp( bd );
+    const Vector3f cp( cd );
+
+    out_.write( (const char*)&normal, 12 );
+    out_.write( (const char*)&ap, 12 );
+    out_.write( (const char*)&bp, 12 );
+    out_.write( (const char*)&cp, 12 );
+    std::uint16_t attr{ 0 };
+    out_.write( ( const char* )&attr, 2 );
+    ++savedNumTris_;
+    return (bool)out_;
+}
+
+bool BinaryStlSaver::updateHeadCounter()
+{
+    if ( savedNumTris_ != headNumTris_ )
+    {
+        const auto curr = out_.tellp();
+        out_.seekp( numTrisPos_ );
+        out_.write( ( const char* )&savedNumTris_, 4 );
+        headNumTris_ = savedNumTris_;
+        out_.seekp( curr );
+    }
+    return (bool)out_;
+}
+
+BinaryStlSaver::~BinaryStlSaver()
+{
+    updateHeadCounter();
 }
 
 Expected<void> toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )

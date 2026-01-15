@@ -157,8 +157,9 @@ bool isPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<
         return false;
     if ( normDir.lengthSq() == 0 )
     {
+
         // ab parallel ac
-        if ( b == c && p != a )
+        if ( a == b && b == c && p != a )
             return false; // fully degenerated
         if ( dot( b - a, c - a ) <= 0 )
             return isPointInSegm( p, b, c ); // ab ac looking in the opposite directions so check BC segm
@@ -184,7 +185,7 @@ bool isPointInTriangle( const Vector2<T>& p, const Vector2<T>& a, const Vector2<
     if ( normSign == 0 )
     {
         // ab parallel ac
-        if ( b == c && p != a )
+        if ( a == b && b == c && p != a )
             return false; // fully degenerated
         if ( dot( b - a, c - a ) <= 0 )
             return isPointInSegm( p, b, c ); // ab ac looking in the opposite directions so check BC segm

@@ -1397,7 +1397,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 break;
             }
         }
-#endif MRVOXELS_NO_DICOM
+#endif //MRVOXELS_NO_DICOM
         return result;
     };
 

@@ -333,6 +333,8 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::
 LoadedObjects toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
 {
     LoadedObjects res;
+    if ( voxels.size() == 1 && voxels[0] && voxels[0]->dimensions().z == 1 )
+        res.warnings = "If you open individual files from a set of DICOM files, please use Open Directory instead.";
     res.objs.reserve( voxels.size() );
     for ( auto&& objVoxels : voxels )
     {

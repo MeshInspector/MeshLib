@@ -39,6 +39,7 @@
 #include "MRWebRequest.h"
 #include "MRUnitSettings.h"
 #include "MROpenObjects.h"
+#include "MRVoxels/MRDicom.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
@@ -1366,6 +1367,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 mask = NotificationTags::ImplicitChanges;
             pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning,.tags = mask } );
         }
+#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+        ProgressBar::finish();
+#endif
     };
 
     auto openFolder = []( const std::filesystem::path& filename, const ProgressCallback& callback ) -> Expected<LoadedObjects>
@@ -1380,21 +1384,40 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         };
     };
 
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess, openFolder]
+    auto checkDicomSlices = []( [[maybe_unused]] const std::vector<std::filesystem::path>& filesList )
     {
-        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::Result result )
+        SceneLoad::Result result;
+#ifndef MRVOXELS_NO_DICOM
+        for ( const auto& f : filesList )
         {
+            Vector3i dims;
+            if ( VoxelsLoad::isDicomFile( f, nullptr, &dims ) && dims.z == 1 )
+            {
+                result.errorSummary = "Please use Open Directory for loading multi-file DICOM volumes.";
+                break;
+            }
+        }
+#endif MRVOXELS_NO_DICOM
+        return result;
+    };
+
+#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]
+    {
+        auto result = checkDicomSlices( filesList );
+        if ( result.errorSummary.empty() )
+            SceneLoad::asyncFromAnySupportedFormat( filesList, postProcess,
+                { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
+        else
             postProcess( result );
-            ProgressBar::finish();
-        },
-        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
     } );
 #else
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder]
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]
     {
-        auto result = SceneLoad::fromAnySupportedFormat( filesList,
-            { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
+        auto result = checkDicomSlices( filesList );
+        if ( result.errorSummary.empty() )
+            result = SceneLoad::fromAnySupportedFormat( filesList,
+                { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
         return [result = std::move( result ), postProcess]
         {
             postProcess( result );

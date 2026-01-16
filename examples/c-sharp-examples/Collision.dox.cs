@@ -16,7 +16,7 @@ public class Collision {
         var collidingFacePairs = MR.findCollidingTriangles(meshPartA, meshPartB);
 
         for (ulong i = 0; i < collidingFacePairs.size(); i++) {
-            var pair = collidingFacePairs.at(i);
+            var pair = collidingFacePairs[i];
             Console.WriteLine($"FaceA: {pair.aFace.id} FaceB: {pair.bFace.id}");
         }
 

@@ -63,7 +63,7 @@ namespace MRTest
 
             Assert.That(restored.size(), Is.EqualTo(1));
 
-            var readVolume = restored.at(0);
+            var readVolume = restored[0];
             Assert.That(readVolume.dims.x, Is.EqualTo(26));
             Assert.That(readVolume.dims.y, Is.EqualTo(26));
             Assert.That(readVolume.dims.z, Is.EqualTo(26));
@@ -125,7 +125,7 @@ namespace MRTest
 
             Assert.That(restored.size(), Is.EqualTo(1));
 
-            var readVolume = restored.at(0);
+            var readVolume = restored[0];
             Assert.That(readVolume.voxelSize.x, Is.EqualTo(0.2f).Within(0.001f));
             Assert.That(readVolume.voxelSize.y, Is.EqualTo(0.1f).Within(0.001f));
             Assert.That(readVolume.voxelSize.z, Is.EqualTo(0.05f).Within(0.001f));

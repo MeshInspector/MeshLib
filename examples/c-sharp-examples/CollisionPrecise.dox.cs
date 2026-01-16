@@ -16,7 +16,7 @@ public class CollisionPrecise {
         var collidingFaceEdges = MR.findCollidingEdgeTrisPrecise(meshPartA, meshPartB, converters);
 
         for (ulong i = 0; i < collidingFaceEdges.size(); i++) {
-            var vet = collidingFaceEdges.at(i);
+            var vet = collidingFaceEdges[i];
             var text = vet.isEdgeATriB()
                 ? $"edgeA: {vet.edge.id}, triB: {vet.tri().id}"
                 : $"triA: {vet.tri().id}, edgeB: {vet.edge.id}";

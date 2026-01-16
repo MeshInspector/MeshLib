@@ -5,6 +5,7 @@
 #include "MRVoxelsVolume.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRBox.h"
 #include "MRPch/MRSpdlog.h"
@@ -672,7 +673,7 @@ void VoxelGraphCut::findActiveVoxels_( Context & context )
     assert( ( context.span.begin % BitSet::bits_per_block ) == 0 );
     context.active.resize( context.span.size() );
 
-    BitSetParallelForAll( IdRange<SeqVoxelId>{ context.span.begin, context.span.end }, [&]( SeqVoxelId s )
+    ParallelFor( context.span.begin, context.span.end, [&]( SeqVoxelId s )
     {
         const auto side = voxelData_[s].side();
         if ( side == Side::Unknown )

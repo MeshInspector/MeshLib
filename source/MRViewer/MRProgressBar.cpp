@@ -391,7 +391,9 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 
     instance.initialize_( name, taskCount, postInit );
 
-    getViewerInstance().incrementForceRedrawFrames();
+    // 2 here to make sure that it will request frame even if triggered within a bad timing inside current frame
+    // for example: drop callback in WASM (which is called from "async" js loop)
+    getViewerInstance().incrementForceRedrawFrames( 2 );
 }
 
 void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
@@ -436,7 +438,9 @@ void orderWithManualFinish( const char* name, std::function<void ()> task, int t
 
     instance.initialize_( name, taskCount, postInit );
 
-    getViewerInstance().incrementForceRedrawFrames();
+    // 2 here to make sure that it will request frame even if triggered within a bad timing inside current frame
+    // for example: drop callback in WASM (which is called from "async" js loop)
+    getViewerInstance().incrementForceRedrawFrames( 2 );
 }
 
 bool isCanceled()

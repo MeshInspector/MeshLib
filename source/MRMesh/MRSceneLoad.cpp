@@ -27,16 +27,8 @@ std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& 
     ext = std::string( "*" ) + ext;
     for ( auto& c : ext )
         c = (char)std::tolower( c );
-
     const auto asyncFilters = AsyncObjectLoad::getFilters();
-    const auto asyncFilter = std::find_if( asyncFilters.begin(), asyncFilters.end(), [&ext] ( auto&& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( asyncFilter != asyncFilters.end() )
-        return *asyncFilter;
-    else
-        return std::nullopt;
+    return findFilter( asyncFilters, ext );
 }
 
 // helper class to unify scene construction process

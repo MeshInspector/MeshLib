@@ -40,6 +40,8 @@ struct VoxelTraits<openvdb::FloatGrid::Accessor>
 
 using VolumeMinMaxAccessor = VoxelsVolumeMinMax<openvdb::FloatGrid::Accessor>;
 
+static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
+
 namespace VoxelsLoad
 {
 
@@ -944,6 +946,25 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesy
     return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
 }
 
+MR_ON_INIT
+{
+    setVoxelsLoader(
+        filter,
+        []( const std::filesystem::path& path, const ProgressCallback& cb )
+        {
+            return loadDicomFileAsVdb( path, cb ).transform(
+                []( DicomVolumeAsVdb&& r )
+                {
+                    std::vector<VdbVolume> ret;
+                    ret.push_back( std::move( r.vol ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.
+                    return ret;
+                }
+            );
+        }
+    );
+    ObjectLoad::setObjectLoader( filter, makeObjectFromVoxelsFile );
+};
+
 } // namespace VoxelsLoad
 
 namespace VoxelsSave
@@ -1024,26 +1045,9 @@ template Expected<void> toDicom<uint16_t>( const SimpleVolumeU16& volume, const 
 
 MR_ON_INIT
 {
-    static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
-    MR::VoxelsSave::setVoxelsSaver( filter, MR::VoxelsSave::toDicom );
+    setVoxelsSaver( filter, toDicom );
     /* additionally register the general saver as an object saver for this format */
-    MR::ObjectSave::setObjectSaver( filter, MR::saveObjectVoxelsToFile );
-
-    MR::VoxelsLoad::setVoxelsLoader(
-        filter,
-        []( const std::filesystem::path& path, const ProgressCallback& cb )
-        {
-            return MR::VoxelsLoad::loadDicomFileAsVdb( path, cb ).transform(
-                []( MR::VoxelsLoad::DicomVolumeAsVdb&& r )
-                {
-                    std::vector<VdbVolume> ret;
-                    ret.push_back( std::move( r.vol ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.
-                    return ret;
-                }
-            );
-        }
-    );
-    MR::ObjectLoad::setObjectLoader( filter, MR::makeObjectFromVoxelsFile );
+    ObjectSave::setObjectSaver( filter, saveObjectVoxelsToFile );
 };
 
 } // namespace VoxelsSave

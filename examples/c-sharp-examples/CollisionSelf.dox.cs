@@ -14,7 +14,7 @@ public class CollisionSelf {
 
         FaceFace pair; // more efficient to declare outside loop
         for (ulong i = 0; i < selfCollidingPairs.size(); i++) {
-            pair = selfCollidingPairs.at(i);
+            pair = selfCollidingPairs[i];
             Console.WriteLine($"FaceA: {pair.aFace.id} FaceB: {pair.bFace.id}"); // print each pair
         }
 

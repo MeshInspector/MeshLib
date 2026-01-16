@@ -154,14 +154,14 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             cubeMesh.transform(xf);
 
-            Assert.That(cubeMesh.points.vec.at(0) == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(1) == new Vector3f(0.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(2) == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(3) == new Vector3f(1.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(4) == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec.at(5) == new Vector3f(0.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec.at(6) == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec.at(7) == new Vector3f(1.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[0] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[1] == new Vector3f(0.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[2] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[3] == new Vector3f(1.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[4] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[5] == new Vector3f(0.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[6] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[7] == new Vector3f(1.5f, 0.5f, 1.5f));
         }
 
         [Test]
@@ -177,14 +177,14 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             cubeMesh.transform(xf, region);
 
-            Assert.That(cubeMesh.points.vec.at(0) == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(1) == new Vector3f(-0.5f, 0.5f, -0.5f));
-            Assert.That(cubeMesh.points.vec.at(2) == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(3) == new Vector3f(0.5f, -0.5f, -0.5f));
-            Assert.That(cubeMesh.points.vec.at(4) == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec.at(5) == new Vector3f(-0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec.at(6) == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec.at(7) == new Vector3f(0.5f, -0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[0] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[1] == new Vector3f(-0.5f, 0.5f, -0.5f));
+            Assert.That(cubeMesh.points.vec[2] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[3] == new Vector3f(0.5f, -0.5f, -0.5f));
+            Assert.That(cubeMesh.points.vec[4] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[5] == new Vector3f(-0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[6] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[7] == new Vector3f(0.5f, -0.5f, 0.5f));
         }
 
         [Test]
@@ -436,13 +436,13 @@ namespace MRTest
 
             var holes = findRightBoundary(cubeMesh.topology);
             Assert.That(holes.size(), Is.EqualTo(1));
-            Assert.That(holes.at(0).size(), Is.EqualTo(6));
+            Assert.That(holes[0].size(), Is.EqualTo(6));
 
-            var hole0 = trackRightBoundaryLoop(cubeMesh.topology, holes.at(0).at(0));
-            Assert.That(hole0.size(), Is.EqualTo(holes.at(0).size()));
+            var hole0 = trackRightBoundaryLoop(cubeMesh.topology, holes[0][0]);
+            Assert.That(hole0.size(), Is.EqualTo(holes[0].size()));
             for (ulong i = 0; i < hole0.size(); i++)
             {
-                Assert.That(hole0.at(i).id, Is.EqualTo(holes.at(0).at(i).id));
+                Assert.That(hole0[i].id, Is.EqualTo(holes[0][i].id));
             }
         }
 

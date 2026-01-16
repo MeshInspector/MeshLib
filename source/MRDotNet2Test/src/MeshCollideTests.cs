@@ -24,7 +24,7 @@ namespace MRTest
             var edgeBTriACount = 0;
             for (ulong i = 0; i < intersections.size(); i++)
             {
-                if ( intersections.at(i).isEdgeATriB() )
+                if ( intersections[i].isEdgeATriB() )
                     edgeATriBCount++;
                 else
                     edgeBTriACount++;
@@ -35,10 +35,10 @@ namespace MRTest
             var contours = orderIntersectionContours(meshA.topology, meshB.topology, intersections);
 
             Assert.That(contours.size(), Is.EqualTo(4));
-            Assert.That(contours.at(0).size(), Is.EqualTo(71));
-            Assert.That(contours.at(1).size(), Is.EqualTo(7));
-            Assert.That(contours.at(2).size(), Is.EqualTo(69));
-            Assert.That(contours.at(3).size(), Is.EqualTo(9));
+            Assert.That(contours[0].size(), Is.EqualTo(71));
+            Assert.That(contours[1].size(), Is.EqualTo(7));
+            Assert.That(contours[2].size(), Is.EqualTo(69));
+            Assert.That(contours[3].size(), Is.EqualTo(9));
             var aConts = new Std.Vector_MROneMeshContour();
             getOneMeshIntersectionContours(meshA, meshB, contours, aConts, null, conv);
             Assert.That(aConts.size(), Is.EqualTo(4));
@@ -49,7 +49,7 @@ namespace MRTest
             ulong posCount = 0;
             for (ulong i = 0; i < aConts.size(); i++)
             {
-                posCount += aConts.at(i).intersections.size();
+                posCount += aConts[i].intersections.size();
             }
 
             Assert.That(posCount, Is.EqualTo(156) );

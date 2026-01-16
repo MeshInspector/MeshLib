@@ -169,7 +169,3 @@ MR_REGISTER_RIBBON_ITEM( OpenRawVoxelsPlugin )
 
 }
 #endif
-#if defined( MESHLIB_NO_VOXELS ) && defined( __EMSCRIPTEN__ )
-#include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
-MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenRawVoxelsPlugin, "Open RAW Voxels" )
-#endif

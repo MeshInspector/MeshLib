@@ -121,7 +121,7 @@ var drop_files_or_dir = function (event) {
                 if (typeof (dynCall_viii) == 'function')
                     dynCall_viii(GLFW.active.dropFunc, GLFW.active.id, filenamesArray.length, filenames);
                 else if (typeof (dynCall_vjij) == 'function')
-                    dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), filenamesArray.length, filenames);
+                    dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), filenamesArray.length, BigInt(filenames));
                 else
                     getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), filenamesArray.length, filenames);
                 for (var i = 0; i < filenamesArray.length; ++i) {

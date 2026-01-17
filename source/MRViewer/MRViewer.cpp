@@ -1367,9 +1367,6 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 mask = NotificationTags::ImplicitChanges;
             pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning,.tags = mask } );
         }
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-        ProgressBar::finish();
-#endif
     };
 
     auto openFolder = []( const std::filesystem::path& filename, const ProgressCallback& callback ) -> Expected<LoadedObjects>
@@ -1410,6 +1407,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
         else
             postProcess( result );
+        ProgressBar::finish();
     } );
 #else
     ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]

@@ -45,7 +45,8 @@ struct DicomStatus
 
 /// check if file is a valid DICOM dataset file
 /// \param seriesUid - if set, the extracted series instance UID is copied to the variable
-MRVOXELS_API DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
+/// \param dims - optional output of the file volume's dimensions
+MRVOXELS_API DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr, Vector3i* dims = nullptr );
 
 /// check if given folder contains at least one DICOM file
 MRVOXELS_API bool isDicomFolder( const std::filesystem::path& dirPath );

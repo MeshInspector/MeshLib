@@ -739,7 +739,7 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
 } // anonymous namespace
 
-DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
+DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid, Vector3i* outDims )
 {
     std::ifstream ifs( path, std::ios_base::binary );
 
@@ -806,6 +806,12 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
     {
         spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
         return { DicomStatusEnum::Unsupported, "unsupported dimensionality" };
+    }
+    if ( outDims )
+    {
+        (*outDims)[0] = dims[0];
+        (*outDims)[1] = dims[1];
+        (*outDims)[2] = dims[2];
     }
 
     if ( seriesUid )

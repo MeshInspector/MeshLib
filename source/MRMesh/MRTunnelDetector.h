@@ -17,6 +17,16 @@ namespace MR
 /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
 MRMESH_API Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart& mp, EdgeMetric metric = {}, ProgressCallback progressCallback = {} );
 
+/// given not-trivial loop on input, finds the loop that
+/// 1) goes from left side of input loop
+/// 2) returns to the input loop from its right side
+/// 3) goes along the input loop to become closed
+/// such that the distance 1)+2) is minimal in given metric
+MRMESH_API Expected<EdgeLoop> findMinimalCoLoop( const Mesh& mesh, const EdgeLoop& loop, const EdgeMetric& metric );
+
+/// same as \ref findMinimalCoLoop with euclidean metric
+MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const Mesh& mesh, const EdgeLoop& loop );
+
 struct DetectTunnelSettings
 {
     /// maximal length of tunnel loops to consider

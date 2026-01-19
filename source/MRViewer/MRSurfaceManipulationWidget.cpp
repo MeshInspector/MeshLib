@@ -436,8 +436,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             auto projRes = projectObjectMeshData( obj_->data(), newMeshData, &newFaces );
             if ( projRes.has_value() )
             {
-                // appendMeshChangeHistory_( std::move( newMesh ), newFaces ); -> Partial
-                AppendHistory<PartialChangeMeshDataAction>( "mesh data", obj_, std::move( newMeshData ) );
+                appendMeshDataChangeHistory_( std::move( newMeshData ), newFaces );
             }
             else
             {
@@ -511,9 +510,9 @@ void SurfaceManipulationWidget::postDraw_()
     drawList->AddCircleFilled( ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( mousePos.x, mousePos.y ) ), 10.f, Color::gray().getUInt32() );
 }
 
-void SurfaceManipulationWidget::appendMeshChangeHistory_( std::shared_ptr<Mesh> newMesh, const FaceBitSet& )
+void SurfaceManipulationWidget::appendMeshDataChangeHistory_( ObjectMeshData&& newMeshData, const FaceBitSet& )
 {
-    AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", obj_, setNew, std::move( newMesh ) ) );
+    AppendHistory<PartialChangeMeshDataAction>( "mesh data", obj_, std::move( newMeshData ) );
 }
 
 void SurfaceManipulationWidget::reallocData_( size_t size )

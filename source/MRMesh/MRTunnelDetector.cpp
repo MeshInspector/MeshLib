@@ -243,11 +243,12 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
         EdgeId e1 = ( i > 0 ? loop[i - 1] : loop.back() ).sym();
         auto v = topology.org( e0 );
         assert( v == topology.org( e1 ) );
-        for ( EdgeId e : orgRing0( topology, e0 ) )
+        for ( EdgeId e : orgRing0( topology, e1 ) )
         {
-            if ( e == e1 )
+            if ( e == e0 )
                 break;
-            // prohibit all the edges returning to the loop from left
+            // prohibit all the edges returning to the loop from right,
+            // the path will be so from right-side to left-side, and back-path in opposite direction
             prohibitedEdges.set( e.sym() );
         }
         ebuilder.addStart( v, 0 );

@@ -241,6 +241,8 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
 
     auto metric = [&]( EdgeId e )
     {
+        if ( fromLeft.test( e.sym() ) )
+            return FLT_MAX;
         if ( fromRight.test( e ) )
             return FLT_MAX;
         const auto m = metric0( e );
@@ -293,7 +295,7 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
 
     for (;;)
     {
-        auto c = ebuilder.reachNext();
+        auto c = ebuilder.growOneEdge();
         if ( !c.v )
             break;
         if ( !bestCoLoop.empty() )

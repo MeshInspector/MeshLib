@@ -227,6 +227,7 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     if ( !isEdgeLoop( topology, loop ) )
         return unexpected( "no initial loop" );
 
+    VertBitSet loopVerts( topology.vertSize() );
     EdgeBitSet prohibitedEdges( topology.edgeSize() );
     auto metric = [&]( EdgeId e )
     {
@@ -250,11 +251,25 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
             prohibitedEdges.set( e.sym() );
         }
         ebuilder.addStart( v, 0 );
+        loopVerts.set( v );
     }
 
+    EdgeLoop bestCoLoop;
+    for (;;)
+    {
+        auto c = ebuilder.reachNext();
+        if ( !c.v )
+            break;
+        if ( loopVerts.test( c.v ) )
+        {
+            bestCoLoop = ebuilder.getPathBack( c.v );
+            break;
+        }
+    }
 
-    EdgeLoop res;
-    return res;
+    if ( bestCoLoop.empty() )
+        return unexpected( "not found" );
+    return bestCoLoop;
 }
 
 Expected<EdgeLoop> findShortestCoLoop( const Mesh& mesh, const EdgeLoop& loop )

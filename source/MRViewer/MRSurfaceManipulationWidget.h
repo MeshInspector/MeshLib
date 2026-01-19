@@ -109,9 +109,9 @@ protected:
     /// @return true if widget consumes event, false if modifiers do not satisfy widget requirements
     MRVIEWER_API virtual bool checkModifiers_( int modifiers ) const { return modifiers == 0; }
 
-    /// called to change mesh with history record
+    /// called to change mesh data with history record
     /// newFaces seems to be useful
-    MRVIEWER_API virtual void appendMeshChangeHistory_( std::shared_ptr<Mesh> newMesh, const FaceBitSet& newFaces );
+    MRVIEWER_API virtual void appendMeshDataChangeHistory_( ObjectMeshData&& newMeshData, const FaceBitSet& newFaces );
 
     void reallocData_( size_t size );
     void clearData_();

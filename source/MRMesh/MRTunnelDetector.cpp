@@ -5,7 +5,7 @@
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
-#include "MRExpected.h"
+#include "MREdgePathsBuilder.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -221,11 +221,38 @@ Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMet
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
-Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric )
+Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric0 )
 {
     MR_TIMER;
     if ( !isEdgeLoop( topology, loop ) )
         return unexpected( "no initial loop" );
+
+    EdgeBitSet prohibitedEdges( topology.edgeSize() );
+    auto metric = [&]( EdgeId e )
+    {
+        if ( prohibitedEdges.test( e ) )
+            return FLT_MAX;
+        return metric0( e );
+    };
+    EdgePathsBuilder ebuilder( topology, metric );
+
+    for ( int i = 0; i < loop.size(); ++i )
+    {
+        EdgeId e0 = loop[i];
+        EdgeId e1 = ( i > 0 ? loop[i - 1] : loop.back() ).sym();
+        auto v = topology.org( e0 );
+        assert( v == topology.org( e1 ) );
+        for ( EdgeId e : orgRing0( topology, e0 ) )
+        {
+            if ( e == e1 )
+                break;
+            // prohibit all the edges returning to the loop from left
+            prohibitedEdges.set( e.sym() );
+        }
+        ebuilder.addStart( v, 0 );
+    }
+
+
     EdgeLoop res;
     return res;
 }

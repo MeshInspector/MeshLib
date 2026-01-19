@@ -8,6 +8,7 @@
 
 #include <dlfcn.h>
 
+#include <bit>
 #include <unordered_set>
 
 namespace
@@ -125,7 +126,7 @@ std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
 std::function<void(const std::string&)> gDeviceSignal;
-bool gAnyStateMsg{ false };
+size_t gNumMsg{ 0 };
 
 float normalize( int16_t value )
 {
@@ -192,10 +193,13 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
     if ( type == kConnexionMsgDeviceState )
     {
         std::unique_lock lock( gStateMutex );
-        if ( gDeviceSignal && !gAnyStateMsg )
+        ++gNumMsg;
+        if ( gDeviceSignal )
         {
-            gDeviceSignal( "3DxWare first SpaceMouseMessage" );
-            gAnyStateMsg = true;
+            if ( gNumMsg == 1 )
+                gDeviceSignal( "3DxWare first SpaceMouseMessage" );
+            if ( std::popcount( gNumMsg ) == 1 ) // report every power of 2
+                gDeviceSignal( "SpaceMouse next log messages" );
         }
 
         assert( arg );
@@ -329,7 +333,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
         return false;
     }
 
-    gAnyStateMsg = false;
+    gNumMsg = 0;
     gDeviceSignal = std::move( deviceSignal );
     lib.SetConnexionHandlers( onSpaceMouseMessage, onSpaceMouseDeviceAdded, onSpaceMouseDeviceRemoved, false );
 

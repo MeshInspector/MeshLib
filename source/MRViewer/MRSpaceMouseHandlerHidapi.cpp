@@ -7,6 +7,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include <bit>
 
 namespace MR
 {
@@ -82,7 +83,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     device_ = hid_open_path( localDevicesIt->path );
                     if ( device_ )
                     {
-                        anyAction_ = false;
+                        numMsg_ = 0;
                         spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vendorId, deviceId, localDevicesIt->path );
                         if ( deviceSignal_ )
                             deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
@@ -296,10 +297,13 @@ void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packe
 
 void SpaceMouseHandlerHidapi::processAction_( const SpaceMouseAction& action )
 {
-    if ( deviceSignal_ && !anyAction_ )
+    ++numMsg_;
+    if ( deviceSignal_ )
     {
-        deviceSignal_( "HID API first action processing" );
-        anyAction_ = true;
+        if ( numMsg_ == 1 )
+            deviceSignal_( "HID API first action processing" );
+        if ( std::popcount( numMsg_ ) == 1 ) // report every power of 2
+            deviceSignal_( "SpaceMouse next log messages" );
     }
     auto& viewer = getViewerInstance();
     viewer.spaceMouseMove( action.translate, action.rotate );

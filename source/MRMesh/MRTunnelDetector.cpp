@@ -227,29 +227,42 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     if ( !isEdgeLoop( topology, loop ) )
         return unexpected( "no initial loop" );
 
-    VertBitSet loopVerts( topology.vertSize() );
-    EdgeBitSet prohibitedEdges( topology.edgeSize() );
+    // construct paths from right-side to left-side, to have back-path in opposite direction
+
+    // edges from loop's right to one of loop's vertices
+    EdgeBitSet fromRight( topology.edgeSize() );
+
+    // edges from loop's left to one of loop's vertices
+    EdgeBitSet fromLeft( topology.edgeSize() );
+
     auto metric = [&]( EdgeId e )
     {
-        if ( prohibitedEdges.test( e ) )
+        if ( fromRight.test( e ) )
             return FLT_MAX;
         return metric0( e );
     };
+
     EdgePathsBuilder ebuilder( topology, metric );
 
+    VertBitSet loopVerts( topology.vertSize() );
     for ( int i = 0; i < loop.size(); ++i )
     {
         EdgeId e0 = loop[i];
         EdgeId e1 = ( i > 0 ? loop[i - 1] : loop.back() ).sym();
         auto v = topology.org( e0 );
         assert( v == topology.org( e1 ) );
+        bool toRight = true;
         for ( EdgeId e : orgRing0( topology, e1 ) )
         {
             if ( e == e0 )
-                break;
-            // prohibit all the edges returning to the loop from right,
-            // the path will be so from right-side to left-side, and back-path in opposite direction
-            prohibitedEdges.set( e.sym() );
+            {
+                toRight = false;
+                continue;
+            }
+            if ( toRight )
+                fromRight.set( e.sym() );
+            else
+                fromLeft.set( e.sym() );
         }
         ebuilder.addStart( v, 0 );
         if ( loopVerts.test_set( v ) )

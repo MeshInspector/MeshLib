@@ -22,7 +22,7 @@ MRMESH_API Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart& m
 /// 2) returns to the input loop from its right side
 /// 3) goes along the input loop to become closed
 /// such that the distance 1)+2) is minimal in given metric
-MRMESH_API Expected<EdgeLoop> findMinimalCoLoop( const Mesh& mesh, const EdgeLoop& loop, const EdgeMetric& metric );
+MRMESH_API Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric );
 
 /// same as \ref findMinimalCoLoop with euclidean metric
 MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const Mesh& mesh, const EdgeLoop& loop );

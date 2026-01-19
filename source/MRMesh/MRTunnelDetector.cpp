@@ -221,9 +221,18 @@ Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMet
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
+Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric )
+{
+    MR_TIMER;
+    if ( !isEdgeLoop( topology, loop ) )
+        return unexpected( "no initial loop" );
+    EdgeLoop res;
+    return res;
+}
+
 Expected<EdgeLoop> findShortestCoLoop( const Mesh& mesh, const EdgeLoop& loop )
 {
-    return findMinimalCoLoop( mesh, loop, edgeLengthMetric( mesh ) );
+    return findMinimalCoLoop( mesh.topology, loop, edgeLengthMetric( mesh ) );
 }
 
 Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )

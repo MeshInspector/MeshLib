@@ -235,14 +235,36 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     // edges from loop's left to one of loop's vertices
     EdgeBitSet fromLeft( topology.edgeSize() );
 
+    EdgeLoop bestCoLoop;
+    float bestCoLoopMetric = FLT_MAX;
+    EdgePathsBuilder ebuilder( topology );
+
     auto metric = [&]( EdgeId e )
     {
         if ( fromRight.test( e ) )
             return FLT_MAX;
-        return metric0( e );
+        const auto m = metric0( e );
+        if ( fromLeft.test( e ) )
+        {
+            const auto v = topology.org( e );
+            const auto vi = ebuilder.getVertInfo( v );
+            assert( vi );
+            if ( vi )
+            {
+                auto candidateMetric = vi->metric + m;
+                if ( candidateMetric < bestCoLoopMetric )
+                {
+                    bestCoLoopMetric = candidateMetric;
+                    bestCoLoop.clear();
+                    bestCoLoop.push_back( e.sym() );
+                    ebuilder.appendPathBack( v, bestCoLoop );
+                    assert( isEdgePath( topology, bestCoLoop ) );
+                }
+            }
+        }
+        return m;
     };
-
-    EdgePathsBuilder ebuilder( topology, metric );
+    ebuilder.reset( metric );
 
     VertBitSet loopVerts( topology.vertSize() );
     for ( int i = 0; i < loop.size(); ++i )
@@ -269,17 +291,13 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
             return unexpected( "initial loop passes some vertex twice" );
     }
 
-    EdgeLoop bestCoLoop;
     for (;;)
     {
         auto c = ebuilder.reachNext();
         if ( !c.v )
             break;
-        if ( loopVerts.test( c.v ) )
-        {
-            bestCoLoop = ebuilder.getPathBack( c.v );
+        if ( !bestCoLoop.empty() )
             break;
-        }
     }
 
     if ( bestCoLoop.empty() )

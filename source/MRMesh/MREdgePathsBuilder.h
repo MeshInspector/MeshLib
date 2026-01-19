@@ -36,6 +36,11 @@ class EdgePathsBuilderT
 public:
     EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric );
 
+    explicit EdgePathsBuilderT( const MeshTopology & topology );
+
+    /// clears everything without freeing memory, and sets new metric
+    void reset( const EdgeMetric & metric );
+
     /// compares proposed metric with best value known for startVert;
     /// if proposed metric is smaller then adds it in the queue and returns true
     bool addStart( VertId startVert, float startMetric );
@@ -83,6 +88,9 @@ public:
     /// returns the path in the forest from given vertex to one of start vertices
     EdgePath getPathBack( VertId backpathStart ) const;
 
+    /// appends the path in the forest from given vertex to one of start vertices to (res)
+    void appendPathBack( VertId backpathStart, EdgePath& res ) const;
+
 protected:
     MR_NO_UNIQUE_ADDRESS MetricToPenalty metricToPenalty_;
 
@@ -127,6 +135,21 @@ EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topo
 }
 
 template<class MetricToPenalty>
+EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topology )
+    : topology_( topology )
+{
+}
+
+template<class MetricToPenalty>
+void EdgePathsBuilderT<MetricToPenalty>::reset( const EdgeMetric & metric )
+{
+    metric_ = metric;
+    vertPathInfoMap_.clear();
+    while ( !nextSteps_.empty() )
+        nextSteps_.pop();
+}
+
+template<class MetricToPenalty>
 bool EdgePathsBuilderT<MetricToPenalty>::addStart( VertId startVert, float startMetric )
 {
     auto & vi = vertPathInfoMap_[startVert];
@@ -150,6 +173,13 @@ template<class MetricToPenalty>
 EdgePath EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
 {
     EdgePath res;
+    appendPathBack( v, res );
+    return res;
+}
+
+template<class MetricToPenalty>
+void EdgePathsBuilderT<MetricToPenalty>::appendPathBack( VertId v, EdgePath& res ) const
+{
     for (;;)
     {
         auto it = vertPathInfoMap_.find( v );
@@ -164,7 +194,6 @@ EdgePath EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
         res.push_back( vi.back );
         v = topology_.dest( vi.back );
     }
-    return res;
 }
 
 template<class MetricToPenalty>

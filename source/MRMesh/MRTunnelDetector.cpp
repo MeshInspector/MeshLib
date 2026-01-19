@@ -252,7 +252,8 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
             prohibitedEdges.set( e.sym() );
         }
         ebuilder.addStart( v, 0 );
-        loopVerts.set( v );
+        if ( loopVerts.test_set( v ) )
+            return unexpected( "initial loop passes some vertex twice" );
     }
 
     EdgeLoop bestCoLoop;

@@ -907,7 +907,8 @@ generate:
     	--helpers-namespace MR::Misc \
     	--force-namespace MR \
 		--dotnet-version=std2.0 \
-		--begin-func-names-with-lowercase
+		--begin-func-names-with-lowercase \
+		--wrap-doc-comments-in-summary-tag
 
 .DEFAULT_GOAL := build
 .PHONY: build

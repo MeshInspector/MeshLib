@@ -1,6 +1,7 @@
 #pragma once
 #ifdef _WIN32
 
+#include "MRSignalCombiners.h"
 #include "MRMesh/MRSignal.h"
 
 namespace MR
@@ -17,7 +18,7 @@ public:
 
     bool isValid() const;
 
-    Signal<bool ( HWND window, UINT message, WPARAM wParam, LPARAM lParam )> onMessage;
+    boost::signals2::signal<bool ( HWND window, UINT message, WPARAM wParam, LPARAM lParam ), StopOnTrueCombiner> onMessage;
 
     static LRESULT WINAPI WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 

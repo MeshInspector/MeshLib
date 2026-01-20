@@ -229,11 +229,8 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
 
     // construct paths from right-side to left-side, to have back-path in opposite direction
 
-    // edges from loop's right to one of loop's vertices
-    EdgeBitSet fromRight( topology.edgeSize() );
-
-    // edges from loop's left to one of loop's vertices
-    EdgeBitSet fromLeft( topology.edgeSize() );
+    // edges from one of loop's vertices exiting to the left from the oriented loop
+    EdgeBitSet toLeft( topology.edgeSize() );
 
     EdgeLoop bestCoLoop;
     float bestCoLoopMetric = FLT_MAX;
@@ -241,12 +238,10 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
 
     auto metric = [&]( EdgeId e )
     {
-        if ( fromLeft.test( e.sym() ) )
-            return FLT_MAX;
-        if ( fromRight.test( e ) )
+        if ( toLeft.test( e ) )
             return FLT_MAX;
         const auto m = metric0( e );
-        if ( fromLeft.test( e ) )
+        if ( toLeft.test( e.sym() ) )
         {
             const auto v = topology.org( e );
             const auto vi = ebuilder.getVertInfo( v );
@@ -275,18 +270,11 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
         EdgeId e1 = ( i > 0 ? loop[i - 1] : loop.back() ).sym();
         auto v = topology.org( e0 );
         assert( v == topology.org( e1 ) );
-        bool toRight = true;
-        for ( EdgeId e : orgRing0( topology, e1 ) )
+        for ( EdgeId e : orgRing0( topology, e0 ) )
         {
-            if ( e == e0 )
-            {
-                toRight = false;
-                continue;
-            }
-            if ( toRight )
-                fromRight.set( e.sym() );
-            else
-                fromLeft.set( e.sym() );
+            if ( e == e1 )
+                break;
+            toLeft.set( e );
         }
         ebuilder.addStart( v, 0 );
         if ( loopVerts.test_set( v ) )

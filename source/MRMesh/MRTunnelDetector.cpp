@@ -242,6 +242,25 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     };
     HashMap<VertId, LoopVertInfo> vert2info;
     float loopLen = 0;
+    auto minPathAlongLoop = [&]( VertId v0, VertId v1 )
+    {
+        auto it0 = vert2info.find( v0 );
+        if ( it0 == vert2info.end() )
+        {
+            assert( false );
+            return 0.f;
+        }
+        auto it1 = vert2info.find( v1 );
+        if ( it1 == vert2info.end() )
+        {
+            assert( false );
+            return 0.f;
+        }
+        float d = it1->second.lenFrom0 - it0->second.lenFrom0;
+        if ( 2 * d > loopLen )
+            d = loopLen - d;
+        return d;
+    };
 
     auto metric = [&]( EdgeId e )
     {
@@ -250,11 +269,14 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
         const auto m = metric0( e );
         if ( toLeft.test( e.sym() ) )
         {
-            const auto vi = ebuilder.getVertInfo( topology.org( e ) );
+            const auto v = topology.org( e );
+            const auto loopD = topology.dest( e );
+            const auto vi = ebuilder.getVertInfo( v );
             assert( vi );
             if ( vi )
             {
-                auto candidateMetric = vi->metric + m;
+                const auto loopO = ebuilder.trackPathBack( loopD );
+                auto candidateMetric = vi->metric + m + minPathAlongLoop( loopO, loopD );
                 if ( candidateMetric < bestCoLoopMetric )
                 {
                     bestCoLoopMetric = candidateMetric;
@@ -284,15 +306,12 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
         loopLen += metric0( e0 );
     }
 
-    for (;;)
+    while( ebuilder.doneDistance() < bestCoLoopMetric )
     {
         auto c = ebuilder.growOneEdge();
         if ( !c.v )
             break;
-        if ( bestCoLoopFirstEdge )
-            break;
     }
-
     if ( !bestCoLoopFirstEdge )
         return unexpected( "not found" );
 

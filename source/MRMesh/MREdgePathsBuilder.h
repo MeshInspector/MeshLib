@@ -90,7 +90,7 @@ public:
 
     /// tracks back path in the forest from the given vertex to one of start vertices, which is returned;
     /// optionally appends tracked path (res)
-    VertId trackPathBack( VertId backpathStart, EdgePath* res ) const;
+    VertId trackPathBack( VertId backpathStart, EdgePath* res = nullptr ) const;
 
 protected:
     MR_NO_UNIQUE_ADDRESS MetricToPenalty metricToPenalty_;

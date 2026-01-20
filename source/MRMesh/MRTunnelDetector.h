@@ -22,7 +22,7 @@ MRMESH_API Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart& m
 /// 2) returns to the input loop from its right side
 /// 3) goes along the input loop to become closed
 /// such that the resulting loop has minimal sum of given metric for its edges;
-/// resulting co-loop is allowed having only edges inner or boundary to the given region (and not allowed having any edge with both left and right not in the region)
+/// edges 1) and 2) can be only inner or boundary to the given region (they must have region from left or from right)
 MRMESH_API Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric,
     const FaceBitSet* region = nullptr );
 

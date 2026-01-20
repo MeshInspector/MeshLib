@@ -7,9 +7,10 @@
 namespace MR
 {
 
-class Win32MessageHandler
+class Win32MessageHandler : public std::enable_shared_from_this<Win32MessageHandler>
 {
     struct Private {};
+
 public:
     Win32MessageHandler( Private, HWND window );
     ~Win32MessageHandler();

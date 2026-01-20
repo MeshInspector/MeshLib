@@ -7,7 +7,7 @@
 namespace
 {
 
-MR::HashMap<HWND, std::shared_ptr<MR::Win32MessageHandler>> gRegistry;
+MR::HashMap<HWND, MR::Win32MessageHandler*> gRegistry;
 
 }
 
@@ -19,22 +19,19 @@ Win32MessageHandler::~Win32MessageHandler()
     if ( parentProc_ != 0 )
         SetWindowLongPtr( window_, GWLP_WNDPROC, parentProc_ );
 
-    assert( gRegistry[window_].get() == this);
-    gRegistry[window_].reset();
+    assert( gRegistry[window_] == this );
+    gRegistry[window_] = nullptr;
 }
 
 std::shared_ptr<Win32MessageHandler> Win32MessageHandler::getHandler( HWND window )
 {
-    if ( auto ownHandler = gRegistry[window] )
-        return ownHandler;
+    if ( auto* handler = gRegistry[window] )
+        return handler->shared_from_this();
 
-    auto newHandler = std::make_shared<Win32MessageHandler>( Private(), window );
-    if ( !newHandler->isValid() )
+    auto handler = std::make_shared<Win32MessageHandler>( Private{}, window );
+    if ( !handler->isValid() )
         return {};
-
-    gRegistry[window] = newHandler;
-
-    return newHandler;
+    return handler;
 }
 
 bool Win32MessageHandler::isValid() const
@@ -44,7 +41,7 @@ bool Win32MessageHandler::isValid() const
 
 LRESULT Win32MessageHandler::WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-    auto handler = gRegistry[hwnd];
+    auto* handler = gRegistry[hwnd];
     assert( handler );
     if ( handler->onMessage( hwnd, uMsg, wParam, lParam ) )
         return TRUE;
@@ -58,6 +55,8 @@ LRESULT Win32MessageHandler::WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wP
 Win32MessageHandler::Win32MessageHandler( Private, HWND window )
     : window_( window )
 {
+    gRegistry[window_] = this;
+
 #pragma warning( push )
 #pragma warning( disable: 4302 )
 #pragma warning( disable: 4311 )

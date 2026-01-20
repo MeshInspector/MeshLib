@@ -227,14 +227,21 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     if ( !isEdgeLoop( topology, loop ) )
         return unexpected( "no initial loop" );
 
-    // construct paths from right-side to left-side, to have back-path in opposite direction
-
     // edges from one of loop's vertices exiting to the left from the oriented loop
     EdgeBitSet toLeft( topology.edgeSize() );
 
+    // construct paths from right-side to left-side, to have back-path in opposite direction
     EdgeId bestCoLoopFirstEdge;
     float bestCoLoopMetric = FLT_MAX;
     EdgePathsBuilder ebuilder( topology );
+
+    struct LoopVertInfo
+    {
+        int index = 0; // index of the vertex in the loop: org(loop[i])
+        float lenFrom0 = 0; // length along the loop from vertex #0: org(loop[0])
+    };
+    HashMap<VertId, LoopVertInfo> vert2info;
+    float loopLen = 0;
 
     auto metric = [&]( EdgeId e )
     {
@@ -259,7 +266,6 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     };
     ebuilder.reset( metric );
 
-    VertBitSet loopVerts( topology.vertSize() );
     for ( int i = 0; i < loop.size(); ++i )
     {
         EdgeId e0 = loop[i];
@@ -273,8 +279,9 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
             toLeft.set( e );
         }
         ebuilder.addStart( v, 0 );
-        if ( loopVerts.test_set( v ) )
+        if ( !vert2info.insert( { v, LoopVertInfo{ i, loopLen } } ).second )
             return unexpected( "initial loop passes some vertex twice" );
+        loopLen += metric0( e0 );
     }
 
     for (;;)

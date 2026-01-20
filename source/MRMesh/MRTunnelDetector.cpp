@@ -242,8 +242,10 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     };
     HashMap<VertId, LoopVertInfo> vert2info;
     float loopLen = 0;
-    auto minPathAlongLoop = [&]( VertId v0, VertId v1 )
+    auto minPathAlongLoop = [&]( VertId v0, VertId v1, EdgePath * res = nullptr )
     {
+        if ( v0 == v1 )
+            return 0.f;
         auto it0 = vert2info.find( v0 );
         if ( it0 == vert2info.end() )
         {
@@ -256,9 +258,49 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
             assert( false );
             return 0.f;
         }
-        float d = it1->second.lenFrom0 - it0->second.lenFrom0;
+        assert( it1->second.index != it0->second.index );
+        bool forward = it1->second.index > it0->second.index;
+        float d = forward ?
+            it1->second.lenFrom0 - it0->second.lenFrom0 :
+            it0->second.lenFrom0 - it1->second.lenFrom0;
         if ( 2 * d > loopLen )
+        {
+            forward = !forward;
             d = loopLen - d;
+        }
+        if ( res )
+        {
+            if ( forward )
+            {
+                if ( it1->second.index > it0->second.index )
+                {
+                    for ( int i = it0->second.index; i < it1->second.index; ++i )
+                        res->push_back( loop[i] );
+                }
+                else
+                {
+                    for ( int i = it0->second.index; i < loop.size(); ++i )
+                        res->push_back( loop[i] );
+                    for ( int i = 0; i < it1->second.index; ++i )
+                        res->push_back( loop[i] );
+                }
+            }
+            else //backward
+            {
+                if ( it0->second.index > it1->second.index )
+                {
+                    for ( int i = it0->second.index; i > it1->second.index; --i )
+                        res->push_back( loop[i - 1].sym() );
+                }
+                else
+                {
+                    for ( int i = it0->second.index; i > 0; --i )
+                        res->push_back( loop[i - 1].sym() );
+                    for ( int i = (int)loop.size(); i > it1->second.index; --i )
+                        res->push_back( loop[i - 1].sym() );
+                }
+            }
+        }
         return d;
     };
 
@@ -317,8 +359,11 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
 
     EdgePath res;
     res.push_back( bestCoLoopFirstEdge );
-    ebuilder.trackPathBack( topology.dest( bestCoLoopFirstEdge ), &res );
+    const auto loopD = topology.org( bestCoLoopFirstEdge );
+    const auto loopO = ebuilder.trackPathBack( topology.dest( bestCoLoopFirstEdge ), &res );
     assert( isEdgePath( topology, res ) );
+    minPathAlongLoop( loopO, loopD, &res );
+    assert( isEdgeLoop( topology, res ) );
     return res;
 }
 

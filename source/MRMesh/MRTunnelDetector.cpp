@@ -232,7 +232,7 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
     // edges from one of loop's vertices exiting to the left from the oriented loop
     EdgeBitSet toLeft( topology.edgeSize() );
 
-    EdgeLoop bestCoLoop;
+    EdgeId bestCoLoopFirstEdge;
     float bestCoLoopMetric = FLT_MAX;
     EdgePathsBuilder ebuilder( topology );
 
@@ -243,8 +243,7 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
         const auto m = metric0( e );
         if ( toLeft.test( e.sym() ) )
         {
-            const auto v = topology.org( e );
-            const auto vi = ebuilder.getVertInfo( v );
+            const auto vi = ebuilder.getVertInfo( topology.org( e ) );
             assert( vi );
             if ( vi )
             {
@@ -252,10 +251,7 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
                 if ( candidateMetric < bestCoLoopMetric )
                 {
                     bestCoLoopMetric = candidateMetric;
-                    bestCoLoop.clear();
-                    bestCoLoop.push_back( e.sym() );
-                    ebuilder.appendPathBack( v, bestCoLoop );
-                    assert( isEdgePath( topology, bestCoLoop ) );
+                    bestCoLoopFirstEdge = e.sym();
                 }
             }
         }
@@ -286,13 +282,18 @@ Expected<EdgeLoop> findMinimalCoLoop( const MeshTopology& topology, const EdgeLo
         auto c = ebuilder.growOneEdge();
         if ( !c.v )
             break;
-        if ( !bestCoLoop.empty() )
+        if ( bestCoLoopFirstEdge )
             break;
     }
 
-    if ( bestCoLoop.empty() )
+    if ( !bestCoLoopFirstEdge )
         return unexpected( "not found" );
-    return bestCoLoop;
+
+    EdgePath res;
+    res.push_back( bestCoLoopFirstEdge );
+    ebuilder.trackPathBack( topology.dest( bestCoLoopFirstEdge ), &res );
+    assert( isEdgePath( topology, res ) );
+    return res;
 }
 
 Expected<EdgeLoop> findShortestCoLoop( const Mesh& mesh, const EdgeLoop& loop )

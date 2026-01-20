@@ -88,8 +88,9 @@ public:
     /// returns the path in the forest from given vertex to one of start vertices
     EdgePath getPathBack( VertId backpathStart ) const;
 
-    /// appends the path in the forest from given vertex to one of start vertices to (res)
-    void appendPathBack( VertId backpathStart, EdgePath& res ) const;
+    /// tracks back path in the forest from the given vertex to one of start vertices, which is returned;
+    /// optionally appends tracked path (res)
+    VertId trackPathBack( VertId backpathStart, EdgePath* res ) const;
 
 protected:
     MR_NO_UNIQUE_ADDRESS MetricToPenalty metricToPenalty_;
@@ -173,12 +174,12 @@ template<class MetricToPenalty>
 EdgePath EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
 {
     EdgePath res;
-    appendPathBack( v, res );
+    trackPathBack( v, &res );
     return res;
 }
 
 template<class MetricToPenalty>
-void EdgePathsBuilderT<MetricToPenalty>::appendPathBack( VertId v, EdgePath& res ) const
+VertId EdgePathsBuilderT<MetricToPenalty>::trackPathBack( VertId v, EdgePath* res ) const
 {
     for (;;)
     {
@@ -191,9 +192,11 @@ void EdgePathsBuilderT<MetricToPenalty>::appendPathBack( VertId v, EdgePath& res
         auto & vi = it->second;
         if ( vi.isStart() )
             break;
-        res.push_back( vi.back );
+        if ( res )
+            res->push_back( vi.back );
         v = topology_.dest( vi.back );
     }
+    return v;
 }
 
 template<class MetricToPenalty>

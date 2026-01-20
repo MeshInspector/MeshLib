@@ -43,7 +43,9 @@ LRESULT Win32MessageHandler::WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wP
 {
     auto* handler = gRegistry[hwnd];
     assert( handler );
-    handler->onMessage( hwnd, uMsg, wParam, lParam );
+    if ( handler->onMessage( hwnd, uMsg, wParam, lParam ) )
+        return TRUE;
+
 #pragma warning( push )
 #pragma warning( disable: 4312 )
     return CallWindowProc( (WNDPROC)handler->parentProc_, hwnd, uMsg, wParam, lParam );

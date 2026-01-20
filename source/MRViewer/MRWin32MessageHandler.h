@@ -17,7 +17,7 @@ public:
 
     bool isValid() const;
 
-    Signal<void ( HWND window, UINT message, WPARAM wParam, LPARAM lParam )> onMessage;
+    Signal<bool ( HWND window, UINT message, WPARAM wParam, LPARAM lParam )> onMessage;
 
     static LRESULT WINAPI WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 

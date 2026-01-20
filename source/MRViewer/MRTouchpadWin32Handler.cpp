@@ -355,7 +355,7 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
     msgHandler_ = Win32MessageHandler::getHandler( window_ );
     if ( !msgHandler_ )
         return;
-    onWinMsg_ = msgHandler_->onMessage.connect( [&] ( [[maybe_unused]] HWND window, UINT message, WPARAM wParam, LPARAM )
+    onWinMsg_ = msgHandler_->onMessage.connect( [this] ( [[maybe_unused]] HWND window, UINT message, WPARAM wParam, LPARAM )
     {
         assert( window == window_ );
         switch ( message )
@@ -363,10 +363,9 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
         // the event is emitted when user starts a gesture
         case DM_POINTERHITTEST:
             processPointerHitTestEvent_( wParam );
-            break;
-        case WM_INPUT:
-            break;
+            return false;
         }
+        return false;
     } );
 
     // timer is used for polling touchpad events during gesture execution

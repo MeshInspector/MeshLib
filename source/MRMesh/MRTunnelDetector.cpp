@@ -5,7 +5,7 @@
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
-#include "MRExpected.h"
+#include "MREdgePathsBuilder.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -219,6 +219,159 @@ Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMet
     if ( auto v = d.prepare( subprogress( cb, 0.0f, 0.25f ) ); !v.has_value() )
         return unexpected( std::move( v.error() ) );
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
+}
+
+Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric0, const FaceBitSet* region )
+{
+    MR_TIMER;
+    if ( !isEdgeLoop( topology, loop ) )
+        return unexpected( "no initial loop" );
+
+    // edges from one of loop's vertices exiting to the left from the oriented loop
+    EdgeBitSet toLeft( topology.edgeSize() );
+
+    // construct paths from right-side to left-side, to have back-path in opposite direction
+    EdgeId bestCoLoopFirstEdge;
+    float bestCoLoopMetric = FLT_MAX;
+    EdgePathsBuilder ebuilder( topology );
+
+    struct LoopVertInfo
+    {
+        int index = 0; // index of the vertex in the loop: org(loop[i])
+        float lenFrom0 = 0; // length along the loop from vertex #0: org(loop[0])
+    };
+    HashMap<VertId, LoopVertInfo> vert2info;
+    float loopLen = 0;
+    auto minPathAlongLoop = [&]( VertId v0, VertId v1, EdgePath * res = nullptr )
+    {
+        if ( v0 == v1 )
+            return 0.f;
+        auto it0 = vert2info.find( v0 );
+        if ( it0 == vert2info.end() )
+        {
+            assert( false );
+            return 0.f;
+        }
+        auto it1 = vert2info.find( v1 );
+        if ( it1 == vert2info.end() )
+        {
+            assert( false );
+            return 0.f;
+        }
+        assert( it1->second.index != it0->second.index );
+        bool forward = it1->second.index > it0->second.index;
+        float d = forward ?
+            it1->second.lenFrom0 - it0->second.lenFrom0 :
+            it0->second.lenFrom0 - it1->second.lenFrom0;
+        if ( 2 * d > loopLen )
+        {
+            forward = !forward;
+            d = loopLen - d;
+        }
+        if ( res )
+        {
+            if ( forward )
+            {
+                if ( it1->second.index > it0->second.index )
+                {
+                    for ( int i = it0->second.index; i < it1->second.index; ++i )
+                        res->push_back( loop[i] );
+                }
+                else
+                {
+                    for ( int i = it0->second.index; i < loop.size(); ++i )
+                        res->push_back( loop[i] );
+                    for ( int i = 0; i < it1->second.index; ++i )
+                        res->push_back( loop[i] );
+                }
+            }
+            else //backward
+            {
+                if ( it0->second.index > it1->second.index )
+                {
+                    for ( int i = it0->second.index; i > it1->second.index; --i )
+                        res->push_back( loop[i - 1].sym() );
+                }
+                else
+                {
+                    for ( int i = it0->second.index; i > 0; --i )
+                        res->push_back( loop[i - 1].sym() );
+                    for ( int i = (int)loop.size(); i > it1->second.index; --i )
+                        res->push_back( loop[i - 1].sym() );
+                }
+            }
+        }
+        return d;
+    };
+
+    auto metric = [&]( EdgeId e )
+    {
+        if ( !topology.isInnerOrBdEdge( e, region ) )
+            return FLT_MAX;
+        if ( toLeft.test( e ) )
+            return FLT_MAX;
+        const auto m = metric0( e );
+        if ( toLeft.test( e.sym() ) )
+        {
+            const auto v = topology.org( e );
+            const auto loopD = topology.dest( e );
+            const auto vi = ebuilder.getVertInfo( v );
+            assert( vi );
+            if ( vi )
+            {
+                const auto loopO = ebuilder.trackPathBack( loopD );
+                auto candidateMetric = vi->metric + m + minPathAlongLoop( loopO, loopD );
+                if ( candidateMetric < bestCoLoopMetric )
+                {
+                    bestCoLoopMetric = candidateMetric;
+                    bestCoLoopFirstEdge = e.sym();
+                }
+            }
+        }
+        return m;
+    };
+    ebuilder.reset( metric );
+
+    for ( int i = 0; i < loop.size(); ++i )
+    {
+        EdgeId e0 = loop[i];
+        EdgeId e1 = ( i > 0 ? loop[i - 1] : loop.back() ).sym();
+        auto v = topology.org( e0 );
+        assert( v == topology.org( e1 ) );
+        for ( EdgeId e : orgRing0( topology, e0 ) )
+        {
+            if ( e == e1 )
+                break;
+            toLeft.set( e );
+        }
+        ebuilder.addStart( v, 0 );
+        if ( !vert2info.insert( { v, LoopVertInfo{ i, loopLen } } ).second )
+            return unexpected( "initial loop passes some vertex twice" );
+        loopLen += metric0( e0 );
+    }
+
+    while( ebuilder.doneDistance() < bestCoLoopMetric )
+    {
+        auto c = ebuilder.growOneEdge();
+        if ( !c.v )
+            break;
+    }
+    if ( !bestCoLoopFirstEdge )
+        return unexpected( "not found" );
+
+    EdgePath res;
+    res.push_back( bestCoLoopFirstEdge );
+    const auto loopD = topology.org( bestCoLoopFirstEdge );
+    const auto loopO = ebuilder.trackPathBack( topology.dest( bestCoLoopFirstEdge ), &res );
+    assert( isEdgePath( topology, res ) );
+    minPathAlongLoop( loopO, loopD, &res );
+    assert( isEdgeLoop( topology, res ) );
+    return res;
+}
+
+Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const EdgeLoop& loop )
+{
+    return findSmallestMetricCoLoop( mp.mesh.topology, loop, edgeLengthMetric( mp.mesh ), mp.region );
 }
 
 Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )

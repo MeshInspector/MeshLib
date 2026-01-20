@@ -352,21 +352,24 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
 {
     window_ = glfwGetWin32Window( window );
 
-    registry_().emplace( window_, this );
+    msgHandler_ = Win32MessageHandler::getHandler( window_ );
+    if ( !msgHandler_ )
+        return;
+    onWinMsg_ = msgHandler_->onMessage.connect( [this] ( [[maybe_unused]] HWND window, UINT message, WPARAM wParam, LPARAM )
+    {
+        assert( window == window_ );
+        switch ( message )
+        {
+        // the event is emitted when user starts a gesture
+        case DM_POINTERHITTEST:
+            processPointerHitTestEvent_( wParam );
+            return false;
+        }
+        return false;
+    } );
 
     // timer is used for polling touchpad events during gesture execution
     timerQueue_ = CreateTimerQueue();
-
-#pragma warning( push )
-#pragma warning( disable: 4302 )
-#pragma warning( disable: 4311 )
-    glfwProc_ = SetWindowLongPtr( window_, GWLP_WNDPROC, ( LONG_PTR )&TouchpadWin32Handler::WindowSubclassProc );
-#pragma warning( pop )
-    if ( glfwProc_ == 0 )
-    {
-        spdlog::warn( "Failed to set the window procedure (code {:08x})", GetLastError() );
-        return;
-    }
 
 #define CHECK( EXPR ) \
     if ( HRESULT hr = EXPR; !SUCCEEDED( hr ) ) \
@@ -418,35 +421,8 @@ TouchpadWin32Handler::~TouchpadWin32Handler()
     {
         HR = manager_->Deactivate( window_ );
     }
-    if ( glfwProc_ )
-    {
-        SetWindowLongPtr( window_, GWLP_WNDPROC, glfwProc_ );
-    }
 
     DeleteTimerQueue( timerQueue_ );
-
-    registry_().erase( window_ );
-}
-
-LRESULT WINAPI TouchpadWin32Handler::WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
-{
-    auto* handler = findHandler_( hwnd );
-    assert( handler );
-
-    switch ( uMsg )
-    {
-    // the event is emitted when user starts a gesture
-    case DM_POINTERHITTEST:
-        handler->processPointerHitTestEvent_( wParam );
-        break;
-    case WM_INPUT:
-        break;
-    }
-
-#pragma warning( push )
-#pragma warning( disable: 4312 )
-    return CallWindowProc( (WNDPROC)handler->glfwProc_, hwnd, uMsg, wParam, lParam );
-#pragma warning( pop )
 }
 
 void TouchpadWin32Handler::processPointerHitTestEvent_( WPARAM wParam )
@@ -491,21 +467,6 @@ void TouchpadWin32Handler::stopTouchpadEventPolling_()
         UNUSED( result );
         timer_ = NULL;
     }
-}
-
-std::map<HWND, MR::TouchpadWin32Handler*>& TouchpadWin32Handler::registry_()
-{
-    static std::map<HWND, MR::TouchpadWin32Handler*> instance;
-    return instance;
-}
-
-MR::TouchpadWin32Handler* TouchpadWin32Handler::findHandler_( HWND view )
-{
-    const auto it = registry_().find( view );
-    if ( it != registry_().end() )
-        return it->second;
-    else
-        return nullptr;
 }
 
 }

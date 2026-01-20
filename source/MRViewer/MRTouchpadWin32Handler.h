@@ -2,6 +2,7 @@
 #ifdef _WIN32
 
 #include "MRTouchpadController.h"
+#include "MRWin32MessageHandler.h"
 
 #pragma warning( push )
 #pragma warning( disable: 4265 )
@@ -25,13 +26,13 @@ public:
     TouchpadWin32Handler( GLFWwindow* window );
     ~TouchpadWin32Handler() override;
 
-    static LRESULT WINAPI WindowSubclassProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
     static void CALLBACK TouchpadEventPoll( PVOID lpParam, BOOLEAN timerOrWaitFired );
 
 private:
     HWND window_;
 
-    LONG_PTR glfwProc_{ NULL };
+    std::shared_ptr<Win32MessageHandler> msgHandler_;
+    boost::signals2::scoped_connection onWinMsg_;
     void processPointerHitTestEvent_( WPARAM wParam );
 
     Microsoft::WRL::ComPtr<IDirectManipulationManager> manager_;
@@ -47,9 +48,6 @@ private:
     HANDLE timer_{ NULL };
     void startTouchpadEventPolling_();
     void stopTouchpadEventPolling_();
-
-    static std::map<HWND, MR::TouchpadWin32Handler*>& registry_();
-    static MR::TouchpadWin32Handler* findHandler_( HWND view );
 };
 
 } // namespace MR

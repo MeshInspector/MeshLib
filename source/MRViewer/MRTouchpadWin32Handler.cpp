@@ -355,7 +355,7 @@ TouchpadWin32Handler::TouchpadWin32Handler( GLFWwindow* window )
     msgHandler_ = Win32MessageHandler::getHandler( window_ );
     if ( !msgHandler_ )
         return;
-    msgHandler_->onMessage.connect( [&] ( [[maybe_unused]] HWND window, UINT message, WPARAM wParam, LPARAM )
+    onWinMsg_ = msgHandler_->onMessage.connect( [&] ( [[maybe_unused]] HWND window, UINT message, WPARAM wParam, LPARAM )
     {
         assert( window == window_ );
         switch ( message )

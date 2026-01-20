@@ -32,6 +32,7 @@ private:
     HWND window_;
 
     std::shared_ptr<Win32MessageHandler> msgHandler_;
+    boost::signals2::scoped_connection onWinMsg_;
     void processPointerHitTestEvent_( WPARAM wParam );
 
     Microsoft::WRL::ComPtr<IDirectManipulationManager> manager_;

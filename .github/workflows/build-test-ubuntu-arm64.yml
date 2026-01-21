@@ -131,7 +131,10 @@ jobs:
 
       - name: Generate C# bindings # generate only sources
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
+        run: |
+          make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
+          ls -l source/MRDotNet2/
+          ls -l source/MRDotNet2/src/
 
       - name: Upload C# bindings headers
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}

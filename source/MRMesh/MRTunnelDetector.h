@@ -33,11 +33,23 @@ struct DetectTunnelSettings
 {
     /// maximal length of tunnel loops to consider
     float maxTunnelLength = FLT_MAX;
+
     /// maximal number of iterations to detect all tunnels;
     /// on a big mesh with many tunnels even one iteration can take a while
     int maxIters = 1;
+
+    /// metric for detectBasisTunnels,
     /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
     EdgeMetric metric;
+
+    /// if true then for every basis loop, findShortestCoLoop will be called;
+    /// it typically results in shorter tunnels found, but requires more time per iteration, and more iterations to find all tunnels
+    bool buildCoLoops = true;
+
+    /// if ( buildCoLoops ) then some tunnel loops can be equivalent (e.g. they cut the same handle twice),
+    /// this option activates their filtering out, but it is very slow
+    bool filterEquivalentCoLoops = false;
+
     /// to report algorithm progress and cancel from outside
     ProgressCallback progress;
 };

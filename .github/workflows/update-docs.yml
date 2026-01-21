@@ -64,7 +64,7 @@ jobs:
       - name: Build All Documentation
         if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
         working-directory: MeshInspector.github.io
-        run: scripts/update_doc.sh ${{ inputs.output_folder }}
+        run: scripts/update_doc.sh ${{ inputs.output_folder }} ../MeshLib/scripts/doxygen/Modules.txt
 
       - name: Commit and push changes
         if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}

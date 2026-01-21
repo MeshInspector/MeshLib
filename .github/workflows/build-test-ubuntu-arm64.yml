@@ -129,18 +129,6 @@ jobs:
           path: ./source/MeshLibC2/include
           retention-days: 1
 
-      - name: Generate C# bindings # generate only sources
-        if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
-
-      - name: Upload C# bindings headers
-        if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: CsharpBindings
-          path: ./source/MRDotNet2/src
-          retention-days: 1
-
       - name: Build
         run: ./scripts/build_source.sh
         env:

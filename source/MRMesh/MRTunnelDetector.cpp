@@ -6,7 +6,7 @@
 #include "MRUnionFind.h"
 #include "MRTimer.h"
 #include "MREdgePathsBuilder.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -398,6 +398,20 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
         auto basisTunnels = d.detect( MR::subprogress( settings.progress, initialProgress, targetProgress ) );
         if ( !basisTunnels.has_value() )
             return unexpected( basisTunnels.error() );
+        if ( settings.buildCoLoops )
+        {
+            ParallelFor( *basisTunnels, [&]( size_t i )
+            {
+                if ( auto maybeCoLoop = findShortestCoLoop( activeMeshPart, (*basisTunnels)[i] ) )
+                    (*basisTunnels)[i] = std::move( maybeCoLoop.value() );
+                else
+                {
+                    assert( false );
+                    (*basisTunnels)[i].clear();
+                }
+            } );
+            std::erase_if( *basisTunnels, [](const auto& v) { return v.empty(); } );
+        }
 
         const auto numBasisTunnels = basisTunnels->size();
 
@@ -428,6 +442,15 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
             }
             if ( touchAlreadySelectedTunnel )
                 continue;
+
+            if ( settings.buildCoLoops && numSelectedTunnels > 0 )
+            {
+                // filter out equivalent co-loops
+                auto maybeCoLoop = findShortestCoLoop( activeMeshPart, t );
+                if ( !maybeCoLoop )
+                    continue;
+            }
+
             ++numSelectedTunnels;
 
             for ( EdgeId e : t )
@@ -435,8 +458,8 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
                 tunnelVerts.set( mp.mesh.topology.org( e ) );
             }
             addLeftBand( mp.mesh.topology, t, tunnelFaces );
+            activeRegion -= tunnelFaces; // reduce region
         }
-        activeRegion -= tunnelFaces; // reduce region
         assert( numSelectedTunnels > 0 );
         if ( !reportProgress( settings.progress, targetProgress + 0.01f ) )
             return unexpectedOperationCanceled();

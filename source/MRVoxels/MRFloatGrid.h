@@ -51,6 +51,15 @@ MRVOXELS_API FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelSc
 /// returns cropped grid
 MRVOXELS_API FloatGrid cropped( const FloatGrid& grid, const Box3i& box, ProgressCallback cb = {} );
 
+/// returns number of velxes in the grid with pred(value) == true
+[[nodiscard]] MRVOXELS_API size_t countVoxelsWithValuePred( const FloatGrid& grid, const std::function<bool( float )>& pred );
+
+/// returns number of voxels in the grid with value less than given
+[[nodiscard]] MRVOXELS_API size_t countVoxelsWithValueLess( const FloatGrid& grid, float value );
+
+/// returns number of voxels in the grid with value greater than given
+[[nodiscard]] MRVOXELS_API size_t countVoxelsWithValueGreater( const FloatGrid& grid, float value );
+
 /// returns grid with gaussian filter applied
 MRVOXELS_API void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb = {} );
 MRVOXELS_API FloatGrid gaussianFiltered( const FloatGrid& grid, int width, int iters, ProgressCallback cb = {} );

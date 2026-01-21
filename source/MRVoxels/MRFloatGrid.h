@@ -66,6 +66,15 @@ MRVOXELS_API void setValue( FloatGrid& grid, const Vector3i& p, float value );
 /// \note region is in grid space (0 voxel id is minimum active voxel in grid)
 MRVOXELS_API void setValue( FloatGrid & grid, const VoxelBitSet& region, float value );
 
+/// returns bounding box of active voxels in grid
+/// min: including
+/// max: excluding
+[[nodiscard]] MRVOXELS_API Box3i findActiveBounds( const FloatGrid& grid );
+
+/// sets given region voxels value one by one
+/// \note region is in grid space (0 voxel id is minimum active voxel in grid)
+MRVOXELS_API void setValues( FloatGrid& grid, const VoxelBitSet& region, const std::vector<float>& values );
+
 /// sets type of this grid as LEVEL SET (for normal flipping)
 MRVOXELS_API void setLevelSetType( FloatGrid & grid );
 

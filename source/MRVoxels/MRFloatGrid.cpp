@@ -158,6 +158,44 @@ FloatGrid cropped( const FloatGrid& grid, const Box3i& box, ProgressCallback cb 
     return MakeFloatGrid( std::move( dest ) );
 }
 
+size_t countVoxelsWithValuePred( const FloatGrid& grid, const std::function<bool( float )>& pred )
+{
+    MR_TIMER;
+    if ( !pred || !grid )
+    {
+        assert( false );
+        return 0;
+    }
+    tbb::enumerable_thread_specific<size_t> tls( 0 );
+    openvdb::tools::foreach( grid->cbeginValueAll(), [&] ( const openvdb::FloatGrid::ValueAllCIter& it )
+    {
+        if ( !pred( it.getValue() ) )
+            return;
+        auto& local = tls.local();
+        local += it.getBoundingBox().volume();
+    } );
+    size_t res = 0;
+    for ( const auto& t : tls )
+        res += t;
+    return res;
+}
+
+size_t countVoxelsWithValueLess( const FloatGrid& grid, float value )
+{
+    return countVoxelsWithValuePred( grid, [value] ( float v )
+    {
+        return v < value;
+    } );
+}
+
+size_t countVoxelsWithValueGreater( const FloatGrid& grid, float value )
+{
+    return countVoxelsWithValuePred( grid, [value] ( float v )
+    {
+        return v > value;
+    } );
+}
+
 void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb /*= {} */ )
 {
     if ( !grid )

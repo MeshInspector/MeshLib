@@ -131,17 +131,14 @@ jobs:
 
       - name: Generate C# bindings # generate only sources
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        run: |
-          make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
-          ls -l source/MRDotNet2/
-          ls -l source/MRDotNet2/src/
+        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
         uses: actions/upload-artifact@v6
         with:
           name: CsharpBindings
-          path: ./source/MRDotNet2/scr
+          path: ./source/MRDotNet2/src
           retention-days: 1
 
       - name: Build

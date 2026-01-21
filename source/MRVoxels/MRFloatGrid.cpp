@@ -231,27 +231,61 @@ float getValue( const FloatGrid & grid, const Vector3i & p )
     return grid ? grid->getConstAccessor().getValue( openvdb::Coord{ p.x, p.y, p.z } ) : 0;
 }
 
+void setValue( FloatGrid& grid, const Vector3i& p, float value )
+{
+    if ( grid )
+        grid->getAccessor().setValue( openvdb::Coord{ p.x,p.y,p.z }, value );
+}
+
+Box3i findActiveBounds( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return Box3i();
+    }
+    return fromVdbBox( grid->evalActiveVoxelBoundingBox() );
+}
+
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
 {
     if ( !grid )
         return;
     MR_TIMER;
-    auto bbox = grid->evalActiveVoxelBoundingBox();
-    Vector3i dims = { bbox.dim().x(),bbox.dim().y(),bbox.dim().z() };
+    auto bbox = findActiveBounds( grid );
+    Vector3i dims = bbox.size();
     VolumeIndexer indexer = VolumeIndexer( dims );
-    auto minVox = bbox.min();
+    auto minVox = bbox.min;
     auto accessor = grid->getAccessor();
     for ( auto voxid : region )
     {
         auto pos = indexer.toPos( voxid );
-        auto coord = minVox + openvdb::Coord{ pos.x,pos.y,pos.z };
-        accessor.setValue( coord, value );
+        accessor.setValue( toVdb( minVox + pos ), value );
     }
 }
-void setValue( FloatGrid& grid, const Vector3i& p, float value )
+
+void setValues( FloatGrid& grid, const VoxelBitSet& region, const std::vector<float>& values )
 {
-    if ( grid )
-        grid->getAccessor().setValue( openvdb::Coord{ p.x,p.y,p.z }, value );
+    if ( !grid )
+        return;
+    MR_TIMER;
+    auto bbox = findActiveBounds( grid );
+    Vector3i dims = bbox.size();
+    VolumeIndexer indexer = VolumeIndexer( dims );
+    auto minVox = bbox.min;
+    auto accessor = grid->getAccessor();
+    size_t i = 0;
+    for ( auto voxid : region )
+    {
+        if ( i >= values.size() )
+        {
+            assert( false );
+            return;
+        }
+        auto pos = indexer.toPos( voxid );
+        accessor.setValue( toVdb( minVox + pos ), values[i] );
+        ++i;
+    }
 }
 
 void setLevelSetType( FloatGrid & grid )

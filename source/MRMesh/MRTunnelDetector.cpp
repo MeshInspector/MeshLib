@@ -443,9 +443,8 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
             if ( touchAlreadySelectedTunnel )
                 continue;
 
-            if ( settings.buildCoLoops && numSelectedTunnels > 0 )
+            if ( settings.buildCoLoops && settings.filterEquivalentCoLoops && numSelectedTunnels > 0 )
             {
-                // filter out equivalent co-loops
                 auto maybeCoLoop = findShortestCoLoop( activeMeshPart, t );
                 if ( !maybeCoLoop )
                     continue;

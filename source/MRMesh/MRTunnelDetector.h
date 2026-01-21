@@ -46,6 +46,10 @@ struct DetectTunnelSettings
     /// it typically results in shorter tunnels found, but requires more time per iteration, and more iterations to find all tunnels
     bool buildCoLoops = true;
 
+    /// if ( buildCoLoops ) then some tunnel loops can be equivalent (e.g. they cut the same handle twice),
+    /// this option activates their filtering out, but it is very slow
+    bool filterEquivalentCoLoops = false;
+
     /// to report algorithm progress and cancel from outside
     ProgressCallback progress;
 };

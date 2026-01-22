@@ -82,7 +82,7 @@ MRSYMBOLMESH_API Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, co
 MRSYMBOLMESH_API Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
     const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params );
 
-/// Creates symbol mesh and deforms it along given surface path, this function is designed for closed paths (periodicCurve=true option)
+/// Creates symbol mesh and deforms it along given surface path
 MRSYMBOLMESH_API Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
     const SurfacePath& path, const BendTextAlongCurveParams& params );
 

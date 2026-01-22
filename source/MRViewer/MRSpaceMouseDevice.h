@@ -95,14 +95,24 @@ struct SpaceMouseAction {
     Vector3f rotate = { 0.0f, 0.0f, 0.0f };
 };
 
+/// This class holds information and state of single SpaceMouse device
 class SpaceMouseDevice
 {
 public:
+    /// Updates internal data by device ids (does nothing if ids is same for current device)
     void updateDevice( VendorId vId, ProductId pId );
+    
+    /// Invalidates this device and its state
     void resetDevice();
+
+    /// Check if this device is set and valid
     bool valid() const;
 
+    /// Parses data from raw packet to unified `action`
     void parseRawEvent( const DataPacketRaw& raw, int numBytes, SpaceMouseAction& action ) const;
+
+    /// Emit unified spacemouse signals in Viewer based on new action and current device state
+    /// updates btn state if needed
     void processAction( const SpaceMouseAction& action );
 private:
     VendorId vId_{ 0 };

@@ -437,18 +437,14 @@ void PolylineTopology::addPart( const PolylineTopology & from, VertMap * outVmap
     }
 
     // translate edge records
-    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    ParallelFor( firstNewEdge.undirected(), edges_.endId().undirected(), [&] ( UndirectedEdgeId ue )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            const EdgeId e{ ue };
-            edges_[e].next = mapEdge( emap, edges_[e].next );
-            edges_[e.sym()].next = mapEdge( emap, edges_[e.sym()].next );
+        const EdgeId e{ ue };
+        edges_[e].next = mapEdge( emap, edges_[e].next );
+        edges_[e.sym()].next = mapEdge( emap, edges_[e.sym()].next );
 
-            edges_[e].org = vmap[edges_[e].org];
-            edges_[e.sym()].org = vmap[edges_[e.sym()].org];
-        }
+        edges_[e].org = vmap[edges_[e].org];
+        edges_[e.sym()].org = vmap[edges_[e.sym()].org];
     } );
 
     if ( outVmap )

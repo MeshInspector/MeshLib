@@ -6,6 +6,7 @@
 #include "MRMakeSphereMesh.h"
 #include "MRBuffer.h"
 #include "MRGTest.h"
+#include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 
 namespace MR
@@ -47,18 +48,14 @@ AABBTree::AABBTree( const MeshPart & mp )
     }
 
     // compute aabb's of each face
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)numFaces ),
-        [&]( const tbb::blocked_range<int>& range )
+    ParallelFor( 0, numFaces, [&] ( int i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            FaceId f;
-            if ( packed )
-                boxedFaces[i].leafId = f = FaceId( i );
-            else
-                f = boxedFaces[i].leafId;
-            boxedFaces[i].box = computeFaceBox( mp.mesh, f );
-        }
+        FaceId f;
+        if ( packed )
+            boxedFaces[i].leafId = f = FaceId( i );
+        else
+            f = boxedFaces[i].leafId;
+        boxedFaces[i].box = computeFaceBox( mp.mesh, f );
     } );
 
     nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );

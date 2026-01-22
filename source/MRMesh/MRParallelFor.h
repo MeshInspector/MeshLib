@@ -80,6 +80,15 @@ inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
     return ParallelFor( v.beginId(), v.endId(), std::forward<F>( f )... );
 }
 
+/// executes given function f for each vector element in parallel threads;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report
+/// \return false if terminated by callback
+template <typename T, typename I, typename ...F>
+inline auto ParallelFor( const Buffer<T, I> & buf, F &&... f )
+{
+    return ParallelFor( buf.beginId(), buf.endId(), std::forward<F>( f )... );
+}
+
 /// \}
 
 } // namespace MR

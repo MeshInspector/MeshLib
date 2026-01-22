@@ -367,110 +367,106 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
 
     const auto maxDistSq = sqr( options.maxDist );
     const auto minDistSq = sqr( options.minDist );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( (size_t)0, size, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        if ( options.region && !options.region->test( PixelId( int( i ) ) ) )
         {
-            if ( options.region && !options.region->test( PixelId( int( i ) ) ) )
-            {
-                distMap.set( i, DistanceMap::NOT_VALID_VALUE );
-                continue;
-            }
-            size_t x = i % params.resolution.x;
-            size_t y = i / params.resolution.x;
-            Vector2f p;
-            p.x = params.pixelSize.x * x + originPoint.x;
-            p.y = params.pixelSize.y * y + originPoint.y;
-            Polyline2ProjectionWithOffsetResult res;
-            if ( options.offsetParameters )
-            {
-                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset, options.maxDist, nullptr, options.minDist );
-            }
-            else
-            {
-                auto noOffsetRes = findProjectionOnPolyline2( p, polyline, maxDistSq, nullptr, minDistSq );
-                res.line = noOffsetRes.line;
-                res.point = noOffsetRes.point;
-                res.dist = std::sqrt( noOffsetRes.distSq );
-            }
-
-            if ( options.outClosestEdges )
-                ( *options.outClosestEdges )[i] = res.line;
-
-            if ( params.withSign && ( !options.offsetParameters || options.offsetParameters->type != ContoursDistanceMapOffset::OffsetType::Shell ) )
-            {
-                bool positive = true;
-                if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::ContourOrientation )
-                {
-                    const EdgeId e = res.line;
-                    const auto& v0 = polyline.points[polyline.topology.org( e )];
-                    const auto& v1 = polyline.points[polyline.topology.dest( e )];
-                    auto vecA = v1 - v0;
-                    auto ray = res.point - p;
-
-                    // get next that is not zero for sign calculation
-                    auto findNextNonZero = [&] ( EdgeId e, bool next )
-                    {
-                        float lengthSq = 0.0f;
-                        EdgeId prev = e;
-                        EdgeId res;
-                        do
-                        {
-                            res = next ?
-                                polyline.topology.next( prev.sym() ) :
-                                polyline.topology.next( prev ).sym();
-                            if ( res == prev.sym() || res == e )
-                                return e.sym();
-                            lengthSq = polyline.edgeLengthSq( res );
-                            prev = res;
-                        } while ( lengthSq <= 0.0f );
-                        return res;
-                    };
-
-                    auto lengthSq = vecA.lengthSq();
-                    float ratio = 0.0f;
-                    if ( lengthSq > 0.0f )
-                        ratio = dot( res.point - v0, vecA ) / lengthSq;
-                    if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
-                    {
-                        Vector2f vecB;
-                        const EdgeId prevEdge = findNextNonZero( e, false );
-                        const EdgeId nextEdge = findNextNonZero( e, true );
-                        if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
-                        {
-                            const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
-                            vecB = v0 - v2;
-                        }
-                        if ( ( ratio >= 1.0f || lengthSq <= 0.0f ) && e.sym() != nextEdge )
-                        {
-                            const auto& v2 = polyline.points[polyline.topology.dest( nextEdge )];
-                            if ( lengthSq <= 0.0f )
-                                vecA = v2 - v1; // degenerated edge, replace with neighbor
-                            else
-                                vecB = v2 - v1;
-                        }
-                        vecA = ( vecA.normalized() + vecB.normalized() ) * 0.5f;
-                    }
-                    if ( cross( vecA, ray ) > 0.0f )
-                        positive = false;
-                }
-                else if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::WindingRule )
-                {
-                    if ( isPointInsidePolyline( polyline, p ) )
-                        positive = false;
-                }
-                if ( !positive )
-                {
-                    res.dist *= -1.0f;
-                    if ( options.offsetParameters )
-                        res.dist -= 2.0f * options.offsetParameters->perEdgeOffset[res.line];
-                }
-            }
-            if ( !params.withSign && options.offsetParameters && options.offsetParameters->type == ContoursDistanceMapOffset::OffsetType::Shell )
-                res.dist = std::abs( res.dist );
-            distMap.set( i, res.dist );
+            distMap.set( i, DistanceMap::NOT_VALID_VALUE );
+            return;
         }
+        size_t x = i % params.resolution.x;
+        size_t y = i / params.resolution.x;
+        Vector2f p;
+        p.x = params.pixelSize.x * x + originPoint.x;
+        p.y = params.pixelSize.y * y + originPoint.y;
+        Polyline2ProjectionWithOffsetResult res;
+        if ( options.offsetParameters )
+        {
+            res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset, options.maxDist, nullptr, options.minDist );
+        }
+        else
+        {
+            auto noOffsetRes = findProjectionOnPolyline2( p, polyline, maxDistSq, nullptr, minDistSq );
+            res.line = noOffsetRes.line;
+            res.point = noOffsetRes.point;
+            res.dist = std::sqrt( noOffsetRes.distSq );
+        }
+
+        if ( options.outClosestEdges )
+            ( *options.outClosestEdges )[i] = res.line;
+
+        if ( params.withSign && ( !options.offsetParameters || options.offsetParameters->type != ContoursDistanceMapOffset::OffsetType::Shell ) )
+        {
+            bool positive = true;
+            if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::ContourOrientation )
+            {
+                const EdgeId e = res.line;
+                const auto& v0 = polyline.points[polyline.topology.org( e )];
+                const auto& v1 = polyline.points[polyline.topology.dest( e )];
+                auto vecA = v1 - v0;
+                auto ray = res.point - p;
+
+                // get next that is not zero for sign calculation
+                auto findNextNonZero = [&] ( EdgeId e, bool next )
+                {
+                    float lengthSq = 0.0f;
+                    EdgeId prev = e;
+                    EdgeId res;
+                    do
+                    {
+                        res = next ?
+                            polyline.topology.next( prev.sym() ) :
+                            polyline.topology.next( prev ).sym();
+                        if ( res == prev.sym() || res == e )
+                            return e.sym();
+                        lengthSq = polyline.edgeLengthSq( res );
+                        prev = res;
+                    } while ( lengthSq <= 0.0f );
+                    return res;
+                };
+
+                auto lengthSq = vecA.lengthSq();
+                float ratio = 0.0f;
+                if ( lengthSq > 0.0f )
+                    ratio = dot( res.point - v0, vecA ) / lengthSq;
+                if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
+                {
+                    Vector2f vecB;
+                    const EdgeId prevEdge = findNextNonZero( e, false );
+                    const EdgeId nextEdge = findNextNonZero( e, true );
+                    if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
+                    {
+                        const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
+                        vecB = v0 - v2;
+                    }
+                    if ( ( ratio >= 1.0f || lengthSq <= 0.0f ) && e.sym() != nextEdge )
+                    {
+                        const auto& v2 = polyline.points[polyline.topology.dest( nextEdge )];
+                        if ( lengthSq <= 0.0f )
+                            vecA = v2 - v1; // degenerated edge, replace with neighbor
+                        else
+                            vecB = v2 - v1;
+                    }
+                    vecA = ( vecA.normalized() + vecB.normalized() ) * 0.5f;
+                }
+                if ( cross( vecA, ray ) > 0.0f )
+                    positive = false;
+            }
+            else if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::WindingRule )
+            {
+                if ( isPointInsidePolyline( polyline, p ) )
+                    positive = false;
+            }
+            if ( !positive )
+            {
+                res.dist *= -1.0f;
+                if ( options.offsetParameters )
+                    res.dist -= 2.0f * options.offsetParameters->perEdgeOffset[res.line];
+            }
+        }
+        if ( !params.withSign && options.offsetParameters && options.offsetParameters->type == ContoursDistanceMapOffset::OffsetType::Shell )
+            res.dist = std::abs( res.dist );
+        distMap.set( i, res.dist );
     } );
 }
 
@@ -656,12 +652,11 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( hmaps, [&] ( size_t i )
     {
-        assert( range.begin() + 1 == range.end() );
-        auto& hmap = hmaps[range.begin()];
+        auto& hmap = hmaps[i];
 
-        const auto begin = range.begin() * blockSize;
+        const auto begin = i * blockSize;
         const auto end = std::min( begin + blockSize, resY );
 
         auto& localNumeration = perThreadVertNumeration.local();
@@ -728,11 +723,9 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
 
     // update map with determined vert indices
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
-    [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( hmaps, [&] ( size_t i )
     {
-        assert( range.begin() + 1 == range.end() );
-        for ( auto& [ind, set] : hmaps[range.begin()] )
+        for ( auto& [ind, set] : hmaps[i] )
         {
             auto vertShift = getVertIndexShiftForPixelId( ind );
             for ( auto& sepPoint : set )
@@ -864,11 +857,9 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     size_t pointsSize = resultVertNumeration.empty() ? 0 : size_t( getVertIndexShiftForPixelId( size ) ) + resultVertNumeration.back().numVerts;
     polyline.points.resize( pointsSize );
     polyline.topology.vertResize( polyline.points.size() );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( (size_t)0, blockCount, [&] ( size_t j )
     {
-        assert( range.begin() + 1 == range.end() );
-        for ( auto& [_, set] : hmaps[range.begin()] )
+        for ( auto& [_, set] : hmaps[j] )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
                 if ( set[i].vid.valid() )

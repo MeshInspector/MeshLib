@@ -5,7 +5,7 @@
 #include "MRMesh.h"
 #include "MRBuffer.h"
 #include "MRTimer.h"
-#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
@@ -32,17 +32,13 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
         return;
 
     // compute aabb's of each line
-    tbb::parallel_for( tbb::blocked_range<int>( 0, numLines ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( 0, numLines, [&] ( int i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            const auto e = boxedLines[i].leafId;
-            Box<V> box;
-            box.include( polyline.orgPnt( e ) );
-            box.include( polyline.destPnt( e ) );
-            boxedLines[i].box = box;
-        }
+        const auto e = boxedLines[i].leafId;
+        Box<V> box;
+        box.include( polyline.orgPnt( e ) );
+        box.include( polyline.destPnt( e ) );
+        boxedLines[i].box = box;
     } );
 
     nodes_ = makeAABBTreeNodeVec( std::move( boxedLines ) );
@@ -64,17 +60,13 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
         boxedLines[numLines++].leafId = ue;
 
     // compute aabb's of each line
-    tbb::parallel_for( tbb::blocked_range<int>( 0, numLines ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( 0, numLines, [&] ( int i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            const auto e = boxedLines[i].leafId;
-            Box<V> box;
-            box.include( mesh.orgPnt( e ) );
-            box.include( mesh.destPnt( e ) );
-            boxedLines[i].box = box;
-        }
+        const auto e = boxedLines[i].leafId;
+        Box<V> box;
+        box.include( mesh.orgPnt( e ) );
+        box.include( mesh.destPnt( e ) );
+        boxedLines[i].box = box;
     } );
 
     nodes_ = makeAABBTreeNodeVec( std::move( boxedLines ) );

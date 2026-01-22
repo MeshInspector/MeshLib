@@ -1,5 +1,6 @@
 #include "MRPolyline2Collide.h"
 #include "MRAABBTreePolyline.h"
+#include "MRParallelFor.h"
 #include "MRPolyline.h"
 #include "MRPolylineProject.h"
 #include "MRTimer.h"
@@ -68,40 +69,36 @@ std::vector<EdgePointPair> findCollidingEdgePairs( const Polyline2& a, const Pol
     }
 
     std::atomic<int> firstIntersection{ ( int )res.size() };
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )res.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( res, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
+        if ( firstIntersectionOnly && knownIntersection < i )
+            return;
+
+        auto as = a.edgeSegment( res[i].a.e );
+        auto bs = b.edgeSegment( res[i].b.e );
+        if ( rigidB2A )
         {
-            int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
-            if ( firstIntersectionOnly && knownIntersection < i )
-                break;
+            bs.a = ( *rigidB2A )( bs.a );
+            bs.b = ( *rigidB2A )( bs.b );
+        }
 
-            auto as = a.edgeSegment( res[i].a.e );
-            auto bs = b.edgeSegment( res[i].b.e );
-            if ( rigidB2A )
+        double aPos = 0, bPos = 0;
+        if ( doSegmentsIntersect( LineSegm2d{ as }, LineSegm2d{ bs }, &aPos, &bPos ) )
+        {
+            res[i].a.a = float( aPos );
+            res[i].b.a = float( bPos );
+            if ( firstIntersectionOnly )
             {
-                bs.a = ( *rigidB2A )( bs.a );
-                bs.b = ( *rigidB2A )( bs.b );
-            }
-
-            double aPos = 0, bPos = 0;
-            if ( doSegmentsIntersect( LineSegm2d{ as }, LineSegm2d{ bs }, &aPos, &bPos ) )
-            {
-                res[i].a.a = float( aPos );
-                res[i].b.a = float( bPos );
-                if ( firstIntersectionOnly )
+                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) )
                 {
-                    while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) )
-                    {
-                    }
-                    break;
                 }
+                return;
             }
-            else
-            {
-                res[i].a.e = {}; //invalidate
-            }
+        }
+        else
+        {
+            res[i].a.e = {}; //invalidate
         }
     } );
 
@@ -233,24 +230,20 @@ std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline
         }
     }
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )res.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( res, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        double aPos = 0, bPos = 0;
+        if ( doSegmentsIntersect(
+            LineSegm2d{ polyline.edgeSegment( res[i].a.e ) },
+            LineSegm2d{ polyline.edgeSegment( res[i].b.e ) },
+            &aPos, &bPos ) )
         {
-            double aPos = 0, bPos = 0;
-            if ( doSegmentsIntersect(
-                LineSegm2d{ polyline.edgeSegment( res[i].a.e ) },
-                LineSegm2d{ polyline.edgeSegment( res[i].b.e ) },
-                &aPos, &bPos ) )
-            {
-                res[i].a.a = float( aPos );
-                res[i].b.a = float( bPos );
-            }
-            else
-            {
-                res[i].a.e = {}; //invalidate
-            }
+            res[i].a.a = float( aPos );
+            res[i].b.a = float( bPos );
+        }
+        else
+        {
+            res[i].a.e = {}; //invalidate
         }
     } );
 

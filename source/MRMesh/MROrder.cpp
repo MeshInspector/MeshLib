@@ -2,6 +2,7 @@
 #include "MRBox.h"
 #include "MRBuffer.h"
 #include "MRMesh.h"
+#include "MRParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
@@ -112,24 +113,20 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     }
 
     // compute minimal point of each face
-    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
-        [&]( const tbb::blocked_range<FaceId>& range )
+    ParallelFor( facePoints, [&] ( FaceId i )
     {
-        for ( FaceId i = range.begin(); i < range.end(); ++i )
-        {
-            FaceId f;
-            if ( packed )
-                facePoints[i].f = f = FaceId( i );
-            else
-                f = facePoints[i].f;
-            Box3f box;
-            Vector3f a, b, c;
-            mesh.getTriPoints( f, a, b, c );
-            box.include( a );
-            box.include( b );
-            box.include( c );
-            facePoints[i].pt = box.min;
-        }
+        FaceId f;
+        if ( packed )
+            facePoints[i].f = f = FaceId( i );
+        else
+            f = facePoints[i].f;
+        Box3f box;
+        Vector3f a, b, c;
+        mesh.getTriPoints( f, a, b, c );
+        box.include( a );
+        box.include( b );
+        box.include( c );
+        facePoints[i].pt = box.min;
     } );
 
     if ( facePoints.size() > 1 )
@@ -148,13 +145,9 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
         orderFacePoints( { begin( facePoints ), facePoints.size() }, numThreads );
     }
 
-    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
-        [&]( const tbb::blocked_range<FaceId>& range )
+    ParallelFor( facePoints, [&] ( FaceId newf )
     {
-        for ( FaceId newf = range.begin(); newf < range.end(); ++newf )
-        {
-            res.b[facePoints[newf].f] = newf;
-        }
+        res.b[facePoints[newf].f] = newf;
     } );
     return res;
 }
@@ -180,23 +173,20 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     VertexOrdering ord( topology.vertSize() );
 
     Timer t( "fill" );
-    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
-    [&]( const tbb::blocked_range<VertId>& range )
+    ParallelFor( (size_t)0, topology.vertSize(), [&] ( size_t i )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
+        const VertId v{ i };
+        if ( !topology.hasVert( v ) )
         {
-            if ( !topology.hasVert( v ) )
-            {
-                // put at the very end after sorting
-                ord[v] = OrderedVertex{ v, ~std::uint32_t(0) };
-                continue;
-            }
-             // if no incident faces, then put after other valid vertices but before invalid vertices
-            auto f = std::uint32_t( -(int)v - 2 );
-            for ( EdgeId e : orgRing( topology, v ) )
-                f = std::min( f, std::uint32_t( getAt( faceMap.b, topology.left( e ) ) ) );
-            ord[v] = OrderedVertex{ v, f };
+            // put at the very end after sorting
+            ord[v] = OrderedVertex{ v, ~std::uint32_t(0) };
+            return;
         }
+         // if no incident faces, then put after other valid vertices but before invalid vertices
+        auto f = std::uint32_t( -(int)v - 2 );
+        for ( EdgeId e : orgRing( topology, v ) )
+            f = std::min( f, std::uint32_t( getAt( faceMap.b, topology.left( e ) ) ) );
+        ord[v] = OrderedVertex{ v, f };
     } );
 
     t.restart( "sort" );
@@ -205,13 +195,10 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     VertBMap res;
     res.b.resize( topology.vertSize() );
     res.tsize = topology.numValidVerts();
-    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
-    [&]( const tbb::blocked_range<VertId>& range )
+    ParallelFor( (size_t)0, topology.vertSize(), [&] ( size_t i )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-        {
-            res.b[ord[v].v] = v < res.tsize ? v : VertId{};
-        }
+        const VertId v{ i };
+        res.b[ord[v].v] = v < res.tsize ? v : VertId{};
     } );
 
     return res;
@@ -239,37 +226,34 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
 
     Timer t( "fill" );
     std::atomic<int> notLoneEdges{0};
-    tbb::parallel_for( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ),
-    [&]( const tbb::blocked_range<UndirectedEdgeId>& range )
+    ParallelFor( (size_t)0, topology.undirectedEdgeSize(), [&] ( size_t i )
     {
         int myNotLoneEdges = 0;
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        const UndirectedEdgeId ue{ i };
+        const auto l = topology.left( ue );
+        const auto r = topology.right( ue );
+        if ( !l && !r )
         {
-            const auto l = topology.left( ue );
-            const auto r = topology.right( ue );
-            if ( !l && !r )
+            if ( topology.isLoneEdge( ue ) )
             {
-                if ( topology.isLoneEdge( ue ) )
-                {
-                    // put at the very end after sorting
-                    ord[ue] = OrderedEdge{ ue, std::uint32_t( -1 ) };
-                }
-                else
-                {
-                    // put after edges with valid left/right faces but before lone edges after sorting
-                    ord[ue] = OrderedEdge{ ue, std::uint32_t( -(int)ue - 2 ) };
-                    ++myNotLoneEdges;
-                }
+                // put at the very end after sorting
+                ord[ue] = OrderedEdge{ ue, std::uint32_t( -1 ) };
             }
             else
             {
-                auto f = std::min(
-                    std::uint32_t( getAt( faceMap.b, l ) ),
-                    std::uint32_t( getAt( faceMap.b, r ) ) );
-                assert ( int(f) >= 0 );
-                ord[ue] = OrderedEdge{ ue, f };
+                // put after edges with valid left/right faces but before lone edges after sorting
+                ord[ue] = OrderedEdge{ ue, std::uint32_t( -(int)ue - 2 ) };
                 ++myNotLoneEdges;
             }
+        }
+        else
+        {
+            auto f = std::min(
+                std::uint32_t( getAt( faceMap.b, l ) ),
+                std::uint32_t( getAt( faceMap.b, r ) ) );
+            assert ( int(f) >= 0 );
+            ord[ue] = OrderedEdge{ ue, f };
+            ++myNotLoneEdges;
         }
         notLoneEdges.fetch_add( myNotLoneEdges, std::memory_order_relaxed );
     } );
@@ -280,13 +264,10 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
     UndirectedEdgeBMap res;
     res.b.resize( topology.undirectedEdgeSize() );
     res.tsize = notLoneEdges;
-    tbb::parallel_for( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ),
-    [&]( const tbb::blocked_range<UndirectedEdgeId>& range )
+    ParallelFor( (size_t)0, topology.undirectedEdgeSize(), [&] ( size_t i )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            res.b[ord[ue].ue] = ue < res.tsize ? ue : UndirectedEdgeId{};
-        }
+        const UndirectedEdgeId ue{ i };
+        res.b[ord[ue].ue] = ue < res.tsize ? ue : UndirectedEdgeId{};
     } );
 
     return res;

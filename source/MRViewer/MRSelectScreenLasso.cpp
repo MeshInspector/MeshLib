@@ -12,6 +12,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolyline2Intersect.h"
 #include "MRMesh/MRPolylineProject.h"
@@ -249,15 +250,11 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
                 verts.set( vid, false );
         } );
 
-        tbb::parallel_for( tbb::blocked_range<size_t>( size_t(0), largeTriFragments.size() ),
-            [&] ( const tbb::blocked_range<size_t>& range )
+        ParallelFor( largeTriFragments, [&] ( size_t i )
         {
-            for ( size_t i = range.begin(); i < range.end(); ++i )
-            {
-                auto & frag = largeTriFragments[i];
-                if ( isPointHidden( frag.p ) )
-                    frag.f = FaceId{}; //invalidate
-            }
+            auto & frag = largeTriFragments[i];
+            if ( isPointHidden( frag.p ) )
+                frag.f = FaceId{}; //invalidate
         } );
     }
 

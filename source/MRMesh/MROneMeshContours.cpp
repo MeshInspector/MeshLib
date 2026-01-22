@@ -633,33 +633,31 @@ OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const Cont
         res[j].closed = isClosed( curInContour );
         curOutContour.resize( curInContour.size() );
 
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, curInContour.size() ),
-            [&] ( const tbb::blocked_range<size_t>& range )
+        ParallelFor( curInContour, [&] ( size_t i )
         {
+            const auto& inIntersection = curInContour[i];
+            auto& outIntersection = curOutContour[i];
+
+            if ( !rigidB2A == inIntersection.isEdgeATriB() )
+                outIntersection.primitiveId = inIntersection.edge;
+            else
+                outIntersection.primitiveId = inIntersection.tri();
+
             Vector3f a, b, c, d, e;
-            for ( size_t i = range.begin(); i < range.end(); ++i )
-            {
-                const auto& inIntersection = curInContour[i];
-                auto& outIntersection = curOutContour[i];
-                if ( !rigidB2A == inIntersection.isEdgeATriB() )
-                    outIntersection.primitiveId = inIntersection.edge;
-                else
-                    outIntersection.primitiveId = inIntersection.tri();
-                mesh.getTriPoints( inIntersection.tri(), a, b, c );
-                d = mesh.orgPnt( inIntersection.edge );
-                e = mesh.destPnt( inIntersection.edge );
+            mesh.getTriPoints( inIntersection.tri(), a, b, c );
+            d = mesh.orgPnt( inIntersection.edge );
+            e = mesh.destPnt( inIntersection.edge );
 
-                // always calculate in mesh A space
-                outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
-                    rigidB2A ? ( *rigidB2A )( a ) : a,
-                    rigidB2A ? ( *rigidB2A )( b ) : b,
-                    rigidB2A ? ( *rigidB2A )( c ) : c,
-                    rigidB2A ? ( *rigidB2A )( d ) : d,
-                    rigidB2A ? ( *rigidB2A )( e ) : e, converters );
+            // always calculate in mesh A space
+            outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
+                rigidB2A ? ( *rigidB2A )( a ) : a,
+                rigidB2A ? ( *rigidB2A )( b ) : b,
+                rigidB2A ? ( *rigidB2A )( c ) : c,
+                rigidB2A ? ( *rigidB2A )( d ) : d,
+                rigidB2A ? ( *rigidB2A )( e ) : e, converters );
 
-                if ( rigidB2A )
-                    outIntersection.coordinate = inverseXf( outIntersection.coordinate );
-            }
+            if ( rigidB2A )
+                outIntersection.coordinate = inverseXf( outIntersection.coordinate );
         } );
     }
     return res;
@@ -1010,21 +1008,16 @@ OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::
         }
 
         curOutContour.resize( curInContour.size() );
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, curInContour.size() ),
-            [&]( const tbb::blocked_range<size_t>& range )
+        ParallelFor( curInContour, [&] ( size_t i )
         {
-            VertId vid;
-            for ( size_t i = range.begin(); i < range.end(); ++i )
-            {
-                const auto& inIntersection = curInContour[i];
-                auto& outIntersection = curOutContour[i];
-                vid = inIntersection.inVertex( mesh.topology );
-                if ( vid.valid() )
-                    outIntersection.primitiveId = vid;
-                else
-                    outIntersection.primitiveId = inIntersection.e;
-                outIntersection.coordinate = mesh.edgePoint( inIntersection );
-            }
+            const auto& inIntersection = curInContour[i];
+            auto& outIntersection = curOutContour[i];
+            const auto vid = inIntersection.inVertex( mesh.topology );
+            if ( vid.valid() )
+                outIntersection.primitiveId = vid;
+            else
+                outIntersection.primitiveId = inIntersection.e;
+            outIntersection.coordinate = mesh.edgePoint( inIntersection );
         } );
     }
     return res;

@@ -540,21 +540,18 @@ void RenderMeshObject::bindEdges_()
     edgeSize_ = lastValid.valid() ? lastValid.undirected() + 1 : 0;
     auto res = calcTextureRes( int( edgeSize_ * 2 ), maxTexSize_ );
     auto positions = glBuffer.prepareBuffer<Vector3f>( res.x * res.y );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, int( edgeSize_ ) ), [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( 0, edgeSize_, [&] ( int ue )
     {
-        for ( int ue = range.begin(); ue < range.end(); ++ue )
+        auto uEId = UndirectedEdgeId( ue );
+        if ( topology.hasEdge( uEId ) )
         {
-            auto uEId = UndirectedEdgeId( ue );
-            if ( topology.hasEdge( uEId ) )
-            {
-                positions[2 * ue] = mesh.orgPnt( uEId );
-                positions[2 * ue + 1] = mesh.destPnt( uEId );
-            }
-            else
-            {
-                // important to be the same point so renderer does not rasterize these edges
-                positions[2 * ue] = positions[2 * ue + 1] = Vector3f();
-            }
+            positions[2 * ue] = mesh.orgPnt( uEId );
+            positions[2 * ue + 1] = mesh.destPnt( uEId );
+        }
+        else
+        {
+            // important to be the same point so renderer does not rasterize these edges
+            positions[2 * ue] = positions[2 * ue + 1] = Vector3f();
         }
     } );
     edgesTexture_.loadData(
@@ -811,18 +808,15 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
         auto numF = topology.lastValidFace() + 1;
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
 
-        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        ParallelFor( 0_f, numF, [&] ( FaceId f )
         {
-            for ( FaceId f = range.begin(); f < range.end(); ++f )
-            {
-                if ( !mesh->topology.hasFace( f ) )
-                    continue;
-                auto ind = 3 * f;
-                Vector3f v[3];
-                mesh->getTriPoints( f, v[0], v[1], v[2] );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = v[i];
-            }
+            if ( !mesh->topology.hasFace( f ) )
+                return;
+            auto ind = 3 * f;
+            Vector3f v[3];
+            mesh->getTriPoints( f, v[0], v[1], v[2] );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = v[i];
         } );
 
         return buffer;
@@ -860,17 +854,14 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         const auto& creases = objMesh_->creases();
 
         const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        ParallelFor( 0_f, numF, [&] ( FaceId f )
         {
-            for ( FaceId f = range.begin(); f < range.end(); ++f )
-            {
-                if ( !mesh->topology.hasFace( f ) )
-                    continue;
-                auto ind = 3 * f;
-                const auto& cornerN = getAt( cornerNormals, f );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = cornerN[i];
-            }
+            if ( !mesh->topology.hasFace( f ) )
+                return;
+            auto ind = 3 * f;
+            const auto& cornerN = getAt( cornerNormals, f );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = cornerN[i];
         } );
 
         return buffer;
@@ -884,20 +875,17 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         {
             auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
-            tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+            ParallelFor( 0_f, numF, [&] ( FaceId f )
             {
-                for ( FaceId f = range.begin(); f < range.end(); ++f )
+                if ( !mesh->topology.hasFace( f ) )
+                    return;
+                auto ind = 3 * f;
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
                 {
-                    if ( !mesh->topology.hasFace( f ) )
-                        continue;
-                    auto ind = 3 * f;
-                    VertId v[3];
-                    topology.getTriVerts( f, v );
-                    for ( int i = 0; i < 3; ++i )
-                    {
-                        const auto& norm = getAt( vertNormals, v[i] );
-                        buffer[ind + i] = norm;
-                    }
+                    const auto& norm = getAt( vertNormals, v[i] );
+                    buffer[ind + i] = norm;
                 }
             } );
 
@@ -940,18 +928,15 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
         auto numF = topology.lastValidFace() + 1;
         auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = 3 * numF );
 
-        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        ParallelFor( 0_f, numF, [&] ( FaceId f )
         {
-            for ( FaceId f = range.begin(); f < range.end(); ++f )
-            {
-                if ( !mesh->topology.hasFace( f ) )
-                    continue;
-                auto ind = 3 * f;
-                VertId v[3];
-                topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = getAt( vertsColorMap, v[i] );
-            }
+            if ( !mesh->topology.hasFace( f ) )
+                return;
+            auto ind = 3 * f;
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = getAt( vertsColorMap, v[i] );
         } );
 
         return buffer;
@@ -989,18 +974,15 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
         {
             auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
 
-            tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+            ParallelFor( 0_f, numF, [&] ( FaceId f )
             {
-                for ( FaceId f = range.begin(); f < range.end(); ++f )
-                {
-                    if ( !mesh->topology.hasFace( f ) )
-                        continue;
-                    auto ind = 3 * f;
-                    VertId v[3];
-                    topology.getTriVerts( f, v );
-                    for ( int i = 0; i < 3; ++i )
-                        buffer[ind + i] = getAt( uvCoords, v[i] );
-                }
+                if ( !mesh->topology.hasFace( f ) )
+                    return;
+                auto ind = 3 * f;
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = getAt( uvCoords, v[i] );
             } );
 
             return buffer;
@@ -1034,23 +1016,20 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
     auto numF = topology.lastValidFace() + 1;
     auto buffer = glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
 
-    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+    ParallelFor( 0_f, numF, [&] ( FaceId f )
     {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        if ( !topology.hasFace( f ) )
+            buffer[f] = Vector3i();
+        else
         {
-            if ( !topology.hasFace( f ) )
-                buffer[f] = Vector3i();
+            if ( cornerMode )
+            {
+                auto ind = 3 * f;
+                buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
+            }
             else
             {
-                if ( cornerMode )
-                {
-                    auto ind = 3 * f;
-                    buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
-                }
-                else
-                {
-                    topology.getTriVerts( f, ( ThreeVertIds& )buffer[f] );
-                }
+                topology.getTriVerts( f, ( ThreeVertIds& )buffer[f] );
             }
         }
     } );
@@ -1075,18 +1054,15 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 
     const auto& selection = objMesh_->getSelectedFaces().bits();
     const unsigned* selectionData = ( unsigned* )selection.data();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( (size_t)0, buffer.size(), [&] ( size_t r )
     {
-        for ( int r = range.begin(); r < range.end(); ++r )
+        auto& block = buffer[r];
+        if ( r / 2 >= selection.size() )
         {
-            auto& block = buffer[r];
-            if ( r / 2 >= selection.size() )
-            {
-                block = 0;
-                continue;
-            }
-            block = selectionData[r];
+            block = 0;
+            return;
         }
+        block = selectionData[r];
     } );
 
     return buffer;

@@ -8,6 +8,7 @@
 #include "MRMeshDecimate.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRBox.h"
+#include "MRParallelFor.h"
 #include <random>
 
 namespace MR
@@ -207,43 +208,39 @@ Expected<Mesh> uniteManyMeshes(
                 std::atomic_bool included{ false };
                 // mesh contains some group meshes
                 tbb::enumerable_thread_specific<BitSet> nestedPerThread( meshes.size() );
-                tbb::parallel_for( tbb::blocked_range<int>( 0, int( group.size() ) ),
-                                   [&] ( const tbb::blocked_range<int>& range )
+                ParallelFor( group, [&] ( size_t i )
                 {
                     if ( intersects.load( std::memory_order::relaxed ) || ( !mergeNestedComponents && included.load( std::memory_order::relaxed ) ) )
                         return;
                     auto& nested = nestedPerThread.local();
 
-                    for ( int i = range.begin(); i < range.end(); ++i )
-                    {
-                        auto& groupMesh = meshes[group[i]];
+                    auto& groupMesh = meshes[group[i]];
 
-                        Box3d box = meshBoxes[m];
-                        box.include( meshBoxes[group[i]] );
-                        auto intConverter = getToIntConverter( box );
-                        auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
-                        if ( !collidingResAB.empty() )
+                    Box3d box = meshBoxes[m];
+                    box.include( meshBoxes[group[i]] );
+                    auto intConverter = getToIntConverter( box );
+                    auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
+                    if ( !collidingResAB.empty() )
+                    {
+                        intersects.store( true, std::memory_order::relaxed );
+                        return;
+                    }
+                    auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
+                    if ( !collidingResBA.empty() )
+                    {
+                        intersects.store( true, std::memory_order::relaxed );
+                        return;
+                    }
+                    if ( !mergeNestedComponents )
+                    {
+                        if ( isNonIntersectingInside( *mesh, *groupMesh ) )
                         {
-                            intersects.store( true, std::memory_order::relaxed );
-                            break;
+                            included.store( true, std::memory_order::relaxed );
+                            return;
                         }
-                        auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
-                        if ( !collidingResBA.empty() )
+                        else if ( isNonIntersectingInside( *groupMesh, *mesh ) )
                         {
-                            intersects.store( true, std::memory_order::relaxed );
-                            break;
-                        }
-                        if ( !mergeNestedComponents )
-                        {
-                            if ( isNonIntersectingInside( *mesh, *groupMesh ) )
-                            {
-                                included.store( true, std::memory_order::relaxed );
-                                break;
-                            }
-                            else if ( isNonIntersectingInside( *groupMesh, *mesh ) )
-                            {
-                                nested.set( group[i] );
-                            }
+                            nested.set( group[i] );
                         }
                     }
                 } );
@@ -286,27 +283,19 @@ Expected<Mesh> uniteManyMeshes(
     std::vector<Mesh> mergedMeshes( separateComponentsProcess ? nonIntersectingGroups.size() : meshes.size() );
     if ( separateComponentsProcess )
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( nonIntersectingGroups.size() ) ),
-                           [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( nonIntersectingGroups, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                auto& mergedMesh = mergedMeshes[i];
-                auto& mergeGroup = nonIntersectingGroups[i];
-                for ( auto meshIndex : mergeGroup )
-                    mergedMesh.addMesh( *meshes[meshIndex] );
-            }
+            auto& mergedMesh = mergedMeshes[i];
+            auto& mergeGroup = nonIntersectingGroups[i];
+            for ( auto meshIndex : mergeGroup )
+                mergedMesh.addMesh( *meshes[meshIndex] );
         } );
     }
     else
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( meshes.size() ) ),
-                   [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( meshes, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                mergedMeshes[i] = *meshes[i];
-            }
+            mergedMeshes[i] = *meshes[i];
         } );
     }
 

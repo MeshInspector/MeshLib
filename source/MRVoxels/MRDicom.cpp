@@ -474,37 +474,33 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
     tbb::task_arena limitedArena( maxNumThreads );
     limitedArena.execute( [&]
     {
-        tbb::parallel_for( tbb::blocked_range( 0, int( files.size() ) ),
-            [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( files, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
+            gdcm::ImageReader ir;
+            std::ifstream ifs( files[i], std::ios_base::binary );
+            ir.SetStream( ifs );
+            ir.ReadSelectedTags( {
+                gdcm::Tag( 0x0002, 0x0002 ),
+                gdcm::Tag( 0x0008, 0x0016 ),
+                gdcm::Keywords::InstanceNumber::GetTag(),
+                gdcm::Keywords::ImagePositionPatient::GetTag() } );
+
+            SliceInfo sl;
+            sl.fileNum = i;
+            const auto origin = gdcm::ImageHelper::GetOriginValue( ir.GetFile() );
+            sl.z = origin[2];
+            sl.imagePos = { origin[0], origin[1], origin[2] };
+
+            // if Instance Number is available then sort by it
+            const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
+            if( ds.FindDataElement( gdcm::Keywords::InstanceNumber::GetTag() ) )
             {
-                gdcm::ImageReader ir;
-                std::ifstream ifs( files[i], std::ios_base::binary );
-                ir.SetStream( ifs );
-                ir.ReadSelectedTags( {
-                    gdcm::Tag( 0x0002, 0x0002 ),
-                    gdcm::Tag( 0x0008, 0x0016 ),
-                    gdcm::Keywords::InstanceNumber::GetTag(),
-                    gdcm::Keywords::ImagePositionPatient::GetTag() } );
-
-                SliceInfo sl;
-                sl.fileNum = i;
-                const auto origin = gdcm::ImageHelper::GetOriginValue( ir.GetFile() );
-                sl.z = origin[2];
-                sl.imagePos = { origin[0], origin[1], origin[2] };
-
-                // if Instance Number is available then sort by it
-                const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
-                if( ds.FindDataElement( gdcm::Keywords::InstanceNumber::GetTag() ) )
-                {
-                    const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::InstanceNumber::GetTag() );
-                    gdcm::Keywords::InstanceNumber at = {0}; // default value if empty
-                    at.SetFromDataElement( de );
-                    sl.instanceNum = at.GetValue();
-                }
-                zOrder[i] = sl;
+                const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::InstanceNumber::GetTag() );
+                gdcm::Keywords::InstanceNumber at = {0}; // default value if empty
+                at.SetFromDataElement( de );
+                sl.instanceNum = at.GetValue();
             }
+            zOrder[i] = sl;
         } );
     } );
 

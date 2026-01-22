@@ -1,5 +1,6 @@
 #include "MRLaplacian.h"
 #include "MRMesh.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRExpandShrink.h"
 #include "MRRingIterator.h"
@@ -245,10 +246,9 @@ void Laplacian::updateRhs_()
         }
     );
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
+    ParallelFor( 0, 3, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-            rhs_[i] = M_.adjoint() * rhs[i];
+        rhs_[i] = M_.adjoint() * rhs[i];
     } );
 }
 
@@ -260,10 +260,9 @@ void Laplacian::apply()
     updateSolver();
 
     Eigen::VectorXd sol[3];
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
+    ParallelFor( 0, 3, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-            sol[i] = solver_->solve( rhs_[i] );
+        sol[i] = solver_->solve( rhs_[i] );
     } );
 
     // copy solution back into mesh points

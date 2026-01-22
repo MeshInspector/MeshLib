@@ -1,5 +1,5 @@
 #include "MRViewportGL.h"
-#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
@@ -255,17 +255,13 @@ std::vector<unsigned> ViewportGL::findUniqueObjectsInRect( const PickParameters&
     auto resColors = pickObjectsInRect_( updatedParams, updatedRect );
 
     tbb::enumerable_thread_specific<BitSet> bitSetPerThread( params.renderVector.size() );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, int( resColors.size() ) ),
-                       [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( resColors, [&] ( size_t i )
     {
         auto& localBitSet = bitSetPerThread.local();
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            auto geomId = resColors[i].color[1];
-            if ( geomId >= params.renderVector.size() || !params.renderVector[geomId] || localBitSet.test( geomId ) )
-                continue;
-            localBitSet.set( geomId );
-        }
+        auto geomId = resColors[i].color[1];
+        if ( geomId >= params.renderVector.size() || !params.renderVector[geomId] || localBitSet.test( geomId ) )
+            return;
+        localBitSet.set( geomId );
     } );
 
     BitSet mergeBitSet( params.renderVector.size() );
@@ -305,17 +301,13 @@ ViewportGL::ScaledPickRes ViewportGL::pickObjectsInRect( const PickParameters& p
 
     auto resColors = pickObjectsInRect_( updatedParams, updatedRect );
     BasePickResults res( resColors.size() );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, int( resColors.size() ) ),
-                   [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( resColors, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            auto geomId = resColors[i].color[1];
-            if ( geomId >= params.renderVector.size() || !params.renderVector[geomId] )
-                continue;
-            res[i].geomId = geomId;
-            res[i].primId = resColors[i].color[0];
-        }
+        auto geomId = resColors[i].color[1];
+        if ( geomId >= params.renderVector.size() || !params.renderVector[geomId] )
+            return;
+        res[i].geomId = geomId;
+        res[i].primId = resColors[i].color[0];
     } );
     return { res,updatedRect };
 }

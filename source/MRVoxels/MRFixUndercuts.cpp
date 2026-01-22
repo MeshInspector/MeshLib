@@ -484,23 +484,19 @@ Vector3f improveDirectionInternal( const Mesh& mesh, const DistMapImproveDirecti
 
     std::vector<double> metrics( size_t( baseAngNum ) * polarAngNum );
     std::vector<Vector3f> dirs( size_t( baseAngNum ) * polarAngNum );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, metrics.size() ), [&]( const tbb::blocked_range<size_t>& range )
+    ParallelFor( metrics, [&] ( size_t myPartId )
     {
         FaceBitSet undercutsi;
-        float angle, polar;
-        int polari, basei;
-        for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
-        {
-            polari = (int) ( myPartId / baseAngNum );
-            basei = (int) ( myPartId % baseAngNum );
 
-            angle = ( basei + 1 ) * params.baseAngleStep;
-            polar = polari * params.polarAngleStep;
+        const auto polari = (int) ( myPartId / baseAngNum );
+        const auto basei = (int) ( myPartId % baseAngNum );
 
-            auto& newDir = dirs[myPartId];
-            newDir = dir * std::cos( angle ) + ( std::sin( polar ) * perp1 + std::cos( polar ) * perp2 ) * std::sin( angle );
-            metrics[myPartId] = metricFinder( newDir, &undercutsi );
-        }
+        const auto angle = ( basei + 1 ) * params.baseAngleStep;
+        const auto polar = polari * params.polarAngleStep;
+
+        auto& newDir = dirs[myPartId];
+        newDir = dir * std::cos( angle ) + ( std::sin( polar ) * perp1 + std::cos( polar ) * perp2 ) * std::sin( angle );
+        metrics[myPartId] = metricFinder( newDir, &undercutsi );
     } );
 
     auto minElemIt = std::min_element( metrics.cbegin(), metrics.cend() );

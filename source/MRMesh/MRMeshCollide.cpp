@@ -1,6 +1,7 @@
 #include "MRMeshCollide.h"
 #include "MRAABBTree.h"
 #include "MRMesh.h"
+#include "MRParallelFor.h"
 #include "MRTriangleIntersection.h"
 #include "MREnums.h"
 #include "MRTimer.h"
@@ -80,35 +81,31 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     }
 
     std::atomic<int> firstIntersection{ (int)res.size() };
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)res.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    ParallelFor( res, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
+        if ( firstIntersectionOnly && knownIntersection < i )
+            return;
+        Vector3f av[3], bv[3];
+        a.mesh.getTriPoints( res[i].aFace, av[0], av[1], av[2] );
+        b.mesh.getTriPoints( res[i].bFace, bv[0], bv[1], bv[2] );
+        if ( rigidB2A )
         {
-            int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
-            if ( firstIntersectionOnly && knownIntersection < i )
-                break;
-            Vector3f av[3], bv[3];
-            a.mesh.getTriPoints( res[i].aFace, av[0], av[1], av[2] );
-            b.mesh.getTriPoints( res[i].bFace, bv[0], bv[1], bv[2] );
-            if ( rigidB2A )
+            bv[0] = (*rigidB2A)( bv[0] );
+            bv[1] = (*rigidB2A)( bv[1] );
+            bv[2] = (*rigidB2A)( bv[2] );
+        }
+        if ( doTrianglesIntersect( Vector3d{ av[0] }, Vector3d{ av[1] }, Vector3d{ av[2] }, Vector3d{ bv[0] }, Vector3d{ bv[1] }, Vector3d{ bv[2] } ) )
+        {
+            if ( firstIntersectionOnly )
             {
-                bv[0] = (*rigidB2A)( bv[0] );
-                bv[1] = (*rigidB2A)( bv[1] );
-                bv[2] = (*rigidB2A)( bv[2] );
+                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) ) { }
+                return;
             }
-            if ( doTrianglesIntersect( Vector3d{ av[0] }, Vector3d{ av[1] }, Vector3d{ av[2] }, Vector3d{ bv[0] }, Vector3d{ bv[1] }, Vector3d{ bv[2] } ) )
-            {
-                if ( firstIntersectionOnly )
-                {
-                    while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) ) { }
-                    break;
-                }
-            }
-            else
-            {
-                res[i].aFace = FaceId{}; //invalidate
-            }
+        }
+        else
+        {
+            res[i].aFace = FaceId{}; //invalidate
         }
     } );
 

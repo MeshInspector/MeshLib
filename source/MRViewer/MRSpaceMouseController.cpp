@@ -4,7 +4,7 @@
 #include "MRMakeSlot.h"
 #include "MRViewerInstance.h"
 #include "MRViewport.h"
-#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseDevice.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRVector3.h"
@@ -102,6 +102,8 @@ bool SpaceMouseController::spaceMouseDown_( int key )
 
     if ( showKeyDebug_ )
         spdlog::info( "SpaceMouse key down = {}", key );
+
+    using namespace SpaceMouse;
 
     if ( key == SMB_MENU )
     {

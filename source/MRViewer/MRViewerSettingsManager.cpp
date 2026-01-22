@@ -448,7 +448,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         {
             if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
             {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
+                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
                 if ( hidapiHandler )
                 {
                     const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
@@ -672,7 +672,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 #ifdef _WIN32
     if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
     {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
         if ( hidapinHandler )
         {
             spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();

@@ -90,7 +90,7 @@ std::vector<EdgePointPair> findCollidingEdgePairs( const Polyline2& a, const Pol
             res[i].b.a = float( bPos );
             if ( firstIntersectionOnly )
             {
-                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) )
+                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, (int)i ) )
                 {
                 }
                 return;

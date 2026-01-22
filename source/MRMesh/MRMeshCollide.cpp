@@ -99,7 +99,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         {
             if ( firstIntersectionOnly )
             {
-                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) ) { }
+                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, (int)i ) ) { }
                 return;
             }
         }

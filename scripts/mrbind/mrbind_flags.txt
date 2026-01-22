@@ -2,6 +2,7 @@
 --buggy-substitute-default-template-args
 --ignore ::
 --ignore MR::detail
+--ignore MR::FunctionRef
 --ignore MR::Signal
 --ignore MR::UniquePtr
 --ignore MR::RegisterRenderObjectConstructor

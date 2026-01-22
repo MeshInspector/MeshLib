@@ -60,11 +60,29 @@ struct BendContoursAlongCurveParams
     float extrusion{ 1.0f };
 
     /// To allow passing Python lambdas into `curve`.
-    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM;
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 /// Converts contours in thick mesh, and deforms it along given path
 MRMESH_API Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendContoursAlongCurveParams& params );
+
+/// given a polyline by its vertices, computes partial lengths along the polyline from the initial point;
+/// return an error if the polyline is less than 2 points or all points have exactly the same location
+/// \param unitLength if true, then the lengths are normalized for the last point to have unit length
+/// \param outCurveLen optional output of the total polyline length (before possible normalization)
+MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, bool unitLength = true, float * outCurveLen = nullptr );
+
+/// given a polyline by its vertices, and partial lengths as computed by \ref findPartialLens,
+/// finds the location of curve point at the given parameter with extrapolation if p outside [0, lens.back()],
+/// execution time is logarithmic relative to the number of points
+[[nodiscard]] MRMESH_API CurvePoint getCurvePoint( const CurvePoints& cp, const std::vector<float> & lens, float p );
+
+/// given a polyline by its vertices, returns curve function representing it;
+/// return an error if the polyline is less than 2 points or all points have exactly the same location
+/// \param unitLength if true, then the lengths are normalized for the last point to have unit length
+/// \param outCurveLen optional output of the total polyline length (before possible normalization)
+MRMESH_API Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, bool unitLength = true, float * outCurveLen = nullptr );
+MRMESH_API Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, bool unitLength = true, float * outCurveLen = nullptr );
 
 /// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset (along -Z if zOffset is negative) to make a volumetric closed mesh
 /// note that this function also packs the mesh

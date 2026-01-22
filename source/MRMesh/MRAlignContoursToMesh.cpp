@@ -184,4 +184,95 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
     return contoursMesh;
 }
 
+Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, bool unitLength, float * outCurveLen )
+{
+    MR_TIMER;
+    if ( cp.size() < 2 )
+    {
+        assert( false );
+        return unexpected( "Curve is too short" );
+    }
+
+    std::vector<float> lens;
+    lens.reserve( cp.size() );
+    lens.push_back( 0 );
+    for ( int i = 0; i + 1 < cp.size(); ++i )
+        lens.push_back( lens.back() + distance( cp[i].pos, cp[i+1].pos ) );
+    assert( lens.size() == cp.size() );
+    if ( outCurveLen )
+        *outCurveLen = lens.back();
+    if ( lens.back() <= 0 )
+        return unexpected( "curve has zero length" );
+
+    if ( unitLength )
+    {
+        // to relative lengths
+        const auto factor = 1 / lens.back();
+        for ( auto & l : lens )
+            l *= factor;
+    }
+    return lens;
+}
+
+CurvePoint getCurvePoint( const CurvePoints& cp, const std::vector<float> & lens, float p )
+{
+    assert( cp.size() == lens.size() );
+    assert( cp.size() >= 2 );
+    CurvePoint res;
+    if ( p <= lens.front() )
+    {
+        // extrapolate
+        res = cp.front();
+        res.pos += ( p - lens.front() ) * res.dir;
+        return res;
+    }
+    if ( p >= lens.back() )
+    {
+        // extrapolate
+        res = cp.back();
+        res.pos += ( p - lens.back() ) * res.dir;
+        return res;
+    }
+    // interpolate
+    auto i = std::lower_bound( lens.begin(), lens.end(), p ) - lens.begin();
+    assert( lens[i] >= p );
+    if ( lens[i] == p )
+        return cp[i];
+    assert( lens[i-1] < p );
+    auto f = ( p - lens[i-1] ) / ( lens[i] - lens[i-1] );
+    res = CurvePoint
+    {
+        .pos = lerp( cp[i-1].pos, cp[i].pos, f ),
+        .dir = lerp( cp[i-1].dir, cp[i].dir, f ),
+        .snorm = lerp( cp[i-1].snorm, cp[i].snorm, f )
+    };
+    return res;
+}
+
+Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, bool unitLength, float * outCurveLen )
+{
+    MR_TIMER;
+    auto maybeLens = findPartialLens( cp, unitLength, outCurveLen );
+    if ( !maybeLens )
+        return unexpected( std::move( maybeLens.error() ) );
+
+    return [&cp, lens = std::move( *maybeLens )]( float p )
+    {
+        return getCurvePoint( cp, lens, p );
+    };
+}
+
+Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, bool unitLength, float * outCurveLen )
+{
+    MR_TIMER;
+    auto maybeLens = findPartialLens( cp, unitLength, outCurveLen );
+    if ( !maybeLens )
+        return unexpected( std::move( maybeLens.error() ) );
+
+    return [cp = std::move( cp ), lens = std::move( *maybeLens )]( float p )
+    {
+        return getCurvePoint( cp, lens, p );
+    };
+}
+
 } //namespace MR

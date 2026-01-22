@@ -60,7 +60,7 @@ struct BendContoursAlongCurveParams
     float extrusion{ 1.0f };
 
     /// To allow passing Python lambdas into `curve`.
-    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM;
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 /// Converts contours in thick mesh, and deforms it along given path

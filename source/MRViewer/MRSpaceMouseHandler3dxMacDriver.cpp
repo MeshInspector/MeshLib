@@ -261,7 +261,7 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
 
 } // namespace
 
-namespace MR
+namespace MR::SpaceMouse
 {
 
 SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()

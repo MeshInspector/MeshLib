@@ -2206,7 +2206,7 @@ void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const st
 #ifndef __EMSCRIPTEN__
 #ifdef __APPLE__
     // try to use the official driver first
-    auto driverHandler = std::make_unique<SpaceMouseHandler3dxMacDriver>();
+    auto driverHandler = std::make_unique<SpaceMouse::SpaceMouseHandler3dxMacDriver>();
     driverHandler->setClientName( MR_PROJECT_NAME );
     if ( driverHandler->initialize( deviceSignal ) )
     {
@@ -2218,7 +2218,7 @@ void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const st
     // fallback to the HIDAPI implementation
     spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
+    spaceMouseHandler_ = std::make_unique<SpaceMouse::SpaceMouseHandlerHidapi>();
     if ( spaceMouseHandler_->initialize( std::move( deviceSignal ) ) )
     {
         spdlog::info( "SpaceMouseHandlerHidapi initialized" );

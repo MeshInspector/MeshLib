@@ -4,7 +4,7 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRViewerEventsListener.h"
 
-namespace MR
+namespace MR::SpaceMouse
 {
 
 /**

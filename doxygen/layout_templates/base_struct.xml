@@ -77,6 +77,7 @@
       <!-- API_CPP_PAGE -->
       <!-- API_PY_PAGE -->
       <!-- API_C_PAGE -->
+      <!-- API_CSHARP_PAGE -->
     </tab>
     <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>

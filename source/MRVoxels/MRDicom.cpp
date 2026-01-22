@@ -486,7 +486,7 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
                 gdcm::Keywords::ImagePositionPatient::GetTag() } );
 
             SliceInfo sl;
-            sl.fileNum = i;
+            sl.fileNum = (int)i;
             const auto origin = gdcm::ImageHelper::GetOriginValue( ir.GetFile() );
             sl.z = origin[2];
             sl.imagePos = { origin[0], origin[1], origin[2] };

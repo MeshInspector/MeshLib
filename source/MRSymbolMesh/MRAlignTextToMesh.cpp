@@ -135,72 +135,24 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         } );
 }
 
-Expected<Mesh> bendTextAlongCurve( const CurvePoints& curve, const BendTextAlongCurveParams& params0 )
+Expected<Mesh> bendTextAlongCurve( const CurvePoints& cp, const BendTextAlongCurveParams& params0 )
 {
     MR_TIMER;
-    if ( curve.size() < 2 )
-    {
-        assert( false );
-        return unexpected( "Curve is too short" );
-    }
 
-    std::vector<float> lens;
-    lens.reserve( curve.size() );
-    lens.push_back( 0 );
-    for ( int i = 0; i + 1 < curve.size(); ++i )
-        lens.push_back( lens.back() + distance( curve[i].pos, curve[i+1].pos ) );
-    assert( lens.size() == curve.size() );
-    if ( lens.back() <= 0 )
-        return unexpected( "curve has zero length" );
+    float curveLen = 0;
+    auto maybeCurveFunc = curveFromPoints( cp, params0.stretch, &curveLen );
+    if ( !maybeCurveFunc )
+        return unexpected( std::move( maybeCurveFunc.error() ) );
+    assert( curveLen > 0 );
 
     BendTextAlongCurveParams params = params0;
-    if ( params.stretch )
-    {
-        // to relative lengths
-        const auto factor = 1 / lens.back();
-        for ( auto & l : lens )
-            l *= factor;
-    }
-    else
+    if ( !params.stretch )
     {
         // pivotCurveTime from relative [0,1] into actual [0,len]
-        params.pivotCurveTime *= lens.back();
+        params.pivotCurveTime *= curveLen;
     }
 
-    auto curveFunc = [&]( float p )
-    { 
-        CurvePoint res;
-        if ( p <= lens.front() )
-        {
-            // extrapolate
-            res = curve.front();
-            res.pos += ( p - lens.front() ) * res.dir;
-            return res;
-        }
-        if ( p >= lens.back() )
-        {
-            // extrapolate
-            res = curve.back();
-            res.pos += ( p - lens.back() ) * res.dir;
-            return res;
-        }
-        // interpolate
-        auto i = std::lower_bound( lens.begin(), lens.end(), p ) - lens.begin();
-        assert( lens[i] >= p );
-        if ( lens[i] == p )
-            return curve[i];
-        assert( lens[i-1] < p );
-        auto f = ( p - lens[i-1] ) / ( lens[i] - lens[i-1] );
-        res = CurvePoint
-        {
-            .pos = lerp( curve[i-1].pos, curve[i].pos, f ),
-            .dir = lerp( curve[i-1].dir, curve[i].dir, f ),
-            .snorm = lerp( curve[i-1].snorm, curve[i].snorm, f )
-        };
-        return res;
-    };
-
-    return bendTextAlongCurve( curveFunc, params );
+    return bendTextAlongCurve( *maybeCurveFunc, params );
 }
 
 Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,

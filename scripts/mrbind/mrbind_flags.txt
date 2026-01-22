@@ -12,6 +12,7 @@
 --skip-mentions-of '/std::integral_constant<.*>/'
 --skip-mentions-of '/boost::dynamic_bitset<.*>/'
 --skip-mentions-of '/openvdb::v[0-9][0-9_a-zA-Z]*::Grid<.*>/'
+--skip-mentions-of '/MR::FunctionRef<.*>/'
 --skip-mentions-of '/MR::Signal<.*>/'
 --skip-mentions-of '/Eigen::Matrix<.*>/'
 --skip-mentions-of Json::Value

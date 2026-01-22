@@ -275,4 +275,38 @@ Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, bool unitLength, float * 
     };
 }
 
+CurvePoints meshPathCurvePoints( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )
+{
+    MR_TIMER;
+    CurvePoints cp;
+    cp.reserve( path.size() + 2 );
+    cp.push_back( { .pos = mesh.triPoint( start ), .snorm = mesh.normal( start ) } );
+    for ( const auto & ep : path )
+        cp.push_back( { .pos = mesh.triPoint( ep ), .snorm = mesh.normal( ep ) } );
+    cp.push_back( { .pos = mesh.triPoint( end ), .snorm = mesh.normal( end ) } );
+    assert( cp.size() == path.size() + 2 );
+
+    cp[0].dir = ( cp[1].pos - cp[0].pos ).normalized();
+    for ( int i = 1; i + 1 < cp.size(); ++i )
+        cp[i].dir = ( cp[i + 1].pos - cp[i - 1].pos ).normalized();
+    cp.back().dir = ( cp[cp.size() - 1].pos - cp[cp.size() - 2].pos ).normalized();
+    return cp;
+}
+
+CurvePoints meshPathCurvePoints( const Mesh& mesh, const SurfacePath& path )
+{
+    MR_TIMER;
+    CurvePoints cp;
+    cp.reserve( path.size() );
+    for ( const auto & ep : path )
+        cp.push_back( { .pos = mesh.triPoint( ep ), .snorm = mesh.normal( ep ) } );
+    assert( cp.size() == path.size() );
+
+    cp[0].dir = ( cp[1].pos - cp[0].pos ).normalized();
+    for ( int i = 1; i + 1 < cp.size(); ++i )
+        cp[i].dir = ( cp[i + 1].pos - cp[i - 1].pos ).normalized();
+    cp.back().dir = ( cp[cp.size() - 1].pos - cp[cp.size() - 2].pos ).normalized();
+    return cp;
+}
+
 } //namespace MR

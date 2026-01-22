@@ -84,6 +84,10 @@ MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, 
 MRMESH_API Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, bool unitLength = true, float * outCurveLen = nullptr );
 MRMESH_API Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, bool unitLength = true, float * outCurveLen = nullptr );
 
+/// converts polyline given as a number of MeshTriPoint/MeshEdgePoint into CurvePoints
+[[nodiscard]] MRMESH_API CurvePoints meshPathCurvePoints( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end );
+[[nodiscard]] MRMESH_API CurvePoints meshPathCurvePoints( const Mesh& mesh, const SurfacePath& path );
+
 /// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset (along -Z if zOffset is negative) to make a volumetric closed mesh
 /// note that this function also packs the mesh
 MRMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset );

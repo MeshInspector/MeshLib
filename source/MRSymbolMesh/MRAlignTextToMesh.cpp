@@ -125,10 +125,9 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         relPivot.y = ( absYPivot - bbox.min.y ) / diagonal.y;
     }
 
-    return bendContoursAlongCurve( conts, {
+    return bendContoursAlongCurve( conts, curve, {
         .pivotCurveTime = params.pivotCurveTime,
         .pivotBoxPoint = relPivot,
-        .curve = curve,
         .periodicCurve = params.periodicCurve,
         .stretch = params.stretch,
         .extrusion = params.surfaceOffset

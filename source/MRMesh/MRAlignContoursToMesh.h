@@ -47,9 +47,6 @@ struct BendContoursAlongCurveParams
     /// (0, 0) - bottom left, (0, 1) - bottom right, (0.5, 0.5) - center, (1, 1) - top right
     Vector2f pivotBoxPoint{0.0f, 0.0f};
 
-    /// converts (x in [0,1], pivotY) into position on curve
-    CurveFunc curve;
-
     /// if true, curve parameter will be always within [0,1) with repetition: xr := x - floor(x)
     bool periodicCurve = false;
 
@@ -64,7 +61,15 @@ struct BendContoursAlongCurveParams
 };
 
 /// Converts contours in thick mesh, and deforms it along given path
-MRMESH_API Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendContoursAlongCurveParams& params );
+MRMESH_API Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFunc& curve, const BendContoursAlongCurveParams& params );
+
+/// Converts contours in thick mesh, and deforms it along given surface path: start->path->end
+MRMESH_API Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end,
+    const BendContoursAlongCurveParams& params );
+
+/// Converts contours in thick mesh, and deforms it along given surface path
+MRMESH_API Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const SurfacePath& path,
+    const BendContoursAlongCurveParams& params );
 
 /// given a polyline by its vertices, computes partial lengths along the polyline from the initial point;
 /// return an error if the polyline is less than 2 points or all points have exactly the same location

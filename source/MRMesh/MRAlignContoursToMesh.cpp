@@ -109,7 +109,7 @@ Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2f& contours
 
 }
 
-Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendContoursAlongCurveParams& params )
+Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFunc& curve, const BendContoursAlongCurveParams& params )
 {
     MR_TIMER;
     auto contoursMesh = PlanarTriangulation::triangulateContours( contours );
@@ -144,7 +144,7 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
         float curveTime = params.pivotCurveTime + xInBoxRelPivot;
         if ( params.periodicCurve )
             curveTime = curveTime - std::floor( curveTime );
-        const auto pos = params.curve( curveTime );
+        const auto pos = curve( curveTime );
 
         const auto vecx = pos.dir;
         const auto norm = pos.snorm;
@@ -182,6 +182,22 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const BendCon
         }
     } );
     return contoursMesh;
+}
+
+Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end,
+    const BendContoursAlongCurveParams& params )
+{
+    MR_TIMER;
+    return curveFromPoints( meshPathCurvePoints( mesh, start, path, end ), params.stretch )
+        .and_then( [&]( auto && curve ) { return bendContoursAlongCurve( contours, curve, params ); } );
+}
+
+Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const SurfacePath& path,
+    const BendContoursAlongCurveParams& params )
+{
+    MR_TIMER;
+    return curveFromPoints( meshPathCurvePoints( mesh, path ), params.stretch )
+        .and_then( [&]( auto && curve ) { return bendContoursAlongCurve( contours, curve, params ); } );
 }
 
 Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, bool unitLength, float * outCurveLen )

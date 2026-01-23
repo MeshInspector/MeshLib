@@ -20,35 +20,6 @@ void Controller::connect()
     viewer.signals().spaceMouseDownSignal.connect( MAKE_SLOT( &Controller::spaceMouseDown_ ) );
 }
 
-void Controller::setParameters( const Parameters& newParams )
-{
-    params_ = newParams;
-    for ( int i = 0; i < 3; ++i )
-    {
-        float sign = params_.translateScale[i] < 0 ? -1.f : 1.f;
-        if ( params_.translateScale[i] * sign < 50 )
-            params_.translateScale[i] = ( 25.f + params_.translateScale[i] * sign / 2.f ) * sign;
-        sign = params_.rotateScale[i] < 0 ? -1.f : 1.f;
-        if ( params_.rotateScale[i] < 50 )
-            params_.rotateScale[i] = ( 25.f + params_.rotateScale[i] * sign / 2.f ) * sign;
-    }
-}
-
-Parameters Controller::getParameters() const
-{
-    Parameters out = params_;
-    for ( int i = 0; i < 3; ++i )
-    {
-        float sign = out.translateScale[i] < 0 ? -1.f : 1.f;
-        if ( out.translateScale[i] * sign < 50 )
-            out.translateScale[i] = ( out.translateScale[i] * sign - 25.f ) * 2.f * sign;
-        sign = out.rotateScale[i] < 0 ? -1.f : 1.f;
-        if ( out.rotateScale[i] * sign < 50 )
-            out.rotateScale[i] = ( out.rotateScale[i] * sign - 25.f ) * 2.f * sign;
-    }
-    return out;
-}
-
 bool Controller::spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate )
 {
     auto& viewer = getViewerInstance();

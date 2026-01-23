@@ -13,8 +13,8 @@ public:
     MR_ADD_CTOR_DELETE_MOVE( Controller );
     void connect();
 
-    MRVIEWER_API void setParameters( const Parameters& newParams );
-    MRVIEWER_API Parameters getParameters() const;
+    void setParameters( const Parameters& newParams ) { params_ = newParams; }
+    const Parameters& getParameters() const { return params_; }
 
 private:
     bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate );

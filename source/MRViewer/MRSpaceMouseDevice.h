@@ -14,7 +14,7 @@ using ProductId = short unsigned int;
 using DataPacketRaw = std::array<unsigned char, 13>;
 
 /// enumeration all spacemouse buttons
-enum SpaceMouseButtons : int
+enum class Buttons : int
 {
     SMB_NO = -1,
     SMB_MENU,
@@ -88,15 +88,15 @@ const std::unordered_map<VendorId, std::vector<ProductId>> cVendor2Device = {
 };
 
 
-struct SpaceMouseAction {
+struct Action {
     bool btnStateChanged = false;
-    std::bitset<SMB_BUTTON_COUNT> buttons = 0;
+    std::bitset<size_t( Buttons::SMB_BUTTON_COUNT )> buttons = 0;
     Vector3f translate = { 0.0f, 0.0f, 0.0f };
     Vector3f rotate = { 0.0f, 0.0f, 0.0f };
 };
 
 /// This class holds information and state of single SpaceMouse device
-class SpaceMouseDevice
+class Device
 {
 public:
     /// Updates internal data by device ids (does nothing if ids is same for current device)
@@ -109,17 +109,17 @@ public:
     bool valid() const;
 
     /// Parses data from raw packet to unified `action`
-    void parseRawEvent( const DataPacketRaw& raw, int numBytes, SpaceMouseAction& action ) const;
+    void parseRawEvent( const DataPacketRaw& raw, int numBytes, Action& action ) const;
 
     /// Emit unified spacemouse signals in Viewer based on new action and current device state
     /// updates btn state if needed
-    void processAction( const SpaceMouseAction& action );
+    void processAction( const Action& action );
 private:
     VendorId vId_{ 0 };
     ProductId pId_{ 0 };
-    std::bitset<SMB_BUTTON_COUNT> buttonsState_;
+    std::bitset<size_t( Buttons::SMB_BUTTON_COUNT )> buttonsState_;
 
-    const std::vector<std::vector<SpaceMouseButtons>>* buttonsMapPtr_ = nullptr;
+    const std::vector<std::vector<Buttons>>* buttonsMapPtr_ = nullptr;
 
     /*         |   <--- packet values --->
      *   #byte |   1          2
@@ -127,9 +127,9 @@ private:
      *       0 |   -          -
      *       1 |   custom_1   custom_2
      */
-    std::vector<std::vector<SpaceMouseButtons>> buttonMapCompact = {
+    std::vector<std::vector<Buttons>> buttonMapCompact = {
         {  }, // 0th byte (unused)
-        { SMB_CUSTOM_1, SMB_CUSTOM_2} // 1st byte
+        { Buttons::SMB_CUSTOM_1, Buttons::SMB_CUSTOM_2} // 1st byte
     };
 
     /*         |  <--- packet values --->
@@ -141,19 +141,19 @@ private:
      *       4 |  shift  ctrl    lock
      *
      */
-    std::vector<std::vector<SpaceMouseButtons>> buttonMapPro = {
+    std::vector<std::vector<Buttons>> buttonMapPro = {
         {  }, // 0th byte (unused)
-        //1             2             4             8             16            32            64            128
-        { SMB_MENU,     SMB_FIT,      SMB_TOP,      SMB_NO,       SMB_RIGHT,    SMB_FRONT,    SMB_NO,       SMB_NO },      // 1st byte
-        { SMB_ROLL_CW,  SMB_NO,       SMB_NO,       SMB_NO,       SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4}, // 2nd byte
-        { SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_ESC,      SMB_ALT},      // 3rd byte
-        { SMB_SHIFT,    SMB_CTRL,     SMB_LOCK_ROT, SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,       SMB_NO,},      // 4th byte
+        //1                      2                      4                      8                      16                     32                     64                     128
+        { Buttons::SMB_MENU,     Buttons::SMB_FIT,      Buttons::SMB_TOP,      Buttons::SMB_NO,       Buttons::SMB_RIGHT,    Buttons::SMB_FRONT,    Buttons::SMB_NO,       Buttons::SMB_NO },      // 1st byte
+        { Buttons::SMB_ROLL_CW,  Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_CUSTOM_1, Buttons::SMB_CUSTOM_2, Buttons::SMB_CUSTOM_3, Buttons::SMB_CUSTOM_4}, // 2nd byte
+        { Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_ESC,      Buttons::SMB_ALT},      // 3rd byte
+        { Buttons::SMB_SHIFT,    Buttons::SMB_CTRL,     Buttons::SMB_LOCK_ROT, Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,},      // 4th byte
     };
 
     // @TODO !!! NOT TESTED !!!
-    std::vector<std::vector<SpaceMouseButtons>> buttonMapEnterprise = {
+    std::vector<std::vector<Buttons>> buttonMapEnterprise = {
         {  }, // 0th byte (unused)
-        { SMB_CUSTOM_1,     SMB_CUSTOM_2}
+        { Buttons::SMB_CUSTOM_1,     Buttons::SMB_CUSTOM_2}
     };
     /* @TODO !!! NOT TESTED !!!
     static constexpr int mapButtonsEnterprise[31] = {

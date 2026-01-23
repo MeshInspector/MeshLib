@@ -1197,7 +1197,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
     {
         if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {
-            auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+            auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
             if ( hidapiHandler )
             {
                 hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
@@ -1363,7 +1363,7 @@ void ViewerSettingsPlugin::updateDialog_()
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
     {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::HandlerHidapi >( spaceMouseHandler );
         if ( hidapiHandler )
             activeMouseScrollZoom_ = hidapiHandler->isMouseScrollZoomActive();
     }
@@ -1389,7 +1389,7 @@ void ViewerSettingsPlugin::resetSettings_()
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
     {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::HandlerHidapi >( spaceMouseHandler );
         if ( hidapiHandler )
             hidapiHandler->activateMouseScrollZoom( false );
     }

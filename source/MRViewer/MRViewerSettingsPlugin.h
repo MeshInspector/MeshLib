@@ -110,7 +110,7 @@ private:
 
     std::unique_ptr<ShadowsGL> shadowGl_;
 
-    SpaceMouseParameters spaceMouseParams_;
+    SpaceMouse::Parameters spaceMouseParams_;
 #if defined(_WIN32) || defined(__APPLE__)
     bool activeMouseScrollZoom_{ false };
 #endif

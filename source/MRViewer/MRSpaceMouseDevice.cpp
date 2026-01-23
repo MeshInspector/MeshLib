@@ -4,7 +4,7 @@
 namespace MR::SpaceMouse
 {
 
-void SpaceMouseDevice::updateDevice( VendorId vendorId, ProductId productId )
+void Device::updateDevice( VendorId vendorId, ProductId productId )
 {
     if ( vId_ == vendorId && pId_ == productId )
         return;
@@ -26,18 +26,18 @@ void SpaceMouseDevice::updateDevice( VendorId vendorId, ProductId productId )
     pId_ = productId;
 }
 
-bool SpaceMouseDevice::valid() const
+bool Device::valid() const
 {
     return bool( buttonsMapPtr_ );
 }
 
-void SpaceMouseDevice::resetDevice()
+void Device::resetDevice()
 {
     buttonsMapPtr_ = nullptr;
     buttonsState_ = 0;
 }
 
-void SpaceMouseDevice::processAction( const SpaceMouseAction& action )
+void Device::processAction( const Action& action )
 {
     if ( !valid() )
         return;
@@ -45,9 +45,9 @@ void SpaceMouseDevice::processAction( const SpaceMouseAction& action )
     viewer.spaceMouseMove( action.translate, action.rotate );
     if ( action.btnStateChanged )
     {
-        std::bitset<SMB_BUTTON_COUNT> new_pressed = action.buttons & ~buttonsState_;
-        std::bitset<SMB_BUTTON_COUNT> new_unpressed = buttonsState_ & ~action.buttons;
-        for ( int btn = 0; btn < SMB_BUTTON_COUNT; ++btn )
+        std::bitset<size_t(Buttons::SMB_BUTTON_COUNT)> new_pressed = action.buttons & ~buttonsState_;
+        std::bitset<size_t(Buttons::SMB_BUTTON_COUNT)> new_unpressed = buttonsState_ & ~action.buttons;
+        for ( int btn = 0; btn < int( Buttons::SMB_BUTTON_COUNT ); ++btn )
         {
             if ( new_unpressed.test( btn ) )
                 viewer.spaceMouseUp( btn );
@@ -58,7 +58,7 @@ void SpaceMouseDevice::processAction( const SpaceMouseAction& action )
     }
 }
 
-void SpaceMouseDevice::parseRawEvent( const DataPacketRaw& raw, int numBytes, SpaceMouseAction& action ) const
+void Device::parseRawEvent( const DataPacketRaw& raw, int numBytes, Action& action ) const
 {
     if ( !valid() )
         return;
@@ -72,7 +72,7 @@ void SpaceMouseDevice::parseRawEvent( const DataPacketRaw& raw, int numBytes, Sp
             for ( int i = 0; i < ( *buttonsMapPtr_ )[column].size(); ++i )
             {
                 if ( raw[column] & ( 1 << i ) )
-                    action.buttons.set( ( *buttonsMapPtr_ )[column][i] );
+                    action.buttons.set( int( ( *buttonsMapPtr_ )[column][i] ) );
             }
         }
         return;

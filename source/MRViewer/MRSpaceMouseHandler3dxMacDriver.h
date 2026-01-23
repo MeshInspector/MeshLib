@@ -12,11 +12,11 @@ namespace MR::SpaceMouse
  * As the driver takes the exclusive control of the SpaceMouse devices, there is no way to connect to the devices
  * other than using the driver.
  */
-class SpaceMouseHandler3dxMacDriver : public SpaceMouseHandler
+class Handler3dxMacDriver : public Handler
 {
 public:
-    SpaceMouseHandler3dxMacDriver();
-    ~SpaceMouseHandler3dxMacDriver() override;
+    Handler3dxMacDriver();
+    ~Handler3dxMacDriver() override;
 
     void setClientName( const char* name, size_t len = 0 );
 

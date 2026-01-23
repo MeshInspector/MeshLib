@@ -42,6 +42,15 @@ void telemetryStlHead( std::string s )
     if ( s.starts_with( STLBN ) )
         s.resize( sizeof( STLBN ) - 2 );
 
+    // e.g. "STLEXP objname"
+    const char STLEXP[] = "STLEXP ";
+    if ( s.starts_with( STLEXP ) )
+        s.resize( sizeof( STLEXP ) - 2 );
+
+    // e.g. "objname.stl"
+    if ( s.ends_with( ".stl" ) )
+        s = "objname.stl";
+
     // e.g. 'SketchUp STL tmpHEPDHM'
     const char SKETCHUP[] = "SketchUp STL ";
     if ( s.starts_with( SKETCHUP ) )
@@ -76,6 +85,11 @@ void telemetryStlHead( std::string s )
     const char CURA[] = "CURA BINARY STL EXPORT. ";
     if ( s.starts_with( CURA ) )
         s.resize( sizeof( CURA ) - 2 );
+
+    // e.g. TopoMiller Streaming STL 2026-01-02T15:59:18.983Z
+    const char TOPOMILLER[] = "TopoMiller Streaming STL ";
+    if ( s.starts_with( TOPOMILLER ) )
+        s.resize( sizeof( TOPOMILLER ) - 2 );
 
     // e.g. "numpy-stl (3.0.0) 2026-01-05 14:46:07.404027 tmphpyx9npt.stl"
     const char NUMPY[] = "numpy-stl (";

@@ -4,14 +4,14 @@
 #include <functional>
 #include <string>
 
-namespace MR
+namespace MR::SpaceMouse
 {
 
 /// base class for handler of spacemouse devices
-class SpaceMouseHandler
+class Handler
 {
 public:
-    virtual ~SpaceMouseHandler() = default;
+    virtual ~Handler() = default;
 
     /// initialize device
     /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect

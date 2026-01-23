@@ -1,5 +1,5 @@
 #ifdef __APPLE__
-#include "MRSpaceMouseHandler3dxMacDriver.h"
+#include "MRHandler3dxMacDriver.h"
 #include "MRViewer.h"
 
 #include <MRPch/MRSpdlog.h>
@@ -264,12 +264,12 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
 namespace MR::SpaceMouse
 {
 
-SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()
+Handler3dxMacDriver::Handler3dxMacDriver()
 {
     setClientName( "MeshLib" );
 }
 
-SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
+Handler3dxMacDriver::~Handler3dxMacDriver()
 {
     std::unique_lock lock( gStateMutex );
     if ( lib.handle != nullptr )
@@ -286,7 +286,7 @@ SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
     gDeviceSignal = {};
 }
 
-void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len )
+void Handler3dxMacDriver::setClientName( const char* name, size_t len )
 {
     if ( len == 0 )
         len = std::strlen( name );
@@ -297,7 +297,7 @@ void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len 
     std::memcpy( clientName_.get() + 1, (const uint8_t *)name, len );
 }
 
-bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::string&)> deviceSignal )
+bool Handler3dxMacDriver::initialize( std::function<void(const std::string&)> deviceSignal )
 {
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
     std::unique_lock lock( gStateMutex );
@@ -355,7 +355,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
     return true;
 }
 
-void SpaceMouseHandler3dxMacDriver::handle()
+void Handler3dxMacDriver::handle()
 {
     // all events are processed by the 3DxWare driver; nothing to do here
 }

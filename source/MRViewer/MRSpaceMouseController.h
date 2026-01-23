@@ -3,18 +3,18 @@
 #include "MRSpaceMouseParameters.h"
 #include "MRMesh/MRMeshFwd.h"
 
-namespace MR
+namespace MR::SpaceMouse
 {
 
 // this class stores maps spacemouse event - program action
-class SpaceMouseController
+class Controller
 {
 public:
-    MR_ADD_CTOR_DELETE_MOVE( SpaceMouseController );
+    MR_ADD_CTOR_DELETE_MOVE( Controller );
     void connect();
 
-    MRVIEWER_API void setParameters( const SpaceMouseParameters& newParams );
-    MRVIEWER_API SpaceMouseParameters getParameters() const;
+    MRVIEWER_API void setParameters( const Parameters& newParams );
+    MRVIEWER_API Parameters getParameters() const;
 
 private:
     bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate );
@@ -23,7 +23,7 @@ private:
     bool lockRotate_{ false };
     bool showKeyDebug_{ false };
 
-    SpaceMouseParameters params;
+    Parameters params_;
 };
 
 } //namespace MR

@@ -407,7 +407,7 @@ public:
     MRVIEWER_API HistoryStore* getGlobalHistoryStore() const { return globalHistoryStore_.get(); }
     
     // Return spacemouse handler
-    const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
+    const std::shared_ptr<SpaceMouse::Handler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
     MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent = true );
@@ -505,8 +505,8 @@ public:
     [[nodiscard]] MRVIEWER_API const TouchpadParameters & getTouchpadParameters() const;
     MRVIEWER_API void setTouchpadParameters( const TouchpadParameters & );
 
-    [[nodiscard]] MRVIEWER_API SpaceMouseParameters getSpaceMouseParameters() const;
-    MRVIEWER_API void setSpaceMouseParameters( const SpaceMouseParameters & );
+    [[nodiscard]] MRVIEWER_API SpaceMouse::Parameters getSpaceMouseParameters() const;
+    MRVIEWER_API void setSpaceMouseParameters( const SpaceMouse::Parameters & );
 
     [[nodiscard]] const MouseController &mouseController() const { return *mouseController_; }
     [[nodiscard]] MouseController &mouseController() { return *mouseController_; }
@@ -571,7 +571,7 @@ private:
     std::shared_ptr<ImGuiMenu> menuPlugin_;
 
     std::unique_ptr<TouchpadController> touchpadController_;
-    std::unique_ptr<SpaceMouseController> spaceMouseController_;
+    std::unique_ptr<SpaceMouse::Controller> spaceMouseController_;
     std::unique_ptr<TouchesController> touchesController_;
     std::unique_ptr<MouseController> mouseController_;
     std::unique_ptr<IDragDropHandler> dragDropAdvancedHandler_;
@@ -642,7 +642,7 @@ private:
 
     std::unique_ptr<HistoryStore> globalHistoryStore_;
 
-    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
+    std::shared_ptr<SpaceMouse::Handler> spaceMouseHandler_;
 
     struct Connections;
     std::unique_ptr<Connections> connections_;

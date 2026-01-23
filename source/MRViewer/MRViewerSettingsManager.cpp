@@ -436,7 +436,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
-        SpaceMouseParameters spaceMouseParams;
+        SpaceMouse::Parameters spaceMouseParams;
         if ( paramsJson.isMember( "translateScale" ) )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
@@ -448,7 +448,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         {
             if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
             {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
                 if ( hidapiHandler )
                 {
                     const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
@@ -666,13 +666,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cShowExperimentalFeatures, viewer.experimentalFeatures );
 
     Json::Value spaceMouseParamsJson;
-    SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();
+    SpaceMouse::Parameters spaceMouseParams = viewer.getSpaceMouseParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
 #ifdef _WIN32
     if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
     {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
         if ( hidapinHandler )
         {
             spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();

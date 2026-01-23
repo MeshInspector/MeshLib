@@ -57,6 +57,8 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
         Buffer<float, VertId> vertStabilizers( res.topology.vertSize() );
         Buffer<float, UndirectedEdgeId> edgeWeights( res.topology.undirectedEdgeSize() );
 
+        // sqrt is used based on observations for more uniform distribution of results with different `params.smoothNormalsModifier`
+        auto sqrtNormalModifier = sqrt( std::clamp( params.smoothNormalsModifier, 0.0f, 1.0f ) );
         BitSetParallelFor( res.topology.getValidVerts(), [&, rden = 1 / ( 2 * sqr( maxOffset ) )]( VertId v )
         {
             float vertStabilizer = 1;
@@ -71,7 +73,7 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
             }
             assert( vertStabilizer >= 0 && vertStabilizer <= 1 );
             // 1e-6 here is to avoid the situation when all vertices of a connected component have stabilizer=0 and the system of equations is underdetermined
-            vertStabilizers[v] = std::max( vertStabilizer, 1e-6f );
+            vertStabilizers[v] = lerp( 1.0f, std::max( vertStabilizer, 1e-6f ), sqrtNormalModifier );
         } );
 
         /// smooth directions on original mesh to avoid boundary effects near stitches

@@ -19,6 +19,10 @@ struct ThickenParams
 
     /// the amount of offset for cloned mirrored mesh vertices in the opposite direction
     float insideOffset = 0;
+
+    /// this value allows user to control over normal smoothing
+    /// [0-1]: 0 minimizes smoothness, 1 uses default smoothing
+    float smoothNormalsModifier = 1.0f;
 };
 
 /// given a mesh \p m, representing a surface,

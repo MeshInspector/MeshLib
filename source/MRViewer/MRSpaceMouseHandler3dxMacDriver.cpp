@@ -1,5 +1,5 @@
 #ifdef __APPLE__
-#include "MRHandler3dxMacDriver.h"
+#include "MRSpaceMouseHandler3dxMacDriver.h"
 #include "MRViewer.h"
 
 #include <MRPch/MRSpdlog.h>

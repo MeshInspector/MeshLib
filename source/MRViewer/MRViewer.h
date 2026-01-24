@@ -502,11 +502,11 @@ public:
 
     MRVIEWER_API void postEmptyEvent();
 
-    [[nodiscard]] MRVIEWER_API const TouchpadParameters & getTouchpadParameters() const;
-    MRVIEWER_API void setTouchpadParameters( const TouchpadParameters & );
+    [[nodiscard]] const TouchpadController &touchpadController() const { return *touchpadController_; }
+    [[nodiscard]] TouchpadController& touchpadController() { return *touchpadController_; }
 
-    [[nodiscard]] MRVIEWER_API SpaceMouse::Parameters getSpaceMouseParameters() const;
-    MRVIEWER_API void setSpaceMouseParameters( const SpaceMouse::Parameters & );
+    [[nodiscard]] const SpaceMouse::Controller &spaceMouseController() const { return *spaceMouseController_; }
+    [[nodiscard]] SpaceMouse::Controller& spaceMouseController() { return *spaceMouseController_; }
 
     [[nodiscard]] const MouseController &mouseController() const { return *mouseController_; }
     [[nodiscard]] MouseController &mouseController() { return *mouseController_; }

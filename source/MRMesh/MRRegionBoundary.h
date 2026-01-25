@@ -43,6 +43,14 @@ namespace MR
 [[nodiscard]] MR_BIND_IGNORE inline std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet & region )
     { return findRightBoundary( topology, &region ); }
 
+/// if left, same as \ref findLeftBoundary
+/// if !left, same as \ref findRightBoundary
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region, bool left );
+
+/// returns all edges (e) for which topology.isLeftBdEdge( e, region ) is true;
+/// \param innerMeshEdgesOnly if true then edges with no right face are excluded
+[[nodiscard]] MRMESH_API EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* region, bool innerMeshEdgesOnly = false );
+
 /// deletes all region faces, inner edges and vertices, but keeps boundary edges and vertices of the region (or whole mesh if region is null);
 /// if `keepLoneHoles` is set - keeps boundary even if it has no valid faces on other side
 /// returns edge loops, each having deleted region faces on the left, and not-region faces or holes on the right

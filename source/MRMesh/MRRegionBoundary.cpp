@@ -74,6 +74,23 @@ EdgePath trackPath( const MeshTopology& topology, EdgeId e, EdgeBitSet & edges, 
     }
 }
 
+EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* region, bool innerMeshEdgesOnly )
+{
+    MR_TIMER;
+    assert( !innerMeshEdgesOnly || innerMeshEdgesOnly && region );
+    EdgeBitSet bdEdges( topology.edgeSize() );
+    BitSetParallelForAll( bdEdges, [&]( EdgeId e )
+    {
+        if ( topology.isLoneEdge( e ) )
+            return;
+        if ( innerMeshEdgesOnly && !topology.right( e ) )
+            return;
+        if ( topology.isLeftBdEdge( e, region ) )
+            bdEdges.set( e );
+    } );
+    return bdEdges;
+}
+
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
 {
     MR_TIMER;
@@ -94,12 +111,7 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
         track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region ); };
     }
 
-    EdgeBitSet bdEdges( topology.edgeSize() );
-    BitSetParallelForAll( bdEdges, [&]( EdgeId e )
-    {
-        if ( !topology.isLoneEdge( e ) && topology.isLeftBdEdge( e, region ) )
-            bdEdges.set( e );
-    } );
+    EdgeBitSet bdEdges = findAllLeftBdEdges( topology, region );
 
     for ( auto e : bdEdges )
     {

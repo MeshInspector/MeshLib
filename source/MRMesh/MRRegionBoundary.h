@@ -19,6 +19,16 @@ namespace MR
 [[nodiscard]] inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
     { return trackRightBoundaryLoop( topology, e0, &region ); }
 
+/// if left, same as \ref trackLeftBoundaryLoop
+/// if !left, same as \ref trackRightBoundaryLoop
+[[nodiscard]] MRMESH_API EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, bool left );
+
+/// returns the longest path of edges with set bits in (edges) starting from (e0);
+/// if at some reached vertex there are two or more edges originate with set bits in (edges),
+/// the path selects the leftmost (if left) or the rightmost (if !left) option;
+/// the bits in (edges) for tracked path edges are reset
+[[nodiscard]] MRMESH_API EdgePath trackPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet & edges, bool left );
+
 /// returns all region boundary loops;
 /// every loop has region faces on the left, and not-region faces or holes on the right
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );

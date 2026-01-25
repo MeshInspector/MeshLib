@@ -44,6 +44,36 @@ EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const 
     return trackBoundaryLoop( topology, e0, region, false );
 }
 
+EdgePath trackPath( const MeshTopology& topology, EdgeId e, EdgeBitSet & edges, bool left )
+{
+    std::function<EdgeId( EdgeId )> next;
+    if ( left )
+        next = [&] ( EdgeId e ) { return topology.prev( e ); };
+    else
+        next = [&] ( EdgeId e ) { return topology.next( e ); };
+
+    EdgeLoop res;
+    if ( !edges.test_set( e, false ) )
+        return res;
+
+    for ( ;; )
+    {
+        res.push_back( e );
+        // search for next edge in the path
+        for ( auto e1 = next( e.sym() );; e1 = next( e1 ) )
+        {
+            if ( e1 == e.sym() )
+                return res; // nothing found after full round
+
+            if ( edges.test_set( e1, false ) )
+            {
+                e = e1;
+                break;
+            }
+        }
+    }
+}
+
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
 {
     MR_TIMER;

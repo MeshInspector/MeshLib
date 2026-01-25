@@ -74,10 +74,19 @@ EdgePath trackPath( const MeshTopology& topology, EdgeId e, EdgeBitSet & edges, 
     }
 }
 
+std::vector<EdgePath> trackAllPaths( const MeshTopology& topology, EdgeBitSet & edges, bool left )
+{
+    MR_TIMER;
+    std::vector<EdgePath> res;
+    for ( auto e : edges )
+        res.push_back( trackPath( topology, e, edges, left ) );
+    return res;
+}
+
 EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* region, bool innerMeshEdgesOnly )
 {
     MR_TIMER;
-    assert( !innerMeshEdgesOnly || innerMeshEdgesOnly && region );
+    assert( !innerMeshEdgesOnly || ( innerMeshEdgesOnly && region ) );
     EdgeBitSet bdEdges( topology.edgeSize() );
     BitSetParallelForAll( bdEdges, [&]( EdgeId e )
     {

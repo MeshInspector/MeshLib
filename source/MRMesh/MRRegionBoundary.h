@@ -29,6 +29,8 @@ namespace MR
 /// the bits in (edges) for tracked path edges are reset
 [[nodiscard]] MRMESH_API EdgePath trackPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet & edges, bool left );
 
+[[nodiscard]] MRMESH_API std::vector<EdgePath> trackAllPaths( const MeshTopology& topology, EdgeBitSet & edges, bool left );
+
 /// returns all region boundary loops;
 /// every loop has region faces on the left, and not-region faces or holes on the right
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );

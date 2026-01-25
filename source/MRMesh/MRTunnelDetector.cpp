@@ -387,8 +387,16 @@ std::vector<EdgeLoop> findSmallestMetricEquivalentLoops( const MeshTopology& top
     };
 
     const auto fs = fillContourLeftByGraphCut( topology, loop, metric );
+
+    auto es = findAllLeftBdEdges( topology, &fs, true );
+    for ( auto e : loop )
+    {
+        assert( es.test( e ) );
+        es.reset( e );
+    }
+
     // returned loops must be oriented the same as input loop
-    return findRightBoundary( topology, fs );
+    return trackAllPaths( topology, es, true ); // left param can be arbitrary
 }
 
 std::vector<EdgeLoop> findShortestEquivalentLoops( const MeshPart& mp, const EdgeLoop& loop )

@@ -68,7 +68,7 @@ auto ForAllRanged( const BS & bs, F && f, Cb && ... cb )
 {
     if constexpr ( sizeof...( cb ) == 0 )
     {
-        return forAllRanged( { (size_t)bs.beginId(), (size_t)bs.endId() }, [&] ( size_t i, const Range& range )
+        return forAllRanged( { (size_t)0, bs.size() }, [&] ( size_t i, const Range& range )
         {
             using Id = typename BS::IndexType;
             std::forward<F>( f )( Id{ i }, IdRange<Id>{ Id{ range.begin() }, Id{ range.end() } } );
@@ -76,7 +76,7 @@ auto ForAllRanged( const BS & bs, F && f, Cb && ... cb )
     }
     else
     {
-        return forAllRanged( { (size_t)bs.beginId(), (size_t)bs.endId() }, [&] ( size_t i, const Range& range, void* )
+        return forAllRanged( { (size_t)0, bs.size() }, [&] ( size_t i, const Range& range, void* )
         {
             using Id = typename BS::IndexType;
             std::forward<F>( f )( Id{ i }, IdRange<Id>{ Id{ range.begin() }, Id{ range.end() } } );
@@ -90,7 +90,7 @@ auto ForAllRanged( const BS & bs, F && f, Cb && ... cb )
 template <typename BS, typename L, typename F, typename ...Cb>
 auto ForAllRanged( const BS & bs, tbb::enumerable_thread_specific<L>& e, F && f, Cb && ... cb )
 {
-    return forAllRanged( { (size_t)bs.beginId(), (size_t)bs.endId() }, [&] ( size_t i, const Range& range, void* ctx )
+    return forAllRanged( { (size_t)0, bs.size() }, [&] ( size_t i, const Range& range, void* ctx )
     {
         using Id = typename BS::IndexType;
         std::forward<F>( f )( Id{ i }, IdRange<Id>{ Id{ range.begin() }, Id{ range.end() } }, *(L*)ctx );

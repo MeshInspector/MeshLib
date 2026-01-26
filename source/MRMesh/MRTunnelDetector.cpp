@@ -396,7 +396,7 @@ std::vector<EdgeLoop> findSmallestMetricEquivalentLoops( const MeshTopology& top
         es.reset( e );
     }
 
-    auto res = extractAllLoops( topology, es, true ); // left param can be arbitrary
+    auto res = extractAllLoops( topology, es, Turn::Leftmost ); // turn parameter can be arbitrary, since no path splitting is expected
     assert( es.none() ); // no not-closed paths remain
     return res;
 }

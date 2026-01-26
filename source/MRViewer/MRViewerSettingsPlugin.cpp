@@ -36,6 +36,8 @@
 #include "MRImGuiMultiViewport.h"
 #include "MRShortcutManager.h"
 #include "MRViewerConfigConstants.h"
+#include "MRSpaceMouseController.h"
+#include "MRTouchpadController.h"
 
 namespace
 {
@@ -1159,7 +1161,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
         int valueAbs = int( std::fabs( value ) );
         bool inverse = value < 0.f;
         ImGui::SetNextItemWidth( menuWidth * 0.6f );
-        bool changed = UI::slider<NoUnit>( label, valueAbs, 1, 100 );
+        bool changed = UI::slider<NoUnit>( label, valueAbs, 10, 100 );
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + ( cInputPadding - cCheckboxPadding ) * UI::scale() );
@@ -1197,7 +1199,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
     {
         if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {
-            auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+            auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
             if ( hidapiHandler )
             {
                 hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
@@ -1207,7 +1209,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
     UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble." );
 #endif
     if ( anyChanged )
-        getViewerInstance().setSpaceMouseParameters( spaceMouseParams_ );
+        getViewerInstance().spaceMouseController().setParameters(spaceMouseParams_);
 }
 
 void ViewerSettingsPlugin::drawTouchpadSettings_()
@@ -1232,7 +1234,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
         updateSettings = true;
     ImGui::PopStyleVar();
     if ( updateSettings )
-        viewer->setTouchpadParameters( touchpadParameters_ );
+        viewer->touchpadController().setParameters( touchpadParameters_ );
 }
 
 void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
@@ -1358,12 +1360,12 @@ void ViewerSettingsPlugin::updateDialog_()
     updateThemes();
 
     tempUserScaling_ = viewer->getMenuPlugin()->getUserScaling();
-    spaceMouseParams_ = viewer->getSpaceMouseParameters();
-    touchpadParameters_ = viewer->getTouchpadParameters();
+    spaceMouseParams_ = viewer->spaceMouseController().getParameters();
+    touchpadParameters_ = viewer->touchpadController().getParameters();
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
     {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::HandlerHidapi >( spaceMouseHandler );
         if ( hidapiHandler )
             activeMouseScrollZoom_ = hidapiHandler->isMouseScrollZoomActive();
     }
@@ -1389,7 +1391,7 @@ void ViewerSettingsPlugin::resetSettings_()
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
     {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::HandlerHidapi >( spaceMouseHandler );
         if ( hidapiHandler )
             hidapiHandler->activateMouseScrollZoom( false );
     }

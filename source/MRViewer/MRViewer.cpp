@@ -804,21 +804,15 @@ bool Viewer::setupWindow_( const LaunchParams& params )
 
     mouseController_->connect();
 
-    if ( !touchesController_ )
-        touchesController_ = std::make_unique<TouchesController>();
     touchesController_->connect( this );
     spdlog::info( "TouchesController created" );
 
-    if ( !spaceMouseController_ )
-        spaceMouseController_ = std::make_unique<SpaceMouseController>();
     spaceMouseController_->connect();
     spdlog::info( "SpaceMouseController created" );
 
     if ( !spaceMouseHandler_ )
         initSpaceMouseHandler();
 
-    if ( !touchpadController_ )
-        touchpadController_ = std::make_unique<TouchpadController>();
     touchpadController_->connect( this );
     touchpadController_->initialize( window );
     spdlog::info( "TouchpadController created" );
@@ -1039,8 +1033,7 @@ void Viewer::launchShut()
     sceneTexture_.reset();
     depthPeeler_.reset();
 
-    if ( touchpadController_ )
-        touchpadController_->reset();
+    touchpadController_->reset();
 
     dragDropAdvancedHandler_.reset();
 
@@ -1120,40 +1113,12 @@ void Viewer::postEmptyEvent()
     glfwPostEmptyEvent();
 }
 
-const TouchpadParameters & Viewer::getTouchpadParameters() const
-{
-    if ( !touchpadController_ )
-    {
-        const static TouchpadParameters empty;
-        return empty;
-    }
-    return touchpadController_->getParameters();
-}
-
-void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
-{
-    if ( !touchpadController_ )
-        touchpadController_ = std::make_unique<TouchpadController>();
-    touchpadController_->setParameters( ps );
-}
-
-SpaceMouseParameters Viewer::getSpaceMouseParameters() const
-{
-    if ( !spaceMouseController_ )
-        return {};
-    return spaceMouseController_->getParameters();
-}
-
-void Viewer::setSpaceMouseParameters( const SpaceMouseParameters & ps )
-{
-    if ( !spaceMouseController_ )
-        spaceMouseController_ = std::make_unique<SpaceMouseController>();
-    spaceMouseController_->setParameters( ps );
-}
-
 Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
+    touchpadController_( std::make_unique<TouchpadController>() ),
+    spaceMouseController_( std::make_unique<SpaceMouse::Controller>() ),
+    touchesController_( std::make_unique<TouchesController>() ),
     mouseController_( std::make_unique<MouseController>() ),
     recentFilesStore_( std::make_unique<RecentFilesStore>() ),
     frameCounter_( std::make_unique<FrameCounter>() ),
@@ -1172,8 +1137,8 @@ Viewer::Viewer() :
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
         viewer->experimentalFeatures = false;
-        viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
-        viewer->setTouchpadParameters( TouchpadParameters{} );
+        viewer->spaceMouseController().setParameters( SpaceMouse::Parameters{} );
+        viewer->touchpadController().setParameters( TouchpadParameters{} );
         viewer->enableAlphaSort( true );
 
         for ( ViewportId id : viewer->getPresentViewports() )
@@ -2206,7 +2171,7 @@ void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const st
 #ifndef __EMSCRIPTEN__
 #ifdef __APPLE__
     // try to use the official driver first
-    auto driverHandler = std::make_unique<SpaceMouse::SpaceMouseHandler3dxMacDriver>();
+    auto driverHandler = std::make_unique<SpaceMouse::Handler3dxMacDriver>();
     driverHandler->setClientName( MR_PROJECT_NAME );
     if ( driverHandler->initialize( deviceSignal ) )
     {
@@ -2218,7 +2183,7 @@ void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const st
     // fallback to the HIDAPI implementation
     spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
-    spaceMouseHandler_ = std::make_unique<SpaceMouse::SpaceMouseHandlerHidapi>();
+    spaceMouseHandler_ = std::make_unique<SpaceMouse::HandlerHidapi>();
     if ( spaceMouseHandler_->initialize( std::move( deviceSignal ) ) )
     {
         spdlog::info( "SpaceMouseHandlerHidapi initialized" );

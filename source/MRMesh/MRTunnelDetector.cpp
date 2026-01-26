@@ -7,6 +7,7 @@
 #include "MRTimer.h"
 #include "MREdgePathsBuilder.h"
 #include "MRParallelFor.h"
+#include "MRFillContourByGraphCut.h"
 
 namespace MR
 {
@@ -372,6 +373,37 @@ Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const
 Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const EdgeLoop& loop )
 {
     return findSmallestMetricCoLoop( mp.mesh.topology, loop, edgeLengthMetric( mp.mesh ), mp.region );
+}
+
+std::vector<EdgeLoop> findSmallestMetricEquivalentLoops( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric0,
+    const FaceBitSet* region )
+{
+    MR_TIMER;
+    auto metric = [&]( EdgeId e )
+    {
+        if ( !topology.isInnerEdge( e, region ) )
+            return FLT_MAX;
+        return metric0( e );
+    };
+
+    const auto fs = fillContourLeftByGraphCut( topology, loop, metric );
+
+    auto es = findAllLeftBdEdges( topology, &fs, true );
+    // exclude input loop from (es)
+    for ( auto e : loop )
+    {
+        assert( es.test( e ) );
+        es.reset( e );
+    }
+
+    auto res = extractAllLoops( topology, es, Turn::Leftmost ); // turn parameter can be arbitrary, since no path splitting is expected
+    assert( es.none() ); // no not-closed paths remain
+    return res;
+}
+
+std::vector<EdgeLoop> findShortestEquivalentLoops( const MeshPart& mp, const EdgeLoop& loop )
+{
+    return findSmallestMetricEquivalentLoops( mp.mesh.topology, loop, edgeLengthMetric( mp.mesh ), mp.region );
 }
 
 Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )

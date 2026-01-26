@@ -15,7 +15,7 @@
 namespace MR
 {
 
-EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
+static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
 {
     std::function<EdgeId( EdgeId )> next;
     if ( left )
@@ -44,7 +44,81 @@ EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const 
     return trackBoundaryLoop( topology, e0, region, false );
 }
 
-std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
+EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
+{
+    std::function<EdgeId( EdgeId )> next;
+    if ( turn == Turn::Leftmost )
+        next = [&] ( EdgeId e ) { return topology.prev( e ); };
+    else
+        next = [&] ( EdgeId e ) { return topology.next( e ); };
+
+    if ( !edges.test_set( e, false ) )
+        return {};
+
+    for ( ;; )
+    {
+        if ( outPath )
+            outPath->push_back( e );
+        // search for next edge in the path
+        for ( auto e1 = next( e.sym() );; e1 = next( e1 ) )
+        {
+            if ( e1 == e.sym() )
+                return e; // nothing found after full round
+
+            if ( edges.test_set( e1, false ) )
+            {
+                e = e1;
+                break;
+            }
+        }
+    }
+}
+
+std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, Turn turn )
+{
+    MR_TIMER;
+    EdgeBitSet pathEdges( edges.size() );
+    EdgePath path;
+    std::vector<EdgeLoop> res;
+    for ( auto e : edges )
+    {
+        extractPath( topology, e, edges, &path, turn );
+        if ( !path.empty() && topology.org( path.front() ) == topology.dest( path.back() ) )
+        {
+            // a closed loop was extracted;
+            // do not move to keep allocated memory in path
+            res.push_back( path );
+        }
+        else
+        {
+            // not closed path was extracted, remember it bits
+            for ( auto pe : path )
+                pathEdges.set( pe );
+        }
+        path.clear();
+    }
+    edges = std::move( pathEdges );
+    return res;
+}
+
+EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* region, bool innerMeshEdgesOnly )
+{
+    MR_TIMER;
+    assert( !innerMeshEdgesOnly || ( innerMeshEdgesOnly && region ) );
+    EdgeBitSet bdEdges( topology.edgeSize() );
+    BitSetParallelForAll( bdEdges, [&]( EdgeId e )
+    {
+        if ( topology.isLoneEdge( e ) )
+            return;
+        if ( innerMeshEdgesOnly && !topology.right( e ) )
+            return;
+        if ( topology.isLeftBdEdge( e, region ) )
+            bdEdges.set( e );
+    } );
+    return bdEdges;
+}
+
+static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
 {
     MR_TIMER;
 
@@ -64,12 +138,7 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
         track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region ); };
     }
 
-    EdgeBitSet bdEdges( topology.edgeSize() );
-    BitSetParallelForAll( bdEdges, [&]( EdgeId e )
-    {
-        if ( !topology.isLoneEdge( e ) && topology.isLeftBdEdge( e, region ) )
-            bdEdges.set( e );
-    } );
+    EdgeBitSet bdEdges = findAllLeftBdEdges( topology, region );
 
     for ( auto e : bdEdges )
     {

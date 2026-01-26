@@ -103,4 +103,11 @@ enum class GeodesicPathApprox : char
     FastMarching
 };
 
+/// what way a path can follow in case of several alternatives
+enum class Turn : bool
+{
+    Leftmost,
+    Rightmost
+};
+
 } //namespace MR

@@ -44,10 +44,10 @@ EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const 
     return trackBoundaryLoop( topology, e0, region, false );
 }
 
-EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, bool left )
+EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
 {
     std::function<EdgeId( EdgeId )> next;
-    if ( left )
+    if ( turn == Turn::Leftmost )
         next = [&] ( EdgeId e ) { return topology.prev( e ); };
     else
         next = [&] ( EdgeId e ) { return topology.next( e ); };
@@ -74,7 +74,7 @@ EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, E
     }
 }
 
-std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, bool left )
+std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, Turn turn )
 {
     MR_TIMER;
     EdgeBitSet pathEdges( edges.size() );
@@ -82,7 +82,7 @@ std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet 
     std::vector<EdgeLoop> res;
     for ( auto e : edges )
     {
-        extractPath( topology, e, edges, &path, left );
+        extractPath( topology, e, edges, &path, turn );
         if ( !path.empty() && topology.org( path.front() ) == topology.dest( path.back() ) )
         {
             // a closed loop was extracted;

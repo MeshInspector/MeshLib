@@ -120,7 +120,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
                                                  &faceToRegionMap, settings.touchIsIntersection );
 
         if ( !res.has_value() )
-            return unexpectedOperationCanceled();
+            return unexpected( std::move( res.error() ) );
         if ( res->none() )
             return {};
 

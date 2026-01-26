@@ -522,7 +522,8 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
     std::atomic<bool> keepGoing{ true };
     // checks subtasks in parallel
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
+        [&] ( const tbb::blocked_range<size_t>& range )
     {
         std::vector<NodeNode> mySubtasks;
         for ( auto is = range.begin(); is < range.end(); ++is )

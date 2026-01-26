@@ -208,39 +208,43 @@ Expected<Mesh> uniteManyMeshes(
                 std::atomic_bool included{ false };
                 // mesh contains some group meshes
                 tbb::enumerable_thread_specific<BitSet> nestedPerThread( meshes.size() );
-                ParallelFor( group, [&] ( size_t i )
+                tbb::parallel_for( tbb::blocked_range<int>( 0, int( group.size() ) ),
+                                   [&] ( const tbb::blocked_range<int>& range )
                 {
                     if ( intersects.load( std::memory_order::relaxed ) || ( !mergeNestedComponents && included.load( std::memory_order::relaxed ) ) )
                         return;
                     auto& nested = nestedPerThread.local();
 
-                    auto& groupMesh = meshes[group[i]];
+                    for ( int i = range.begin(); i < range.end(); ++i )
+                    {
+                        auto& groupMesh = meshes[group[i]];
 
-                    Box3d box = meshBoxes[m];
-                    box.include( meshBoxes[group[i]] );
-                    auto intConverter = getToIntConverter( box );
-                    auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
-                    if ( !collidingResAB.empty() )
-                    {
-                        intersects.store( true, std::memory_order::relaxed );
-                        return;
-                    }
-                    auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
-                    if ( !collidingResBA.empty() )
-                    {
-                        intersects.store( true, std::memory_order::relaxed );
-                        return;
-                    }
-                    if ( !mergeNestedComponents )
-                    {
-                        if ( isNonIntersectingInside( *mesh, *groupMesh ) )
+                        Box3d box = meshBoxes[m];
+                        box.include( meshBoxes[group[i]] );
+                        auto intConverter = getToIntConverter( box );
+                        auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
+                        if ( !collidingResAB.empty() )
                         {
-                            included.store( true, std::memory_order::relaxed );
-                            return;
+                            intersects.store( true, std::memory_order::relaxed );
+                            break;
                         }
-                        else if ( isNonIntersectingInside( *groupMesh, *mesh ) )
+                        auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
+                        if ( !collidingResBA.empty() )
                         {
-                            nested.set( group[i] );
+                            intersects.store( true, std::memory_order::relaxed );
+                            break;
+                        }
+                        if ( !mergeNestedComponents )
+                        {
+                            if ( isNonIntersectingInside( *mesh, *groupMesh ) )
+                            {
+                                included.store( true, std::memory_order::relaxed );
+                                break;
+                            }
+                            else if ( isNonIntersectingInside( *groupMesh, *mesh ) )
+                            {
+                                nested.set( group[i] );
+                            }
                         }
                     }
                 } );

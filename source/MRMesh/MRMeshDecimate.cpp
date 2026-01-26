@@ -1089,57 +1089,59 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     TbbThreadMutex reporterMutex;
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
-    ParallelFor( parts, [&] ( size_t i )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
         const auto reporterLock = reporterMutex.tryLock();
         const bool reportProgressFromThisThread = settings.progressCallback && reporterLock;
-
-        auto reportThreadProgress = [&]( float p )
+        for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            if ( cancelled.load( std::memory_order_relaxed ) )
-                return false;
-            if ( reportProgressFromThisThread && !settings.progressCallback( 0.2f + 0.65f * ( finishedParts.load( std::memory_order_relaxed ) + p ) / sz ) )
+            auto reportThreadProgress = [&]( float p )
             {
-                cancelled.store( true, std::memory_order_relaxed );
-                return false;
+                if ( cancelled.load( std::memory_order_relaxed ) )
+                    return false;
+                if ( reportProgressFromThisThread && !settings.progressCallback( 0.2f + 0.65f * ( finishedParts.load( std::memory_order_relaxed ) + p ) / sz ) )
+                {
+                    cancelled.store( true, std::memory_order_relaxed );
+                    return false;
+                }
+                return true;
+            };
+            if ( !reportThreadProgress( 0 ) )
+                break;
+
+            DecimateSettings subSeqSettings = settings;
+            if ( limitedDeletion )
+            {
+                /// give quota of deletions proportional to the number of removable vertices in the part
+                const auto numPartRemovableVerts = parts[i].removableVerts.count();
+                const auto partFraction = float( numPartRemovableVerts ) / numIniVerts;
+                subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
+                subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
             }
-            return true;
-        };
-        if ( !reportThreadProgress( 0 ) )
-            return;
+            if ( settings.minFacesInPart > 0 )
+            {
+                int startFaces = (int)parts[i].region.count();
+                if ( startFaces > settings.minFacesInPart )
+                    subSeqSettings.maxDeletedFaces = std::min( subSeqSettings.maxDeletedFaces, startFaces - settings.minFacesInPart );
+                else
+                    subSeqSettings.maxDeletedFaces = 0;
+            }
+            subSeqSettings.packMesh = false;
+            subSeqSettings.vertForms = &mVertForms;
+            subSeqSettings.touchNearBdEdges = false;
+            // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
+            subSeqSettings.bdVerts = &parts[i].bdVerts;
+            subSeqSettings.region = &parts[i].region;
+            if ( reportProgressFromThisThread )
+                subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
+            else if ( settings.progressCallback )
+                subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
+            parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
 
-        DecimateSettings subSeqSettings = settings;
-        if ( limitedDeletion )
-        {
-            /// give quota of deletions proportional to the number of removable vertices in the part
-            const auto numPartRemovableVerts = parts[i].removableVerts.count();
-            const auto partFraction = float( numPartRemovableVerts ) / numIniVerts;
-            subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
-            subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
+            if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
+                break;
+            finishedParts.fetch_add( 1, std::memory_order_relaxed );
         }
-        if ( settings.minFacesInPart > 0 )
-        {
-            int startFaces = (int)parts[i].region.count();
-            if ( startFaces > settings.minFacesInPart )
-                subSeqSettings.maxDeletedFaces = std::min( subSeqSettings.maxDeletedFaces, startFaces - settings.minFacesInPart );
-            else
-                subSeqSettings.maxDeletedFaces = 0;
-        }
-        subSeqSettings.packMesh = false;
-        subSeqSettings.vertForms = &mVertForms;
-        subSeqSettings.touchNearBdEdges = false;
-        // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
-        subSeqSettings.bdVerts = &parts[i].bdVerts;
-        subSeqSettings.region = &parts[i].region;
-        if ( reportProgressFromThisThread )
-            subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
-        else if ( settings.progressCallback )
-            subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
-        parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
-
-        if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
-            return;
-        finishedParts.fetch_add( 1, std::memory_order_relaxed );
     } );
 
     if ( settings.region )

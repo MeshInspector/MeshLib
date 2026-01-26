@@ -18,3 +18,5 @@
 --skip-mentions-of '/(std|tl)::expected<Json::Value, .*>/'
 --skip-mentions-of '/std::initializer_list<.*>/'
 --adjust-comments 's@(^|(^///\s*)? )\\([{}]|(def|in|addto)group\s+).*@@g'
+--infer-lifetime-iterators
+--infer-lifetime-constructors

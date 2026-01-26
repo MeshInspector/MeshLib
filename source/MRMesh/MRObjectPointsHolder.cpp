@@ -268,9 +268,9 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     if ( !points_ )
         return {};
     tbb::enumerable_thread_specific<Box3f> threadData;
-    BitSetParallelFor( points_->validPoints, threadData, [&] ( VertId id, Box3f& b )
+    BitSetParallelFor( points_->validPoints, [&] ( VertId id )
     {
-        b.include( points_->points[id] );
+        threadData.local().include( points_->points[id] );
     } );
     Box3f bb;
     for ( const auto& b : threadData )

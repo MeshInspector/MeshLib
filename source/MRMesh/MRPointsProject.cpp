@@ -224,13 +224,13 @@ VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & pr
     MR_TIMER;
     std::atomic<float> minDistSq{ FLT_MAX };
     tbb::enumerable_thread_specific<VertPair> threadData;
-    BitSetParallelFor( pc.validPoints, threadData, [&]( VertId v, VertPair& p )
+    BitSetParallelFor( pc.validPoints, [&]( VertId v )
     {
         float knownDistSq = minDistSq.load( std::memory_order_relaxed );
         auto proj = findProjectionOnPoints( pc.points[v], pc, knownDistSq, nullptr, 0, [v]( VertId x ) { return v == x; } );
         if ( proj.distSq >= knownDistSq )
             return;
-        p = { v, proj.vId };
+        threadData.local() = { v, proj.vId };
         while ( knownDistSq > proj.distSq && !minDistSq.compare_exchange_strong( knownDistSq, proj.distSq ) ) { }
     }, progress );
 

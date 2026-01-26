@@ -201,8 +201,8 @@ static void testClosestWeightedMeshPointContinuity( bool bidir )
         zVals.push_back( z );
 
     // check that distance is continuous
-    tbb::enumerable_thread_specific<float> threadMaxGrad { 0.f };
-    ParallelFor( zVals, threadMaxGrad, [&] ( size_t iz, float& val ) {
+    tbb::enumerable_thread_specific<float> threadMaxGrad;
+    ParallelFor( zVals, [&] ( size_t iz ) {
         float z = zVals[iz];
         float localMaxGrad = 0.f;
         for ( float y = rangeMin; y < rangeMax; y += step )
@@ -218,7 +218,7 @@ static void testClosestWeightedMeshPointContinuity( bool bidir )
                 localMaxGrad = std::max( localMaxGrad, grad.length() );
             }
         }
-        val = std::max( val, localMaxGrad );
+        threadMaxGrad.local() = localMaxGrad;
     } );
 
     float maxGrad = 0.f;

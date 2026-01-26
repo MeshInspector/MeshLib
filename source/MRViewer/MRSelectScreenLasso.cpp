@@ -151,7 +151,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
     const auto orthoBackwards = viewport.getBackwardDirection();
     const Box2f clipArea( { -1.f, -1.f }, { 1.f, 1.f } );
     tbb::enumerable_thread_specific<std::vector<Fragment>> tlsFragments;
-    BitSetParallelFor( mesh->topology.getValidFaces(), tlsFragments, [&]( FaceId f, auto& fragments )
+    BitSetParallelFor( mesh->topology.getValidFaces(), [&]( FaceId f )
     {
         Vector3f v[3];
         mesh->getTriPoints( f, v );
@@ -182,6 +182,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         const int steps = std::min( maxPixelSpan / 2, 64 ); // sample over every second pixel
         const float rsteps = 1.0f / steps;
         // no samples on edges
+        auto & fragments = tlsFragments.local();
         for ( int ia = 1; ia < steps; ++ia )
             for ( int ib = 1; ia + ib < steps; ++ib )
             {

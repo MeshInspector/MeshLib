@@ -414,8 +414,9 @@ Expected<VoxelsVolumeMinMax<Vector<T,VoxelId>>> vdbVolumeToSimpleVolumeImpl(
         return res;
 
     tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
-    if ( !ParallelFor( 0_vox, indexer.endId(), accessorPerThread, [&]( VoxelId i, auto& accessor )
+    if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
     {
+        auto& accessor = accessorPerThread.local();
         auto coord = indexer.toPos( i );
         float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
         if constexpr ( isFloat && !Norm )
@@ -512,8 +513,10 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
         * AffineXf3f::translation( Vector3f{ fromVdb( minCoord ) } );
 
     tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
-    auto updateGrid = [&] ( VoxelId vox, float windVal, openvdb::FloatGrid::Accessor& accessor )
+    auto updateGrid = [&] ( VoxelId vox, float windVal )
     {
+        auto & accessor = perThreadAccessor.local();
+
         auto pos = indexer.toPos( vox );
         auto coord = minCoord;
         for ( int j = 0; j < 3; ++j )
@@ -533,9 +536,9 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
         auto func = [&] ( std::vector<float>&& vals, const Vector3i&, int zOffset ) -> Expected<void>
         {
             const auto offset = indexer.sizeXY() * zOffset;
-            ParallelFor( size_t( 0 ), vals.size(), perThreadAccessor, [&] ( size_t i, auto& accessor )
+            ParallelFor( size_t( 0 ), vals.size(), [&] ( size_t i )
             {
-                updateGrid( VoxelId( i + offset ), vals[i], accessor );
+                updateGrid( VoxelId( i + offset ), vals[i] );
             } );
             return {};
         };
@@ -555,9 +558,9 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
         return res;
     }
 
-    if ( !ParallelFor( size_t( 0 ), volume, perThreadAccessor, [&]( size_t i, auto& accessor )
+    if ( !ParallelFor( size_t( 0 ), volume, [&]( size_t i )
         {
-            updateGrid( VoxelId( i ), windVals[i], accessor );
+            updateGrid( VoxelId( i ), windVals[i] );
         }, subprogress( settings.progress, 0.8f, 1.0f ) ) )
     {
         return unexpectedOperationCanceled();

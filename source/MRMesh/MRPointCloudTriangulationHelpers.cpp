@@ -562,8 +562,9 @@ std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
     };
     tbb::enumerable_thread_specific<PerThreadData> threadData;
 
-    if ( !BitSetParallelFor( cloud.validPoints, threadData, [&]( VertId v, PerThreadData& localData )
+    if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
     {
+        auto& localData = threadData.local();
         auto& disc = localData.fanData;
         TriangulationHelpers::buildLocalTriangulation( cloud, v, settings, disc );
 
@@ -610,8 +611,9 @@ std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, cons
 
     VertBitSet borderPoints( pointCloud.validPoints.size() );
     tbb::enumerable_thread_specific<TriangulatedFanData> tls;
-    if ( !BitSetParallelFor( pointCloud.validPoints, tls, [&] ( VertId v, TriangulatedFanData& fanData )
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&] ( VertId v )
     {
+        auto& fanData = tls.local();
         if ( isBoundaryPoint( pointCloud, v, settings, fanData ) )
             borderPoints.set( v );
     }, cb ) )

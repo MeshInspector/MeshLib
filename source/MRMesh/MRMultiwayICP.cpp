@@ -808,7 +808,7 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
         } );
 
         tbb::enumerable_thread_specific<size_t> counters( 0 );
-        ParallelFor( size_t( 0 ), pairs.size() * pairs.size(), counters, [&] ( size_t r, size_t& counter )
+        ParallelFor( size_t( 0 ), pairs.size() * pairs.size(), [&] ( size_t r )
         {
             auto i = ICPElementId( r % pairs.size() );
             auto j = ICPElementId( r / pairs.size() );
@@ -816,7 +816,7 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
                 return;
             if ( maxDistSq[i] >= prop_.distThresholdSq )
                 return;
-            counter += MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] );
+            counters.local() += MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] );
         } );
 
         size_t numDeactivated = 0;

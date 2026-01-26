@@ -298,7 +298,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
     validInQueue_.resize( sz, false );
 
     tbb::enumerable_thread_specific<std::vector<QueueElement>> threadData;
-    BitSetParallelForAll( validInQueue_, threadData, [&]( UndirectedEdgeId ue, auto& v )
+    BitSetParallelForAll( validInQueue_, [&]( UndirectedEdgeId ue )
     {
         if ( regionEdges_.empty() )
         {
@@ -312,7 +312,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
         }
         if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
         {
-            v.push_back( *qe );
+            threadData.local().push_back( *qe );
             validInQueue_.set( ue );
         }
     } );

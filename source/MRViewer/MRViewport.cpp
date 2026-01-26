@@ -368,8 +368,9 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     int width = int( MR::width( viewportRect_ ) );
     int height = int( MR::height( viewportRect_ ) );
     tbb::enumerable_thread_specific<Box2i> tlBoxes;
-    BitSetParallelFor( includePixBs, tlBoxes, [&] ( size_t i, Box2i& localBox )
+    BitSetParallelFor( includePixBs, [&] ( size_t i )
     {
+        auto& localBox = tlBoxes.local();
         localBox.include( Vector2i( int( i ) % width, int( i ) / width ) );
     } );
     Box2i rect;

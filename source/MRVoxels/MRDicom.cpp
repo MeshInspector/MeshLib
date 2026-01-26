@@ -621,8 +621,9 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
             int firstMissed = prevPresentSlice + 1;
             float ratioDenom = 1.0f / float( numMissed + 1 );
             tbb::enumerable_thread_specific<VolumeUpdater> ts( std::ref( data ) );
-            cancelCalled = !ParallelFor( firstMissed * dimXY, presentSlice * dimXY, ts, [&] ( size_t i, VolumeUpdater& volUpdater )
+            cancelCalled = !ParallelFor( firstMissed * dimXY, presentSlice * dimXY, [&] ( size_t i )
             {
+                auto& volUpdater = ts.local();
                 auto posZ = int( i / dimXY );
                 auto zBotDiff = posZ - prevPresentSlice;
                 auto botValue = volUpdater.getValue( VoxelId( i - dimXY * zBotDiff ) );

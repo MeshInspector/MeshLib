@@ -2,11 +2,11 @@
 
 #include "MRTbbThreadMutex.h"
 
-namespace
+namespace MR::BitSetParallel
 {
 
-using namespace MR;
-using namespace MR::BitSetParallel;
+namespace
+{
 
 Range toBlockRange( const Range & bitRange )
 {
@@ -26,10 +26,7 @@ Range toBitSubRange( const Range & bitRange, const Range & blockRange, const Ran
 
 } // namespace
 
-namespace MR
-{
-
-void BitSetParallel::forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f )
+void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f )
 {
     const auto blockRange = toBlockRange( bitRange );
     tbb::parallel_for( blockRange, [&] ( const Range & subRange )
@@ -40,7 +37,7 @@ void BitSetParallel::forAllRanged( const Range & bitRange, FunctionRef<void ( si
     } );
 }
 
-void BitSetParallel::forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
+void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
     FunctionRef<void* ()> ctx )
 {
     const auto blockRange = toBlockRange( bitRange );
@@ -53,7 +50,7 @@ void BitSetParallel::forAllRanged( const Range & bitRange, FunctionRef<void ( si
     } );
 }
 
-bool BitSetParallel::forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
+bool forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
     FunctionRef<void* ()> ctx, ProgressCallback progressCb, size_t reportProgressEveryBit )
 {
     if ( !progressCb )

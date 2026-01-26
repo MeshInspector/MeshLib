@@ -18,7 +18,7 @@ std::vector<FaceBitSet> separateClosedContour( const Mesh& mesh, const std::vect
         return {};
 
     std::vector<MeshTriPoint> projections( contour.size() );
-    MR::ParallelFor( contour, [&] ( size_t i )
+    ParallelFor( contour, [&] ( size_t i )
     {
         if ( auto projRes = mesh.projectPoint( contour[i] ) )
             projections[i] = projRes.mtp;

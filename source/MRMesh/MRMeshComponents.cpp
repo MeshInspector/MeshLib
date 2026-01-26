@@ -166,7 +166,8 @@ VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBit
     return res;
 }
 
-FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+FaceBitSet getComponents( const MeshTopology& topology, const FaceBitSet & seeds, const FaceBitSet* region0,
+    FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     MR_TIMER;
 
@@ -174,8 +175,8 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
     if ( seeds.none() )
         return res;
 
-    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
-    const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
+    auto unionFindStruct = getUnionFindStructureFaces( topology, region0, incidence, isCompBd );
+    const FaceBitSet& region = topology.getFaceIds( region0 );
 
     FaceId faceRoot;
     for ( auto s : seeds )
@@ -197,6 +198,11 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
         } );
     }
     return res;
+}
+
+FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    return getComponents( meshPart.mesh.topology, seeds, meshPart.region, incidence, isCompBd );
 }
 
 FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const UndirectedEdgeBitSet * isCompBd )
@@ -505,12 +511,11 @@ std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceInci
     return getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first;
 }
 
-static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd, UnionFind<FaceId>& res )
+static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region0, const UndirectedEdgeBitSet * isCompBd, UnionFind<FaceId>& res )
 {
     MR_TIMER;
 
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+    const FaceBitSet& region = topology.getFaceIds( region0 );
     const FaceBitSet* lastPassFaces = &region;
     const auto numFaces = region.find_last() + 1;
     res.reset( numFaces );
@@ -527,12 +532,12 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
             if ( !contains( region, f0 ) )
                 return;
             EdgeId e[3];
-            mesh.topology.getTriEdges( f0, e );
+            topology.getTriEdges( f0, e );
             for ( int i = 0; i < 3; ++i )
             {
-                assert( mesh.topology.left( e[i] ) == f0 );
-                FaceId f1 = mesh.topology.right( e[i] );
-                if ( f0 < f1 && contains( meshPart.region, f1 ) )
+                assert( topology.left( e[i] ) == f0 );
+                FaceId f1 = topology.right( e[i] );
+                if ( f0 < f1 && contains( region0, f1 ) )
                 {
                     if ( f1 >= range.end )
                         bdFaces.set( f0 ); // remember the face to unite later in a sequential region
@@ -546,12 +551,12 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
     for ( auto f0 : *lastPassFaces )
     {
         EdgeId e[3];
-        mesh.topology.getTriEdges( f0, e );
+        topology.getTriEdges( f0, e );
         for ( int i = 0; i < 3; ++i )
         {
-            assert( mesh.topology.left( e[i] ) == f0 );
-            FaceId f1 = mesh.topology.right( e[i] );
-            if ( f0 < f1 && contains( meshPart.region, f1 ) && ( !isCompBd || !isCompBd->test( e[i].undirected() ) ) )
+            assert( topology.left( e[i] ) == f0 );
+            FaceId f1 = topology.right( e[i] );
+            if ( f0 < f1 && contains( region0, f1 ) && ( !isCompBd || !isCompBd->test( e[i].undirected() ) ) )
                 res.unite( f0, f1 );
         }
     }
@@ -752,33 +757,37 @@ void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection )
     }
 }
 
-UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd )
+UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region, const UndirectedEdgeBitSet * isCompBd )
 {
     UnionFind<FaceId> res;
-    getUnionFindStructureFacesPerEdge( meshPart, isCompBd, res );
+    getUnionFindStructureFacesPerEdge( topology, region, isCompBd, res );
     return res;
 }
 
-UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd )
+{
+    return getUnionFindStructureFacesPerEdge( meshPart.mesh.topology, meshPart.region, isCompBd );
+}
+
+UnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region0, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     UnionFind<FaceId> res;
     if ( incidence == FaceIncidence::PerEdge )
-        return getUnionFindStructureFacesPerEdge( meshPart, isCompBd );
+        return getUnionFindStructureFacesPerEdge( topology, region0, isCompBd );
 
     MR_TIMER;
     assert( !isCompBd );
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+    const FaceBitSet& region = topology.getFaceIds( region0 );
     res.reset( region.find_last() + 1 );
     assert ( incidence == FaceIncidence::PerVertex );
     VertBitSet store;
-    for ( auto v : getIncidentVerts( mesh.topology, meshPart.region, store ) )
+    for ( auto v : getIncidentVerts( topology, region0, store ) )
     {
         FaceId f0;
-        for ( auto edge : orgRing( mesh.topology, v ) )
+        for ( auto edge : orgRing( topology, v ) )
         {
-            FaceId f1 = mesh.topology.left( edge );
-            if ( !contains( meshPart.region, f1 ) )
+            FaceId f1 = topology.left( edge );
+            if ( !contains( region0, f1 ) )
                 continue;
             if ( !f0 )
             {
@@ -789,6 +798,11 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
         }
     }
     return res;
+}
+
+UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    return getUnionFindStructureFaces( meshPart.mesh.topology, meshPart.region, incidence, isCompBd );
 }
 
 UnionFind<VertId> getUnionFindStructureVerts( const MeshTopology& topology, const VertBitSet* region )

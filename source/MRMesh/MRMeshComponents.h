@@ -45,6 +45,8 @@ enum FaceIncidence
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshTopology& topology, const FaceBitSet & seeds, const FaceBitSet* region = nullptr,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// returns the union of connected components, each having at least given area
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgeBitSet * isCompBd );
@@ -164,10 +166,12 @@ MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& se
 
 /// gets union-find structure for faces with different options of face-connectivity
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region = nullptr, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to skip uniting components over it
 /// it is guaranteed that isCompBd is invoked in a thread-safe manner (that left and right face are always processed by one thread)
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region = nullptr, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );

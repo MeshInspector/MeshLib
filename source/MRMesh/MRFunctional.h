@@ -11,6 +11,11 @@ namespace MR
 template <typename F>
 class FunctionRef;
 
+/// \brief Simplified implementation of std::function_ref from C++26
+/// \details
+/// FunctionRef can be used as a lightweight replacement for std::function in cases when:
+///  - a callable exists (there's no equivalent to `std::function( nullptr )`)
+///  - a callable is passed to a function that calls it immediately or passes to another function of the same kind
 template <typename R, typename... Args>
 class FunctionRef<R ( Args... )>
 {

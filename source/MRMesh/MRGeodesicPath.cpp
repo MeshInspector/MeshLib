@@ -673,10 +673,9 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, SurfacePath & pat
             vertSpans.emplace_back( spanStart, (int)path.size() );
 
         // straighten path in each triangle strip
-        ParallelFor( vertSpans, [&] ( size_t i )
+        ParallelFor( vertSpans, stripPerThread, [&] ( size_t i, TriangleStripUnfolder& strip )
         {
             auto span = vertSpans[i];
-            auto & strip = stripPerThread.local();
             while ( span.first + 1 < span.second )
             {
                 strip.clear();

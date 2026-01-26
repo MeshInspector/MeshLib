@@ -652,14 +652,13 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    ParallelFor( hmaps, [&] ( size_t i )
+    ParallelFor( hmaps, perThreadVertNumeration, [&] ( size_t i, PerThreadVertNumeration& localNumeration )
     {
         auto& hmap = hmaps[i];
 
         const auto begin = i * blockSize;
         const auto end = std::min( begin + blockSize, resY );
 
-        auto& localNumeration = perThreadVertNumeration.local();
         localNumeration.emplace_back( begin * resX, 0 );
         auto& thisRangeNumeration = localNumeration.back().numVerts;
 

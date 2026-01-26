@@ -255,9 +255,8 @@ std::vector<unsigned> ViewportGL::findUniqueObjectsInRect( const PickParameters&
     auto resColors = pickObjectsInRect_( updatedParams, updatedRect );
 
     tbb::enumerable_thread_specific<BitSet> bitSetPerThread( params.renderVector.size() );
-    ParallelFor( resColors, [&] ( size_t i )
+    ParallelFor( resColors, bitSetPerThread, [&] ( size_t i, BitSet& localBitSet )
     {
-        auto& localBitSet = bitSetPerThread.local();
         auto geomId = resColors[i].color[1];
         if ( geomId >= params.renderVector.size() || !params.renderVector[geomId] || localBitSet.test( geomId ) )
             return;

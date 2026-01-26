@@ -212,9 +212,8 @@ void FreeFormDeformer::apply() const
     };
     tbb::enumerable_thread_specific<CacheLines> caches;
 
-    BitSetParallelFor( validPoints_, [&] ( VertId vid )
+    BitSetParallelFor( validPoints_, caches, [&] ( VertId vid, CacheLines& cache )
     {
-        auto& cache = caches.local();
         if ( cache.xPlane.empty() )
             cache.xPlane.resize( resolution_.y * resolution_.z );
         if ( cache.yLine.empty() )

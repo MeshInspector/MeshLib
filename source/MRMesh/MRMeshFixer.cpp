@@ -690,9 +690,9 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
     MR_TIMER;
 
     tbb::enumerable_thread_specific<std::vector<FaceId>> threadData;
-    BitSetParallelFor( findRepeatedVertsOnHoleBd( mesh.topology ), [&]( VertId v )
+    BitSetParallelFor( findRepeatedVertsOnHoleBd( mesh.topology ), threadData, [&]( VertId v, auto& fs )
     {
-        findHoleComplicatingFaces( mesh, v, threadData.local() );
+        findHoleComplicatingFaces( mesh, v, fs );
     } );
 
     FaceId maxFace;

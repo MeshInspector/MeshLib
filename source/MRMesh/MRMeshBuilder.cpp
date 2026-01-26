@@ -6,7 +6,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
-#include "MRParallelFor.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -399,10 +399,14 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     res.resizeBeforeParallelAdd( numEdgesInParts, maxVertId + 1, t.size() );
 
     // add pieces in res in parallel
-    ParallelFor( (size_t)0, numParts, [&] ( size_t myPartId )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, numParts, 1 ), [&]( const tbb::blocked_range<size_t> & range )
     {
-        const auto & part = pieces[myPartId];
-        res.addPackedPart( part.topology, firstPartEdge[myPartId], part.fmap, part.vmap );
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
+        {
+            const auto & part = pieces[myPartId];
+            res.addPackedPart( part.topology, firstPartEdge[myPartId], part.fmap, part.vmap );
+        }
     } );
     res.computeValidsFromEdges();
 
@@ -456,38 +460,42 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
     timer.restart("parallel parts");
     if ( progressCb && !progressCb( 0.4f ) )
         return {};
-    ParallelFor( (size_t)0, numParts, [&] ( size_t myPartId )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, numParts, 1 ), [&]( const tbb::blocked_range<size_t> & range )
     {
-        MeshPiece part;
-        Triangulation partTriangulation;
-        BuildSettings partSettings{ .region = &part.rem, .allowNonManifoldEdge = settings.allowNonManifoldEdge };
-        part.vmap.resize( vertsInPart );
-        const VertId myBeginVert( myPartId * vertsInPart );
-        const VertId myEndVert( ( myPartId + 1 ) * vertsInPart );
-        for ( FaceId f{0}; f < t.size(); ++f )
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
         {
-            if ( settings.region && !settings.region->test( f ) )
-                continue;
-            if ( borderTris.test( f ) )
-                continue;
-            const auto & vs = t[f];
-            if ( vs[0] < myBeginVert || vs[0] >= myEndVert )
-                continue;
-            VertId v[3] = {
-                VertId( vs[0] % vertsInPart ),
-                VertId( vs[1] % vertsInPart ),
-                VertId( vs[2] % vertsInPart )
-            };
-            FaceId fp{ partTriangulation.size() };
-            partTriangulation.push_back( ThreeVertIds{ v[0], v[1], v[2] } );
-            part.fmap.push_back( f );
-            part.vmap[ v[0] ] = vs[0];
-            part.vmap[ v[1] ] = vs[1];
-            part.vmap[ v[2] ] = vs[2];
-            part.rem.autoResizeSet( fp );
+            MeshPiece part;
+            Triangulation partTriangulation;
+            BuildSettings partSettings{ .region = &part.rem, .allowNonManifoldEdge = settings.allowNonManifoldEdge };
+            part.vmap.resize( vertsInPart );
+            const VertId myBeginVert( myPartId * vertsInPart );
+            const VertId myEndVert( ( myPartId + 1 ) * vertsInPart );
+            for ( FaceId f{0}; f < t.size(); ++f )
+            {
+                if ( settings.region && !settings.region->test( f ) )
+                    continue;
+                if ( borderTris.test( f ) )
+                    continue;
+                const auto & vs = t[f];
+                if ( vs[0] < myBeginVert || vs[0] >= myEndVert )
+                    continue;
+                VertId v[3] = {
+                    VertId( vs[0] % vertsInPart ),
+                    VertId( vs[1] % vertsInPart ),
+                    VertId( vs[2] % vertsInPart )
+                };
+                FaceId fp{ partTriangulation.size() };
+                partTriangulation.push_back( ThreeVertIds{ v[0], v[1], v[2] } );
+                part.fmap.push_back( f );
+                part.vmap[ v[0] ] = vs[0];
+                part.vmap[ v[1] ] = vs[1];
+                part.vmap[ v[2] ] = vs[2];
+                part.rem.autoResizeSet( fp );
+            }
+            part.topology = fromTrianglesSeq( partTriangulation, partSettings );
+            parts[myPartId] = std::move( part );
         }
-        part.topology = fromTrianglesSeq( partTriangulation, partSettings );
-        parts[myPartId] = std::move( part );
     } );
 
     auto joinSettings = settings;

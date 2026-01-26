@@ -984,16 +984,21 @@ void cutEdgesIntoPieces( Mesh& mesh,
 {
     MR_TIMER;
     // sort each edge intersections in parallel
-    ParallelFor( (size_t)0, edgeData.subcnt(), [&] ( size_t i )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
+        [&] ( const tbb::blocked_range<size_t>& range )
     {
-        edgeData.with_submap( i, [&] ( const EdgeDataMap::EmbeddedSet& subSet )
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t i = range.begin(); i != range.end(); ++i )
         {
-            // const_cast here is safe, we don't write to map, just sort internal data
-            for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
+            edgeData.with_submap( i, [&] ( const EdgeDataMap::EmbeddedSet& subSet )
             {
-                sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
-            }
-        } );
+                // const_cast here is safe, we don't write to map, just sort internal data
+                for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
+                {
+                    sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
+                }
+            } );
+        }
     } );
     // cut all
     for ( const auto& edgeInfo : edgeData )

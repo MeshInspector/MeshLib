@@ -7,7 +7,6 @@ void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t )> f )
 {
     tbb::parallel_for( tbb::blocked_range( begin, end ), [&f] ( const tbb::blocked_range<size_t>& range )
     {
-        assert( range.begin() + 1 == range.end() );
         for ( auto i = range.begin(); i != range.end(); ++i )
             f( i );
     } );

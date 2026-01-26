@@ -652,13 +652,15 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    ParallelFor( hmaps, perThreadVertNumeration, [&] ( size_t i, PerThreadVertNumeration& localNumeration )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& hmap = hmaps[i];
+        assert( range.begin() + 1 == range.end() );
+        auto& hmap = hmaps[range.begin()];
 
-        const auto begin = i * blockSize;
+        const auto begin = range.begin() * blockSize;
         const auto end = std::min( begin + blockSize, resY );
 
+        auto& localNumeration = perThreadVertNumeration.local();
         localNumeration.emplace_back( begin * resX, 0 );
         auto& thisRangeNumeration = localNumeration.back().numVerts;
 
@@ -722,9 +724,11 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
 
     // update map with determined vert indices
-    ParallelFor( hmaps, [&] ( size_t i )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
+    [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( auto& [ind, set] : hmaps[i] )
+        assert( range.begin() + 1 == range.end() );
+        for ( auto& [ind, set] : hmaps[range.begin()] )
         {
             auto vertShift = getVertIndexShiftForPixelId( ind );
             for ( auto& sepPoint : set )
@@ -856,9 +860,11 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     size_t pointsSize = resultVertNumeration.empty() ? 0 : size_t( getVertIndexShiftForPixelId( size ) ) + resultVertNumeration.back().numVerts;
     polyline.points.resize( pointsSize );
     polyline.topology.vertResize( polyline.points.size() );
-    ParallelFor( (size_t)0, blockCount, [&] ( size_t j )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, blockCount, 1 ),
+        [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( auto& [_, set] : hmaps[j] )
+        assert( range.begin() + 1 == range.end() );
+        for ( auto& [_, set] : hmaps[range.begin()] )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
                 if ( set[i].vid.valid() )

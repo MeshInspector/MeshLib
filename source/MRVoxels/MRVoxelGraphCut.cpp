@@ -254,16 +254,20 @@ void VoxelGraphCut::fillToSeqId_()
 {
     MR_TIMER;
     const auto subcnt = toSeqId_.subcnt();
-    ParallelFor( (size_t)0, subcnt, [&] ( size_t myPartId )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt ), [&]( const tbb::blocked_range<size_t> & range )
     {
-        for ( SeqVoxelId s(0); s < seq2voxel_.size(); ++s )
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
         {
-            auto v = seq2voxel_[s];
-            auto hashval = toSeqId_.hash( v );
-            auto idx = toSeqId_.subidx( hashval );
-            if ( idx != myPartId )
-                continue;
-            toSeqId_[v] = s;
+            for ( SeqVoxelId s(0); s < seq2voxel_.size(); ++s )
+            {
+                auto v = seq2voxel_[s];
+                auto hashval = toSeqId_.hash( v );
+                auto idx = toSeqId_.subidx( hashval );
+                if ( idx != myPartId )
+                    continue;
+                toSeqId_[v] = s;
+            }
         }
     } );
 }

@@ -19,17 +19,18 @@ namespace MR
 [[nodiscard]] inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
     { return trackRightBoundaryLoop( topology, e0, &region ); }
 
-/// if left, same as \ref trackLeftBoundaryLoop
-/// if !left, same as \ref trackRightBoundaryLoop
-[[nodiscard]] MRMESH_API EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, bool left );
-
-/// returns the longest path of edges with set bits in (edges) starting from (e0);
+/// track the path of edges with set bits in (edges) starting from (e0);
+/// \return the last edge of the path or invalid edge if e0's bit in (edge) was reset;
 /// if at some reached vertex there are two or more edges originate with set bits in (edges),
 /// the path selects the leftmost (if left) or the rightmost (if !left) option;
 /// the bits in (edges) for tracked path edges are reset
-[[nodiscard]] MRMESH_API EdgePath trackPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet & edges, bool left );
+MRMESH_API EdgeId extractPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outPath, bool left );
 
-[[nodiscard]] MRMESH_API std::vector<EdgePath> trackAllPaths( const MeshTopology& topology, EdgeBitSet & edges, bool left );
+/// tracks are returns all closed loops of edges from the given bit set;
+/// if at some reached vertex there are two or more edges originate with set bits in (edges),
+/// the path selects the leftmost (if left) or the rightmost (if !left) option;
+/// the bits corresponding to loops are reset in (edges), and to remaining not-closed paths are kept
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, bool left );
 
 /// returns all region boundary loops;
 /// every loop has region faces on the left, and not-region faces or holes on the right
@@ -44,10 +45,6 @@ namespace MR
 /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
 [[nodiscard]] MR_BIND_IGNORE inline std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet & region )
     { return findRightBoundary( topology, &region ); }
-
-/// if left, same as \ref findLeftBoundary
-/// if !left, same as \ref findRightBoundary
-[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region, bool left );
 
 /// returns all edges (e) for which topology.isLeftBdEdge( e, region ) is true;
 /// \param innerMeshEdgesOnly if true then edges with no right face are excluded

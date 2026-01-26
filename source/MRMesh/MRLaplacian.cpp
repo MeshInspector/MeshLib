@@ -7,7 +7,7 @@
 #include "MRMakeSphereMesh.h"
 #include "MRMeshComponents.h"
 #include "MRTriMath.h"
-#include "MRPch/MRTBB.h"
+
 #include <Eigen/SparseCholesky>
 
 namespace MR

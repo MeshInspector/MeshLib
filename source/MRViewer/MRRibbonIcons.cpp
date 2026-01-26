@@ -9,7 +9,6 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 
 #include "MRIOExtras/MRPng.h"
 

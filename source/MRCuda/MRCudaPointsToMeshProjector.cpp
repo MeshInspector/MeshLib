@@ -9,7 +9,6 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTimer.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {

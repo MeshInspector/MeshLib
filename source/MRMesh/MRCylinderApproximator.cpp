@@ -5,7 +5,6 @@
 #include "MRToFromEigen.h"
 #include "MRVector.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {

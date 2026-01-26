@@ -9,7 +9,6 @@
 #include "MRComputeBoundingBox.h"
 #include "MREdgePaths.h"
 #include "MRParallelFor.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {

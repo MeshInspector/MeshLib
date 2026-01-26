@@ -5,7 +5,6 @@
 #include "MRMeshComponents.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {

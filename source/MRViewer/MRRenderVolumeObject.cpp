@@ -10,7 +10,6 @@
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
-#include "MRPch/MRTBB.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR

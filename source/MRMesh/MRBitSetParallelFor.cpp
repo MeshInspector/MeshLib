@@ -31,6 +31,7 @@ void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
     const auto blockRange = toBlockRange( bitRange );
     tbb::parallel_for( blockRange, [&] ( const Range & subRange )
     {
+        assert( subRange.begin() + 1 == subRange.end() );
         const auto bitSubRange = toBitSubRange( bitRange, blockRange, subRange );
         for ( auto i = bitSubRange.begin(); i < bitSubRange.end(); ++i )
             f( i, bitSubRange );

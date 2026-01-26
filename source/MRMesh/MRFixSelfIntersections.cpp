@@ -114,6 +114,16 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     if ( settings.touchIsIntersection )
     {
+        auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
+        auto res = findSelfCollidingTrianglesBS( mesh,
+                                                 subprogress( settings.callback, 0.0f, 0.2f ),
+                                                 &faceToRegionMap, settings.touchIsIntersection );
+
+        if ( !res.has_value() )
+            return unexpectedOperationCanceled();
+        if ( res->none() )
+            return {};
+
         FixMeshDegeneraciesParams fdParams;
         fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
         fdParams.tinyEdgeLength = fdParams.maxDeviation * 0.1f;
@@ -123,7 +133,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         if ( settings.subdivideEdgeLen < FLT_MAX )
             fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
 
-        fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
+        fdParams.cb = subprogress( settings.callback, 0.2f, 0.3f );
         auto fdRes = fixMeshDegeneracies( mesh, fdParams );
         if ( !fdRes.has_value() )
             return fdRes;
@@ -131,11 +141,11 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
-    if ( !reportProgress( settings.callback, 0.25f ) )
+    if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
 
     auto res = findSelfCollidingTrianglesBS( mesh,
-                                             subprogress( settings.callback, 0.25f, 0.4f ),
+                                             subprogress( settings.callback, 0.3f, 0.5f ),
                                              &faceToRegionMap, settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -158,20 +168,20 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         ssettings.maxEdgeSplits = 1000;
         ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
         ssettings.criticalAspectRatioFlip = FLT_MAX;
-        ssettings.progressCallback = subprogress( settings.callback, 0.4f, 0.5f );
+        ssettings.progressCallback = subprogress( settings.callback, 0.5f, 0.6f );
         subdivideMesh( mesh, ssettings );
     }
 
-    if ( !reportProgress( settings.callback, 0.5f ) )
+    if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
 
     faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
-    if ( !reportProgress( settings.callback, 0.55f ) )
+    if ( !reportProgress( settings.callback, 0.65f ) )
         return unexpectedOperationCanceled();
 
     res = findSelfCollidingTrianglesBS( MeshPart( mesh, &res.value() ),
-                                        subprogress( settings.callback, 0.55f, 0.7f ),
+                                        subprogress( settings.callback, 0.65f, 0.85f ),
                                         &faceToRegionMap,settings.touchIsIntersection );
 
     if ( !res.has_value() )
@@ -183,12 +193,12 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     {
         auto verts = getIncidentVerts( mesh.topology, *res );
 
-        if ( !reportProgress( settings.callback, 0.8f ) )
+        if ( !reportProgress( settings.callback, 0.85f ) )
             return unexpectedOperationCanceled();
         MeshRelaxParams params;
         params.iterations = settings.relaxIterations;
         params.region = &verts;
-        if ( !relax( mesh, params, subprogress( settings.callback, 0.8f, 1.0f ) ) )
+        if ( !relax( mesh, params, subprogress( settings.callback, 0.85f, 1.0f ) ) )
             return unexpectedOperationCanceled();
     }
     else
@@ -199,10 +209,10 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         mesh.invalidateCaches();
         auto holes = findRightBoundary( mesh.topology );
 
-        if ( !reportProgress( settings.callback, 0.8f ) )
+        if ( !reportProgress( settings.callback, 0.85f ) )
             return unexpectedOperationCanceled();
 
-        auto sp = subprogress( settings.callback, 0.8f, 0.95f );
+        auto sp = subprogress( settings.callback, 0.85f, 0.95f );
         for ( int i = 0; i < holes.size(); ++i )
         {
             bool outerBounds = false;

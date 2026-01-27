@@ -238,6 +238,8 @@ jobs:
         shell: cmd
 
       - name: Unit Tests
+        env:
+          GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests (old bindings)
@@ -254,7 +256,7 @@ jobs:
       - name: Python Sanity Tests
         timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
@@ -262,10 +264,15 @@ jobs:
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}
-          pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative"
+          pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ${{ matrix.test_artifacts_path }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
+
+      - name: Generate Test Performance Report
+        run: |
+          py -3 scripts/junit_to_csv.py unit_tests_report.csv unit_tests_report_*.xml
+          cat unit_tests_report.csv
 
       - name: Delete unwanted files
         # Those files should not exist when using CMake.

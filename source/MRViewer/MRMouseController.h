@@ -60,9 +60,6 @@ public:
     // cast simple int key to mouse button and modifier
     MRVIEWER_API static MouseControlKey keyToMouseAndMod( int key );
 
-    // Activate / deactivate mouse scroll in scene
-    MRVIEWER_API void setMouseScroll( bool active );
-
     // set callback to modify view transform before it is applied to viewport
     void setTrasformModifierCb( std::function<void( AffineXf3f& )> cb ) { transformModifierCb_ = cb; }
     
@@ -109,8 +106,6 @@ private:
 
     MouseModeMap map_;
     MouseModeBackMap backMap_;
-
-    bool scrollActive_{ true };
 
     std::function<void( AffineXf3f& )> transformModifierCb_;
     std::function<void( float& )> fovModifierCb_;

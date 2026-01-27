@@ -1194,20 +1194,9 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
     ImGui::PopStyleVar( 2 );
 
-#if defined(_WIN32) || defined(__APPLE__)
-    if ( UI::checkbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
-    {
-        if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
-        {
-            auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
-            if ( hidapiHandler )
-            {
-                hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
-            }
-        }
-    }
-    UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble." );
-#endif
+    anyChanged = UI::checkboxValid( "Suppress Zoom by Mouse Scroll", &spaceMouseParams_.suppressMouseScrollZoom, viewer->spaceMouseController().canDriverSendScroll() ) || anyChanged;
+    UI::setTooltipIfHovered( "This mode is recommended if you have 3Dconnexion driver installed, which sends fake mouse scroll events resulting in double reaction on SpaceMouse movement and camera tremble." );
+    
     if ( anyChanged )
         getViewerInstance().spaceMouseController().setParameters(spaceMouseParams_);
 }
@@ -1362,14 +1351,6 @@ void ViewerSettingsPlugin::updateDialog_()
     tempUserScaling_ = viewer->getMenuPlugin()->getUserScaling();
     spaceMouseParams_ = viewer->spaceMouseController().getParameters();
     touchpadParameters_ = viewer->touchpadController().getParameters();
-#if defined(_WIN32) || defined(__APPLE__)
-    if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
-    {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::HandlerHidapi >( spaceMouseHandler );
-        if ( hidapiHandler )
-            activeMouseScrollZoom_ = hidapiHandler->isMouseScrollZoomActive();
-    }
-#endif
 }
 
 void ViewerSettingsPlugin::resetSettings_()
@@ -1387,15 +1368,6 @@ void ViewerSettingsPlugin::resetSettings_()
 
     if ( auto& settingsManager = viewer->getViewerSettingsManager() )
         settingsManager->saveString( "multisampleAntiAliasing", "invalid" );// invalidate record, so next time - default value will be used
-
-#if defined(_WIN32) || defined(__APPLE__)
-    if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
-    {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouse::HandlerHidapi >( spaceMouseHandler );
-        if ( hidapiHandler )
-            hidapiHandler->activateMouseScrollZoom( false );
-    }
-#endif
 
     updateDialog_();
 }

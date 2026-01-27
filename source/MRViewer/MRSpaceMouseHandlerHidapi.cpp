@@ -17,7 +17,6 @@ HandlerHidapi::HandlerHidapi()
     , dataPacket_( { 0 } )
     , packetLength_( 0 )
     , active_( true )
-    , activeMouseScrollZoom_( true )
 {
     connect( &getViewerInstance(), 0, boost::signals2::connect_position::at_back );
 }
@@ -86,12 +85,7 @@ bool HandlerHidapi::findAndAttachDevice_( bool verbose )
                         spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vendorId, deviceId, localDevicesIt->path );
                         if ( deviceSignal_ )
                             deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
-                        if ( !smDevice_ )
-                            smDevice_ = std::make_unique<Device>();
-                        // setup buttons logger
-                        smDevice_->resetDevice(); // as far as we now only support single device with HID API we reset old one
-                        smDevice_->updateDevice( vendorId, deviceId );
-                        activeMouseScrollZoom_ = false;
+                        smDevice_.resetDevice( vendorId, deviceId );
                         if ( !verbose )
                             break;
                     }
@@ -118,8 +112,6 @@ void HandlerHidapi::handle()
     if ( !syncThreadLock.try_lock() )
         return;
 
-    getViewerInstance().mouseController().setMouseScroll( !device_ || activeMouseScrollZoom_ );
-
     if ( packetLength_ <= 0 || !device_ )
     {
         cv_.notify_one();
@@ -130,14 +122,14 @@ void HandlerHidapi::handle()
     hid_set_nonblocking( device_, 1 );
 
     Action action;
-    updateActionWithInput_( dataPacket_, packetLength_, action );
+    smDevice_.parseRaw( dataPacket_, packetLength_, action );
 
     int packetLengthTmp = 0;
     do
     {
         DataPacketRaw dataPacketTmp;
         packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
-        updateActionWithInput_( dataPacketTmp, packetLengthTmp, action );
+        smDevice_.parseRaw( dataPacketTmp, packetLengthTmp, action );
     } while ( packetLengthTmp > 0 );
 
     processAction_( action );
@@ -196,10 +188,7 @@ void HandlerHidapi::initListenerThread_()
             {
                 hid_close( device_ );
                 device_ = nullptr;
-                if ( smDevice_ )
-                    smDevice_->resetDevice();
-                smDevice_.reset();
-                activeMouseScrollZoom_ =  true;
+                smDevice_.resetDevice();
                 spdlog::error( "HID API: device lost" );
                 if ( deviceSignal_ )
                     deviceSignal_( fmt::format( "HID API device lost" ) );
@@ -221,19 +210,6 @@ void HandlerHidapi::postFocus_( bool focused )
     cv_.notify_one();
 }
 
-void HandlerHidapi::activateMouseScrollZoom( bool activeMouseScrollZoom )
-{
-    activeMouseScrollZoom_ = activeMouseScrollZoom;
-    getViewerInstance().mouseController().setMouseScroll(  activeMouseScrollZoom );
-}
-
-void HandlerHidapi::updateActionWithInput_( const DataPacketRaw& packet, int packet_length, Action& action )
-{
-    if ( !smDevice_ )
-        return;
-    smDevice_->parseRawEvent( packet, packet_length, action );
-}
-
 void HandlerHidapi::processAction_( const Action& action )
 {
     ++numMsg_;
@@ -244,9 +220,54 @@ void HandlerHidapi::processAction_( const Action& action )
         if ( std::popcount( numMsg_ ) == 1 ) // report every power of 2
             deviceSignal_( "SpaceMouse next log messages" );
     }
-    if ( smDevice_ )
-        smDevice_->processAction( action );
+    smDevice_.process( action );
     glfwPostEmptyEvent();
+}
+
+bool HandlerHidapi::hasValidDeviceConnected() const
+{
+    return smDevice_.valid();
+}
+
+void HandlerHidapi::AtomicDevice::resetDevice( VendorId vId, ProductId pId )
+{
+    std::unique_lock lock( mutex_ );
+    bool clear = vId == 0 && pId == 0;
+    if ( clear )
+    {
+        if ( device_ )
+        {
+            device_->resetDevice();
+            device_.reset();
+        }
+        return;
+    }
+    if ( !device_ )
+        device_ = std::make_unique<Device>();
+    device_->resetDevice(); // as far as we now only support single device with HID API we reset old one
+    device_->updateDevice( vId, pId );
+}
+
+void HandlerHidapi::AtomicDevice::parseRaw( const DataPacketRaw& packet, int packet_length, Action& action ) const
+{
+    std::unique_lock lock( mutex_ );
+    if ( device_ )
+        device_->parseRawEvent( packet, packet_length, action );
+}
+
+void HandlerHidapi::AtomicDevice::process( const Action& action )
+{
+    std::unique_lock lock( mutex_ );
+    if ( device_ )
+        device_->processAction( action );
+}
+
+bool HandlerHidapi::AtomicDevice::valid() const
+{
+    std::unique_lock lock( mutex_ );
+    if ( device_ )
+        return device_->valid();
+    return false;
 }
 
 }

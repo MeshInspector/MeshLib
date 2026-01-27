@@ -34,13 +34,8 @@ public:
     bool initialize( std::function<void(const std::string&)> deviceSignal ) override;
     void handle() override;
 
-    // set state of zoom by mouse scroll (to fix scroll signal from SpaceMouse driver)
-    MRVIEWER_API void activateMouseScrollZoom( bool activeMouseScrollZoom );
-    // get state of zoom by mouse scroll
-    MRVIEWER_API bool isMouseScrollZoomActive()
-    {
-        return activeMouseScrollZoom_;
-    }
+    /// returns true if this handler has connected device
+    MRVIEWER_API bool hasValidDeviceConnected() const;
 
 private:
     void initListenerThread_();
@@ -48,15 +43,27 @@ private:
 
     void processAction_( const Action& action );
 
-    // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
-    void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, Action& action );
-
     bool findAndAttachDevice_( bool verbose );
 
 private:
     std::function<void(const std::string&)> deviceSignal_;
     hid_device* device_ = nullptr;
-    std::unique_ptr<Device> smDevice_;
+
+    class AtomicDevice
+    {
+    public:
+        void resetDevice( VendorId vId = 0, ProductId pId = 0 );
+
+        // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
+        void parseRaw( const DataPacketRaw& packet, int packet_length, Action& action ) const;
+
+        void process( const Action& action );
+        bool valid() const;
+    private:
+        mutable std::mutex mutex_;
+        std::unique_ptr<Device> device_;
+    } smDevice_;
+
     size_t numMsg_ = 0;
     std::thread listenerThread_;
     std::atomic_bool terminateListenerThread_{ false };
@@ -65,7 +72,6 @@ private:
     DataPacketRaw dataPacket_;    // packet from listener thread
     int packetLength_ = 0;
     std::atomic_bool active_{ false };
-    bool activeMouseScrollZoom_ = false;
 };
 
 }

@@ -37,8 +37,6 @@ class RecentFilesStore;
 class ScopeHistory;
 class SelectScreenLasso;
 class SceneTextureGL;
-class SpaceMouseHandler;
-class SpaceMouseHandlerHidapi;
 class SplashWindow;
 class StateBasePlugin;
 class Toolbar;
@@ -64,8 +62,6 @@ class PlaneWidget;
 
 class TouchpadController;
 struct TouchpadParameters;
-class SpaceMouseController;
-struct SpaceMouseParameters;
 class TouchesController;
 class MouseController;
 struct PointInAllSpaces;
@@ -89,6 +85,14 @@ using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::P
 using RequirementsFunction = std::function<std::string( const std::shared_ptr<RibbonMenuItem>& )>;
 
 using FontAndSize = std::pair<ImFont*, float>;
+
+namespace SpaceMouse
+{
+struct Parameters;
+class Handler;
+class HandlerHidapi;
+class Controller;
+}
 
 // this is needed as far as MAKE_SLOT cannot be used with movable classes
 #define MR_DELETE_MOVE(StaticClassName)\

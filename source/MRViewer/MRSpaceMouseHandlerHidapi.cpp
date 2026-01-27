@@ -11,7 +11,7 @@
 
 namespace MR::SpaceMouse
 {
-SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
+HandlerHidapi::HandlerHidapi()
     : device_( nullptr )
     , terminateListenerThread_( false )
     , dataPacket_( { 0 } )
@@ -22,7 +22,7 @@ SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
     connect( &getViewerInstance(), 0, boost::signals2::connect_position::at_back );
 }
 
-SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
+HandlerHidapi::~HandlerHidapi()
 {
     terminateListenerThread_ = true;
     cv_.notify_one();
@@ -36,7 +36,7 @@ SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
     hid_exit();
 }
 
-bool SpaceMouseHandlerHidapi::initialize( std::function<void(const std::string&)> deviceSignal )
+bool HandlerHidapi::initialize( std::function<void(const std::string&)> deviceSignal )
 {
     deviceSignal_ = std::move( deviceSignal );
     if ( hid_init() != 0 )
@@ -55,7 +55,7 @@ bool SpaceMouseHandlerHidapi::initialize( std::function<void(const std::string&)
     return true;
 }
 
-bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
+bool HandlerHidapi::findAndAttachDevice_( bool verbose )
 {
     const static int HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER = 8; //Multi-axis Controller
     const static int HID_USAGE_PAGE_GENERIC = 1; //Generic Desktop Controls
@@ -87,7 +87,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                         if ( deviceSignal_ )
                             deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
                         if ( !smDevice_ )
-                            smDevice_ = std::make_unique<SpaceMouseDevice>();
+                            smDevice_ = std::make_unique<Device>();
                         // setup buttons logger
                         smDevice_->resetDevice(); // as far as we now only support single device with HID API we reset old one
                         smDevice_->updateDevice( vendorId, deviceId );
@@ -111,9 +111,9 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
     return (bool)device_;
 }
 
-void SpaceMouseHandlerHidapi::handle()
+void HandlerHidapi::handle()
 {
-    // works in pair with SpaceMouseHandlerHidapi::startListenerThread_()
+    // works in pair with HandlerHidapi::startListenerThread_()
     std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_, std::defer_lock );
     if ( !syncThreadLock.try_lock() )
         return;
@@ -129,7 +129,7 @@ void SpaceMouseHandlerHidapi::handle()
     // set the device handle to be non-blocking
     hid_set_nonblocking( device_, 1 );
 
-    SpaceMouseAction action;
+    Action action;
     updateActionWithInput_( dataPacket_, packetLength_, action );
 
     int packetLengthTmp = 0;
@@ -146,9 +146,9 @@ void SpaceMouseHandlerHidapi::handle()
     cv_.notify_one();
 }
 
-void SpaceMouseHandlerHidapi::initListenerThread_()
+void HandlerHidapi::initListenerThread_()
 {
-    // works in pair with SpaceMouseHandlerHidapi::handle()
+    // works in pair with HandlerHidapi::handle()
     // waits for updates on SpaceMouse and notifies main thread
     listenerThread_ = std::thread( [&] ()
     {
@@ -215,26 +215,26 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     } );
 }
 
-void SpaceMouseHandlerHidapi::postFocus_( bool focused )
+void HandlerHidapi::postFocus_( bool focused )
 {
     active_ = focused;
     cv_.notify_one();
 }
 
-void SpaceMouseHandlerHidapi::activateMouseScrollZoom( bool activeMouseScrollZoom )
+void HandlerHidapi::activateMouseScrollZoom( bool activeMouseScrollZoom )
 {
     activeMouseScrollZoom_ = activeMouseScrollZoom;
     getViewerInstance().mouseController().setMouseScroll(  activeMouseScrollZoom );
 }
 
-void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action )
+void HandlerHidapi::updateActionWithInput_( const DataPacketRaw& packet, int packet_length, Action& action )
 {
     if ( !smDevice_ )
         return;
     smDevice_->parseRawEvent( packet, packet_length, action );
 }
 
-void SpaceMouseHandlerHidapi::processAction_( const SpaceMouseAction& action )
+void HandlerHidapi::processAction_( const Action& action )
 {
     ++numMsg_;
     if ( deviceSignal_ )

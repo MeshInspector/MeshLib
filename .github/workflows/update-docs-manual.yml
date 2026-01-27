@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
+      options: --user root
     strategy:
       fail-fast: false
     env:
@@ -45,8 +46,8 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
-
+          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
@@ -101,6 +102,16 @@ jobs:
         with:
           name: CBindings
           path: ./source/MeshLibC2/include
+          retention-days: 1
+
+      - name: Generate C# bindings # generate only sources
+        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
+
+      - name: Upload C# bindings headers
+        uses: actions/upload-artifact@v6
+        with:
+          name: CsharpBindings
+          path: ./source/MRDotNet2/src
           retention-days: 1
 
   update-dev-documentation:

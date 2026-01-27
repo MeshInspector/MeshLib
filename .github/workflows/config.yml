@@ -31,7 +31,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_windows_vcpkg_rebuild:
         description:
-        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
@@ -199,10 +199,12 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@a8f8f59fd7f0625188492e945240f12d7ad2dca3 # v5.4.0
+        uses: paulhatch/semantic-version@f29500c9d60a99ed5168e39ee367e0976884c46e # v6.0.1
         id: version
         with:
           tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
           version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: true

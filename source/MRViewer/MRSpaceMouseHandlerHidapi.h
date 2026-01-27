@@ -25,11 +25,11 @@
 namespace MR::SpaceMouse
 {
 
-class MRVIEWER_CLASS SpaceMouseHandlerHidapi : public SpaceMouseHandler, public PostFocusListener
+class MRVIEWER_CLASS HandlerHidapi : public Handler, public PostFocusListener
 {
 public:
-    SpaceMouseHandlerHidapi();
-    ~SpaceMouseHandlerHidapi() override;
+    HandlerHidapi();
+    ~HandlerHidapi() override;
 
     bool initialize( std::function<void(const std::string&)> deviceSignal ) override;
     void handle() override;
@@ -46,17 +46,17 @@ private:
     void initListenerThread_();
     virtual void postFocus_( bool focused ) override;
 
-    void processAction_( const SpaceMouseAction& action );
+    void processAction_( const Action& action );
 
     // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
-    void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action );
+    void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, Action& action );
 
     bool findAndAttachDevice_( bool verbose );
 
 private:
     std::function<void(const std::string&)> deviceSignal_;
     hid_device* device_ = nullptr;
-    std::unique_ptr<SpaceMouseDevice> smDevice_;
+    std::unique_ptr<Device> smDevice_;
     size_t numMsg_ = 0;
     std::thread listenerThread_;
     std::atomic_bool terminateListenerThread_{ false };

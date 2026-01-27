@@ -52,12 +52,12 @@ Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
     } );
 
     const auto maxOffset = std::max( params.insideOffset, params.outsideOffset );
-    if ( maxOffset > 0 )
+    if ( maxOffset > 0 && params.normalsTrustFactor > 0 )
     {
         Buffer<float, VertId> vertStabilizers( res.topology.vertSize() );
         Buffer<float, UndirectedEdgeId> edgeWeights( res.topology.undirectedEdgeSize() );
 
-        BitSetParallelFor( res.topology.getValidVerts(), [&, rden = 1 / ( 2 * sqr( maxOffset ) )]( VertId v )
+        BitSetParallelFor( res.topology.getValidVerts(), [&, rden = params.normalsTrustFactor / ( 2 * sqr( maxOffset ) )]( VertId v )
         {
             float vertStabilizer = 1;
             for ( auto e : orgRing( res.topology, v ) )

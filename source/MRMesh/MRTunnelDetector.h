@@ -17,7 +17,7 @@ namespace MR
 /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
 MRMESH_API Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart& mp, EdgeMetric metric = {}, ProgressCallback progressCallback = {} );
 
-/// given not-trivial loop on input, finds the loop that
+/// given not-separating loop on input, finds the loop (also not-separation) that
 /// 1) goes from left side of input loop
 /// 2) returns to the input loop from its right side
 /// 3) goes along the input loop to become closed
@@ -28,6 +28,17 @@ MRMESH_API Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topo
 
 /// same as \ref findMinimalCoLoop with euclidean edge length metric
 MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const EdgeLoop& loop );
+
+/// given not-separating loop on input, finds one or several loops such that
+/// 1) resulting loops together with input loop separate a part of mesh,
+/// 2) returned loops are oriented the same as input loop (and have the separated mesh part from the other side compared to input loop);
+/// 3) the sum of the given metric for their edges is minimal;
+/// 4) resulting edges can be only inner to the given region.
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findSmallestMetricEquivalentLoops( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric,
+    const FaceBitSet* region = nullptr );
+
+/// same as \ref findSmallestMetricEquivalentLoops with euclidean edge length metric
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findShortestEquivalentLoops( const MeshPart& mp, const EdgeLoop& loop );
 
 struct DetectTunnelSettings
 {

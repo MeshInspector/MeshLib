@@ -7,7 +7,7 @@
 #include "MRRibbonMenu.h"
 #include "MRToolbar.h"
 #include "MRSpaceMouseHandlerHidapi.h"
-#include "MRSpaceMouseParameters.h"
+#include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
 #include "MRViewportGlobalBasis.h"
@@ -436,19 +436,19 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
-        SpaceMouseParameters spaceMouseParams;
+        SpaceMouse::Parameters spaceMouseParams;
         if ( paramsJson.isMember( "translateScale" ) )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
-        viewer.setSpaceMouseParameters( spaceMouseParams );
+        viewer.spaceMouseController().setParameters( spaceMouseParams );
 
 #ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
         {
             if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
             {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
                 if ( hidapiHandler )
                 {
                     const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
@@ -479,7 +479,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             else
                 spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
         }
-        viewer.setTouchpadParameters( parameters );
+        viewer.touchpadController().setParameters( parameters );
     }
 
     if ( cfg.hasJsonValue( cAmbientCoefSelectedObj ) )
@@ -666,13 +666,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cShowExperimentalFeatures, viewer.experimentalFeatures );
 
     Json::Value spaceMouseParamsJson;
-    SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();
+    SpaceMouse::Parameters spaceMouseParams = viewer.spaceMouseController().getParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
 #ifdef _WIN32
     if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
     {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouse::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
         if ( hidapinHandler )
         {
             spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();
@@ -682,7 +682,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 
     Json::Value touchpadParametersJson;
-    const auto& touchpadParameters = viewer.getTouchpadParameters();
+    const auto& touchpadParameters = viewer.touchpadController().getParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;

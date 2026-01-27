@@ -42,32 +42,32 @@ jobs:
         continue-on-error: true
         with:
           name: CBindings
-          path: ./MeshLib/Cbindings/
+          path: MeshLib/Cbindings
 
       - name: Download C# bindings
         uses: actions/download-artifact@v7
         continue-on-error: true
         with:
           name: CsharpBindings
-          path: ./MeshLib/CsharpBindings/
+          path: MeshLib/CsharpBindings
 
-      - name: Check for Python Stubs
-        id: check_py_stubs
+      - name: Check for bindings
+        id: check_bindings
         run: |
-          if [ -d MeshLib/scripts/wheel/meshlib/meshlib ] ; then
-            echo "py_stubs=true" >> $GITHUB_OUTPUT
+          if [ -d MeshLib/scripts/wheel/meshlib/meshlib && -d MeshLib/Cbindings && -d MeshLib/CsharpBindings ] ; then
+            echo "all_bindings=true" >> $GITHUB_OUTPUT
           else
             echo "Failed to get Python stub files, aborting"
-            echo "py_stubs=false" >> $GITHUB_OUTPUT
+            echo "all_bindings=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Build All Documentation
-        if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
+        if: ${{ steps.check_bindings.outputs.all_bindings == 'true' }}
         working-directory: MeshInspector.github.io
         run: scripts/update_doc.sh ${{ inputs.output_folder }} ../MeshLib/scripts/doxygen/Modules.txt
 
       - name: Commit and push changes
-        if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
+        if: ${{ steps.check_bindings.outputs.all_bindings == 'true' }}
         working-directory: MeshInspector.github.io
         run: |
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"

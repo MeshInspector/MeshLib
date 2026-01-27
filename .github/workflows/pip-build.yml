@@ -208,6 +208,18 @@ jobs:
           path: ./source/MeshLibC2/include
           retention-days: 1
 
+      - name: Generate C# bindings # generate only sources
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
+
+      - name: Upload C# bindings headers
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: CsharpBindings
+          path: ./source/MRDotNet2/src
+          retention-days: 1
+
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v6
         with:

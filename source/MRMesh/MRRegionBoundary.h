@@ -1,8 +1,9 @@
 #pragma once
 
-#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MREnums.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -19,6 +20,19 @@ namespace MR
 [[nodiscard]] inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
     { return trackRightBoundaryLoop( topology, e0, &region ); }
 
+/// track the path of edges with set bits in (edges) starting from (e0);
+/// \return the last edge of the path or invalid edge if e0's bit in (edge) was reset;
+/// if at some reached vertex there are two or more edges originate with set bits in (edges),
+/// the path selects the leftmost or the rightmost option depending on \param turn;
+/// the bits in (edges) for tracked path edges are reset
+MRMESH_API EdgeId extractPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outPath, Turn turn );
+
+/// tracks are returns all closed loops of edges from the given bit set;
+/// if at some reached vertex there are two or more edges originate with set bits in (edges),
+/// the path selects the leftmost or the rightmost option depending on \param turn;
+/// the bits corresponding to loops are reset in (edges), and to remaining not-closed paths are kept
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, Turn turn );
+
 /// returns all region boundary loops;
 /// every loop has region faces on the left, and not-region faces or holes on the right
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
@@ -32,6 +46,10 @@ namespace MR
 /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
 [[nodiscard]] MR_BIND_IGNORE inline std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet & region )
     { return findRightBoundary( topology, &region ); }
+
+/// returns all edges (e) for which topology.isLeftBdEdge( e, region ) is true;
+/// \param innerMeshEdgesOnly if true then edges with no right face are excluded
+[[nodiscard]] MRMESH_API EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* region, bool innerMeshEdgesOnly = false );
 
 /// deletes all region faces, inner edges and vertices, but keeps boundary edges and vertices of the region (or whole mesh if region is null);
 /// if `keepLoneHoles` is set - keeps boundary even if it has no valid faces on other side

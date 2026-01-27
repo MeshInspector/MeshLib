@@ -98,7 +98,7 @@ bool HandlerWinEvents::initialize()
     };
 
     winEventsConnection_ = winHandler_->onMessage.connect( processRawInput );
-    return false;
+    return true;
 }
 
 bool HandlerWinEvents::hasValidDeviceConnected() const

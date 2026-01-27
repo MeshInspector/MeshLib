@@ -295,7 +295,7 @@ jobs:
           & $env:CMAKE_EXE `
             -S examples/cpp-examples `
             -B cpp-examples-build `
-            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include" `
+            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include/eigen3" `
             -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/x64-windows-meshlib/lib"
           & $env:CMAKE_EXE `
             --build cpp-examples-build `

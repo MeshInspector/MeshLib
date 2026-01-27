@@ -1,5 +1,6 @@
 #ifndef __EMSCRIPTEN__
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMouseController.h"
@@ -35,9 +36,8 @@ HandlerHidapi::~HandlerHidapi()
     hid_exit();
 }
 
-bool HandlerHidapi::initialize( std::function<void(const std::string&)> deviceSignal )
+bool HandlerHidapi::initialize()
 {
-    deviceSignal_ = std::move( deviceSignal );
     if ( hid_init() != 0 )
     {
         spdlog::error( "HID API: init error" );
@@ -70,9 +70,8 @@ bool HandlerHidapi::findAndAttachDevice_( bool verbose )
                 spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}, name={}:{}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page,
                     wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) );
-                if ( deviceSignal_ && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
-                    deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
-                        wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) ) );
+                TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
+                    wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
             {
@@ -83,8 +82,7 @@ bool HandlerHidapi::findAndAttachDevice_( bool verbose )
                     {
                         numMsg_ = 0;
                         spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vendorId, deviceId, localDevicesIt->path );
-                        if ( deviceSignal_ )
-                            deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
+                        TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
                         smDevice_.resetDevice( vendorId, deviceId );
                         if ( !verbose )
                             break;
@@ -93,8 +91,7 @@ bool HandlerHidapi::findAndAttachDevice_( bool verbose )
                     {
                         spdlog::error( "HID API device ({:04x}:{:04x}, path={}) open error: {}",
                             vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );
-                        if ( deviceSignal_ )
-                            deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} open failed", vendorId, localDevicesIt->product_id ) );
+                        TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} open failed", vendorId, localDevicesIt->product_id ) );
                     }
                 }
             }
@@ -190,8 +187,7 @@ void HandlerHidapi::initListenerThread_()
                 device_ = nullptr;
                 smDevice_.resetDevice();
                 spdlog::error( "HID API: device lost" );
-                if ( deviceSignal_ )
-                    deviceSignal_( fmt::format( "HID API device lost" ) );
+                TelemetrySignal( fmt::format( "HID API device lost" ) );
             }
             else if ( packetLength_ > 0 )
             {
@@ -213,13 +209,10 @@ void HandlerHidapi::postFocus_( bool focused )
 void HandlerHidapi::processAction_( const Action& action )
 {
     ++numMsg_;
-    if ( deviceSignal_ )
-    {
-        if ( numMsg_ == 1 )
-            deviceSignal_( "HID API first action processing" );
-        if ( std::popcount( numMsg_ ) == 1 ) // report every power of 2
-            deviceSignal_( "SpaceMouse next log messages" );
-    }
+    if ( numMsg_ == 1 )
+        TelemetrySignal( "HID API first action processing" );
+    if ( std::popcount( numMsg_ ) == 1 ) // report every power of 2
+        TelemetrySignal( "HID API SpaceMouse next log messages" );
     smDevice_.process( action );
     glfwPostEmptyEvent();
 }

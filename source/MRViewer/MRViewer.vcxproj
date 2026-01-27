@@ -55,6 +55,7 @@
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
     <ClCompile Include="MRSceneControlMenuItems.cpp" />
     <ClCompile Include="MRSpaceMouseDevice.cpp" />
+    <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
@@ -210,6 +211,7 @@
     <ClInclude Include="MRMruFormatParameters.h" />
     <ClInclude Include="MRSceneControlMenuItems.h" />
     <ClInclude Include="MRSpaceMouseDevice.h" />
+    <ClInclude Include="MRSpaceMouseHandlerWinEvents.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />

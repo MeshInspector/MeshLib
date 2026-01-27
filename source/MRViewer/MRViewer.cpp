@@ -141,6 +141,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
+#include "MRSpaceMouseHandlerWinEvents.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -811,7 +812,7 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     spdlog::info( "SpaceMouseController created" );
 
     if ( !spaceMouseHandler_ )
-        initSpaceMouseHandler();
+        initSpaceMouseHandler_();
 
     touchpadController_->connect( this );
     touchpadController_->initialize( window );
@@ -2165,7 +2166,7 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setAncillary( true );
 }
 
-void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const std::string&)> deviceSignal )
+void Viewer::initSpaceMouseHandler_()
 {
     spaceMouseHandler_.reset();
 #ifndef __EMSCRIPTEN__
@@ -2173,20 +2174,32 @@ void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const st
     // try to use the official driver first
     auto driverHandler = std::make_unique<SpaceMouse::Handler3dxMacDriver>();
     driverHandler->setClientName( MR_PROJECT_NAME );
-    if ( driverHandler->initialize( deviceSignal ) )
+    if ( driverHandler->initialize() )
     {
         spaceMouseHandler_ = std::move( driverHandler );
-        spdlog::info( "SpaceMouseHandler3dxMacDriver initialized" );
+        spdlog::info( "SpaceMouse::Handler3dxMacDriver initialized" );
         return;
     }
 
     // fallback to the HIDAPI implementation
     spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
-    spaceMouseHandler_ = std::make_unique<SpaceMouse::HandlerHidapi>();
-    if ( spaceMouseHandler_->initialize( std::move( deviceSignal ) ) )
+#ifdef _WIN32
+    auto winEventsHandler = std::make_unique<SpaceMouse::HandlerWinEvents>();
+    if ( winEventsHandler->initialize() )
     {
-        spdlog::info( "SpaceMouseHandlerHidapi initialized" );
+        spaceMouseHandler_ = std::move( winEventsHandler );
+        spdlog::info( "SpaceMouse::HandlerWinEvents initialized" );
+        return;
+    }
+
+    // fallback to the HIDAPI implementation
+    spdlog::warn( "Failed to init Windows Raw Input handeler for SpaceMouse; falling back to the HIDAPI implementation" );
+#endif
+    spaceMouseHandler_ = std::make_unique<SpaceMouse::HandlerHidapi>();
+    if ( spaceMouseHandler_->initialize() )
+    {
+        spdlog::info( "SpaceMouse::HandlerHidapi initialized" );
     }
     else
     {

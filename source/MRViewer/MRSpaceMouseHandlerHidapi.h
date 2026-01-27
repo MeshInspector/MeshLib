@@ -31,7 +31,7 @@ public:
     HandlerHidapi();
     ~HandlerHidapi() override;
 
-    bool initialize( std::function<void(const std::string&)> deviceSignal ) override;
+    bool initialize() override;
     void handle() override;
 
     /// returns true if this handler has connected device
@@ -46,7 +46,6 @@ private:
     bool findAndAttachDevice_( bool verbose );
 
 private:
-    std::function<void(const std::string&)> deviceSignal_;
     hid_device* device_ = nullptr;
 
     class AtomicDevice

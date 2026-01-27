@@ -2342,6 +2342,8 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
         {
             assert( settings.onSave );
             saved = settings.onSave && settings.onSave( currentConfigName );
+            if ( saved )
+                ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
         if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Escape ) )

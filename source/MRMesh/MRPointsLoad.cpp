@@ -47,8 +47,14 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     cloud.points.resizeNoInit( lineCount );
     cloud.validPoints.resize( lineCount, false );
 
-    // detect normals and colors
+    // CSV format specification (RFC 4180) doesn't support comments.
+    // However, there's several unofficial conventions to mark lines as comments rather than data records.
+    // Some examples:
+    // https://stackoverflow.com/questions/1961006/can-a-csv-file-have-a-comment
+    // https://giftoolscookbook.readthedocs.io/en/latest/content/fileFormats/CSVfile.html
     static const std::set<char> cCommentChars { '#', ';', '/', '!', '%' };
+
+    // detect normals and colors
     constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
     constexpr Color cInvalidColor( 0, 0, 0, 0 );
     Vector3d firstPoint;

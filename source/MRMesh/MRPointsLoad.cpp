@@ -10,6 +10,7 @@
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
 #include "MRBitSetParallelFor.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <fstream>
 #include <set>
@@ -60,6 +61,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     Vector3d firstPoint;
     auto hasNormals = false;
     auto hasColors = false;
+    std::string_view header;
     for ( auto i = 0; i < lineCount; ++i )
     {
         const auto line = parseBom( { buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] } );
@@ -70,7 +72,11 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         auto color = cInvalidColor;
         auto result = parseTextCoordinate( line, firstPoint, &normal, &color );
         if ( !result )
-            return unexpected( std::move( result.error() ) );
+        {
+            if ( header.empty() )
+                header = line;
+            continue;
+        }
 
         if ( settings.outXf )
             *settings.outXf = AffineXf3f::translation( Vector3f( firstPoint ) );
@@ -89,8 +95,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         break;
     }
 
-    std::string parseError;
-    tbb::task_group_context ctx;
+    BitSet parseErrorLines( lineCount, false );
     const auto keepGoing = BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
     {
         const auto line = parseBom( { buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] } );
@@ -103,8 +108,9 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         auto result = parseTextCoordinate( line, point, hasNormals ? &normal : nullptr, hasColors ? &color : nullptr );
         if ( !result )
         {
-            if ( ctx.cancel_group_execution() )
-                parseError = std::move( result.error() );
+            // ignore the parse error for the first line, assuming it is a header
+            if ( line.data() != header.data() )
+                parseErrorLines.set( v.get() );
             return;
         }
 
@@ -118,8 +124,28 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
-    if ( !parseError.empty() )
-        return unexpected( std::move( parseError ) );
+    if ( cloud.validPoints.none() )
+        return unexpected( "Could not read any points" );
+
+    if ( parseErrorLines.any() )
+    {
+        if ( parseErrorLines.count() < 10 )
+        {
+            std::ostringstream oss;
+            const auto first = parseErrorLines.find_first();
+            for ( auto it = first; it != BitSet::npos; it = parseErrorLines.find_next( it ) )
+            {
+                if ( it != first )
+                    oss << ", ";
+                oss << it;
+            }
+            spdlog::info( "Failed to parse lines: {}", oss.str() );
+        }
+        else
+        {
+            spdlog::info( "Failed to parse {} lines", parseErrorLines.count() );
+        }
+    }
 
     return cloud;
 }

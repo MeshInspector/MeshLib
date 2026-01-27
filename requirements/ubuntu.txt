@@ -9,7 +9,6 @@ libfmt-dev
 libfreetype-dev
 libgdcm-dev
 libglfw3-dev
-libgtest-dev
 libgtk-3-dev
 libhidapi-dev
 libhpdf-dev

@@ -54,7 +54,7 @@ jobs:
       - name: Check for bindings
         id: check_bindings
         run: |
-          if [ -d MeshLib/scripts/wheel/meshlib/meshlib && -d MeshLib/Cbindings && -d MeshLib/CsharpBindings ] ; then
+          if [ -d MeshLib/scripts/wheel/meshlib/meshlib ] && [ -d MeshLib/Cbindings ] && [ -d MeshLib/CsharpBindings ] ; then
             echo "all_bindings=true" >> $GITHUB_OUTPUT
           else
             echo "Failed to get Python stub files, aborting"

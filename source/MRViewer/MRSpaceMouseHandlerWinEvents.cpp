@@ -3,6 +3,7 @@
 #include "MRViewer.h"
 #include "MRMesh/MRTelemetry.h"
 #include "MRWin32MessageHandler.h"
+#include "MRMesh/MRStringConvert.h"
 
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -19,13 +20,13 @@ bool HandlerWinEvents::initialize()
     auto window = getViewerInstance().window;
     if ( !window )
     {
-        assert( false && "no glfw window while trying to initialize SpaceMouse::HandlerWinEvents" );
+        assert( !"no glfw window while trying to initialize SpaceMouse::HandlerWinEvents" );
         return false;
     }
     auto winHndl = glfwGetWin32Window( window );
     if ( !winHndl )
     {
-        assert( false && "no window handler while trying to initialize SpaceMouse::HandlerWinEvents" );
+        assert( !"no window handler while trying to initialize SpaceMouse::HandlerWinEvents" );
         return false;
     }
 
@@ -46,7 +47,7 @@ bool HandlerWinEvents::initialize()
     auto handler = Win32MessageHandler::getHandler( winHndl );
     if ( !handler || !handler->isValid() )
     {
-        assert( false && "invalid Win32MessageHandler while trying to initialize SpaceMouse::HandlerWinEvents" );
+        assert( !"invalid Win32MessageHandler while trying to initialize SpaceMouse::HandlerWinEvents" );
         return false;
     }
 
@@ -75,7 +76,14 @@ bool HandlerWinEvents::initialize()
         {
             device_ = std::make_unique<Device>();
             numMsg_ = 0;
-            spdlog::info( "SpaceMouse connected: {:04x}:{:04x}", vId, pId );
+
+            unsigned nameSize = 0;
+            GetRawInputDeviceInfo( rawInput.header.hDevice, RIDI_DEVICENAME, NULL, &nameSize ); // get size
+            std::wstring name;
+            name.resize( nameSize );
+            GetRawInputDeviceInfo( rawInput.header.hDevice, RIDI_DEVICENAME, name.data(), &nameSize ); // get name
+
+            spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vId, pId, wideToUtf8( name.c_str() ) );
             TelemetrySignal( fmt::format( "WIN API device {:04x}:{:04x} opened", vId, pId ) );
         }
         device_->updateDevice( vId, pId );

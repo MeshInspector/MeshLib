@@ -16,6 +16,9 @@ public:
     void setParameters( const Parameters& newParams ) { params_ = newParams; }
     const Parameters& getParameters() const { return params_; }
 
+    /// returns true if there is a device connected with raw handler
+    /// while installed driver can send excessive scroll events
+    bool canDriverSendScroll() const;
 private:
     bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate );
     bool spaceMouseDown_( int key );

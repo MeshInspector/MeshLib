@@ -441,22 +441,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
-        viewer.spaceMouseController().setParameters( spaceMouseParams );
-
-#ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
-        {
-            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
-            {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
-                if ( hidapiHandler )
-                {
-                    const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
-                    hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom );
-                }
-            }
-        }
-#endif
+            spaceMouseParams.suppressMouseScrollZoom = !paramsJson["activeMouseScrollZoom"].asBool();
+        viewer.spaceMouseController().setParameters( spaceMouseParams );
     }
 
     if ( cfg.hasJsonValue( cTouchpadSettings ) )
@@ -669,16 +656,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     SpaceMouse::Parameters spaceMouseParams = viewer.spaceMouseController().getParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
-#ifdef _WIN32
-    if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
-    {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( spaceMouseHandler );
-        if ( hidapinHandler )
-        {
-            spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();
-        }
-    }
-#endif
+    spaceMouseParamsJson["activeMouseScrollZoom"] = !spaceMouseParams.suppressMouseScrollZoom;
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 
     Json::Value touchpadParametersJson;

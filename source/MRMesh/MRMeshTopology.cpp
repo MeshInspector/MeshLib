@@ -2409,28 +2409,30 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
     {
         if ( !b )
             failed.store( true, std::memory_order_relaxed );
+        return b;
     };
 
     auto result = ParallelFor( edges_, [&] (const EdgeId& e)
     {
         if ( failed.load( std::memory_order_relaxed ) )
             return;
-        parCheck( edges_[edges_[e].next].prev == e );
-        parCheck( edges_[edges_[e].prev].next == e );
-        auto v = edges_[e].org;
+        const auto& edge = edges_[e];
+        parCheck( edge.next < edges_.size() && edges_[edge.next].prev == e );
+        parCheck( edge.prev < edges_.size() && edges_[edge.prev].next == e );
+        auto v = edge.org;
         if ( allVerts && !isLoneEdge( e ) )
             parCheck( v.valid() );
         if ( v )
         {
             parCheck( validVerts_.test( v ) );
             // check that vertex v is manifold - there is only one ring of edges around it
-            parCheck( edgePerVertex_[v] && fromSameOriginRing( edgePerVertex_[v], e ) );
+            parCheck( v < edgePerVertex_.size() && edgePerVertex_[v] && fromSameOriginRing( edgePerVertex_[v], e ) );
         }
-        if ( auto f = edges_[e].left )
+        if ( auto f = edge.left )
         {
             parCheck( validFaces_.test( f ) );
             // check that face f is manifold - there is only one ring of edges around it
-            parCheck( edgePerFace_[f] && fromSameLeftRing( edgePerFace_[f], e ) );
+            parCheck( f < edgePerFace_.size() && edgePerFace_[f] && fromSameLeftRing( edgePerFace_[f], e ) );
         }
     }, subprogress( cb, 0.0f, 0.3f ) );
 
@@ -2448,12 +2450,11 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
             return;
         if ( edgePerVertex_[v].valid() )
         {
-            parCheck( validVerts_.test( v ) );
-            parCheck( edgePerVertex_[v] < edges_.size() );
-            parCheck( edges_[edgePerVertex_[v]].org == v );
             ++myValidVerts;
-            for ( EdgeId e : orgRing( *this, v ) )
-                parCheck( org(e) == v );
+            parCheck( validVerts_.test( v ) );
+            if ( parCheck( edgePerVertex_[v] < edges_.size() && edges_[edgePerVertex_[v]].org == v ) )
+                for ( EdgeId e : orgRing( *this, v ) )
+                    parCheck( org(e) == v );
         }
         else
         {
@@ -2478,12 +2479,11 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
             return;
         if ( edgePerFace_[f].valid() )
         {
-            parCheck( validFaces_.test( f ) );
-            parCheck( edgePerFace_[f] < edges_.size() );
-            parCheck( edges_[edgePerFace_[f]].left == f );
             ++myValidFaces;
-            for ( EdgeId e : leftRing( *this, f ) )
-                parCheck( left(e) == f );
+            parCheck( validFaces_.test( f ) );
+            if ( parCheck( edgePerFace_[f] < edges_.size() && edges_[edgePerFace_[f]].left == f ) )
+                for ( EdgeId e : leftRing( *this, f ) )
+                    parCheck( left(e) == f );
         }
         else
         {

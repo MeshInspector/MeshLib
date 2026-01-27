@@ -1,13 +1,12 @@
 #include "MRLaplacian.h"
 #include "MRMesh.h"
-#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRExpandShrink.h"
 #include "MRRingIterator.h"
 #include "MRMakeSphereMesh.h"
 #include "MRMeshComponents.h"
 #include "MRTriMath.h"
-
+#include "MRPch/MRTBB.h"
 #include <Eigen/SparseCholesky>
 
 namespace MR
@@ -246,9 +245,10 @@ void Laplacian::updateRhs_()
         }
     );
 
-    ParallelFor( 0, 3, [&] ( size_t i )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
-        rhs_[i] = M_.adjoint() * rhs[i];
+        for ( int i = range.begin(); i < range.end(); ++i )
+            rhs_[i] = M_.adjoint() * rhs[i];
     } );
 }
 
@@ -260,9 +260,10 @@ void Laplacian::apply()
     updateSolver();
 
     Eigen::VectorXd sol[3];
-    ParallelFor( 0, 3, [&] ( size_t i )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
-        sol[i] = solver_->solve( rhs_[i] );
+        for ( int i = range.begin(); i < range.end(); ++i )
+            sol[i] = solver_->solve( rhs_[i] );
     } );
 
     // copy solution back into mesh points

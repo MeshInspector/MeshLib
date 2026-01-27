@@ -2,10 +2,9 @@
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MRMeshTriPoint.h"
-#include "MRParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
-
+#include "MRPch/MRTBB.h"
 #include <atomic>
 
 namespace MR
@@ -673,33 +672,38 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, SurfacePath & pat
             vertSpans.emplace_back( spanStart, (int)path.size() );
 
         // straighten path in each triangle strip
-        ParallelFor( vertSpans, stripPerThread, [&] ( size_t i, TriangleStripUnfolder& strip )
+        tbb::parallel_for( tbb::blocked_range( 0, (int)vertSpans.size(), 1 ),
+            [&]( const tbb::blocked_range<int> & range )
         {
-            auto span = vertSpans[i];
-            while ( span.first + 1 < span.second )
+            for ( int i = range.begin(); i < range.end(); ++i )
             {
-                strip.clear();
-                const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
-                strip.reset( first, path[span.first + 1] );
-                int j = span.first + 2;
-                for ( ; j < span.second; ++j )
+                auto span = vertSpans[i];
+                auto & strip = stripPerThread.local();
+                while ( span.first + 1 < span.second )
                 {
-                    // path[j] is an ordinary point not in a vertex
-                    if ( !strip.nextEdge( path[j] ) )
-                        break;
+                    strip.clear();
+                    const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
+                    strip.reset( first, path[span.first + 1] );
+                    int j = span.first + 2;
+                    for ( ; j < span.second; ++j )
+                    {
+                        // path[j] is an ordinary point not in a vertex
+                        if ( !strip.nextEdge( path[j] ) )
+                            break;
+                    }
+                    const MeshTriPoint last = j < path.size() ? MeshTriPoint{ path[j] } : end;
+                    int pos = j;
+                    strip.find( last, [&]( float v ) 
+                    {
+                        assert( pos > 0 );
+                        auto & edgePoint = path[ --pos ];
+                        assert( !edgePoint.inVertex() );
+                        edgePoint.a = 1 - v;
+                        if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+                            pathTopologyChanged.store( true, std::memory_order_relaxed );
+                    } );
+                    span.first = j;
                 }
-                const MeshTriPoint last = j < path.size() ? MeshTriPoint{ path[j] } : end;
-                int pos = j;
-                strip.find( last, [&]( float v )
-                {
-                    assert( pos > 0 );
-                    auto & edgePoint = path[ --pos ];
-                    assert( !edgePoint.inVertex() );
-                    edgePoint.a = 1 - v;
-                    if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
-                        pathTopologyChanged.store( true, std::memory_order_relaxed );
-                } );
-                span.first = j;
             }
         } );
 

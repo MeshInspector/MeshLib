@@ -75,9 +75,10 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     solver.compute( A );
 
     Eigen::VectorXd sol[3];
-    ParallelFor( 0, 3, [&] ( int i )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
-        sol[i] = solver.solve( rhs[i] );
+        for ( int i = range.begin(); i < range.end(); ++i )
+            sol[i] = solver.solve( rhs[i] );
     } );
 
     // copy solution back into normals

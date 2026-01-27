@@ -12,6 +12,7 @@
 #include "MRBitSetParallelFor.h"
 
 #include <fstream>
+#include <set>
 
 namespace MR::PointsLoad
 {
@@ -47,6 +48,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     cloud.validPoints.resize( lineCount, false );
 
     // detect normals and colors
+    static const std::set<char> cCommentChars { '#', ';', '/', '!', '%' };
     constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
     constexpr Color cInvalidColor( 0, 0, 0, 0 );
     Vector3d firstPoint;
@@ -54,8 +56,8 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     auto hasColors = false;
     for ( auto i = 0; i < lineCount; ++i )
     {
-        const std::string_view line( buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] );
-        if ( line.empty() || line.starts_with( '#' ) || line.starts_with( ';' ) )
+        const auto line = parseBom( { buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] } );
+        if ( line.empty() || cCommentChars.contains( line[0] ) )
             continue;
 
         auto normal = cInvalidNormal;
@@ -85,8 +87,8 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     tbb::task_group_context ctx;
     const auto keepGoing = BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
     {
-        const std::string_view line( buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] );
-        if ( line.empty() || line.starts_with( '#' ) || line.starts_with( ';' ) )
+        const auto line = parseBom( { buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] } );
+        if ( line.empty() || cCommentChars.contains( line[0] ) )
             return;
 
         Vector3d point( noInit );

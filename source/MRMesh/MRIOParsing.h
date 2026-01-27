@@ -44,9 +44,10 @@ template<typename T>
 [[deprecated( "use parseTextCoordinate() instead")]]
 Expected<void> parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
 
-
-
 template<typename T>
 Expected<void> parseSingleNumber( const std::string_view& str, T& num );
+
+// if the given string starts with the UTF-8 byte-order mark, strip it out
+MRMESH_API std::string_view parseBom( const std::string_view& str );
 
 }

@@ -120,7 +120,7 @@ bool Controller::canDriverSendScroll() const
     return false;
 #else
     auto handler = getViewerInstance().getSpaceMouseHandler();
-    if ( handler )
+    if ( !handler )
         return false;
     if ( auto wHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerWinEvents >( handler ) )
         return wHandler->hasValidDeviceConnected();

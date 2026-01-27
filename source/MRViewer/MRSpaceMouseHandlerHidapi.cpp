@@ -70,8 +70,9 @@ bool HandlerHidapi::findAndAttachDevice_( bool verbose )
                 spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}, name={}:{}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page,
                     wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) );
-                TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
-                    wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) ) );
+                if ( localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
+                    TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
+                        wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
             {

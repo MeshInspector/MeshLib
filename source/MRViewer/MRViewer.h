@@ -521,10 +521,6 @@ public:
     /// sets whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene
     void setSortDroppedFiles( bool value ) { sortDroppedFiles_ = value; }
 
-    /// (re)initializes the handler of SpaceMouse events
-    /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
-    MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
-
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
 
@@ -603,6 +599,9 @@ private:
     void initBasisViewControllerObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
+
+    /// (re)initializes the handler of SpaceMouse events
+    void initSpaceMouseHandler_();
 
     // recalculate pixel ratio
     void updatePixelRatio_();

@@ -22,7 +22,7 @@ public:
 
 public:
     // SpaceMouseHandler
-    bool initialize( std::function<void(const std::string&)> deviceSignal ) override;
+    bool initialize() override;
     void handle() override;
 
 private:

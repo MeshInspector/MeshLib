@@ -511,6 +511,9 @@
     <ClCompile Include="MRSpaceMouseDevice.cpp">
       <Filter>SpaceMouse</Filter>
     </ClCompile>
+    <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -1012,6 +1015,9 @@
       <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseDevice.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandlerWinEvents.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
   </ItemGroup>

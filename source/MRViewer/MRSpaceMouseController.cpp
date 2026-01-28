@@ -1,6 +1,7 @@
 #include "MRSpaceMouseController.h"
 #include "MRViewer.h"
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandlerWinEvents.h"
 #include "MRViewerSignals.h"
 #include "MRMakeSlot.h"
 #include "MRViewerInstance.h"
@@ -118,8 +119,13 @@ bool Controller::canDriverSendScroll() const
 #ifndef _WIN32
     return false;
 #else
-    if ( auto handler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( getViewerInstance().getSpaceMouseHandler() ) )
-        return handler->hasValidDeviceConnected();
+    auto handler = getViewerInstance().getSpaceMouseHandler();
+    if ( !handler )
+        return false;
+    if ( auto wHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerWinEvents >( handler ) )
+        return wHandler->hasValidDeviceConnected();
+    else if ( auto hHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( handler ) )
+        return hHandler->hasValidDeviceConnected();
     return false;
 #endif
 }

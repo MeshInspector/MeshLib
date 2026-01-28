@@ -132,12 +132,13 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         if ( parseErrorLines.count() < 10 )
         {
             std::ostringstream oss;
-            const auto first = parseErrorLines.find_first();
-            for ( auto it = first; it != BitSet::npos; it = parseErrorLines.find_next( it ) )
+            bool empty = true;
+            for ( auto line : parseErrorLines )
             {
-                if ( it != first )
+                if ( !empty )
                     oss << ", ";
-                oss << it;
+                oss << line;
+                empty = false;
             }
             spdlog::info( "Failed to parse lines: {}", oss.str() );
         }

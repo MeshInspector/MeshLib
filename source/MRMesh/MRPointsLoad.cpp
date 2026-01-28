@@ -10,8 +10,10 @@
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
 #include "MRBitSetParallelFor.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <fstream>
+#include <set>
 
 namespace MR::PointsLoad
 {
@@ -46,23 +48,35 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     cloud.points.resizeNoInit( lineCount );
     cloud.validPoints.resize( lineCount, false );
 
+    // CSV format specification (RFC 4180) doesn't support comments.
+    // However, there's several unofficial conventions to mark lines as comments rather than data records.
+    // Some examples:
+    // https://stackoverflow.com/questions/1961006/can-a-csv-file-have-a-comment
+    // https://giftoolscookbook.readthedocs.io/en/latest/content/fileFormats/CSVfile.html
+    static const std::set<char> cCommentChars { '#', ';', '/', '!', '%' };
+
     // detect normals and colors
     constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
     constexpr Color cInvalidColor( 0, 0, 0, 0 );
     Vector3d firstPoint;
     auto hasNormals = false;
     auto hasColors = false;
+    std::string_view header;
     for ( auto i = 0; i < lineCount; ++i )
     {
-        const std::string_view line( buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] );
-        if ( line.empty() || line.starts_with( '#' ) || line.starts_with( ';' ) )
+        const auto line = parseBom( { buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] } );
+        if ( line.empty() || cCommentChars.contains( line[0] ) )
             continue;
 
         auto normal = cInvalidNormal;
         auto color = cInvalidColor;
         auto result = parseTextCoordinate( line, firstPoint, &normal, &color );
         if ( !result )
-            return unexpected( std::move( result.error() ) );
+        {
+            if ( header.empty() )
+                header = line;
+            continue;
+        }
 
         if ( settings.outXf )
             *settings.outXf = AffineXf3f::translation( Vector3f( firstPoint ) );
@@ -81,12 +95,11 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         break;
     }
 
-    std::string parseError;
-    tbb::task_group_context ctx;
+    BitSet parseErrorLines( lineCount, false );
     const auto keepGoing = BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
     {
-        const std::string_view line( buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] );
-        if ( line.empty() || line.starts_with( '#' ) || line.starts_with( ';' ) )
+        const auto line = parseBom( { buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] } );
+        if ( line.empty() || cCommentChars.contains( line[0] ) )
             return;
 
         Vector3d point( noInit );
@@ -95,8 +108,9 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         auto result = parseTextCoordinate( line, point, hasNormals ? &normal : nullptr, hasColors ? &color : nullptr );
         if ( !result )
         {
-            if ( ctx.cancel_group_execution() )
-                parseError = std::move( result.error() );
+            // ignore the parse error for the first line, assuming it is a header
+            if ( line.data() != header.data() )
+                parseErrorLines.set( v.get() );
             return;
         }
 
@@ -110,8 +124,29 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
-    if ( !parseError.empty() )
-        return unexpected( std::move( parseError ) );
+    if ( cloud.validPoints.none() )
+        return unexpected( "Could not read any points" );
+
+    if ( parseErrorLines.any() )
+    {
+        if ( parseErrorLines.count() < 10 )
+        {
+            std::ostringstream oss;
+            bool empty = true;
+            for ( auto line : parseErrorLines )
+            {
+                if ( !empty )
+                    oss << ", ";
+                oss << line;
+                empty = false;
+            }
+            spdlog::info( "Failed to parse lines: {}", oss.str() );
+        }
+        else
+        {
+            spdlog::info( "Failed to parse {} lines", parseErrorLines.count() );
+        }
+    }
 
     return cloud;
 }

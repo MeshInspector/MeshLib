@@ -271,7 +271,7 @@ jobs:
 
       - name: Generate Test Performance Report
         run: |
-          py -3 scripts/junit_to_csv.py unit_tests_report.csv unit_tests_report_*.xml
+          py -3 scripts/junit_to_csv.py unit_tests_report.csv (get-item unit_tests_report_*.xml)
           cat unit_tests_report.csv
 
       - name: Delete unwanted files

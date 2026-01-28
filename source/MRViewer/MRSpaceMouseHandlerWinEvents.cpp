@@ -11,6 +11,7 @@
 
 #include "MRPch/MRWinapi.h"
 
+#pragma comment(lib, "hid.lib")
 #pragma warning(push)
 #pragma warning(disable: 4191)
 #include <hidsdi.h>

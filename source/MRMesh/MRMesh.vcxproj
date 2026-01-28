@@ -439,6 +439,7 @@
     <ClInclude Include="MRObjectComparableWithReference.h" />
     <ClInclude Include="MRPointMeasurementObject.h" />
     <ClInclude Include="MRFormat.h" />
+    <ClInclude Include="MRFunctional.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
@@ -737,6 +738,8 @@
     <ClCompile Include="MRObjectTagEventDispatcher.cpp" />
     <ClCompile Include="MRPointMeasurementObject.cpp" />
     <ClCompile Include="MRFormat.cpp" />
+    <ClCompile Include="MRParallelFor.cpp" />
+    <ClCompile Include="MRBitSetParallelFor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

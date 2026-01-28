@@ -258,22 +258,19 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
             // important to be last edge org for points picker,
             // real last point will overlap invalid points so picker will return correct id
             auto lastValidEdgeOrg = lastValid.valid() ? topology.org( lastValid ) : VertId();
-            tbb::parallel_for( tbb::blocked_range<int>( 0, lineIndicesSize_ ), [&] ( const tbb::blocked_range<int>& range )
+            ParallelFor( 0, lineIndicesSize_, [&] ( int ue )
             {
-                for ( int ue = range.begin(); ue < range.end(); ++ue )
+                auto o = topology.org( UndirectedEdgeId( ue ) );
+                auto d = topology.dest( UndirectedEdgeId( ue ) );
+                if ( !o || !d )
                 {
-                    auto o = topology.org( UndirectedEdgeId( ue ) );
-                    auto d = topology.dest( UndirectedEdgeId( ue ) );
-                    if ( !o || !d )
-                    {
-                        positions[2 * ue] = polyline->points[lastValidEdgeOrg];
-                        positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
-                    }
-                    else
-                    {
-                        positions[2 * ue] = polyline->points[o];
-                        positions[2 * ue + 1] = polyline->points[d];
-                    }
+                    positions[2 * ue] = polyline->points[lastValidEdgeOrg];
+                    positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
+                }
+                else
+                {
+                    positions[2 * ue] = polyline->points[o];
+                    positions[2 * ue + 1] = polyline->points[d];
                 }
             } );
         }

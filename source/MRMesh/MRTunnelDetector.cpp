@@ -80,13 +80,10 @@ Expected<void> BasisTunnelsDetector::prepare( ProgressCallback cb )
         return unexpectedOperationCanceled();
 
     // compute curvature for every collected edge
-    tbb::parallel_for(tbb::blocked_range<size_t>( 0, innerEdges_.size() ), [&](const tbb::blocked_range<size_t> & range)
+    ParallelFor( innerEdges_, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            innerEdges_[i].metric = metric_( innerEdges_[i].edge );
-        }
-    });
+        innerEdges_[i].metric = metric_( innerEdges_[i].edge );
+    } );
 
     if ( !reportProgress( cb, 0.75f ) )
         return unexpectedOperationCanceled();
@@ -187,23 +184,20 @@ Expected<std::vector<EdgeLoop>> BasisTunnelsDetector::detect( ProgressCallback c
     std::vector<EdgeLoop> res( joinEdges.size() );
     InTreePathBuilder inTreePathBuilder( mp_.mesh.topology, primaryTree_ );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
+    ParallelFor( res, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto edge = joinEdges[i];
-            const auto o = mp_.mesh.topology.org( edge );
-            const auto d = mp_.mesh.topology.dest( edge );
-            assert( o != d );
-            assert( !primaryTree_.test( edge ) );
-            assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
+        auto edge = joinEdges[i];
+        const auto o = mp_.mesh.topology.org( edge );
+        const auto d = mp_.mesh.topology.dest( edge );
+        assert( o != d );
+        assert( !primaryTree_.test( edge ) );
+        assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
-            auto tunnel = inTreePathBuilder.build( d, o );
-            tunnel.push_back( edge );
-            assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
-            res[i] = std::move( tunnel );
-        }
-    });
+        auto tunnel = inTreePathBuilder.build( d, o );
+        tunnel.push_back( edge );
+        assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
+        res[i] = std::move( tunnel );
+    } );
 
     return res;
 }

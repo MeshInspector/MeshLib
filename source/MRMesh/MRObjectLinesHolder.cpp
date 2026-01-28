@@ -23,13 +23,9 @@ void ObjectLinesHolder::applyScale( float scaleFactor )
 
     auto& points = polyline_->points;
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( points, [&] ( VertId i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            points[VertId( i )] *= scaleFactor;
-        }
+        points[i] *= scaleFactor;
     } );
     setDirtyFlags( DIRTY_POSITION );
 }

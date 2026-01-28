@@ -600,25 +600,20 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
 {
     MR_TIMER;
     std::atomic_bool res{ true };
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&] ( UndirectedEdgeId ue )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            if ( !res.load( std::memory_order_relaxed ) )
-                return;
-            EdgeId e( ue );
-            if ( isLoneEdge( e ) )
-                continue;
-            const auto l = left( e );
-            const auto r = right( e );
-            if ( l && r )
-                continue; // no neighboring holes
-            if ( region && !contains( *region, l ) && !contains( *region, r ) )
-                continue; // both left and right are not in the region
-            res.store( false, std::memory_order_relaxed );
+        if ( !res.load( std::memory_order_relaxed ) )
             return;
-        }
+        EdgeId e( ue );
+        if ( isLoneEdge( e ) )
+            return;
+        const auto l = left( e );
+        const auto r = right( e );
+        if ( l && r )
+            return; // no neighboring holes
+        if ( region && !contains( *region, l ) && !contains( *region, r ) )
+            return; // both left and right are not in the region
+        res.store( false, std::memory_order_relaxed );
     } );
     return res.load( std::memory_order_relaxed );
 }
@@ -1361,14 +1356,10 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
     }
 
     // translate edge records
-    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    ParallelFor( firstNewEdge.undirected(), edges_.endId().undirected(), [&] ( UndirectedEdgeId ue )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            EdgeId e{ ue };
-            from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, false );
-        }
+        EdgeId e{ ue };
+        from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, false );
     } );
 
 #ifndef NDEBUG
@@ -1495,26 +1486,28 @@ void MeshTopology::preferEdges( const UndirectedEdgeBitSet & stableEdges )
 {
     MR_TIMER;
 
-    tbb::parallel_for( tbb::blocked_range( 0_f, edgePerFace_.endId() ), [&]( const tbb::blocked_range<FaceId> & range )
+    ParallelFor( edgePerFace_, [&] ( FaceId f )
     {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
-            for ( EdgeId e : leftRing( *this, f ) )
-                if ( stableEdges.test( e.undirected() ) )
-                {
-                    edgePerFace_[f] = e;
-                    break;
-                }
+        for ( EdgeId e : leftRing( *this, f ) )
+        {
+            if ( stableEdges.test( e.undirected() ) )
+            {
+                edgePerFace_[f] = e;
+                break;
+            }
+        }
     } );
 
-    tbb::parallel_for( tbb::blocked_range( 0_v, edgePerVertex_.endId() ), [&]( const tbb::blocked_range<VertId> & range )
+    ParallelFor( edgePerVertex_, [&] ( VertId v )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-            for ( EdgeId e : orgRing( *this, v ) )
-                if ( stableEdges.test( e.undirected() ) )
-                {
-                    edgePerVertex_[v] = e;
-                    break;
-                }
+        for ( EdgeId e : orgRing( *this, v ) )
+        {
+            if ( stableEdges.test( e.undirected() ) )
+            {
+                edgePerVertex_[v] = e;
+                break;
+            }
+        }
     } );
 }
 
@@ -2078,25 +2071,22 @@ void MeshTopology::rotateTriangles()
 {
     MR_TIMER;
 
-    tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{0}, FaceId{edgePerFace_.size()} ), [&]( const tbb::blocked_range<FaceId> & range )
+    ParallelFor( edgePerFace_, [&] ( FaceId f )
     {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        EdgeId emin = edgePerFace_[f];
+        if ( !emin.valid() )
+            return;
+        VertId vmin = org( emin );
+        for ( EdgeId e : leftRing0( *this, emin ) )
         {
-            EdgeId emin = edgePerFace_[f];
-            if ( !emin.valid() )
-                continue;
-            VertId vmin = org( emin );
-            for ( EdgeId e : leftRing0( *this, emin ) )
+            VertId v = org( e );
+            if ( v < vmin )
             {
-                VertId v = org( e );
-                if ( v < vmin )
-                {
-                    vmin = v;
-                    emin = e;
-                }
+                vmin = v;
+                emin = e;
             }
-            edgePerFace_[f] = emin;
         }
+        edgePerFace_[f] = emin;
     } );
 }
 
@@ -2279,39 +2269,27 @@ void MeshTopology::packMinMem( const PackMapping & map )
     group.wait();
 
     m.restart( "translate" );
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    ParallelFor( 0_ue, UndirectedEdgeId( map.e.tsize ), [&] ( UndirectedEdgeId ue )
     {
-        for ( auto ue = range.begin(); ue < range.end(); ++ue )
+        auto translateHalfEdge = [&]( HalfEdgeRecord & he )
         {
-            auto translateHalfEdge = [&]( HalfEdgeRecord & he )
-            {
-                he.next = getAt( map.e.b, he.next );
-                he.prev = getAt( map.e.b, he.prev );
-                he.org = getAt( map.v.b, he.org );
-                he.left = getAt( map.f.b, he.left );
-            };
-            translateHalfEdge( edges_[ EdgeId{ue} ] );
-            translateHalfEdge( edges_[ EdgeId{ue}.sym() ] );
-        }
+            he.next = getAt( map.e.b, he.next );
+            he.prev = getAt( map.e.b, he.prev );
+            he.org = getAt( map.v.b, he.org );
+            he.left = getAt( map.f.b, he.left );
+        };
+        translateHalfEdge( edges_[ EdgeId{ue} ] );
+        translateHalfEdge( edges_[ EdgeId{ue}.sym() ] );
     } );
 
-    tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( map.f.tsize ) ),
-        [&]( const tbb::blocked_range<FaceId> & range )
+    ParallelFor( 0_f, FaceId( map.f.tsize ), [&] ( FaceId f )
     {
-        for ( auto f = range.begin(); f < range.end(); ++f )
-        {
-            edgePerFace_[f] = getAt( map.e.b, edgePerFace_[f] );
-        }
+        edgePerFace_[f] = getAt( map.e.b, edgePerFace_[f] );
     } );
 
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( map.v.tsize ) ),
-        [&]( const tbb::blocked_range<VertId> & range )
+    ParallelFor( 0_v, VertId( map.v.tsize ), [&] ( VertId v )
     {
-        for ( auto v = range.begin(); v < range.end(); ++v )
-        {
-            edgePerVertex_[v] = getAt( map.e.b, edgePerVertex_[v] );
-        }
+        edgePerVertex_[v] = getAt( map.e.b, edgePerVertex_[v] );
     } );
 
     updateValids_ = true;

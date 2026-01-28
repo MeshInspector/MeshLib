@@ -3,8 +3,8 @@
 #include "MRSurfacePath.h"
 #include "MRRingIterator.h"
 #include "MRMeshComponents.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -18,29 +18,21 @@ std::vector<FaceBitSet> separateClosedContour( const Mesh& mesh, const std::vect
         return {};
 
     std::vector<MeshTriPoint> projections( contour.size() );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, int( contour.size() ) ),
-                       [&]( const tbb::blocked_range<int>& range )
+    ParallelFor( contour, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            if ( auto projRes = mesh.projectPoint( contour[i] ) )
-                projections[i] = projRes.mtp;
-        }
+        if ( auto projRes = mesh.projectPoint( contour[i] ) )
+            projections[i] = projRes.mtp;
     } );
     for ( const auto& mtp : projections )
         if ( !mtp.e.valid() )
             return {};
 
     std::vector<SurfacePath> paths( projections.size() );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, int( projections.size() ) ),
-                       [&]( const tbb::blocked_range<int>& range )
+    ParallelFor( projections, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            auto sp = computeSurfacePath( mesh, projections[i], projections[( i + 1 ) % projections.size()] );
-            if ( sp.has_value() )
-                paths[i] = std::move( sp.value() );
-        }
+        auto sp = computeSurfacePath( mesh, projections[i], projections[( i + 1 ) % projections.size()] );
+        if ( sp.has_value() )
+            paths[i] = std::move( sp.value() );
     } );
 
     FaceBitSet contourFaces( mesh.topology.getValidFaces().size() );

@@ -2,6 +2,7 @@
 --buggy-substitute-default-template-args
 --ignore ::
 --ignore MR::detail
+--ignore MR::FunctionRef
 --ignore MR::Signal
 --ignore MR::UniquePtr
 --ignore MR::RegisterRenderObjectConstructor
@@ -12,6 +13,7 @@
 --skip-mentions-of '/std::integral_constant<.*>/'
 --skip-mentions-of '/boost::dynamic_bitset<.*>/'
 --skip-mentions-of '/openvdb::v[0-9][0-9_a-zA-Z]*::Grid<.*>/'
+--skip-mentions-of '/MR::FunctionRef<.*>/'
 --skip-mentions-of '/MR::Signal<.*>/'
 --skip-mentions-of '/Eigen::Matrix<.*>/'
 --skip-mentions-of Json::Value

@@ -5,11 +5,12 @@
 #include "MRVoxelsVolume.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRBox.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 #include "MRMesh/MRphmap.h"
+
 #include <array>
 #include <cfloat>
 
@@ -515,30 +516,27 @@ void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k
         return std::exp( k * delta );
     };
 
-    tbb::parallel_for( tbb::blocked_range<SeqVoxelId>( SeqVoxelId( 0 ), SeqVoxelId( seq2voxel_.size() ) ), [&] ( const tbb::blocked_range<SeqVoxelId>& range )
+    ParallelFor( seq2voxel_, [&] ( SeqVoxelId sid )
     {
-        for ( SeqVoxelId sid = range.begin(); sid != range.end(); ++sid )
+        if ( sinkSeeds_.test( sid ) )
+            return; // no exiting edges from sinks
+        auto & cap = capacity_[sid];
+        const auto vid = seq2voxel_[sid];
+        const auto density = densityVolume.data[vid];
+        const auto pos = toPos( vid );
+        const auto bdPos = isBdVoxel( pos );
+        const bool vIsSource = sourceSeeds_.test( sid );
+        for ( int i = 0; i < OutEdgeCount; ++i )
         {
-            if ( sinkSeeds_.test( sid ) )
-                continue; // no exiting edges from sinks
-            auto & cap = capacity_[sid];
-            const auto vid = seq2voxel_[sid];
-            const auto density = densityVolume.data[vid];
-            const auto pos = toPos( vid );
-            const auto bdPos = isBdVoxel( pos );
-            const bool vIsSource = sourceSeeds_.test( sid );
-            for ( int i = 0; i < OutEdgeCount; ++i )
-            {
-                const auto e = OutEdge( i );
-                auto neiv = getNeighbor( vid, pos, bdPos, e );
-                if ( !neiv )
-                    continue;
-                if ( sourceSeeds.test( neiv ) )
-                    continue; // no entering edges to sources
-                if ( vIsSource && sinkSeeds.test( neiv ) )
-                    continue; // no direct source-sink edges
-                cap.forOutEdge[i] = capacity( density, densityVolume.data[neiv] );
-            }
+            const auto e = OutEdge( i );
+            auto neiv = getNeighbor( vid, pos, bdPos, e );
+            if ( !neiv )
+                continue;
+            if ( sourceSeeds.test( neiv ) )
+                continue; // no entering edges to sources
+            if ( vIsSource && sinkSeeds.test( neiv ) )
+                continue; // no direct source-sink edges
+            cap.forOutEdge[i] = capacity( density, densityVolume.data[neiv] );
         }
     } );
 }
@@ -672,7 +670,7 @@ void VoxelGraphCut::findActiveVoxels_( Context & context )
     assert( ( context.span.begin % BitSet::bits_per_block ) == 0 );
     context.active.resize( context.span.size() );
 
-    BitSetParallelForAll( IdRange<SeqVoxelId>{ context.span.begin, context.span.end }, [&]( SeqVoxelId s )
+    ParallelFor( context.span.begin, context.span.end, [&]( SeqVoxelId s )
     {
         const auto side = voxelData_[s].side();
         if ( side == Side::Unknown )
@@ -1144,31 +1142,28 @@ Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolum
     auto sp = subprogress( cb, 4.0f / 16, 1.0f );
     for ( int p = 0; p <= power; ++p )
     {
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, parts.size() ), [&]( const tbb::blocked_range<size_t>& range )
+        ParallelFor( parts, [&] ( size_t i )
         {
-            for ( size_t i = range.begin(); i < range.end(); ++i )
+            auto & part = parts[i];
+            if ( parts.size() == numSubtasks )
             {
-                auto & part = parts[i];
-                if ( parts.size() == numSubtasks )
-                {
-                    part.span.begin = SeqVoxelId( i * voxelsPerPart );
-                    part.span.end = ( i + 1 ) < numSubtasks ? SeqVoxelId( ( i + 1 ) * voxelsPerPart ) : vgc.getFullSpan().end;
-                }
-
-                VoxelGraphCut::Context context
-                {
-                    .span = part.span,
-                    .stat = part.stat
-                };
-                if ( parts.size() > 1 )
-                    vgc.cutOutOfSpanNeiNeighbors( context );
-                vgc.buildForest( context, parts.size() == numSubtasks );
-                (void)vgc.segment( context ); // cannot fail without callback
-                if ( parts.size() > 1 )
-                    vgc.restoreCutNeighbor( context );
-                part.stat = context.stat;
-                //part.stat.log( fmt::format( " after [{}, {})", part.span.begin, part.span.end ) );
+                part.span.begin = SeqVoxelId( i * voxelsPerPart );
+                part.span.end = ( i + 1 ) < numSubtasks ? SeqVoxelId( ( i + 1 ) * voxelsPerPart ) : vgc.getFullSpan().end;
             }
+
+            VoxelGraphCut::Context context
+            {
+                .span = part.span,
+                .stat = part.stat
+            };
+            if ( parts.size() > 1 )
+                vgc.cutOutOfSpanNeiNeighbors( context );
+            vgc.buildForest( context, parts.size() == numSubtasks );
+            (void)vgc.segment( context ); // cannot fail without callback
+            if ( parts.size() > 1 )
+                vgc.restoreCutNeighbor( context );
+            part.stat = context.stat;
+            //part.stat.log( fmt::format( " after [{}, {})", part.span.begin, part.span.end ) );
         } );
         if ( parts.size() <= 1 )
         {

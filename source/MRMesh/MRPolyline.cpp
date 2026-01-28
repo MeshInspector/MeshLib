@@ -8,7 +8,7 @@
 #include "MRMesh.h"
 #include "MRComputeBoundingBox.h"
 #include "MREdgePaths.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -317,13 +317,10 @@ void Polyline<V>::transform( const AffineXf<V> & xf )
     MR_TIMER;
     VertId lastValidVert = topology.lastValidVert();
 
-    tbb::parallel_for(tbb::blocked_range<VertId>(VertId{ 0 }, lastValidVert + 1), [&](const tbb::blocked_range<VertId> & range)
+    ParallelFor( 0_v, lastValidVert + 1, [&] ( VertId v )
     {
-        for (VertId v = range.begin(); v < range.end(); ++v)
-        {
-            if (topology.hasVert(v))
-                points[v] = xf(points[v]);
-        }
+        if (topology.hasVert(v))
+            points[v] = xf(points[v]);
     });
     invalidateCaches();
 }

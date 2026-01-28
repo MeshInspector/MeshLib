@@ -2,13 +2,13 @@
 #include "MRImGuiImage.h"
 #include "MRViewer.h"
 #include "MRMesh/MRImageLoad.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 
 #include "MRIOExtras/MRPng.h"
 
@@ -162,15 +162,11 @@ void RibbonIcons::load_( IconType type )
             if ( whiteIcons )
             {
                 icons.white = std::make_unique<ImGuiImage>();
-                tbb::parallel_for( tbb::blocked_range<int>( 0, int( texture.pixels.size() ) ),
-                                   [&] ( const  tbb::blocked_range<int>& range )
+                ParallelFor( texture.pixels, [&] ( size_t i )
                 {
-                    for ( int i = range.begin(); i < range.end(); ++i )
-                    {
-                        auto alpha = texture.pixels[i].a;
-                        texture.pixels[i] = Color::white();
-                        texture.pixels[i].a = alpha;
-                    }
+                    auto alpha = texture.pixels[i].a;
+                    texture.pixels[i] = Color::white();
+                    texture.pixels[i].a = alpha;
                 } );
                 icons.white->update( std::move( texture ) );
             }

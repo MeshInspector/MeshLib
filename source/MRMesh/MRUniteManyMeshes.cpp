@@ -8,6 +8,7 @@
 #include "MRMeshDecimate.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRBox.h"
+#include "MRParallelFor.h"
 #include <random>
 
 namespace MR
@@ -286,27 +287,19 @@ Expected<Mesh> uniteManyMeshes(
     std::vector<Mesh> mergedMeshes( separateComponentsProcess ? nonIntersectingGroups.size() : meshes.size() );
     if ( separateComponentsProcess )
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( nonIntersectingGroups.size() ) ),
-                           [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( nonIntersectingGroups, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                auto& mergedMesh = mergedMeshes[i];
-                auto& mergeGroup = nonIntersectingGroups[i];
-                for ( auto meshIndex : mergeGroup )
-                    mergedMesh.addMesh( *meshes[meshIndex] );
-            }
+            auto& mergedMesh = mergedMeshes[i];
+            auto& mergeGroup = nonIntersectingGroups[i];
+            for ( auto meshIndex : mergeGroup )
+                mergedMesh.addMesh( *meshes[meshIndex] );
         } );
     }
     else
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( meshes.size() ) ),
-                   [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( meshes, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                mergedMeshes[i] = *meshes[i];
-            }
+            mergedMeshes[i] = *meshes[i];
         } );
     }
 

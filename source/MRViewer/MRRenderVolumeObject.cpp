@@ -7,9 +7,9 @@
 #include "MRGLStaticHolder.h"
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
-#include "MRPch/MRTBB.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
@@ -80,19 +80,17 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
 
     if ( objVoxels_->getVolumeRenderActiveVoxels().empty() )
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( (size_t)0, buffer.size(), [&] ( size_t r )
         {
-            for ( int r = range.begin(); r < range.end(); ++r )
-                buffer[r] = 0xFFFFFFFF;
+            buffer[r] = 0xFFFFFFFF;
         } );
         return buffer;
     }
     const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().bits();
     const unsigned* activeVoxelsData = ( unsigned* )activeVoxels.data();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( (size_t)0, buffer.size(), [&] ( size_t r )
     {
-        for ( int r = range.begin(); r < range.end(); ++r )
-            buffer[r] = activeVoxelsData[r];
+        buffer[r] = activeVoxelsData[r];
     } );
 
     return buffer;

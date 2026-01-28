@@ -7,8 +7,8 @@
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTimer.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -115,15 +115,12 @@ void PointsToMeshProjector::findProjections(
         cudaResult.copyTo( res.data() + offset, size );
     }
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( res, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            if ( res[i].proj.face )
-                res[i].mtp.e = mesh_->topology.edgeWithLeft( res[i].proj.face );
-            else
-                assert( !res[i].mtp.e );
-        }
+        if ( res[i].proj.face )
+            res[i].mtp.e = mesh_->topology.edgeWithLeft( res[i].proj.face );
+        else
+            assert( !res[i].mtp.e );
     } );
 }
 

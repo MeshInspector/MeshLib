@@ -2,9 +2,12 @@
 
 #include "MRMeshFwd.h"
 #include "MRCone3.h"
-#include "MRToFromEigen.h"
 #include "MRConstants.h"
-#include <MRPch/MREigenCore.h>
+#include "MRParallelFor.h"
+#include "MRToFromEigen.h"
+#include "MRPch/MREigenCore.h"
+#include "MRPch/MRSuppressWarning.h"
+
 #include <Eigen/SVD>
 
 #ifdef _MSC_VER
@@ -17,9 +20,6 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-#include "MRPch/MRSuppressWarning.h"
-#include "MRPch/MRTBB.h"
 
 #include <algorithm>
 
@@ -248,50 +248,46 @@ private:
         std::vector<BestCone> bestCones;
         bestCones.resize( params_.hemisphereSearchPhiResolution + 1 );
 
-        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), params_.hemisphereSearchPhiResolution + 1 ),
-               [&] ( const tbb::blocked_range<size_t>& range )
+        ParallelFor( 0, params_.hemisphereSearchPhiResolution + 1, [&] ( int j )
         {
-            for ( size_t j = range.begin(); j < range.end(); ++j )
+            T phi = phiStep * j; //  [0 .. pi/2]
+            T cosPhi = std::cos( phi );
+            T sinPhi = std::sin( phi );
+            for ( size_t i = 0; i < params_.hemisphereSearchThetaResolution; ++i )
             {
-                T phi = phiStep * j; //  [0 .. pi/2]
-                T cosPhi = std::cos( phi );
-                T sinPhi = std::sin( phi );
-                for ( size_t i = 0; i < params_.hemisphereSearchThetaResolution; ++i )
+                T theta = theraStep * i; //  [0 .. 2*pi)
+                T cosTheta = std::cos( theta );
+                T sinTheta = std::sin( theta );
+
+                // cone main axis original extimation
+                Vector3<T> U( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
+
+                auto tmpCone = computeInitialCone_( points, center, U );
+
+                Eigen::VectorX<T> fittedParams( 6 );
+                coneToFitParams_( tmpCone, fittedParams );
+
+                // create approximator and minimize functor
+                Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
+                lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
+                [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
+
+                // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only.
+                // Not return value for Success minimization.
+
+                fitParamsToCone_( fittedParams, tmpCone );
+
+                T const one_v = static_cast< T >( 1 );
+                auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
+                tmpCone.angle = std::acos( cosAngle );
+                tmpCone.direction() = tmpCone.direction().normalized();
+
+                // calculate approximation error and store best result.
+                T error = getApproximationRMS_( points, tmpCone );
+                if ( error < bestCones[j].minError )
                 {
-                    T theta = theraStep * i; //  [0 .. 2*pi)
-                    T cosTheta = std::cos( theta );
-                    T sinTheta = std::sin( theta );
-
-                    // cone main axis original extimation
-                    Vector3<T> U( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
-
-                    auto tmpCone = computeInitialCone_( points, center, U );
-
-                    Eigen::VectorX<T> fittedParams( 6 );
-                    coneToFitParams_( tmpCone, fittedParams );
-
-                    // create approximator and minimize functor
-                    Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
-                    lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
-                    [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
-
-                    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only.
-                    // Not return value for Success minimization.
-
-                    fitParamsToCone_( fittedParams, tmpCone );
-
-                    T const one_v = static_cast< T >( 1 );
-                    auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
-                    tmpCone.angle = std::acos( cosAngle );
-                    tmpCone.direction() = tmpCone.direction().normalized();
-
-                    // calculate approximation error and store best result.
-                    T error = getApproximationRMS_( points, tmpCone );
-                    if ( error < bestCones[j].minError )
-                    {
-                        bestCones[j].minError = error;
-                        bestCones[j].bestCone = tmpCone;
-                    }
+                    bestCones[j].minError = error;
+                    bestCones[j].bestCone = tmpCone;
                 }
             }
         } );

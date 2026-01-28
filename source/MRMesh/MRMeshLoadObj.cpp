@@ -1230,6 +1230,12 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 {
     MR_TIMER;
 
+    if ( hasBom( { data, size } ) )
+    {
+        data += 3;
+        size -= 3;
+    }
+
     const auto newlines = splitByLines( data, size );
 
     if ( !reportProgress( settings.callback, 0.15f ) )

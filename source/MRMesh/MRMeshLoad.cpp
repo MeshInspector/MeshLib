@@ -177,6 +177,8 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
 
     std::string header;
     in >> header;
+    if ( hasBom( header ) )
+        header = header.substr( 3 );
     if ( !in || header != "OFF" )
         return unexpected( std::string( "File is not in OFF-format" ) );
     // some options are not supported yet: http://www.geomview.org/docs/html/OFF.html
@@ -689,6 +691,8 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     std::vector<Triangle3f> triangles;
     std::string str;
     std::getline( in, str );
+    if ( hasBom( str ) )
+        str = str.substr( 3 );
 
     int code = {};
     if ( !parseSingleNumber<int>( str, code ) )

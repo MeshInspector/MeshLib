@@ -35,10 +35,18 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     if ( !buf )
         return unexpected( std::move( buf.error() ) );
 
+    auto bufData = buf->data();
+    auto bufSize = buf->size();
+    if ( hasBom( { bufData, bufSize } ) )
+    {
+        bufData += 3;
+        bufSize -= 3;
+    }
+
     if ( !reportProgress( settings.callback, 0.50f ) )
         return unexpectedOperationCanceled();
 
-    const auto newlines = splitByLines( buf->data(), buf->size() );
+    const auto newlines = splitByLines( bufData, bufSize );
     const auto lineCount = newlines.size() - 1;
 
     if ( !reportProgress( settings.callback, 0.60f ) )
@@ -64,7 +72,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     std::string_view header;
     for ( auto i = 0; i < lineCount; ++i )
     {
-        const auto line = parseBom( { buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] } );
+        const std::string_view line( bufData + newlines[i], newlines[i + 1] - newlines[i + 0] );
         if ( line.empty() || cCommentChars.contains( line[0] ) )
             continue;
 
@@ -98,7 +106,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     BitSet parseErrorLines( lineCount, false );
     const auto keepGoing = BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
     {
-        const auto line = parseBom( { buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] } );
+        const std::string_view line( bufData + newlines[v], newlines[v + 1] - newlines[v + 0] );
         if ( line.empty() || cCommentChars.contains( line[0] ) )
             return;
 
@@ -168,6 +176,9 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     if ( !std::getline( in, numPointsLine ) )
         return unexpected( "Cannot read header line" );
 
+    if ( hasBom( numPointsLine ) )
+        numPointsLine = numPointsLine.substr( 3 );
+
     Vector3f testFirstLine;
     if ( parseTextCoordinate( numPointsLine, testFirstLine ).has_value() )
     {
@@ -194,8 +205,8 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     int firstLine = 1;
     Vector3d firstLineCoord;
     Color firstLineColor;
-    std::string_view shitLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
-    auto shiftLineRes = parsePtsCoordinate( shitLine, firstLineCoord, firstLineColor );
+    std::string_view shiftLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
+    auto shiftLineRes = parsePtsCoordinate( shiftLine, firstLineCoord, firstLineColor );
     if ( !shiftLineRes.has_value() )
         return unexpected( shiftLineRes.error() );
 
@@ -331,6 +342,8 @@ Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settin
 
     std::string str;
     std::getline( in, str );
+    if ( hasBom( str ) )
+        str = str.substr( 3 );
 
     int code{};
     if ( !parseSingleNumber<int>( str, code ) )

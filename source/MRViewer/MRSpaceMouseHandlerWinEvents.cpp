@@ -10,7 +10,12 @@
 #include <GLFW/glfw3native.h>
 
 #include "MRPch/MRWinapi.h"
-#include "hidusage.h"
+
+#pragma warning(push)
+#pragma warning(disable: 4191)
+#include <hidsdi.h>
+#pragma warning(pop)
+#include <hidusage.h>
 
 namespace MR::SpaceMouse
 {
@@ -64,36 +69,13 @@ bool HandlerWinEvents::initialize()
         if ( rawInput.header.dwType != RIM_TYPEHID )
             return false;
 
-        RID_DEVICE_INFO info;
-        unsigned infoSize = sizeof( RID_DEVICE_INFO );
-        info.cbSize = infoSize;
-
-        GetRawInputDeviceInfo( rawInput.header.hDevice, RIDI_DEVICEINFO, &info, &infoSize );
-
-        VendorId vId = VendorId( info.hid.dwVendorId );
-        ProductId pId = VendorId( info.hid.dwProductId );
-        if ( !device_ )
-        {
-            device_ = std::make_unique<Device>();
-            numMsg_ = 0;
-
-            unsigned nameSize = 0;
-            GetRawInputDeviceInfo( rawInput.header.hDevice, RIDI_DEVICENAME, NULL, &nameSize ); // get size
-            std::wstring name;
-            name.resize( nameSize );
-            GetRawInputDeviceInfo( rawInput.header.hDevice, RIDI_DEVICENAME, name.data(), &nameSize ); // get name
-
-            spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vId, pId, wideToUtf8( name.c_str() ) );
-            TelemetrySignal( fmt::format( "WIN API device {:04x}:{:04x} opened", vId, pId ) );
-        }
-        device_->updateDevice( vId, pId );
+        resetDevice_( rawInput.header.hDevice );
         
         Action action;
         DataPacketRaw rawPacket;
         unsigned packetSize = rawInput.data.hid.dwSizeHid;
         std::copy( rawInput.data.hid.bRawData, rawInput.data.hid.bRawData + std::min( size_t( rawInput.data.hid.dwSizeHid ), rawPacket.size() ), rawPacket.data() );
         device_->parseRawEvent( rawPacket, packetSize, action );
-
 
         ++numMsg_;
         if ( numMsg_ == 1 )
@@ -112,6 +94,59 @@ bool HandlerWinEvents::initialize()
 bool HandlerWinEvents::hasValidDeviceConnected() const
 {
     return device_ && device_->valid();
+}
+
+void HandlerWinEvents::resetDevice_( void* handle )
+{
+    RID_DEVICE_INFO info;
+    unsigned infoSize = sizeof( RID_DEVICE_INFO );
+    info.cbSize = infoSize;
+
+    GetRawInputDeviceInfo( handle, RIDI_DEVICEINFO, &info, &infoSize );
+
+    VendorId vId = VendorId( info.hid.dwVendorId );
+    ProductId pId = VendorId( info.hid.dwProductId );
+    if ( !device_ )
+    {
+        device_ = std::make_unique<Device>();
+        numMsg_ = 0;
+
+        unsigned pathSize = 0;
+        GetRawInputDeviceInfo( handle, RIDI_DEVICENAME, NULL, &pathSize ); // get size
+        std::wstring path;
+        path.resize( pathSize );
+
+        std::wstring productString;
+        productString.resize( 256 );
+        std::wstring manufacturerString;
+        manufacturerString.resize( 256 );
+
+        bool gotProdStr = false;
+        bool gotManufacturerStr = false;
+
+        GetRawInputDeviceInfo( handle, RIDI_DEVICENAME, path.data(), &pathSize ); // get name
+
+        auto hidHandler = CreateFile( path.data(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL );
+        if ( hidHandler != INVALID_HANDLE_VALUE )
+        {
+            gotProdStr = HidD_GetProductString( hidHandler, productString.data(), unsigned( productString.size() ) );
+            gotManufacturerStr = HidD_GetManufacturerString( hidHandler, manufacturerString.data(), unsigned( manufacturerString.size() ) );
+            CloseHandle( hidHandler );
+        }
+
+        if ( gotProdStr && gotManufacturerStr )
+        {
+            spdlog::info( "WIN API device found: {:04x}:{:04x}, name={}:{}",
+                vId, pId, wideToUtf8( manufacturerString.c_str() ), wideToUtf8( productString.c_str() ) );
+            TelemetrySignal( fmt::format( "WIN API device {:04x}:{:04x} found: {}:{}",
+                vId, pId, wideToUtf8( manufacturerString.c_str() ), wideToUtf8( productString.c_str() ) ) );
+        }
+
+
+        spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vId, pId, wideToUtf8( path.c_str() ) );
+        TelemetrySignal( fmt::format( "WIN API device {:04x}:{:04x} opened", vId, pId ) );
+    }
+    device_->updateDevice( vId, pId );
 }
 
 }

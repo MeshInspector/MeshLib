@@ -30,6 +30,8 @@ private:
     std::shared_ptr<Win32MessageHandler> winHandler_;
     boost::signals2::scoped_connection winEventsConnection_;
     size_t numMsg_ = 0;
+
+    void resetDevice_( void* handle );
 };
 
 }

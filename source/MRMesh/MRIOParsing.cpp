@@ -332,12 +332,10 @@ Expected<void> parsePolygon( const std::string_view& str, VertId* vertId, int* n
     return {};
 }
 
-std::string_view parseBom( const std::string_view& str )
+bool hasBom( const std::string_view& str )
 {
     constexpr auto cUtf8Bom = "\xef\xbb\xbf";
-    if ( str.starts_with( cUtf8Bom ) )
-        return str.substr( 3 );
-    return str;
+    return str.starts_with( cUtf8Bom );
 }
 
 template <typename T>

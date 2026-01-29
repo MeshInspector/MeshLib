@@ -13,12 +13,9 @@ namespace MRTest
             var meshB = makeTorus(1.1f, 0.5f, 8, 8);
             meshB.transform(AffineXf3f.linear(Matrix3f.rotation(Vector3f.plusZ(), new Vector3f(0.1f, 0.8f, 0.2f))));
 
-            MeshPart mpA = new MeshPart( meshA );
-            MeshPart mpB = new MeshPart( meshB );
+            var conv = getVectorConverters(meshA, meshB);
 
-            var conv = getVectorConverters(mpA, mpB);
-
-            var intersections = findCollidingEdgeTrisPrecise(mpA, mpB, conv.toInt);
+            var intersections = findCollidingEdgeTrisPrecise(meshA, meshB, conv.toInt);
             Assert.That(intersections.size(), Is.EqualTo(152));
             var edgeATriBCount = 0;
             var edgeBTriACount = 0;
@@ -59,8 +56,8 @@ namespace MRTest
         [Test]
         public void TestMeshCollide()
         {
-            MeshPart meshA = new MeshPart(makeTorus(1.1f, 0.5f, 8, 8));
-            MeshPart meshB = new MeshPart(makeTorus(1.1f, 0.2f, 8, 8));
+            Mesh meshA = makeTorus(1.1f, 0.5f, 8, 8);
+            Mesh meshB = makeTorus(1.1f, 0.2f, 8, 8);
             Assert.That(isInside(meshB, meshA));
             Assert.That(!isInside(meshA, meshB));
         }

@@ -335,8 +335,8 @@ namespace MRTest
         public void TestProjection()
         {
             var p = new Vector3f(1, 2, 3);
-            var mp = new MeshPart(makeSphere(new SphereParams(1.0f, 1000)));
-            var projRes = findProjection(p, mp);
+            var mesh = makeSphere(new SphereParams(1.0f, 1000));
+            var projRes = findProjection(p, mesh);
             Assert.That(projRes.distSq, Is.EqualTo(7.529f).Within(1e-3));
 
             Assert.That(projRes.proj.face.id, Is.EqualTo(904));
@@ -349,7 +349,7 @@ namespace MRTest
             Assert.That(projRes.mtp.bary.b, Is.EqualTo(0.946).Within(1e-3));
 
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
-            projRes = findProjection(p, mp, float.MaxValue, xf);
+            projRes = findProjection(p, mesh, float.MaxValue, xf);
 
             Assert.That(projRes.proj.face.id, Is.EqualTo(632));
             Assert.That(projRes.proj.point.x, Is.EqualTo(1.000).Within(1e-3));
@@ -366,18 +366,16 @@ namespace MRTest
         {
             var sphere1 = makeUVSphere(1, 8, 8);
 
-            var wholeSphere1 = new MeshPart(sphere1);
-            var d11 = findDistance(wholeSphere1, wholeSphere1);
+            var d11 = findDistance(sphere1, sphere1);
             Assert.That(d11.distSq, Is.EqualTo(0));
 
             var zShift = AffineXf3f.translation(new Vector3f(0.0f, 0.0f, 3.0f));
-            var d1z = findDistance(wholeSphere1, wholeSphere1, zShift);
+            var d1z = findDistance(sphere1, sphere1, zShift);
             Assert.That(d1z.distSq, Is.EqualTo(1));
 
             Mesh sphere2 = makeUVSphere(2, 8, 8);
 
-            var wholeSphere2 = new MeshPart(sphere2);
-            var d12 = findDistance(wholeSphere1, wholeSphere2);
+            var d12 = findDistance(sphere1, sphere2);
             var dist12 = Math.Sqrt(d12.distSq);
             Assert.That(dist12, Is.InRange(0.9, 1.0));
         }
@@ -470,7 +468,7 @@ namespace MRTest
         public void TestShortEdges()
         {
             var mesh = makeTorus(1.0f, 0.05f, 16, 16);
-            var shortEdges = findShortEdges(new MeshPart( mesh ), 0.1f);
+            var shortEdges = findShortEdges(mesh, 0.1f);
             Assert.That(shortEdges.count(), Is.EqualTo(256));
         }
     }

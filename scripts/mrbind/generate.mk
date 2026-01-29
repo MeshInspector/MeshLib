@@ -910,7 +910,8 @@ generate:
 		--force-namespace MR \
 		--dotnet-version=std2.0 \
 		--begin-func-names-with-lowercase \
-		--wrap-doc-comments-in-summary-tag
+		--wrap-doc-comments-in-summary-tag \
+		--fat-objects
 
 .DEFAULT_GOAL := build
 .PHONY: build

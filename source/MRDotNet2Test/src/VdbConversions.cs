@@ -12,7 +12,7 @@ namespace MRTest
             var mesh = makeSphere(new SphereParams(1.0f, 3000));
             var settings = new MeshToVolumeParams();
             settings.voxelSize = Vector3f.diagonal(0.1f);
-            return meshToVolume(new MeshPart(mesh), settings);
+            return meshToVolume(mesh, settings);
         }
 
         [Test]

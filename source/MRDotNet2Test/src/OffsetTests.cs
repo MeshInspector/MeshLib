@@ -11,42 +11,42 @@ namespace MRTest
         [Test]
         public void TestOffsets()
         {
-            var mp = new MeshPart(makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f)));
+            var mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
 
             var parameters = new OffsetParameters();
-            parameters.voxelSize = suggestVoxelSize(mp, 8000);
+            parameters.voxelSize = suggestVoxelSize(mesh, 8000);
 
-            var offset = offsetMesh(mp, 0.5f, parameters);
+            var offset = offsetMesh(mesh, 0.5f, parameters);
             Assert.That( offset.points.size() == 8792 );
 
-            offset = mcOffsetMesh(mp, 0.5f, parameters);
+            offset = mcOffsetMesh(mesh, 0.5f, parameters);
             Assert.That( offset.points.size() == 8790 );
 
-            offset = doubleOffsetMesh(mp, 0.5f, -0.5f, parameters);
+            offset = doubleOffsetMesh(mesh, 0.5f, -0.5f, parameters);
             Assert.That( offset.points.size() == 2408 );
 
             var sharpParameters = new SharpOffsetParameters();
-            sharpParameters.voxelSize = suggestVoxelSize(mp, 8000);
+            sharpParameters.voxelSize = suggestVoxelSize(mesh, 8000);
 
-            offset = sharpOffsetMesh(mp, 0.5f, sharpParameters);
+            offset = sharpOffsetMesh(mesh, 0.5f, sharpParameters);
             Assert.That( offset.points.size() == 8790 );
 
             var generalParameters = new GeneralOffsetParameters();
-            generalParameters.voxelSize = suggestVoxelSize(mp, 8000);
+            generalParameters.voxelSize = suggestVoxelSize(mesh, 8000);
 
-            offset = generalOffsetMesh(mp, 0.5f, generalParameters);
+            offset = generalOffsetMesh(mesh, 0.5f, generalParameters);
             Assert.That( offset.points.size() == 8790 );
         }
 
         [Test]
         public void TestThickenMesh()
         {
-            var mp = new MeshPart(makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f)));
+            var mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
 
             var parameters = new GeneralOffsetParameters();
-            parameters.voxelSize = suggestVoxelSize(mp, 8000);
+            parameters.voxelSize = suggestVoxelSize(mesh, 8000);
 
-            var offset = thickenMesh(mp.mesh, 0.5f, parameters);
+            var offset = thickenMesh(mesh, 0.5f, parameters);
 
             Assert.That( offset.points.size() == 8798 );
         }

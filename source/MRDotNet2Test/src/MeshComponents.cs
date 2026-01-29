@@ -12,7 +12,7 @@ namespace MRTest
             var bigCube = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
             var smallCube = makeCube(Vector3f.diagonal(0.1f), Vector3f.diagonal(1.0f));
             var boolResult = boolean(bigCube, smallCube, BooleanOperation.Union);
-            return new MeshPart(boolResult.mesh);
+            return boolResult.mesh;
         }
 
         [Test]

@@ -220,6 +220,7 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Generate Test Performance Report
+        continue-on-error: true
         run: |
           scripts/junit_to_csv.py unit_tests_report.csv unit_tests_report_*.xml
           cat unit_tests_report.csv

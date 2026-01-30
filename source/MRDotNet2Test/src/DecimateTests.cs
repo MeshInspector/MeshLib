@@ -13,10 +13,10 @@ namespace MRTest
         {
             Mesh sphere = makeSphere( new SphereParams( 0.5f, 30000 ) );
 
-            var savedRegion = new FaceBitSet((Const_BitSet)sphere.topology.getValidFaces());
+            var savedRegion = new FaceBitSet(sphere.topology.getValidFaces());
 
             var parameters = new DecimateSettings();
-            var region = new FaceBitSet((Const_BitSet)sphere.topology.getValidFaces());
+            var region = new FaceBitSet(sphere.topology.getValidFaces());
             if ( region is not null )
                 parameters.region = region;
 

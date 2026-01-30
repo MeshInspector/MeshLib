@@ -435,8 +435,13 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     const auto mtlContent = readCharBuffer( mtlIn );
     if ( !mtlContent )
         return unexpected( "Unable to open MTL file: " + mtlContent.error() );
-    const auto* data = mtlContent->data();
-    const auto mtlSize = mtlContent->size();
+    auto data = mtlContent->data();
+    auto mtlSize = mtlContent->size();
+    if ( hasBom( data ) )
+    {
+        data += 3;
+        mtlSize -= 3;
+    }
 
     if ( mtlSize == 0 )
         return unexpected( "empty MTL file" );

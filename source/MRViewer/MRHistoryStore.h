@@ -91,7 +91,7 @@ public:
         PopAction, ///< called after removing action that exceeds memory limit: action - nullptr
         Filter ///< called after this store is filtered: action - nullptr
     };
-    using HistoryStoreChangedSignal = boost::signals2::signal<void( const HistoryStore& store, ChangeType, std::shared_ptr<HistoryAction> action )>;
+    using HistoryStoreChangedSignal = boost::signals2::signal<void( HistoryStore& store, ChangeType, std::shared_ptr<HistoryAction> action )>;
     HistoryStoreChangedSignal changedSignal;
 
 private:

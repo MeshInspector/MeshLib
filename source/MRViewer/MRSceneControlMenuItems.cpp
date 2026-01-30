@@ -44,7 +44,7 @@ UndoMenuItem::UndoMenuItem() :
         if ( !historyStoreConnection_.connected() )
         {
             historyStoreConnection_ = history->changedSignal.connect( MAKE_SLOT( &UndoMenuItem::updateUndoListCache_ ) );
-            updateUndoListCache_( *history, HistoryStore::ChangeType::AppendAction ); // can by any type
+            updateUndoListCache_( *history, HistoryStore::ChangeType::PostUndo, {} );
         }
     } );
 }
@@ -73,8 +73,16 @@ std::string UndoMenuItem::getDynamicTooltip() const
     return res;
 }
 
-void UndoMenuItem::updateUndoListCache_( const HistoryStore& store, HistoryStore::ChangeType )
+void UndoMenuItem::updateUndoListCache_( const HistoryStore& store, HistoryStore::ChangeType type, std::shared_ptr<HistoryAction> )
 {
+    if ( type == HistoryStore::ChangeType::PreRedo || 
+        type == HistoryStore::ChangeType::PreUndo || 
+        type == HistoryStore::ChangeType::PreAppendAction )
+        return; // no need to update cache in this case
+
+    if ( type == HistoryStore::ChangeType::PostAppendAction && bool( store.getScopeBlockPtr() ) )
+        return; // no need to update cache for actions in scope
+
     auto lastUndos = store.getNActions( cMaxNumActionsInList, HistoryAction::Type::Undo );
     if ( lastUndos.empty() )
     {
@@ -109,7 +117,7 @@ RedoMenuItem::RedoMenuItem() :
         if ( !historyStoreConnection_.connected() )
         {
             historyStoreConnection_ = history->changedSignal.connect( MAKE_SLOT( &RedoMenuItem::updateRedoListCache_ ) );
-            updateRedoListCache_( *history, HistoryStore::ChangeType::AppendAction ); // can by any type
+            updateRedoListCache_( *history, HistoryStore::ChangeType::PostRedo, {} );
         }
     } );
 }
@@ -137,8 +145,16 @@ std::string RedoMenuItem::getDynamicTooltip() const
     return res;
 }
 
-void RedoMenuItem::updateRedoListCache_( const HistoryStore& store, HistoryStore::ChangeType )
+void RedoMenuItem::updateRedoListCache_( const HistoryStore& store, HistoryStore::ChangeType type, std::shared_ptr<HistoryAction> )
 {
+    if ( type == HistoryStore::ChangeType::PreRedo ||
+        type == HistoryStore::ChangeType::PreUndo ||
+        type == HistoryStore::ChangeType::PreAppendAction )
+        return; // no need to update cache in this case
+
+    if ( type == HistoryStore::ChangeType::PostAppendAction && bool( store.getScopeBlockPtr() ) )
+        return; // no need to update cache for actions in scope
+
     auto lastRedos = store.getNActions( cMaxNumActionsInList, HistoryAction::Type::Redo );
     if ( lastRedos.empty() )
     {

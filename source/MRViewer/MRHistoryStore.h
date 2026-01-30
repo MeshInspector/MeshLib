@@ -81,16 +81,17 @@ public:
     /// Signal is called after this store changed
     enum class ChangeType
     {
-        AppendAction, ///< additions in scoped block does not provide signal
-        PreUndo,
-        PostUndo,
-        PreRedo,
-        PostRedo,
-        Clear,
-        PopAction, ///< called after removing action that exceeds memory limit
-        Filter
+        PreAppendAction, ///< called before action is appended (allows to decorate raw actions with scopes): action - that is about to be added
+        PostAppendAction, ///< called after action is appended either to store or to current scope: action - one that was just added
+        PreUndo, ///< called right before action is undone: action - the that will be undone
+        PostUndo, ///< called right after action is undone: action - the that have been undone
+        PreRedo, ///< called right before action is redone: action - the that will be redone
+        PostRedo, ///< called right after action is redone: action - the that have been redone
+        Clear, ///< called when this store is cleaned: action - nullptr
+        PopAction, ///< called after removing action that exceeds memory limit: action - nullptr
+        Filter ///< called after this store is filtered: action - nullptr
     };
-    using HistoryStoreChangedSignal = boost::signals2::signal<void( const HistoryStore& store, ChangeType )>;
+    using HistoryStoreChangedSignal = boost::signals2::signal<void( const HistoryStore& store, ChangeType, std::shared_ptr<HistoryAction> action )>;
     HistoryStoreChangedSignal changedSignal;
 
 private:

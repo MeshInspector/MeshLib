@@ -14,7 +14,7 @@ public:
     virtual std::string getDynamicTooltip() const override;
     
 private:
-    void updateUndoListCache_( const HistoryStore& store, HistoryStore::ChangeType type );
+    void updateUndoListCache_( const HistoryStore& store, HistoryStore::ChangeType, std::shared_ptr<HistoryAction> );
 
     boost::signals2::scoped_connection historyStoreConnection_;
 };
@@ -28,7 +28,7 @@ public:
     virtual std::string getDynamicTooltip() const override;
 
 private:
-    void updateRedoListCache_( const HistoryStore& store, HistoryStore::ChangeType type );
+    void updateRedoListCache_( const HistoryStore& store, HistoryStore::ChangeType, std::shared_ptr<HistoryAction> );
 
     boost::signals2::scoped_connection historyStoreConnection_;
 };

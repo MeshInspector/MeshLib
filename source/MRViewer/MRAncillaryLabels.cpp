@@ -5,6 +5,7 @@
 #include "MRViewer.h"
 #include "MRViewport.h"
 #include "ImGuiMenu.h"
+#include "MRImGuiMultiViewport.h"
 #include "imgui.h"
 
 namespace MR
@@ -141,9 +142,9 @@ void AncillaryImGuiLabel::preDraw_()
         Vector3f coord = vp.projectToViewportSpace( labelData_.position );
         auto viewerCoord = getViewerInstance().viewportToScreen( coord, vp.id );
 
-        params.list->PushClipRect( minRect, maxRect );
+        params.list->PushClipRect( ImGuiMV::Window2ScreenSpaceImVec2( minRect ), ImGuiMV::Window2ScreenSpaceImVec2( maxRect ) );
         ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params,
-            ImVec2( viewerCoord.x, viewerCoord.y ), sWithI, {}, {}, pivot_ );
+            ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( viewerCoord.x, viewerCoord.y ) ), sWithI, {}, {}, pivot_ );
         params.list->PopClipRect();
     }
 }

@@ -25,9 +25,11 @@ void HistoryStore::appendAction( std::shared_ptr<HistoryAction> action )
         return;
     if ( !action )
         return;
+    changedSignal( *this, ChangeType::PreAppendAction, action );
     if ( scopedBlock_ )
     {
         scopedBlock_->push_back( std::move( action ) );
+        changedSignal( *this, ChangeType::PostAppendAction, scopedBlock_->back() );
         return;
     }
     spdlog::info( "History action append: \"{}\"", action->name() );
@@ -37,7 +39,7 @@ void HistoryStore::appendAction( std::shared_ptr<HistoryAction> action )
     stack_[firstRedoIndex_] = std::move( action );
     ++firstRedoIndex_;
 
-    changedSignal( *this, ChangeType::AppendAction );
+    changedSignal( *this, ChangeType::PostAppendAction, stack_.back() );
 
     filterByMemoryLimit_();
 }
@@ -52,7 +54,7 @@ void HistoryStore::clear()
     spdlog::info( "History store clear" );
     stack_.clear();
     firstRedoIndex_ = 0;
-    changedSignal( *this, ChangeType::Clear );
+    changedSignal( *this, ChangeType::Clear, {} );
 }
 
 void HistoryStore::filterStack( HistoryStackFilter filteringCondition, bool deepFiltering /*= true*/ )
@@ -63,7 +65,7 @@ void HistoryStore::filterStack( HistoryStackFilter filteringCondition, bool deep
     const auto [needSignal, redoDecrease] = filterHistoryActionsVector( stack_, filteringCondition, firstRedoIndex_, deepFiltering );
     firstRedoIndex_ -= redoDecrease;
     if ( needSignal )
-        changedSignal( *this, ChangeType::Filter );
+        changedSignal( *this, ChangeType::Filter, {} );
 }
 
 bool HistoryStore::undo()
@@ -80,11 +82,11 @@ bool HistoryStore::undo()
     if ( stack_[firstRedoIndex_ - 1] )
     {
         spdlog::info( "History action undo: \"{}\"", stack_[firstRedoIndex_ - 1]->name() );
-        changedSignal( *this, ChangeType::PreUndo );
+        changedSignal( *this, ChangeType::PreUndo, stack_[firstRedoIndex_ - 1] );
         stack_[firstRedoIndex_ - 1]->action( HistoryAction::Type::Undo );
     }
     --firstRedoIndex_;
-    changedSignal( *this, ChangeType::PostUndo );
+    changedSignal( *this, ChangeType::PostUndo, stack_[firstRedoIndex_] );
     return true;
 }
 
@@ -101,11 +103,11 @@ bool HistoryStore::redo()
     if ( stack_[firstRedoIndex_] )
     {
         spdlog::info( "History action redo: \"{}\"", stack_[firstRedoIndex_]->name() );
-        changedSignal( *this, ChangeType::PreRedo );
+        changedSignal( *this, ChangeType::PreRedo, stack_[firstRedoIndex_] );
         stack_[firstRedoIndex_]->action( HistoryAction::Type::Redo );
     }
     ++firstRedoIndex_;
-    changedSignal( *this, ChangeType::PostRedo );
+    changedSignal( *this, ChangeType::PostRedo, stack_[firstRedoIndex_ - 1] );
     return true;
 }
 
@@ -167,7 +169,7 @@ void HistoryStore::filterByMemoryLimit_()
         stack_.erase( stack_.begin() );
         --firstRedoIndex_;
         --savedSceneIndex_;
-        changedSignal( *this, ChangeType::PopAction );
+        changedSignal( *this, ChangeType::PopAction, nullptr );
     }
 }
 

@@ -2813,11 +2813,11 @@ void Viewer::enableGlobalHistory( bool on )
     if ( on )
     {
         globalHistoryStore_ = std::make_unique<HistoryStore>();
-        globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
+        globalHistoryStore_->changedSignal.connect( [this] ( const HistoryStore& st, HistoryStore::ChangeType type, std::shared_ptr<HistoryAction> )
         {
             if ( type == HistoryStore::ChangeType::PostUndo ||
                  type == HistoryStore::ChangeType::PostRedo ||
-                 type == HistoryStore::ChangeType::AppendAction )
+                 ( type == HistoryStore::ChangeType::PostAppendAction && !st.getScopeBlockPtr() ) )
                 makeTitleFromSceneRootPath();
         } );
     }

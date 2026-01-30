@@ -258,8 +258,7 @@ jobs:
           [Environment]::CurrentDirectory = $pwd
           $xslt = New-Object System.Xml.Xsl.XslCompiledTransform
           $xslt.Load("scripts\devops\nunit3-junit.xslt")
-          $xslt.Transform("_report_nunit.xml", "_unit_tests_report_nunit.xml")
-          cat _unit_tests_report_nunit.xml
+          $xslt.Transform("_report_nunit.xml", "unit_tests_report_nunit.xml")
 
       - name: Python Sanity Tests
         timeout-minutes: 8

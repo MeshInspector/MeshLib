@@ -154,13 +154,16 @@
     <ClCompile Include="MRDicomTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BendTextAlongCurveTests.cpp">
+    <ClCompile Include="MRBendTextAlongCurveTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRFormatTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshCollideTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBase64Tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
+    <ClCompile Include="MRBase64Tests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />
@@ -61,7 +62,7 @@
     <ClCompile Include="MRCylinderApproximation.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRFillingSurface.cpp" />
-    <ClCompile Include="BendTextAlongCurveTests.cpp" />
+    <ClCompile Include="MRBendTextAlongCurveTests.cpp" />
     <ClCompile Include="MRFormatTests.cpp" />
   </ItemGroup>
   <ItemGroup>

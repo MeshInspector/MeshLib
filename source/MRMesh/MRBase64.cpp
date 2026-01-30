@@ -18,15 +18,21 @@ std::string encode64( const std::uint8_t * data, size_t size )
     return tmp;
 }
 
-std::vector<std::uint8_t> decode64( const std::string &val ) 
+std::vector<std::uint8_t> decode64( const std::string &val )
 {
     MR_TIMER;
     using namespace boost::archive::iterators;
     using It = transform_width<binary_from_base64<std::string::const_iterator>, 8, 6>;
     #pragma warning(push)
         #pragma warning(disable:4127)
-        return std::vector<std::uint8_t>( It( begin( val ) ), It( end( val ) ) );
+        auto res = std::vector<std::uint8_t>( It( begin( val ) ), It( end( val ) ) );
     #pragma warning(pop)
+    // remove padding zeros
+    if ( !res.empty() && !val.empty() && val.back() == '=' )
+        res.pop_back();
+    if ( !res.empty() && val.size() >= 2 && val[val.size() - 2] == '=' )
+        res.pop_back();
+    return res;
 }
 
 } //namespace MR

@@ -1271,8 +1271,68 @@ float ImGuiMenu::drawSelectionInformation_()
         return ImGui::GetCursorScreenPos().y - baseCursorScreenPos;
     };
 
-    if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) || selectedObjs.empty() )
+    if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap ) || selectedObjs.empty() )
         return resultingHeight();
+
+    // draw World/Local toggles
+    {
+        auto pos = ImGui::GetCursorPos();
+        pos.x += ImGui::GetContentRegionAvail().x + style.WindowPadding.x * 0.5f - style.FramePadding.x;
+        pos.y -= ImGui::GetFrameHeightWithSpacing();
+        const auto frameHeight = ImGui::GetFrameHeight();
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 8.f * UI::scale(), 3.f * UI::scale() } );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, style.ItemInnerSpacing );
+        RibbonFontHolder iconsFont( RibbonFontManager::FontType::SemiBold, 0.75f );
+        const auto worldTextSize = ImGui::CalcTextSize( "WORLD" );
+        const auto localTextSize = ImGui::CalcTextSize( "LOCAL" );
+        const ImVec2 layoutSize {
+            worldTextSize.x + localTextSize.x + style.ItemSpacing.x + style.FramePadding.x * 4,
+            std::max( worldTextSize.y, localTextSize.y ) + style.FramePadding.y * 2,
+        };
+
+        pos.x -= layoutSize.x;
+        pos.y += ( frameHeight - layoutSize.y ) / 2;
+        ImGui::SetCursorPos( pos );
+
+        auto showToggleButton = [&] ( const char* label, bool& enabled )
+        {
+            const auto initEnabled = enabled;
+            if ( enabled )
+            {
+                ImGui::PushStyleColor( ImGuiCol_Text, Color::white() );
+                ImGui::PushStyleColor( ImGuiCol_Button, Color::black() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::black() );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::black() );
+            }
+            else
+            {
+                if ( ColorTheme::getPreset() == ColorTheme::Preset::Dark )
+                {
+                    ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 51 ) );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color( 0, 0, 0, 76 ) );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color( 0, 0, 0, 76 ) );
+                }
+                else
+                {
+                    ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 25 ) );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color( 0, 0, 0, 12 ) );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color( 0, 0, 0, 12 ) );
+                }
+            }
+
+            if ( ImGui::Button( label ) )
+                enabled = !enabled;
+
+            ImGui::PopStyleColor( initEnabled ? 4 : 3 );
+        };
+        showToggleButton( "WORLD", showWorldBox_ );
+        ImGui::SameLine();
+        showToggleButton( "LOCAL", showLocalBox_ );
+
+        iconsFont.popFont();
+        ImGui::PopStyleVar( 2 );
+    }
 
     // Points info
     size_t totalPoints = 0;
@@ -1318,11 +1378,7 @@ float ImGuiMenu::drawSelectionInformation_()
     };
 #endif
     // Scene info
-    Vector3f bsize;
-    Vector3f wbsize;
-    std::string bsizeStr;
-    std::string wbsizeStr;
-    selectionBbox_ = Box3f{};
+    selectionLocalBox_ = {};
     selectionWorldBox_ = {};
 
     for ( const auto& obj : selectedObjs )
@@ -1339,7 +1395,7 @@ float ImGuiMenu::drawSelectionInformation_()
         if ( auto vObj = obj->asType<VisualObject>() )
         {
             if ( auto box = vObj->getBoundingBox(); box.valid() )
-                selectionBbox_.include( box );
+                selectionLocalBox_.include( box );
             if ( auto box = vObj->getWorldBox(); box.valid() )
                 selectionWorldBox_.include( box );
         }
@@ -1391,14 +1447,6 @@ float ImGuiMenu::drawSelectionInformation_()
             updateVoxelsInfo( voxelMaxValue, vObj->vdbVolume().max, FLT_MAX );
         }
 #endif
-    }
-
-    if ( selectionBbox_.valid() && selectionWorldBox_.valid() )
-    {
-        bsize = selectionBbox_.size();
-        bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
-        wbsize = selectionWorldBox_.size();
-        wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
     }
 
     ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
@@ -1540,24 +1588,35 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     // Bounding box.
-    if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
+    const auto showLocalBox = showLocalBox_ && selectionLocalBox_.valid();
+    const auto showWorldBox = showWorldBox_ && selectionWorldBox_.valid();
+    if ( ( showLocalBox || showWorldBox ) && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
     {
         ImGui::Spacing();
         ImGui::Spacing();
 
-        drawDimensionsVec3( "Local Box Size", bsize, LengthUnit{} );
-        UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
-
-        drawDimensionsVec3( "Local Box Min", selectionBbox_.min, LengthUnit{} );
-        UI::setTooltipIfHovered( "Lower left corner of the tight axis-aligned bounding box in the local object space." );
-
-        drawDimensionsVec3( "Local Box Max", selectionBbox_.max, LengthUnit{} );
-        UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the local object space." );
-
-        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+        if ( showLocalBox )
         {
-            drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );
+            drawDimensionsVec3( "Local Box Size", selectionLocalBox_.size(), LengthUnit{} );
+            UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
+
+            drawDimensionsVec3( "Local Box Min", selectionLocalBox_.min, LengthUnit{} );
+            UI::setTooltipIfHovered( "Lower left corner of the tight axis-aligned bounding box in the local object space." );
+
+            drawDimensionsVec3( "Local Box Max", selectionLocalBox_.max, LengthUnit{} );
+            UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the local object space." );
+        }
+
+        if ( showWorldBox )
+        {
+            drawDimensionsVec3( "World Box Size", selectionWorldBox_.size(), LengthUnit{} );
             UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the world space." );
+
+            drawDimensionsVec3( "World Box Min", selectionWorldBox_.min, LengthUnit{} );
+            UI::setTooltipIfHovered( "Lower left corner of the tight axis-aligned bounding box in the world space." );
+
+            drawDimensionsVec3( "World Box Max", selectionWorldBox_.max, LengthUnit{} );
+            UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the world space." );
         }
     }
 
@@ -2679,7 +2738,7 @@ float ImGuiMenu::drawTransform_()
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
 
-            const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
+            const auto trSpeed = ( selectionLocalBox_.valid() && selectionLocalBox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionLocalBox_.diagonal() : 0.003f;
 
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
             auto wbsize = selectionWorldBox_.valid() ? selectionWorldBox_.size() : Vector3f::diagonal( 1.f );

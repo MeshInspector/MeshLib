@@ -1383,13 +1383,28 @@ float ImGuiMenu::drawSelectionInformation_()
 
     for ( const auto& obj : selectedObjs )
     {
-        const auto xf = obj->worldXf();
-        Matrix3f q, r;
-        decomposeMatrix3( xf.A, q, r );
-        const Vector3f scale{ r.x.x, r.y.y, r.z.z };
-        const auto lengthScale = ( scale.x + scale.y + scale.z ) / 3; // correct for uniform scales only
-        const auto areaScale = sqr( lengthScale );
-        const auto volumeScale = scale.x * scale.y * scale.z; // correct for not-uniform scales as well
+        // compute units based on current coord type
+        float lengthScale, areaScale, volumeScale;
+        switch ( coordType_ )
+        {
+        case CoordType::Local:
+            lengthScale = 1.f;
+            areaScale = 1.f;
+            volumeScale = 1.f;
+            break;
+
+        case CoordType::World:
+        {
+            const auto xf = obj->worldXf();
+            Matrix3f q, r;
+            decomposeMatrix3( xf.A, q, r );
+            const Vector3f scale{ r.x.x, r.y.y, r.z.z };
+            lengthScale = ( scale.x + scale.y + scale.z ) / 3; // correct for uniform scales only
+            areaScale = sqr( lengthScale );
+            volumeScale = scale.x * scale.y * scale.z; // correct for not-uniform scales as well
+        }
+            break;
+        }
 
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )

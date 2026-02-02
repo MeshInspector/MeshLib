@@ -105,8 +105,13 @@ protected:
   bool savedDialogPositionEnabled_{ false };
 
   std::weak_ptr<Object> lastRenameObj_;
-  Box3f selectionBbox_; // updated in drawSelectionInformation_
+  Box3f selectionLocalBox_; // updated in drawSelectionInformation_
   Box3f selectionWorldBox_;
+  enum class CoordType : int
+  {
+      Local,
+      World,
+  } coordType_{ CoordType::Local };
 
   struct LabelParams
   {

@@ -1384,7 +1384,7 @@ float ImGuiMenu::drawSelectionInformation_()
     for ( const auto& obj : selectedObjs )
     {
         // compute units based on current coord type
-        float lengthScale, areaScale, volumeScale;
+        float lengthScale{}, areaScale{}, volumeScale{};
         switch ( coordType_ )
         {
         case CoordType::Local:

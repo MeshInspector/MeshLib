@@ -1,5 +1,5 @@
 #include "MR3mf.h"
-#ifndef MRIOEXTRAS_NO_3MF
+#ifndef MRIOEXTRAS_NO_XML
 
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRIOParsing.h"

@@ -1,6 +1,5 @@
 project(MRIOExtras CXX)
 
-option(MRIOEXTRAS_NO_3MF "Disable 3MF support" OFF)
 option(MRIOEXTRAS_NO_CTM "Disable OpenCTM support" OFF)
 option(MRIOEXTRAS_NO_E57 "Disable E57 support" OFF)
 option(MRIOEXTRAS_NO_GLTF "Disable glTF support" OFF)
@@ -10,6 +9,7 @@ option(MRIOEXTRAS_NO_PDF "Disable PDF support" OFF)
 option(MRIOEXTRAS_NO_PNG "Disable PNG support" OFF)
 option(MRIOEXTRAS_NO_STEP "Disable STEP support" OFF)
 option(MRIOEXTRAS_NO_TIFF "Disable TIFF support" OFF)
+option(MRIOEXTRAS_NO_XML "Disable XML support (3MF, SVG)" OFF)
 option(MRIOEXTRAS_NO_ZLIB "Disable Zlib usage" OFF)
 
 option(MRIOEXTRAS_OPENCASCADE_USE_XDE "Use OpenCASCADE XDE module" ON)
@@ -32,7 +32,7 @@ target_link_libraries(${PROJECT_NAME}
     MRMesh
 )
 
-IF(NOT MRIOEXTRAS_NO_3MF)
+IF(NOT MRIOEXTRAS_NO_XML)
   target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2)
 ENDIF()
 

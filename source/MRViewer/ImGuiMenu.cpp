@@ -1309,15 +1309,15 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 if ( ColorTheme::getPreset() == ColorTheme::Preset::Dark )
                 {
-                    ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 51 ) );
-                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color( 0, 0, 0, 76 ) );
-                    ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color( 0, 0, 0, 76 ) );
+                    ImGui::PushStyleColor( ImGuiCol_Button, Color::black() * .20f );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::black() * .30f );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::black() * .30f );
                 }
                 else
                 {
-                    ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 25 ) );
-                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color( 0, 0, 0, 12 ) );
-                    ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color( 0, 0, 0, 12 ) );
+                    ImGui::PushStyleColor( ImGuiCol_Button, Color::black() * .10f );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::black() * .05f );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::black() * .05f );
                 }
             }
 

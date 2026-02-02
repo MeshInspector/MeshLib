@@ -107,8 +107,11 @@ protected:
   std::weak_ptr<Object> lastRenameObj_;
   Box3f selectionLocalBox_; // updated in drawSelectionInformation_
   Box3f selectionWorldBox_;
-  bool showLocalBox_{ true };
-  bool showWorldBox_{ false };
+  enum class CoordType : int
+  {
+      Local,
+      World,
+  } coordType_{ CoordType::Local };
 
   struct LabelParams
   {

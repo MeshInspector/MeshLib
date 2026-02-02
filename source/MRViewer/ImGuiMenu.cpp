@@ -1295,9 +1295,9 @@ float ImGuiMenu::drawSelectionInformation_()
         pos.y += ( frameHeight - layoutSize.y ) / 2;
         ImGui::SetCursorPos( pos );
 
-        auto showToggleButton = [&] ( const char* label, bool& enabled )
+        auto showToggleButton = [&] ( const char* label, CoordType coordType )
         {
-            const auto initEnabled = enabled;
+            const auto enabled = coordType_ == coordType;
             if ( enabled )
             {
                 ImGui::PushStyleColor( ImGuiCol_Text, Color::white() );
@@ -1322,13 +1322,13 @@ float ImGuiMenu::drawSelectionInformation_()
             }
 
             if ( ImGui::Button( label ) )
-                enabled = !enabled;
+                coordType_ = coordType;
 
-            ImGui::PopStyleColor( initEnabled ? 4 : 3 );
+            ImGui::PopStyleColor( enabled ? 4 : 3 );
         };
-        showToggleButton( "WORLD", showWorldBox_ );
+        showToggleButton( "WORLD", CoordType::World );
         ImGui::SameLine();
-        showToggleButton( "LOCAL", showLocalBox_ );
+        showToggleButton( "LOCAL", CoordType::Local );
 
         iconsFont.popFont();
         ImGui::PopStyleVar( 2 );
@@ -1588,15 +1588,14 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     // Bounding box.
-    const auto showLocalBox = showLocalBox_ && selectionLocalBox_.valid();
-    const auto showWorldBox = showWorldBox_ && selectionWorldBox_.valid();
-    if ( ( showLocalBox || showWorldBox ) && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
+    if ( selectionLocalBox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
     {
         ImGui::Spacing();
         ImGui::Spacing();
 
-        if ( showLocalBox )
+        switch ( coordType_ )
         {
+        case CoordType::Local:
             drawDimensionsVec3( "Local Box Size", selectionLocalBox_.size(), LengthUnit{} );
             UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
 
@@ -1605,10 +1604,10 @@ float ImGuiMenu::drawSelectionInformation_()
 
             drawDimensionsVec3( "Local Box Max", selectionLocalBox_.max, LengthUnit{} );
             UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the local object space." );
-        }
 
-        if ( showWorldBox )
-        {
+            break;
+
+        case CoordType::World:
             drawDimensionsVec3( "World Box Size", selectionWorldBox_.size(), LengthUnit{} );
             UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the world space." );
 
@@ -1617,6 +1616,8 @@ float ImGuiMenu::drawSelectionInformation_()
 
             drawDimensionsVec3( "World Box Max", selectionWorldBox_.max, LengthUnit{} );
             UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the world space." );
+
+            break;
         }
     }
 

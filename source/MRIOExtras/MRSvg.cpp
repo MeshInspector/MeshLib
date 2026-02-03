@@ -67,6 +67,12 @@ Contour2f getEllipsePoints( const EllipseParams params = {} )
     return results;
 }
 
+void close( Contour2f& contour )
+{
+    if ( contour.back() != contour.front() )
+        contour.emplace_back( contour.front() );
+}
+
 class SvgLoader
 {
 public:
@@ -142,6 +148,8 @@ private:
             return parsePolygon_( elem );
         else if ( name == "polyline" )
             return parsePolyline_( elem );
+        else if ( name == "rect" )
+            return parseRect_( elem );
         return {};
     }
 
@@ -197,7 +205,7 @@ private:
         auto points = parser::parsePoints( pointsStr );
         if ( !points )
             return unexpected( std::move( points.error() ) );
-        points->emplace_back( points->front() );
+        close( *points );
         return { { std::move( *points ) } };
     }
 
@@ -208,6 +216,81 @@ private:
         if ( !points )
             return unexpected( std::move( points.error() ) );
         return { { std::move( *points ) } };
+    }
+
+    Expected<Contours2f> parseRect_( XMLElement* elem ) const
+    {
+        const auto x = elem->FloatAttribute( "x", 0.f );
+        const auto y = elem->FloatAttribute( "y", 0.f );
+        const auto width = elem->FloatAttribute( "width", 0.f );
+        const auto height = elem->FloatAttribute( "height", 0.f );
+        auto rx = elem->FloatAttribute( "rx", 0.f );
+        auto ry = elem->FloatAttribute( "ry", 0.f );
+        if ( width == 0.f || height == 0.f )
+            return {};
+        if ( rx == 0.f && ry == 0.f )
+        {
+            Contour2f rect {
+                { x, y },
+                { x, y + height },
+                { x + width, y + height },
+                { x + width, y },
+                { x, y },
+            };
+            return { { std::move( rect ) } };
+        }
+        else
+        {
+            // SVG requirements
+            if ( rx == 0.f )
+                rx = ry;
+            else if ( ry == 0.f )
+                ry = rx;
+            if ( width / 2.f < rx )
+                rx = width / 2.f;
+            if ( height / 2.f < ry )
+                ry = height / 2.f;
+
+            Contour2f points;
+            for ( auto p : getEllipsePoints( {
+                .cx = x + width - rx,
+                .cy = y + ry,
+                .rx = rx,
+                .ry = ry,
+                .a0 = -PI2_F,
+                .a1 = 0.f,
+            } ) )
+                points.emplace_back( p );
+            for ( auto p : getEllipsePoints( {
+                .cx = x + width - rx,
+                .cy = y + height - ry,
+                .rx = rx,
+                .ry = ry,
+                .a0 = 0.f,
+                .a1 = PI2_F,
+            } ) )
+                points.emplace_back( p );
+            for ( auto p : getEllipsePoints( {
+                .cx = x + rx,
+                .cy = y + height - ry,
+                .rx = rx,
+                .ry = ry,
+                .a0 = PI2_F,
+                .a1 = PI_F,
+            } ) )
+                points.emplace_back( p );
+            for ( auto p : getEllipsePoints( {
+                .cx = x + rx,
+                .cy = y + ry,
+                .rx = rx,
+                .ry = ry,
+                .a0 = -PI_F,
+                .a1 = -PI2_F,
+            } ) )
+                points.emplace_back( p );
+            close( points );
+            return { { std::move( points ) } };
+        }
     }
 
 private:

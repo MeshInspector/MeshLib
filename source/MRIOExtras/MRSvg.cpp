@@ -197,10 +197,19 @@ Expected<std::vector<Path::Command>> parsePath( std::string_view str )
 
     bool relative = false;
     std::vector<Path::Command> commands;
-#define ABS ( [&relative] ( auto& ) { relative = false; } )
-#define REL ( [&relative] ( auto& ) { relative = true; } )
-#define ADD ( [&relative, &commands] ( auto& ctx ) { _attr( ctx ).relative = relative; commands.emplace_back( _attr( ctx ) ); } )
-
+    const auto ABS = [&relative] ( auto& )
+    {
+        relative = false;
+    };
+    const auto REL = [&relative] ( auto& )
+    {
+        relative = true;
+    };
+    const auto ADD = [&relative, &commands] ( auto& ctx )
+    {
+        _attr( ctx ).relative = relative;
+        commands.emplace_back( _attr( ctx ) );
+    };
     const auto command = +(
         closepath[ADD]
         // "If a moveto is followed by multiple pairs of coordinates, the subsequent pairs are treated as implicit lineto commands."
@@ -214,9 +223,6 @@ Expected<std::vector<Path::Command>> parsePath( std::string_view str )
         | ( ( lit( 'T' )[ABS] | lit( 't' )[REL] ) >> +( qscurveto[ADD] ) )
         | ( ( lit( 'A' )[ABS] | lit( 'a' )[REL] ) >> +( arc[ADD] ) )
     );
-
-#undef REL
-#undef ABS
 
     if ( !phrase_parse( str.begin(), str.end(), command, space | lit( ',' ) ) )
         return unexpected( "Failed to parse path" );

@@ -238,7 +238,6 @@ struct EllipseParams
 
 Contour2f getEllipsePoints( const EllipseParams params = {} )
 {
-    assert( params.a0 < params.a1 );
     Contour2f results;
     for ( auto i = 0; i <= params.resolution; ++i )
     {
@@ -475,7 +474,59 @@ private:
                 },
                 [&] ( const Path::EllipticalArc& cmd )
                 {
-                    // TODO: Implement me!
+                    if ( results.back().empty() )
+                        results.back().emplace_back( pos );
+
+                    const auto p1 = pos;
+                    const auto p2 = cmd.relative ? pos + cmd.end : cmd.end;
+                    const auto phi = cmd.xAxisRot * PI_F / 180.f;
+
+                    const auto rot = Matrix2f::rotation( phi );
+                    const auto p0_ = rot.transposed() * ( p1 - p2 ) / 2.f;
+
+                    // https://www.w3.org/TR/SVG2/implnote.html#ArcCorrectionOutOfRangeRadii
+                    auto r = cmd.radii;
+                    if ( r == Vector2f{} )
+                        return (void)results.back().emplace_back( p2 );
+                    if ( r.x < 0.f )
+                        r.x *= -1.f;
+                    if ( r.y < 0.f )
+                        r.y *= -1.f;
+                    const auto lam = div( p0_, r ).lengthSq();
+                    if ( lam > 1.f )
+                        r = r * std::sqrt( lam );
+
+                    // https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
+                    const auto rp_ = Vector2f { r.x * p0_.y, r.y * p0_.x };
+                    assert( rp_.lengthSq() != 0.f );
+                    const auto k1Sq = sqr( r.x * r.y ) / rp_.lengthSq() - 1;
+                    assert( k1Sq >= 0.f );
+                    const auto k1 = std::sqrt( k1Sq ) * ( cmd.largeArc != cmd.sweep ? +1.f : -1.f );
+                    assert( std::isfinite( k1 ) );
+                    const auto c_ = k1 * Vector2f { rp_.x / r.y, -rp_.y / r.x };
+                    const auto c = rot * c_ + ( p1 + p2 ) / 2.f;
+                    const auto th1 = angle( Vector2f::plusX(), div( p0_ - c_, r ) );
+                    auto dth = angle( div( p0_ - c_, r ), div( -p0_ - c_, r ) );
+                    if ( cmd.sweep && dth < 0.f )
+                        dth += 2.f * PI_F;
+                    if ( !cmd.sweep && dth > 0.f )
+                        dth -= 2.f * PI_F;
+
+                    auto arcPoints = getEllipsePoints( {
+                        .cx = c.x,
+                        .cy = c.y,
+                        .rx = r.x,
+                        .ry = r.y,
+                        .a0 = th1,
+                        .a1 = th1 + dth,
+                    } );
+                    const auto ellXfInv = AffineXf2f::xfAround( rot, c );
+                    for ( auto& p : arcPoints )
+                        p = ellXfInv( p );
+                    assert( ( p1 - arcPoints.front() ).lengthSq() < 1e-6f );
+                    assert( ( p2 - arcPoints.back() ).lengthSq() < 1e-6f );
+                    for ( auto p : arcPoints )
+                        results.back().emplace_back( p );
 
                     if ( cmd.relative )
                         pos += cmd.end;

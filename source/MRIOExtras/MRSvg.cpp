@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRIOParsing.h"
+#include "MRMesh/MRMatrix2.h"
 #include "MRMesh/MRStringConvert.h"
 
 #include <boost/fusion/include/adapt_struct.hpp>
@@ -26,9 +27,9 @@ namespace parser
 
 using namespace boost::spirit::x3;
 
-const auto point = rule<class point, MR::Vector2f>{ "point" }
-                 = double_ >> -lit( ',' ) >> double_;
-const auto points = point % -lit( ',' );
+constexpr auto point = rule<class point, MR::Vector2f>{ "point" }
+                     = double_ >> -lit( ',' ) >> double_;
+constexpr auto points = point % -lit( ',' );
 
 Expected<std::vector<Vector2f>> parsePoints( std::string_view str )
 {
@@ -36,6 +37,66 @@ Expected<std::vector<Vector2f>> parsePoints( std::string_view str )
     if ( !phrase_parse( str.begin(), str.end(), points, space, results ) )
         return unexpected( "Failed to parse points" );
     return results;
+}
+
+Expected<AffineXf2f> parseTransform( std::string_view str )
+{
+#define _(...) ( [] ( auto& ctx ) { [[maybe_unused]] auto& xf = _val( ctx ); [[maybe_unused]] auto& A = xf.A; [[maybe_unused]] auto& b = xf.b; [[maybe_unused]] auto& val = _attr( ctx ); __VA_ARGS__; } )
+
+    constexpr auto matrix
+        = rule<class matrix, AffineXf2f>{ "matrix" }
+        = lit( "matrix" ) >> '('
+            >> double_[_( A.x.x = val )] >> -lit( ',' )
+            >> double_[_( A.y.x = val )] >> -lit( ',' )
+            >> double_[_( A.x.y = val )] >> -lit( ',' )
+            >> double_[_( A.y.y = val )] >> -lit( ',' )
+            >> double_[_( b.x = val )] >> -lit( ',' )
+            >> double_[_( b.y = val )]
+          >> ')';
+    constexpr auto translate
+        = rule<class translate, AffineXf2f>{ "translate" }
+        = lit( "translate" ) >> '('
+            >> double_[_( b.x = val )] >> -lit( ',' )
+            >> -double_[_( b.y = val )]
+          >> ')';
+    constexpr auto scale
+        = rule<class scale, AffineXf2f>{ "scale" }
+        = lit( "scale" ) >> '('
+            // uniform scaling by default
+            >> double_[_( A.x.x = val, A.y.y = val )] >> -lit( ',' )
+            >> -double_[_( A.y.y = val )]
+          >> ')';
+    constexpr auto rotate
+        = rule<class rotate, AffineXf2f>{ "rotate" }
+        = lit( "rotate" ) >> '('
+            >> double_[_( A = Matrix2f::rotation( val * PI_F / 180.f ) )] >> -lit( ',' )
+            // optional translation
+            >> -( point[_( xf = AffineXf2f::translation( val ) * xf * AffineXf2f::translation( -val ) )])
+          >> ')';
+    constexpr auto skewX
+        = rule<class skewX, AffineXf2f>{ "skewX" }
+        = lit( "skewX" ) >> '('
+            >> double_[_( A.x.y = std::tan( val * PI_F / 180.f ) )]
+          >> ')';
+    constexpr auto skewY
+        = rule<class skewY, AffineXf2f>{ "skewY" }
+        = lit( "skewY" ) >> '('
+            >> double_[_( A.y.x = std::tan( val * PI_F / 180.f ) )]
+          >> ')';
+
+#undef _
+
+    constexpr auto transform = ( matrix | translate | scale | rotate | skewX | skewY ) % -lit( ',' );
+
+    std::vector<AffineXf2f> results;
+    if ( !phrase_parse( str.begin(), str.end(), transform, space, results ) )
+        return unexpected( "Failed to parse points" );
+
+    AffineXf2f result;
+    for ( auto xf : results )
+        result = result * xf;
+
+    return result;
 }
 
 } // namespace parser
@@ -95,61 +156,71 @@ public:
         if ( !svg || svg->Name() != std::string_view{ "svg" } )
             return unexpected( "Not an SVG document" );
 
-        Polyline2 result;
-        if ( auto res = parseChildren_( svg, result ); !res )
-            return unexpected( std::move( res.error() ) );
-        // flip Y axis
-        for ( auto& p : result.points )
-            p.y *= -1.f;
-        return result;
+        if ( auto contours = parseChildren_( svg ) )
+        {
+            Polyline2 result{ *contours };
+            // flip Y axis
+            for ( auto& p : result.points )
+                p.y *= -1.f;
+            return result;
+        }
+        else
+        {
+            return unexpected( std::move( contours.error() ) );
+        }
     }
 
 private:
-    Expected<void> parseChildren_( XMLElement* group, Polyline2& polyline )
+    Expected<Contours2f> parseChildren_( XMLElement* group ) const
     {
+        Contours2f results;
         for ( auto* child = group->FirstChildElement(); child != nullptr; child = child->NextSiblingElement() )
         {
-            if ( child->Name() == std::string_view{ "g" } )
+            auto contours = parseElement_( child );
+            if ( !contours )
+                return contours;
+
+            // https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/transform
+            if ( const auto* transform = child->FindAttribute( "transform" ) )
             {
-                // TODO: update transform chain
-                // https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/transform
-                if ( auto res = parseChildren_( child, polyline ); !res )
-                    return res;
+                const auto xf = parser::parseTransform( transform->Value() );
+                if ( !xf )
+                    return unexpected( std::move( xf.error() ) );
+
+                for ( auto& contour : *contours )
+                    for ( auto& p : contour )
+                        p = (*xf)( p );
             }
-            else
-            {
-                if ( auto res = parseElement_( child ) )
-                {
-                    for ( const auto& contour : *res )
-                    {
-                        // TODO: apply transform
-                        polyline.addFromPoints( contour.data(), contour.size() );
-                    }
-                }
-                else
-                {
-                    return unexpected( std::move( res.error() ) );
-                }
-            }
+
+            for ( auto&& contour : *contours )
+                results.emplace_back( std::move( contour ) );
         }
-        return {};
+        return results;
     }
 
     Expected<Contours2f> parseElement_( XMLElement* elem ) const
     {
         const std::string_view name = elem->Name();
+
+        // group
+        if ( name == "g" )
+            return parseChildren_( elem );
+
+        // shape
         if ( name == "circle" )
             return parseCircle_( elem );
-        else if ( name == "ellipse" )
+        if ( name == "ellipse" )
             return parseEllipse_( elem );
-        else if ( name == "line" )
+        if ( name == "line" )
             return parseLine_( elem );
-        else if ( name == "polygon" )
+        if ( name == "polygon" )
             return parsePolygon_( elem );
-        else if ( name == "polyline" )
+        if ( name == "polyline" )
             return parsePolyline_( elem );
-        else if ( name == "rect" )
+        if ( name == "rect" )
             return parseRect_( elem );
+
+        // omitting unknown element
         return {};
     }
 

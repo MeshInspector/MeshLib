@@ -483,7 +483,6 @@
     <ClCompile Include="MRComputeBoundingBox.cpp" />
     <ClCompile Include="MRConeObject.cpp" />
     <ClCompile Include="MRConfig.cpp" />
-    <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
     <ClCompile Include="MRContoursSeparation.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />

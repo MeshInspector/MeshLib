@@ -65,6 +65,30 @@ R calcLength( const Contour<V>& contour )
     return l;
 }
 
+/// returns the index of contour's point which is the closed by length from start to the given value
+/// \tparam R is the type for the accumulation and for result
+template<typename V, typename R = typename V::ValueType>
+size_t findContourPointByLength( const Contour<V>& contour, R targetLen )
+{
+    if ( contour.empty() )
+    {
+        assert( false );
+        return size_t( -1 );
+    }
+    if ( targetLen <= 0 )
+        return 0;
+    R l = R( 0 );
+    for ( size_t i = 1; i < contour.size(); ++i )
+    {
+        assert( targetLen > l );
+        auto l1 = l + R( ( contour[i] - contour[i - 1] ).length() );
+        if ( targetLen <= l1 )
+            return 2 * targetLen < ( l + l1 ) ? i - 1 : i;
+        l =  l1;
+    }
+    return contour.size() - 1;
+}
+
 /// Copy double-contour to float-contour, or vice versa. Also handles 2D-3D conversions (zeroing or dropping the Z component).
 /// This is excluded from the bindings for simplicity. While it does bind (if manually instantiated),
 ///   the resulting names are quite ugly. Instead we provide wrapper functions with nicer names below.

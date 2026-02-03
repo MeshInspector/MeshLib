@@ -6,7 +6,7 @@
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
 #include "MRMeshPart.h"
-#include "MRGeodesicPath.h"
+#include "MRReducePath.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
 #include "MRSurfaceDistance.h"
@@ -631,6 +631,19 @@ float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath )
     return sum;
 }
 
+float geodesicPathLength( const Mesh& mesh, const GeodesicPath& path )
+{
+    if ( path.mids.empty() )
+        return path.start && path.end ? distance( mesh.triPoint( path.start ), mesh.triPoint( path.end ) ) : 0;
+    float sum = 0;
+    if ( path.start )
+        sum += distance( mesh.triPoint( path.start ), mesh.edgePoint( path.mids.front() ) );
+    sum += surfacePathLength( mesh, path.mids );
+    if ( path.end )
+        sum += distance( mesh.triPoint( path.end ), mesh.edgePoint( path.mids.back() ) );
+    return sum;
+}
+
 Contour3f surfacePathToContour3f( const Mesh & mesh, const SurfacePath & line )
 {
     MR_TIMER;
@@ -649,6 +662,23 @@ Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lin
     res.reserve( lines.size() );
     for ( const auto& l : lines )
         res.push_back( surfacePathToContour3f( mesh, l ) );
+    return res;
+}
+
+Contour3f geodesicPathToContour3f( const Mesh& mesh, const GeodesicPath& path )
+{
+    MR_TIMER;
+    Contour3f res;
+    res.reserve( path.numVertices() );
+
+    if ( path.start )
+        res.push_back( mesh.triPoint( path.start ) );
+    for ( int j = 0; j < path.mids.size(); ++j )
+        res.push_back(  mesh.edgePoint( path.mids[j] ) );
+    if ( path.end )
+        res.push_back( mesh.triPoint( path.end ) );
+
+    assert( res.size() == path.numVertices() );
     return res;
 }
 

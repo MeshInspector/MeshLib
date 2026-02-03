@@ -267,7 +267,7 @@
     <ClInclude Include="MRSurfacePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRGeodesicPath.h">
+    <ClInclude Include="MRReducePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneColors.h">
@@ -1484,7 +1484,7 @@
     <ClCompile Include="MRSurfacePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRGeodesicPath.cpp">
+    <ClCompile Include="MRReducePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">

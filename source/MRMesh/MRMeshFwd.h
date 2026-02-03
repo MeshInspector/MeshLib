@@ -482,6 +482,7 @@ using IsoLines = SurfacePaths;
 using PlaneSection = SurfacePath;
 using PlaneSections = SurfacePaths;
 struct EdgePointPair;
+struct GeodesicPath;
 class Laplacian;
 
 using VertPair = std::pair<VertId, VertId>;

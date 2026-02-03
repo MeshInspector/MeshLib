@@ -40,6 +40,33 @@ Expected<std::vector<Vector2f>> parsePoints( std::string_view str )
 
 } // namespace parser
 
+struct EllipseParams
+{
+    float cx = 0.f;
+    float cy = 0.f;
+    float rx = 1.f;
+    float ry = 1.f;
+    float a0 = 0.f;
+    float a1 = 2.f * PI;
+    int resolution = 32;
+};
+
+Contour2f getEllipsePoints( const EllipseParams params = {} )
+{
+    assert( params.a0 < params.a1 );
+    Contour2f results;
+    for ( auto i = 0; i <= params.resolution; ++i )
+    {
+        const auto a = params.a0 + ( params.a1 - params.a0 ) * (float)i / (float)params.resolution;
+        const auto x = std::cos( a ), y = std::sin( a );
+        results.push_back( {
+            x * params.rx + params.cx,
+            y * params.ry + params.cy,
+        } );
+    }
+    return results;
+}
+
 class SvgLoader
 {
 public:
@@ -105,13 +132,50 @@ private:
     Expected<Contours2f> parseElement_( XMLElement* elem ) const
     {
         const std::string_view name = elem->Name();
-        if ( name == "line" )
+        if ( name == "circle" )
+            return parseCircle_( elem );
+        else if ( name == "ellipse" )
+            return parseEllipse_( elem );
+        else if ( name == "line" )
             return parseLine_( elem );
         else if ( name == "polygon" )
             return parsePolygon_( elem );
         else if ( name == "polyline" )
             return parsePolyline_( elem );
         return {};
+    }
+
+    Expected<Contours2f> parseCircle_( XMLElement* elem ) const
+    {
+        const auto cx = elem->FloatAttribute( "cx", 0.f );
+        const auto cy = elem->FloatAttribute( "cy", 0.f );
+        const auto r = elem->FloatAttribute( "r", 0.f );
+        if ( r == 0.f )
+            return {};
+        auto points = getEllipsePoints( {
+            .cx = cx,
+            .cy = cy,
+            .rx = r,
+            .ry = r,
+        } );
+        return { { std::move( points ) } };
+    }
+
+    Expected<Contours2f> parseEllipse_( XMLElement* elem ) const
+    {
+        const auto cx = elem->FloatAttribute( "cx", 0.f );
+        const auto cy = elem->FloatAttribute( "cy", 0.f );
+        const auto rx = elem->FloatAttribute( "rx", 0.f );
+        const auto ry = elem->FloatAttribute( "ry", 0.f );
+        if ( rx == 0.f || ry == 0.f )
+            return {};
+        auto points = getEllipsePoints( {
+            .cx = cx,
+            .cy = cy,
+            .rx = rx,
+            .ry = ry,
+        } );
+        return { { std::move( points ) } };
     }
 
     Expected<Contours2f> parseLine_( XMLElement* elem ) const

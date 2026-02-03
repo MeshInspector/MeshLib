@@ -88,7 +88,7 @@ namespace parser
 using namespace boost::spirit::x3;
 
 constexpr auto point = rule<class point, MR::Vector2f>{ "point" }
-                     = double_ >> -lit( ',' ) >> double_;
+                     = float_ >> -lit( ',' ) >> float_;
 constexpr auto points = point % -lit( ',' );
 
 Expected<std::vector<Vector2f>> parsePoints( std::string_view str )
@@ -106,42 +106,42 @@ Expected<AffineXf2f> parseTransform( std::string_view str )
     constexpr auto matrix
         = rule<class matrix, AffineXf2f>{ "matrix" }
         = lit( "matrix" ) >> '('
-            >> double_[_( A.x.x = val )] >> -lit( ',' )
-            >> double_[_( A.y.x = val )] >> -lit( ',' )
-            >> double_[_( A.x.y = val )] >> -lit( ',' )
-            >> double_[_( A.y.y = val )] >> -lit( ',' )
-            >> double_[_( b.x = val )] >> -lit( ',' )
-            >> double_[_( b.y = val )]
+            >> float_[_( A.x.x = val )] >> -lit( ',' )
+            >> float_[_( A.y.x = val )] >> -lit( ',' )
+            >> float_[_( A.x.y = val )] >> -lit( ',' )
+            >> float_[_( A.y.y = val )] >> -lit( ',' )
+            >> float_[_( b.x = val )] >> -lit( ',' )
+            >> float_[_( b.y = val )]
           >> ')';
     constexpr auto translate
         = rule<class translate, AffineXf2f>{ "translate" }
         = lit( "translate" ) >> '('
-            >> double_[_( b.x = val )] >> -lit( ',' )
-            >> -double_[_( b.y = val )]
+            >> float_[_( b.x = val )] >> -lit( ',' )
+            >> -float_[_( b.y = val )]
           >> ')';
     constexpr auto scale
         = rule<class scale, AffineXf2f>{ "scale" }
         = lit( "scale" ) >> '('
             // uniform scaling by default
-            >> double_[_( A.x.x = val, A.y.y = val )] >> -lit( ',' )
-            >> -double_[_( A.y.y = val )]
+            >> float_[_( A.x.x = val, A.y.y = val )] >> -lit( ',' )
+            >> -float_[_( A.y.y = val )]
           >> ')';
     constexpr auto rotate
         = rule<class rotate, AffineXf2f>{ "rotate" }
         = lit( "rotate" ) >> '('
-            >> double_[_( A = Matrix2f::rotation( val * PI_F / 180.f ) )] >> -lit( ',' )
+            >> float_[_( A = Matrix2f::rotation( val * PI_F / 180.f ) )] >> -lit( ',' )
             // optional translation
             >> -( point[_( xf = AffineXf2f::translation( val ) * xf * AffineXf2f::translation( -val ) )])
           >> ')';
     constexpr auto skewX
         = rule<class skewX, AffineXf2f>{ "skewX" }
         = lit( "skewX" ) >> '('
-            >> double_[_( A.x.y = std::tan( val * PI_F / 180.f ) )]
+            >> float_[_( A.x.y = std::tan( val * PI_F / 180.f ) )]
           >> ')';
     constexpr auto skewY
         = rule<class skewY, AffineXf2f>{ "skewY" }
         = lit( "skewY" ) >> '('
-            >> double_[_( A.y.x = std::tan( val * PI_F / 180.f ) )]
+            >> float_[_( A.y.x = std::tan( val * PI_F / 180.f ) )]
           >> ')';
 
 #undef _
@@ -173,10 +173,10 @@ Expected<std::vector<Path::Command>> parsePath( std::string_view str )
                           = point[_( val.to = attr )];
 
     constexpr auto hlineto = rule<class hlineto, Path::LineTo>{ "hlineto" }
-                           = eps[_( val.kind = Path::LineTo::Horizontal )] >> double_[_( val.to.x = attr )];
+                           = eps[_( val.kind = Path::LineTo::Horizontal )] >> float_[_( val.to.x = attr )];
 
     constexpr auto vlineto = rule<class vlineto, Path::LineTo>{ "vlineto" }
-                           = eps[_( val.kind = Path::LineTo::Vertical )] >> double_[_( val.to.y = attr )];
+                           = eps[_( val.kind = Path::LineTo::Vertical )] >> float_[_( val.to.y = attr )];
 
     constexpr auto curveto = rule<class curveto, Path::CubicBezier>{ "curveto" }
                            = point[_( val.controlPoints[0] = attr )] >> point[_( val.controlPoints[1] = attr )] >> point[_( val.end = attr )];
@@ -191,7 +191,7 @@ Expected<std::vector<Path::Command>> parsePath( std::string_view str )
                              = eps[_( val.shorthand = true )] >> point[_( val.end = attr )];
 
     constexpr auto arc = rule<class arc, Path::EllipticalArc>{ "arc" }
-                       = point[_( val.radii = attr )] >> double_[_( val.xAxisRot = attr )] >> int_[_( val.largeArc = (bool)attr )] >> int_[_( val.sweep = (bool)attr )] >> point[_( val.end = attr )];
+                       = point[_( val.radii = attr )] >> float_[_( val.xAxisRot = attr )] >> int_[_( val.largeArc = (bool)attr )] >> int_[_( val.sweep = (bool)attr )] >> point[_( val.end = attr )];
 
 #undef _
 
@@ -232,7 +232,7 @@ struct EllipseParams
     float rx = 1.f;
     float ry = 1.f;
     float a0 = 0.f;
-    float a1 = 2.f * PI;
+    float a1 = 2.f * PI_F;
     int resolution = 32;
 };
 

@@ -1,11 +1,17 @@
 #include "MRSvg.h"
 #ifndef MRIOEXTRAS_NO_XML
 
-#include <tinyxml2.h>
-
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRStringConvert.h"
+
+#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/spirit/home/x3.hpp>
+
+#include <tinyxml2.h>
+
+// required for parsing lists of points
+BOOST_FUSION_ADAPT_STRUCT( MR::Vector2f, x, y )
 
 namespace MR::LinesLoad
 {
@@ -14,6 +20,25 @@ namespace
 {
 
 using namespace tinyxml2;
+
+namespace parser
+{
+
+using namespace boost::spirit::x3;
+
+const auto point = rule<class point, MR::Vector2f>{ "point" }
+                 = double_ >> -lit( ',' ) >> double_;
+const auto points = point % -lit( ',' );
+
+Expected<std::vector<Vector2f>> parsePoints( std::string_view str )
+{
+    std::vector<Vector2f> results;
+    if ( !phrase_parse( str.begin(), str.end(), points, space, results ) )
+        return unexpected( "Failed to parse points" );
+    return results;
+}
+
+} // namespace parser
 
 class SvgLoader
 {
@@ -79,6 +104,10 @@ private:
         const std::string_view name = elem->Name();
         if ( name == "line" )
             return parseLine_( elem );
+        else if ( name == "polygon" )
+            return parsePolygon_( elem );
+        else if ( name == "polyline" )
+            return parsePolyline_( elem );
         return {};
     }
 
@@ -93,6 +122,25 @@ private:
             Vector2f { x2, y2 },
         };
         return { { std::move( line ) } };
+    }
+
+    Expected<Contours2f> parsePolygon_( XMLElement* elem ) const
+    {
+        const std::string pointsStr = elem->Attribute( "points" );
+        auto points = parser::parsePoints( pointsStr );
+        if ( !points )
+            return unexpected( std::move( points.error() ) );
+        points->emplace_back( points->front() );
+        return { { std::move( *points ) } };
+    }
+
+    Expected<Contours2f> parsePolyline_( XMLElement* elem ) const
+    {
+        const std::string pointsStr = elem->Attribute( "points" );
+        auto points = parser::parsePoints( pointsStr );
+        if ( !points )
+            return unexpected( std::move( points.error() ) );
+        return { { std::move( *points ) } };
     }
 
 private:

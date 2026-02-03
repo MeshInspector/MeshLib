@@ -1,6 +1,7 @@
 #include "MRSvg.h"
 #ifndef MRIOEXTRAS_NO_XML
 
+#include "MRMesh/MRBezier.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRMatrix2.h"
@@ -10,6 +11,8 @@
 #include <boost/spirit/home/x3.hpp>
 
 #include <tinyxml2.h>
+
+#include <variant>
 
 // required for parsing lists of points
 BOOST_FUSION_ADAPT_STRUCT( MR::Vector2f, x, y )
@@ -21,6 +24,63 @@ namespace
 {
 
 using namespace tinyxml2;
+
+namespace Path
+{
+
+struct MoveTo
+{
+    bool relative = false;
+    Vector2f to;
+};
+
+struct ClosePath
+{
+    // this flag has no effect for ClosePath but allows to set it uniformly for other commands
+    bool relative = false;
+};
+
+struct LineTo
+{
+    bool relative = false;
+    enum Kind
+    {
+        Tangent,
+        Horizontal,
+        Vertical,
+    } kind = Tangent;
+    Vector2f to;
+};
+
+struct CubicBezier
+{
+    bool relative = false;
+    bool shorthand = false;
+    std::array<Vector2f, 2> controlPoints;
+    Vector2f end;
+};
+
+struct QuadraticBezier
+{
+    bool relative = false;
+    bool shorthand = false;
+    Vector2f controlPoint;
+    Vector2f end;
+};
+
+struct EllipticalArc
+{
+    bool relative = false;
+    Vector2f radii;
+    float xAxisRot = 0.f;
+    bool largeArc = false;
+    bool sweep = false;
+    Vector2f end;
+};
+
+using Command = std::variant<MoveTo, ClosePath, LineTo, CubicBezier, QuadraticBezier, EllipticalArc>;
+
+}
 
 namespace parser
 {
@@ -97,6 +157,70 @@ Expected<AffineXf2f> parseTransform( std::string_view str )
         result = result * xf;
 
     return result;
+}
+
+Expected<std::vector<Path::Command>> parsePath( std::string_view str )
+{
+#define _( ... ) ( [] ( auto& ctx ) { auto& val = _val( ctx ); [[maybe_unused]] auto& attr = _attr( ctx ); __VA_ARGS__; } )
+
+    constexpr auto closepath = rule<class closepath, Path::ClosePath>{ "closepath" }
+                             = lit( 'Z' ) | lit( 'z' );
+
+    constexpr auto moveto = rule<class moveto, Path::MoveTo>{ "moveto" }
+                          = point[_( val.to = attr )];
+
+    constexpr auto lineto = rule<class lineto, Path::LineTo>{ "lineto" }
+                          = point[_( val.to = attr )];
+
+    constexpr auto hlineto = rule<class hlineto, Path::LineTo>{ "hlineto" }
+                           = eps[_( val.kind = Path::LineTo::Horizontal )] >> double_[_( val.to.x = attr )];
+
+    constexpr auto vlineto = rule<class vlineto, Path::LineTo>{ "vlineto" }
+                           = eps[_( val.kind = Path::LineTo::Vertical )] >> double_[_( val.to.y = attr )];
+
+    constexpr auto curveto = rule<class curveto, Path::CubicBezier>{ "curveto" }
+                           = point[_( val.controlPoints[0] = attr )] >> point[_( val.controlPoints[1] = attr )] >> point[_( val.end = attr )];
+
+    constexpr auto scurveto = rule<class scurveto, Path::CubicBezier>{ "scurveto" }
+                            = eps[_( val.shorthand = true )] >> point[_( val.controlPoints[1] = attr )] >> point[_( val.end = attr )];
+
+    constexpr auto qcurveto = rule<class qcurveto, Path::QuadraticBezier>{ "qcurveto" }
+                            = point[_( val.controlPoint = attr )] >> point[_( val.end = attr )];
+
+    constexpr auto qscurveto = rule<class qscurveto, Path::QuadraticBezier>{ "qscurveto" }
+                             = eps[_( val.shorthand = true )] >> point[_( val.end = attr )];
+
+    constexpr auto arc = rule<class arc, Path::EllipticalArc>{ "arc" }
+                       = point[_( val.radii = attr )] >> double_[_( val.xAxisRot = attr )] >> int_[_( val.largeArc = (bool)attr )] >> int_[_( val.sweep = (bool)attr )] >> point[_( val.end = attr )];
+
+#undef _
+
+    bool relative = false;
+    std::vector<Path::Command> commands;
+#define ABS ( [&relative] ( auto& ) { relative = false; } )
+#define REL ( [&relative] ( auto& ) { relative = true; } )
+#define ADD ( [&relative, &commands] ( auto& ctx ) { _attr( ctx ).relative = relative; commands.emplace_back( _attr( ctx ) ); } )
+
+    const auto command = +(
+        closepath[ADD]
+        // "If a moveto is followed by multiple pairs of coordinates, the subsequent pairs are treated as implicit lineto commands."
+        | ( ( lit( 'M' )[ABS] | lit( 'm' )[REL] ) >> moveto[ADD] >> *( lineto[ADD] ) )
+        | ( ( lit( 'L' )[ABS] | lit( 'l' )[REL] ) >> +( lineto[ADD] ) )
+        | ( ( lit( 'H' )[ABS] | lit( 'h' )[REL] ) >> +( hlineto[ADD] ) )
+        | ( ( lit( 'V' )[ABS] | lit( 'v' )[REL] ) >> +( vlineto[ADD] ) )
+        | ( ( lit( 'C' )[ABS] | lit( 'c' )[REL] ) >> +( curveto[ADD] ) )
+        | ( ( lit( 'S' )[ABS] | lit( 's' )[REL] ) >> +( scurveto[ADD] ) )
+        | ( ( lit( 'Q' )[ABS] | lit( 'q' )[REL] ) >> +( qcurveto[ADD] ) )
+        | ( ( lit( 'T' )[ABS] | lit( 't' )[REL] ) >> +( qscurveto[ADD] ) )
+        | ( ( lit( 'A' )[ABS] | lit( 'a' )[REL] ) >> +( arc[ADD] ) )
+    );
+
+#undef REL
+#undef ABS
+
+    if ( !phrase_parse( str.begin(), str.end(), command, space | lit( ',' ) ) )
+        return unexpected( "Failed to parse path" );
+    return commands;
 }
 
 } // namespace parser
@@ -205,8 +329,10 @@ private:
         // group
         if ( name == "g" )
             return parseChildren_( elem );
-
-        // shape
+        // path
+        if ( name == "path" )
+            return parsePath_( elem );
+        // basic shapes
         if ( name == "circle" )
             return parseCircle_( elem );
         if ( name == "ellipse" )
@@ -222,6 +348,148 @@ private:
 
         // omitting unknown element
         return {};
+    }
+
+    Expected<Contours2f> parsePath_( XMLElement* elem ) const
+    {
+        const std::string_view d = elem->Attribute( "d" );
+        const auto commands = parser::parsePath( d );
+        if ( !commands )
+            return unexpected( std::move( commands.error() ) );
+
+        Contours2f results;
+        Vector2f pos{};
+        Vector2f prevCurveControlPoint{};
+        results.emplace_back();
+        for ( const auto& command : *commands )
+        {
+            std::visit( overloaded {
+                [&] ( Path::ClosePath )
+                {
+                    close( results.back() );
+                    results.emplace_back();
+                },
+                [&] ( const Path::MoveTo& cmd )
+                {
+                    if ( !results.back().empty() )
+                        results.emplace_back();
+
+                    if ( cmd.relative )
+                        pos += cmd.to;
+                    else
+                        pos = cmd.to;
+
+                    results.back().emplace_back( pos );
+                },
+                [&] ( const Path::LineTo& cmd )
+                {
+                    if ( results.back().empty() )
+                        results.back().emplace_back( pos );
+
+                    if ( cmd.relative )
+                    {
+                        pos += cmd.to;
+                    }
+                    else
+                    {
+                        switch ( cmd.kind )
+                        {
+                        case Path::LineTo::Tangent:
+                            pos = cmd.to;
+                            break;
+                        case Path::LineTo::Horizontal:
+                            pos.x = cmd.to.x;
+                            break;
+                        case Path::LineTo::Vertical:
+                            pos.y = cmd.to.y;
+                            break;
+                        }
+                    }
+
+                    results.back().emplace_back( pos );
+                },
+                [&] ( const Path::CubicBezier& cmd )
+                {
+                    if ( results.back().empty() )
+                        results.back().emplace_back( pos );
+
+                    CubicBezierCurve2f curve;
+                    curve.p[0] = pos;
+                    if ( cmd.relative )
+                    {
+                        curve.p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : pos + cmd.controlPoints[0];
+                        curve.p[2] = pos + cmd.controlPoints[1];
+                        curve.p[3] = pos + cmd.end;
+                    }
+                    else
+                    {
+                        curve.p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : cmd.controlPoints[0];
+                        curve.p[2] = cmd.controlPoints[1];
+                        curve.p[3] = cmd.end;
+                    }
+                    constexpr auto cResolution = 32;
+                    for ( auto i = 1; i <= cResolution; ++i )
+                    {
+                        const auto t = (float)i / (float)cResolution;
+                        results.back().emplace_back( curve.getPoint( t ) );
+                    }
+
+                    if ( cmd.relative )
+                        pos += cmd.end;
+                    else
+                        pos = cmd.end;
+                    prevCurveControlPoint = cmd.controlPoints[1];
+                },
+                [&] ( const Path::QuadraticBezier& cmd )
+                {
+                    if ( results.back().empty() )
+                        results.back().emplace_back( pos );
+
+                    std::array<Vector2f, 3> p;
+                    p[0] = pos;
+                    if ( cmd.relative )
+                    {
+                        p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : pos + cmd.controlPoint;
+                        p[2] = pos + cmd.end;
+                    }
+                    else
+                    {
+                        p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : cmd.controlPoint;
+                        p[2] = cmd.end;
+                    }
+                    constexpr auto cResolution = 32;
+                    for ( auto i = 1; i <= cResolution; ++i )
+                    {
+                        const auto t = (float)i / (float)cResolution;
+                        const auto q0 = lerp( p[0], p[1], t );
+                        const auto q1 = lerp( p[1], p[2], t );
+                        const auto r = lerp( q0, q1, t );
+                        results.back().emplace_back( r );
+                    }
+
+                    if ( cmd.relative )
+                        pos += cmd.end;
+                    else
+                        pos = cmd.end;
+                    prevCurveControlPoint = cmd.controlPoint;
+                },
+                [&] ( const Path::EllipticalArc& cmd )
+                {
+                    // TODO: Implement me!
+
+                    if ( cmd.relative )
+                        pos += cmd.end;
+                    else
+                        pos = cmd.end;
+                },
+            }, command );
+        }
+        // remove degenerate contours
+        std::erase_if( results, [] ( auto&& contour )
+        {
+            return contour.size() <= 1;
+        } );
+        return results;
     }
 
     Expected<Contours2f> parseCircle_( XMLElement* elem ) const

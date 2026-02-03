@@ -531,7 +531,7 @@ private:
         const auto y1 = elem->FloatAttribute( "y1", 0.f );
         const auto x2 = elem->FloatAttribute( "x2", 0.f );
         const auto y2 = elem->FloatAttribute( "y2", 0.f );
-        Contour2 line {
+        Contour2f line {
             Vector2f { x1, y1 },
             Vector2f { x2, y2 },
         };

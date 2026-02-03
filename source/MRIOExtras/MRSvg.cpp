@@ -505,12 +505,21 @@ private:
                     assert( std::isfinite( k1 ) );
                     const auto c_ = k1 * Vector2f { rp_.x / r.y, -rp_.y / r.x };
                     const auto c = rot * c_ + ( p1 + p2 ) / 2.f;
-                    const auto th1 = angle( Vector2f::plusX(), div( p0_ - c_, r ) );
-                    auto dth = angle( div( p0_ - c_, r ), div( -p0_ - c_, r ) );
-                    if ( cmd.sweep && dth < 0.f )
-                        dth += 2.f * PI_F;
-                    if ( !cmd.sweep && dth > 0.f )
-                        dth -= 2.f * PI_F;
+
+                    constexpr auto angle2 = [] ( auto v1, auto v2 )
+                    {
+                        const auto d = cross( v1, v2 );
+                        if ( d != 0.f )
+                            return sgn( d ) * angle( v1, v2 );
+
+                        return dot( v1, v2 ) >= 0.f ? 0.f : PI_F;
+                    };
+                    const auto th1 = angle2( Vector2f::plusX(), div( p0_ - c_, r ) );
+                    auto th2 = angle2( Vector2f::plusX(), div( -p0_ - c_, r ) );
+                    if ( cmd.sweep && th2 < th1 )
+                        th2 += 2.f * PI_F;
+                    if ( !cmd.sweep && th1 < th2 )
+                        th2 -= 2.f * PI_F;
 
                     auto arcPoints = getEllipsePoints( {
                         .cx = c.x,
@@ -518,11 +527,14 @@ private:
                         .rx = r.x,
                         .ry = r.y,
                         .a0 = th1,
-                        .a1 = th1 + dth,
+                        .a1 = th2,
                     } );
-                    const auto ellXfInv = AffineXf2f::xfAround( rot, c );
-                    for ( auto& p : arcPoints )
-                        p = ellXfInv( p );
+                    if ( phi != 0.f )
+                    {
+                        const auto ellXfInv = AffineXf2f::xfAround( rot, c );
+                        for ( auto& p : arcPoints )
+                            p = ellXfInv( p );
+                    }
                     assert( ( p1 - arcPoints.front() ).lengthSq() < 1e-6f );
                     assert( ( p2 - arcPoints.back() ).lengthSq() < 1e-6f );
                     for ( auto p : arcPoints )

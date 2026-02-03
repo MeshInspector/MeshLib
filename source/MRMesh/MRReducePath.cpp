@@ -1,4 +1,4 @@
-#include "MRGeodesicPath.h"
+#include "MRReducePath.h"
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MRMeshTriPoint.h"

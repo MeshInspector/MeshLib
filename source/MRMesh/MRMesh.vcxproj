@@ -320,7 +320,7 @@
     <ClInclude Include="MRObjectPoints.h" />
     <ClInclude Include="MRObjectsAccess.h" />
     <ClInclude Include="MRObjectsAccess.hpp" />
-    <ClInclude Include="MRGeodesicPath.h" />
+    <ClInclude Include="MRReducePath.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRPointCloudMakeNormals.h" />
     <ClInclude Include="MRPointCloudRadius.h" />
@@ -652,7 +652,7 @@
     <ClCompile Include="MRMeshProject.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMakePlane.cpp" />
-    <ClCompile Include="MRGeodesicPath.cpp" />
+    <ClCompile Include="MRReducePath.cpp" />
     <ClCompile Include="MRPrimitiveMapsComposition.cpp" />
     <ClCompile Include="MRRegularMapMesher.cpp" />
     <ClCompile Include="MRRegularGridMesh.cpp" />

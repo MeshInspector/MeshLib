@@ -6,7 +6,7 @@
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
 #include "MRMeshPart.h"
-#include "MRGeodesicPath.h"
+#include "MRReducePath.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
 #include "MRSurfaceDistance.h"

@@ -6,7 +6,7 @@
 #include "MRTimer.h"
 #include "MRTriMath.h"
 #include "MRVector2.h"
-#include "MRGeodesicPath.h"
+#include "MRReducePath.h"
 #include "MRTriDist.h"
 #include "MREdgeLengthMesh.h"
 

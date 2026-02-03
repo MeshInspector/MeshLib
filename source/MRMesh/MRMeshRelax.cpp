@@ -8,7 +8,7 @@
 #include "MRMeshComponents.h"
 #include "MRLaplacian.h"
 #include "MRLineSegm.h"
-#include "MRGeodesicPath.h"
+#include "MRReducePath.h"
 #include "MRSymMatrix2.h"
 
 namespace MR

@@ -40,6 +40,7 @@
     <ClCompile Include="MRStep.cpp" />
     <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRTiff.cpp" />
+    <ClCompile Include="MRSvg.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
@@ -56,6 +57,7 @@
     <ClInclude Include="MRStep.h" />
     <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRTiff.h" />
+    <ClInclude Include="MRSvg.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

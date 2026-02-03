@@ -65,6 +65,9 @@ public:
         Polyline2 result;
         if ( auto res = parseChildren_( svg, result ); !res )
             return unexpected( std::move( res.error() ) );
+        // flip Y axis
+        for ( auto& p : result.points )
+            p.y *= -1.f;
         return result;
     }
 

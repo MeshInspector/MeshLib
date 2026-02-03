@@ -3,6 +3,7 @@
 #include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
+#include <cassert>
 
 namespace MR
 {

@@ -490,7 +490,7 @@ private:
                     const auto rot = Matrix2f::rotation( phi );
                     const auto p0_ = rot.transposed() * ( p1 - p2 ) / 2.f;
 
-                    // https://www.w3.org/TR/SVG2/implnote.html#ArcCorrectionOutOfRangeRadii
+                    // https://www.w3.org/TR/SVG/implnote.html#ArcCorrectionOutOfRangeRadii
                     auto r = cmd.radii;
                     if ( r == Vector2f{} )
                         return (void)results.back().emplace_back( p2 );
@@ -512,16 +512,9 @@ private:
                     const auto c_ = k1 * Vector2f { rp_.x / r.y, -rp_.y / r.x };
                     const auto c = rot * c_ + ( p1 + p2 ) / 2.f;
 
-                    constexpr auto angle2 = [] ( auto v1, auto v2 )
-                    {
-                        const auto d = cross( v1, v2 );
-                        if ( d != 0.f )
-                            return sgn( d ) * angle( v1, v2 );
-
-                        return dot( v1, v2 ) >= 0.f ? 0.f : PI_F;
-                    };
-                    const auto th1 = angle2( Vector2f::plusX(), div( p0_ - c_, r ) );
-                    auto th2 = angle2( Vector2f::plusX(), div( -p0_ - c_, r ) );
+                    constexpr auto angle2 = [] ( auto v ) { return std::atan2( v.y, v.x ); };
+                    auto th1 = angle2( div( +p0_ - c_, r ) );
+                    auto th2 = angle2( div( -p0_ - c_, r ) );
                     if ( cmd.sweep && th2 < th1 )
                         th2 += 2.f * PI_F;
                     if ( !cmd.sweep && th1 < th2 )

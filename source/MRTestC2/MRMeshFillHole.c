@@ -17,19 +17,19 @@
 MR_Mesh* createMeshWithHoles( void )
 {
     MR_VertCoords* pointsVec = MR_VertCoords_Construct_1_uint64_t( 6 );
-    *MR_VertCoords_index( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){ 0.f, 0.f, 0.f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ 1.f, 0.f, 0.f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ 0.f, 1.f, 0.f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){ 0.f, 0.f, 1.f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ 1.f, 0.f, 1.f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ 0.f, 1.f, 1.f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){ 0.f, 0.f, 0.f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ 1.f, 0.f, 0.f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ 0.f, 1.f, 0.f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){ 0.f, 0.f, 1.f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ 1.f, 0.f, 1.f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ 0.f, 1.f, 1.f };
 
     MR_Triangulation* triangulation = MR_Triangulation_Construct_1_uint64_t( 5 );
-    *MR_Triangulation_index( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {5} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {0}, {1}, {3} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {4} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {2}, {3}, {5} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {5} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {0}, {1}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {4} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {2}, {3}, {5} }};
 
     MR_Mesh* ret = MR_Mesh_fromTriangles( MR_PassBy_Copy, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 
@@ -44,7 +44,7 @@ void testMeshFillHole( void )
     MR_Mesh* mesh = createMeshWithHoles();
 
     MR_std_vector_MR_EdgeId* oldBdEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( oldBdEdges ) == 2 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( oldBdEdges ) == 2 );
 
     MR_FillHoleParams* params = MR_FillHoleParams_DefaultConstruct();
     MR_FaceBitSet* newFaces = MR_FaceBitSet_DefaultConstruct();
@@ -55,7 +55,7 @@ void testMeshFillHole( void )
     TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) ) == 3 )
 
     MR_std_vector_MR_EdgeId* newBdEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( newBdEdges ) == 0 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( newBdEdges ) == 0 );
 
     MR_std_vector_MR_EdgeId_Destroy( newBdEdges );
     MR_FaceBitSet_Destroy( newFaces );
@@ -67,18 +67,18 @@ void testMeshFillHoleNicely( void )
 {
     MR_Mesh* mesh = createMeshWithHoles();
     MR_std_vector_MR_EdgeId* oldBdEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( oldBdEdges ) == 2 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( oldBdEdges ) == 2 );
 
     MR_FillHoleNicelySettings* params = MR_FillHoleNicelySettings_DefaultConstruct();
 
-    MR_FaceBitSet* patch = MR_fillHoleNicely( mesh, *MR_std_vector_MR_EdgeId_Front( oldBdEdges ), params );
+    MR_FaceBitSet* patch = MR_fillHoleNicely( mesh, *MR_std_vector_MR_EdgeId_front( oldBdEdges ), params );
     MR_FillHoleNicelySettings_Destroy( params );
 
     size_t patchCount = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( patch ) );
     TEST_ASSERT( patchCount == 1887 );
 
     MR_std_vector_MR_EdgeId* newBdEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( newBdEdges ) == 1 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( newBdEdges ) == 1 );
 
     MR_FaceBitSet_Destroy( patch );
     MR_std_vector_MR_EdgeId_Destroy( oldBdEdges );
@@ -91,12 +91,12 @@ void testRightBoundary( void )
     MR_Mesh* mesh = createMeshWithHoles();
     MR_std_vector_std_vector_MR_EdgeId* loops = MR_findRightBoundary( MR_Mesh_Get_topology( mesh ), NULL );
 
-    TEST_ASSERT( MR_std_vector_std_vector_MR_EdgeId_Size( loops ) == 2 );
-    const MR_std_vector_MR_EdgeId* loop = MR_std_vector_std_vector_MR_EdgeId_At( loops, 0 );
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( loop ) == 3 );
+    TEST_ASSERT( MR_std_vector_std_vector_MR_EdgeId_size( loops ) == 2 );
+    const MR_std_vector_MR_EdgeId* loop = MR_std_vector_std_vector_MR_EdgeId_at( loops, 0 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( loop ) == 3 );
 
-    loop = MR_std_vector_std_vector_MR_EdgeId_At( loops, 1 );
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( loop ) == 4 );
+    loop = MR_std_vector_std_vector_MR_EdgeId_at( loops, 1 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( loop ) == 4 );
 
     MR_std_vector_std_vector_MR_EdgeId_Destroy( loops );
     MR_Mesh_Destroy( mesh );

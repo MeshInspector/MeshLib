@@ -32,7 +32,7 @@ MR_VdbVolume* createVolume(void)
     MR_MeshToVolumeParams_Destroy( mtvParams );
     MR_Mesh_Destroy( mesh );
 
-    MR_VdbVolume *volume = MR_expected_MR_VdbVolume_std_string_GetMutableValue( volumeEx );
+    MR_VdbVolume *volume = MR_expected_MR_VdbVolume_std_string_value_mut( volumeEx );
     TEST_ASSERT( volume )
     return volume;
 }
@@ -55,7 +55,7 @@ void testVDBConversions( void )
     MR_GridToMeshSettings_Set_isoValue( gridToMeshSettings, 1 );
 
     MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VoxelsVolume_MR_FloatGrid_Get_data( baseVolume ), gridToMeshSettings );
-    const MR_Mesh* restored = MR_expected_MR_Mesh_std_string_GetValue( restoredEx );
+    const MR_Mesh* restored = MR_expected_MR_Mesh_std_string_value( restoredEx );
     MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( restored, NULL );
     TEST_ASSERT( bbox.min.x > 0.199f && bbox.min.x < 0.201f );
     TEST_ASSERT( bbox.min.y > 0.199f && bbox.min.y < 0.201f );

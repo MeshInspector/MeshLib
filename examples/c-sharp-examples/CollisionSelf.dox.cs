@@ -26,7 +26,7 @@ public class CollisionSelf {
 
         Console.WriteLine($"{selfCollidingBitSet.count()} faces self-intersecting");
 
-        var isSelfColliding = !MR.findSelfCollidingTriangles(mesh).isEmpty();
+        var isSelfColliding = !MR.findSelfCollidingTriangles(mesh).empty();
         Console.WriteLine($"Is self colliding: {isSelfColliding}");
     }
 

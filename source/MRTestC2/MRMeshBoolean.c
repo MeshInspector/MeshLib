@@ -103,19 +103,19 @@ void testMeshBoolean( void )
 void testBooleanMultipleEdgePropogationSort( void )
 {
     MR_VertCoords* pointsVec = MR_VertCoords_Construct_1_uint64_t( 6 );
-    *MR_VertCoords_index( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){  0.0f, 0.0f, 0.0f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ -0.5f, 1.0f, 0.0f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ +0.5f, 1.0f, 0.0f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){  0.0f, 1.5f, 0.5f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ -1.0f, 1.5f, 0.0f };
-    *MR_VertCoords_index( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){  0.0f, 0.0f, 0.0f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ -0.5f, 1.0f, 0.0f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ +0.5f, 1.0f, 0.0f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){  0.0f, 1.5f, 0.5f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ -1.0f, 1.5f, 0.0f };
+    *MR_VertCoords_index_mut( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
 
     MR_Triangulation *triangulation = MR_Triangulation_Construct_1_uint64_t( 5 );
-    *MR_Triangulation_index( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
-    *MR_Triangulation_index( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
 
     MR_Mesh* meshA = MR_Mesh_fromTriangles( MR_PassBy_Move, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 
@@ -124,16 +124,16 @@ void testBooleanMultipleEdgePropogationSort( void )
 
     {
         MR_Mesh* meshASup = MR_Mesh_ConstructFromAnother( MR_PassBy_Copy, meshA );
-        MR_Vector3f* meshASupPoints = MR_VertCoords_data( MR_Mesh_GetMutable_points( meshASup ) );
+        MR_Vector3f* meshASupPoints = MR_VertCoords_data_mut( MR_Mesh_GetMutable_points( meshASup ) );
         meshASupPoints[3] = (MR_Vector3f){ 0.0f, 1.5f, -0.5f };
 
         const MR_MeshTopology* meshATopology = MR_Mesh_Get_topology( meshA );
         MR_std_vector_MR_EdgeId* meshAHoles = MR_MeshTopology_findHoleRepresentiveEdges( meshATopology, NULL );
 
-        MR_std_vector_MR_EdgeId* border = MR_trackRightBoundaryLoop_MR_EdgeId( meshATopology, *MR_std_vector_MR_EdgeId_At( meshAHoles, 0 ), NULL );
+        MR_std_vector_MR_EdgeId* border = MR_trackRightBoundaryLoop_MR_EdgeId( meshATopology, *MR_std_vector_MR_EdgeId_at( meshAHoles, 0 ), NULL );
 
         MR_std_vector_std_vector_MR_EdgeId* borderVec = MR_std_vector_std_vector_MR_EdgeId_DefaultConstruct();
-        MR_std_vector_std_vector_MR_EdgeId_PushBack( borderVec, MR_PassBy_Move, border );
+        MR_std_vector_std_vector_MR_EdgeId_push_back( borderVec, MR_PassBy_Move, border );
         MR_std_vector_MR_EdgeId_Destroy( border );
 
         const MR_FaceBitSet* meshASupFaces = MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( meshASup ) );

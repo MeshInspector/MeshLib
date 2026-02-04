@@ -24,7 +24,7 @@ void testOffsetMesh(void)
     MR_expected_MR_Mesh_std_string* outputMesh = MR_offsetMesh(inputMeshPart, offset, params);
     MR_OffsetParameters_Destroy(params);
     MR_MeshPart_Destroy(inputMeshPart);
-    TEST_ASSERT(MR_expected_MR_Mesh_std_string_GetValue(outputMesh));
+    TEST_ASSERT(MR_expected_MR_Mesh_std_string_success(outputMesh));
     MR_expected_MR_Mesh_std_string_Destroy(outputMesh);
     MR_Mesh_Destroy(mesh);
 }
@@ -42,7 +42,7 @@ void testDoubleOffsetMesh(void)
     MR_expected_MR_Mesh_std_string* outputMesh = MR_doubleOffsetMesh(inputMeshPart, offset, offset2, params);
     MR_OffsetParameters_Destroy(params);
     MR_MeshPart_Destroy(inputMeshPart);
-    TEST_ASSERT(MR_expected_MR_Mesh_std_string_GetValue(outputMesh));
+    TEST_ASSERT(MR_expected_MR_Mesh_std_string_success(outputMesh));
     MR_expected_MR_Mesh_std_string_Destroy(outputMesh);
     MR_Mesh_Destroy(mesh);
 }
@@ -59,7 +59,7 @@ void testMcOffsetMesh(void)
     MR_expected_MR_Mesh_std_string* outputMesh = MR_mcOffsetMesh(inputMeshPart, offset, params, NULL);
     MR_OffsetParameters_Destroy(params);
     MR_MeshPart_Destroy(inputMeshPart);
-    TEST_ASSERT(MR_expected_MR_Mesh_std_string_GetValue(outputMesh));
+    TEST_ASSERT(MR_expected_MR_Mesh_std_string_success(outputMesh));
     MR_expected_MR_Mesh_std_string_Destroy(outputMesh);
     MR_Mesh_Destroy(mesh);
 }
@@ -76,7 +76,7 @@ void testSharpOffsetMesh(void)
     MR_expected_MR_Mesh_std_string* outputMesh = MR_sharpOffsetMesh(inputMeshPart, offset, params);
     MR_SharpOffsetParameters_Destroy(params);
     MR_MeshPart_Destroy(inputMeshPart);
-    TEST_ASSERT(MR_expected_MR_Mesh_std_string_GetValue(outputMesh));
+    TEST_ASSERT(MR_expected_MR_Mesh_std_string_success(outputMesh));
     MR_expected_MR_Mesh_std_string_Destroy(outputMesh);
     MR_Mesh_Destroy(mesh);
 }
@@ -94,7 +94,7 @@ void testGeneralOffsetMesh(void)
     MR_expected_MR_Mesh_std_string* outputMesh = MR_generalOffsetMesh(inputMeshPart, offset, params);
     MR_GeneralOffsetParameters_Destroy(params);
     MR_MeshPart_Destroy(inputMeshPart);
-    TEST_ASSERT(MR_expected_MR_Mesh_std_string_GetValue(outputMesh));
+    TEST_ASSERT(MR_expected_MR_Mesh_std_string_success(outputMesh));
     MR_expected_MR_Mesh_std_string_Destroy(outputMesh);
     MR_Mesh_Destroy(mesh);
 }
@@ -114,7 +114,7 @@ void testThickenMesh(void)
     MR_PartMapping_Destroy(map);
     MR_GeneralOffsetParameters_Destroy(params);
     MR_MeshPart_Destroy(inputMeshPart);
-    TEST_ASSERT(MR_expected_MR_Mesh_std_string_GetValue(outputMesh));
+    TEST_ASSERT(MR_expected_MR_Mesh_std_string_success(outputMesh));
     MR_expected_MR_Mesh_std_string_Destroy(outputMesh);
     MR_Mesh_Destroy(mesh);
 }

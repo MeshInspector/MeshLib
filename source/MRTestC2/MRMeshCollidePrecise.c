@@ -42,28 +42,28 @@ void testMeshCollidePrecise( void )
     MR_MeshPart_Destroy( meshAPart );
     MR_MeshPart_Destroy( meshBPart );
 
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_Size( intersections ), 152 )
+    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_size( intersections ), 152 )
 
     const MR_MeshTopology* meshATop = MR_Mesh_Get_topology( meshA );
     const MR_MeshTopology* meshBTop = MR_Mesh_Get_topology( meshB );
     MR_std_vector_std_vector_MR_VarEdgeTri* contours = MR_orderIntersectionContours( meshATop, meshBTop, intersections );
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_std_vector_MR_VarEdgeTri_Size( contours ), 4 )
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_Size( MR_std_vector_std_vector_MR_VarEdgeTri_At( contours, 0 ) ), 71 )
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_Size( MR_std_vector_std_vector_MR_VarEdgeTri_At( contours, 1 ) ), 7 )
-    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_Size( MR_std_vector_std_vector_MR_VarEdgeTri_At( contours, 2 ) ) == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 MR_std_vector_MR_VarEdgeTri_Size( MR_std_vector_std_vector_MR_VarEdgeTri_At( contours, 2 ) ) == 71 ); // with FMA instruction (modern compilers for ARM)
-    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_Size( MR_std_vector_std_vector_MR_VarEdgeTri_At( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 MR_std_vector_MR_VarEdgeTri_Size( MR_std_vector_std_vector_MR_VarEdgeTri_At( contours, 3 ) ) == 7 );  // with FMA instruction (modern compilers for ARM)
+    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_std_vector_MR_VarEdgeTri_size( contours ), 4 )
+    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 0 ) ), 71 )
+    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 1 ) ), 7 )
+    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 2 ) ) == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 2 ) ) == 71 ); // with FMA instruction (modern compilers for ARM)
+    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 3 ) ) == 7 );  // with FMA instruction (modern compilers for ARM)
 
     MR_std_vector_MR_OneMeshContour* meshAContours = MR_std_vector_MR_OneMeshContour_DefaultConstruct();
     MR_std_vector_MR_OneMeshContour* meshBContours = MR_std_vector_MR_OneMeshContour_DefaultConstruct();
     MR_getOneMeshIntersectionContours( meshA, meshB, contours, meshAContours, meshBContours, conv, NULL, NULL, NULL );
-    TEST_ASSERT( MR_std_vector_MR_OneMeshContour_Size( meshAContours ) == 4 )
-    TEST_ASSERT( MR_std_vector_MR_OneMeshContour_Size( meshBContours ) == 4 )
+    TEST_ASSERT( MR_std_vector_MR_OneMeshContour_size( meshAContours ) == 4 )
+    TEST_ASSERT( MR_std_vector_MR_OneMeshContour_size( meshBContours ) == 4 )
 
     size_t posCount = 0;
-    for ( size_t i = 0; i < MR_std_vector_MR_OneMeshContour_Size( meshAContours ); ++i )
-        posCount += MR_std_vector_MR_OneMeshIntersection_Size( MR_OneMeshContour_Get_intersections( MR_std_vector_MR_OneMeshContour_At( meshAContours, i ) ) );
+    for ( size_t i = 0; i < MR_std_vector_MR_OneMeshContour_size( meshAContours ); ++i )
+        posCount += MR_std_vector_MR_OneMeshIntersection_size( MR_OneMeshContour_Get_intersections( MR_std_vector_MR_OneMeshContour_at( meshAContours, i ) ) );
     TEST_ASSERT( posCount == 156 )
 
     MR_std_vector_MR_OneMeshContour_Destroy( meshBContours );

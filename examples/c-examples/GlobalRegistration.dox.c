@@ -82,12 +82,12 @@ int main( int argc, char* argv[] )
     for ( int i = 0; i < inputNum; ++i )
     {
         MR_expected_MR_PointCloud_std_string* pointCloudEx = MR_PointsLoad_fromAnySupportedFormat_2( argv[1 + i], NULL, NULL );
-        MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_GetMutableValue( pointCloudEx );
+        MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_value_mut( pointCloudEx );
 
         if ( !pointCloud )
         {
             // Failed to load.
-            fprintf( stderr, "Failed to load point cloud: %s\n", MR_std_string_Data( MR_expected_MR_PointCloud_std_string_GetError( pointCloudEx ) ) );
+            fprintf( stderr, "Failed to load point cloud: %s\n", MR_std_string_data( MR_expected_MR_PointCloud_std_string_error( pointCloudEx ) ) );
             MR_expected_MR_PointCloud_std_string_Destroy( pointCloudEx );
             goto out_inputs;
         }
@@ -134,29 +134,29 @@ int main( int argc, char* argv[] )
     MR_PointCloud* output = MR_PointCloud_DefaultConstruct();
     for ( int i = 0; i < inputNum; i++ )
     {
-        const MR_MeshOrPointsXf* input = MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index_const( inputs, (MR_ObjId){i} );
-        const MR_AffineXf3f* xf = MR_Vector_MR_AffineXf3f_MR_ObjId_index_const( xfs, (MR_ObjId){i} );
+        const MR_MeshOrPointsXf* input = MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index( inputs, (MR_ObjId){i} );
+        const MR_AffineXf3f* xf = MR_Vector_MR_AffineXf3f_MR_ObjId_index( xfs, (MR_ObjId){i} );
         const MR_PointCloud* cloud = MR_PointCloudPart_Get_cloud( MR_MeshOrPoints_asPointCloudPart( MR_MeshOrPointsXf_Get_obj( input ) ) );
         const MR_VertCoords* points = MR_PointCloud_Get_points( cloud );
         size_t numPoints = MR_VertCoords_size( points );
         printf("Resulting transform for part %d:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n\n", i, xf->A.x.x, xf->A.x.y, xf->A.x.z, xf->b.x, xf->A.y.x, xf->A.y.y, xf->A.y.z, xf->b.y, xf->A.z.x, xf->A.z.y, xf->A.z.z, xf->b.z);
         for ( size_t j = 0; j < numPoints; j++ )
         {
-            MR_Vector3f point = *MR_VertCoords_index_const( points, (MR_VertId){j} );
+            MR_Vector3f point = *MR_VertCoords_index( points, (MR_VertId){j} );
             point = MR_AffineXf3f_call( xf, &point );
             MR_PointCloud_addPoint_1( output, &point );
         }
     }
 
     MR_expected_void_std_string* saveEx = MR_PointsSave_toAnySupportedFormat_3( output, argv[argc - 1], NULL, NULL );
-    const MR_std_string* saveError = MR_expected_void_std_string_GetError( saveEx );
+    const MR_std_string* saveError = MR_expected_void_std_string_error( saveEx );
     if ( !saveError )
     {
         rc = EXIT_SUCCESS;
     }
     else
     {
-        fprintf( stderr, "Failed to save point cloud: %s\n", MR_std_string_Data( saveError ) );
+        fprintf( stderr, "Failed to save point cloud: %s\n", MR_std_string_data( saveError ) );
     }
     MR_std_string_Destroy( saveError );
 

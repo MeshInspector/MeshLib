@@ -29,7 +29,7 @@ int main( void )
         {
             float v = PI * (float)j / ( 100.f - 1.f );
 
-            *MR_VertCoords_index( points, (MR_VertId){ i * 100 + j } ) = (MR_Vector3f){
+            *MR_VertCoords_index_mut( points, (MR_VertId){ i * 100 + j } ) = (MR_Vector3f){
                 cos( u ) * sin( v ),
                 sin( u ) * sin( v ),
                 cos( v )
@@ -55,7 +55,7 @@ int main( void )
         return 1;
     }
 
-    MR_PointCloud_Set_validPoints( pc, MR_PassBy_Move, MR_std_optional_MR_VertBitSet_MutableValue( vs ) );
+    MR_PointCloud_Set_validPoints( pc, MR_PassBy_Move, MR_std_optional_MR_VertBitSet_value_mut( vs ) );
     MR_std_optional_MR_VertBitSet_Destroy( vs );
 
     MR_PointCloud_invalidateCaches( pc );
@@ -64,7 +64,7 @@ int main( void )
     MR_std_optional_MR_Mesh* triangulatedOpt = MR_triangulatePointCloud( pc, NULL, NULL );
     MR_PointCloud_Destroy( pc );
 
-    MR_Mesh* triangulated = MR_std_optional_MR_Mesh_MutableValue( triangulatedOpt );
+    MR_Mesh* triangulated = MR_std_optional_MR_Mesh_value_mut( triangulatedOpt );
     if ( !triangulated )
     {
         fprintf( stderr, "Triangulation failed\n" );
@@ -80,10 +80,10 @@ int main( void )
     MR_MeshPart_Destroy( mp );
     MR_std_optional_MR_Mesh_Destroy( triangulatedOpt );
 
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( meshEx );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
     if ( !mesh )
     {
-        fprintf( stderr, "Offset failed: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        fprintf( stderr, "Offset failed: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshEx ) ) );
         MR_expected_MR_Mesh_std_string_Destroy( meshEx );
         return 1;
     }
@@ -92,9 +92,9 @@ int main( void )
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "result.stl", NULL, NULL);
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );
 
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         MR_expected_void_std_string_Destroy( saveEx );
         return 1;
     }

@@ -27,14 +27,14 @@ int main( void )
 
     // create converters to integer field (needed for absolute precision predicates)
     MR_CoordinateConverters* converters = MR_getVectorConverters_3( mpA, mpB, NULL );
-    // find each intersecting edge/triangle pair 
+    // find each intersecting edge/triangle pair
     MR_std_vector_MR_VarEdgeTri* collidingFaceEdges = MR_findCollidingEdgeTrisPrecise_5(
         mpA, mpB, MR_PassBy_Copy, MR_CoordinateConverters_GetMutable_toInt( converters ), NULL, NULL );
 
     // print pairs of edges triangles
-    for ( MR_uint64_t i = 0; i < MR_std_vector_MR_VarEdgeTri_Size( collidingFaceEdges ); ++i )
+    for ( MR_uint64_t i = 0; i < MR_std_vector_MR_VarEdgeTri_size( collidingFaceEdges ); ++i )
     {
-        MR_VarEdgeTri* edgeTri = MR_std_vector_MR_VarEdgeTri_MutableAt( collidingFaceEdges, i );
+        MR_VarEdgeTri* edgeTri = MR_std_vector_MR_VarEdgeTri_at_mut( collidingFaceEdges, i );
         bool edgeATriB = MR_VarEdgeTri_isEdgeATriB( edgeTri );
         MR_FaceId tri = MR_VarEdgeTri_tri( edgeTri );
         if ( edgeATriB )

@@ -25,6 +25,32 @@ namespace
 
 using namespace tinyxml2;
 
+struct EllipseParams
+{
+    float cx = 0.f;
+    float cy = 0.f;
+    float rx = 1.f;
+    float ry = 1.f;
+    float a0 = 0.f;
+    float a1 = 2.f * PI_F;
+    int resolution = 32;
+};
+
+Contour2f getEllipsePoints( const EllipseParams params = {} )
+{
+    Contour2f results;
+    for ( auto i = 0; i <= params.resolution; ++i )
+    {
+        const auto a = params.a0 + ( params.a1 - params.a0 ) * (float)i / (float)params.resolution;
+        const auto x = std::cos( a ), y = std::sin( a );
+        results.push_back( {
+            x * params.rx + params.cx,
+            y * params.ry + params.cy,
+        } );
+    }
+    return results;
+}
+
 namespace Path
 {
 
@@ -60,6 +86,28 @@ struct CubicBezier
     Vector2f end;
 };
 
+std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, CubicBezier cmd )
+{
+    const auto shift = cmd.relative ? start : Vector2f{};
+
+    CubicBezierCurve2f curve;
+    curve.p[0] = start;
+    curve.p[1] = cmd.shorthand ? smoothControlPoint : cmd.controlPoints[0] + shift;
+    curve.p[2] = cmd.controlPoints[1] + shift;
+    curve.p[3] = cmd.end + shift;
+
+    smoothControlPoint = start - ( curve.p[2] - start );
+
+    std::vector<Vector2f> results;
+    constexpr auto cResolution = 32;
+    for ( auto i = 1; i <= cResolution; ++i )
+    {
+        const auto t = (float)i / (float)cResolution;
+        results.emplace_back( curve.getPoint( t ) );
+    }
+    return results;
+}
+
 struct QuadraticBezier
 {
     bool relative = false;
@@ -67,6 +115,30 @@ struct QuadraticBezier
     Vector2f controlPoint;
     Vector2f end;
 };
+
+std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, QuadraticBezier cmd )
+{
+    const auto shift = cmd.relative ? start : Vector2f{};
+
+    std::array<Vector2f, 3> p;
+    p[0] = start;
+    p[1] = cmd.shorthand ? smoothControlPoint : cmd.controlPoint + shift;
+    p[2] = cmd.end + shift;
+
+    smoothControlPoint = start - ( p[1] - start );
+
+    std::vector<Vector2f> results;
+    constexpr auto cResolution = 32;
+    for ( auto i = 1; i <= cResolution; ++i )
+    {
+        const auto t = (float)i / (float)cResolution;
+        const auto q0 = lerp( p[0], p[1], t );
+        const auto q1 = lerp( p[1], p[2], t );
+        const auto r = lerp( q0, q1, t );
+        results.emplace_back( r );
+    }
+    return results;
+}
 
 struct EllipticalArc
 {
@@ -77,6 +149,67 @@ struct EllipticalArc
     bool sweep = false;
     Vector2f end;
 };
+
+std::vector<Vector2f> getPoints( Vector2f start, EllipticalArc cmd )
+{
+    const auto shift = cmd.relative ? start : Vector2f{};
+
+    const auto p1 = start;
+    const auto p2 = cmd.end + shift;
+    const auto phi = cmd.xAxisRot * PI_F / 180.f;
+
+    const auto rot = Matrix2f::rotation( phi );
+    const auto p0_ = rot.transposed() * ( p1 - p2 ) / 2.f;
+
+    // https://www.w3.org/TR/SVG/implnote.html#ArcCorrectionOutOfRangeRadii
+    auto r = cmd.radii;
+    if ( r == Vector2f{} )
+        return { p2 };
+    if ( r.x < 0.f )
+        r.x *= -1.f;
+    if ( r.y < 0.f )
+        r.y *= -1.f;
+    const auto lam = div( p0_, r ).lengthSq();
+    if ( lam > 1.f )
+        r = r * std::sqrt( lam );
+
+    // https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
+    const auto rp_ = Vector2f { r.x * p0_.y, r.y * p0_.x };
+    assert( rp_.lengthSq() != 0.f );
+    const auto k1Sq = sqr( r.x * r.y ) / rp_.lengthSq() - 1;
+    assert( k1Sq >= 0.f );
+    const auto k1 = std::sqrt( k1Sq ) * ( cmd.largeArc != cmd.sweep ? +1.f : -1.f );
+    assert( std::isfinite( k1 ) );
+    const auto c_ = k1 * Vector2f { rp_.x / r.y, -rp_.y / r.x };
+    const auto c = rot * c_ + ( p1 + p2 ) / 2.f;
+
+    constexpr auto angle2 = [] ( auto v ) { return std::atan2( v.y, v.x ); };
+    auto th1 = angle2( div( +p0_ - c_, r ) );
+    auto th2 = angle2( div( -p0_ - c_, r ) );
+    if ( cmd.sweep && th2 < th1 )
+        th2 += 2.f * PI_F;
+    if ( !cmd.sweep && th1 < th2 )
+        th2 -= 2.f * PI_F;
+
+    auto results = getEllipsePoints( {
+        .cx = c.x,
+        .cy = c.y,
+        .rx = r.x,
+        .ry = r.y,
+        .a0 = th1,
+        .a1 = th2,
+    } );
+    if ( phi != 0.f )
+    {
+        const auto ellXfInv = AffineXf2f::xfAround( rot, c );
+        for ( auto& p : results )
+            p = ellXfInv( p );
+    }
+    assert( ( p1 - results.front() ).lengthSq() < 1e-6f );
+    assert( ( p2 - results.back() ).lengthSq() < 1e-6f );
+    results.erase( results.begin() );
+    return results;
+}
 
 using Command = std::variant<MoveTo, ClosePath, LineTo, CubicBezier, QuadraticBezier, EllipticalArc>;
 
@@ -231,32 +364,6 @@ Expected<std::vector<Path::Command>> parsePath( std::string_view str )
 
 } // namespace parser
 
-struct EllipseParams
-{
-    float cx = 0.f;
-    float cy = 0.f;
-    float rx = 1.f;
-    float ry = 1.f;
-    float a0 = 0.f;
-    float a1 = 2.f * PI_F;
-    int resolution = 32;
-};
-
-Contour2f getEllipsePoints( const EllipseParams params = {} )
-{
-    Contour2f results;
-    for ( auto i = 0; i <= params.resolution; ++i )
-    {
-        const auto a = params.a0 + ( params.a1 - params.a0 ) * (float)i / (float)params.resolution;
-        const auto x = std::cos( a ), y = std::sin( a );
-        results.push_back( {
-            x * params.rx + params.cx,
-            y * params.ry + params.cy,
-        } );
-    }
-    return results;
-}
-
 void close( Contour2f& contour )
 {
     if ( contour.back() != contour.front() )
@@ -364,7 +471,7 @@ private:
 
         Contours2f results;
         Vector2f pos{};
-        Vector2f prevCurveControlPoint{};
+        Vector2f nextCurveControlPoint{};
         results.emplace_back();
         for ( const auto& command : *commands )
         {
@@ -379,10 +486,8 @@ private:
                     if ( !results.back().empty() )
                         results.emplace_back();
 
-                    if ( cmd.relative )
-                        pos += cmd.to;
-                    else
-                        pos = cmd.to;
+                    const auto shift = cmd.relative ? pos : Vector2f{};
+                    pos = cmd.to + shift;
 
                     results.back().emplace_back( pos );
                 },
@@ -391,24 +496,18 @@ private:
                     if ( results.back().empty() )
                         results.back().emplace_back( pos );
 
-                    if ( cmd.relative )
+                    const auto shift = cmd.relative ? pos : Vector2f{};
+                    switch ( cmd.kind )
                     {
-                        pos += cmd.to;
-                    }
-                    else
-                    {
-                        switch ( cmd.kind )
-                        {
-                        case Path::LineTo::Tangent:
-                            pos = cmd.to;
-                            break;
-                        case Path::LineTo::Horizontal:
-                            pos.x = cmd.to.x;
-                            break;
-                        case Path::LineTo::Vertical:
-                            pos.y = cmd.to.y;
-                            break;
-                        }
+                    case Path::LineTo::Tangent:
+                        pos = cmd.to + shift;
+                        break;
+                    case Path::LineTo::Horizontal:
+                        pos.x = cmd.to.x + shift.x;
+                        break;
+                    case Path::LineTo::Vertical:
+                        pos.y = cmd.to.y + shift.y;
+                        break;
                     }
 
                     results.back().emplace_back( pos );
@@ -418,131 +517,30 @@ private:
                     if ( results.back().empty() )
                         results.back().emplace_back( pos );
 
-                    CubicBezierCurve2f curve;
-                    curve.p[0] = pos;
-                    if ( cmd.relative )
-                    {
-                        curve.p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : pos + cmd.controlPoints[0];
-                        curve.p[2] = pos + cmd.controlPoints[1];
-                        curve.p[3] = pos + cmd.end;
-                    }
-                    else
-                    {
-                        curve.p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : cmd.controlPoints[0];
-                        curve.p[2] = cmd.controlPoints[1];
-                        curve.p[3] = cmd.end;
-                    }
-                    constexpr auto cResolution = 32;
-                    for ( auto i = 1; i <= cResolution; ++i )
-                    {
-                        const auto t = (float)i / (float)cResolution;
-                        results.back().emplace_back( curve.getPoint( t ) );
-                    }
+                    for ( auto p : Path::getPoints( pos, nextCurveControlPoint, cmd ) )
+                        results.back().emplace_back( p );
 
-                    if ( cmd.relative )
-                        pos += cmd.end;
-                    else
-                        pos = cmd.end;
-                    prevCurveControlPoint = cmd.controlPoints[1];
+                    pos = results.back().back();
                 },
                 [&] ( const Path::QuadraticBezier& cmd )
                 {
                     if ( results.back().empty() )
                         results.back().emplace_back( pos );
 
-                    std::array<Vector2f, 3> p;
-                    p[0] = pos;
-                    if ( cmd.relative )
-                    {
-                        p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : pos + cmd.controlPoint;
-                        p[2] = pos + cmd.end;
-                    }
-                    else
-                    {
-                        p[1] = cmd.shorthand ? pos - ( prevCurveControlPoint - pos ) : cmd.controlPoint;
-                        p[2] = cmd.end;
-                    }
-                    constexpr auto cResolution = 32;
-                    for ( auto i = 1; i <= cResolution; ++i )
-                    {
-                        const auto t = (float)i / (float)cResolution;
-                        const auto q0 = lerp( p[0], p[1], t );
-                        const auto q1 = lerp( p[1], p[2], t );
-                        const auto r = lerp( q0, q1, t );
-                        results.back().emplace_back( r );
-                    }
+                    for ( auto p : Path::getPoints( pos, nextCurveControlPoint, cmd ) )
+                        results.back().emplace_back( p );
 
-                    if ( cmd.relative )
-                        pos += cmd.end;
-                    else
-                        pos = cmd.end;
-                    prevCurveControlPoint = cmd.controlPoint;
+                    pos = results.back().back();
                 },
                 [&] ( const Path::EllipticalArc& cmd )
                 {
                     if ( results.back().empty() )
                         results.back().emplace_back( pos );
 
-                    const auto p1 = pos;
-                    const auto p2 = cmd.relative ? pos + cmd.end : cmd.end;
-                    const auto phi = cmd.xAxisRot * PI_F / 180.f;
-
-                    const auto rot = Matrix2f::rotation( phi );
-                    const auto p0_ = rot.transposed() * ( p1 - p2 ) / 2.f;
-
-                    // https://www.w3.org/TR/SVG/implnote.html#ArcCorrectionOutOfRangeRadii
-                    auto r = cmd.radii;
-                    if ( r == Vector2f{} )
-                        return (void)results.back().emplace_back( p2 );
-                    if ( r.x < 0.f )
-                        r.x *= -1.f;
-                    if ( r.y < 0.f )
-                        r.y *= -1.f;
-                    const auto lam = div( p0_, r ).lengthSq();
-                    if ( lam > 1.f )
-                        r = r * std::sqrt( lam );
-
-                    // https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
-                    const auto rp_ = Vector2f { r.x * p0_.y, r.y * p0_.x };
-                    assert( rp_.lengthSq() != 0.f );
-                    const auto k1Sq = sqr( r.x * r.y ) / rp_.lengthSq() - 1;
-                    assert( k1Sq >= 0.f );
-                    const auto k1 = std::sqrt( k1Sq ) * ( cmd.largeArc != cmd.sweep ? +1.f : -1.f );
-                    assert( std::isfinite( k1 ) );
-                    const auto c_ = k1 * Vector2f { rp_.x / r.y, -rp_.y / r.x };
-                    const auto c = rot * c_ + ( p1 + p2 ) / 2.f;
-
-                    constexpr auto angle2 = [] ( auto v ) { return std::atan2( v.y, v.x ); };
-                    auto th1 = angle2( div( +p0_ - c_, r ) );
-                    auto th2 = angle2( div( -p0_ - c_, r ) );
-                    if ( cmd.sweep && th2 < th1 )
-                        th2 += 2.f * PI_F;
-                    if ( !cmd.sweep && th1 < th2 )
-                        th2 -= 2.f * PI_F;
-
-                    auto arcPoints = getEllipsePoints( {
-                        .cx = c.x,
-                        .cy = c.y,
-                        .rx = r.x,
-                        .ry = r.y,
-                        .a0 = th1,
-                        .a1 = th2,
-                    } );
-                    if ( phi != 0.f )
-                    {
-                        const auto ellXfInv = AffineXf2f::xfAround( rot, c );
-                        for ( auto& p : arcPoints )
-                            p = ellXfInv( p );
-                    }
-                    assert( ( p1 - arcPoints.front() ).lengthSq() < 1e-6f );
-                    assert( ( p2 - arcPoints.back() ).lengthSq() < 1e-6f );
-                    for ( auto p : arcPoints )
+                    for ( auto p : Path::getPoints( pos, cmd ) )
                         results.back().emplace_back( p );
 
-                    if ( cmd.relative )
-                        pos += cmd.end;
-                    else
-                        pos = cmd.end;
+                    pos = results.back().back();
                 },
             }, command );
         }

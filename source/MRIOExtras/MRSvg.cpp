@@ -36,7 +36,7 @@ struct EllipseParams
     int resolution = 32;
 };
 
-Contour2f getEllipsePoints( const EllipseParams params = {} )
+Contour2f getEllipsePoints( const EllipseParams& params = {} )
 {
     Contour2f results;
     for ( auto i = 0; i <= params.resolution; ++i )
@@ -86,7 +86,7 @@ struct CubicBezier
     Vector2f end;
 };
 
-std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, CubicBezier cmd )
+std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, const CubicBezier& cmd )
 {
     const auto shift = cmd.relative ? start : Vector2f{};
 
@@ -116,7 +116,7 @@ struct QuadraticBezier
     Vector2f end;
 };
 
-std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, QuadraticBezier cmd )
+std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, const QuadraticBezier& cmd )
 {
     const auto shift = cmd.relative ? start : Vector2f{};
 
@@ -150,7 +150,7 @@ struct EllipticalArc
     Vector2f end;
 };
 
-std::vector<Vector2f> getPoints( Vector2f start, EllipticalArc cmd )
+std::vector<Vector2f> getPoints( Vector2f start, const EllipticalArc& cmd )
 {
     const auto shift = cmd.relative ? start : Vector2f{};
 

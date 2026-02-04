@@ -1174,6 +1174,13 @@ void ImGuiMenu::showModalMessage( const std::string& msg, NotificationType msgTy
     storedModalMessage_ = msg;
     // this is needed to correctly resize modal window
     getViewerInstance().incrementForceRedrawFrames( 2, true );
+
+    // focus main window
+    if ( ImGui::isMultiViewportEnabled() )
+    {
+        HWND hwnd = glfwGetWin32Window( getViewerInstance().window );
+        SetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE );
+    }
 }
 
 void ImGuiMenu::setupShortcuts_()

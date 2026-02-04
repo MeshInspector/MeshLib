@@ -702,7 +702,7 @@ private:
     }
 
 private:
-    XMLDocument doc_;
+    tinyxml2::XMLDocument doc_;
 };
 
 } // namespace

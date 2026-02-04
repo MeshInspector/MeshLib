@@ -161,37 +161,37 @@ Expected<AffineXf2f> parseTransform( std::string_view str )
 
 Expected<std::vector<Path::Command>> parsePath( std::string_view str )
 {
-#define _( ... ) ( [] ( auto& ctx ) { auto& val = _val( ctx ); [[maybe_unused]] auto& attr = _attr( ctx ); __VA_ARGS__; } )
+#define _( ... ) ( [] ( auto& ctx ) { auto& cmd = _val( ctx ); [[maybe_unused]] auto& val = _attr( ctx ); __VA_ARGS__; } )
 
     constexpr auto closepath = rule<class closepath, Path::ClosePath>{ "closepath" }
                              = lit( 'Z' ) | lit( 'z' );
 
     constexpr auto moveto = rule<class moveto, Path::MoveTo>{ "moveto" }
-                          = point[_( val.to = attr )];
+                          = point[_( cmd.to = val )];
 
     constexpr auto lineto = rule<class lineto, Path::LineTo>{ "lineto" }
-                          = point[_( val.to = attr )];
+                          = point[_( cmd.to = val )];
 
     constexpr auto hlineto = rule<class hlineto, Path::LineTo>{ "hlineto" }
-                           = eps[_( val.kind = Path::LineTo::Horizontal )] >> float_[_( val.to.x = attr )];
+                           = eps[_( cmd.kind = Path::LineTo::Horizontal )] >> float_[_( cmd.to.x = val )];
 
     constexpr auto vlineto = rule<class vlineto, Path::LineTo>{ "vlineto" }
-                           = eps[_( val.kind = Path::LineTo::Vertical )] >> float_[_( val.to.y = attr )];
+                           = eps[_( cmd.kind = Path::LineTo::Vertical )] >> float_[_( cmd.to.y = val )];
 
     constexpr auto curveto = rule<class curveto, Path::CubicBezier>{ "curveto" }
-                           = point[_( val.controlPoints[0] = attr )] >> point[_( val.controlPoints[1] = attr )] >> point[_( val.end = attr )];
+                           = point[_( cmd.controlPoints[0] = val )] >> point[_( cmd.controlPoints[1] = val )] >> point[_( cmd.end = val )];
 
     constexpr auto scurveto = rule<class scurveto, Path::CubicBezier>{ "scurveto" }
-                            = eps[_( val.shorthand = true )] >> point[_( val.controlPoints[1] = attr )] >> point[_( val.end = attr )];
+                            = eps[_( cmd.shorthand = true )] >> point[_( cmd.controlPoints[1] = val )] >> point[_( cmd.end = val )];
 
     constexpr auto qcurveto = rule<class qcurveto, Path::QuadraticBezier>{ "qcurveto" }
-                            = point[_( val.controlPoint = attr )] >> point[_( val.end = attr )];
+                            = point[_( cmd.controlPoint = val )] >> point[_( cmd.end = val )];
 
     constexpr auto qscurveto = rule<class qscurveto, Path::QuadraticBezier>{ "qscurveto" }
-                             = eps[_( val.shorthand = true )] >> point[_( val.end = attr )];
+                             = eps[_( cmd.shorthand = true )] >> point[_( cmd.end = val )];
 
     constexpr auto arc = rule<class arc, Path::EllipticalArc>{ "arc" }
-                       = point[_( val.radii = attr )] >> float_[_( val.xAxisRot = attr )] >> int_[_( val.largeArc = (bool)attr )] >> int_[_( val.sweep = (bool)attr )] >> point[_( val.end = attr )];
+                       = point[_( cmd.radii = val )] >> float_[_( cmd.xAxisRot = val )] >> int_[_( cmd.largeArc = (bool)val )] >> int_[_( cmd.sweep = (bool)val )] >> point[_( cmd.end = val )];
 
 #undef _
 

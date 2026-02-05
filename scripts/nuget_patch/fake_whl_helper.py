@@ -13,7 +13,7 @@ def make_fake_whl(dll_path : Path):
     os.mkdir(whl_dir)
     whl_libs_path = whl_dir / "dummy.libs"
     whl_info_path = whl_dir / "dummy-1.0.dist-info"
-    os.mkdir( whl_libs_path)
+    os.mkdir( whl_libs_path )
     os.mkdir( whl_info_path )
     # copy dll
     shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
@@ -64,6 +64,10 @@ def patch_whl(out_dir,libs_dir):
                     "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
                     "dummy-1.0-py3-none-any.whl"
                 ]
+            )
+        elif SYSTEM == "Darwin":
+            subprocess.check_call(
+                ["delocate-wheel", "-v", "dummy-1.0-py3-none-any.whl"]
             )
     except subprocess.CalledProcessError as e:
         print(e)

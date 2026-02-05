@@ -130,6 +130,7 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   update-win-version:
@@ -169,6 +170,13 @@ jobs:
          path: linux_runtime
          merge-multiple: true
 
+     - name: Download NuGet MacOS Patch Archive
+       uses: actions/download-artifact@v7
+       with:
+         pattern: DotNetPatchArchiveMacOs*
+         path: macos_runtime
+         merge-multiple: true
+
      - name: Download NuGet DLL
        uses: actions/download-artifact@v7
        with:
@@ -179,7 +187,7 @@ jobs:
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_runtime macos_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe

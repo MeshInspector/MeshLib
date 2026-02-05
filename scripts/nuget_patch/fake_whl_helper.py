@@ -69,6 +69,9 @@ def patch_whl(out_dir,libs_dir):
             subprocess.check_call(
                 ["delocate-wheel", "-v", "dummy-1.0-py3-none-any.whl"]
             )
+            # The commands below seem to assume that the new wheel is in the `wheelhouse` directory, move it to match that.
+            os.mkdir("wheelhouse")
+            os.rename("dummy-1.0-py3-none-any.whl", "wheelhouse/dummy-1.0-py3-none-any.whl")
     except subprocess.CalledProcessError as e:
         print(e)
         sys.exit(e.returncode)

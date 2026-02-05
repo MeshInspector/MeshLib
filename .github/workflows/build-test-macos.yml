@@ -276,7 +276,7 @@ jobs:
         run: |
           python3 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
-          python3 -m pip install delvewheel
+          python3 -m pip install delocate==0.10.7
           python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.dylib" "./patched_content/"
 
       - name: Upload NuGet files to Artifacts

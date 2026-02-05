@@ -75,8 +75,12 @@ def patch_whl(out_dir,libs_dir):
     except subprocess.CalledProcessError as e:
         print(e)
         sys.exit(e.returncode)
-    # not needed anymore
-    os.remove("dummy-1.0-py3-none-any.whl")
+
+    try:
+        # not needed anymore
+        os.remove("dummy-1.0-py3-none-any.whl")
+    except OSError:
+        pass # On MacOS we move the original file, so this will not exist.
 
     repaired_files = []
     for repaired_wheel_file in Path(".").glob("wheelhouse/dummy-*.whl"):

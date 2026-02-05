@@ -150,6 +150,7 @@ jobs:
       - config
       - windows-build-test
       - linux-vcpkg-build-test
+      - macos-build-test
     timeout-minutes: 20
     runs-on: windows-2025
     steps:

@@ -350,11 +350,11 @@ jobs:
         with:
           name: DotNetDll*
           failOnError: false
-      - name: Delete NuGet Patches artifact
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: DotNetPatchArchive*
-          failOnError: false
+      # - name: Delete NuGet Patches artifact
+      #   uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+      #   with:
+      #     name: DotNetPatchArchive*
+      #     failOnError: false
       # Distributives
       - name: Delete Distribution
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5

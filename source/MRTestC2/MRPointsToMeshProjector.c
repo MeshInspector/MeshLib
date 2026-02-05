@@ -25,8 +25,8 @@ void testFindSignedDistances( void )
 
     float maxDist = 0.f;
     for ( int i = 0; i < MR_VertScalars_size( results ); i++ )
-        if ( maxDist < fabsf( *MR_VertScalars_index_const( results, (MR_VertId){i} ) ) )
-            maxDist = fabsf( *MR_VertScalars_index_const( results, (MR_VertId){i} ) );
+        if ( maxDist < fabsf( *MR_VertScalars_index( results, (MR_VertId){i} ) ) )
+            maxDist = fabsf( *MR_VertScalars_index( results, (MR_VertId){i} ) );
     TEST_ASSERT_FLOAT_EQUAL_APPROX( maxDist, MR_Vector3f_length( &shift ), 1e-6f )
 
     MR_VertScalars_Destroy( results );

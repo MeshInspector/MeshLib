@@ -24,12 +24,12 @@ void testTriangulation( void )
 
     MR_PointCloud* pc = MR_meshToPointCloud( mesh, &(bool){true}, NULL );
     MR_std_optional_MR_Mesh* restored = MR_triangulatePointCloud( pc, NULL, NULL );
-    TEST_ASSERT( MR_VertCoords_size( MR_Mesh_Get_points( MR_std_optional_MR_Mesh_Value( restored ) ) ) == 1024 );
-    const MR_MeshTopology* top = MR_Mesh_Get_topology( MR_std_optional_MR_Mesh_Value( restored ) );
+    TEST_ASSERT( MR_VertCoords_size( MR_Mesh_Get_points( MR_std_optional_MR_Mesh_value( restored ) ) ) == 1024 );
+    const MR_MeshTopology* top = MR_Mesh_Get_topology( MR_std_optional_MR_Mesh_value( restored ) );
     TEST_ASSERT( MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( MR_MeshTopology_getValidVerts( top ) ) ) == 1024 );
     MR_std_vector_MR_EdgeId* holes = MR_MeshTopology_findHoleRepresentiveEdges( top, NULL );
 
-    TEST_ASSERT( MR_std_vector_MR_EdgeId_Size( holes ) == 0 );
+    TEST_ASSERT( MR_std_vector_MR_EdgeId_size( holes ) == 0 );
 
     MR_std_vector_MR_EdgeId_Destroy( holes );
     MR_Mesh_Destroy( mesh );

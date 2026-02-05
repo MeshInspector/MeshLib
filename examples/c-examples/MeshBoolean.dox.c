@@ -32,15 +32,15 @@ int main( void )
     MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( sphere1, sphere2, MR_BooleanOperation_Intersection, NULL );
     if ( !MR_BooleanResult_valid( result ) )
     {
-        fprintf( stderr, "Failed to perform boolean: %s\n", MR_std_string_Data( MR_BooleanResult_Get_errorString( result ) ) );
+        fprintf( stderr, "Failed to perform boolean: %s\n", MR_std_string_data( MR_BooleanResult_Get_errorString( result ) ) );
         goto fail;
     }
 
     // Save result to an STL file.
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( MR_BooleanResult_Get_mesh( result ), "out_boolean.stl", NULL, NULL);
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail;
     }
 

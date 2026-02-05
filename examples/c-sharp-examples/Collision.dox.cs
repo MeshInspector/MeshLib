@@ -26,7 +26,7 @@ public class Collision {
         bitSet = collidingFaceBitSet.second();
         Console.WriteLine($"Colliding faces on MeshB: {bitSet.count()}");
 
-        var isColliding = !MR.findCollidingTriangles(meshPartA, meshPartB, null, true).isEmpty();
+        var isColliding = !MR.findCollidingTriangles(meshPartA, meshPartB, null, true).empty();
         Console.WriteLine($"Meshes are colliding: {isColliding}\n");
     }
 }

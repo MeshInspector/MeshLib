@@ -30,19 +30,19 @@ int main( int argc, char* argv[] )
 
     // Load mesh.
     MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( input, NULL, NULL );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( meshEx );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh.
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshEx ) ) );
         goto fail_mesh_loading;
     }
 
 
     // Get the list of the existing holes; each hole is represented by a single edge from the hole's border.
     MR_std_vector_MR_EdgeId* holes = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
-    if ( MR_std_vector_MR_EdgeId_IsEmpty( holes ) )
+    if ( MR_std_vector_MR_EdgeId_empty( holes ) )
     {
         printf( "Mesh doesn't have any holes" );
         goto fail_no_holes;
@@ -84,9 +84,9 @@ int main( int argc, char* argv[] )
 
     // Save result
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, output, NULL, NULL);
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save;
     }
 

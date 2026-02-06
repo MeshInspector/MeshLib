@@ -1,6 +1,6 @@
-#include "MRContour.h"
-#include "MRVector2.h"
-#include "MRGTest.h"
+#include <MRMesh/MRContour.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRGTest.h>
 
 namespace MR
 {
@@ -45,6 +45,12 @@ TEST( MRMesh, calcLength )
     };
     auto length2 = calcLength( contour2 );
     EXPECT_NEAR( length2, 4.0f, 1e-6f );
+
+    EXPECT_EQ( 0, findContourPointByLength( contour2, -1 ) );
+    EXPECT_EQ( 0, findContourPointByLength( contour2, 0.1f ) );
+    EXPECT_EQ( 2, findContourPointByLength( contour2, 1.7f ) );
+    EXPECT_EQ( 4, findContourPointByLength( contour2, 3.9f ) );
+    EXPECT_EQ( 4, findContourPointByLength( contour2, 5 ) );
 
     auto length2d = calcLength<Vector2f, double>( contour2 );
     EXPECT_NEAR( length2d, 4.0, 1e-12 );

@@ -13,6 +13,18 @@ namespace MR
 /// \ingroup SurfacePathGroup
 /// \{
 
+/// in the most general form, geodesic path can start in any mesh location (MeshTriPoint),
+/// then pass triangles along straight lines, making turns on edges (MeshEdgePoint),
+/// and finish in any mesh location (MeshTriPoint)
+struct GeodesicPath
+{
+    MeshTriPoint start; ///< can be invalid, then the path starts in mids.front()
+    SurfacePath mids;
+    MeshTriPoint end;   ///< can be invalid, then the path ends in mids.back()
+
+    [[nodiscard]] size_t numVertices() const { return start.valid() + mids.size() + end.valid(); }
+};
+
 enum class PathError
 {
     StartEndNotConnected, ///< no path can be found from start to end, because they are not from the same connected component
@@ -97,20 +109,26 @@ enum class ExtremeEdgeType
 
 /// for each vertex from (starts) finds the closest vertex from (ends) in geodesic sense
 /// \param vertRegion consider paths going in this region only
-MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
+[[nodiscard]] MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
     const VertBitSet & starts, const VertBitSet & ends, const VertBitSet * vertRegion = nullptr,
     VertScalars * outSurfaceDistances = nullptr );
 
 /// returns a set of mesh lines passing via most of given vertices in auto-selected order;
 /// the lines try to avoid sharp turns in the vertices
-MRMESH_API SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs );
+[[nodiscard]] MRMESH_API SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs );
 
-/// computes the length of surface path
-MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );
+/// computes the length of the given surface path
+[[nodiscard]] MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );
+
+/// computes the length of the given geodesic path
+[[nodiscard]] MRMESH_API float geodesicPathLength( const Mesh& mesh, const GeodesicPath& path );
 
 /// converts lines on mesh in 3D contours by computing coordinate of each point
-MRMESH_API Contour3f surfacePathToContour3f( const Mesh & mesh, const SurfacePath & line );
-MRMESH_API Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lines );
+[[nodiscard]] MRMESH_API Contour3f surfacePathToContour3f( const Mesh & mesh, const SurfacePath & line );
+[[nodiscard]] MRMESH_API Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lines );
+
+/// returns coordinates of all vertices of the given path
+[[nodiscard]] MRMESH_API Contour3f geodesicPathToContour3f( const Mesh& mesh, const GeodesicPath& path );
 
 /// \}
 

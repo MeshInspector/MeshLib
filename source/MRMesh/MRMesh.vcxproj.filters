@@ -267,7 +267,7 @@
     <ClInclude Include="MRSurfacePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRGeodesicPath.h">
+    <ClInclude Include="MRReducePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneColors.h">
@@ -1382,6 +1382,7 @@
     <ClInclude Include="MRFormat.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRFunctional.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1483,7 +1484,7 @@
     <ClCompile Include="MRSurfacePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRGeodesicPath.cpp">
+    <ClCompile Include="MRReducePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">
@@ -1631,9 +1632,6 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRIntersection.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="MRContour.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp">
@@ -2270,6 +2268,8 @@
     <ClCompile Include="MRFormat.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
+    <ClCompile Include="MRParallelFor.cpp" />
+    <ClCompile Include="MRBitSetParallelFor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

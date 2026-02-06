@@ -478,9 +478,15 @@ private:
             std::visit( overloaded {
                 [&] ( Path::ClosePath )
                 {
+                    if ( results.back().empty() )
+                        return;
+
                     close( results.back() );
-                    results.emplace_back();
+
+                    pos = results.back().back();
                     nextCurveControlPoint.reset();
+
+                    results.emplace_back();
                 },
                 [&] ( const Path::MoveTo& cmd )
                 {

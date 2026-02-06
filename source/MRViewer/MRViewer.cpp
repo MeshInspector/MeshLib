@@ -224,7 +224,11 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
     } );
-    viewer->draw( true );
+    // force redraw window to prevent ghosting on Windows with multi windows enabled
+#ifdef _WIN32
+    if ( viewer->isMultiViewportAvailable() && viewer->getLaunchParams().multiViewport )
+        viewer->draw( true );
+#endif
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )

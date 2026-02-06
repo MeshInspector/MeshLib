@@ -279,10 +279,10 @@ jobs:
           python3 -m pip install delocate==0.10.7
           python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.dylib" "./patched_content/"
 
-      - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
-          path: ./patched_content/*
-          retention-days: 1
+      # - name: Upload NuGet files to Artifacts
+      #   if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+      #   uses: actions/upload-artifact@v6
+      #   with:
+      #     name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
+      #     path: ./patched_content/*
+      #     retention-days: 1

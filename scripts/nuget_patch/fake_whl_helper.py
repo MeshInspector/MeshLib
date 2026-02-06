@@ -13,7 +13,7 @@ def make_fake_whl(dll_path : Path):
     os.mkdir(whl_dir)
     whl_libs_path = whl_dir / "dummy.libs"
     whl_info_path = whl_dir / "dummy-1.0.dist-info"
-    os.mkdir( whl_libs_path)
+    os.mkdir( whl_libs_path )
     os.mkdir( whl_info_path )
     # copy dll
     shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
@@ -29,6 +29,14 @@ def make_fake_whl(dll_path : Path):
     shutil.rmtree(whl_dir)
 
 def patch_whl(out_dir,libs_dir):
+    def copy_libs(src_wheel):
+        temp_dir = Path("patched_whl")
+        shutil.unpack_archive(src_wheel, temp_dir, "zip")
+        shutil.copytree(Path(temp_dir) / "dummy.libs", Path(out_dir), dirs_exist_ok=True)
+        if SYSTEM == "Darwin":
+            shutil.copytree(Path(temp_dir) / "dummy.dylibs", Path(out_dir), dirs_exist_ok=True)
+        shutil.rmtree(temp_dir)
+
     # use mangling tool on whl file
     # store result dlls in `content/dummy.libs/`
     try:
@@ -53,6 +61,9 @@ def patch_whl(out_dir,libs_dir):
                     "dummy-1.0-py3-none-any.whl"
                 ]
             )
+            repaired_files = list(Path("wheelhouse").glob("dummy-*.whl"))
+            copy_libs(repaired_files[0])
+            shutil.rmtree("wheelhouse")
         elif SYSTEM == "Linux":
             sys.path.append(libs_dir) # to find SO files
             # see also: https://github.com/mayeut/pep600_compliance
@@ -65,17 +76,17 @@ def patch_whl(out_dir,libs_dir):
                     "dummy-1.0-py3-none-any.whl"
                 ]
             )
+            repaired_files = list(Path("wheelhouse").glob("dummy-*.whl"))
+            copy_libs(repaired_files[0])
+            shutil.rmtree("wheelhouse")
+        elif SYSTEM == "Darwin":
+            subprocess.check_call(
+                ["delocate-wheel", "-v", "dummy-1.0-py3-none-any.whl"]
+            )
+            copy_libs("dummy-1.0-py3-none-any.whl")
     except subprocess.CalledProcessError as e:
         print(e)
         sys.exit(e.returncode)
-    # not needed anymore
-    os.remove("dummy-1.0-py3-none-any.whl")
 
-    repaired_files = []
-    for repaired_wheel_file in Path(".").glob("wheelhouse/dummy-*.whl"):
-        repaired_files.append(repaired_wheel_file)
-    shutil.unpack_archive(repaired_files[0],"patched_whl","zip")
-    shutil.copytree(Path("patched_whl") / "dummy.libs/",Path(out_dir))
-    #clean
-    shutil.rmtree("wheelhouse")
-    shutil.rmtree("patched_whl")
+    # clean
+    os.remove("dummy-1.0-py3-none-any.whl")

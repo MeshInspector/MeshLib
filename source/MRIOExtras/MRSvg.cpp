@@ -96,7 +96,7 @@ std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, c
     curve.p[2] = cmd.controlPoints[1] + shift;
     curve.p[3] = cmd.end + shift;
 
-    smoothControlPoint = start - ( curve.p[2] - start );
+    smoothControlPoint = curve.p[3] + ( curve.p[3] - curve.p[2] );
 
     std::vector<Vector2f> results;
     constexpr auto cResolution = 32;
@@ -125,7 +125,7 @@ std::vector<Vector2f> getPoints( Vector2f start, Vector2f& smoothControlPoint, c
     p[1] = cmd.shorthand ? smoothControlPoint : cmd.controlPoint + shift;
     p[2] = cmd.end + shift;
 
-    smoothControlPoint = start - ( p[1] - start );
+    smoothControlPoint = p[2] + ( p[2] - p[1] );
 
     std::vector<Vector2f> results;
     constexpr auto cResolution = 32;
@@ -471,7 +471,7 @@ private:
 
         Contours2f results;
         Vector2f pos{};
-        Vector2f nextCurveControlPoint{};
+        std::optional<Vector2f> nextCurveControlPoint{};
         results.emplace_back();
         for ( const auto& command : *commands )
         {
@@ -480,6 +480,7 @@ private:
                 {
                     close( results.back() );
                     results.emplace_back();
+                    nextCurveControlPoint.reset();
                 },
                 [&] ( const Path::MoveTo& cmd )
                 {
@@ -490,6 +491,7 @@ private:
                     pos = cmd.to + shift;
 
                     results.back().emplace_back( pos );
+                    nextCurveControlPoint.reset();
                 },
                 [&] ( const Path::LineTo& cmd )
                 {
@@ -511,13 +513,16 @@ private:
                     }
 
                     results.back().emplace_back( pos );
+                    nextCurveControlPoint.reset();
                 },
                 [&] ( const Path::CubicBezier& cmd )
                 {
                     if ( results.back().empty() )
                         results.back().emplace_back( pos );
 
-                    for ( auto p : Path::getPoints( pos, nextCurveControlPoint, cmd ) )
+                    if ( !nextCurveControlPoint )
+                        nextCurveControlPoint = pos;
+                    for ( auto p : Path::getPoints( pos, *nextCurveControlPoint, cmd ) )
                         results.back().emplace_back( p );
 
                     pos = results.back().back();
@@ -527,7 +532,9 @@ private:
                     if ( results.back().empty() )
                         results.back().emplace_back( pos );
 
-                    for ( auto p : Path::getPoints( pos, nextCurveControlPoint, cmd ) )
+                    if ( !nextCurveControlPoint )
+                        nextCurveControlPoint = pos;
+                    for ( auto p : Path::getPoints( pos, *nextCurveControlPoint, cmd ) )
                         results.back().emplace_back( p );
 
                     pos = results.back().back();
@@ -541,6 +548,7 @@ private:
                         results.back().emplace_back( p );
 
                     pos = results.back().back();
+                    nextCurveControlPoint.reset();
                 },
             }, command );
         }

@@ -160,23 +160,32 @@ jobs:
      - name: Download NuGet Windows Patch Archive
        uses: actions/download-artifact@v7
        with:
-         pattern: DotNetPatchArchiveWindows*
+         pattern: DotNetPatchArchiveWindows-x64
          path: windows_runtime
-         merge-multiple: true
 
-     - name: Download NuGet Linux Patch Archive
+     - name: Download NuGet Linux x64 Patch Archive
        uses: actions/download-artifact@v7
        with:
-         pattern: DotNetPatchArchiveLinux*
-         path: linux_runtime
-         merge-multiple: true
+         pattern: DotNetPatchArchiveLinux-x64
+         path: linux_x64_runtime
+
+     - name: Download NuGet Linux Arm Patch Archive
+       uses: actions/download-artifact@v7
+       with:
+         pattern: DotNetPatchArchiveLinux-arm64
+         path: linux_arm64_runtime
 
      - name: Download NuGet MacOS Patch Archive
        uses: actions/download-artifact@v7
        with:
-         pattern: DotNetPatchArchiveMacOs*
-         path: macos_runtime
-         merge-multiple: true
+         pattern: DotNetPatchArchiveMacOs-x64
+         path: macos_x64_runtime
+
+     - name: Download NuGet MacOS Patch Archive
+       uses: actions/download-artifact@v7
+       with:
+         pattern: DotNetPatchArchiveMacOs-arm64
+         path: macos_arm64_runtime
 
      - name: Download NuGet DLL
        uses: actions/download-artifact@v7
@@ -188,7 +197,7 @@ jobs:
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_runtime macos_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe

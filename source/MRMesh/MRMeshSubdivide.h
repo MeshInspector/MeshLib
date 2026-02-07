@@ -19,6 +19,10 @@ struct SubdivideSettings
     /// Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
     float maxEdgeLen = 0;
 
+    /// edge length will be magnified by the squared difference of normals at edge's ends times this factor,
+    /// thus subdivision will be larger in the regions of high curvature compared to planar regions
+    float curvaturePriority = 0;
+
     /// Maximum number of edge splits allowed
     int maxEdgeSplits = 1000;
 

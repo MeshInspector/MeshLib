@@ -72,6 +72,17 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     if ( settings.curvaturePriority > 0 )
         ns = computePerVertPseudoNormals( mesh );
 
+    auto calcEdgeLenSq = [&]( UndirectedEdgeId ue )
+    {
+        EdgeId e( ue );
+        auto o = mesh.topology.org( e );
+        auto d = mesh.topology.dest( e );
+        float lenSq = distanceSq( mesh.points[o], mesh.points[d] );
+        if ( settings.curvaturePriority > 0 )
+            lenSq *= 1 + settings.curvaturePriority * distanceSq( ns[o], ns[d] );
+        return lenSq;
+    };
+
     auto getQueueElem = [&]( UndirectedEdgeId ue )
     {
         EdgeLength x;
@@ -79,11 +90,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
             return x;
-        auto o = mesh.topology.org( e );
-        auto d = mesh.topology.dest( e );
-        float lenSq = distanceSq( mesh.points[o], mesh.points[d] );
-        if ( settings.curvaturePriority > 0 )
-            lenSq *= 1 + settings.curvaturePriority * distanceSq( ns[o], ns[d] );
+        const float lenSq = calcEdgeLenSq( ue );
         if ( lenSq < maxEdgeLenSq )
             return x;
         if ( !aboveMaxSplittableTriAspectRatio.empty() )
@@ -135,7 +142,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const EdgeId e = el.edge;
         queue.pop();
 
-        if ( !el || el.lenSq != getQueueElem( e ).lenSq )
+        if ( el.lenSq != calcEdgeLenSq( el.edge ) )
             continue; // outdated record in the queue
 
         if ( settings.beforeEdgeSplit && !settings.beforeEdgeSplit( e ) )

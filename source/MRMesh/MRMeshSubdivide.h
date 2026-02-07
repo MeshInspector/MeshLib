@@ -20,7 +20,7 @@ struct SubdivideSettings
     float maxEdgeLen = 0;
 
     /// edge length will be magnified by the squared difference of normals at edge's ends times this factor,
-    /// thus subdivision will be larger in the regions of high curvature compared to planar regions
+    /// thus subdivision will be finer in the regions of high curvature compared to planar regions
     float curvaturePriority = 0;
 
     /// Maximum number of edge splits allowed

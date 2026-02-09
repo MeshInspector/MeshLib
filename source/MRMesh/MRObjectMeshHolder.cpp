@@ -675,7 +675,7 @@ double ObjectMeshHolder::totalArea() const
 double ObjectMeshHolder::selectedArea() const
 {
     if ( !selectedArea_ )
-        selectedArea_ = data_.mesh ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
+        selectedArea_ = data_.mesh && data_.selectedFaces.any() ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
 
     return *selectedArea_;
 }

@@ -1,11 +1,12 @@
 #include "MRViewportGL.h"
-#include "MRMesh/MRParallelFor.h"
-#include "MRMesh/MRVisualObject.h"
-#include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRTimer.h"
 
 namespace MR
 {
@@ -179,6 +180,7 @@ ViewportGL::PickResults ViewportGL::pickObjects( const PickParameters& params, c
 {
     if ( !inited_ )
         return {};
+    MR_TIMER;
 
     int width = params.baseRenderParams.viewport.z;
     int height = params.baseRenderParams.viewport.w;
@@ -313,6 +315,7 @@ ViewportGL::ScaledPickRes ViewportGL::pickObjectsInRect( const PickParameters& p
 
 std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickParameters& params, const Box2i& rect ) const
 {
+    MR_TIMER;
     Vector2i size;
     std::vector<PickColor> resColors;
     if ( rect.valid() )
@@ -362,6 +365,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
     if ( rect.valid() )
     {
         // read data from gpu
+        Timer t( "glReadPixels" );
         GL_EXEC( glReadPixels( rect.min.x, height - rect.max.y - 1, size.x, size.y, GL_RGBA_INTEGER, GL_UNSIGNED_INT, resColors.data() ) );
     }
     // Clean up

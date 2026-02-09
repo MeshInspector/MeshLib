@@ -188,7 +188,7 @@ Box3f ObjectPointsHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = points_->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : points_->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }

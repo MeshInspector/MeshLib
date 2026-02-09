@@ -140,6 +140,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 
 void RenderMeshObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
@@ -507,6 +508,7 @@ void RenderMeshObject::bindMesh_( GLStaticHolder::ShaderType shaderType )
 
 void RenderMeshObject::bindMeshPicker_()
 {
+    MR_TIMER;
 #ifdef __EMSCRIPTEN__
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 #else
@@ -795,6 +797,7 @@ void RenderMeshObject::update_( ViewportMask mask )
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 {
+    MR_TIMER;
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
@@ -1005,6 +1008,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 
 RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 {
+    MR_TIMER;
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, !facesIndicesBuffer_.valid() );

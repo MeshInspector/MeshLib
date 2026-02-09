@@ -1,6 +1,7 @@
 #include "MRRenderGLHelpers.h"
 #include "MRViewer.h"
 #include "MRGLStaticHolder.h"
+#include <MRMesh/MRTimer.h>
 
 namespace MR
 {
@@ -32,6 +33,7 @@ void GlBuffer::bind( GLenum target )
 
 void GlBuffer::loadData( GLenum target, const char * arr, size_t arrSize )
 {
+    MR_TIMER;
     if ( !valid() )
         gen();
     bind( target );

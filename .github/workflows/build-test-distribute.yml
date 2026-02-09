@@ -305,7 +305,7 @@ jobs:
           pattern: ArtifactStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v6
         id: aws-creds
         with:
           aws-region: us-east-1

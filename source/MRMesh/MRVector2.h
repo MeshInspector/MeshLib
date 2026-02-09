@@ -202,17 +202,17 @@ inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORT
 }
 
 
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
+// We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-MR_BIND_IGNORE inline auto begin( const Vector2<T> & v ) { return &v[0]; }
+MR_BIND_IGNORE_PY inline auto begin( const Vector2<T> & v ) { return &v[0]; }
 template <typename T>
-MR_BIND_IGNORE inline auto begin( Vector2<T> & v ) { return &v[0]; }
+MR_BIND_IGNORE_PY inline auto begin( Vector2<T> & v ) { return &v[0]; }
 
 template <typename T>
-MR_BIND_IGNORE inline auto end( const Vector2<T> & v ) { return &v[2]; }
+MR_BIND_IGNORE_PY inline auto end( const Vector2<T> & v ) { return &v[2]; }
 template <typename T>
-MR_BIND_IGNORE inline auto end( Vector2<T> & v ) { return &v[2]; }
+MR_BIND_IGNORE_PY inline auto end( Vector2<T> & v ) { return &v[2]; }
 
 /// \}
 

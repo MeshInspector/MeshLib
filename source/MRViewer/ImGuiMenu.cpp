@@ -1295,6 +1295,11 @@ float ImGuiMenu::drawSelectionInformation_()
             std::max( worldTextSize.y, localTextSize.y ) + style.FramePadding.y * 2,
         };
 
+        // draw invisible button to prevent misclicking the header
+        ImGui::SetCursorPos( { pos.x - layoutSize.x - style.ItemSpacing.x, pos.y } );
+        ImGui::SetNextItemAllowOverlap();
+        ImGui::InvisibleButton( "##CoordToggleBackground", { layoutSize.x + style.ItemSpacing.x * 2, frameHeight } );
+
         pos.x -= layoutSize.x;
         pos.y += ( frameHeight - layoutSize.y ) / 2;
         ImGui::SetCursorPos( pos );

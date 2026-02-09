@@ -41,6 +41,9 @@ struct NoCtor<T>
     using type = NoDefInit<T>;
 };
 
+template <typename T>
+concept ValidBufferElemType = requires{ typename NoCtor<T>::type; };
+
 /**
  * \brief std::vector<V>-like container that is
  *  1) resized without initialization of its elements,
@@ -68,7 +71,7 @@ public:
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
-    void resize( size_t newSize ) 
+    void resize( size_t newSize )
     {
         if ( size_.val == newSize )
             return;
@@ -121,19 +124,22 @@ inline T getAt( const Buffer<T, I> & bmap, I key, T def = {} )
     return key ? T{bmap[key]} : def;
 }
 
-template <typename T, typename I>
+// Need the `ValidBufferElemType` on those, otherwise random calls to `MR::begin<T>(...)` in the bindings for unrelated types,
+//   with `T` not being a valid buffer type, will cause hard errors on those unrelated overloads.
+
+template <ValidBufferElemType T, typename I>
 [[nodiscard]] inline auto begin( const Buffer<T, I> & a )
     { return a.data(); }
 
-template <typename T, typename I>
+template <ValidBufferElemType T, typename I>
 [[nodiscard]] inline auto begin( Buffer<T, I> & a )
     { return a.data(); }
 
-template <typename T, typename I>
+template <ValidBufferElemType T, typename I>
 [[nodiscard]] inline auto end( const Buffer<T, I> & a )
     { return a.data() + a.size(); }
 
-template <typename T, typename I>
+template <ValidBufferElemType T, typename I>
 [[nodiscard]] inline auto end( Buffer<T, I> & a )
     { return a.data() + a.size(); }
 

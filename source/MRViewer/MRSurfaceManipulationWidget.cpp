@@ -466,6 +466,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         updateValueChanges_( generalEditingRegion_ );
         obj_->setDirtyFlags( DIRTY_POSITION );
     }
+    else
+        invalidateMetricsCache_();
 
     generalEditingRegion_.clear();
     generalEditingRegion_.resize( numV, false );
@@ -598,7 +600,7 @@ void SurfaceManipulationWidget::changeSurface_()
         params.region = &singleEditingRegion_;
         params.force = settings_.relaxForce;
         relax( *obj_->varMesh(), params );
-        obj_->setDirtyFlags( DIRTY_POSITION );
+        obj_->setDirtyFlagsFast( DIRTY_POSITION );
         updateValueChanges_( singleEditingRegion_ );
         return;
     }
@@ -610,6 +612,7 @@ void SurfaceManipulationWidget::changeSurface_()
         normal += mesh.dirDblArea( v );
     normal = normal.normalized();
 
+    obj_->varMesh()->invalidateCaches();
     auto& points = obj_->varMesh()->points;
 
     const float maxShift = settings_.editForce;
@@ -634,7 +637,7 @@ void SurfaceManipulationWidget::changeSurface_()
     generalEditingRegion_ |= singleEditingRegion_;
     changedRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );
-    obj_->setDirtyFlags( DIRTY_POSITION );
+    obj_->setDirtyFlagsFast( DIRTY_POSITION );
 }
 
 void SurfaceManipulationWidget::updateUVmap_( bool set, bool wholeMesh )
@@ -750,12 +753,23 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     singleEditingRegion_ -= unchangeableVerts_;
 }
 
+void SurfaceManipulationWidget::invalidateMetricsCache_()
+{
+    // if not-Patch mode and some surface change was done without metrics update
+    if ( !appendHistoryAction_ && historyAction_ )
+    {
+        assert( settings_.workMode != WorkMode::Patch );
+        obj_->invalidateMetricsCache( DIRTY_POSITION );
+    }
+}
+
 void SurfaceManipulationWidget::abortEdit_()
 {
     if ( !mousePressed_ )
         return;
     mousePressed_ = false;
     removeLastStableObjMesh_();
+    invalidateMetricsCache_();
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();

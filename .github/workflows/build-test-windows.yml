@@ -242,9 +242,6 @@ jobs:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
-      - name: C Unit Tests (old bindings)
-        run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
-
       - name: C Unit Tests
         if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
         run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}

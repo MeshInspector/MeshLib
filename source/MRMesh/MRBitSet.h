@@ -336,7 +336,7 @@ template <typename I>
 
 /// iterator to enumerate all indices with set bits in BitSet class or its derivatives
 template <typename T>
-class MR_BIND_IGNORE SetBitIteratorT
+class MR_BIND_IGNORE_PY SetBitIteratorT
 {
 public:
     using IndexType = typename T::IndexType;
@@ -344,7 +344,7 @@ public:
     using iterator_category = std::forward_iterator_tag;
     using value_type        = IndexType;
     using difference_type   = std::ptrdiff_t;
-    using reference         = const IndexType; ///< intentionally not a reference
+    using reference         = IndexType; ///< intentionally not a reference
     using pointer           = const IndexType *;
 
     /// constructs end iterator
@@ -377,16 +377,16 @@ private:
 };
 
 
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( const BitSet & a )
     { return SetBitIteratorT<BitSet>(a); }
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const BitSet & )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const BitSet & )
     { return SetBitIteratorT<BitSet>(); }
 
 template <typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const TypedBitSet<I> & a )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( const TypedBitSet<I> & a )
     { return SetBitIteratorT<TypedBitSet<I>>(a); }
 template <typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const TypedBitSet<I> & )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const TypedBitSet<I> & )
     { return SetBitIteratorT<TypedBitSet<I>>(); }
 
 /// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits

@@ -68,7 +68,7 @@ public:
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
-    void resize( size_t newSize ) 
+    void resize( size_t newSize )
     {
         if ( size_.val == newSize )
             return;

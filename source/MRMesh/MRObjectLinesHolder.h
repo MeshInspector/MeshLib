@@ -107,11 +107,19 @@ public:
     /// reset basic object colors to their default values from the current theme
     MRMESH_API void resetFrontColor() override;
 
+    /// signal about lines changing, triggered in setDirtyFlag
+    using LinesChangedSignal = Signal<void( uint32_t mask )>;
+    LinesChangedSignal linesChangedSignal;
+
 protected:
     ObjectLinesHolder( const ObjectLinesHolder& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     /// we serialize polyline as text so separate polyline serialization and base fields serialization
     /// serializeBaseFields_ serializes Parent fields and base fields of ObjectLinesHolder

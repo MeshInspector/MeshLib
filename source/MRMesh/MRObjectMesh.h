@@ -38,8 +38,6 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
-
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectMesh( ProtectedStruct, const ObjectMesh& obj ) : ObjectMesh( obj ) {}
 
@@ -48,18 +46,11 @@ public:
     /// it is inefficient to call this function for many rays, because it computes world-to-local xf every time
     MRMESH_API MeshIntersectionResult worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region = nullptr ) const;
 
-    /// signal about mesh changing, triggered in setDirtyFlag
-    using MeshChangedSignal = Signal<void( uint32_t mask )>;
-    MeshChangedSignal meshChangedSignal;
-
 protected:
     ObjectMesh( const ObjectMesh& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
-    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
-    /// pls call Parent::swapSignals_ first when overriding this function
-    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };

@@ -70,6 +70,14 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         if ( invalidateCaches && polyline_ )
             polyline_->invalidateCaches();
     }
+
+    if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
+    {
+        if ( polyline_ )
+        {
+            linesChangedSignal( mask );
+        }
+    }
 }
 
 void ObjectLinesHolder::setDashPattern( const DashPattern& pattern, ViewportId id /*= {} */ )
@@ -100,6 +108,15 @@ void ObjectLinesHolder::swapBase_( Object& other )
 {
     if ( auto otherLines = other.asType<ObjectLinesHolder>() )
         std::swap( *this, *otherLines );
+    else
+        assert( false );
+}
+
+void ObjectLinesHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherLines = other.asType<ObjectLinesHolder>() )
+        std::swap( linesChangedSignal, otherLines->linesChangedSignal );
     else
         assert( false );
 }

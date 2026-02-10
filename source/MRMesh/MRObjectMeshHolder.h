@@ -265,6 +265,10 @@ public:
     SelectionChangedSignal edgeSelectionChangedSignal;
     SelectionChangedSignal creasesChangedSignal;
 
+    /// signal about mesh changing, triggered in setDirtyFlag
+    using MeshChangedSignal = Signal<void( uint32_t mask )>;
+    MeshChangedSignal meshChangedSignal;
+
 protected:
     ObjectMeshData data_;
 

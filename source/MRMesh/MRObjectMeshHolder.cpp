@@ -785,6 +785,14 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         if ( invalidateCaches && data_.mesh )
             data_.mesh->invalidateCaches();
     }
+
+    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
+    {
+        if ( data_.mesh )
+        {
+            meshChangedSignal( mask );
+        }
+    }
 }
 
 void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
@@ -820,6 +828,7 @@ void ObjectMeshHolder::swapSignals_( Object& other )
         std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
         std::swap( edgeSelectionChangedSignal, otherMesh->edgeSelectionChangedSignal );
         std::swap( creasesChangedSignal, otherMesh->creasesChangedSignal );
+        std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
     }
     else
         assert( false );

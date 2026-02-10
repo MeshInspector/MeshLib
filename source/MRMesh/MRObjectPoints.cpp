@@ -71,18 +71,6 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
     return res;
 }
 
-void ObjectPoints::setDirtyFlags( uint32_t mask, bool invalidateCaches )
-{
-    ObjectPointsHolder::setDirtyFlags( mask, invalidateCaches );
-    if ( points_ )
-    {
-        if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
-            pointsChangedSignal( mask );
-        if ( mask & DIRTY_RENDER_NORMALS )
-            normalsChangedSignal( mask );
-    }
-}
-
 std::shared_ptr<Object> ObjectPoints::clone() const
 {
     auto res = std::make_shared<ObjectPoints>( ProtectedStruct{}, *this );
@@ -111,18 +99,6 @@ void ObjectPoints::swapBase_( Object& other )
 {
     if ( auto otherPoints = other.asType<ObjectPoints>() )
         std::swap( *this, *otherPoints );
-    else
-        assert( false );
-}
-
-void ObjectPoints::swapSignals_( Object& other )
-{
-    ObjectPointsHolder::swapSignals_( other );
-    if ( auto otherPoints = other.asType<ObjectPoints>() )
-    {
-        std::swap( pointsChangedSignal, otherPoints->pointsChangedSignal );
-        std::swap( normalsChangedSignal, otherPoints->normalsChangedSignal );
-    }
     else
         assert( false );
 }

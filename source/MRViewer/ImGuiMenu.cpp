@@ -235,6 +235,7 @@ void reserveKeyEvent( ImGuiKey key )
 
 void ImGuiMenu::startFrame()
 {
+    MR_TIMER;
     if ( pollEventsInPreDraw )
     {
         glfwPollEvents();
@@ -340,6 +341,7 @@ void ImGuiMenu::startFrame()
 
 void ImGuiMenu::finishFrame()
 {
+    MR_TIMER;
     draw_menu();
     prevFrameFocusPlugin_ = nullptr;
     if ( context_ && !context_->WindowsFocusOrder.empty() && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup ) )

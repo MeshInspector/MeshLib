@@ -35,6 +35,7 @@ RenderMeshObject::~RenderMeshObject()
 
 bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     bool depthTest = objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
@@ -393,6 +394,7 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
 
 void RenderMeshObject::bindMesh_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
@@ -746,7 +748,6 @@ void RenderMeshObject::freeBuffers_()
 
 void RenderMeshObject::update_( ViewportMask mask )
 {
-    MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
     uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( mask );
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
@@ -797,7 +798,6 @@ void RenderMeshObject::update_( ViewportMask mask )
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 {
-    MR_TIMER;
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
@@ -1008,7 +1008,6 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 
 RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 {
-    MR_TIMER;
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, !facesIndicesBuffer_.valid() );

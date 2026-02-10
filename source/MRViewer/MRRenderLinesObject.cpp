@@ -35,6 +35,7 @@ RenderLinesObject::~RenderLinesObject()
 
 bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
@@ -72,6 +73,7 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 
 void RenderLinesObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
@@ -414,6 +416,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
 
 void RenderLinesObject::bindLinesPicker_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );

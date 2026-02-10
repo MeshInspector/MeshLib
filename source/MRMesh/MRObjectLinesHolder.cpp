@@ -115,7 +115,7 @@ Box3f ObjectLinesHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = polyline_->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : polyline_->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }

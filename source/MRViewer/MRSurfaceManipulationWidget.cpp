@@ -5,6 +5,7 @@
 #include "MRAppendHistory.h"
 #include "MRMouse.h"
 #include "MRPalette.h"
+#include "MRSceneCache.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRImGuiMultiViewport.h"
 #include "MRMesh/MRObjectMesh.h"
@@ -29,11 +30,11 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRChangeSelectionAction.h"
 #include "MRMesh/MRObjectsAccess.h"
-#include "MRSceneCache.h"
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRPointsProject.h"
 #include "MRMesh/MRProjectionMeshAttribute.h"
 #include "MRMesh/MRChangeMeshDataAction.h"
+#include "MRMesh/MRTimer.h"
 
 namespace MR
 {
@@ -827,6 +828,7 @@ void SurfaceManipulationWidget::updateVizualizeSelection_()
 
 void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
 {
+    MR_TIMER;
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
     uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
@@ -855,6 +857,7 @@ void SurfaceManipulationWidget::updateValueChanges_( const VertBitSet& region )
 
 void SurfaceManipulationWidget::updateValueChangesPointToPoint_( const VertBitSet& region )
 {
+    MR_TIMER;
     const auto& oldPoints = originalMesh_->points;
     const auto& mesh = *obj_->mesh();
     const auto& points = mesh.points;
@@ -870,6 +873,7 @@ void SurfaceManipulationWidget::updateValueChangesPointToPoint_( const VertBitSe
 
 void SurfaceManipulationWidget::updateValueChangesPointToPlane_( const VertBitSet& region )
 {
+    MR_TIMER;
     const auto& oldMesh = *originalMesh_;
     const auto& oldPoints = oldMesh.points;
     const auto& mesh = *obj_->mesh();
@@ -886,6 +890,7 @@ void SurfaceManipulationWidget::updateValueChangesPointToPlane_( const VertBitSe
 
 void SurfaceManipulationWidget::updateValueChangesExactDistance_( const VertBitSet& region )
 {
+    MR_TIMER;
     const auto& mesh = *obj_->mesh();
     const auto& meshVerts = mesh.points;
 

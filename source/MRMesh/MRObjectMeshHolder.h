@@ -64,6 +64,14 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
+    /// this is a faster version of setDirtyFlags(), which does not invalidate metrics cache (area, volume, ...);
+    /// the user is responsible for calling invalidateMetricsCache( mask ) or setDirtyFlags( mask ) at the end of mesh editing;
+    /// DANGER: all cached values returned until then can be outdated
+    MRMESH_API virtual void setDirtyFlagsFast( uint32_t mask );
+
+    /// invalidates same caches with mesh metrics (area, volume, ...) as by setDirtyFlags( mask )
+    MRMESH_API virtual void invalidateMetricsCache( uint32_t mask );
+
     const FaceBitSet& getSelectedFaces() const { return data_.selectedFaces; }
     MRMESH_API virtual void selectFaces( FaceBitSet newSelection );
     /// returns colors of selected triangles

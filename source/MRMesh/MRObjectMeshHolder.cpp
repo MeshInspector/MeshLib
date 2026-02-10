@@ -763,8 +763,22 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    VisualObject::setDirtyFlags( mask, invalidateCaches );
+    invalidateMetricsCache( mask );
+    setDirtyFlagsFast( mask );
 
+    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        data_.mesh->invalidateCaches();
+}
+
+void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
+{
+    VisualObject::setDirtyFlags( mask );
+    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        meshChangedSignal( mask );
+}
+
+void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
+{
     if ( mask & DIRTY_FACE )
     {
         numHoles_.reset();
@@ -782,16 +796,6 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         selectedArea_.reset();
         volume_.reset();
         avgEdgeLen_.reset();
-        if ( invalidateCaches && data_.mesh )
-            data_.mesh->invalidateCaches();
-    }
-
-    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
-    {
-        if ( data_.mesh )
-        {
-            meshChangedSignal( mask );
-        }
     }
 }
 

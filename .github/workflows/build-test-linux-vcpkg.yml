@@ -264,7 +264,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.arch == 'x64' && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -273,9 +273,9 @@ jobs:
           python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.so" "./patched_content/"
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.arch == 'x64' && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v6
         with:
-          name: DotNetPatchArchiveLinux-x64
+          name: DotNetPatchArchiveLinux-${{ matrix.arch }}
           path: ./patched_content/*
           retention-days: 1

@@ -27,6 +27,10 @@ on:
         default: true
         required: false
         type: boolean
+      nuget_build_patch:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   macos-build-test:
@@ -84,14 +88,14 @@ jobs:
           echo "Brew prefix: $BREW_PREFIX"
           echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
           echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
-          
+
           # Substitute BREW_PREFIX in templates and set actual compiler paths
           CXX_COMPILER=$(echo "${{ matrix.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
           C_COMPILER=$(echo "${{ matrix.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
-          
+
           echo "CXX compiler: $CXX_COMPILER"
           echo "C compiler: $C_COMPILER"
-          
+
           echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
           echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
 
@@ -262,3 +266,20 @@ jobs:
           artifact_path: ${{ github.workspace }}
           artifact_glob: meshlib_${{matrix.os}}.pkg
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+      - name: Create and fix fake Wheel for NuGet
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          python3 -m venv ./wheel_venv
+          source ./wheel_venv/bin/activate
+          python3 -m pip install delocate==0.10.7
+          python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.dylib" "./patched_content/"
+
+      - name: Upload NuGet files to Artifacts
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
+          path: ./patched_content/*
+          retention-days: 1

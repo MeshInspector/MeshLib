@@ -20,6 +20,8 @@
 		<file src="./macos/MeshInspector_icon.png" target="images/"></file>
 		<file src="LICENSE.txt" target=""></file>
 		<file src="./readme_dotnet.md" target="docs/"></file>
+		<file src="./scripts/nuget_patch/MeshLib.targets" target="build/"></file>
+		<file src="./scripts/nuget_patch/MeshLib.targets" target="buildTransitive/"></file>
 $FILES
 	</files>
 </package>

@@ -54,7 +54,7 @@ namespace Cuda
         };
 
         addSubTask( 0 );
-        const auto inv2SgSq = -0.5f / ( params.sigma * params.sigma );
+        const auto inv2SgSq = -params.invSigmaModifier / ( params.sigma * params.sigma );
         while ( !subtasks.empty() )
         {
             const auto n = subtasks.top();
@@ -73,7 +73,11 @@ namespace Cuda
                         const auto distSq =  lengthSq(voxelCenter - coord );
                         const auto w = exp( distSq * inv2SgSq );
                         sumWeight += w;
-                        sumDist += dot( normals[orderedPoints[i].id], voxelCenter - coord ) * w;
+                        const auto dt = dot( normals[orderedPoints[i].id], voxelCenter - coord );
+                        if ( !params.sqrtAngleWeight )
+                            sumDist += dt * w;
+                        else
+                            sumDist += copysign( sqrt( abs( dt ) ), dt ) * w;
                     }
                 }
                 continue;

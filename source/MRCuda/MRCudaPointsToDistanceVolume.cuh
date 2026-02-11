@@ -20,6 +20,14 @@ namespace Cuda
 
         /// minimum sum of influence weights from surrounding points for a triangle to appear, meaning that there shall be at least this number of points in close proximity
         float minWeight = 1;
+
+        /// coefficient used for weight calculation: e^(dist^2 * -invSigmaModifier * sigma^-2)
+        /// values: (0;inf)
+        float invSigmaModifier = 0.5f;
+
+        /// changes the way point angle affects weight, by default it is linearly increasing with dot product
+        /// if enabled - increasing as dot product^(0.5) (with respect to its sign)
+        bool sqrtAngleWeight{ false };
     };
     
     // struct similar to MR::Point

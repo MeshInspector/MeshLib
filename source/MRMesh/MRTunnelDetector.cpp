@@ -306,6 +306,11 @@ Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const
         if ( toLeft.test( e ) )
             return FLT_MAX;
         const auto m = metric0( e );
+        if ( m < 0 )
+        {
+            assert( !"metric must be not-negative" );
+            return FLT_MAX;
+        }
         if ( toLeft.test( e.sym() ) )
         {
             const auto v = topology.org( e );

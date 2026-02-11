@@ -50,7 +50,9 @@ struct DetectTunnelSettings
     int maxIters = 1;
 
     /// edge metric that will be used in optimizations,
-    /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
+    /// if co-loops are enabled then this metric must be not-negative,
+    /// if no metric is given then either discreteMinusAbsMeanCurvatureMetric (if buildCoLoops = false) or edgeLengthMetric (if buildCoLoops = true) will be used,
+    /// using caching via edgeTableSymMetric function can improve the performance, especially in buildCoLoops = true mode
     EdgeMetric metric;
 
     /// if true then for every basis loop, findSmallestMetricCoLoop will be called;

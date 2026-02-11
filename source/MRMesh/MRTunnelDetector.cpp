@@ -410,7 +410,7 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
     MR_TIMER;
     auto metric = settings.metric;
     if ( !metric )
-        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
+        metric = settings.buildCoLoops ? edgeLengthMetric( mp.mesh ) : discreteMinusAbsMeanCurvatureMetric( mp.mesh );
 
     FaceBitSet activeRegion = mp.mesh.topology.getFaceIds( mp.region );
     MeshPart activeMeshPart{ mp.mesh, &activeRegion };

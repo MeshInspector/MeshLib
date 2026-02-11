@@ -306,6 +306,11 @@ Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const
         if ( toLeft.test( e ) )
             return FLT_MAX;
         const auto m = metric0( e );
+        if ( m < 0 )
+        {
+            assert( !"metric must be not-negative" );
+            return FLT_MAX;
+        }
         if ( toLeft.test( e.sym() ) )
         {
             const auto v = topology.org( e );
@@ -405,7 +410,7 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
     MR_TIMER;
     auto metric = settings.metric;
     if ( !metric )
-        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
+        metric = settings.buildCoLoops ? edgeLengthMetric( mp.mesh ) : discreteMinusAbsMeanCurvatureMetric( mp.mesh );
 
     FaceBitSet activeRegion = mp.mesh.topology.getFaceIds( mp.region );
     MeshPart activeMeshPart{ mp.mesh, &activeRegion };
@@ -428,7 +433,7 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
         {
             ParallelFor( *basisTunnels, [&]( size_t i )
             {
-                if ( auto maybeCoLoop = findShortestCoLoop( activeMeshPart, (*basisTunnels)[i] ) )
+                if ( auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, (*basisTunnels)[i], metric, &activeRegion ) )
                     (*basisTunnels)[i] = std::move( maybeCoLoop.value() );
                 else
                 {
@@ -441,10 +446,10 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
 
         const auto numBasisTunnels = basisTunnels->size();
 
-        sortPathsByLength( *basisTunnels, mp.mesh );
+        sortPathsByMetric( *basisTunnels, metric );
         for ( int i = 0; i < basisTunnels->size(); ++i )
         {
-            if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > settings.maxTunnelLength )
+            if ( calcPathMetric( (*basisTunnels)[i], metric ) > settings.maxTunnelLength )
             {
                 basisTunnels->erase( basisTunnels->begin() + i, basisTunnels->end() );
                 break;
@@ -471,7 +476,7 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
 
             if ( settings.buildCoLoops && settings.filterEquivalentCoLoops && numSelectedTunnels > 0 )
             {
-                auto maybeCoLoop = findShortestCoLoop( activeMeshPart, t );
+                auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, t, metric, &activeRegion );
                 if ( !maybeCoLoop )
                     continue;
             }

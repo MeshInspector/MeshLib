@@ -175,13 +175,13 @@ jobs:
          pattern: DotNetPatchArchiveLinux-arm64
          path: linux_arm64_runtime
 
-     - name: Download NuGet MacOS Patch Archive
+     - name: Download NuGet MacOS x64 Patch Archive
        uses: actions/download-artifact@v7
        with:
          pattern: DotNetPatchArchiveMacOs-x64
          path: macos_x64_runtime
 
-     - name: Download NuGet MacOS Patch Archive
+     - name: Download NuGet MacOS Arm Patch Archive
        uses: actions/download-artifact@v7
        with:
          pattern: DotNetPatchArchiveMacOs-arm64

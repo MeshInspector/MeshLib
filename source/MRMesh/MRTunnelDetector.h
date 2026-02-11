@@ -42,18 +42,18 @@ MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const Edge
 
 struct DetectTunnelSettings
 {
-    /// maximal length of tunnel loops to consider
-    float maxTunnelLength = FLT_MAX;
+    /// maximal summed metric of tunnel loops to consider
+    float maxTunnelMetricSum = FLT_MAX;
 
     /// maximal number of iterations to detect all tunnels;
     /// on a big mesh with many tunnels even one iteration can take a while
     int maxIters = 1;
 
-    /// metric for detectBasisTunnels,
+    /// edge metric that will be used in optimizations,
     /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
     EdgeMetric metric;
 
-    /// if true then for every basis loop, findShortestCoLoop will be called;
+    /// if true then for every basis loop, findSmallestMetricCoLoop will be called;
     /// it typically results in shorter tunnels found, but requires more time per iteration, and more iterations to find all tunnels
     bool buildCoLoops = true;
 

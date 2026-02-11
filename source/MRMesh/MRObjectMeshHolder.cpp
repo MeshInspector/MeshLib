@@ -617,7 +617,7 @@ Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = data_.mesh->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : data_.mesh->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }
@@ -675,7 +675,7 @@ double ObjectMeshHolder::totalArea() const
 double ObjectMeshHolder::selectedArea() const
 {
     if ( !selectedArea_ )
-        selectedArea_ = data_.mesh ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
+        selectedArea_ = data_.mesh && data_.selectedFaces.any() ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
 
     return *selectedArea_;
 }
@@ -763,8 +763,22 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    VisualObject::setDirtyFlags( mask, invalidateCaches );
+    invalidateMetricsCache( mask );
+    setDirtyFlagsFast( mask );
 
+    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        data_.mesh->invalidateCaches();
+}
+
+void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
+{
+    VisualObject::setDirtyFlags( mask );
+    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        meshChangedSignal( mask );
+}
+
+void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
+{
     if ( mask & DIRTY_FACE )
     {
         numHoles_.reset();
@@ -782,8 +796,6 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         selectedArea_.reset();
         volume_.reset();
         avgEdgeLen_.reset();
-        if ( invalidateCaches && data_.mesh )
-            data_.mesh->invalidateCaches();
     }
 }
 
@@ -820,6 +832,7 @@ void ObjectMeshHolder::swapSignals_( Object& other )
         std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
         std::swap( edgeSelectionChangedSignal, otherMesh->edgeSelectionChangedSignal );
         std::swap( creasesChangedSignal, otherMesh->creasesChangedSignal );
+        std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
     }
     else
         assert( false );

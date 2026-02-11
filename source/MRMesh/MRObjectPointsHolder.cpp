@@ -77,8 +77,15 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         if ( invalidateCaches && points_ )
             points_->invalidateCaches();
     }
-}
 
+    if ( points_ )
+    {
+        if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
+            pointsChangedSignal( mask );
+        if ( mask & DIRTY_RENDER_NORMALS )
+            normalsChangedSignal( mask );
+    }
+}
 
 void ObjectPointsHolder::swapSignals_( Object& other )
 {
@@ -86,6 +93,8 @@ void ObjectPointsHolder::swapSignals_( Object& other )
     if ( auto otherPoints = other.asType<ObjectPointsHolder>() )
     {
         std::swap( pointsSelectionChangedSignal, otherPoints->pointsSelectionChangedSignal );
+        std::swap( pointsChangedSignal, otherPoints->pointsChangedSignal );
+        std::swap( normalsChangedSignal, otherPoints->normalsChangedSignal );
     }
     else
         assert( false );
@@ -188,7 +197,7 @@ Box3f ObjectPointsHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = points_->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : points_->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }

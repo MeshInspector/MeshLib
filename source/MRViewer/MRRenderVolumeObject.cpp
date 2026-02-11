@@ -1,15 +1,16 @@
 #include "MRRenderVolumeObject.h"
 #ifndef MRVIEWER_NO_VOXELS
-#include "MRVoxels/MRObjectVoxels.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
+#include "MRVoxels/MRObjectVoxels.h"
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
+#include "MRMesh/MRTimer.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
@@ -30,6 +31,7 @@ RenderVolumeObject::~RenderVolumeObject()
 
 bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     RenderModelPassMask desiredPass =
         !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
         RenderModelPassMask::VolumeRendering;
@@ -43,6 +45,7 @@ bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 
 void RenderVolumeObject::renderPicker( const ModelBaseRenderParams& renderParams, unsigned geomId )
 {
+    MR_TIMER;
     render_( renderParams, nullptr, geomId );
 }
 
@@ -231,6 +234,7 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
 
 void RenderVolumeObject::bindVolume_( bool picker )
 {
+    MR_TIMER;
     auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Volume );
 

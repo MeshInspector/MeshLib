@@ -32,25 +32,16 @@ public:
 
     virtual const std::shared_ptr<Polyline3>& varPolyline() { return polyline_; }
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
-
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
-    /// signal about lines changing, triggered in setDirtyFlag
-    using LinesChangedSignal = Signal<void( uint32_t mask )>;
-    LinesChangedSignal linesChangedSignal;
 
 protected:
     ObjectLines( const ObjectLines& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
-    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
-    /// pls call Parent::swapSignals_ first when overriding this function
-    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };

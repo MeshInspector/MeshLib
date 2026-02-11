@@ -196,9 +196,6 @@ jobs:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: C Unit Tests (old bindings)
-        run: ./build/${{ matrix.config }}/bin/MRTestC
-
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}
         run: ./build/${{ matrix.config }}/bin/MRTestC2

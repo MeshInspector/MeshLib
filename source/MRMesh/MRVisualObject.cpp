@@ -273,6 +273,7 @@ bool VisualObject::render( const ModelRenderParams& params ) const
 
 void VisualObject::renderForPicker( const ModelBaseRenderParams& params, unsigned id ) const
 {
+    MR_TIMER;
     setupRenderObject_();
     if ( !renderObj_ )
         return;

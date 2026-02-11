@@ -35,6 +35,7 @@ RenderMeshObject::~RenderMeshObject()
 
 bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     bool depthTest = objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
@@ -140,6 +141,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 
 void RenderMeshObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
@@ -392,6 +394,7 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
 
 void RenderMeshObject::bindMesh_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
@@ -507,6 +510,7 @@ void RenderMeshObject::bindMesh_( GLStaticHolder::ShaderType shaderType )
 
 void RenderMeshObject::bindMeshPicker_()
 {
+    MR_TIMER;
 #ifdef __EMSCRIPTEN__
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 #else
@@ -744,7 +748,6 @@ void RenderMeshObject::freeBuffers_()
 
 void RenderMeshObject::update_( ViewportMask mask )
 {
-    MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
     uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( mask );
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )

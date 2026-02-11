@@ -40,21 +40,11 @@ public:
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
-
-    /// signal about points or normals changing, triggered in setDirtyFlag
-    using ChangedSignal = Signal<void( uint32_t mask )>;
-    ChangedSignal pointsChangedSignal;
-    ChangedSignal normalsChangedSignal;
-
 protected:
     ObjectPoints( const ObjectPoints& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
-    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
-    /// pls call Parent::swapSignals_ first when overriding this function
-    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };

@@ -394,6 +394,9 @@ void RibbonMenu::drawHelpButton_( const std::string& url )
 
 bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
+    UI::TestEngine::pushTree( "CustomCheckBox" );
+    MR_FINALLY { UI::TestEngine::popTree(); };
+
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
     {

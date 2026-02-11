@@ -157,31 +157,10 @@ std::shared_ptr<Object> ObjectMesh::shallowClone() const
     return res;
 }
 
-void ObjectMesh::setDirtyFlags( uint32_t mask, bool invalidateCaches )
-{
-    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
-    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
-    {
-        if ( data_.mesh )
-        {
-            meshChangedSignal( mask );
-        }
-    }
-}
-
 void ObjectMesh::swapBase_( Object& other )
 {
     if ( auto otherMesh = other.asType<ObjectMesh>() )
         std::swap( *this, *otherMesh );
-    else
-        assert( false );
-}
-
-void ObjectMesh::swapSignals_( Object& other )
-{
-    ObjectMeshHolder::swapSignals_( other );
-    if ( auto otherMesh = other.asType<ObjectMesh>() )
-        std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
     else
         assert( false );
 }

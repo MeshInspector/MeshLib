@@ -20,6 +20,13 @@
 // Mark a declaration with this to avoid generating a binding for it.
 #define MR_BIND_IGNORE __attribute__((__annotate__("mrbind::ignore")))
 
+// Same, but specific to Python.
+#ifdef MR_PARSING_FOR_PB11_BINDINGS
+#define MR_BIND_IGNORE_PY MR_BIND_IGNORE
+#else
+#define MR_BIND_IGNORE_PY
+#endif
+
 // This is a specialized replacement for `MR_CANONICAL_TYPEDEFS()`, to be used on full template specializations, where that macro doesn't work.
 #define MR_BIND_PREFERRED_NAME(...) __attribute__((__annotate__(DETAIL_MR_BIND_PREFERRED_NAME(mrbind::preferred_name=__VA_ARGS__))))
 #define DETAIL_MR_BIND_PREFERRED_NAME(...) #__VA_ARGS__
@@ -27,6 +34,7 @@
 #else
 #define MR_BIND_TEMPLATE(...)
 #define MR_BIND_IGNORE
+#define MR_BIND_IGNORE_PY
 #define MR_BIND_PREFERRED_NAME(...)
 #endif
 

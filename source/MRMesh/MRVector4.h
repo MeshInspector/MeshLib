@@ -169,17 +169,17 @@ inline Vector4<T> div( const Vector4<T>& a, const Vector4<T>& b )
 }
 
 
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
+// We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-MR_BIND_IGNORE auto begin( const Vector4<T> & v ) { return &v[0]; }
+MR_BIND_IGNORE_PY auto begin( const Vector4<T> & v ) { return &v[0]; }
 template <typename T>
-MR_BIND_IGNORE auto begin( Vector4<T> & v ) { return &v[0]; }
+MR_BIND_IGNORE_PY auto begin( Vector4<T> & v ) { return &v[0]; }
 
 template <typename T>
-MR_BIND_IGNORE auto end( const Vector4<T> & v ) { return &v[4]; }
+MR_BIND_IGNORE_PY auto end( const Vector4<T> & v ) { return &v[4]; }
 template <typename T>
-MR_BIND_IGNORE auto end( Vector4<T> & v ) { return &v[4]; }
+MR_BIND_IGNORE_PY auto end( Vector4<T> & v ) { return &v[4]; }
 
 /// \}
 

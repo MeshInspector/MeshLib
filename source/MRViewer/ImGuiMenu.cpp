@@ -235,6 +235,7 @@ void reserveKeyEvent( ImGuiKey key )
 
 void ImGuiMenu::startFrame()
 {
+    MR_TIMER;
     if ( pollEventsInPreDraw )
     {
         glfwPollEvents();
@@ -340,6 +341,7 @@ void ImGuiMenu::startFrame()
 
 void ImGuiMenu::finishFrame()
 {
+    MR_TIMER;
     draw_menu();
     prevFrameFocusPlugin_ = nullptr;
     if ( context_ && !context_->WindowsFocusOrder.empty() && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup ) )
@@ -1295,6 +1297,11 @@ float ImGuiMenu::drawSelectionInformation_()
             std::max( worldTextSize.y, localTextSize.y ) + style.FramePadding.y * 2,
         };
 
+        // draw invisible button to prevent misclicking the header
+        ImGui::SetCursorPos( { pos.x - layoutSize.x - style.ItemSpacing.x, pos.y } );
+        ImGui::SetNextItemAllowOverlap();
+        ImGui::InvisibleButton( "##CoordToggleBackground", { layoutSize.x + style.ItemSpacing.x * 2, frameHeight } );
+
         pos.x -= layoutSize.x;
         pos.y += ( frameHeight - layoutSize.y ) / 2;
         ImGui::SetCursorPos( pos );
@@ -1305,9 +1312,7 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( enabled )
             {
                 ImGui::PushStyleColor( ImGuiCol_Text, Color::white() );
-                ImGui::PushStyleColor( ImGuiCol_Button, Color::black() );
-                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::black() );
-                ImGui::PushStyleColor( ImGuiCol_ButtonActive, Color::black() );
+                ImGui::PushStyleColor( ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive] );
             }
             else
             {
@@ -1328,7 +1333,7 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( ImGui::Button( label ) )
                 coordType_ = coordType;
 
-            ImGui::PopStyleColor( enabled ? 4 : 3 );
+            ImGui::PopStyleColor( enabled ? 2 : 3 );
         };
         showToggleButton( "WORLD", CoordType::World );
         ImGui::SameLine();
@@ -1384,6 +1389,8 @@ float ImGuiMenu::drawSelectionInformation_()
     // Scene info
     selectionLocalBox_ = {};
     selectionWorldBox_ = {};
+    std::optional<AffineXf3f> worldXf;
+    bool showLocalBox = true;
 
     for ( const auto& obj : selectedObjs )
     {
@@ -1417,6 +1424,25 @@ float ImGuiMenu::drawSelectionInformation_()
                 selectionLocalBox_.include( box );
             if ( auto box = vObj->getWorldBox(); box.valid() )
                 selectionWorldBox_.include( box );
+            if ( !worldXf )
+                worldXf = vObj->worldXf();
+            else if ( *worldXf != vObj->worldXf() )
+                showLocalBox = false;
+        }
+        // Compute bounding box of group
+        else if ( selectedObjs.size() == 1 )
+        {
+            for ( const auto& child : getAllObjectsInTree<VisualObject>( *obj, ObjectSelectivityType::Selectable ) )
+            {
+                if ( auto box = child->getBoundingBox(); box.valid() )
+                    selectionLocalBox_.include( box );
+                if ( auto box = child->getWorldBox(); box.valid() )
+                    selectionWorldBox_.include( box );
+                if ( !worldXf )
+                    worldXf = child->worldXf();
+                else if ( *worldXf != child->worldXf() )
+                    showLocalBox = false;
+            }
         }
 
         // Typed info
@@ -1612,22 +1638,30 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
+        RibbonFontHolder boldFont( RibbonFontManager::FontType::SemiBold, 1.f, false );
+
         switch ( coordType_ )
         {
         case CoordType::Local:
-            drawDimensionsVec3( "Local Box Size", selectionLocalBox_.size(), LengthUnit{} );
-            UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
+            if ( showLocalBox )
+            {
+                boldFont.pushFont();
+                drawDimensionsVec3( "Local Box Size", selectionLocalBox_.size(), LengthUnit{} );
+                boldFont.popFont();
+                UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
 
-            drawDimensionsVec3( "Local Box Min", selectionLocalBox_.min, LengthUnit{} );
-            UI::setTooltipIfHovered( "Lower left corner of the tight axis-aligned bounding box in the local object space." );
+                drawDimensionsVec3( "Local Box Min", selectionLocalBox_.min, LengthUnit{} );
+                UI::setTooltipIfHovered( "Lower left corner of the tight axis-aligned bounding box in the local object space." );
 
-            drawDimensionsVec3( "Local Box Max", selectionLocalBox_.max, LengthUnit{} );
-            UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the local object space." );
-
+                drawDimensionsVec3( "Local Box Max", selectionLocalBox_.max, LengthUnit{} );
+                UI::setTooltipIfHovered( "Upper right corner of the tight axis-aligned bounding box in the local object space." );
+            }
             break;
 
         case CoordType::World:
+            boldFont.pushFont();
             drawDimensionsVec3( "World Box Size", selectionWorldBox_.size(), LengthUnit{} );
+            boldFont.popFont();
             UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the world space." );
 
             drawDimensionsVec3( "World Box Min", selectionWorldBox_.min, LengthUnit{} );

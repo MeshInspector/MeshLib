@@ -70,6 +70,14 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         if ( invalidateCaches && polyline_ )
             polyline_->invalidateCaches();
     }
+
+    if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
+    {
+        if ( polyline_ )
+        {
+            linesChangedSignal( mask );
+        }
+    }
 }
 
 void ObjectLinesHolder::setDashPattern( const DashPattern& pattern, ViewportId id /*= {} */ )
@@ -104,6 +112,15 @@ void ObjectLinesHolder::swapBase_( Object& other )
         assert( false );
 }
 
+void ObjectLinesHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherLines = other.asType<ObjectLinesHolder>() )
+        std::swap( linesChangedSignal, otherLines->linesChangedSignal );
+    else
+        assert( false );
+}
+
 Box3f ObjectLinesHolder::getWorldBox( ViewportId id ) const
 {
     if ( !polyline_ )
@@ -115,7 +132,7 @@ Box3f ObjectLinesHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = polyline_->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : polyline_->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }

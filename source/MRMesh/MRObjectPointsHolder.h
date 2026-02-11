@@ -155,6 +155,11 @@ public:
     /// signal about render discretization changing, triggered in setRenderDiscretization
     Signal<void()> renderDiscretizationChangedSignal;
 
+    /// signal about points or normals changing, triggered in setDirtyFlag
+    using ChangedSignal = Signal<void( uint32_t mask )>;
+    ChangedSignal pointsChangedSignal;
+    ChangedSignal normalsChangedSignal;
+
 protected:
     VertBitSet selectedPoints_;
     mutable std::optional<size_t> numValidPoints_;

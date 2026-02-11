@@ -224,7 +224,11 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
     } );
-    viewer->draw( true );
+    // force redraw window to prevent ghosting on Windows with multi windows enabled
+#ifdef _WIN32
+    if ( viewer->isMultiViewportAvailable() && viewer->getLaunchParams().multiViewport )
+        viewer->draw( true );
+#endif
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
@@ -1711,6 +1715,7 @@ void Viewer::resetRedraw_()
 
 void Viewer::draw( bool force )
 {
+    MR_TIMER;
 #ifdef __EMSCRIPTEN__
     (void)force;
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
@@ -1729,6 +1734,7 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
+    MR_TIMER;
     SceneCache::invalidateAll();
     bool needSceneRedraw = needRedraw_();
     if ( !force && !needSceneRedraw )
@@ -1762,7 +1768,10 @@ bool Viewer::draw_( bool force )
         --forceRedrawFrames_;
     }
     if ( window && swapped )
+    {
+        Timer t( "glfwSwapBuffers" );
         glfwSwapBuffers( window );
+    }
     frameCounter_->endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
@@ -1774,6 +1783,7 @@ void Viewer::drawUiRenderObjects()
     // That's why each viewport is being drawn separately.
     if ( !window )
         return;
+    MR_TIMER;
     UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
 
     for ( Viewport& viewport : getViewerInstance().viewport_list )
@@ -1832,6 +1842,7 @@ bool Viewer::isMultiViewportAvailable()
 
 void Viewer::drawFull( bool dirtyScene )
 {
+    MR_TIMER;
     // unbind to clean main framebuffer
     if ( sceneTexture_ )
         sceneTexture_->unbind();
@@ -1858,6 +1869,7 @@ void Viewer::drawFull( bool dirtyScene )
     signals_->postDrawSignal();
     if ( sceneTexture_ )
     {
+        Timer t( "sceneTexture" );
         sceneTexture_->unbind();
         if ( renderScene )
             sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
@@ -1873,6 +1885,7 @@ void Viewer::drawFull( bool dirtyScene )
 
 void Viewer::drawScene( FramebufferData* framebuffer )
 {
+    MR_TIMER;
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
 
@@ -1924,6 +1937,7 @@ void Viewer::drawScene( FramebufferData* framebuffer )
 
 void Viewer::setupScene()
 {
+    MR_TIMER;
     signals_->preSetupViewSignal();
     for ( auto& viewport : viewport_list )
         viewport.setupView();
@@ -1931,6 +1945,7 @@ void Viewer::setupScene()
 
 void Viewer::clearFramebuffers()
 {
+    MR_TIMER;
     for ( auto& viewport : viewport_list )
         viewport.clearFramebuffers();
 }

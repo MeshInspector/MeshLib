@@ -163,19 +163,19 @@ public:
 };
 
 template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( const Vector<T, I> & a )
     { return a.vec_.begin(); }
 
 template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( Vector<T, I> & a )
     { return a.vec_.begin(); }
 
 template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const Vector<T, I> & a )
     { return a.vec_.end(); }
 
 template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto end( Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( Vector<T, I> & a )
     { return a.vec_.end(); }
 
 /// given some std::vector and a key, returns the value associated with the key, or default value if key is invalid or outside the std::vector

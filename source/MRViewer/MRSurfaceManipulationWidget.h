@@ -122,6 +122,7 @@ protected:
     void changeSurface_();
     void updateUVmap_( bool set, bool wholeMesh = false );
     void updateRegion_( const Vector2f& mousePos );
+    void invalidateMetricsCache_();
     void abortEdit_();
     /// Laplacian
     void laplacianPickVert_( const PointOnFace& pick );

@@ -258,17 +258,17 @@ Vector3<T> unitVector3( T azimuth, T altitude )
 }
 
 
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
+// We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-MR_BIND_IGNORE inline auto begin( const Vector3<T> & v ) { return &v[0]; }
+MR_BIND_IGNORE_PY inline auto begin( const Vector3<T> & v ) { return &v[0]; }
 template <typename T>
-MR_BIND_IGNORE inline auto begin( Vector3<T> & v ) { return &v[0]; }
+MR_BIND_IGNORE_PY inline auto begin( Vector3<T> & v ) { return &v[0]; }
 
 template <typename T>
-MR_BIND_IGNORE inline auto end( const Vector3<T> & v ) { return &v[3]; }
+MR_BIND_IGNORE_PY inline auto end( const Vector3<T> & v ) { return &v[3]; }
 template <typename T>
-MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
+MR_BIND_IGNORE_PY inline auto end( Vector3<T> & v ) { return &v[3]; }
 
 /// \}
 

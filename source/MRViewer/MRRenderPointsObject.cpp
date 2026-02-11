@@ -33,6 +33,7 @@ RenderPointsObject::~RenderPointsObject()
 
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
     if ( !isColorTransparent && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
     {
@@ -131,6 +132,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
 void RenderPointsObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
@@ -261,6 +263,7 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 
 void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
@@ -305,6 +308,7 @@ void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 
 void RenderPointsObject::bindPointsPicker_()
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );

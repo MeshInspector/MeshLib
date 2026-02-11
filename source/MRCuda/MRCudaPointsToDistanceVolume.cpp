@@ -101,6 +101,8 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
         .dimensions = fromVec( params.dimensions ),
         .sigma = params.sigma,
         .minWeight = params.minWeight,
+        .invSigmaModifier = params.invSigmaModifier, 
+        .sqrtAngleWeight = params.sqrtAngleWeight
     };
 
     const auto layerSize = (size_t)params.dimensions.x * params.dimensions.y;

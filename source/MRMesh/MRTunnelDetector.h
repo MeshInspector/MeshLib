@@ -42,8 +42,8 @@ MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const Edge
 
 struct DetectTunnelSettings
 {
-    /// maximal summed metric of tunnel loops to consider
-    float maxTunnelMetricSum = FLT_MAX;
+    /// maximal euclidean length of tunnel loops to consider
+    float maxTunnelLength = FLT_MAX;
 
     /// maximal number of iterations to detect all tunnels;
     /// on a big mesh with many tunnels even one iteration can take a while

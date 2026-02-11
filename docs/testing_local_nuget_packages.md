@@ -29,10 +29,11 @@ If done correctly, the package will be copied into `./nuget/MeshLib.1.2.3.4.nupk
 
 ### Install package
 
-Delete the existing MeshLib packages using:
-```sh
-rm -rf ~/.nuget/packages/meshlib/
-```
+Delete the existing MeshLib packages:
+
+* On Windows, delete `C:\Users\user\.nuget\packages\meshlib`.
+
+* On Linux: `rm -rf ~/.nuget/packages/meshlib/`
 
 If this is a new project, add the dependency on MeshLib by adding the following part to the `.csproj` file:
 ```xml

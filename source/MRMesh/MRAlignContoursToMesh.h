@@ -41,23 +41,21 @@ MRMESH_API Expected<Mesh> alignContoursToMesh( const Mesh& mesh, const Contours2
 struct BendContoursAlongCurveParams
 {
     /// Position on the curve, where bounding box's pivot point is mapped
+    /// (0) - start of the curve, (1) - end of the curve
     float pivotCurveTime = 0;
 
     /// Position of the curve(pivotCurveTime) in the contours' bounding box:
     /// (0, 0) - bottom left, (0, 1) - bottom right, (0.5, 0.5) - center, (1, 1) - top right
     Vector2f pivotBoxPoint{0.0f, 0.0f};
 
-    /// if true, curve parameter will be always within [0,1) with repetition: xr := x - floor(x)
+    /// if true, curve parameter will be always within [0,curve.totalLength) with repetition: xr := mod( x, curve.totalLength )
     bool periodicCurve = false;
 
-    /// stretch all contours along curve to fit in unit curve range
+    /// stretch all contours along curve to fit in curve.totalLength
     bool stretch = true;
 
     /// Contours extrusion outside of curve level
     float extrusion{ 1.0f };
-
-    /// To allow passing Python lambdas into `curve`.
-    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 /// Converts contours in thick mesh, and deforms it along given path
@@ -73,9 +71,8 @@ MRMESH_API Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contou
 
 /// given a polyline by its vertices, computes partial lengths along the polyline from the initial point;
 /// return an error if the polyline is less than 2 points or all points have exactly the same location
-/// \param unitLength if true, then the lengths are normalized for the last point to have unit length
 /// \param outCurveLen optional output of the total polyline length (before possible normalization)
-MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, bool unitLength = true, float * outCurveLen = nullptr );
+MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, float * outCurveLen = nullptr );
 
 /// given a polyline by its vertices, and partial lengths as computed by \ref findPartialLens,
 /// finds the location of curve point at the given parameter with extrapolation if p outside [0, lens.back()],
@@ -84,10 +81,9 @@ MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, 
 
 /// given a polyline by its vertices, returns curve function representing it;
 /// return an error if the polyline is less than 2 points or all points have exactly the same location
-/// \param unitLength if true, then the lengths are normalized for the last point to have unit length
 /// \param outCurveLen optional output of the total polyline length (before possible normalization)
-MRMESH_API Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, bool unitLength = true, float * outCurveLen = nullptr );
-MRMESH_API Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, bool unitLength = true, float * outCurveLen = nullptr );
+MRMESH_API Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, float * outCurveLen = nullptr );
+MRMESH_API Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, float* outCurveLen = nullptr );
 
 /// converts polyline given as a number of MeshTriPoint/MeshEdgePoint into CurvePoints
 [[nodiscard]] MRMESH_API CurvePoints meshPathCurvePoints( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end );

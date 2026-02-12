@@ -35,7 +35,7 @@ TEST( MRMesh, BendTextAlongCurve )
         };
     };
 
-    auto maybeText = bendTextAlongCurve( curve,
+    auto maybeText = bendTextAlongCurve( { .func = curve,.totalLength = 1.0f },
         BendTextAlongCurveParams{
             .symbolMesh = s,
             .fontHeight = 0.2f,

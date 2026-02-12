@@ -118,6 +118,12 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFu
     if ( !bbox.valid() )
         return unexpected( "Contours mesh is empty" );
 
+    if ( curve.totalLength <= 0.0f )
+    {
+        assert( !"invalid curve length" );
+        return unexpected( "Invalid curve length" );
+    }
+
     const float cStartDepth = bbox.diagonal() * 0.05f; // use relative depth to avoid floating errors
     addBaseToPlanarMesh( contoursMesh, -cStartDepth );
     contoursMesh.invalidateCaches();
@@ -146,7 +152,7 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFu
 
         float curveTime = startCurvePos + xInBox;
         if ( params.periodicCurve )
-            curveTime = std::fmodf( curveTime, curve.totalLength );
+            curveTime = curveTime - std::floor( curveTime / curve.totalLength ) * curve.totalLength;
         const auto pos = curve.func( curveTime );
 
         const auto vecx = pos.dir;

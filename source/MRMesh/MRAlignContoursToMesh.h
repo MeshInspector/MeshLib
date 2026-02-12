@@ -71,7 +71,7 @@ MRMESH_API Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contou
 
 /// given a polyline by its vertices, computes partial lengths along the polyline from the initial point;
 /// return an error if the polyline is less than 2 points or all points have exactly the same location
-/// \param outCurveLen optional output of the total polyline length (before possible normalization)
+/// \param outCurveLen optional output of the total polyline length
 MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, float * outCurveLen = nullptr );
 
 /// given a polyline by its vertices, and partial lengths as computed by \ref findPartialLens,
@@ -81,7 +81,7 @@ MRMESH_API Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, 
 
 /// given a polyline by its vertices, returns curve function representing it;
 /// return an error if the polyline is less than 2 points or all points have exactly the same location
-/// \param outCurveLen optional output of the total polyline length (before possible normalization)
+/// \param outCurveLen optional output of the total polyline length
 MRMESH_API Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, float * outCurveLen = nullptr );
 MRMESH_API Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, float* outCurveLen = nullptr );
 

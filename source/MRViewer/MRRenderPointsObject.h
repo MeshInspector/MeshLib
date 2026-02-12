@@ -18,6 +18,9 @@ public:
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
+    virtual uint32_t getDirtyFlags() const override { return dirty_; }
+    virtual void setDirtyFlags( uint32_t mask ) override { dirty_ |= mask; }
+
 private:
     const ObjectPointsHolder* objPoints_;
 

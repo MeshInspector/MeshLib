@@ -11,6 +11,7 @@
 #include "MRMeshComponents.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include <cmath>
 
 namespace MR
 {

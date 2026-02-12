@@ -152,7 +152,15 @@ public:
     /// * `params` will remain alive as long as the tasks are used.
     /// * You'll have at most one living task at a time, so you can write a non-owning pointer to an internal task.
     virtual void renderUi( const UiRenderParams& params ) { (void)params; }
+
+    /// returns current dirty flags for the object
+    virtual uint32_t getDirtyFlags() const = 0;
+
+    /// sets some dirty flags for the object (to force its visual update)
+    /// \param mask is a union of DirtyFlags flags
+    virtual void setDirtyFlags( uint32_t mask ) = 0;
 };
+
 // Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.
 // We could check in `RenderObjectCombinator` if they're overridden or not, but it's easier to just define them.
 inline bool IRenderObject::render( const ModelRenderParams& ) { return false; }

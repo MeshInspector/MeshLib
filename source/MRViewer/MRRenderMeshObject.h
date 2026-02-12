@@ -20,6 +20,9 @@ public:
     MRVIEWER_API virtual size_t heapBytes() const override;
     MRVIEWER_API virtual size_t glBytes() const override;
     MRVIEWER_API virtual void forceBindAll() override;
+    MRVIEWER_API virtual uint32_t getDirtyFlags() const override;
+    MRVIEWER_API virtual void setDirtyFlags( uint32_t mask ) override;
+
 protected:
     const ObjectMeshHolder* objMesh_;
 

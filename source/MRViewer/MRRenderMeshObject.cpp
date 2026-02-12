@@ -46,7 +46,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objMesh_->resetDirty();
+        dirty_ = 0;
         return false;
     }
 
@@ -144,7 +144,7 @@ void RenderMeshObject::renderPicker( const ModelBaseRenderParams& parameters, un
     MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objMesh_->resetDirty();
+        dirty_ = 0;
         return;
     }
     update_( parameters.viewportId );
@@ -206,6 +206,23 @@ void RenderMeshObject::forceBindAll()
     bindSelectedEdges_();
     bindBorders_();
     bindPoints_( GLStaticHolder::Points );
+}
+
+uint32_t RenderMeshObject::getDirtyFlags() const
+{
+    return dirty_;
+}
+
+void RenderMeshObject::setDirtyFlags( uint32_t mask )
+{
+    if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
+        mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
+    if ( mask & DIRTY_POSITION )
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+    // DIRTY_POSITION because we use corner rendering and need to update render verts
+    // DIRTY_UV because we need to update UV coordinates
+
+    dirty_ |= mask;
 }
 
 void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, RenderModelPassMask desiredPass, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
@@ -767,7 +784,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         dirtyPointPos_ = true;
     }
 
-    objMesh_->resetDirtyExceptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
+    dirty_ &= DIRTY_RENDER_NORMALS - dirtyNormalFlag;
 
 #ifndef __EMSCRIPTEN__
     if ( !cornerMode && bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )

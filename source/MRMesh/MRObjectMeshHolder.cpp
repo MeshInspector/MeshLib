@@ -543,7 +543,7 @@ bool ObjectMeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
 {
     return Object::getRedrawFlag( viewportMask ) ||
         ( isVisible( viewportMask ) &&
-          ( getDirtyFlags() & ( ~( DIRTY_CACHES | ( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) ) );
+          ( getDirtyFlags() & ( ~( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) );
 }
 
 void ObjectMeshHolder::applyScale( float scaleFactor )

@@ -189,7 +189,10 @@ void VisualObject::setDirtyFlags( uint32_t mask, bool )
     if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
         mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
     if ( mask & DIRTY_POSITION )
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+    {
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+        boundingBoxCache_.reset();
+    }
     // DIRTY_POSITION because we use corner rendering and need to update render verts
     // DIRTY_UV because we need to update UV coordinates
 
@@ -200,24 +203,19 @@ void VisualObject::setDirtyFlags( uint32_t mask, bool )
 
 void VisualObject::resetDirty() const
 {
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= DIRTY_CACHES;
+    dirty_ = 0;
 }
 
 void VisualObject::resetDirtyExceptMask( uint32_t mask ) const
 {
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= ( DIRTY_CACHES | mask );
+    dirty_ &= mask;
 }
 
 Box3f VisualObject::getBoundingBox() const
 {
-    if ( dirty_ & DIRTY_BOUNDING_BOX )
-    {
+    if ( !boundingBoxCache_ )
         boundingBoxCache_ = computeBoundingBox_();
-        dirty_ &= ~DIRTY_BOUNDING_BOX;
-    }
-    return boundingBoxCache_;
+    return *boundingBoxCache_;
 }
 
 void VisualObject::setPickable( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )

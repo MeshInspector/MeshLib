@@ -89,10 +89,8 @@ enum DirtyFlags
     DIRTY_FACES_COLORMAP = DIRTY_PRIMITIVE_COLORMAP,
     DIRTY_TEXTURE_PER_FACE = 0x0400,
     DIRTY_MESH = 0x07FF,
-    DIRTY_BOUNDING_BOX = 0x0800,
     DIRTY_BORDER_LINES = 0x1000,
     DIRTY_EDGES_SELECTION = 0x2000,
-    DIRTY_CACHES = DIRTY_BOUNDING_BOX,
     DIRTY_VOLUME = 0x4000,
     DIRTY_ALL = 0x7FFF
 };
@@ -222,8 +220,7 @@ public:
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override
     {
         return Object::getRedrawFlag( viewportMask ) ||
-            ( isVisible( viewportMask ) &&
-              ( dirty_ & ( ~( DIRTY_CACHES ) ) ) );
+            ( isVisible( viewportMask ) && dirty_ );
     }
 
     /// whether the object can be picked (by mouse) in any of given viewports
@@ -354,7 +351,7 @@ protected:
 private:
     mutable Dirty dirty_; // private dirty, to force all using setDirtyFlags, instead of direct change
 
-    mutable Box3f boundingBoxCache_;
+    mutable std::optional<Box3f> boundingBoxCache_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

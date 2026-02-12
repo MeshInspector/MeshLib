@@ -446,10 +446,12 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
 
         const auto numBasisTunnels = basisTunnels->size();
 
+        // sort loops by the sum of the given metric in ascending order
         sortPathsByMetric( *basisTunnels, metric );
         for ( int i = 0; i < basisTunnels->size(); ++i )
         {
-            if ( calcPathMetric( (*basisTunnels)[i], metric ) > settings.maxTunnelLength )
+            // and skip too long loops by their euclidean length, and not by the given metric
+            if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > settings.maxTunnelLength )
             {
                 basisTunnels->erase( basisTunnels->begin() + i, basisTunnels->end() );
                 break;

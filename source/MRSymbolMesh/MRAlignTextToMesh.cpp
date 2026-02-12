@@ -90,7 +90,7 @@ Expected<Mesh> alignTextToMesh(
 Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
-    if ( !curve )
+    if ( !curve.func )
     {
         assert( false );
         return unexpected( "No curve provided" );
@@ -139,7 +139,7 @@ Expected<Mesh> bendTextAlongCurve( const CurvePoints& cp, const BendTextAlongCur
     MR_TIMER;
 
     float curveLen = 0;
-    auto maybeCurveFunc = curveFromPoints( cp, params0.stretch, &curveLen );
+    auto maybeCurveFunc = curveFromPoints( cp, &curveLen );
     if ( !maybeCurveFunc )
         return unexpected( std::move( maybeCurveFunc.error() ) );
     assert( curveLen > 0 );

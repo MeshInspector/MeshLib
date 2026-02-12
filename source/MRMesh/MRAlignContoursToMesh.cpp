@@ -11,6 +11,7 @@
 #include "MRMeshComponents.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include <cmath>
 
 namespace MR
 {
@@ -117,6 +118,12 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFu
     if ( !bbox.valid() )
         return unexpected( "Contours mesh is empty" );
 
+    if ( curve.totalLength <= 0.0f )
+    {
+        assert( !"invalid curve length" );
+        return unexpected( "Invalid curve length" );
+    }
+
     const float cStartDepth = bbox.diagonal() * 0.05f; // use relative depth to avoid floating errors
     addBaseToPlanarMesh( contoursMesh, -cStartDepth );
     contoursMesh.invalidateCaches();
@@ -132,19 +139,21 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFu
     VertId firstBottomVert( contoursMeshPoints.size() / 2 );
 
     const auto components = MeshComponents::getAllComponents( contoursMesh );
+    const auto stretchMod = curve.totalLength / diagonal.x;
+    const auto startCurvePos = params.pivotCurveTime * curve.totalLength;
     // independently for each component of contoursMesh
     ParallelFor( components, [&]( size_t icomp )
     {
         const auto & compFaces = components[icomp];
         const auto compCenter = contoursMesh.computeBoundingBox( &compFaces ).center();
-        float xInBoxRelPivot = compCenter.x - pivotInBoxX;
+        float xInBox = compCenter.x - pivotInBoxX;
         if ( params.stretch )
-            xInBoxRelPivot /= diagonal.x;
+            xInBox *= stretchMod;
 
-        float curveTime = params.pivotCurveTime + xInBoxRelPivot;
+        float curveTime = startCurvePos + xInBox;
         if ( params.periodicCurve )
-            curveTime = curveTime - std::floor( curveTime );
-        const auto pos = curve( curveTime );
+            curveTime = curveTime - std::floor( curveTime / curve.totalLength ) * curve.totalLength;
+        const auto pos = curve.func( curveTime );
 
         const auto vecx = pos.dir;
         const auto norm = pos.snorm;
@@ -188,7 +197,7 @@ Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const M
     const BendContoursAlongCurveParams& params )
 {
     MR_TIMER;
-    return curveFromPoints( meshPathCurvePoints( mesh, start, path, end ), params.stretch )
+    return curveFromPoints( meshPathCurvePoints( mesh, start, path, end ) )
         .and_then( [&]( auto && curve ) { return bendContoursAlongCurve( contours, curve, params ); } );
 }
 
@@ -196,11 +205,11 @@ Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const M
     const BendContoursAlongCurveParams& params )
 {
     MR_TIMER;
-    return curveFromPoints( meshPathCurvePoints( mesh, path ), params.stretch )
+    return curveFromPoints( meshPathCurvePoints( mesh, path ) )
         .and_then( [&]( auto && curve ) { return bendContoursAlongCurve( contours, curve, params ); } );
 }
 
-Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, bool unitLength, float * outCurveLen )
+Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, float * outCurveLen )
 {
     MR_TIMER;
     if ( cp.size() < 2 )
@@ -220,13 +229,6 @@ Expected<std::vector<float>> findPartialLens( const CurvePoints& cp, bool unitLe
     if ( lens.back() <= 0 )
         return unexpected( "curve has zero length" );
 
-    if ( unitLength )
-    {
-        // to relative lengths
-        const auto factor = 1 / lens.back();
-        for ( auto & l : lens )
-            l *= factor;
-    }
     return lens;
 }
 
@@ -265,30 +267,36 @@ CurvePoint getCurvePoint( const CurvePoints& cp, const std::vector<float> & lens
     return res;
 }
 
-Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, bool unitLength, float * outCurveLen )
+Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, float* outCurveLen )
 {
     MR_TIMER;
-    auto maybeLens = findPartialLens( cp, unitLength, outCurveLen );
+    auto maybeLens = findPartialLens( cp, outCurveLen );
     if ( !maybeLens )
         return unexpected( std::move( maybeLens.error() ) );
 
-    return [&cp, lens = std::move( *maybeLens )]( float p )
+    CurveFunc res;
+    res.totalLength = maybeLens->back();
+    res.func = [&cp, lens = std::move( *maybeLens )] ( float p )
     {
         return getCurvePoint( cp, lens, p );
     };
+    return res;
 }
 
-Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, bool unitLength, float * outCurveLen )
+Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, float * outCurveLen )
 {
     MR_TIMER;
-    auto maybeLens = findPartialLens( cp, unitLength, outCurveLen );
+    auto maybeLens = findPartialLens( cp, outCurveLen );
     if ( !maybeLens )
         return unexpected( std::move( maybeLens.error() ) );
 
-    return [cp = std::move( cp ), lens = std::move( *maybeLens )]( float p )
+    CurveFunc res;
+    res.totalLength = maybeLens->back();
+    res.func = [&cp, lens = std::move( *maybeLens )] ( float p )
     {
         return getCurvePoint( cp, lens, p );
     };
+    return res;
 }
 
 CurvePoints meshPathCurvePoints( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )

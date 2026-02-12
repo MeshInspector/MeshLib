@@ -208,19 +208,17 @@ void RenderMeshObject::forceBindAll()
     bindPoints_( GLStaticHolder::Points );
 }
 
-uint32_t RenderMeshObject::getDirtyFlags() const
-{
-    return dirty_;
-}
-
 void RenderMeshObject::setDirtyFlags( uint32_t mask )
 {
-    if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
-        mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
+    if ( cornerMode_ )
+    {
+        // DIRTY_POSITION because we use corner rendering and need to update render verts
+        // DIRTY_UV because we need to update UV coordinates
+        if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
+            mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
+    }
     if ( mask & DIRTY_POSITION )
         mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
-    // DIRTY_POSITION because we use corner rendering and need to update render verts
-    // DIRTY_UV because we need to update UV coordinates
 
     dirty_ |= mask;
 }
@@ -787,23 +785,23 @@ void RenderMeshObject::update_( ViewportMask mask )
     dirty_ &= DIRTY_RENDER_NORMALS - dirtyNormalFlag;
 
 #ifndef __EMSCRIPTEN__
-    if ( !cornerMode && bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
+    if ( !cornerMode_ && bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
     {
         // always need corner mode for creases
         // it should not affect dirtyEdges_
-        cornerMode = true;
+        cornerMode_ = true;
         dirty_ |= DIRTY_POSITION;
         dirty_ |= DIRTY_VERTS_COLORMAP;
         dirty_ |= DIRTY_UV;
         dirty_ |= DIRTY_FACE;
         dirtyPointPos_ = true;
     }
-    if ( cornerMode && bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) )
+    if ( cornerMode_ && bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) )
     {
         assert( objMesh_->creases().none() );
         // disable corner mode if no creases
         // it should not affect dirtyEdges_
-        cornerMode = false;
+        cornerMode_ = false;
         dirty_ |= DIRTY_POSITION;
         dirty_ |= DIRTY_VERTS_COLORMAP;
         dirty_ |= DIRTY_UV;
@@ -823,7 +821,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
-    if ( cornerMode )
+    if ( cornerMode_ )
     {
         auto numF = topology.lastValidFace() + 1;
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
@@ -891,7 +889,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         MR_NAMED_TIMER( "dirty_vertices_normals" );
 
         const auto vertNormals = computePerVertNormals( *mesh );
-        if ( cornerMode )
+        if ( cornerMode_ )
         {
             auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
@@ -943,7 +941,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
     const auto& topology = mesh->topology;
     const auto& vertsColorMap = objMesh_->getVertsColorMap();
 
-    if ( cornerMode )
+    if ( cornerMode_ )
     {
         auto numF = topology.lastValidFace() + 1;
         auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = 3 * numF );
@@ -990,7 +988,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     bool textureEnabled = objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) || objMesh_->hasAncillaryTexture();
     if ( textureEnabled )
     {
-        if ( cornerMode )
+        if ( cornerMode_ )
         {
             auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
 
@@ -1042,7 +1040,7 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
             buffer[f] = Vector3i();
         else
         {
-            if ( cornerMode )
+            if ( cornerMode_ )
             {
                 auto ind = 3 * f;
                 buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
@@ -1148,7 +1146,7 @@ RenderBufferRef<VertId> RenderMeshObject::loadPointValidIndicesBuffer_()
     const auto& validPoints = topology.getValidVerts();
     pointValidSize_ = int( validPoints.count() );
     auto buffer = glBuffer.prepareBuffer<VertId>( pointValidSize_ );
-    if ( cornerMode )
+    if ( cornerMode_ )
     {
         auto unprocessedPoints = validPoints;
         const auto& validFaces = topology.getValidFaces();

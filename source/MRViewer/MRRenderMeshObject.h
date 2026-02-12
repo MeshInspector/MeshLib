@@ -20,7 +20,7 @@ public:
     MRVIEWER_API virtual size_t heapBytes() const override;
     MRVIEWER_API virtual size_t glBytes() const override;
     MRVIEWER_API virtual void forceBindAll() override;
-    MRVIEWER_API virtual uint32_t getDirtyFlags() const override;
+    virtual uint32_t getDirtyFlags() const override { return dirty_; }
     MRVIEWER_API virtual void setDirtyFlags( uint32_t mask ) override;
 
 protected:
@@ -120,9 +120,9 @@ protected:
     bool dirtyEdges_{ false };
 
 #ifdef __EMSCRIPTEN__
-    bool cornerMode = true;
+    bool cornerMode_ = true;
 #else
-    bool cornerMode = false;
+    bool cornerMode_ = false;
 #endif
 };
 

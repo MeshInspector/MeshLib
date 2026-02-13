@@ -154,11 +154,11 @@ public:
     virtual void renderUi( const UiRenderParams& params ) { (void)params; }
 
     /// returns current dirty flags for the object
-    virtual uint32_t getDirtyFlags() const = 0;
+    virtual uint32_t getDirtyFlags() const { return 0; }
 
     /// sets some dirty flags for the object (to force its visual update)
     /// \param mask is a union of DirtyFlags flags
-    virtual void setDirtyFlags( uint32_t mask ) = 0;
+    virtual void setDirtyFlags( uint32_t /*mask*/ ) {}
 };
 
 // Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.

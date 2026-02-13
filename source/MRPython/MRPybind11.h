@@ -15,6 +15,11 @@ MR_SUPPRESS_WARNING_PUSH
 #pragma warning( disable: 4548 ) // expression before comma has no effect; expected expression with side-effect
 #endif
 
+// avoid macro redefinitions
+#undef _POSIX_C_SOURCE
+#undef _XOPEN_SOURCE
+#include <Python.h>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>

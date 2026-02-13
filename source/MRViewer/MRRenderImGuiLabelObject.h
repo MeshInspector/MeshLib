@@ -9,7 +9,7 @@ namespace MR
 class ObjectImGuiLabel;
 
 // The implementation of `IRenderObject` used by `ObjectImGuiLabel`. Draws an label using ImGui.
-class RenderImGuiLabelObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderResetDirtyComponent>
+class RenderImGuiLabelObject : public RenderDefaultUiObject
 {
     const ObjectImGuiLabel* object_ = nullptr;
     UI::NonOverlappingLabelTask task_;

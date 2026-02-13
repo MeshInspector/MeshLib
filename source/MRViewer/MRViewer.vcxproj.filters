@@ -367,9 +367,6 @@
     <ClCompile Include="MRVisualSubfeatures.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="MRRenderDefaultObjects.cpp">
-      <Filter>Render\Implementations</Filter>
-    </ClCompile>
     <ClCompile Include="MRImGuiMenuListeners.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>

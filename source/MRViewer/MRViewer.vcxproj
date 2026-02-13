@@ -48,7 +48,6 @@
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
-    <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonLayoutConfig.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonRegisterItem.cpp" />

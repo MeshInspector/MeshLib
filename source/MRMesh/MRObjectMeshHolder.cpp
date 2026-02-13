@@ -772,13 +772,14 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 
 void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
 {
-    VisualObject::setDirtyFlags( mask );
+    VisualObject::setDirtyFlagsFast_( mask );
     if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
         meshChangedSignal( mask );
 }
 
 void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
 {
+    VisualObject::invalidateMetricsCache_( mask );
     if ( mask & DIRTY_FACE )
     {
         numHoles_.reset();

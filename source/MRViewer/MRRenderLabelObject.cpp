@@ -54,7 +54,7 @@ bool RenderLabelObject::render( const ModelRenderParams& renderParams )
 
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objLabel_->resetDirty();
+        dirty_ = 0;
         return false;
     }
 
@@ -474,7 +474,7 @@ void RenderLabelObject::update_()
         dirtyLLine_ = true;
     }
 
-    objLabel_->resetDirty();
+    dirty_ = 0;
 }
 
 RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()

@@ -7,12 +7,9 @@
 
 This instruction will guide you through integrating MeshLib into your C# project using NuGet or the .NET Command-Line Interface.
 
-\note We are planning to deliver full C# support in 2025. Until then, only the core features of MeshLib are available in
-C#, and the API may evolve as we expand functionality. We will strive to minimize disruptions and ensure a smooth
-transition as these changes are introduced.
+\note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity.
 
-\note C# integration is currently supported on Windows x64 and Linux x64. Please note that ARM64 builds are not yet
-available, so make sure your project is configured accordingly to avoid compatibility issues.
+\note As of January 2026, the C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all supported platforms (Windows x64, Linux x64/Arm, MacOS x64/Arm), ensuring feature parity with the native C++ API.
 
 
 ## Prerequisites

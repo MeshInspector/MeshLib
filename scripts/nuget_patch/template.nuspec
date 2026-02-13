@@ -14,12 +14,12 @@
 		</dependencies>
 		<icon>images/MeshInspector_icon.png</icon>
 		<license type="file">LICENSE.txt</license>
-		<readme>docs/readme_dotnet.md</readme>
+		<readme>docs/readme.md</readme>
 	</metadata>
 	<files>
 		<file src="./macos/MeshInspector_icon.png" target="images/"></file>
 		<file src="LICENSE.txt" target=""></file>
-		<file src="./readme_dotnet.md" target="docs/"></file>
+		<file src="./readme.md" target="docs/"></file>
 		<file src="./scripts/nuget_patch/MeshLib.targets" target="build/"></file>
 		<file src="./scripts/nuget_patch/MeshLib.targets" target="buildTransitive/"></file>
 $FILES

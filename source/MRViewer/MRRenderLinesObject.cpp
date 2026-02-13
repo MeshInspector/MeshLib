@@ -447,7 +447,11 @@ void RenderLinesObject::freeBuffers_()
 
 void RenderLinesObject::update_()
 {
-    dirty_ |= objLines_->getDirtyFlags();
+    auto objDirty = objLines_->getDirtyFlags();
+    // DIRTY_POSITION because we use corner rendering and need to update render verts
+    if ( objDirty & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
+        objDirty |= DIRTY_POSITION | DIRTY_VERTS_COLORMAP;
+    dirty_ |= objDirty;
     objLines_->resetDirty();
 }
 

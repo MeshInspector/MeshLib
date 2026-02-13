@@ -103,7 +103,7 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
 {
     if ( !getViewerInstance().isGLInitialized() )
     {
-        objVoxels_->resetDirty();
+        dirty_ = 0;
         return;
     }
     update_();
@@ -378,7 +378,6 @@ void RenderVolumeObject::freeBuffers_()
 void RenderVolumeObject::update_()
 {
     dirty_ |= objVoxels_->getDirtyFlags();
-    objVoxels_->resetDirty();
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderObjectCombinator<RenderDefaultUiObject, RenderVolumeObject> )

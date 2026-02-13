@@ -21,6 +21,8 @@ public:
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
+    virtual uint32_t getDirtyFlags() const override { return dirty_; }
+    virtual void setDirtyFlags( uint32_t mask ) override { dirty_ |= mask; }
 
 private:
     const ObjectLinesHolder* objLines_ = nullptr;
@@ -63,7 +65,7 @@ private:
 
     bool needUpdateScreenLengths_{ true };
     // Marks dirty buffers that need to be uploaded to OpenGL
-    uint32_t dirty_;
+    uint32_t dirty_ = 0;
 };
 
 // Returns the range of line widths that are allowed by current renderer

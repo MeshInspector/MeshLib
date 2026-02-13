@@ -186,29 +186,13 @@ void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val 
 
 void VisualObject::setDirtyFlags( uint32_t mask, bool )
 {
-    if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
-        mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
-    if ( mask & DIRTY_POSITION )
-    {
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+    if ( mask & ( DIRTY_FACE | DIRTY_POSITION ) )
         boundingBoxCache_.reset();
-    }
-    // DIRTY_POSITION because we use corner rendering and need to update render verts
-    // DIRTY_UV because we need to update UV coordinates
 
-    dirty_ |= mask;
+    if ( renderObj_ )
+        renderObj_->setDirtyFlags( mask );
 
     needRedraw_ = true; // this is needed to differ dirty render object and dirty scene
-}
-
-void VisualObject::resetDirty() const
-{
-    dirty_ = 0;
-}
-
-void VisualObject::resetDirtyExceptMask( uint32_t mask ) const
-{
-    dirty_ &= mask;
 }
 
 Box3f VisualObject::getBoundingBox() const
@@ -237,10 +221,10 @@ void VisualObject::setColoringType( ColoringType coloringType )
         needRedraw_ = true;
         break;
     case ColoringType::PrimitivesColorMap:
-        dirty_ |= DIRTY_PRIMITIVE_COLORMAP;
+        setDirtyFlags( DIRTY_PRIMITIVE_COLORMAP );
         break;
     case ColoringType::VertsColorMap:
-        dirty_ |= DIRTY_VERTS_COLORMAP;
+        setDirtyFlags( DIRTY_VERTS_COLORMAP );
         break;
     default:
         break;
@@ -262,7 +246,7 @@ bool VisualObject::render( const ModelRenderParams& params ) const
     setupRenderObject_();
     if ( !renderObj_ )
     {
-        resetDirty();
+        assert( getDirtyFlags() == 0 );
         return false;
     }
 
@@ -383,7 +367,7 @@ void VisualObject::deserializeFields_( const Json::Value& root )
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
 
-    dirty_ = DIRTY_ALL;
+    setDirtyFlags( DIRTY_ALL );
 }
 
 Box3f VisualObject::getWorldBox( ViewportId id ) const

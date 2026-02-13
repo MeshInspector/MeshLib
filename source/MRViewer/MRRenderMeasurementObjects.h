@@ -13,7 +13,7 @@
 namespace MR
 {
 
-using RenderDimensionObject = RenderObjectCombinator<RenderDefaultUiObject, RenderResetDirtyComponent>;
+using RenderDimensionObject = RenderDefaultUiObject;
 
 class RenderPointObject : public RenderDimensionObject
 {

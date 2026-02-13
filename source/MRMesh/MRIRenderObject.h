@@ -152,13 +152,23 @@ public:
     /// * `params` will remain alive as long as the tasks are used.
     /// * You'll have at most one living task at a time, so you can write a non-owning pointer to an internal task.
     virtual void renderUi( const UiRenderParams& params ) { (void)params; }
+
+    /// returns current dirty flags for the object
+    virtual uint32_t getDirtyFlags() const = 0;
+
+    /// sets some dirty flags for the object (to force its visual update)
+    /// \param mask is a union of DirtyFlags flags
+    virtual void setDirtyFlags( uint32_t mask ) = 0;
 };
+
 // Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.
 // We could check in `RenderObjectCombinator` if they're overridden or not, but it's easier to just define them.
 inline bool IRenderObject::render( const ModelRenderParams& ) { return false; }
 inline void IRenderObject::renderPicker( const ModelBaseRenderParams&, unsigned ) {}
 inline size_t IRenderObject::heapBytes() const { return 0; }
 inline size_t IRenderObject::glBytes() const { return 0; }
+inline uint32_t IRenderObject::getDirtyFlags() const { return 0; }
+inline void IRenderObject::setDirtyFlags( uint32_t ) {}
 
 // Combines several different `IRenderObject`s into one in a meaningful way.
 template <typename ...Bases>
@@ -182,6 +192,8 @@ public:
     size_t glBytes() const override { return ( std::size_t{} + ... + Bases::glBytes() ); }
     void forceBindAll() override { ( Bases::forceBindAll(), ... ); }
     void renderUi( const UiRenderParams& params ) override { ( Bases::renderUi( params ), ... ); }
+    uint32_t getDirtyFlags() const override { return ( uint32_t{} | ... | Bases::getDirtyFlags() ); }
+    void setDirtyFlags( uint32_t mask ) override { ( Bases::setDirtyFlags( mask ), ... ); }
 };
 
 MR_BIND_IGNORE MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

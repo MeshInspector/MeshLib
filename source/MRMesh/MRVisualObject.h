@@ -204,12 +204,9 @@ public:
     /// \param mask is a union of DirtyFlags flags
     /// \param invalidateCaches whether to automatically invalidate model caches (pass false here if you manually update the caches)
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true );
+
     /// returns current dirty flags for the object
-    MRMESH_API uint32_t getDirtyFlags() const { return dirty_; }
-    /// resets all dirty flags (except for cache flags that will be reset automatically on cache update)
-    MRMESH_API void resetDirty() const;
-    /// reset dirty flags without some specific bits (useful for lazy normals update)
-    MRMESH_API virtual void resetDirtyExceptMask( uint32_t mask ) const;
+    MRMESH_API uint32_t getDirtyFlags() const { return renderObj_ ? renderObj_->getDirtyFlags() : 0; }
 
     /// returns cached bounding box of this object in local coordinates
     MRMESH_API Box3f getBoundingBox() const;
@@ -220,7 +217,7 @@ public:
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override
     {
         return Object::getRedrawFlag( viewportMask ) ||
-            ( isVisible( viewportMask ) && dirty_ );
+            ( isVisible( viewportMask ) && getDirtyFlags() );
     }
 
     /// whether the object can be picked (by mouse) in any of given viewports
@@ -349,8 +346,6 @@ protected:
     }
 
 private:
-    mutable Dirty dirty_; // private dirty, to force all using setDirtyFlags, instead of direct change
-
     mutable std::optional<Box3f> boundingBoxCache_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only

@@ -49,7 +49,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objPoints_->resetDirty();
+        dirty_ = 0;
         return false;
     }
     update_();
@@ -135,7 +135,7 @@ void RenderPointsObject::renderPicker( const ModelBaseRenderParams& parameters, 
     MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objPoints_->resetDirty();
+        dirty_ = 0;
         return;
     }
     update_();
@@ -359,7 +359,6 @@ void RenderPointsObject::update_()
     }
 
     dirty_ |= objPoints_->getDirtyFlags();
-    objPoints_->resetDirty();
 }
 
 RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()

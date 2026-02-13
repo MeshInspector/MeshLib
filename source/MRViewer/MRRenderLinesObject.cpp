@@ -46,7 +46,7 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objLines_->resetDirty();
+        dirty_ = 0;
         return false;
     }
 
@@ -76,7 +76,7 @@ void RenderLinesObject::renderPicker( const ModelBaseRenderParams& parameters, u
     MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
-        objLines_->resetDirty();
+        dirty_ = 0;
         return;
     }
     update_();
@@ -448,7 +448,6 @@ void RenderLinesObject::freeBuffers_()
 void RenderLinesObject::update_()
 {
     dirty_ |= objLines_->getDirtyFlags();
-    objLines_->resetDirty();
 }
 
 bool RenderLinesObject::needAccumLengthDirtyUpdate_( const ModelRenderParams& params )

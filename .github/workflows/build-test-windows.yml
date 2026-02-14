@@ -45,7 +45,7 @@ jobs:
 
     env:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
-      PYTEST_C_SHARP_ARGS: #--run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
       - name: Checkout
@@ -197,6 +197,7 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
+          dotnet build examples/c-sharp-examples -c ${{matrix.config}}
 
       - name: Build
         shell: cmd

@@ -7,7 +7,7 @@ public class CollisionSelf {
 
         Console.WriteLine(" --- Beginning Colliding Self Test! --- ");
         var selfCollidingPairs = MR.findSelfCollidingTriangles(mesh);
-        if (selfCollidingPairs.isEmpty()) {
+        if (selfCollidingPairs.empty()) {
             Console.WriteLine("Error with MR.FindSelfCollidingTriangles");
             return;
         }

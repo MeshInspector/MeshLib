@@ -778,7 +778,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         if ( objDirty & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
             objDirty |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
     }
-    if ( objDirty & DIRTY_POSITION )
+    if ( objDirty & ( DIRTY_FACE | DIRTY_POSITION ) )
         objDirty |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
     dirty_ |= objDirty;
 

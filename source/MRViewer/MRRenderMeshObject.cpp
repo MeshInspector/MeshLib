@@ -746,6 +746,28 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &pointsArrayObjId_ ) );
 }
 
+uint32_t RenderMeshObject::getNeededNormalsRenderDirtyValue_( ViewportMask viewportMask ) const
+{
+    auto flatShading = objMesh_->getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
+    uint32_t res = 0;
+    if ( !( flatShading & viewportMask ).empty() )
+    {
+        res |= ( dirty_ & DIRTY_FACES_RENDER_NORMAL );
+    }
+    if ( ( flatShading & viewportMask ) != viewportMask )
+    {
+        if ( !objMesh_->creases().any() )
+        {
+            res |= ( dirty_ & DIRTY_VERTS_RENDER_NORMAL );
+        }
+        else
+        {
+            res |= ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
+        }
+    }
+    return res;
+}
+
 void RenderMeshObject::update_( ViewportMask mask )
 {
     auto objDirty = objMesh_->getDirtyFlags();
@@ -758,8 +780,9 @@ void RenderMeshObject::update_( ViewportMask mask )
     }
     if ( objDirty & DIRTY_POSITION )
         objDirty |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+    dirty_ |= objDirty;
 
-    uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( mask );
+    uint32_t dirtyNormalFlag = getNeededNormalsRenderDirtyValue_( mask );
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         // vertNormalsBufferObj_ should be valid no matter what normals we use
@@ -768,8 +791,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         else
             dirtyNormalFlag |= DIRTY_CORNERS_RENDER_NORMAL;
     }
-    objDirty &= ~( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
-    dirty_ |= objDirty;
+    dirty_ &= ~( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 
     if ( dirty_ & DIRTY_FACE || dirty_ & DIRTY_POSITION )
     {

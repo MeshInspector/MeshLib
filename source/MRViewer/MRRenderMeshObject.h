@@ -121,6 +121,10 @@ protected:
 #else
     bool cornerMode_ = false;
 #endif
+
+private:
+    /// returns dirty flag of currently using normal type if they are dirty in render representation
+    uint32_t getNeededNormalsRenderDirtyValue_( ViewportMask viewportMask ) const;
 };
 
 }

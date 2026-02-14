@@ -295,6 +295,10 @@ protected:
     /// and assign renderObj_ inside
     virtual void setupRenderObject_() const {}
 
+    /// todo: make virtual and public when all children support separate fast dirty and cache invalidation
+    MRMESH_API void setDirtyFlagsFast_( uint32_t mask );
+    MRMESH_API void invalidateMetricsCache_( uint32_t mask );
+
     mutable UniquePtr<IRenderObject> renderObj_;
 
     /// Visualization options

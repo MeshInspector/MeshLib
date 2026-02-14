@@ -201,9 +201,6 @@ public:
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
 
-    /// returns dirty flag of currently using normal type if they are dirty in render representation
-    MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
-
     MRMESH_API virtual bool getRedrawFlag( ViewportMask viewportMask ) const override;
 
     /// returns cached information whether the mesh is closed

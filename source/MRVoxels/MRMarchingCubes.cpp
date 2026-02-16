@@ -775,14 +775,6 @@ Expected<TriMesh> VolumeMesher::finalize()
             const BitSet* layerInvalids[2] = { &invalids_[loc.pos.z], &invalids_[loc.pos.z+1] };
             const BitSet* layerLowerIso[2] = { &lowerIso_[loc.pos.z], &lowerIso_[loc.pos.z+1] };
             const VoxelId layerFirstVoxelId[2] = { indexer_.toVoxelId( { 0, 0, loc.pos.z } ), indexer_.toVoxelId( { 0, 0, loc.pos.z + 1 } ) };
-            // returns a bit from from one-of-two bit sets (bs) corresponding to given location (vl)
-            auto getBit = [&]( const BitSet *bs[2], const VoxelLocation & vl )
-            {
-                const auto dl = vl.pos.z - loc.pos.z;
-                assert( dl >= 0 && dl <= 1 );
-                // (*bs)[dl] is one of two bit sets, and layerFirstVoxelId[dl] is VoxelId corresponding to zeroth bit in it
-                return (*bs)[dl].test( vl.id - layerFirstVoxelId[dl] );
-            };
             for ( loc.pos.y = 0; loc.pos.y + 1 < indexer_.dims().y; ++loc.pos.y )
             {
                 loc.pos.x = 0;
@@ -807,14 +799,32 @@ Expected<TriMesh> VolumeMesher::finalize()
                         layerLowerIso[1]->test( posXY + dimsX ),
                         layerLowerIso[1]->test( posXY + dimsX + 1 )
                     };
+                    [[maybe_unused]] bool ivx[8] = {};
+                    if ( hasInvalidVoxels )
+                    {
+                        ivx[0] = layerInvalids[0]->test( posXY );
+                        ivx[1] = layerInvalids[0]->test( posXY + 1 );
+                        ivx[2] = layerInvalids[0]->test( posXY + dimsX );
+                        ivx[3] = layerInvalids[0]->test( posXY + dimsX + 1 );
+                        ivx[4] = layerInvalids[1]->test( posXY );
+                        ivx[5] = layerInvalids[1]->test( posXY + 1 );
+                        ivx[6] = layerInvalids[1]->test( posXY + dimsX );
+                        ivx[7] = layerInvalids[1]->test( posXY + dimsX + 1 );
+                        if ( ivx[0] && ivx[1] && ivx[2] && ivx[3] && ivx[4] && ivx[5] && ivx[6] && ivx[7] )
+                        {
+                            // fast check invalid box
+                            voxelValid = false;
+                            continue;
+                        }
+                    }
                     [[maybe_unused]] bool atLeastOneNan = false;
                     for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
                     {
-                        bool voxelValueLowerIso = vx[i]; //faster alternative of getBit( layerLowerIso, nloc );
+                        bool voxelValueLowerIso = vx[i];
                         if ( hasInvalidVoxels )
                         {
                             VoxelLocation nloc{ loc.id + cVoxelNeighborsIndexAdd[i], loc.pos + cVoxelNeighbors[i] };
-                            bool invalidVoxelValue = getBit( layerInvalids, nloc );
+                            bool invalidVoxelValue = ivx[i];
                             // find non nan neighbor
                             constexpr std::array<uint8_t, 7> cNeighborsOrder{
                                 0b001,
@@ -829,24 +839,9 @@ Expected<TriMesh> VolumeMesher::finalize()
                             // iterates over nan neighbors to find consistent value
                             while ( invalidVoxelValue && neighIndex < 7 )
                             {
-                                auto neighLoc = nloc;
-                                for ( int posCoord = 0; posCoord < 3; ++posCoord )
-                                {
-                                    if ( !( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) )
-                                        continue;
-                                    if ( cVoxelNeighbors[i][posCoord] == 1 )
-                                    {
-                                        --neighLoc.pos[posCoord];
-                                        neighLoc.id -= cDimStep[posCoord];
-                                    }
-                                    else
-                                    {
-                                        ++neighLoc.pos[posCoord];
-                                        neighLoc.id += cDimStep[posCoord];
-                                    }
-                                }
-                                invalidVoxelValue = getBit( layerInvalids, neighLoc );
-                                voxelValueLowerIso = getBit( layerLowerIso, neighLoc );
+                                auto id = i ^ cNeighborsOrder[neighIndex];
+                                invalidVoxelValue = ivx[id];
+                                voxelValueLowerIso = vx[id];
                                 ++neighIndex;
                             }
                             if ( invalidVoxelValue )

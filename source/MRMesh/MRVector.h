@@ -126,8 +126,8 @@ public:
         return vec_[i];
     }
 
-    void push_back( const T & t MR_LIFETIME_CAPTURE_BY(this) ) { vec_.push_back( t ); }
-    void push_back( T && t MR_LIFETIME_CAPTURE_BY(this) ) { vec_.push_back( std::move( t ) ); }
+    void push_back( const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( t ); }
+    void push_back( T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( std::move( t ) ); }
     void pop_back() { vec_.pop_back(); }
 
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )

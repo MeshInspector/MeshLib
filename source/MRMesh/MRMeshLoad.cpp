@@ -531,7 +531,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     if ( newlines.size() < 2 )
         return unexpected( std::string( "Ascii STL is too short" ) );
 
-    auto headerView = dataView.substr( 0, newlines[1] );
+    auto headerView = dataView.substr( newlines[0], newlines[1] );
     if ( !headerView.starts_with( "solid" ) )
         return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
 

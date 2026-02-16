@@ -19,7 +19,9 @@ namespace
 bool ignoreComment( const std::string & comment )
 {
     return comment == "File generated"
-        || ( comment.starts_with( "Created 20" ) && comment.size() > 12 && comment[12] == '-' ) // e.g. "Created 2025-12-19T22:09:05"
+        || ( comment.starts_with( "Created 20" ) && comment.size() > 12 && comment[12] == '-' ) // e.g. 'Created 2025-12-19T22:09:05'
+        || ( comment.starts_with( "Created " ) && comment.size() > 13 && comment[10] == '/' && comment[13] == '/' ) // e.g. 'Created 26/12/2019 10:15'
+        || comment.starts_with( "Timestamp: " ) // e.g. 'Timestamp: 2026-02-06 15:12:26'
         || comment.starts_with( "scalex " )
         || comment.starts_with( "scaley " )
         || comment.starts_with( "scalez " )
@@ -35,6 +37,11 @@ bool ignoreComment( const std::string & comment )
         || comment.starts_with( "offsetx " )
         || comment.starts_with( "offsety " )
         || comment.starts_with( "offsetz " )
+        || comment.starts_with( "Density: " )
+        || comment.starts_with( "FOV: " )
+        || comment.starts_with( "Vertical axis: " )
+        || comment.starts_with( "Coordinate Orientation: " )
+        || comment.starts_with( "Range: " )
         ;
 }
 

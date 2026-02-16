@@ -897,6 +897,27 @@ void trimComment( std::string_view& line )
         line = line.substr( 0, line.find_first_of( ' ', 13 ) ); // till the space after version
         return;
     }
+
+    //'Created by meshio v5.3.5, 2026-02-08T17:36:42.731777'
+    if ( line.starts_with( "Created by meshio " ) )
+    {
+        line = line.substr( 0, line.find_first_of( ' ', 19 ) ); // till the space after version
+        return;
+    }
+
+    //'Reconstructed 4D: Element_V5', '1', 'MI_2.5.6.175'
+    if ( line.starts_with( "Reconstructed 4D: " ) )
+    {
+        line = line.substr( 0, line.find_first_of( ' ', 17 ) ); // 'Reconstructed 4D:'
+        return;
+    }
+
+    //'Apple ModelIO OBJ File: model'
+    if ( line.starts_with( "Apple ModelIO OBJ File: " ) )
+    {
+        line = line.substr( 0, line.find_first_of( ' ', 23 ) ); // 'Apple ModelIO OBJ File:'
+        return;
+    }
 }
 
 Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(

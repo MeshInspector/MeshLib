@@ -562,26 +562,15 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     int i = 0;
     int processedChunks = 0;
     auto sb = subprogress( settings.callback, 0.3f, 0.9f );
-    bool startParallelAdding = false;
     for ( auto fLine : faceRepresentativeLines )
     {
-        // add previous chunk in indexer in parallel
-        if ( startParallelAdding )
-        {
-            startParallelAdding = false;
-            taskGroup.run( [&chunk2, &vi] ()
-            {
-                vi.addTriangles( chunk2 );
-            } );
-        }
         if ( i < itemsInBuffer )
         {
-            size_t lineI = fLine + 1;
             int triI = 0;
             Triangle3f tri;
-            for ( ; ; ++lineI)
+            for ( auto lineI = fLine + 1; lineI + 1 < newlines.size(); ++lineI )
             {
-                if ( lineI + 1 >= newlines.size() || faceRepresentativeLines.test( lineI ) )
+                if ( faceRepresentativeLines.test( lineI ) )
                     break;
                 auto lineView = dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] );
                 if ( lineView.starts_with( "endloop" ) )
@@ -605,12 +594,13 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
                 return unexpectedOperationCanceled();
             std::swap( chunk, chunk2 );
             chunk2.resize( i );
-            startParallelAdding = true;
             i = 0;
+            if ( fLine != lastFaceLine ) // add previous chunk in indexer in parallel
+                taskGroup.run( [&chunk2, &vi] () { vi.addTriangles( chunk2 ); } );
+            else
+                vi.addTriangles( chunk2 );
         }
     }
-    assert( !chunk2.empty() );
-    vi.addTriangles( chunk2 );
 
     if ( !reportProgress( sb, 1.0f ) )
         return unexpectedOperationCanceled();

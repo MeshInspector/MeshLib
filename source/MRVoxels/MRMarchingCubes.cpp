@@ -773,7 +773,6 @@ Expected<TriMesh> VolumeMesher::finalize()
         {
             const BitSet* layerInvalids[2] = { &invalids_[loc.pos.z], &invalids_[loc.pos.z+1] };
             const BitSet* layerLowerIso[2] = { &lowerIso_[loc.pos.z], &lowerIso_[loc.pos.z+1] };
-            const VoxelId layerFirstVoxelId[2] = { indexer_.toVoxelId( { 0, 0, loc.pos.z } ), indexer_.toVoxelId( { 0, 0, loc.pos.z + 1 } ) };
             for ( loc.pos.y = 0; loc.pos.y + 1 < indexer_.dims().y; ++loc.pos.y )
             {
                 loc.pos.x = 0;

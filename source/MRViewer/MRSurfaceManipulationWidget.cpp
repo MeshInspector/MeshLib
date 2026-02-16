@@ -365,6 +365,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.workMode == WorkMode::Laplacian )
     {
         removeLastStableObjMesh_();
+        invalidateMetricsCache_();
         return true;
     }
 
@@ -792,6 +793,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
 
 void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
 {
+    obj_->varMesh()->invalidateCaches();
     ownMeshChangedSignal_ = true;
     auto& viewerRef = getViewerInstance();
     const float zpos = viewerRef.viewport().projectToViewportSpace( obj_->worldXf()( touchVertIniPos_ ) ).z;
@@ -802,7 +804,7 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
     const Vector3f move = obj_->worldXf().A.inverse()* ( pos1 - pos0 );
     laplacian_->fixVertex( touchVertId_, touchVertIniPos_ + move );
     laplacian_->apply();
-    obj_->setDirtyFlags( DIRTY_POSITION );
+    obj_->setDirtyFlagsFast( DIRTY_POSITION );
     updateValueChanges_( singleEditingRegion_ );
 }
 

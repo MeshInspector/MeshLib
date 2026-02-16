@@ -186,19 +186,20 @@ void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val 
 
 void VisualObject::setDirtyFlags( uint32_t mask, bool )
 {
-    if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
-        mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
-    if ( mask & DIRTY_POSITION )
-    {
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
-        boundingBoxCache_.reset();
-    }
-    // DIRTY_POSITION because we use corner rendering and need to update render verts
-    // DIRTY_UV because we need to update UV coordinates
+    invalidateMetricsCache_( mask );
+    setDirtyFlagsFast_( mask );
+}
 
+void VisualObject::setDirtyFlagsFast_( uint32_t mask )
+{
     dirty_ |= mask;
-
     needRedraw_ = true; // this is needed to differ dirty render object and dirty scene
+}
+
+void VisualObject::invalidateMetricsCache_( uint32_t mask )
+{
+    if ( mask & ( DIRTY_POSITION | DIRTY_FACE ) )
+        boundingBoxCache_.reset();
 }
 
 void VisualObject::resetDirty() const

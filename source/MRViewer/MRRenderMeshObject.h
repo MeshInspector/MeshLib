@@ -117,10 +117,14 @@ protected:
     bool dirtyEdges_{ false };
 
 #ifdef __EMSCRIPTEN__
-    bool cornerMode = true;
+    bool cornerMode_ = true;
 #else
-    bool cornerMode = false;
+    bool cornerMode_ = false;
 #endif
+
+private:
+    /// returns dirty flag of currently using normal type if they are dirty in render representation
+    uint32_t getNeededNormalsRenderDirtyValue_( ViewportMask viewportMask ) const;
 };
 
 }

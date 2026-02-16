@@ -517,33 +517,10 @@ void ObjectMeshHolder::clearAncillaryTexture()
         setAncillaryUVCoords( {} );
 }
 
-uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
-{
-    auto flatShading = getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
-    uint32_t res = 0;
-    if ( !( flatShading & viewportMask ).empty() )
-    {
-        res |= ( getDirtyFlags() & DIRTY_FACES_RENDER_NORMAL );
-    }
-    if ( ( flatShading & viewportMask ) != viewportMask )
-    {
-        if ( !data_.creases.any() )
-        {
-            res |= ( getDirtyFlags() & DIRTY_VERTS_RENDER_NORMAL );
-        }
-        else
-        {
-            res |= ( getDirtyFlags() & DIRTY_CORNERS_RENDER_NORMAL );
-        }
-    }
-    return res;
-}
-
 bool ObjectMeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
 {
     return Object::getRedrawFlag( viewportMask ) ||
-        ( isVisible( viewportMask ) &&
-          ( getDirtyFlags() & ( ~( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) );
+        ( isVisible( viewportMask ) && getDirtyFlags() );
 }
 
 void ObjectMeshHolder::applyScale( float scaleFactor )
@@ -772,13 +749,14 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 
 void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
 {
-    VisualObject::setDirtyFlags( mask );
+    VisualObject::setDirtyFlagsFast_( mask );
     if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
         meshChangedSignal( mask );
 }
 
 void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
 {
+    VisualObject::invalidateMetricsCache_( mask );
     if ( mask & DIRTY_FACE )
     {
         numHoles_.reset();

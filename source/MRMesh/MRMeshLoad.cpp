@@ -20,6 +20,8 @@
 #include "MRTextureColors.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
+#include "MRBitSetParallelFor.h"
+#include "MRString.h"
 
 #include <array>
 #include <bit>
@@ -512,84 +514,119 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
 {
     MR_TIMER;
 
-    using HMap = ParallelHashMap<Vector3f, VertId>;
-    HMap hmap;
-    VertCoords points;
-    Triangulation t;
+    auto data = readCharBuffer( in );
+    if ( !data.has_value() )
+        return unexpected( data.error() );
 
-    std::string line;
-    std::string prefix;
-    Vector3f point;
-    ThreeVertIds currTri;
-    int triPos = 0;
-    bool solidFound = false;
+    std::string_view dataView( data->data(), data->size() );
 
-    const auto posStart = in.tellg();
-    const auto streamSize = getStreamSize( in );
+    if ( hasBom( dataView ) )
+        dataView = dataView.substr( 3 );
 
-    std::string header;
-    for ( int i = 0; std::getline( in, line ); ++i )
-    {
-        std::istringstream iss( line );
-        if ( !( iss >> prefix ) )
-            break;
+    const auto newlines = splitByLines( dataView.data(), dataView.size() );
 
-        if ( !solidFound )
-        {
-            if ( prefix == "solid" )
-            {
-                solidFound = true;
-                std::getline( iss, header ); // header will include space after "solid"
-            }
-            else
-                break;
-        }
+    if ( !reportProgress( settings.callback, 0.15f ) )
+        return unexpectedOperationCanceled();
 
-        if ( prefix == "outer" )
-        {
-            triPos = 0;
-            continue;
-        }
-        if ( prefix == "vertex" )
-        {
-            double x, y, z; // double is used to correctly open coordinates like 1e-55 which are under of float-precision
-            if ( !( iss >> x >> y >> z ) )
-                break;
-            point = Vector3f{ Vector3d{ x, y, z } };
+    if ( newlines.size() < 2 )
+        return unexpected( std::string( "Ascii STL is too short" ) );
 
-            VertId& id = hmap[point];
-            if ( !id.valid() )
-            {
-                id = VertId( points.size() );
-                points.push_back( point );
-            }
-            currTri[triPos] = id;
-            ++triPos;
-            continue;
-        }
-        if ( prefix == "endloop" )
-        {
-            t.push_back( currTri );
-            continue;
-        }
-        if ( settings.callback && !( i & 0x3FF ) )
-        {
-            const float progress = float( in.tellg() - posStart ) / float( streamSize );
-            if ( !settings.callback( progress ) )
-                return unexpectedOperationCanceled();
-        }
-    }
-
-    if ( !solidFound )
+    auto headerView = dataView.substr( 0, newlines[1] );
+    if ( !headerView.starts_with( "solid" ) )
         return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
 
+    BitSet faceRepresentativeLines( newlines.size() - 1 );
+    auto keepGoing = BitSetParallelForAll( faceRepresentativeLines, [&] ( size_t lineI )
+    {
+        auto startLine = newlines[lineI];
+        auto size = newlines[lineI + 1] - newlines[lineI];
+        if ( dataView.substr( startLine, size ).starts_with( "outer" ) )
+            faceRepresentativeLines.set( lineI );
+    }, subprogress( settings.callback, 0.15f, 0.3f ) );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    auto numTris = faceRepresentativeLines.count();
+    const auto itemsInBuffer = std::min( numTris, size_t( 32768 ) );
+    int numChunks = ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer );
+    std::vector<Triangle3f> chunk( itemsInBuffer );
+    std::vector<Triangle3f> chunk2( itemsInBuffer );
+
+    auto lastFaceLine = faceRepresentativeLines.find_last();
+
+    MeshBuilder::VertexIdentifier vi;
+    vi.reserve( numTris );
+    tbb::task_group taskGroup;
+
+    int i = 0;
+    int processedChunks = 0;
+    auto sb = subprogress( settings.callback, 0.3f, 0.9f );
+    bool startParallelAdding = false;
+    for ( auto fLine : faceRepresentativeLines )
+    {
+        // add previous chunk in indexer in parallel
+        if ( startParallelAdding )
+        {
+            startParallelAdding = false;
+            taskGroup.run( [&chunk2, &vi] ()
+            {
+                vi.addTriangles( chunk2 );
+            } );
+        }
+        if ( i < itemsInBuffer )
+        {
+            size_t lineI = fLine + 1;
+            int triI = 0;
+            Triangle3f tri;
+            for ( ; ; ++lineI)
+            {
+                if ( lineI + 1 >= newlines.size() || faceRepresentativeLines.test( lineI ) )
+                    break;
+                auto lineView = dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] );
+                if ( lineView.starts_with( "endloop" ) )
+                    break;
+                if ( !lineView.starts_with( "vertex" ) )
+                    continue;
+                if ( triI == 3 )
+                    return unexpected( "Polygonal STL is not supported, line: " + std::to_string( newlines[lineI] ) );
+                auto parseRes = parseTextCoordinate( lineView.substr( 7 ), tri[triI++] );
+                if ( !parseRes.has_value() )
+                    return unexpected( parseRes.error() + " line: " + std::to_string( newlines[lineI] ) );
+            }
+            if ( triI != 3 )
+                unexpected( "Too few vertices for triangle, line: " + std::to_string( newlines[fLine] ) );
+            chunk[i++] = std::move( tri );
+        }
+        if ( i == itemsInBuffer || fLine == lastFaceLine )
+        {
+            taskGroup.wait();
+            if ( !reportProgress( sb, float( ++processedChunks ) / float( numChunks ) ) )
+                return unexpectedOperationCanceled();
+            std::swap( chunk, chunk2 );
+            chunk2.resize( i );
+            startParallelAdding = true;
+            i = 0;
+        }
+    }
+    assert( !chunk2.empty() );
+    vi.addTriangles( chunk2 );
+
+    if ( !reportProgress( sb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    auto t = vi.takeTriangulation();
     std::vector<MeshBuilder::VertDuplication> dups;
     std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    auto header = std::string( trimRight( headerView.substr( 5 ) ) );// "solid " - 6 chars (substr(5) to keep space)
 
     if ( settings.telemetrySignal )
         TelemetrySignal( "STL ASCII" + header );

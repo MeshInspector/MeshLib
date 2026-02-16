@@ -30,13 +30,12 @@ public class GlobalRegistrationExample
         try
         {
             int inputNum = args.Length - 2;
-            List<MR.PointCloud> input_pointclouds = new();
             MR.Vector_MRMeshOrPointsXf_MRObjId inputs = new();
             MR.Box3f maxBBox = new();
             for (int i = 0; i < inputNum; ++i)
             {
                 var pc = MR.PointsLoad.fromAnySupportedFormat(args[i + 1]);
-                input_pointclouds.Add(pc); // Need this to prevent the point-cloud object from dying too early.
+                System.Runtime.InteropServices.GCHandle.Alloc(pc);
                 MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
                 inputs.pushBack(obj);
                 maxBBox.include(obj.obj.computeBoundingBox());

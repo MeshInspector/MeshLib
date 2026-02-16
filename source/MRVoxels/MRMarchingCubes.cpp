@@ -736,7 +736,6 @@ Expected<TriMesh> VolumeMesher::finalize()
         indexer_.sizeXY() + dimsX,
         indexer_.sizeXY() + dimsX + 1
     };
-    const size_t cDimStep[3] = { 1, dimsX, indexer_.sizeXY() };
 
     const bool hasInvalidVoxels =
         std::any_of( invalids_.begin(), invalids_.end(), []( const BitSet & bs ) { return !bs.empty(); } ); // bit set is not empty only if at least one bit is set
@@ -823,7 +822,6 @@ Expected<TriMesh> VolumeMesher::finalize()
                         bool voxelValueLowerIso = vx[i];
                         if ( hasInvalidVoxels )
                         {
-                            VoxelLocation nloc{ loc.id + cVoxelNeighborsIndexAdd[i], loc.pos + cVoxelNeighbors[i] };
                             bool invalidVoxelValue = ivx[i];
                             // find non nan neighbor
                             constexpr std::array<uint8_t, 7> cNeighborsOrder{

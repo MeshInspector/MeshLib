@@ -768,7 +768,7 @@ void RenderMeshObject::update_( ViewportMask )
     }
 
 #ifndef __EMSCRIPTEN__
-    if ( !cornerMode_ && bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
+    if ( !cornerMode_ && objMesh_->creases().any() )
     {
         // always need corner mode for creases
         // it should not affect dirtyEdges_
@@ -779,9 +779,8 @@ void RenderMeshObject::update_( ViewportMask )
         dirty_ |= DIRTY_FACE;
         dirtyPointPos_ = true;
     }
-    if ( cornerMode_ && bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) )
+    else if ( cornerMode_ && objMesh_->creases().none() )
     {
-        assert( objMesh_->creases().none() );
         // disable corner mode if no creases
         // it should not affect dirtyEdges_
         cornerMode_ = false;

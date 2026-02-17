@@ -4,7 +4,7 @@ namespace MR
 {
 
 /// removes white spaces, meaningless or case-specific information from a comment line, then calls telemetry signal
-void telemetryStlHead( std::string s )
+void telemetryStlHead( const char* prefix, std::string s )
 {
     while ( !s.empty() && ( s.back() == ' ' || s.back() == '\t' || s.back() == '\r' || s.back() == '\n' ) )
         s.pop_back();
@@ -58,6 +58,10 @@ void telemetryStlHead( std::string s )
     // e.g. "$objname"
     if ( s.starts_with( "$" ) )
         s = "$objname";
+
+    // e.g. "\"objname\""
+    if ( s.size() >= 2 && s.front() == '"' && s.back() == '"' )
+        s = "\"objname\"";
 
     // e.g. "objname.stl"
     if ( s.ends_with( ".stl" ) )
@@ -136,7 +140,7 @@ void telemetryStlHead( std::string s )
     if ( s.starts_with( NUMPY ) )
         s = s.substr( 0, s.find_first_of( ' ', sizeof( NUMPY ) ) ); // till the space after version
 
-    TelemetrySignal( "STL head " + s );
+    TelemetrySignal( prefix + s );
 }
 
 } //namespace MR

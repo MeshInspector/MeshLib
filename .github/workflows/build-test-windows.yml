@@ -377,18 +377,13 @@ jobs:
           path: ./patched_content/*
           retention-days: 1
 
-      - name: Upload NuGet library DLL to Artifacts
+      - name: Upload NuGet library DLL and XML to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v6
         with:
-          name: DotNetDll
-          path: ./source/x64/Release/MRDotNet2.dll
+          name: DotNetDllXml
+          path: |
+            ./source/x64/Release/MRDotNet2.dll
+            ./source/x64/Release/MRDotNet2.xml
           retention-days: 1
           
-      - name: Upload NuGet documentation XML to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: DotNetXml
-          path: ./source/x64/Release/MRDotNet2.xml
-          retention-days: 1

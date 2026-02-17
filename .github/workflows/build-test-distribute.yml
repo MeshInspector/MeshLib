@@ -190,7 +190,7 @@ jobs:
      - name: Download NuGet DLL
        uses: actions/download-artifact@v7
        with:
-         pattern: DotNetDll*
+         pattern: DotNetDll
          path: dotnet_dll
          merge-multiple: true
 
@@ -364,13 +364,7 @@ jobs:
       - name: Delete .NET Binaries Archive artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
-          name: DotNetDll*
-          failOnError: false
-      - name: Delete .NET XML documentation artifact
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: DotNetXml
-          failOnError: false
+          name: DotNetDll
       - name: Delete NuGet Patches artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:

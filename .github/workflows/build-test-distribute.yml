@@ -197,7 +197,7 @@ jobs:
      - name: Download NuGet XML
        uses: actions/download-artifact@v7
        with:
-         pattern: DotNetXML
+         pattern: DotNetXml
          path: dotnet_dll
 
      - name: Show NuGet DLL dir (TEST)

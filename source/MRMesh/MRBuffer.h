@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRNoDefInit.h"
 #include "MRId.h"
 #include <cassert>
@@ -83,19 +84,19 @@ public:
         size_.val = newSize;
     }
 
-    [[nodiscard]] const_reference operator[]( I i ) const
+    [[nodiscard]] const_reference operator[]( I i ) const MR_LIFETIMEBOUND
     {
         assert( i < size_.val );
         return data_[i];
     }
-    [[nodiscard]] reference operator[]( I i )
+    [[nodiscard]] reference operator[]( I i ) MR_LIFETIMEBOUND
     {
         assert( i < size_.val );
         return data_[i];
     }
 
-    [[nodiscard]] auto data() { return data_.get(); }
-    [[nodiscard]] auto data() const { return data_.get(); }
+    [[nodiscard]] auto data() MR_LIFETIMEBOUND { return data_.get(); }
+    [[nodiscard]] auto data() const MR_LIFETIMEBOUND { return data_.get(); }
 
     /// returns the identifier of the first element
     [[nodiscard]] I beginId() const { return I{ size_t(0) }; }
@@ -116,7 +117,7 @@ private:
 
 /// given some buffer map and a key, returns the value associated with the key, or default value if key is invalid
 template <typename T, typename I>
-inline T getAt( const Buffer<T, I> & bmap, I key, T def = {} )
+inline T getAt( const Buffer<T, I> & bmap MR_LIFETIMEBOUND_NESTED, I key, T def = {} )
 {
     return key ? T{bmap[key]} : def;
 }

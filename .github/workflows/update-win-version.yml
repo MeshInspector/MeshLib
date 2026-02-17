@@ -14,6 +14,20 @@ jobs:
   update-win-version:
     timeout-minutes: 60
     runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triplet: x64-windows-meshlib
+            extract_release: MREDist_Release.zip
+            extract_debug: MREDist_Debug.zip
+            output_zip: MeshLibDist.zip
+            artifact_name: DistributivesWin
+          - triplet: x64-windows-meshlib-iterator-debug
+            extract_release: MREDist_Release-IteratorDebug.zip
+            extract_debug: MREDist_Debug-IteratorDebug.zip
+            output_zip: MeshLibDist-IteratorDebug.zip
+            artifact_name: DistributivesWin-IteratorDebug
     env:
       vs19_vcpkg_version: ${{ inputs.vs19_vcpkg_version }}
     steps:
@@ -32,12 +46,13 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.vs19_vcpkg_version}}
+          key: vcpkg-cache-${{ env.vs19_vcpkg_version }}-${{ matrix.triplet }}
           path: |
             C:\vcpkg\*
 
       - name: Update vcpkg packages
-        # NOTE: This step (thirdparty/install.bat) is the only one keeping us from using github runner for this job
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
         run: |
           .\thirdparty\install.bat
 
@@ -49,18 +64,18 @@ jobs:
 
       - name: Extract Windows Binaries
         run: |
-          tar -xvzf MREDist_Release.zip
-          tar -xvzf MREDist_Debug.zip
+          tar -xvzf ${{ matrix.extract_release }}
+          tar -xvzf ${{ matrix.extract_debug }}
           tar -xvzf MeshLibC2Headers.zip
 
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }}
+        run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.triplet }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Archive Distribution
-        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
+        run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
 
       - name: Test Example Plugin # call it after archive not to pack build results
         run: |
@@ -70,6 +85,6 @@ jobs:
       - name: Upload Windows Distribution
         uses: actions/upload-artifact@v6
         with:
-          name: DistributivesWin
-          path: MeshLibDist.zip
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.output_zip }}
           retention-days: 1

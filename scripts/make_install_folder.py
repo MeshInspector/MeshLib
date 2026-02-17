@@ -21,16 +21,19 @@ path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdpar
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 
 def vcpkg_dir():
-	vcpkg_exe_dir = ""
+	vcpkg_triplet = "x64-windows-meshlib"
 	if len(sys.argv) > 2:
-		vcpkg_exe_dir = sys.argv[2]
+		vcpkg_triplet = sys.argv[2]
+	vcpkg_exe_dir = ""
+	if len(sys.argv) > 3:
+		vcpkg_exe_dir = sys.argv[3]
 	else:
 		vcpkg_exe_dir = os.popen("where vcpkg").read().strip()
 		if "vcpkg.exe" not in vcpkg_exe_dir:
 			vcpkg_exe_dir = "C:\\vcpkg"
 		else:
 			vcpkg_exe_dir = os.path.dirname( vcpkg_exe_dir )
-	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"),"x64-windows-meshlib")
+	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"), vcpkg_triplet)
 
 
 vcpkg_directory = vcpkg_dir()

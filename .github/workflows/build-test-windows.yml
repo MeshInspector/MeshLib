@@ -91,7 +91,7 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           path: |
             C:\vcpkg\*
 
@@ -103,6 +103,8 @@ jobs:
           aws-region: us-east-1
 
       - name: Update vcpkg packages
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
         run: |
           .\thirdparty\install.bat --write-s3
 
@@ -202,13 +204,14 @@ jobs:
         shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
             cmake --version
             if errorlevel 1 exit 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             if errorlevel 1 exit 1
             cmake --build source\TempOutput -j
             if errorlevel 1 exit 1
@@ -217,7 +220,7 @@ jobs:
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y
             if errorlevel 1 exit 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
           )
 
@@ -303,12 +306,13 @@ jobs:
         if: ${{ matrix.config == 'Release' }}  # debug builds not supported due to missing file 'tbb12_debug.lib'
         env:
           VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
         run: |
           & $env:CMAKE_EXE `
             -S examples/cpp-examples `
             -B cpp-examples-build `
-            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include/eigen3" `
-            -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/x64-windows-meshlib/lib"
+            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/include;$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/include/eigen3" `
+            -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/lib"
           & $env:CMAKE_EXE `
             --build cpp-examples-build `
             --config ${{ matrix.config }} `
@@ -330,7 +334,7 @@ jobs:
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
+        run: tar -a -c -f MREDist_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
@@ -340,8 +344,8 @@ jobs:
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
         uses: actions/upload-artifact@v6
         with:
-          name: WindowsArchive_${{matrix.config}}
-          path: MREDist_${{matrix.config}}.zip
+          name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
+          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
           retention-days: 1
 
       - name: Collect artifact stats
@@ -350,7 +354,7 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: MREDist_${{matrix.config}}.zip
+          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive

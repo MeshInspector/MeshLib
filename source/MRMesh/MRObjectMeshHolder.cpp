@@ -784,14 +784,7 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
     data_.creases = std::move( creases );
     numCreaseEdges_.reset();
     creasesChangedSignal();
-    if ( data_.creases.any() )
-    {
-        setDirtyFlags( DIRTY_CORNERS_RENDER_NORMAL );
-    }
-    else
-    {
-        setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
-    }
+    setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
 }
 
 void ObjectMeshHolder::swapBase_( Object& other )

@@ -839,19 +839,20 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !objMesh_->mesh() )
+    if ( !( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+
+    MR_TIMER;
+    dirty_ &= ~DIRTY_VERTS_RENDER_NORMAL;
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
     const auto& creases = objMesh_->creases();
     
-    if ( ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) && creases.any() )
+    if ( creases.any() )
     {
         assert( cornerMode_ );
-        MR_NAMED_TIMER( "dirty_corners_normals" );
-        dirty_ &= ~( DIRTY_CORNERS_RENDER_NORMAL | DIRTY_VERTS_RENDER_NORMAL );
 
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
@@ -869,48 +870,40 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         return buffer;
     }
 
-    if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
+    assert( creases.none() );
+    const auto vertNormals = computePerVertNormals( *mesh );
+    if ( cornerMode_ )
     {
-        assert( creases.none() );
-        MR_NAMED_TIMER( "dirty_vertices_normals" );
-        dirty_ &= ~( DIRTY_CORNERS_RENDER_NORMAL | DIRTY_VERTS_RENDER_NORMAL );
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
-        const auto vertNormals = computePerVertNormals( *mesh );
-        if ( cornerMode_ )
+        ParallelFor( 0_f, numF, [&] ( FaceId f )
         {
-            auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
-
-            ParallelFor( 0_f, numF, [&] ( FaceId f )
+            if ( !mesh->topology.hasFace( f ) )
+                return;
+            auto ind = 3 * f;
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
             {
-                if ( !mesh->topology.hasFace( f ) )
-                    return;
-                auto ind = 3 * f;
-                VertId v[3];
-                topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                {
-                    const auto& norm = getAt( vertNormals, v[i] );
-                    buffer[ind + i] = norm;
-                }
-            } );
-
-            return buffer;
-        }
-        else
-        {
-            vertNormalsSize_ = topology.lastValidVert() + 1;
-            if ( vertNormalsSize_ > vertNormals.size() )
-            {
-                assert( false && "lastValidVert() + 1 > computed normals amount" );
-                vertNormalsSize_ = (int)vertNormals.size();
+                const auto& norm = getAt( vertNormals, v[i] );
+                buffer[ind + i] = norm;
             }
-            auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ );
-            std::copy_n( vertNormals.data(), vertNormalsSize_, buffer.data() );
-            return buffer;
-        }
-    }
+        } );
 
-    return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+        return buffer;
+    }
+    else
+    {
+        vertNormalsSize_ = topology.lastValidVert() + 1;
+        if ( vertNormalsSize_ > vertNormals.size() )
+        {
+            assert( false && "lastValidVert() + 1 > computed normals amount" );
+            vertNormalsSize_ = (int)vertNormals.size();
+        }
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ );
+        std::copy_n( vertNormals.data(), vertNormalsSize_, buffer.data() );
+        return buffer;
+    }
 }
 
 RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()

@@ -194,6 +194,15 @@ jobs:
          path: dotnet_dll
          merge-multiple: true
 
+     - name: Download NuGet XML
+       uses: actions/download-artifact@v7
+       with:
+         pattern: DotNetXML
+         path: dotnet_dll
+
+     - name: Show NuGet DLL dir (TEST)
+       run: ls dotnet_dll
+
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
@@ -359,6 +368,11 @@ jobs:
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: DotNetDll*
+          failOnError: false
+      - name: Delete .NET XML documentation artifact
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: DotNetXml
           failOnError: false
       - name: Delete NuGet Patches artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5

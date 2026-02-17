@@ -845,36 +845,35 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-
-    if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
+    const auto& creases = objMesh_->creases();
+    
+    if ( ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) && creases.any() )
     {
-        dirty_ &= ~DIRTY_CORNERS_RENDER_NORMAL;
-        if ( objMesh_->creases().any() )
+        assert( cornerMode_ );
+        MR_NAMED_TIMER( "dirty_corners_normals" );
+        dirty_ &= ~( DIRTY_CORNERS_RENDER_NORMAL | DIRTY_VERTS_RENDER_NORMAL );
+
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
+
+        const auto cornerNormals = computePerCornerNormals( *mesh, &creases );
+        ParallelFor( 0_f, numF, [&] ( FaceId f )
         {
-            MR_NAMED_TIMER( "dirty_corners_normals" );
+            if ( !mesh->topology.hasFace( f ) )
+                return;
+            auto ind = 3 * f;
+            const auto& cornerN = getAt( cornerNormals, f );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = cornerN[i];
+        } );
 
-            auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
-
-            const auto& creases = objMesh_->creases();
-
-            const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-            ParallelFor( 0_f, numF, [&] ( FaceId f )
-            {
-                if ( !mesh->topology.hasFace( f ) )
-                    return;
-                auto ind = 3 * f;
-                const auto& cornerN = getAt( cornerNormals, f );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = cornerN[i];
-            } );
-
-            return buffer;
-        }
+        return buffer;
     }
+
     if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
     {
+        assert( creases.none() );
         MR_NAMED_TIMER( "dirty_vertices_normals" );
-        dirty_ &= ~DIRTY_VERTS_RENDER_NORMAL;
+        dirty_ &= ~( DIRTY_CORNERS_RENDER_NORMAL | DIRTY_VERTS_RENDER_NORMAL );
 
         const auto vertNormals = computePerVertNormals( *mesh );
         if ( cornerMode_ )
@@ -910,10 +909,8 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
             return buffer;
         }
     }
-    else
-    {
-        return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
-    }
+
+    return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 }
 
 RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()

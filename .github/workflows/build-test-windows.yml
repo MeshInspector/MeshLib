@@ -197,6 +197,10 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
+          
+      - name: Show C# bindings
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
+        run: ls ./source/x64/Release/
 
       - name: Build
         shell: cmd

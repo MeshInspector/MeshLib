@@ -779,21 +779,19 @@ Expected<TriMesh> VolumeMesher::finalize()
                 loc.id = indexer_.toVoxelId( loc.pos );
                 auto posXY = dimsX * loc.pos.y;
 
-                // imitate previous X filling, so we can safely "swap" it later
+                // imitate previous X filling, so we can safely take it later
                 bool vx[8] = {};
                 [[maybe_unused]] bool ivx[8] = {};
+                vx[1] = layerLowerIso[0]->test( posXY );
+                vx[3] = layerLowerIso[0]->test( posXY + dimsX );
+                vx[5] = layerLowerIso[1]->test( posXY );
+                vx[7] = layerLowerIso[1]->test( posXY + dimsX );
+                if ( hasInvalidVoxels )
                 {
-                    vx[1] = layerLowerIso[0]->test( posXY );
-                    vx[3] = layerLowerIso[0]->test( posXY + dimsX );
-                    vx[5] = layerLowerIso[1]->test( posXY );
-                    vx[7] = layerLowerIso[1]->test( posXY + dimsX );
-                    if ( hasInvalidVoxels )
-                    {
-                        ivx[1] = layerInvalids[0]->test( posXY );
-                        ivx[3] = layerInvalids[0]->test( posXY + dimsX );
-                        ivx[5] = layerInvalids[1]->test( posXY );
-                        ivx[7] = layerInvalids[1]->test( posXY + dimsX );
-                    }
+                    ivx[1] = layerInvalids[0]->test( posXY );
+                    ivx[3] = layerInvalids[0]->test( posXY + dimsX );
+                    ivx[5] = layerInvalids[1]->test( posXY );
+                    ivx[7] = layerInvalids[1]->test( posXY + dimsX );
                 }
 
                 for ( ; loc.pos.x + 1 < dimsX; ++loc.pos.x, ++loc.id, ++posXY )
@@ -807,7 +805,7 @@ Expected<TriMesh> VolumeMesher::finalize()
                     // update vx and ivx
                     {
                         for ( int i = 0; i < 4; ++i )
-                            std::swap( vx[i * 2], vx[i * 2 + 1] ); // take lower values from previous vx filling to minimize "test"
+                            vx[i * 2] = vx[i * 2 + 1]; // take lower values from previous vx filling to minimize "test"
                         vx[1] = layerLowerIso[0]->test( posXY + 1 );
                         vx[3] = layerLowerIso[0]->test( posXY + dimsX + 1 );
                         vx[5] = layerLowerIso[1]->test( posXY + 1 );
@@ -816,7 +814,7 @@ Expected<TriMesh> VolumeMesher::finalize()
                     if ( hasInvalidVoxels )
                     {
                         for ( int i = 0; i < 4; ++i )
-                            std::swap( ivx[i * 2], ivx[i * 2 + 1] ); // take lower values from previous vx filling to minimize "test"
+                            ivx[i * 2] = ivx[i * 2 + 1]; // take lower values from previous vx filling to minimize "test"
                         ivx[1] = layerInvalids[0]->test( posXY + 1 );
                         ivx[3] = layerInvalids[0]->test( posXY + dimsX + 1 );
                         ivx[5] = layerInvalids[1]->test( posXY + 1 );

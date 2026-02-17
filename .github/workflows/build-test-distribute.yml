@@ -194,12 +194,6 @@ jobs:
          path: dotnet_dll
          merge-multiple: true
 
-     - name: Download NuGet XML
-       uses: actions/download-artifact@v7
-       with:
-         pattern: DotNetXml
-         path: dotnet_dll
-
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}

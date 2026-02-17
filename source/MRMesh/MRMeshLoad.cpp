@@ -31,7 +31,7 @@
 namespace MR
 {
 
-void telemetryStlHead( std::string s );
+void telemetryStlHead( const char* prefix, std::string s );
 
 Expected<Mesh> loadMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings )
 {
@@ -496,7 +496,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
         return unexpectedOperationCanceled();
 
     if ( settings.telemetrySignal )
-        telemetryStlHead( header );
+        telemetryStlHead( "STL head ", header );
 
     return res;
 }
@@ -616,10 +616,8 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     if ( !reportProgress( settings.callback, 1.0f ) )
         return unexpectedOperationCanceled();
 
-    auto header = std::string( trimRight( headerView.substr( 5 ) ) );// "solid " - 6 chars (substr(5) to keep space)
-
     if ( settings.telemetrySignal )
-        TelemetrySignal( "STL ASCII" + header );
+        telemetryStlHead( "STL ASCII ", std::string( headerView.substr( 6 ) ) ); // "solid " - 6 chars
 
     return res;
 }

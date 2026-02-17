@@ -200,9 +200,6 @@ jobs:
          pattern: DotNetXml
          path: dotnet_dll
 
-     - name: Show NuGet DLL dir (TEST)
-       run: ls dotnet_dll
-
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}

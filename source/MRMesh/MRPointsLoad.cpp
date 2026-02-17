@@ -397,7 +397,12 @@ Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settin
     return cloud;
 }
 
-void telemetryOpenPoints( const std::string& ext, const PointCloud& cloud, const PointsLoadSettings& settings )
+void telemetryLogSize( const PointCloud& cloud )
+{
+    TelemetrySignal( "Open Pnts Log Pnts " + std::to_string( intLog2( cloud.calcNumValidPoints() ) ) );
+}
+
+static void telemetryOpenPoints( const std::string& ext, const PointCloud& cloud, const PointsLoadSettings& settings )
 {
     if ( !settings.telemetrySignal )
         return;
@@ -417,7 +422,7 @@ void telemetryOpenPoints( const std::string& ext, const PointCloud& cloud, const
         signalString += " XF";
 
     TelemetrySignal( signalString );
-    TelemetrySignal( "Open Pnts Log Pnts " + std::to_string( intLog2( cloud.calcNumValidPoints() ) ) );
+    telemetryLogSize( cloud );
 }
 
 Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, const PointsLoadSettings& settings )

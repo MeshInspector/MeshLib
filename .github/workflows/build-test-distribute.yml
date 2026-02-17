@@ -187,10 +187,10 @@ jobs:
          pattern: DotNetPatchArchiveMacOs-arm64
          path: macos_arm64_runtime
 
-     - name: Download NuGet DLL
+     - name: Download NuGet DLL and XML
        uses: actions/download-artifact@v7
        with:
-         pattern: DotNetDll
+         pattern: DotNetDllXml
          path: dotnet_dll
          merge-multiple: true
 
@@ -364,7 +364,8 @@ jobs:
       - name: Delete .NET Binaries Archive artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
-          name: DotNetDll
+          name: DotNetDllXml
+          failOnError: false
       - name: Delete NuGet Patches artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:

@@ -372,7 +372,6 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     }
 
     Locale::init();
-    Locale::set( "en_US.UTF-8" );
 
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
 

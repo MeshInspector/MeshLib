@@ -39,6 +39,7 @@
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
 #include "MRLocale.h"
+#include "MRRibbonFontHolder.h"
 
 namespace
 {
@@ -244,6 +245,8 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
 
     drawSeparator_( "General" );
 
+    drawLanguageSelector_();
+
     drawThemeSelector_();
 
     const auto& style = ImGui::GetStyle();
@@ -280,6 +283,8 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     const float btnHalfSizeX = 168.0f * UI::scale();
 
     drawSeparator_( "Interface" );
+
+    drawLanguageSelector_();
 
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
@@ -895,6 +900,30 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
         shadowGl_->setBlurRadius( radius );
         shadowGl_->setQuality( quality );
     }
+}
+
+void ViewerSettingsPlugin::drawLanguageSelector_()
+{
+    static const auto sLanguages = Locale::getAvailableLocales();
+    if ( selectedLanguage_ < 0 )
+    {
+        auto it = std::find( sLanguages.begin(), sLanguages.end(), Locale::getName() );
+        if ( it == sLanguages.end() )
+        {
+            it = std::find( sLanguages.begin(), sLanguages.end(), "en" );
+            assert( it != sLanguages.end() );
+        }
+        selectedLanguage_ = std::distance( sLanguages.begin(), it );
+    }
+
+    ImGui::SetNextItemWidth( 200.0f * UI::scale() );
+    if ( UI::combo( _t( "Language" ), &selectedLanguage_, sLanguages ) )
+        Locale::set( sLanguages[selectedLanguage_].c_str() );
+
+    ImGui::SameLine();
+    RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );
+    ImGui::Text( "" );
+    icons.popFont();
 }
 
 void ViewerSettingsPlugin::drawThemeSelector_()

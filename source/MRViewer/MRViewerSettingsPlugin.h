@@ -76,6 +76,7 @@ private:
     void drawMeasurementUnitsTab_();
     void drawFeaturesTab_();
 
+    void drawLanguageSelector_();
     void drawThemeSelector_();
     void drawResetDialog_( bool activated );
     void drawShadingModeCombo_( bool inGroup, float toolWidth );
@@ -104,6 +105,8 @@ private:
     float tempUserScaling_{ 1.0f };
 
     Vector4f backgroundColor_;
+
+    int selectedLanguage_{ -1 };
 
     int selectedUserPreset_{ 0 };
     std::vector<std::string> userThemesPresets_;

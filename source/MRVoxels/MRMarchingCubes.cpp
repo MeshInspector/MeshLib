@@ -778,6 +778,24 @@ Expected<TriMesh> VolumeMesher::finalize()
                 loc.pos.x = 0;
                 loc.id = indexer_.toVoxelId( loc.pos );
                 auto posXY = dimsX * loc.pos.y;
+
+                // imitate previous X filling, so we can safely "swap" it later
+                bool vx[8] = {};
+                [[maybe_unused]] bool ivx[8] = {};
+                {
+                    vx[1] = layerLowerIso[0]->test( posXY );
+                    vx[3] = layerLowerIso[0]->test( posXY + dimsX );
+                    vx[5] = layerLowerIso[1]->test( posXY );
+                    vx[7] = layerLowerIso[1]->test( posXY + dimsX );
+                    if ( hasInvalidVoxels )
+                    {
+                        ivx[1] = layerInvalids[0]->test( posXY );
+                        ivx[3] = layerInvalids[0]->test( posXY + dimsX );
+                        ivx[5] = layerInvalids[1]->test( posXY );
+                        ivx[7] = layerInvalids[1]->test( posXY + dimsX );
+                    }
+                }
+
                 for ( ; loc.pos.x + 1 < dimsX; ++loc.pos.x, ++loc.id, ++posXY )
                 {
                     assert( indexer_.toVoxelId( loc.pos ) == loc.id );
@@ -786,27 +804,22 @@ Expected<TriMesh> VolumeMesher::finalize()
 
                     bool voxelValid = true;
                     voxelConfiguration = 0;
-                    bool vx[8] =
+                    // update vx and ivx
                     {
-                        layerLowerIso[0]->test( posXY ),
-                        layerLowerIso[0]->test( posXY + 1 ),
-                        layerLowerIso[0]->test( posXY + dimsX ),
-                        layerLowerIso[0]->test( posXY + dimsX + 1 ),
-                        layerLowerIso[1]->test( posXY ),
-                        layerLowerIso[1]->test( posXY + 1 ),
-                        layerLowerIso[1]->test( posXY + dimsX ),
-                        layerLowerIso[1]->test( posXY + dimsX + 1 )
-                    };
-                    [[maybe_unused]] bool ivx[8] = {};
+                        for ( int i = 0; i < 4; ++i )
+                            std::swap( vx[i * 2], vx[i * 2 + 1] ); // take lower values from previous vx filling to minimize "test"
+                        vx[1] = layerLowerIso[0]->test( posXY + 1 );
+                        vx[3] = layerLowerIso[0]->test( posXY + dimsX + 1 );
+                        vx[5] = layerLowerIso[1]->test( posXY + 1 );
+                        vx[7] = layerLowerIso[1]->test( posXY + dimsX + 1 );
+                    }
                     if ( hasInvalidVoxels )
                     {
-                        ivx[0] = layerInvalids[0]->test( posXY );
+                        for ( int i = 0; i < 4; ++i )
+                            std::swap( ivx[i * 2], ivx[i * 2 + 1] ); // take lower values from previous vx filling to minimize "test"
                         ivx[1] = layerInvalids[0]->test( posXY + 1 );
-                        ivx[2] = layerInvalids[0]->test( posXY + dimsX );
                         ivx[3] = layerInvalids[0]->test( posXY + dimsX + 1 );
-                        ivx[4] = layerInvalids[1]->test( posXY );
                         ivx[5] = layerInvalids[1]->test( posXY + 1 );
-                        ivx[6] = layerInvalids[1]->test( posXY + dimsX );
                         ivx[7] = layerInvalids[1]->test( posXY + dimsX + 1 );
                         if ( ivx[0] && ivx[1] && ivx[2] && ivx[3] && ivx[4] && ivx[5] && ivx[6] && ivx[7] )
                         {

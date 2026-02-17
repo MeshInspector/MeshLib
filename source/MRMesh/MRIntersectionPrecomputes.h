@@ -3,10 +3,6 @@
 #include "MRVector3.h"
 #include "MRPch/MRBindingMacros.h"
 
-#if defined(__x86_64__) || defined(_M_X64)
-#include <xmmintrin.h> //SSE instructions
-#endif
-
 namespace MR
 {
 
@@ -145,16 +141,13 @@ struct IntersectionPrecomputes
         invDir.y = ( dir.y == 0 ) ? std::numeric_limits<T>::max() : T( 1 ) / dir.y;
         invDir.z = ( dir.z == 0 ) ? std::numeric_limits<T>::max() : T( 1 ) / dir.z;
     }
-
 };
 
-/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
-#if defined(__x86_64__) || defined(_M_X64)
 template<>
 struct IntersectionPrecomputes<float>
 {
     // {1.f / dir}
-    MR_BIND_IGNORE __m128 invDir;
+    MR_BIND_IGNORE alignas(16) std::array<float, 4> invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}
     int maxDimIdxZ = 2;
@@ -172,18 +165,15 @@ struct IntersectionPrecomputes<float>
         Sy = dir[idxY] / dir[maxDimIdxZ];
         Sz = float( 1 ) / dir[maxDimIdxZ];
 
-        invDir = _mm_set_ps(
+        invDir = {
             ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
             ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
             ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
-            1 );
+            1.f,
+        };
     }
-
 };
 
 /// \}
 
-#else
-    #pragma message("IntersectionPrecomputes<float>: no hardware optimized instructions")
-#endif
 }

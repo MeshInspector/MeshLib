@@ -2268,8 +2268,15 @@
     <ClCompile Include="MRFormat.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRParallelFor.cpp" />
-    <ClCompile Include="MRBitSetParallelFor.cpp" />
+    <ClCompile Include="MRParallelFor.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBitSetParallelFor.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRayBoxIntersection.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

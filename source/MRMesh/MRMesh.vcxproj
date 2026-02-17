@@ -739,6 +739,7 @@
     <ClCompile Include="MRFormat.cpp" />
     <ClCompile Include="MRParallelFor.cpp" />
     <ClCompile Include="MRBitSetParallelFor.cpp" />
+    <ClCompile Include="MRRayBoxIntersection.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

@@ -34,6 +34,8 @@ IF(NOT EMSCRIPTEN)
   find_package(glfw3 CONFIG REQUIRED)
 ENDIF()
 
+find_package(Boost COMPONENTS locale REQUIRED)
+
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh
@@ -42,6 +44,7 @@ target_link_libraries(${PROJECT_NAME}
   PRIVATE
     MRIOExtras
     MRSymbolMesh
+    Boost::locale
     glad::glad
     ${CMAKE_DL_LIBS}
 )

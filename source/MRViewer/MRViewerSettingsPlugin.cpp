@@ -38,6 +38,7 @@
 #include "MRViewerConfigConstants.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
+#include "MRLocale.h"
 
 namespace
 {
@@ -903,7 +904,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( "Color Theme", &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( _t( "Color Theme" ), &selectedUserPreset_, userThemesPresets_ );
     ImGui::PopStyleVar();
     if ( selectedUserPreset_ != selectedUserIdxBackup )
     {

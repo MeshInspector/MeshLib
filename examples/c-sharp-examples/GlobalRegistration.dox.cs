@@ -35,7 +35,6 @@ public class GlobalRegistrationExample
             for (int i = 0; i < inputNum; ++i)
             {
                 var pc = MR.PointsLoad.fromAnySupportedFormat(args[i + 1]);
-                System.Runtime.InteropServices.GCHandle.Alloc(pc);
                 MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
                 inputs.pushBack(obj);
                 maxBBox.include(obj.obj.computeBoundingBox());

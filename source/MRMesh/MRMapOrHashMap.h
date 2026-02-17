@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRVector.h"
 #include "MRphmap.h"
 #include <variant>
@@ -21,8 +22,8 @@ struct MapOrHashMap
     [[nodiscard]] static MapOrHashMap createMap( size_t size = 0 );
     [[nodiscard]] static MapOrHashMap createHashMap( size_t capacity = 0 );
 
-    void setMap( Dense && m ) { var = std::move( m ); }
-    void setHashMap( Hash && m ) { var = std::move( m ); }
+    void setMap( Dense && m MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { var = std::move( m ); }
+    void setHashMap( Hash && m MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { var = std::move( m ); }
 
     /// if this stores dense map then resizes it to denseTotalSize;
     /// if this stores hash map then sets its capacity to size()+hashAdditionalCapacity
@@ -30,17 +31,17 @@ struct MapOrHashMap
 
     /// appends one element in the map,
     /// in case of dense map, key must be equal to vector.endId()
-    void pushBack( K key, V val );
+    void pushBack( K key MR_LIFETIME_CAPTURE_BY_NESTED(this), V val MR_LIFETIME_CAPTURE_BY_NESTED(this) );
 
     /// executes given function for all pairs (key, value) with valid value for dense map
     template<typename F>
     void forEach( F && f ) const;
 
-    [[nodiscard]]       Dense* getMap()       { return get_if<Dense>( &var ); }
-    [[nodiscard]] const Dense* getMap() const { return get_if<Dense>( &var ); }
+    [[nodiscard]]       Dense* getMap()       MR_LIFETIMEBOUND { return get_if<Dense>( &var ); }
+    [[nodiscard]] const Dense* getMap() const MR_LIFETIMEBOUND { return get_if<Dense>( &var ); }
 
-    [[nodiscard]]       Hash* getHashMap()       { return get_if<Hash>( &var ); }
-    [[nodiscard]] const Hash* getHashMap() const { return get_if<Hash>( &var ); }
+    [[nodiscard]]       Hash* getHashMap()       MR_LIFETIMEBOUND { return get_if<Hash>( &var ); }
+    [[nodiscard]] const Hash* getHashMap() const MR_LIFETIMEBOUND { return get_if<Hash>( &var ); }
 
     void clear();
 };

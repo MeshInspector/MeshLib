@@ -42,7 +42,11 @@ const char* Locale::getName()
 
 const std::locale& Locale::set( const char* locale )
 {
-    return ( gLocale = gLocaleGen.generate( ( gLocaleName = locale ) ) );
+    auto localeName = ( gLocaleName = locale );
+    // TODO: correct encoding processing
+    if ( !localeName.ends_with( ".UTF-8" ) )
+        localeName.append( ".UTF-8" );
+    return ( gLocale = gLocaleGen.generate( localeName ) );
 }
 
 std::vector<std::string> Locale::getAvailableLocales()

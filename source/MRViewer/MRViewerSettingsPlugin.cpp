@@ -243,7 +243,7 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     if ( !ribbonMenu )
         return;
 
-    drawSeparator_( "General" );
+    drawSeparator_( _t( "General" ) );
 
     drawLanguageSelector_();
 
@@ -961,7 +961,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     if ( item != RibbonSchemaHolder::schema().items.end() )
     {
         ImGui::SameLine( 300.0f * UI::scale() );
-        if ( UI::button( "Add",
+        if ( UI::button( _t( "Add" ),
             item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
             Vector2f( 50.0f * UI::scale(), 0 ) ) )
         {

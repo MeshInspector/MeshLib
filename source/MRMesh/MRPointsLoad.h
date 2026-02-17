@@ -38,6 +38,9 @@ MRMESH_API Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::p
 /// extension in `*.ext` format
 MRMESH_API Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings = {} );
 
+/// emits telemetry signal with the integer logarithm of the number of points
+MR_BIND_IGNORE MRMESH_API void telemetryLogSize( const PointCloud& cloud );
+
 /// \}
 
 } // namespace MR::PointsLoad

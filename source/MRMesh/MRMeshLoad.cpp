@@ -769,17 +769,6 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     return Mesh::fromPointTriples( triangles, true );
 }
 
-static int intLog2( int n )
-{
-    int l = 0;
-    while ( n > 0 )
-    {
-        ++l;
-        n /= 2;
-    }
-    return l;
-}
-
 void telemetryLogSize( const Mesh& mesh )
 {
     if ( int logFaces = intLog2( mesh.topology.numValidFaces() ) )

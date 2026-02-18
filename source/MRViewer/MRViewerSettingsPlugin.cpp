@@ -282,7 +282,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         return;
     const float btnHalfSizeX = 168.0f * UI::scale();
 
-    drawSeparator_( "Interface" );
+    drawSeparator_( _tr( "Interface" ) );
 
     drawLanguageSelector_();
 

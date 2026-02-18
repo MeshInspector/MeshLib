@@ -59,7 +59,7 @@ public:
     [[nodiscard]] bool uncheckedTestSet( IndexType n, bool val = true ) { assert( n < size() ); bool b = uncheckedTest( n ); if ( b != val ) set( n, val ); return b; }
 
     // all bits after size() we silently consider as not-set
-    [[nodiscard]] bool test( IndexType n ) const { return n < size() && uncheckedTest( n ); }
+    [[nodiscard]] bool test( IndexType n ) const { return n < size() ? uncheckedTest( n ) : false; } // return n < size() && uncheckedTest( n ); was compiled with conditional jump by MSVC
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
     MRMESH_API BitSet & set( IndexType n, size_type len, bool val );

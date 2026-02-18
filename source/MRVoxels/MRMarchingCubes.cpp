@@ -713,6 +713,88 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, const Bl
     }
 }
 
+struct BitSetBounds
+{
+    MinMax<size_t> setBounds;
+    MinMax<size_t> unsetBounds;
+};
+
+// returns min and max unset bits in bitset
+MinMax<size_t> findNonSetBitSetBounds( const BitSet& bs )
+{
+    return { bs.find_first_not_set(),bs.find_last_not_set() };
+}
+
+// returns min and max set bits along with min and max unset bits
+BitSetBounds findBitSetBounds( const BitSet& bs )
+{
+    BitSetBounds res;
+    res.setBounds.min = bs.find_first();
+    res.setBounds.max = bs.find_last();
+    res.unsetBounds = findNonSetBitSetBounds( bs );
+    return res;
+}
+
+// finds bounds of `lowValue` layers (min and max bits where value changes)
+MinMax<size_t> trianglulatedVoxelBounds( const BitSetBounds& valueBounds0, const BitSetBounds& valueBounds1, size_t layerSize )
+{
+    MinMax<size_t> res;
+    if ( valueBounds0.unsetBounds.min == 0 )
+        res.min = std::min( valueBounds0.setBounds.min, valueBounds1.setBounds.min );
+    else
+        res.min = std::min( valueBounds0.unsetBounds.min, valueBounds1.unsetBounds.min );
+
+    if ( valueBounds0.unsetBounds.max + 1 == layerSize )
+        res.max = std::max( valueBounds0.setBounds.max, valueBounds1.setBounds.max );
+    else
+        res.max = std::max( valueBounds0.unsetBounds.max, valueBounds1.unsetBounds.max );
+    return res;
+}
+
+// function to find current layer processing bounds (voxels outside of it are guaranteed to be empty)
+// valueBounds: two `BitSetBounds` for this and next layer, 
+//     if valueBounds[1] is valid it will be copied to valueBounds[0] (as it is same layer calculated on previous step)
+//     updated in this function
+// invalidBounds: two `MinMax<size_t>` for this and next layer, 
+//     if invalidBounds[1] is valid it will be copied to invalidBounds[0] (as it is same layer calculated on previous step)
+//     updated in this function
+// lowValues: two `const BitSet*` for this and next layer (each bit means voxel with value lower than iso)
+// invalids: two `const BitSet*` for this and next layer (each bit means invalid voxel)
+// haveInvalids: flag to skip `invalidBounds` update if there is no `invalids` in current run
+MinMax<size_t> prepareLayerBounds(
+    BitSetBounds* valueBounds, MinMax<size_t>* invalidBounds,
+    const BitSet** lowValues, const BitSet** invalids,
+    bool haveInvalids, const VolumeIndexer& indexer )
+{
+    // find layer bounds to fast discard invalid and empty voxels on ends of the layer
+    MinMax<size_t> positionBounds{ 0,indexer.sizeXY() };
+
+    if ( valueBounds[1].setBounds.valid() )
+        valueBounds[0] = valueBounds[1]; // take from previous step instead of calculating
+    else
+        valueBounds[0] = findBitSetBounds( *lowValues[0] );
+    valueBounds[1] = findBitSetBounds( *lowValues[1] );
+    positionBounds.intersect( trianglulatedVoxelBounds( valueBounds[0], valueBounds[1], indexer.sizeXY() ) );
+    if ( haveInvalids )
+    {
+        if ( invalidBounds[1].valid() )
+            invalidBounds[0] = invalidBounds[1]; // take from previous step instead of calculating
+        else
+            invalidBounds[0] = findNonSetBitSetBounds( *invalids[0] );
+        invalidBounds[1] = findNonSetBitSetBounds( *invalids[1] );
+        auto commonInvalidsBounds = invalidBounds[0];
+        commonInvalidsBounds.include( invalidBounds[1] );
+        positionBounds.intersect( commonInvalidsBounds );
+    }
+
+    if ( positionBounds.min > ( indexer.dims().x + 2 ) )
+        positionBounds.min -= ( indexer.dims().x + 2 );
+    else
+        positionBounds.min = 0;
+    positionBounds.max += ( indexer.dims().x + 2 );
+    return positionBounds;
+}
+
 Expected<TriMesh> VolumeMesher::finalize()
 {
     MR_TIMER;
@@ -771,6 +853,8 @@ Expected<TriMesh> VolumeMesher::finalize()
         std::array<const SeparationPointSet*, 7> neis;
         unsigned char voxelConfiguration;
         VoxelLocation loc = indexer_.toLoc( Vector3i( 0, 0, layerBegin ) );
+        BitSetBounds valueBSBounds[2];
+        [[maybe_unused]] MinMax<size_t> invalidBSBounds[2];
         for ( ; loc.pos.z < layerEnd; ++loc.pos.z )
         {
             const BitSet* layerInvalids[2];
@@ -779,6 +863,9 @@ Expected<TriMesh> VolumeMesher::finalize()
             const BitSet* layerLowerIso[2];
             layerLowerIso[0] = lowerIso_[loc.pos.z].empty() ? &noneLayerBitset_ : &lowerIso_[loc.pos.z];
             layerLowerIso[1] = lowerIso_[loc.pos.z + 1].empty() ? &noneLayerBitset_ : &lowerIso_[loc.pos.z + 1];
+
+            auto positionBounds = prepareLayerBounds( valueBSBounds, invalidBSBounds, layerLowerIso, layerInvalids, hasInvalidVoxels, indexer_ );
+
             for ( loc.pos.y = 0; loc.pos.y + 1 < indexer_.dims().y; ++loc.pos.y )
             {
                 loc.pos.x = 0;
@@ -803,6 +890,10 @@ Expected<TriMesh> VolumeMesher::finalize()
                 for ( ; loc.pos.x + 1 < dimsX; ++loc.pos.x, ++loc.id, ++posXY )
                 {
                     assert( indexer_.toVoxelId( loc.pos ) == loc.id );
+
+                    if ( !positionBounds.contains( posXY ) )
+                        continue;
+
                     if ( params_.cb && !keepGoing.load( std::memory_order_relaxed ) )
                         return;
 

@@ -35,7 +35,6 @@ inline auto pgettext( const char* context, const char* id )
 } // namespace MR
 
 #ifndef MR_NO_GETTEXT_MACROS
-#define _t( id ) MR::gettext( id ).c_str()
-#define _tp( context, id ) MR::pgettext( context, id ).c_str()
+#define _tr( id ) MR::gettext( id ).c_str()
+#define p_tr( context, id ) MR::pgettext( context, id ).c_str()
 #endif // MR_NO_GETTEXT_MACROS
-

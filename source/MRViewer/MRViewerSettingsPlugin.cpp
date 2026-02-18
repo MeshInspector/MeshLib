@@ -46,12 +46,12 @@ namespace
 const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
 {
     constexpr std::array<const char*, size_t( MR::ViewerSettingsPlugin::TabType::Count )> tabNames{
-        "Quick",
-        "Application",
-        "Control",
-        "3D View",
-        "Units",
-        "Features",
+        p_t( "ViewerSettingsPlugin", "Quick" ),
+        p_t( "ViewerSettingsPlugin", "Application" ),
+        p_t( "ViewerSettingsPlugin", "Control" ),
+        p_t( "ViewerSettingsPlugin", "3D View" ),
+        p_t( "ViewerSettingsPlugin", "Units" ),
+        p_t( "ViewerSettingsPlugin", "Features" ),
     };
     return tabNames[int( tab )];
 }
@@ -105,7 +105,7 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
             }
             auto tab = TabType( i );
             bool neetToSelect = orderedTab_ == tab;
-            if ( UI::beginTabItem( getViewerSettingTabName( tab ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
+            if ( UI::beginTabItem( p_tr( "ViewerSettingsPlugin", getViewerSettingTabName( tab ) ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
             {
                 if ( neetToSelect )
                     orderedTab_ = TabType::Count;
@@ -243,7 +243,7 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     if ( !ribbonMenu )
         return;
 
-    drawSeparator_( _t( "General" ) );
+    drawSeparator_( _tr( "General" ) );
 
     drawLanguageSelector_();
 
@@ -917,7 +917,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
     }
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
-    if ( UI::combo( _t( "Language" ), &selectedLanguage_, sLanguages ) )
+    if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguages ) )
         Locale::set( sLanguages[selectedLanguage_].c_str() );
 
     ImGui::SameLine();
@@ -933,7 +933,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( _t( "Color Theme" ), &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( _tr( "Color Theme" ), &selectedUserPreset_, userThemesPresets_ );
     ImGui::PopStyleVar();
     if ( selectedUserPreset_ != selectedUserIdxBackup )
     {
@@ -961,7 +961,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     if ( item != RibbonSchemaHolder::schema().items.end() )
     {
         ImGui::SameLine( 300.0f * UI::scale() );
-        if ( UI::button( _t( "Add" ),
+        if ( UI::button( _tr( "Add" ),
             item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
             Vector2f( 50.0f * UI::scale(), 0 ) ) )
         {

@@ -806,3 +806,9 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+#ifndef MR_NO_GETTEXT_MACROS
+/// special no-op macros for marking strings as translatable
+#define _t( str ) str
+#define p_t( ctx, str ) str
+#endif // MR_NO_GETTEXT_MACROS

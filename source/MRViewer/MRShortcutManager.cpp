@@ -145,6 +145,14 @@ std::string ShortcutManager::getKeyString( int key )
     {
         return std::string( "Enter" );
     }
+    else if ( key == GLFW_KEY_EQUAL )
+    {
+        return std::string( "=" );
+    }
+    else if ( key == GLFW_KEY_MINUS )
+    {
+        return std::string( "-" );
+    }
     else
     {
         switch ( key )

@@ -372,6 +372,7 @@ private:
     int layersPerBlock_ = 0;
     int nextZ_ = 0;
 
+    BitSet noneLayerBitset_; ///< bitset that has valid layer size but no set bits, used to optimize memory and "uncheckedTest"s
     std::vector<BitSet> invalids_; ///< invalid voxels in each layer
     std::vector<BitSet> lowerIso_; ///< voxels with the values lower then params.iso
 
@@ -422,6 +423,7 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
 
     sepStorage_.resize( blockCount_, blockSize );
 
+    noneLayerBitset_.resize( layerSize );
     invalids_.resize( layerCount );
     lowerIso_.resize( layerCount );
 }
@@ -771,8 +773,12 @@ Expected<TriMesh> VolumeMesher::finalize()
         VoxelLocation loc = indexer_.toLoc( Vector3i( 0, 0, layerBegin ) );
         for ( ; loc.pos.z < layerEnd; ++loc.pos.z )
         {
-            const BitSet* layerInvalids[2] = { &invalids_[loc.pos.z], &invalids_[loc.pos.z+1] };
-            const BitSet* layerLowerIso[2] = { &lowerIso_[loc.pos.z], &lowerIso_[loc.pos.z+1] };
+            const BitSet* layerInvalids[2];
+            layerInvalids[0] = invalids_[loc.pos.z].empty() ? &noneLayerBitset_ : &invalids_[loc.pos.z];
+            layerInvalids[1] = invalids_[loc.pos.z + 1].empty() ? &noneLayerBitset_ : &invalids_[loc.pos.z + 1];
+            const BitSet* layerLowerIso[2];
+            layerLowerIso[0] = lowerIso_[loc.pos.z].empty() ? &noneLayerBitset_ : &lowerIso_[loc.pos.z];
+            layerLowerIso[1] = lowerIso_[loc.pos.z + 1].empty() ? &noneLayerBitset_ : &lowerIso_[loc.pos.z + 1];
             for ( loc.pos.y = 0; loc.pos.y + 1 < indexer_.dims().y; ++loc.pos.y )
             {
                 loc.pos.x = 0;
@@ -782,16 +788,16 @@ Expected<TriMesh> VolumeMesher::finalize()
                 // imitate previous X filling, so we can safely take it later
                 bool vx[8] = {};
                 [[maybe_unused]] bool ivx[8] = {};
-                vx[1] = layerLowerIso[0]->test( posXY );
-                vx[3] = layerLowerIso[0]->test( posXY + dimsX );
-                vx[5] = layerLowerIso[1]->test( posXY );
-                vx[7] = layerLowerIso[1]->test( posXY + dimsX );
+                vx[1] = layerLowerIso[0]->uncheckedTest( posXY );
+                vx[3] = layerLowerIso[0]->uncheckedTest( posXY + dimsX );
+                vx[5] = layerLowerIso[1]->uncheckedTest( posXY );
+                vx[7] = layerLowerIso[1]->uncheckedTest( posXY + dimsX );
                 if ( hasInvalidVoxels )
                 {
-                    ivx[1] = layerInvalids[0]->test( posXY );
-                    ivx[3] = layerInvalids[0]->test( posXY + dimsX );
-                    ivx[5] = layerInvalids[1]->test( posXY );
-                    ivx[7] = layerInvalids[1]->test( posXY + dimsX );
+                    ivx[1] = layerInvalids[0]->uncheckedTest( posXY );
+                    ivx[3] = layerInvalids[0]->uncheckedTest( posXY + dimsX );
+                    ivx[5] = layerInvalids[1]->uncheckedTest( posXY );
+                    ivx[7] = layerInvalids[1]->uncheckedTest( posXY + dimsX );
                 }
 
                 for ( ; loc.pos.x + 1 < dimsX; ++loc.pos.x, ++loc.id, ++posXY )
@@ -806,19 +812,19 @@ Expected<TriMesh> VolumeMesher::finalize()
                     {
                         for ( int i = 0; i < 4; ++i )
                             vx[i * 2] = vx[i * 2 + 1]; // take lower values from previous vx filling to minimize "test"
-                        vx[1] = layerLowerIso[0]->test( posXY + 1 );
-                        vx[3] = layerLowerIso[0]->test( posXY + dimsX + 1 );
-                        vx[5] = layerLowerIso[1]->test( posXY + 1 );
-                        vx[7] = layerLowerIso[1]->test( posXY + dimsX + 1 );
+                        vx[1] = layerLowerIso[0]->uncheckedTest( posXY + 1 );
+                        vx[3] = layerLowerIso[0]->uncheckedTest( posXY + dimsX + 1 );
+                        vx[5] = layerLowerIso[1]->uncheckedTest( posXY + 1 );
+                        vx[7] = layerLowerIso[1]->uncheckedTest( posXY + dimsX + 1 );
                     }
                     if ( hasInvalidVoxels )
                     {
                         for ( int i = 0; i < 4; ++i )
                             ivx[i * 2] = ivx[i * 2 + 1]; // take lower values from previous vx filling to minimize "test"
-                        ivx[1] = layerInvalids[0]->test( posXY + 1 );
-                        ivx[3] = layerInvalids[0]->test( posXY + dimsX + 1 );
-                        ivx[5] = layerInvalids[1]->test( posXY + 1 );
-                        ivx[7] = layerInvalids[1]->test( posXY + dimsX + 1 );
+                        ivx[1] = layerInvalids[0]->uncheckedTest( posXY + 1 );
+                        ivx[3] = layerInvalids[0]->uncheckedTest( posXY + dimsX + 1 );
+                        ivx[5] = layerInvalids[1]->uncheckedTest( posXY + 1 );
+                        ivx[7] = layerInvalids[1]->uncheckedTest( posXY + dimsX + 1 );
                         if ( ivx[0] && ivx[1] && ivx[2] && ivx[3] && ivx[4] && ivx[5] && ivx[6] && ivx[7] )
                         {
                             // fast check invalid box

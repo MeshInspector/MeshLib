@@ -1,29 +1,9 @@
 #include <MRMesh/MRMeshCollide.h>
 #include <MRMesh/MRMesh.h>
-#include <MRMesh/MRTriangleIntersection.h>
 #include <MRMesh/MRGTest.h>
 
 namespace MR
 {
-
-TEST( MRMesh, DegenerateTrianglesIntersect )
-{
-    Vector3f a{-24.5683002f,-17.7052994f,-21.3701000f};
-    Vector3f b{-24.6611996f,-17.7504997f,-21.3423004f};
-    Vector3f c{-24.6392994f,-17.7071991f,-21.3542995f};
-
-    Vector3f d{-24.5401993f,-17.7504997f,-21.3390007f};
-    Vector3f e{-24.5401993f,-17.7504997f,-21.3390007f};
-    Vector3f f{-24.5862007f,-17.7504997f,-21.3586998f};
-
-    bool intersection = doTrianglesIntersect(
-        Vector3d{a}, Vector3d{b}, Vector3d{c},
-        Vector3d{d}, Vector3d{e}, Vector3d{f} );
-
-    // in float arithmetic this test fails unfortunately
-
-    EXPECT_FALSE( intersection );
-}
 
 TEST( MRMesh, findSelfCollidingTriangles )
 {

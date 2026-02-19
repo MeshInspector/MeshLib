@@ -54,7 +54,7 @@
     <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
-    <ClCompile Include="MRTriangleIntersection.cpp" />
+    <ClCompile Include="MRTriangleIntersectionTests.cpp" />
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
     <ClCompile Include="MRTriMathTests.cpp" />
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />

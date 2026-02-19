@@ -191,22 +191,8 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesOverlapTestFixture, testing::Values(
     , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.25f,0.5f ), Vector2f( 0.5,1.25f ), Vector2f( 1,1.25f ) }
 ) );
 
-TEST( MRMesh, DegenerateTrianglesIntersect )
+static void testNoIntersect( const Vector3f (&triA)[3], const Vector3f (&triB)[3] )
 {
-    Vector3f triA[3] =
-    {
-        { -24.5683002f, -17.7052994f, -21.3701000f },
-        { -24.6611996f, -17.7504997f, -21.3423004f },
-        { -24.6392994f, -17.7071991f, -21.3542995f }
-    };
-
-    Vector3f triB[3] =
-    {
-        { -24.5401993f, -17.7504997f, -21.3390007f },
-        { -24.5401993f, -17.7504997f, -21.3390007f },
-        { -24.5862007f, -17.7504997f, -21.3586998f }
-    };
-
     for ( const auto& orderA : triPermutations )
     {
         for ( const auto& orderB : triPermutations )
@@ -218,14 +204,44 @@ TEST( MRMesh, DegenerateTrianglesIntersect )
             const auto& e = triB[orderB[1]];
             const auto& f = triB[orderB[2]];
 
-            // in float arithmetic this test fails unfortunately
             EXPECT_FALSE( doTrianglesIntersect( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, Vector3d{e}, Vector3d{f} ) );
             EXPECT_FALSE( doTrianglesIntersect( Vector3d{d}, Vector3d{e}, Vector3d{f}, Vector3d{a}, Vector3d{b}, Vector3d{c} ) );
 
-            EXPECT_FALSE( doTrianglesIntersectExt( a, b, c, d, e, f ) );
-            EXPECT_FALSE( doTrianglesIntersectExt( d, e, f, a, b, c ) );
+            EXPECT_FALSE( doTrianglesIntersect( a, b, c, d, e, f ) );
+            EXPECT_FALSE( doTrianglesIntersect( d, e, f, a, b, c ) );
         }
     }
+}
+
+TEST( MRMesh, DegenerateTrianglesIntersect )
+{
+    testNoIntersect
+    (
+        {
+            { -24.5683002f, -17.7052994f, -21.3701000f },
+            { -24.6611996f, -17.7504997f, -21.3423004f },
+            { -24.6392994f, -17.7071991f, -21.3542995f }
+        },
+        {
+            { -24.5401993f, -17.7504997f, -21.3390007f },
+            { -24.5401993f, -17.7504997f, -21.3390007f },
+            { -24.5862007f, -17.7504997f, -21.3586998f }
+        }
+    );
+
+    testNoIntersect
+    (
+        {
+            { -5.695016f,  -17.290453f, 5.923905f  },
+            { -6.8302813f, -19.602076f, 1.5111064f },
+            { -6.8302813f, -19.602076f, 1.5111064f }
+        },
+        {
+            { -5.6232224f, -17.31377f,  4.5464506f },
+            { -5.8195434f, -17.221924f, 4.6023197f },
+            { -5.5997314f, -17.227707f, 4.616623f }
+        }
+    );
 }
 
 } // namespace MR

@@ -178,16 +178,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Download missing vcpkg/MSYS2 file
+      - name: Add Clarkson MSYS2 mirror to vcpkg
         if: ${{ matrix.vs == 'vs2019' }}
         run: |
-          $downloads = "C:\vcpkg\downloads"
-          if (-not (Test-Path $downloads)) { New-Item -ItemType Directory -Path $downloads -Force }
-          $url = "https://mirror.clarkson.edu/msys2/msys/x86_64/msys2-runtime-3.5.3-3-x86_64.pkg.tar.zst"
-          $out = Join-Path $downloads "msys2-runtime-3.5.3-3-x86_64.pkg.tar.zst"
-          if (-not (Test-Path $out)) {
-            Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing
-          }
+          $path = "C:\vcpkg\scripts\cmake\vcpkg_acquire_msys.cmake"
+          $content = Get-Content $path -Raw
+          $content = $content -replace '    # Alternative primary', "    `"https://mirror.clarkson.edu/msys2/`"`n    # Alternative primary"
+          Set-Content $path -Value $content
 
       - name: Build and cache vcpkg
         env:

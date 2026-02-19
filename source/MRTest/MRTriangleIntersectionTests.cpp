@@ -191,7 +191,7 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesOverlapTestFixture, testing::Values(
     , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.25f,0.5f ), Vector2f( 0.5,1.25f ), Vector2f( 1,1.25f ) }
 ) );
 
-static void testNoIntersect( const Vector3f (&triA)[3], const Vector3f (&triB)[3] )
+static void testNoIntersect( const Vector3f (&triA)[3], const Vector3f (&triB)[3], bool ext = false )
 {
     for ( const auto& orderA : triPermutations )
     {
@@ -204,11 +204,22 @@ static void testNoIntersect( const Vector3f (&triA)[3], const Vector3f (&triB)[3
             const auto& e = triB[orderB[1]];
             const auto& f = triB[orderB[2]];
 
-            EXPECT_FALSE( doTrianglesIntersect( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, Vector3d{e}, Vector3d{f} ) );
-            EXPECT_FALSE( doTrianglesIntersect( Vector3d{d}, Vector3d{e}, Vector3d{f}, Vector3d{a}, Vector3d{b}, Vector3d{c} ) );
+            if ( ext )
+            {
+                EXPECT_FALSE( doTrianglesIntersectExt( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, Vector3d{e}, Vector3d{f} ) );
+                EXPECT_FALSE( doTrianglesIntersectExt( Vector3d{d}, Vector3d{e}, Vector3d{f}, Vector3d{a}, Vector3d{b}, Vector3d{c} ) );
 
-            EXPECT_FALSE( doTrianglesIntersect( a, b, c, d, e, f ) );
-            EXPECT_FALSE( doTrianglesIntersect( d, e, f, a, b, c ) );
+                EXPECT_FALSE( doTrianglesIntersectExt( a, b, c, d, e, f ) );
+                EXPECT_FALSE( doTrianglesIntersectExt( d, e, f, a, b, c ) );
+            }
+            else
+            {
+                EXPECT_FALSE( doTrianglesIntersect( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, Vector3d{e}, Vector3d{f} ) );
+                EXPECT_FALSE( doTrianglesIntersect( Vector3d{d}, Vector3d{e}, Vector3d{f}, Vector3d{a}, Vector3d{b}, Vector3d{c} ) );
+
+                EXPECT_FALSE( doTrianglesIntersect( a, b, c, d, e, f ) );
+                EXPECT_FALSE( doTrianglesIntersect( d, e, f, a, b, c ) );
+            }
         }
     }
 }
@@ -224,7 +235,7 @@ TEST( MRMesh, DegenerateTrianglesIntersect )
         },
         {
             { -24.5401993f, -17.7504997f, -21.3390007f },
-            { -24.5401993f, -17.7504997f, -21.3390007f },
+            { -24.5401993f, -17.7504997f, -21.3390007f }, //same point
             { -24.5862007f, -17.7504997f, -21.3586998f }
         }
     );
@@ -234,13 +245,29 @@ TEST( MRMesh, DegenerateTrianglesIntersect )
         {
             { -5.695016f,  -17.290453f, 5.923905f  },
             { -6.8302813f, -19.602076f, 1.5111064f },
-            { -6.8302813f, -19.602076f, 1.5111064f }
+            { -6.8302813f, -19.602076f, 1.5111064f } //same point
         },
         {
             { -5.6232224f, -17.31377f,  4.5464506f },
             { -5.8195434f, -17.221924f, 4.6023197f },
             { -5.5997314f, -17.227707f, 4.616623f }
         }
+    );
+
+    // two well separated triangles in one plane
+    testNoIntersect
+    (
+        {
+            { 6.841205f,  10.8885565f, -0.24069165f },
+            { 6.853537f,  10.949715f,  -0.16254053f },
+            { 6.9493885f, 10.92198f,   -0.15596102f }
+        },
+        {
+            { 6.9370565f, 10.860822f,  -0.23411214f },
+            { 7.032908f,  10.833087f,  -0.22753264f },
+            { 7.0452394f, 10.894245f,  -0.14938152f }
+        },
+        true
     );
 }
 

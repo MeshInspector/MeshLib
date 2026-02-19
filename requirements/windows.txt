@@ -2,6 +2,7 @@ boost-algorithm
 boost-dynamic-bitset
 boost-functional
 boost-integer
+boost-locale
 boost-move
 boost-multiprecision
 boost-program-options

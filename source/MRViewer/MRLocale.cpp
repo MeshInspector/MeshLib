@@ -4,7 +4,10 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
 
+#pragma warning( push )
+#pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
 #include <boost/locale/generator.hpp>
+#pragma warning( pop )
 
 namespace MR
 {

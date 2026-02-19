@@ -921,7 +921,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
             it = std::find( sLanguages.begin(), sLanguages.end(), "en" );
             assert( it != sLanguages.end() );
         }
-        selectedLanguage_ = std::distance( sLanguages.begin(), it );
+        selectedLanguage_ = (int)std::distance( sLanguages.begin(), it );
     }
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );

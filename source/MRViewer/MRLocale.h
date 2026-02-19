@@ -1,6 +1,9 @@
 #pragma once
 
+#pragma warning( push )
+#pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
 #include <boost/locale/message.hpp>
+#pragma warning( pop )
 
 namespace MR
 {

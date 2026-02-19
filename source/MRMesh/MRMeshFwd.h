@@ -810,5 +810,6 @@ struct VertDuplication;
 #ifndef MR_NO_GETTEXT_MACROS
 /// special no-op macros for marking strings as translatable
 #define _t( str ) str
+#define n_t( s, p, n ) ( n == 1 ? s : p )
 #define p_t( ctx, str ) str
 #endif // MR_NO_GETTEXT_MACROS

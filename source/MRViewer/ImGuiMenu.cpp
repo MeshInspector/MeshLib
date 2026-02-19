@@ -84,6 +84,7 @@
 #include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRRadiusMeasurementObject.h"
 #include "imgui_internal.h"
+#include "MRLocale.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
 #include "MRViewportGlobalBasis.h"
@@ -2475,7 +2476,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
     }
     auto text = oss.str();
     if ( const auto uncommonTagCount = allTags.size() - commonTags.size() )
-        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( "{} uncommon tag{}", uncommonTagCount, uncommonTagCount != 1 ? "s" : "" );
+        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( fn_tr( "{} uncommon tag", "{} uncommon tags", uncommonTagCount ), uncommonTagCount );
     if ( text.empty() )
         text = "–";
 

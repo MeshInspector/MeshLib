@@ -1184,7 +1184,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             keysListWithAlt += ", ";
         keysListWithAlt += MouseController::getControlString( ctrlAlt );
     }
-    UI::transparentTextWrapped( "Camera controls can also be used with %s", getAltModName() );
+    // TRANSLATORS: %s is substituted with Alt/Option depending on the platform.
+    UI::transparentTextWrapped( _tr( "Camera controls can also be used with %s" ), getAltModName() );
     if ( !keysListWithAlt.empty() )
         UI::setTooltipIfHovered( keysListWithAlt );
 }

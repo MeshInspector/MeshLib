@@ -32,6 +32,11 @@ inline auto gettext( const char* id )
     return boost::locale::gettext( id, Locale::get() );
 }
 /// ...
+inline auto ngettext( const char* singular, const char* plural, auto n )
+{
+    return boost::locale::ngettext( singular, plural, n, Locale::get() );
+}
+/// ...
 inline auto pgettext( const char* context, const char* id )
 {
     return boost::locale::pgettext( context, id, Locale::get() );
@@ -41,5 +46,6 @@ inline auto pgettext( const char* context, const char* id )
 
 #ifndef MR_NO_GETTEXT_MACROS
 #define _tr( id ) MR::gettext( id ).c_str()
-#define p_tr( context, id ) MR::pgettext( context, id ).c_str()
+#define n_tr( s, p, n ) MR::ngettext( s, p, n ).c_str()
+#define p_tr( ctx, id ) MR::pgettext( ctx, id ).c_str()
 #endif // MR_NO_GETTEXT_MACROS

@@ -10,6 +10,7 @@
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
 #include "MRBitSetParallelFor.h"
+#include "MRTelemetry.h"
 #include "MRPch/MRSpdlog.h"
 
 #include <fstream>
@@ -396,6 +397,34 @@ Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settin
     return cloud;
 }
 
+void telemetryLogSize( const PointCloud& cloud )
+{
+    TelemetrySignal( "Open Pnts Log Pnts " + std::to_string( intLog2( cloud.calcNumValidPoints() ) ) );
+}
+
+static void telemetryOpenPoints( const std::string& ext, const PointCloud& cloud, const PointsLoadSettings& settings )
+{
+    if ( !settings.telemetrySignal )
+        return;
+
+    std::string signalString = "Open " + ext;
+
+    if ( cloud.validPoints.any() )
+    {
+        signalString += " VP";
+        if ( cloud.hasNormals() )
+            signalString += 'N';
+        if ( settings.colors && settings.colors->size() >= cloud.points.size() )
+            signalString += 'C';
+    }
+
+    if ( settings.outXf && *settings.outXf != AffineXf3f{} )
+        signalString += " XF";
+
+    TelemetrySignal( signalString );
+    telemetryLogSize( cloud );
+}
+
 Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     auto ext = utf8string( file.extension() );
@@ -407,7 +436,10 @@ Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, 
     if ( !loader.fileLoad )
         return unexpectedUnsupportedFileExtension();
 
-    return loader.fileLoad( file, settings );
+    auto res = loader.fileLoad( file, settings );
+    if ( res )
+        telemetryOpenPoints( ext, *res, settings );
+    return res;
 }
 
 Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings )
@@ -420,7 +452,10 @@ Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string
     if ( !loader.streamLoad )
         return unexpectedUnsupportedFileExtension();
 
-    return loader.streamLoad( in, settings );
+    auto res = loader.streamLoad( in, settings );
+    if ( res )
+        telemetryOpenPoints( ext, *res, settings );
+    return res;
 }
 
 MR_ADD_POINTS_LOADER( IOFilter( "ASC (.asc)",        "*.asc" ), fromText )

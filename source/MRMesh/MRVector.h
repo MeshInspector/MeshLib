@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRMeshFwd.h"
 #include "MRResizeNoInit.h"
 #include "MRPch/MRBindingMacros.h"
@@ -60,12 +61,12 @@ public:
 
     void reserve( size_t capacity ) { vec_.reserve( capacity ); }
 
-    [[nodiscard]] const_reference operator[]( I i ) const
+    [[nodiscard]] const_reference operator[]( I i ) const MR_LIFETIMEBOUND
     {
         assert( i < vec_.size() );
         return vec_[i];
     }
-    [[nodiscard]] reference operator[]( I i )
+    [[nodiscard]] reference operator[]( I i ) MR_LIFETIMEBOUND
     {
         assert( i < vec_.size() );
         return vec_[i];
@@ -125,17 +126,17 @@ public:
         return vec_[i];
     }
 
-    void push_back( const T & t ) { vec_.push_back( t ); }
-    void push_back( T && t ) { vec_.push_back( std::move( t ) ); }
+    void push_back( const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( t ); }
+    void push_back( T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( std::move( t ) ); }
     void pop_back() { vec_.pop_back(); }
 
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )
     T& emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }
 
-    [[nodiscard]] const_reference front() const { return vec_.front(); }
-    [[nodiscard]]       reference front()       { return vec_.front(); }
-    [[nodiscard]] const_reference  back() const { return vec_.back(); }
-    [[nodiscard]]       reference  back()       { return vec_.back(); }
+    [[nodiscard]] const_reference front() const MR_LIFETIMEBOUND { return vec_.front(); }
+    [[nodiscard]]       reference front()       MR_LIFETIMEBOUND { return vec_.front(); }
+    [[nodiscard]] const_reference  back() const MR_LIFETIMEBOUND { return vec_.back(); }
+    [[nodiscard]]       reference  back()       MR_LIFETIMEBOUND { return vec_.back(); }
 
     /// returns the identifier of the first element
     [[nodiscard]] I beginId() const { return I( size_t(0) ); }
@@ -146,8 +147,8 @@ public:
     /// returns backId() + 1
     [[nodiscard]] I endId() const { return I( vec_.size() ); }
 
-    [[nodiscard]] T* data() { return vec_.data(); }
-    [[nodiscard]] const T* data() const { return vec_.data(); }
+    [[nodiscard]] T* data() MR_LIFETIMEBOUND { return vec_.data(); }
+    [[nodiscard]] const T* data() const MR_LIFETIMEBOUND { return vec_.data(); }
 
     void swap( Vector & b ) { vec_.swap( b.vec_ ); }
 

@@ -3,9 +3,7 @@
 #include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
 #include "MRTimer.h"
-#include "MRMakeSphereMesh.h"
 #include "MRBuffer.h"
-#include "MRGTest.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 
@@ -100,31 +98,5 @@ template auto AABBTreeBase<FaceTreeTraits3>::getSubtreeLeaves( NodeId subtreeRoo
 template NodeBitSet AABBTreeBase<FaceTreeTraits3>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
 template void AABBTreeBase<FaceTreeTraits3>::getLeafOrder( LeafBMap & leafMap ) const;
 template void AABBTreeBase<FaceTreeTraits3>::getLeafOrderAndReset( LeafBMap & leafMap );
-
-TEST(MRMesh, AABBTree)
-{
-    Mesh sphere = makeUVSphere( 1, 8, 8 );
-    AABBTree tree( sphere );
-    EXPECT_EQ( tree.nodes().size(), getNumNodes( sphere.topology.numValidFaces() ) );
-    EXPECT_EQ( tree[AABBTree::rootNodeId()].box, sphere.computeBoundingBox().insignificantlyExpanded() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].r.valid() );
-
-    assert( !tree.nodes().empty() );
-    auto m = std::move( tree );
-    assert( tree.nodes().empty() );
-
-    FaceBitSet fs;
-    fs.autoResizeSet( 1_f );
-    AABBTree smallerTree( { sphere, &fs } );
-    EXPECT_EQ( smallerTree.nodes().size(), 1 );
-}
-
-TEST(MRMesh, ProjectionToEmptyMesh)
-{
-    Vector3f p( 1.f, 2.f, 3.f );
-    bool hasProjection = Mesh{}.projectPoint( p ).valid();
-    EXPECT_FALSE( hasProjection );
-}
 
 } //namespace MR

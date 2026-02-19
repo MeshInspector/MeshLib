@@ -389,7 +389,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
             FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;
-            UndirectedEdgeBitSet newEdgeSelection = obj_->getSelectedEdges() - getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
+            const auto delEdges = getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
+            UndirectedEdgeBitSet newEdgeSelection = obj_->getSelectedEdges() - delEdges;
+            UndirectedEdgeBitSet newCreases = obj_->creases() - delEdges;
             auto bds = delRegionKeepBd( *newMesh, delFaces );
             const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
             for ( const auto & bd : bds )
@@ -426,11 +428,6 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         fillHoleNicely( *newMesh, e, settings );
             }
 
-            if ( newFaceSelection != obj_->getSelectedFaces() )
-                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Face Selection", obj_, std::move( newFaceSelection ) );
-            if ( newEdgeSelection != obj_->getSelectedEdges() )
-                AppendHistory<ChangeMeshEdgeSelectionAction>( "Change Edge Selection", obj_, std::move( newEdgeSelection ) );
-
             // newFaces include both faces inside the patch and subdivided faces around
             const FaceBitSet newFaces = newMesh->topology.getValidFaces() - oldFaces;
             ObjectMeshData newMeshData;
@@ -438,6 +435,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             auto projRes = projectObjectMeshData( obj_->data(), newMeshData, &newFaces );
             if ( projRes.has_value() )
             {
+                newMeshData.selectedFaces = std::move( newFaceSelection );
+                newMeshData.selectedEdges = std::move( newEdgeSelection );
+                newMeshData.creases = std::move( newCreases );
                 appendMeshDataChangeHistory_( std::move( newMeshData ), newFaces );
             }
             else

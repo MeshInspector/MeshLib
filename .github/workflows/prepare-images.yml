@@ -147,10 +147,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ windows-2025 ]
+        vs: [ vs2019, vs2022 ]
         include:
-          - runner: windows-2025
+          - vs: vs2022
+            runner: windows-2025
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
+            vcpkg_triplet: x64-windows-meshlib
+          - vs: vs2019
+            runner: windows-2025
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
+            vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
@@ -173,4 +179,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Build and cache vcpkg
-        run: .\thirdparty\install.bat --write-s3
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+        run: |
+          .\thirdparty\install.bat --write-s3

@@ -905,6 +905,14 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
 void ViewerSettingsPlugin::drawLanguageSelector_()
 {
     static const auto sLanguages = Locale::getAvailableLocales();
+    static const auto sLanguageNames = [] ( const auto& languages )
+    {
+        auto results = languages;
+        for ( auto& locale : results )
+            locale = Locale::getDisplayName( locale.c_str() );
+        return results;
+    } ( sLanguages );
+
     if ( selectedLanguage_ < 0 )
     {
         auto it = std::find( sLanguages.begin(), sLanguages.end(), Locale::getName() );
@@ -917,7 +925,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
     }
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
-    if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguages ) )
+    if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguageNames ) )
         Locale::set( sLanguages[selectedLanguage_].c_str() );
 
     ImGui::SameLine();

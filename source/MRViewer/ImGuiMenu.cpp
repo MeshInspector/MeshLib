@@ -2476,7 +2476,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
     }
     auto text = oss.str();
     if ( const auto uncommonTagCount = allTags.size() - commonTags.size() )
-        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( fn_tr( "{} uncommon tag", "{} uncommon tags", uncommonTagCount ), uncommonTagCount );
+        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( f_tr( "{} uncommon tag", "{} uncommon tags", uncommonTagCount ), uncommonTagCount );
     if ( text.empty() )
         text = "–";
 

@@ -43,15 +43,17 @@
 
 namespace
 {
+using namespace MR;
+
 const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
 {
     constexpr std::array<const char*, size_t( MR::ViewerSettingsPlugin::TabType::Count )> tabNames{
-        p_t( "ViewerSettingsPlugin", "Quick" ),
-        p_t( "ViewerSettingsPlugin", "Application" ),
-        p_t( "ViewerSettingsPlugin", "Control" ),
-        p_t( "ViewerSettingsPlugin", "3D View" ),
-        p_t( "ViewerSettingsPlugin", "Units" ),
-        p_t( "ViewerSettingsPlugin", "Features" ),
+        _t( "ViewerSettingsPlugin", "Quick" ),
+        _t( "ViewerSettingsPlugin", "Application" ),
+        _t( "ViewerSettingsPlugin", "Control" ),
+        _t( "ViewerSettingsPlugin", "3D View" ),
+        _t( "ViewerSettingsPlugin", "Units" ),
+        _t( "ViewerSettingsPlugin", "Features" ),
     };
     return tabNames[int( tab )];
 }
@@ -105,7 +107,7 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
             }
             auto tab = TabType( i );
             bool neetToSelect = orderedTab_ == tab;
-            if ( UI::beginTabItem( p_tr( "ViewerSettingsPlugin", getViewerSettingTabName( tab ) ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
+            if ( UI::beginTabItem( _tr( "ViewerSettingsPlugin", getViewerSettingTabName( tab ) ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
             {
                 if ( neetToSelect )
                     orderedTab_ = TabType::Count;

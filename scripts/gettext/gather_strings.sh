@@ -6,15 +6,22 @@ shift
 LOCALE_DIR=$PWD/locale
 
 xgettext \
-    -k_t \
-    -k_tr \
-    -kf_tr \
-    -kn_t:1,2 \
-    -kn_tr:1,2 \
-    -kfn_tr:1,2 \
-    -kp_t:1c,2 \
-    -kp_tr:1c,2 \
-    -kfp_tr:1c,2 \
+    -ktranslate:1,1t \
+    -ktranslate:1c,2,2t \
+    -ktranslate:1,2,3t \
+    -ktranslate:1c,2,3,4t \
+    -k_t:1,1t \
+    -k_t:1c,2,2t \
+    -k_t:1,2,3t \
+    -k_t:1c,2,3,4t \
+    -k_tr:1,1t \
+    -k_tr:1c,2,2t \
+    -k_tr:1,2,3t \
+    -k_tr:1c,2,3,4t \
+    -kf_tr:1,1t \
+    -kf_tr:1c,2,2t \
+    -kf_tr:1,2,3t \
+    -kf_tr:1c,2,3,4t \
     --language=C++ \
     --from-code=UTF-8 \
     --add-comments="TRANSLATORS:" \

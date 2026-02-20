@@ -791,6 +791,14 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
+#ifndef MR_NO_GETTEXT_MACROS
+/// special no-op inline functions to mark string literal as translatable
+constexpr inline auto _t( const char* str ) noexcept { return str; }
+constexpr inline auto _t( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
+constexpr inline auto _t( const char* s, const char* p, auto n ) noexcept { return n == decltype( n )( 1 ) ? s : p; }
+constexpr inline auto _t( const char* ctx, const char* s, const char* p, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? s : p; }
+#endif // MR_NO_GETTEXT_MACROS
+
 } //namespace MR
 
 #ifdef __cpp_lib_unreachable
@@ -806,10 +814,3 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
-
-#ifndef MR_NO_GETTEXT_MACROS
-/// special no-op macros for marking strings as translatable
-#define _t( str ) str
-#define n_t( s, p, n ) ( n == 1 ? s : p )
-#define p_t( ctx, str ) str
-#endif // MR_NO_GETTEXT_MACROS

@@ -80,8 +80,6 @@ MRVOXELS_API Expected<std::vector<FloatGrid>> gridsFromAnySupportedFormat( const
 MRVOXELS_API Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::path& file,
                                                                         const ProgressCallback& cb = {} );
 
-/// \}
-
 // Determines iso-surface orientation
 enum class GridType
 {
@@ -115,5 +113,7 @@ MR_FORMAT_REGISTRY_EXTERNAL_DECL( MRVOXELS_API, VoxelsLoader )
 MRVOXELS_API Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
 MRVOXELS_API Expected<LoadedObjects> makeObjectFromVoxelsFile( const std::filesystem::path& file, const ProgressCallback& callback = {} );
+
+/// \}
 
 }

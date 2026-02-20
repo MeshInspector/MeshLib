@@ -114,9 +114,13 @@ struct StitchHolesParams
   * \sa \ref fillHole
   * \sa \ref StitchHolesParams
   */
+MRMESH_API void stitchHoles( Mesh& mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
+[[deprecated( "Use stitchHoles( mesh, a, b, params )" )]]
 MRMESH_API void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
 
 /// this version finds holes in the mesh by itself and returns false if they are not found
+MRMESH_API bool stitchHoles( Mesh& mesh, const StitchHolesParams& params = {} );
+[[deprecated( "Use stitchHoles( mesh, params )" )]]
 MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params = {} );
 
 

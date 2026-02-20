@@ -1,4 +1,5 @@
 #include "MRTriDist.h"
+#include "MRTwoLineSegmDist.h"
 
 namespace MR
 {
@@ -42,131 +43,6 @@ namespace MR
 
 
 \**************************************************************************/
-
-//--------------------------------------------------------------------------
-// File:   triDist.cpp
-// Author: Eric Larsen
-// Description:
-// contains segPoints() for finding closest points on a pair of line
-// segments and triDist() for finding closest points on a pair of triangles
-//--------------------------------------------------------------------------
-
-//--------------------------------------------------------------------------
-// segPoints()
-//
-// Returns closest points between an segment pair.
-// Implemented from an algorithm described in
-//
-// Vladimir J. Lumelsky,
-// On fast computation of distance between line segments.
-// In Information Processing Letters, no. 21, pages 55-61, 1985.
-//--------------------------------------------------------------------------
-
-void
-segPoints( Vector3f & VEC,
-          Vector3f & X, Vector3f & Y,             // closest points
-          const Vector3f & P, const Vector3f & A, // seg 1 origin, vector
-          const Vector3f & Q, const Vector3f & B) // seg 2 origin, vector
-{
-  Vector3f T, TMP;
-  float A_dot_A, B_dot_B, A_dot_B, A_dot_T, B_dot_T;
-
-  T = Q - P;
-  A_dot_A = dot(A,A);
-  B_dot_B = dot(B,B);
-  A_dot_B = dot(A,B);
-  A_dot_T = dot(A,T);
-  B_dot_T = dot(B,T);
-
-  // t parameterizes ray P,A
-  // u parameterizes ray Q,B
-
-  float t,u;
-
-  // compute t for the closest point on ray P,A to
-  // ray Q,B
-
-  float denom = A_dot_A*B_dot_B - A_dot_B*A_dot_B;
-
-  t = (A_dot_T*B_dot_B - B_dot_T*A_dot_B) / denom;
-
-  // clamp result so t is on the segment P,A
-
-  if ((t < 0) || std::isnan(t)) t = 0; else if (t > 1) t = 1;
-
-  // find u for point on ray Q,B closest to point at t
-
-  u = (t*A_dot_B - B_dot_T) / B_dot_B;
-
-  // if u is on segment Q,B, t and u correspond to
-  // closest points, otherwise, clamp u, recompute and
-  // clamp t
-
-  if ((u <= 0) || std::isnan(u)) {
-
-    Y = Q;
-
-    t = A_dot_T / A_dot_A;
-
-    if ((t <= 0) || std::isnan(t)) {
-      X = P;
-      VEC = Q - P;
-    }
-    else if (t >= 1) {
-      X = P + A;
-      VEC = Q - X;
-    }
-    else {
-      X = P +  A * t;
-      TMP = cross( T, A );
-      VEC = cross( A, TMP );
-    }
-  }
-  else if (u >= 1) {
-
-    Y =  Q + B;
-
-    t = (A_dot_B + A_dot_T) / A_dot_A;
-
-    if ((t <= 0) || std::isnan(t)) {
-      X = P;
-      VEC = Y - P;
-    }
-    else if (t >= 1) {
-      X = P + A;
-      VEC = Y - X;
-    }
-    else {
-      X = P + A * t;
-      T = Y - P;
-      TMP = cross( T, A );
-      VEC = cross( A, TMP );
-    }
-  }
-  else {
-
-    Y = Q + B * u;
-
-    if ((t <= 0) || std::isnan(t)) {
-      X = P;
-      TMP = cross( T, B );
-      VEC = cross( B, TMP );
-    }
-    else if (t >= 1) {
-      X = P + A;
-      T = Q - X;
-      TMP = cross( T, B );
-      VEC = cross( B, TMP );
-    }
-    else {
-      X = P + A * t;
-      VEC = cross( A, B );
-      if (dot(VEC, T) < 0) {
-        VEC = -VEC;
-      }
-    }
-  }
-}
 
 //--------------------------------------------------------------------------
 // triDist()
@@ -219,7 +95,11 @@ float triDist( Vector3f & P, Vector3f & Q, const Vector3f S[3], const Vector3f T
       // Find closest points on edges i & j, plus the
       // vector (and distance squared) between these points
 
-      segPoints(VEC,P,Q,S[i],Sv[i],T[j],Tv[j]);
+      static constexpr int next[3] = { 1, 2, 0 };
+      const auto sd = findTwoLineSegmClosestPoints( { S[i], S[next[i]] }, { T[j], T[next[j]] } );
+      P = sd.a;
+      Q = sd.b;
+      VEC = sd.dir;
 
       V = Q - P;
       float dd = dot(V,V);
@@ -400,6 +280,17 @@ float triDist( Vector3f & P, Vector3f & Q, const Vector3f S[3], const Vector3f T
   }
 
   return 0;
+}
+
+void segPoints( Vector3f & VEC,
+          Vector3f & X, Vector3f & Y,
+          const Vector3f & P, const Vector3f & A,
+          const Vector3f & Q, const Vector3f & B)
+{
+    const auto sd = findTwoLineSegmClosestPoints( { P, P + A }, { Q, Q + B } );
+    X = sd.a;
+    Y = sd.b;
+    VEC = sd.dir;
 }
 
 } // namespace MR

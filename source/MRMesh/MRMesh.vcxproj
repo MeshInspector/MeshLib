@@ -241,6 +241,7 @@
     <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
+    <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
     <ClInclude Include="MRSolarRadiation.h" />
@@ -667,6 +668,7 @@
     <ClCompile Include="MRTerrainTriangulation.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
+    <ClCompile Include="MRTwoLineSegmDist.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
     <ClCompile Include="MRQuadraticForm.cpp" />

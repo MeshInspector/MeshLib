@@ -24,9 +24,9 @@ using FillCombineMetric = std::function<double( double, double )>;
 MRMESH_API extern const double BadTriangulationMetric;
 
 /** \struct MR::FillHoleMetric
-  * \brief Holds metrics for fillHole and buildCylinderBetweenTwoHoles triangulation\n
+  * \brief Holds metrics for fillHole and stitchHoles triangulation\n
   * 
-  * This is struct used as optimization metric of fillHole and buildCylinderBetweenTwoHoles functions\n
+  * This is struct used as optimization metric of fillHole and stitchHoles functions\n
   * 
   * \sa \ref getCircumscribedMetric
   * \sa \ref getPlaneFillMetric
@@ -34,7 +34,7 @@ MRMESH_API extern const double BadTriangulationMetric;
   * \sa \ref getEdgeLengthStitchMetric
   * \sa \ref getComplexStitchMetric
   * \sa \ref fillHole
-  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref stitchHoles
   */
 struct FillHoleMetric
 {

@@ -6,11 +6,14 @@ namespace MRTest
     [TestFixture]
     internal class FillHoleTests
     {
-        private static void updateTri(ref Std.Array_MRVertId_3 tri, int v0, int v1, int v2)
+        private static Std.Array_MRVertId_3 makeTri(int v0, int v1, int v2)
         {
+            // TODO: array constructor
+            Std.Array_MRVertId_3 tri;
             tri.elems._0 = new VertId(v0);
             tri.elems._1 = new VertId(v1);
             tri.elems._2 = new VertId(v2);
+            return tri;
         }
 
         private static Mesh CreateMeshWithHoles()
@@ -23,12 +26,12 @@ namespace MRTest
             points.pushBack(new Vector3f(1, 0, 1));
             points.pushBack(new Vector3f(0, 1, 1));
 
-            var triangles = new Triangulation(5);
-            updateTri(ref triangles[new FaceId(0)], 0, 2, 1);
-            updateTri(ref triangles[new FaceId(1)], 3, 4, 5);
-            updateTri(ref triangles[new FaceId(2)], 0, 1, 3);
-            updateTri(ref triangles[new FaceId(3)], 2, 5, 4);
-            updateTri(ref triangles[new FaceId(4)], 2, 3, 5);
+            var triangles = new Triangulation();
+            triangles.pushBack(makeTri(0, 2, 1));
+            triangles.pushBack(makeTri(3, 4, 5));
+            triangles.pushBack(makeTri(0, 1, 3));
+            triangles.pushBack(makeTri(2, 5, 4));
+            triangles.pushBack(makeTri(2, 3, 5));
 
             return Mesh.fromTriangles(points, triangles);
         }

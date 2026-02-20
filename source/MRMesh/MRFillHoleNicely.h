@@ -81,4 +81,34 @@ MRMESH_API FaceBitSet fillHoleNicely( Mesh & mesh,
     EdgeId holeEdge, ///< left of this edge must not have a face and it will be filled
     const FillHoleNicelySettings & settings );
 
+struct StitchHolesNicelySettings
+{
+    /// how to triangulate the cylinder between holes, must be specified by the user
+    StitchHolesParams triangulateParams;
+
+    /// If false then additional vertices are created inside the patch for best mesh quality
+    bool triangulateOnly = false;
+
+    /// if `triangulateOnly` is false - this settings are used to subdivide new filling
+    SubdivideFillingSettings subdivideSettings;
+
+    /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
+    bool smoothCurvature = true;
+
+    /// if `smoothCurvature` is true and `triangulateOnly is false - these settings are used to smooth new filling
+    SmoothFillingSettings smoothSeettings;
+
+    /// structure with optional output attributes
+    OutAttributesFillingSettings outAttributes;
+};
+
+/// stitches two holes building cylinder between them, each hole is specified by one of its edge,
+/// optionally subdivides new patch on smaller triangles,
+/// optionally make smooth connection with existing triangles outside the hole
+/// \return triangles of the patch
+MRMESH_API FaceBitSet stitchHolesNicely( Mesh& mesh, 
+    EdgeId hole0Edge, ///< left of this edge must not have a face and it will be filled
+    EdgeId hole1Edge, ///< left of this edge must not have a face and it will be filled
+    const StitchHolesNicelySettings& settings );
+
 } //namespace MR

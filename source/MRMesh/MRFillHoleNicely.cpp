@@ -171,4 +171,40 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     return newFaces;
 }
 
+FaceBitSet stitchHolesNicely( Mesh& mesh, EdgeId hole0Edge, EdgeId hole1Edge, const StitchHolesNicelySettings& settings )
+{
+    MR_TIMER;
+    assert( !mesh.topology.left( hole0Edge ) );
+    assert( !mesh.topology.left( hole1Edge ) );
+
+    FaceBitSet newFaces;
+    if ( mesh.topology.left( hole0Edge ) || mesh.topology.left( hole1Edge ) )
+        return newFaces; //no hole exists
+
+    auto [faceColors, newFaceColor] = prepareFillingFaceColors( mesh.topology, hole0Edge, hole1Edge, settings.outAttributes.faceColors );
+
+    const auto fsz0 = mesh.topology.faceSize();
+    stitchHoles( mesh, hole0Edge, hole1Edge, settings.triangulateParams );
+    const auto fsz = mesh.topology.faceSize();
+    if ( fsz0 == fsz )
+        return newFaces;
+    newFaces.autoResizeSet( FaceId{ fsz0 }, fsz - fsz0 );
+    if ( faceColors )
+        faceColors->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, newFaceColor );
+
+    if ( !settings.triangulateOnly )
+    {
+        auto outAttribs = settings.outAttributes;
+        outAttribs.faceColors = faceColors;
+        VertBitSet newVerts = subdivideFillingNicely( mesh, newFaces, settings.subdivideSettings, outAttribs );
+
+        if ( settings.smoothCurvature )
+        {
+            smoothFillingNicely( mesh, newVerts, newFaces, true, settings.smoothSeettings );
+        }
+    }
+
+    return newFaces;
+}
+
 } //namespace MR

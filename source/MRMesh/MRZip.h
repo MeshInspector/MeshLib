@@ -46,7 +46,7 @@ struct CompressZipSettings
  * \brief compresses given folder in given zip-file
  */
 MRMESH_API Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
-    const CompressZipSettings& settings );
+    const CompressZipSettings& settings = {} );
 
 /**
  * \brief compresses given folder in given zip-file
@@ -56,7 +56,7 @@ MRMESH_API Expected<void> compressZip( const std::filesystem::path& zipFile, con
  */
 [[deprecated( "Use compressZip( zipFile, sourceFolder, settings )" )]]
 MRMESH_API Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, 
-    const std::vector<std::filesystem::path>& excludeFiles = {}, const char * password = nullptr, ProgressCallback cb = {} );
+    const std::vector<std::filesystem::path>& excludeFiles, const char * password = nullptr, ProgressCallback cb = {} );
 
 /// \}
 

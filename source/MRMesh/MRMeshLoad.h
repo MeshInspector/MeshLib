@@ -15,6 +15,10 @@ namespace MR
 
 // new simpler names
 
+/// \defgroup MeshLoadGroup Mesh Load
+/// \ingroup IOGroup
+/// \{
+
 /// loads mesh from file in internal MeshLib format
 MRMESH_API Expected<Mesh> loadMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
@@ -79,10 +83,6 @@ MRMESH_API Expected<Mesh> loadMesh( std::istream& in, const std::string& extensi
 namespace MeshLoad
 {
 
-/// \defgroup MeshLoadGroup Mesh Load
-/// \ingroup IOGroup
-/// \{
-
 /// loads mesh from file in internal MeshLib format
 MRMESH_API Expected<Mesh> fromMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
@@ -146,8 +146,9 @@ MRMESH_API Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::s
 /// emits telemetry signal with the integer logarithm of mesh size
 MR_BIND_IGNORE MRMESH_API void telemetryLogSize( const Mesh& mesh );
 
+
+} // end namespace MeshLoad
+
 /// \}
 
-} // namespace MeshLoad
-
-} // namespace MR
+} // end namespace MR

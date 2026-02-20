@@ -86,6 +86,7 @@ struct TriangulationParameters
 [[nodiscard]] MRMESH_API std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud,
     const TriangulationParameters& params = {}, const ProgressCallback& progressCb = {} );
 
+/// \ingroup PointCloudTriangulationGroup
 struct FillHolesWithExtraPointsParams
 {
     TriangulationParameters triangulation;
@@ -96,9 +97,10 @@ struct FillHolesWithExtraPointsParams
 };
 
 /// fills the holes in the mesh by adding triangles to it with the vertices in existing boundary vertices or given extra points (in any combination)
+/// \ingroup PointCloudTriangulationGroup
 /// \param extraPoints must have either properly oriented normals or no normals, and it will be temporary modified during the call
 /// \return false if the operation was canceled or incorrect input
 [[nodiscard]] MRMESH_API bool fillHolesWithExtraPoints( Mesh & mesh, PointCloud& extraPoints,
     const FillHolesWithExtraPointsParams& params = {}, const ProgressCallback& progressCb = {} );
 
-} //namespace MR
+} // end namespace MR

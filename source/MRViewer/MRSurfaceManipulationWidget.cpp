@@ -408,11 +408,17 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                     {
                         .metric = getUniversalMetric( *newMesh ),
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
-                    },
-                    .maxEdgeLen = 2 * (float)avgLen,
-                    .edgeWeights = settings_.edgeWeights
+                    }, 
+                    .subdivideSettings = 
+                    {
+                        .maxEdgeLen = 2 * ( float )avgLen
+                    }, 
+                    .smoothSeettings = 
+                    {
+                        .edgeWeights = settings_.edgeWeights
+                    }
                 };
-                settings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+                settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
                 {
                     if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
                         newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );

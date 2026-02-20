@@ -377,7 +377,7 @@ void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& pa
     if ( mesh.topology.left( a0 ) || mesh.topology.left( b0 ) )
     {
         assert( false );
-        spdlog::error( "buildCylinderBetweenTwoHoles: edges do not represent holes" );
+        spdlog::error( "stitchHoles: edges do not represent holes" );
         return;
     }
     // stitch direction should be independent of input order

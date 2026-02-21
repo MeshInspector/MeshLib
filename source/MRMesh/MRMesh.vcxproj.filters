@@ -1383,6 +1383,9 @@
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
     <ClInclude Include="MRFunctional.h" />
+    <ClInclude Include="MRTwoLineSegmDist.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2270,6 +2273,9 @@
     </ClCompile>
     <ClCompile Include="MRParallelFor.cpp" />
     <ClCompile Include="MRBitSetParallelFor.cpp" />
+    <ClCompile Include="MRTwoLineSegmDist.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -63,13 +63,7 @@ inline float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> 
     return triDist( p, q, s.data(), t.data() );
 }
 
-
-
-/// Returns closest points between an segment pair.
-MRMESH_API void segPoints(
-          // if both closest points are in segment endpoints, then directed from closest point 1 to closest point 2,
-          // if both closest points are inner to the segments, then its orthogonal to both segments and directed from 1 to 2,
-          // otherwise it is orthogonal to the segment with inner closest point and rotated toward/away the other closest point in endpoint
+[[deprecated( "Use findTwoLineSegmClosestPoints() instead" )]] MRMESH_API void segPoints(
           Vector3f & VEC,
           Vector3f & X, Vector3f & Y,             // closest points
           const Vector3f & P, const Vector3f & A, // seg 1 origin, vector

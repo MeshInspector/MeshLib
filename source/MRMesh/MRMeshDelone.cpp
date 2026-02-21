@@ -7,7 +7,7 @@
 #include "MRTriMath.h"
 #include "MRVector2.h"
 #include "MRReducePath.h"
-#include "MRTriDist.h"
+#include "MRTwoLineSegmDist.h"
 #include "MREdgeLengthMesh.h"
 
 namespace MR
@@ -118,10 +118,11 @@ bool checkDeloneQuadrangleInMesh( const MeshTopology & topology, const VertCoord
 
     if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
-        Vector3f vec, closestOnAC, closestOnBD;
-        segPoints( vec, closestOnAC, closestOnBD,
-            ap, cp - ap,   // first diagonal segment
-            bp, dp - bp ); // second diagonal segment
+        const auto sd = findTwoLineSegmClosestPoints(
+            { ap, cp },   // first diagonal segment
+            { bp, dp } ); // second diagonal segment
+        const auto closestOnAC = sd.a;
+        const auto closestOnBD = sd.b;
         const auto distSq = ( closestOnAC - closestOnBD ).lengthSq();
         if ( deviationSqAfterFlip )
             *deviationSqAfterFlip = distSq;

@@ -91,7 +91,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 bv[2] = ( *rigidB2A )( bv[2] );
             }
 
-            const auto td = findDistance( av, bv );
+            const auto td = findTriTriDistance( av, bv );
             if ( td.distSq < res.distSq )
             {
                 Vector3f aPt = td.a;

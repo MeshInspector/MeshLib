@@ -10,7 +10,7 @@ namespace
 // based on the code by E. Larsen from University of N. Carolina
 
 template<class T>
-TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
+TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
 {
     TriTriDistanceResult<T> res;
 
@@ -245,19 +245,19 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
 
 } // anonymous namespace
 
-TriTriDistanceResultf findDistance( const Triangle3f& a, const Triangle3f& b )
+TriTriDistanceResultf findTriTriDistance( const Triangle3f& a, const Triangle3f& b )
 {
-    return findDistanceT( a, b );
+    return findTriTriDistanceT( a, b );
 }
 
-TriTriDistanceResultd findDistance( const Triangle3d& a, const Triangle3d& b )
+TriTriDistanceResultd findTriTriDistance( const Triangle3d& a, const Triangle3d& b )
 {
-    return findDistanceT( a, b );
+    return findTriTriDistanceT( a, b );
 }
 
 float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] )
 {
-    const auto td = findDistance( { s[0], s[1], s[2] }, { t[0], t[1], t[2] } );
+    const auto td = findTriTriDistance( { s[0], s[1], s[2] }, { t[0], t[1], t[2] } );
     p = td.a;
     q = td.b;
     return td.distSq;
@@ -265,7 +265,7 @@ float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t
 
 float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t )
 {
-    const auto td = findDistance( s, t );
+    const auto td = findTriTriDistance( s, t );
     p = td.a;
     q = td.b;
     return td.distSq;

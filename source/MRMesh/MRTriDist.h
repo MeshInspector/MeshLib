@@ -24,8 +24,8 @@ using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;
 
 /// computes the closest points on two triangles
-[[nodiscard]] MRMESH_API TriTriDistanceResultf findDistance( const Triangle3f& a, const Triangle3f& b );
-[[nodiscard]] MRMESH_API TriTriDistanceResultd findDistance( const Triangle3d& a, const Triangle3d& b );
+[[nodiscard]] MRMESH_API TriTriDistanceResultf findTriTriDistance( const Triangle3f& a, const Triangle3f& b );
+[[nodiscard]] MRMESH_API TriTriDistanceResultd findTriTriDistance( const Triangle3d& a, const Triangle3d& b );
 
 // This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
 [[deprecated( "Use findDistance() instead" )]] MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );

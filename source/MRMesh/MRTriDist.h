@@ -2,63 +2,35 @@
 
 #include "MRVector3.h"
 
-/*************************************************************************\
-
-  Copyright 1999 The University of North Carolina at Chapel Hill.
-  All Rights Reserved.
-
-  Permission to use, copy, modify and distribute this software and its
-  documentation for educational, research and non-profit purposes, without
-  fee, and without a written agreement is hereby granted, provided that the
-  above copyright notice and the following three paragraphs appear in all
-  copies.
-
-  IN NO EVENT SHALL THE UNIVERSITY OF NORTH CAROLINA AT CHAPEL HILL BE
-  LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR
-  CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF THE
-  USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY
-  OF NORTH CAROLINA HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
-  DAMAGES.
-
-  THE UNIVERSITY OF NORTH CAROLINA SPECIFICALLY DISCLAIM ANY
-  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE
-  PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF
-  NORTH CAROLINA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT,
-  UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
-
-  The authors may be contacted via:
-
-  US Mail:             E. Larsen
-                       Department of Computer Science
-                       Sitterson Hall, CB #3175
-                       University of N. Carolina
-                       Chapel Hill, NC 27599-3175
-
-  Phone:               (919)962-1749
-
-  EMail:               geom@cs.unc.edu
-
-
-\**************************************************************************/
-
 namespace MR
 {
 
-// This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
-MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
+template<class T>
+struct TriTriDistanceResult
+{
+    /// If the triangles are disjoint, these points are the closest points of
+    /// the corresponding triangles. However, if the triangles overlap, these
+    /// are basically a random pair of points from the triangles, not
+    /// coincident points on the intersection of the triangles, as might
+    /// be expected.
+    Vector3<T> a, b;
 
-/// \brief computes the closest points on two triangles, and returns the
-/// squared distance between them.
-///
-/// \param s,t are the triangles, stored tri[point][dimension].
-///
-/// \details If the triangles are disjoint, p and q give the closest points of
-/// s and t respectively. However, if the triangles overlap, p and q
-/// are basically a random pair of points from the triangles, not
-/// coincident points on the intersection of the triangles, as might
-/// be expected.
-inline float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t )
+    /// If the triangles are disjoint, it is the squared distance them
+    /// (equal to the squared distance between a and b points).
+    /// If the triangles overlap, it is zero.
+    T distSq = 0;
+};
+using TriTriDistanceResultf = TriTriDistanceResult<float>;
+using TriTriDistanceResultd = TriTriDistanceResult<double>;
+
+/// computes the closest points on two triangles
+[[nodiscard]] MRMESH_API TriTriDistanceResultf findDistance( const Triangle3f& a, const Triangle3f& b );
+[[nodiscard]] MRMESH_API TriTriDistanceResultd findDistance( const Triangle3d& a, const Triangle3d& b );
+
+// This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
+[[deprecated( "Use findDistance() instead" )]] MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
+
+[[deprecated( "Use findDistance() instead" )]] inline float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t )
 {
     return triDist( p, q, s.data(), t.data() );
 }

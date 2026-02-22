@@ -4,6 +4,9 @@
 namespace MR
 {
 
+namespace
+{
+
 /*************************************************************************\
 
   Copyright 1999 The University of North Carolina at Chapel Hill.
@@ -44,22 +47,8 @@ namespace MR
 
 \**************************************************************************/
 
-//--------------------------------------------------------------------------
-// triDist()
-//
-// Computes the closest points on two triangles, and returns the
-// squared distance between them.
-//
-// S and T are the triangles, stored tri[point][dimension].
-//
-// If the triangles are disjoint, P and Q give the closest points of
-// S and T respectively. However, if the triangles overlap, P and Q
-// are basically a random pair of points from the triangles, not
-// coincident points on the intersection of the triangles, as might
-// be expected.
-//--------------------------------------------------------------------------
-
-float triDist( Vector3f & P, Vector3f & Q, const Vector3f S[3], const Vector3f T[3] )
+template<class T>
+TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
 {
   // Compute vectors along the 6 sides
 
@@ -280,6 +269,18 @@ float triDist( Vector3f & P, Vector3f & Q, const Vector3f S[3], const Vector3f T
   }
 
   return 0;
+}
+
+} // anonymous namespace
+
+TriTriDistanceResultf findDistance( const Triangle3f& a, const Triangle3f& b )
+{
+    return findDistanceT( a, b );
+}
+
+TriTriDistanceResultd findDistance( const Triangle3d& a, const Triangle3d& b )
+{
+    return findDistanceT( a, b );
 }
 
 void segPoints( Vector3f & VEC,

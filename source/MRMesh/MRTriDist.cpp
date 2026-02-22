@@ -15,8 +15,6 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
     TriTriDistanceResult<T> res;
 
     // Compute vectors along the 6 sides
-    Vector3<T> VEC;
-
     const Vector3<T> Sv[3] =
     {
         a[1] - a[0],
@@ -56,7 +54,6 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
             const auto sd = findTwoLineSegmClosestPoints( { a[i], a[next[i]] }, { b[j], b[next[j]] } );
             res.a = sd.a;
             res.b = sd.b;
-            VEC = sd.dir;
 
             V = res.b - res.a;
             T dd = dot( V, V );
@@ -71,9 +68,9 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
                 mindd = dd;
 
                 Z = a[( i + 2 ) % 3] - res.a;
-                T s = dot( Z, VEC );
+                T s = dot( Z, sd.dir );
                 Z = b[( j + 2 ) % 3] - res.b;
-                T t = dot( Z, VEC );
+                T t = dot( Z, sd.dir );
 
                 if ( ( s <= 0 ) && ( t >= 0 ) )
                 {
@@ -81,7 +78,7 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
                     return res;
                 }
 
-                T p = dot( V, VEC );
+                T p = dot( V, sd.dir );
 
                 if ( s < 0 ) s = 0;
                 if ( t > 0 ) t = 0;

@@ -8,7 +8,6 @@
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
-#include "MRPch/MRTBB.h"
 #include "MRTriangleIntersection.h"
 
 namespace MR
@@ -82,8 +81,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const auto aFace = aNode.leafId();
             const auto bFace = bNode.leafId();
 
-            Vector3f aPt, bPt;
-            Vector3f av[3], bv[3];
+            Triangle3f av, bv;
             a.mesh.getTriPoints( aFace, av[0], av[1], av[2] );
             b.mesh.getTriPoints( bFace, bv[0], bv[1], bv[2] );
             if ( rigidB2A )
@@ -93,11 +91,13 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 bv[2] = ( *rigidB2A )( bv[2] );
             }
 
-            float distSq = triDist( aPt, bPt, av, bv );
-            if ( distSq < res.distSq )
+            const auto td = findDistance( av, bv );
+            if ( td.distSq < res.distSq )
             {
-                res.distSq = distSq;
-                if ( distSq == 0.0f )
+                Vector3f aPt = td.a;
+                Vector3f bPt = td.b;
+                res.distSq = td.distSq;
+                if ( td.distSq == 0 )
                 {
                     auto pt = findTriangleTriangleIntersection( av[0], av[1], av[2], bv[0], bv[1], bv[2] );
                     if ( pt )

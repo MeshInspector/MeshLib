@@ -30,7 +30,7 @@ using TriTriDistanceResultd = TriTriDistanceResult<double>;
 // This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
 [[deprecated( "Use findDistance() instead" )]] MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
 
-[[deprecated( "Use findDistance() instead" )]] float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t );
+[[deprecated( "Use findDistance() instead" )]] MRMESH_API float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t );
 
 [[deprecated( "Use findTwoLineSegmClosestPoints() instead" )]] MRMESH_API void segPoints(
           Vector3f & VEC,

@@ -38,10 +38,10 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
     // points found, and whether the triangles were shown disjoint
 
     Vector3<T> V, Z, minP, minQ;
-    T mindd;
-    int shown_disjoint = 0;
+    bool shownDisjoint = false;
 
-    mindd = ( a[0] - b[0] ).lengthSq() + 1;  // Set first minimum safely high
+    // the distance between the triangles is not more than the distance between two of their points
+    T mindd = distanceSq( a[0], b[0] );
 
     for ( int i = 0; i < 3; i++ )
     {
@@ -82,7 +82,7 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
 
                 if ( s < 0 ) s = 0;
                 if ( t > 0 ) t = 0;
-                if ( ( p - s + t ) > 0 ) shown_disjoint = 1;
+                if ( ( p - s + t ) > 0 ) shownDisjoint = true;
             }
         }
     }
@@ -142,7 +142,7 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
 
         if ( point >= 0 )
         {
-            shown_disjoint = 1;
+            shownDisjoint = true;
 
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face.
@@ -202,7 +202,7 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
 
         if ( point >= 0 )
         {
-            shown_disjoint = 1;
+            shownDisjoint = true;
 
             V = a[point] - b[0];
             Z = cross( Tn, Tv[0] );
@@ -231,7 +231,7 @@ TriTriDistanceResult<T> findDistanceT( const Triangle3<T>& a, const Triangle3<T>
     // we assume case 3 or 4, otherwise we conclude case 2,
     // that the triangles overlap.
 
-    if ( shown_disjoint )
+    if ( shownDisjoint )
     {
         res.a = minP;
         res.b = minQ;

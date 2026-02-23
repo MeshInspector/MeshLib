@@ -50,6 +50,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // Find closest points on edges i & j, plus the
             // vector (and distance squared) between these points
 
+            static constexpr int prev[3] = { 2, 0, 1 };
             static constexpr int next[3] = { 1, 2, 0 };
             const auto sd = findTwoLineSegmClosestPoints( { a[i], a[next[i]] }, { b[j], b[next[j]] } );
             res.a = sd.a;
@@ -67,8 +68,8 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 minQ = res.b;
                 mindd = dd;
 
-                T s = dot( a[( i + 2 ) % 3] - res.a, sd.dir );
-                T t = dot( b[( j + 2 ) % 3] - res.b, sd.dir );
+                T s = dot( a[prev[i]] - res.a, sd.dir );
+                T t = dot( b[prev[j]] - res.b, sd.dir );
 
                 if ( ( s <= 0 ) && ( t >= 0 ) )
                 {

@@ -1,5 +1,6 @@
 #include "MRTriDist.h"
 #include "MRTwoLineSegmDist.h"
+#include <optional>
 
 namespace MR
 {
@@ -9,10 +10,13 @@ namespace
 
 // based on the code by E. Larsen from University of N. Carolina
 
+// a. tests whether normal of a-triangle is a separating direction, then sets shownDisjoint flag;
+// b. if a. test passed, then additionally tests whether the closest of b-vertices to a-triangle
+//       projects in the interior of a-triangle, then returns them as the closest pair of points.
 template<class T>
-TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
+std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const Triangle3<T>& b, bool& shownDisjoint )
 {
-    // Compute vectors along the 6 sides
+    // vectors of a-edges:
     const Vector3<T> av[3] =
     {
         a[1] - a[0],
@@ -20,13 +24,62 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         a[0] - a[2]
     };
 
-    const Vector3<T> bv[3] =
-    {
-        b[1] - b[0],
-        b[2] - b[1],
-        b[0] - b[2]
-    };
+    const Vector3<T> an = cross( av[0], av[1] ); // Compute normal to a triangle
+    const T anSq = an.lengthSq();
 
+    // If a-triangles is not degenerate
+    if ( anSq > 0 )
+    {
+        // projections of b-points on -an direction
+        const T bp[3] =
+        {
+            dot( a[0] - b[0], an ),
+            dot( a[0] - b[1], an ),
+            dot( a[0] - b[2], an )
+        };
+
+        // if all bps have the same sign, then an is a separating direction;
+        // find the point with the smallest projection
+        int point = -1;
+        if ( ( bp[0] > 0 ) && ( bp[1] > 0 ) && ( bp[2] > 0 ) )
+        {
+            if ( bp[0] < bp[1] ) point = 0; else point = 1;
+            if ( bp[2] < bp[point] ) point = 2;
+        }
+        else if ( ( bp[0] < 0 ) && ( bp[1] < 0 ) && ( bp[2] < 0 ) )
+        {
+            if ( bp[0] > bp[1] ) point = 0; else point = 1;
+            if ( bp[2] > bp[point] ) point = 2;
+        }
+
+        // If an is a separating direction,
+        if ( point >= 0 )
+        {
+            shownDisjoint = true;
+
+            // Test whether the point found, when projected onto the
+            // other triangle, lies within the face.
+
+            if ( mixed( b[point] - a[0], an, av[0] ) > 0
+              && mixed( b[point] - a[1], an, av[1] ) > 0
+              && mixed( b[point] - a[2], an, av[2] ) > 0 )
+            {
+                // b[point] passed the test - it's the closest point for
+                // the b triangle; the other point is on the face of a
+                TriTriDistanceResult<T> res;
+                res.a = b[point] + an * bp[point] / anSq;
+                res.b = b[point];
+                res.distSq = distanceSq( res.a, res.b );
+                return res;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+template<class T>
+TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
+{
     // For each edge pair, the vector connecting the closest points
     // of the edges defines a slab (parallel planes at head and tail
     // enclose the slab). If we can show that the off-edge vertex of
@@ -102,106 +155,13 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     //    contain the closest points.
 
     // First check for case 1
+    if ( auto maybeRes = projectBonA( a, b, shownDisjoint ) )
+        return *maybeRes;
 
-    const Vector3<T> an = cross( av[0], av[1] ); // Compute normal to a triangle
-    const T anSq = an.lengthSq();
-
-    // If a-triangles is not degenerate
-    if ( anSq > 0 )
+    if ( auto maybeRes = projectBonA( b, a, shownDisjoint ) )
     {
-        // Get projection lengths of b points
-        const T bp[3] =
-        {
-            dot( a[0] - b[0], an ),
-            dot( a[0] - b[1], an ),
-            dot( a[0] - b[2], an )
-        };
-
-        // If an is a separating direction,
-        // find point with smallest projection
-
-        int point = -1;
-        if ( ( bp[0] > 0 ) && ( bp[1] > 0 ) && ( bp[2] > 0 ) )
-        {
-            if ( bp[0] < bp[1] ) point = 0; else point = 1;
-            if ( bp[2] < bp[point] ) point = 2;
-        }
-        else if ( ( bp[0] < 0 ) && ( bp[1] < 0 ) && ( bp[2] < 0 ) )
-        {
-            if ( bp[0] > bp[1] ) point = 0; else point = 1;
-            if ( bp[2] > bp[point] ) point = 2;
-        }
-
-        // If an is a separating direction,
-        if ( point >= 0 )
-        {
-            shownDisjoint = true;
-
-            // Test whether the point found, when projected onto the
-            // other triangle, lies within the face.
-
-            if ( mixed( b[point] - a[0], an, av[0] ) > 0 )
-            {
-                if ( mixed( b[point] - a[1], an, av[1] ) > 0 )
-                {
-                    if ( mixed( b[point] - a[2], an, av[2] ) > 0 )
-                    {
-                        // b[point] passed the test - it's a closest point for
-                        // the b triangle; the other point is on the face of a
-
-                        res.a = b[point] + an * bp[point] / anSq;
-                        res.b = b[point];
-                        res.distSq = distanceSq( res.a, res.b );
-                        return res;
-                    }
-                }
-            }
-        }
-    }
-
-    const Vector3<T> bn = cross( bv[0], bv[1] );
-    const T bnSq = bn.lengthSq();
-
-    // If b-triangles is not degenerate
-    if ( bnSq > 0 )
-    {
-        const T ap[3] =
-        {
-            dot( b[0] - a[0], bn ),
-            dot( b[0] - a[1], bn ),
-            dot( b[0] - a[2], bn )
-        };
-
-        int point = -1;
-        if ( ( ap[0] > 0 ) && ( ap[1] > 0 ) && ( ap[2] > 0 ) )
-        {
-            if ( ap[0] < ap[1] ) point = 0; else point = 1;
-            if ( ap[2] < ap[point] ) point = 2;
-        }
-        else if ( ( ap[0] < 0 ) && ( ap[1] < 0 ) && ( ap[2] < 0 ) )
-        {
-            if ( ap[0] > ap[1] ) point = 0; else point = 1;
-            if ( ap[2] > ap[point] ) point = 2;
-        }
-
-        if ( point >= 0 )
-        {
-            shownDisjoint = true;
-
-            if ( mixed( a[point] - b[0], bn, bv[0] ) > 0 )
-            {
-                if ( mixed( a[point] - b[1], bn, bv[1] ) > 0 )
-                {
-                    if ( mixed( a[point] - b[2], bn, bv[2] ) > 0 )
-                    {
-                        res.a = a[point];
-                        res.b = a[point] + bn * ap[point] / bnSq;
-                        res.distSq = distanceSq( res.a, res.b );
-                        return res;
-                    }
-                }
-            }
-        }
+        std::swap( maybeRes->a, maybeRes->b );
+        return *maybeRes;
     }
 
     // Case 1 can't be shown.
@@ -212,6 +172,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     if ( shownDisjoint )
         return res;
 
+    // triangles are colliding (overlapping)
     res.distSq = 0;
     return res;
 }

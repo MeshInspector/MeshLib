@@ -49,13 +49,13 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     {
         for ( int j = 0; j < 3; j++ )
         {
-            // Find closest points on edges i & j, plus the
+            // Find closest points on edges { a[i], a[next[i]] } & { b[j], b[next[j]] }, plus the
             // vector (and distance squared) between these points
 
             static constexpr int prev[3] = { 2, 0, 1 };
             static constexpr int next[3] = { 1, 2, 0 };
             const auto sd = findTwoLineSegmClosestPoints( { a[i], a[next[i]] }, { b[j], b[next[j]] } );
-            T dd = distanceSq( sd.a, sd.b );
+            const T dd = distanceSq( sd.a, sd.b );
 
             // Verify this closest point pair only if the distance
             // squared is less than the minimum found thus far.
@@ -66,16 +66,22 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 res.b = sd.b;
                 res.distSq = dd;
 
+                // a[prev[i]] and b[prev[j]] are remaining vertices of the triangles
+                // on top of the vertices from the considered edges
                 T s = dot( a[prev[i]] - res.a, sd.dir );
                 T t = dot( b[prev[j]] - res.b, sd.dir );
 
+                // if the remaining points are further along sd.dir than the considered edges
                 if ( ( s <= 0 ) && ( t >= 0 ) )
                     return res;
 
-                T p = dot( res.b - res.a, sd.dir );
+                // the distance along sd.dir between the considered edges
+                const T p = dot( res.b - res.a, sd.dir );
 
                 if ( s < 0 ) s = 0;
                 if ( t > 0 ) t = 0;
+
+                // a plane with sd.dir normal is separating
                 if ( ( p - s + t ) > 0 ) shownDisjoint = true;
             }
         }
@@ -98,10 +104,10 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // First check for case 1
 
     const Vector3<T> an = cross( av[0], av[1] ); // Compute normal to a triangle
-    const T anSq = dot( an, an );      // Compute square of length of normal
+    const T anSq = an.lengthSq();
 
-    // If cross product is long enough,
-    if ( anSq > 1e-15 )
+    // If a-triangles is not degenerate
+    if ( anSq > 0 )
     {
         // Get projection lengths of b points
         const T bp[3] =
@@ -154,9 +160,10 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     }
 
     const Vector3<T> bn = cross( bv[0], bv[1] );
-    const T bnSq = dot( bn, bn );
+    const T bnSq = bn.lengthSq();
 
-    if ( bnSq > 1e-15 )
+    // If b-triangles is not degenerate
+    if ( bnSq > 0 )
     {
         const T ap[3] =
         {

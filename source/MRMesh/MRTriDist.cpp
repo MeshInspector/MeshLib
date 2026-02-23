@@ -12,8 +12,6 @@ namespace
 template<class T>
 TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
 {
-    TriTriDistanceResult<T> res;
-
     // Compute vectors along the 6 sides
     const Vector3<T> av[3] =
     {
@@ -37,11 +35,13 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // Even if these tests fail, it may be helpful to know the closest
     // points found, and whether the triangles were shown disjoint
 
-    Vector3<T> minP, minQ;
     bool shownDisjoint = false;
 
     // the distance between the triangles is not more than the distance between two of their points
-    T mindd = distanceSq( a[0], b[0] );
+    TriTriDistanceResult<T> res;
+    res.a = a[0];
+    res.b = b[0];
+    res.distSq = distanceSq( res.a, res.b );
 
     for ( int i = 0; i < 3; i++ )
     {
@@ -53,28 +53,22 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             static constexpr int prev[3] = { 2, 0, 1 };
             static constexpr int next[3] = { 1, 2, 0 };
             const auto sd = findTwoLineSegmClosestPoints( { a[i], a[next[i]] }, { b[j], b[next[j]] } );
-            res.a = sd.a;
-            res.b = sd.b;
-
-            T dd = distanceSq( res.a, res.b );
+            T dd = distanceSq( sd.a, sd.b );
 
             // Verify this closest point pair only if the distance
             // squared is less than the minimum found thus far.
 
-            if ( dd <= mindd )
+            if ( dd < res.distSq )
             {
-                minP = res.a;
-                minQ = res.b;
-                mindd = dd;
+                res.a = sd.a;
+                res.b = sd.b;
+                res.distSq = dd;
 
                 T s = dot( a[prev[i]] - res.a, sd.dir );
                 T t = dot( b[prev[j]] - res.b, sd.dir );
 
                 if ( ( s <= 0 ) && ( t >= 0 ) )
-                {
-                    res.distSq = dd;
                     return res;
-                }
 
                 T p = dot( res.b - res.a, sd.dir );
 
@@ -207,12 +201,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // that the triangles overlap.
 
     if ( shownDisjoint )
-    {
-        res.a = minP;
-        res.b = minQ;
-        res.distSq = mindd;
         return res;
-    }
 
     res.distSq = 0;
     return res;

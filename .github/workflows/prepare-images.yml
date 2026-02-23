@@ -178,14 +178,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Add Clarkson MSYS2 mirror to vcpkg
-        if: ${{ matrix.vs == 'vs2019' }}
-        run: |
-          $path = "C:\vcpkg\scripts\cmake\vcpkg_acquire_msys.cmake"
-          $content = Get-Content $path -Raw
-          $content = $content -replace '    # Alternative primary', "    `"https://mirror.clarkson.edu/msys2/`"`n    # Alternative primary"
-          Set-Content $path -Value $content
-
       - name: Build and cache vcpkg
         env:
           VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}

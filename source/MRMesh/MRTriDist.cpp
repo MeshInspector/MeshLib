@@ -38,10 +38,12 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     bool shownDisjoint = false;
 
     // the distance between the triangles is not more than the distance between two of their points
-    TriTriDistanceResult<T> res;
-    res.a = a[0];
-    res.b = b[0];
-    res.distSq = distanceSq( res.a, res.b );
+    TriTriDistanceResult<T> res
+    {
+        .a = a[0],
+        .b = b[0],
+        .distSq = distanceSq( a[0], b[0] )
+    };
 
     for ( int i = 0; i < 3; i++ )
     {
@@ -58,7 +60,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // Verify this closest point pair only if the distance
             // squared is less than the minimum found thus far.
 
-            if ( dd < res.distSq )
+            if ( dd <= res.distSq ) // no strictly less, to set shownDisjoint
             {
                 res.a = sd.a;
                 res.b = sd.b;

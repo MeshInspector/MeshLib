@@ -37,7 +37,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // Even if these tests fail, it may be helpful to know the closest
     // points found, and whether the triangles were shown disjoint
 
-    Vector3<T> V, minP, minQ;
+    Vector3<T> minP, minQ;
     bool shownDisjoint = false;
 
     // the distance between the triangles is not more than the distance between two of their points
@@ -56,8 +56,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             res.a = sd.a;
             res.b = sd.b;
 
-            V = res.b - res.a;
-            T dd = dot( V, V );
+            T dd = distanceSq( res.a, res.b );
 
             // Verify this closest point pair only if the distance
             // squared is less than the minimum found thus far.
@@ -77,7 +76,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                     return res;
                 }
 
-                T p = dot( V, sd.dir );
+                T p = dot( res.b - res.a, sd.dir );
 
                 if ( s < 0 ) s = 0;
                 if ( t > 0 ) t = 0;
@@ -110,17 +109,12 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     if ( Snl > 1e-15 )
     {
         // Get projection lengths of b points
-
-        T Tp[3];
-
-        V = a[0] - b[0];
-        Tp[0] = dot( V, Sn );
-
-        V = a[0] - b[1];
-        Tp[1] = dot( V, Sn );
-
-        V = a[0] - b[2];
-        Tp[2] = dot( V, Sn );
+        const T Tp[3] =
+        {
+            dot( a[0] - b[0], Sn ),
+            dot( a[0] - b[1], Sn ),
+            dot( a[0] - b[2], Sn )
+        };
 
         // If Sn is a separating direction,
         // find point with smallest projection
@@ -146,14 +140,11 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face.
 
-            V = b[point] - a[0];
-            if ( dot( V, cross( Sn, av[0] ) ) > 0 )
+            if ( dot( b[point] - a[0], cross( Sn, av[0] ) ) > 0 )
             {
-                V = b[point] - a[1];
-                if ( dot( V, cross( Sn, av[1] ) ) > 0 )
+                if ( dot( b[point] - a[1], cross( Sn, av[1] ) ) > 0 )
                 {
-                    V = b[point] - a[2];
-                    if ( dot( V, cross( Sn, av[2] ) ) > 0 )
+                    if ( dot( b[point] - a[2], cross( Sn, av[2] ) ) > 0 )
                     {
                         // b[point] passed the test - it's a closest point for
                         // the b triangle; the other point is on the face of a
@@ -173,16 +164,12 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
 
     if ( Tnl > 1e-15 )
     {
-        T Sp[3];
-
-        V = b[0] - a[0];
-        Sp[0] = dot( V, Tn );
-
-        V = b[0] - a[1];
-        Sp[1] = dot( V, Tn );
-
-        V = b[0] - a[2];
-        Sp[2] = dot( V, Tn );
+        const T Sp[3] =
+        {
+            dot( b[0] - a[0], Tn ),
+            dot( b[0] - a[1], Tn ),
+            dot( b[0] - a[2], Tn )
+        };
 
         int point = -1;
         if ( ( Sp[0] > 0 ) && ( Sp[1] > 0 ) && ( Sp[2] > 0 ) )
@@ -200,14 +187,11 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         {
             shownDisjoint = true;
 
-            V = a[point] - b[0];
-            if ( dot( V, cross( Tn, bv[0] ) ) > 0 )
+            if ( dot( a[point] - b[0], cross( Tn, bv[0] ) ) > 0 )
             {
-                V = a[point] - b[1];
-                if ( dot( V, cross( Tn, bv[1] ) ) > 0 )
+                if ( dot( a[point] - b[1], cross( Tn, bv[1] ) ) > 0 )
                 {
-                    V = a[point] - b[2];
-                    if ( dot( V, cross( Tn, bv[2] ) ) > 0 )
+                    if ( dot( a[point] - b[2], cross( Tn, bv[2] ) ) > 0 )
                     {
                         res.a = a[point];
                         res.b = a[point] + Tn * Sp[point] / Tnl;

@@ -19,6 +19,10 @@ struct TriTriDistanceResult
     /// (equal to the squared distance between a and b points).
     /// If the triangles overlap, it is zero.
     T distSq = 0;
+
+    /// overlap==true means that the triangles are intersecting and not just touch one another => distSq == 0
+    /// if distSq == 0 and overlap == false, then the triangles just touch one another
+    bool overlap = true;
 };
 using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;

@@ -10,11 +10,11 @@ namespace
 
 // based on the code by E. Larsen from University of N. Carolina
 
-// a. tests whether normal of a-triangle is a separating direction, then sets shownDisjoint flag;
-// b. if a. test passed, then additionally tests whether the closest of b-vertices to a-triangle
+// a. tests whether normal of a-triangle is a separating direction, then sets overlap flag to false;
+// b. if separating direction confirmed, then additionally tests whether the closest of b-vertices to a-triangle
 //       projects in the interior of a-triangle, then returns them as the closest pair of points.
 template<class T>
-std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const Triangle3<T>& b, bool& shownDisjoint )
+std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const Triangle3<T>& b, bool& overlap )
 {
     // vectors of a-edges:
     const Vector3<T> av[3] =
@@ -41,12 +41,12 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
         // if all bps have the same sign, then an is a separating direction;
         // find the point with the smallest projection
         int point = -1;
-        if ( ( bp[0] > 0 ) && ( bp[1] > 0 ) && ( bp[2] > 0 ) )
+        if ( ( bp[0] >= 0 ) && ( bp[1] >= 0 ) && ( bp[2] >= 0 ) )
         {
             if ( bp[0] < bp[1] ) point = 0; else point = 1;
             if ( bp[2] < bp[point] ) point = 2;
         }
-        else if ( ( bp[0] < 0 ) && ( bp[1] < 0 ) && ( bp[2] < 0 ) )
+        else if ( ( bp[0] <= 0 ) && ( bp[1] <= 0 ) && ( bp[2] <= 0 ) )
         {
             if ( bp[0] > bp[1] ) point = 0; else point = 1;
             if ( bp[2] > bp[point] ) point = 2;
@@ -55,7 +55,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
         // If an is a separating direction,
         if ( point >= 0 )
         {
-            shownDisjoint = true;
+            overlap = false;
 
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face.
@@ -70,6 +70,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                 res.a = b[point] + an * bp[point] / anSq;
                 res.b = b[point];
                 res.distSq = distanceSq( res.a, res.b );
+                res.overlap = false;
                 return res;
             }
         }
@@ -87,8 +88,6 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // of the edges are the closest points for the triangles.
     // Even if these tests fail, it may be helpful to know the closest
     // points found, and whether the triangles were shown disjoint
-
-    bool shownDisjoint = false;
 
     // the distance between the triangles is not more than the distance between two of their points
     TriTriDistanceResult<T> res
@@ -113,7 +112,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // Verify this closest point pair only if the distance
             // squared is less than the minimum found thus far.
 
-            if ( dd <= res.distSq ) // no strictly less, to set shownDisjoint
+            if ( dd <= res.distSq ) // no strictly less, to set res.overlap
             {
                 res.a = sd.a;
                 res.b = sd.b;
@@ -126,7 +125,10 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
 
                 // if the remaining points are further along sd.dir than the considered edges
                 if ( ( s <= 0 ) && ( t >= 0 ) )
+                {
+                    res.overlap = false;
                     return res;
+                }
 
                 // the distance along sd.dir between the considered edges
                 const T p = dot( res.b - res.a, sd.dir );
@@ -134,8 +136,8 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 if ( s < 0 ) s = 0;
                 if ( t > 0 ) t = 0;
 
-                // a plane with sd.dir normal is separating
-                if ( ( p - s + t ) > 0 ) shownDisjoint = true;
+                // sd.dir is a separating direction
+                if ( ( p - s + t ) >= 0 ) res.overlap = false;
             }
         }
     }
@@ -155,10 +157,10 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     //    contain the closest points.
 
     // First check for case 1
-    if ( auto maybeRes = projectBonA( a, b, shownDisjoint ) )
+    if ( auto maybeRes = projectBonA( a, b, res.overlap ) )
         return *maybeRes;
 
-    if ( auto maybeRes = projectBonA( b, a, shownDisjoint ) )
+    if ( auto maybeRes = projectBonA( b, a, res.overlap ) )
     {
         std::swap( maybeRes->a, maybeRes->b );
         return *maybeRes;
@@ -169,11 +171,9 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // we assume case 3 or 4, otherwise we conclude case 2,
     // that the triangles overlap.
 
-    if ( shownDisjoint )
-        return res;
+    if ( res.overlap )
+        res.distSq = 0; // triangles are colliding (overlapping)
 
-    // triangles are colliding (overlapping)
-    res.distSq = 0;
     return res;
 }
 

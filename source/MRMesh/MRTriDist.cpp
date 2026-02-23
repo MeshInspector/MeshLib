@@ -15,14 +15,14 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     TriTriDistanceResult<T> res;
 
     // Compute vectors along the 6 sides
-    const Vector3<T> Sv[3] =
+    const Vector3<T> av[3] =
     {
         a[1] - a[0],
         a[2] - a[1],
         a[0] - a[2]
     };
 
-    const Vector3<T> Tv[3] =
+    const Vector3<T> bv[3] =
     {
         b[1] - b[0],
         b[2] - b[1],
@@ -37,7 +37,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     // Even if these tests fail, it may be helpful to know the closest
     // points found, and whether the triangles were shown disjoint
 
-    Vector3<T> V, Z, minP, minQ;
+    Vector3<T> V, minP, minQ;
     bool shownDisjoint = false;
 
     // the distance between the triangles is not more than the distance between two of their points
@@ -67,10 +67,8 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 minQ = res.b;
                 mindd = dd;
 
-                Z = a[( i + 2 ) % 3] - res.a;
-                T s = dot( Z, sd.dir );
-                Z = b[( j + 2 ) % 3] - res.b;
-                T t = dot( Z, sd.dir );
+                T s = dot( a[( i + 2 ) % 3] - res.a, sd.dir );
+                T t = dot( b[( j + 2 ) % 3] - res.b, sd.dir );
 
                 if ( ( s <= 0 ) && ( t >= 0 ) )
                 {
@@ -103,7 +101,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
 
     // First check for case 1
 
-    Vector3<T> Sn = cross( Sv[0], Sv[1] ); // Compute normal to a triangle
+    Vector3<T> Sn = cross( av[0], av[1] ); // Compute normal to a triangle
     T Snl = dot( Sn, Sn );      // Compute square of length of normal
 
     // If cross product is long enough,
@@ -148,16 +146,13 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // other triangle, lies within the face.
 
             V = b[point] - a[0];
-            Z = cross( Sn, Sv[0] );
-            if ( dot( V, Z ) > 0 )
+            if ( dot( V, cross( Sn, av[0] ) ) > 0 )
             {
                 V = b[point] - a[1];
-                Z = cross( Sn, Sv[1] );
-                if ( dot( V, Z ) > 0 )
+                if ( dot( V, cross( Sn, av[1] ) ) > 0 )
                 {
                     V = b[point] - a[2];
-                    Z = cross( Sn, Sv[2] );
-                    if ( dot( V, Z ) > 0 )
+                    if ( dot( V, cross( Sn, av[2] ) ) > 0 )
                     {
                         // b[point] passed the test - it's a closest point for
                         // the b triangle; the other point is on the face of a
@@ -172,7 +167,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         }
     }
 
-    Vector3<T> Tn = cross( Tv[0], Tv[1] );
+    Vector3<T> Tn = cross( bv[0], bv[1] );
     T Tnl = dot( Tn, Tn );
 
     if ( Tnl > 1e-15 )
@@ -205,16 +200,13 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             shownDisjoint = true;
 
             V = a[point] - b[0];
-            Z = cross( Tn, Tv[0] );
-            if ( dot( V, Z ) > 0 )
+            if ( dot( V, cross( Tn, bv[0] ) ) > 0 )
             {
                 V = a[point] - b[1];
-                Z = cross( Tn, Tv[1] );
-                if ( dot( V, Z ) > 0 )
+                if ( dot( V, cross( Tn, bv[1] ) ) > 0 )
                 {
                     V = a[point] - b[2];
-                    Z = cross( Tn, Tv[2] );
-                    if ( dot( V, Z ) > 0 )
+                    if ( dot( V, cross( Tn, bv[2] ) ) > 0 )
                     {
                         res.a = a[point];
                         res.b = a[point] + Tn * Sp[point] / Tnl;

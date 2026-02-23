@@ -131,7 +131,6 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         }
 
         // If an is a separating direction,
-
         if ( point >= 0 )
         {
             shownDisjoint = true;
@@ -139,11 +138,11 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face.
 
-            if ( dot( b[point] - a[0], cross( an, av[0] ) ) > 0 )
+            if ( mixed( b[point] - a[0], an, av[0] ) > 0 )
             {
-                if ( dot( b[point] - a[1], cross( an, av[1] ) ) > 0 )
+                if ( mixed( b[point] - a[1], an, av[1] ) > 0 )
                 {
-                    if ( dot( b[point] - a[2], cross( an, av[2] ) ) > 0 )
+                    if ( mixed( b[point] - a[2], an, av[2] ) > 0 )
                     {
                         // b[point] passed the test - it's a closest point for
                         // the b triangle; the other point is on the face of a
@@ -186,11 +185,11 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         {
             shownDisjoint = true;
 
-            if ( dot( a[point] - b[0], cross( bn, bv[0] ) ) > 0 )
+            if ( mixed( a[point] - b[0], bn, bv[0] ) > 0 )
             {
-                if ( dot( a[point] - b[1], cross( bn, bv[1] ) ) > 0 )
+                if ( mixed( a[point] - b[1], bn, bv[1] ) > 0 )
                 {
-                    if ( dot( a[point] - b[2], cross( bn, bv[2] ) ) > 0 )
+                    if ( mixed( a[point] - b[2], bn, bv[2] ) > 0 )
                     {
                         res.a = a[point];
                         res.b = a[point] + bn * ap[point] / bnSq;

@@ -101,37 +101,36 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
 
     // First check for case 1
 
-    Vector3<T> Sn = cross( av[0], av[1] ); // Compute normal to a triangle
-    T Snl = dot( Sn, Sn );      // Compute square of length of normal
+    const Vector3<T> an = cross( av[0], av[1] ); // Compute normal to a triangle
+    const T anSq = dot( an, an );      // Compute square of length of normal
 
     // If cross product is long enough,
-
-    if ( Snl > 1e-15 )
+    if ( anSq > 1e-15 )
     {
         // Get projection lengths of b points
-        const T Tp[3] =
+        const T bp[3] =
         {
-            dot( a[0] - b[0], Sn ),
-            dot( a[0] - b[1], Sn ),
-            dot( a[0] - b[2], Sn )
+            dot( a[0] - b[0], an ),
+            dot( a[0] - b[1], an ),
+            dot( a[0] - b[2], an )
         };
 
-        // If Sn is a separating direction,
+        // If an is a separating direction,
         // find point with smallest projection
 
         int point = -1;
-        if ( ( Tp[0] > 0 ) && ( Tp[1] > 0 ) && ( Tp[2] > 0 ) )
+        if ( ( bp[0] > 0 ) && ( bp[1] > 0 ) && ( bp[2] > 0 ) )
         {
-            if ( Tp[0] < Tp[1] ) point = 0; else point = 1;
-            if ( Tp[2] < Tp[point] ) point = 2;
+            if ( bp[0] < bp[1] ) point = 0; else point = 1;
+            if ( bp[2] < bp[point] ) point = 2;
         }
-        else if ( ( Tp[0] < 0 ) && ( Tp[1] < 0 ) && ( Tp[2] < 0 ) )
+        else if ( ( bp[0] < 0 ) && ( bp[1] < 0 ) && ( bp[2] < 0 ) )
         {
-            if ( Tp[0] > Tp[1] ) point = 0; else point = 1;
-            if ( Tp[2] > Tp[point] ) point = 2;
+            if ( bp[0] > bp[1] ) point = 0; else point = 1;
+            if ( bp[2] > bp[point] ) point = 2;
         }
 
-        // If Sn is a separating direction,
+        // If an is a separating direction,
 
         if ( point >= 0 )
         {
@@ -140,16 +139,16 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face.
 
-            if ( dot( b[point] - a[0], cross( Sn, av[0] ) ) > 0 )
+            if ( dot( b[point] - a[0], cross( an, av[0] ) ) > 0 )
             {
-                if ( dot( b[point] - a[1], cross( Sn, av[1] ) ) > 0 )
+                if ( dot( b[point] - a[1], cross( an, av[1] ) ) > 0 )
                 {
-                    if ( dot( b[point] - a[2], cross( Sn, av[2] ) ) > 0 )
+                    if ( dot( b[point] - a[2], cross( an, av[2] ) ) > 0 )
                     {
                         // b[point] passed the test - it's a closest point for
                         // the b triangle; the other point is on the face of a
 
-                        res.a = b[point] + Sn * Tp[point] / Snl;
+                        res.a = b[point] + an * bp[point] / anSq;
                         res.b = b[point];
                         res.distSq = distanceSq( res.a, res.b );
                         return res;
@@ -159,42 +158,42 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         }
     }
 
-    Vector3<T> Tn = cross( bv[0], bv[1] );
-    T Tnl = dot( Tn, Tn );
+    const Vector3<T> bn = cross( bv[0], bv[1] );
+    const T bnSq = dot( bn, bn );
 
-    if ( Tnl > 1e-15 )
+    if ( bnSq > 1e-15 )
     {
-        const T Sp[3] =
+        const T ap[3] =
         {
-            dot( b[0] - a[0], Tn ),
-            dot( b[0] - a[1], Tn ),
-            dot( b[0] - a[2], Tn )
+            dot( b[0] - a[0], bn ),
+            dot( b[0] - a[1], bn ),
+            dot( b[0] - a[2], bn )
         };
 
         int point = -1;
-        if ( ( Sp[0] > 0 ) && ( Sp[1] > 0 ) && ( Sp[2] > 0 ) )
+        if ( ( ap[0] > 0 ) && ( ap[1] > 0 ) && ( ap[2] > 0 ) )
         {
-            if ( Sp[0] < Sp[1] ) point = 0; else point = 1;
-            if ( Sp[2] < Sp[point] ) point = 2;
+            if ( ap[0] < ap[1] ) point = 0; else point = 1;
+            if ( ap[2] < ap[point] ) point = 2;
         }
-        else if ( ( Sp[0] < 0 ) && ( Sp[1] < 0 ) && ( Sp[2] < 0 ) )
+        else if ( ( ap[0] < 0 ) && ( ap[1] < 0 ) && ( ap[2] < 0 ) )
         {
-            if ( Sp[0] > Sp[1] ) point = 0; else point = 1;
-            if ( Sp[2] > Sp[point] ) point = 2;
+            if ( ap[0] > ap[1] ) point = 0; else point = 1;
+            if ( ap[2] > ap[point] ) point = 2;
         }
 
         if ( point >= 0 )
         {
             shownDisjoint = true;
 
-            if ( dot( a[point] - b[0], cross( Tn, bv[0] ) ) > 0 )
+            if ( dot( a[point] - b[0], cross( bn, bv[0] ) ) > 0 )
             {
-                if ( dot( a[point] - b[1], cross( Tn, bv[1] ) ) > 0 )
+                if ( dot( a[point] - b[1], cross( bn, bv[1] ) ) > 0 )
                 {
-                    if ( dot( a[point] - b[2], cross( Tn, bv[2] ) ) > 0 )
+                    if ( dot( a[point] - b[2], cross( bn, bv[2] ) ) > 0 )
                     {
                         res.a = a[point];
-                        res.b = a[point] + Tn * Sp[point] / Tnl;
+                        res.b = a[point] + bn * ap[point] / bnSq;
                         res.distSq = distanceSq( res.a, res.b );
                         return res;
                     }

@@ -24,7 +24,7 @@ struct PointsProjectionResult
 
 /**
  * \brief computes the closest point on point cloud to given point
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning upDistLimitSq and no valid point
  * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param skipCb callback to discard VertId projection candidate
@@ -37,7 +37,7 @@ struct PointsProjectionResult
 
 /**
  * \brief computes the closest point on AABBTreePoints to given point
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning upDistLimitSq and no valid point
  * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param region if not nullptr, all points not from the given region will be ignored

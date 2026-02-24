@@ -18,7 +18,7 @@ typedef struct MRMeshMeshDistanceResult
 /**
  * \brief computes minimal distance between two meshes or two mesh regions
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid points
  */
 MRMESHC_API MRMeshMeshDistanceResult mrFindDistance( const MRMeshPart* a, const MRMeshPart* b,
     const MRAffineXf3f* rigidB2A, float upDistLimitSq );

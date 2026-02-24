@@ -28,17 +28,21 @@ struct TriTriDistanceResult
 using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;
 
+enum class UpLimitCheck : bool
+{
+    GreaterOrEqual, ///< findTriTriDistance exits earlier if (distSqLowerBound >= upDistLimitSq)
+    Greater         ///< findTriTriDistance exits earlier if (distSqLowerBound >  upDistLimitSq)
+};
+
 template<class T>
 struct TriTriDistanceParams
 {
-    /// upper limit on the distance in question, if the real distance is larger then findTriTriDistance exits earlier
-    /// returning lower bound on distSq >= upDistLimitSq and the points a and b can be arbitrary
+    /// upper limit on the distance in question, if the real distance is larger (or equal depending on upLimitCheck)
+    /// then findTriTriDistance exits earlier returning lower bound on distSq >= upDistLimitSq
+    /// and the points a and b can be arbitrary
     T upDistLimitSq = std::numeric_limits<T>::max();
 
-    /// findTriTriDistance exits earlier
-    /// if ( strictlyAboveUpLimit && distSqLowerBound >  upDistLimitSq), or
-    /// if (!strictlyAboveUpLimit && distSqLowerBound >= upDistLimitSq)
-    bool strictlyAboveUpLimit = true;
+    UpLimitCheck upLimitCheck = UpLimitCheck::Greater;
 
     bool canExitEarlier() const // with the current parameters
     {
@@ -47,7 +51,7 @@ struct TriTriDistanceParams
 
     bool canExitEarlier( T distSqLowerBound ) const // with this particular lower bound
     {
-        return distSqLowerBound > upDistLimitSq || ( !strictlyAboveUpLimit && distSqLowerBound == upDistLimitSq );
+        return distSqLowerBound > upDistLimitSq || ( upLimitCheck == UpLimitCheck::GreaterOrEqual && distSqLowerBound == upDistLimitSq );
     }
 };
 using TriTriDistanceParamsf = TriTriDistanceParams<float>;

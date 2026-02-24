@@ -280,7 +280,7 @@ Expected<bool> findSelfCollidingTriangles(
                             // else not touching
                         }
                     }
-                    else if ( auto td = findTriTriDistance( { ap[0], ap[1], ap[2] }, { bp[0], bp[1], bp[2] }, { .upDistLimitSq = 0, .strictlyAboveUpLimit = touchIsIntersection } );
+                    else if ( auto td = findTriTriDistance( { ap[0], ap[1], ap[2] }, { bp[0], bp[1], bp[2] }, { .upDistLimitSq = 0, .upLimitCheck = touchIsIntersection ? UpLimitCheck::Greater : UpLimitCheck::GreaterOrEqual } );
                         td.distSq > 0 || ( !touchIsIntersection && !td.overlap ) )
                     {
                         return Processing::Continue;

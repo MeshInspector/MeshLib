@@ -1386,6 +1386,9 @@
     <ClInclude Include="MRTwoLineSegmDist.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshPatch.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2275,6 +2278,9 @@
     <ClCompile Include="MRBitSetParallelFor.cpp" />
     <ClCompile Include="MRTwoLineSegmDist.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshPatch.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

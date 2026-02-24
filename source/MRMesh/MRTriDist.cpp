@@ -1,285 +1,208 @@
 #include "MRTriDist.h"
 #include "MRTwoLineSegmDist.h"
+#include <optional>
 
 namespace MR
 {
 
-/*************************************************************************\
-
-  Copyright 1999 The University of North Carolina at Chapel Hill.
-  All Rights Reserved.
-
-  Permission to use, copy, modify and distribute this software and its
-  documentation for educational, research and non-profit purposes, without
-  fee, and without a written agreement is hereby granted, provided that the
-  above copyright notice and the following three paragraphs appear in all
-  copies.
-
-  IN NO EVENT SHALL THE UNIVERSITY OF NORTH CAROLINA AT CHAPEL HILL BE
-  LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR
-  CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF THE
-  USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY
-  OF NORTH CAROLINA HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
-  DAMAGES.
-
-  THE UNIVERSITY OF NORTH CAROLINA SPECIFICALLY DISCLAIM ANY
-  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE
-  PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF
-  NORTH CAROLINA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT,
-  UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
-
-  The authors may be contacted via:
-
-  US Mail:             E. Larsen
-                       Department of Computer Science
-                       Sitterson Hall, CB #3175
-                       University of N. Carolina
-                       Chapel Hill, NC 27599-3175
-
-  Phone:               (919)962-1749
-
-  EMail:               geom@cs.unc.edu
-
-
-\**************************************************************************/
-
-//--------------------------------------------------------------------------
-// triDist()
-//
-// Computes the closest points on two triangles, and returns the
-// squared distance between them.
-//
-// S and T are the triangles, stored tri[point][dimension].
-//
-// If the triangles are disjoint, P and Q give the closest points of
-// S and T respectively. However, if the triangles overlap, P and Q
-// are basically a random pair of points from the triangles, not
-// coincident points on the intersection of the triangles, as might
-// be expected.
-//--------------------------------------------------------------------------
-
-float triDist( Vector3f & P, Vector3f & Q, const Vector3f S[3], const Vector3f T[3] )
+namespace
 {
-  // Compute vectors along the 6 sides
 
-  Vector3f Sv[3], Tv[3];
-  Vector3f VEC;
+// based on the code by E. Larsen from University of N. Carolina
 
-  Sv[0] = S[1] - S[0];
-  Sv[1] = S[2] - S[1];
-  Sv[2] = S[0] - S[2];
-
-  Tv[0] = T[1] - T[0];
-  Tv[1] = T[2] - T[1];
-  Tv[2] = T[0] - T[2];
-
-  // For each edge pair, the vector connecting the closest points
-  // of the edges defines a slab (parallel planes at head and tail
-  // enclose the slab). If we can show that the off-edge vertex of
-  // each triangle is outside of the slab, then the closest points
-  // of the edges are the closest points for the triangles.
-  // Even if these tests fail, it may be helpful to know the closest
-  // points found, and whether the triangles were shown disjoint
-
-  Vector3f V, Z, minP, minQ;
-  float mindd;
-  int shown_disjoint = 0;
-
-  mindd = (S[0] - T[0]).lengthSq() + 1;  // Set first minimum safely high
-
-  for (int i = 0; i < 3; i++)
-  {
-    for (int j = 0; j < 3; j++)
+// a. tests whether normal of a-triangle is a separating direction, then sets overlap flag to false;
+// b. if separating direction confirmed, then additionally tests whether the closest of b-vertices to a-triangle
+//       projects in the interior of a-triangle, then returns them as the closest pair of points.
+template<class T>
+std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const Triangle3<T>& b, bool& overlap )
+{
+    // vectors of a-edges:
+    const Vector3<T> av[3] =
     {
-      // Find closest points on edges i & j, plus the
-      // vector (and distance squared) between these points
+        a[1] - a[0],
+        a[2] - a[1],
+        a[0] - a[2]
+    };
 
-      static constexpr int next[3] = { 1, 2, 0 };
-      const auto sd = findTwoLineSegmClosestPoints( { S[i], S[next[i]] }, { T[j], T[next[j]] } );
-      P = sd.a;
-      Q = sd.b;
-      VEC = sd.dir;
+    const Vector3<T> an = cross( av[0], av[1] ); // Compute normal to a triangle
+    const T anSq = an.lengthSq();
 
-      V = Q - P;
-      float dd = dot(V,V);
-
-      // Verify this closest point pair only if the distance
-      // squared is less than the minimum found thus far.
-
-      if (dd <= mindd)
-      {
-        minP = P;
-        minQ = Q;
-        mindd = dd;
-
-        Z = S[(i+2)%3] - P;
-        float a = dot(Z,VEC);
-        Z = T[(j+2)%3] - Q;
-        float b = dot(Z,VEC);
-
-        if ((a <= 0) && (b >= 0))
-            return dd;
-
-        float p = dot(V, VEC);
-
-        if (a < 0) a = 0;
-        if (b > 0) b = 0;
-        if ((p - a + b) > 0) shown_disjoint = 1;
-      }
-    }
-  }
-
-  // No edge pairs contained the closest points.
-  // either:
-  // 1. one of the closest points is a vertex, and the
-  //    other point is interior to a face.
-  // 2. the triangles are overlapping.
-  // 3. an edge of one triangle is parallel to the other's face. If
-  //    cases 1 and 2 are not true, then the closest points from the 9
-  //    edge pairs checks above can be taken as closest points for the
-  //    triangles.
-  // 4. possibly, the triangles were degenerate.  When the
-  //    triangle points are nearly colinear or coincident, one
-  //    of above tests might fail even though the edges tested
-  //    contain the closest points.
-
-  // First check for case 1
-
-  Vector3f Sn = cross( Sv[0], Sv[1] ); // Compute normal to S triangle
-  float Snl = dot(Sn,Sn);      // Compute square of length of normal
-
-  // If cross product is long enough,
-
-  if (Snl > 1e-15)
-  {
-    // Get projection lengths of T points
-
-    float Tp[3];
-
-    V = S[0] - T[0];
-    Tp[0] = dot(V,Sn);
-
-    V = S[0] - T[1];
-    Tp[1] = dot(V,Sn);
-
-    V = S[0] - T[2];
-    Tp[2] = dot(V,Sn);
-
-    // If Sn is a separating direction,
-    // find point with smallest projection
-
-    int point = -1;
-    if ((Tp[0] > 0) && (Tp[1] > 0) && (Tp[2] > 0))
+    // If a-triangles is not degenerate
+    if ( anSq > 0 )
     {
-      if (Tp[0] < Tp[1]) point = 0; else point = 1;
-      if (Tp[2] < Tp[point]) point = 2;
-    }
-    else if ((Tp[0] < 0) && (Tp[1] < 0) && (Tp[2] < 0))
-    {
-      if (Tp[0] > Tp[1]) point = 0; else point = 1;
-      if (Tp[2] > Tp[point]) point = 2;
-    }
-
-    // If Sn is a separating direction,
-
-    if (point >= 0)
-    {
-      shown_disjoint = 1;
-
-      // Test whether the point found, when projected onto the
-      // other triangle, lies within the face.
-
-      V = T[point] - S[0];
-      Z = cross( Sn, Sv[0] );
-      if (dot(V,Z) > 0)
-      {
-        V = T[point] - S[1];
-        Z = cross( Sn, Sv[1] );
-        if (dot(V,Z) > 0)
+        // projections of b-points on -an direction
+        const T bp[3] =
         {
-          V = T[point] - S[2];
-          Z = cross( Sn, Sv[2] );
-          if (dot(V,Z) > 0)
-          {
-            // T[point] passed the test - it's a closest point for
-            // the T triangle; the other point is on the face of S
+            dot( a[0] - b[0], an ),
+            dot( a[0] - b[1], an ),
+            dot( a[0] - b[2], an )
+        };
 
-            P = T[point] + Sn * Tp[point]/Snl;
-            Q = T[point];
-            return ( P - Q ).lengthSq();
-          }
-        }
-      }
-    }
-  }
-
-  Vector3f Tn = cross( Tv[0], Tv[1] );
-  float Tnl = dot(Tn,Tn);
-
-  if (Tnl > 1e-15)
-  {
-    float Sp[3];
-
-    V = T[0] - S[0];
-    Sp[0] = dot(V,Tn);
-
-    V = T[0] - S[1];
-    Sp[1] = dot(V,Tn);
-
-    V = T[0] - S[2];
-    Sp[2] = dot(V,Tn);
-
-    int point = -1;
-    if ((Sp[0] > 0) && (Sp[1] > 0) && (Sp[2] > 0))
-    {
-      if (Sp[0] < Sp[1]) point = 0; else point = 1;
-      if (Sp[2] < Sp[point]) point = 2;
-    }
-    else if ((Sp[0] < 0) && (Sp[1] < 0) && (Sp[2] < 0))
-    {
-      if (Sp[0] > Sp[1]) point = 0; else point = 1;
-      if (Sp[2] > Sp[point]) point = 2;
-    }
-
-    if (point >= 0)
-    {
-      shown_disjoint = 1;
-
-      V = S[point] - T[0];
-      Z = cross( Tn, Tv[0] );
-      if (dot(V,Z) > 0)
-      {
-        V = S[point] - T[1];
-        Z = cross( Tn, Tv[1] );
-        if (dot(V,Z) > 0)
+        // if all bps have the same sign, then an is a separating direction;
+        // find the point with the smallest projection
+        int point = -1;
+        if ( ( bp[0] >= 0 ) && ( bp[1] >= 0 ) && ( bp[2] >= 0 ) )
         {
-          V = S[point] - T[2];
-          Z = cross( Tn, Tv[2] );
-          if (dot(V,Z) > 0)
-          {
-            P = S[point];
-            Q = S[point] + Tn * Sp[point]/Tnl;
-            return ( P - Q ).lengthSq();
-          }
+            if ( bp[0] < bp[1] ) point = 0; else point = 1;
+            if ( bp[2] < bp[point] ) point = 2;
         }
-      }
+        else if ( ( bp[0] <= 0 ) && ( bp[1] <= 0 ) && ( bp[2] <= 0 ) )
+        {
+            if ( bp[0] > bp[1] ) point = 0; else point = 1;
+            if ( bp[2] > bp[point] ) point = 2;
+        }
+
+        // If an is a separating direction,
+        if ( point >= 0 )
+        {
+            overlap = false;
+
+            // Test whether the point found, when projected onto the
+            // other triangle, lies within the face.
+
+            if ( mixed( b[point] - a[0], an, av[0] ) > 0
+              && mixed( b[point] - a[1], an, av[1] ) > 0
+              && mixed( b[point] - a[2], an, av[2] ) > 0 )
+            {
+                // b[point] passed the test - it's the closest point for
+                // the b triangle; the other point is on the face of a
+                TriTriDistanceResult<T> res;
+                res.a = b[point] + an * bp[point] / anSq;
+                res.b = b[point];
+                res.distSq = distanceSq( res.a, res.b );
+                res.overlap = false;
+                return res;
+            }
+        }
     }
-  }
+    return std::nullopt;
+}
 
-  // Case 1 can't be shown.
-  // If one of these tests showed the triangles disjoint,
-  // we assume case 3 or 4, otherwise we conclude case 2,
-  // that the triangles overlap.
+template<class T>
+TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
+{
+    // For each edge pair, the vector connecting the closest points
+    // of the edges defines a slab (parallel planes at head and tail
+    // enclose the slab). If we can show that the off-edge vertex of
+    // each triangle is outside of the slab, then the closest points
+    // of the edges are the closest points for the triangles.
+    // Even if these tests fail, it may be helpful to know the closest
+    // points found, and whether the triangles were shown disjoint
 
-  if (shown_disjoint)
-  {
-    P = minP;
-    Q = minQ;
-    return mindd;
-  }
+    // the distance between the triangles is not more than the distance between two of their points
+    TriTriDistanceResult<T> res
+    {
+        .a = a[0],
+        .b = b[0],
+        .distSq = distanceSq( a[0], b[0] )
+    };
 
-  return 0;
+    for ( int i = 0; i < 3; i++ )
+    {
+        for ( int j = 0; j < 3; j++ )
+        {
+            // Find closest points on edges { a[i], a[next[i]] } & { b[j], b[next[j]] }, plus the
+            // vector (and distance squared) between these points
+
+            static constexpr int prev[3] = { 2, 0, 1 };
+            static constexpr int next[3] = { 1, 2, 0 };
+            const auto sd = findTwoLineSegmClosestPoints( { a[i], a[next[i]] }, { b[j], b[next[j]] } );
+            const T dd = distanceSq( sd.a, sd.b );
+
+            // Verify this closest point pair only if the distance
+            // squared is less than the minimum found thus far.
+
+            if ( dd <= res.distSq ) // no strictly less, to set res.overlap
+            {
+                res.a = sd.a;
+                res.b = sd.b;
+                res.distSq = dd;
+
+                // a[prev[i]] and b[prev[j]] are remaining vertices of the triangles
+                // on top of the vertices from the considered edges
+                T s = dot( a[prev[i]] - res.a, sd.dir );
+                T t = dot( b[prev[j]] - res.b, sd.dir );
+
+                // if the remaining points are further along sd.dir than the considered edges
+                if ( ( s <= 0 ) && ( t >= 0 ) )
+                {
+                    res.overlap = false;
+                    return res;
+                }
+
+                // the distance along sd.dir between the considered edges
+                const T p = dot( res.b - res.a, sd.dir );
+
+                if ( s < 0 ) s = 0;
+                if ( t > 0 ) t = 0;
+
+                // sd.dir is a separating direction
+                if ( ( p - s + t ) >= 0 ) res.overlap = false;
+            }
+        }
+    }
+
+    // No edge pairs contained the closest points.
+    // either:
+    // 1. one of the closest points is a vertex, and the
+    //    other point is interior to a face.
+    // 2. the triangles are overlapping.
+    // 3. an edge of one triangle is parallel to the other's face. If
+    //    cases 1 and 2 are not true, then the closest points from the 9
+    //    edge pairs checks above can be taken as closest points for the
+    //    triangles.
+    // 4. possibly, the triangles were degenerate.  When the
+    //    triangle points are nearly colinear or coincident, one
+    //    of above tests might fail even though the edges tested
+    //    contain the closest points.
+
+    // First check for case 1
+    if ( auto maybeRes = projectBonA( a, b, res.overlap ) )
+        return *maybeRes;
+
+    if ( auto maybeRes = projectBonA( b, a, res.overlap ) )
+    {
+        std::swap( maybeRes->a, maybeRes->b );
+        return *maybeRes;
+    }
+
+    // Case 1 can't be shown.
+    // If one of these tests showed the triangles disjoint,
+    // we assume case 3 or 4, otherwise we conclude case 2,
+    // that the triangles overlap.
+
+    if ( res.overlap )
+        res.distSq = 0; // triangles are colliding (overlapping)
+
+    return res;
+}
+
+} // anonymous namespace
+
+TriTriDistanceResultf findTriTriDistance( const Triangle3f& a, const Triangle3f& b )
+{
+    return findTriTriDistanceT( a, b );
+}
+
+TriTriDistanceResultd findTriTriDistance( const Triangle3d& a, const Triangle3d& b )
+{
+    return findTriTriDistanceT( a, b );
+}
+
+float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] )
+{
+    const auto td = findTriTriDistance( { s[0], s[1], s[2] }, { t[0], t[1], t[2] } );
+    p = td.a;
+    q = td.b;
+    return td.distSq;
+}
+
+float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t )
+{
+    const auto td = findTriTriDistance( s, t );
+    p = td.a;
+    q = td.b;
+    return td.distSq;
 }
 
 void segPoints( Vector3f & VEC,

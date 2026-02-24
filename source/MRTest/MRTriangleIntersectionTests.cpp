@@ -1,5 +1,6 @@
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRTriangleIntersection.h>
+#include <MRMesh/MRTriDist.h>
 #include <MRMesh/MRGTest.h>
 
 
@@ -220,6 +221,9 @@ static void testNoIntersect( const Vector3f (&triA)[3], const Vector3f (&triB)[3
                 EXPECT_FALSE( doTrianglesIntersect( a, b, c, d, e, f ) );
                 EXPECT_FALSE( doTrianglesIntersect( d, e, f, a, b, c ) );
             }
+
+            EXPECT_GT( findTriTriDistance( { Vector3d{a}, Vector3d{b}, Vector3d{c} }, { Vector3d{d}, Vector3d{e}, Vector3d{f} } ).distSq, 0 );
+            EXPECT_GT( findTriTriDistance( { a, b, c }, { d, e, f } ).distSq, 0 );
         }
     }
 }

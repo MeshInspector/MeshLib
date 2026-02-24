@@ -36,7 +36,7 @@ void addBaseToPlanarMesh( Mesh& mesh, float zOffset )
     {
         StitchHolesParams stitchParams;
         stitchParams.metric = getVerticalStitchMetric( mesh, Vector3f::plusZ() );
-        buildCylinderBetweenTwoHoles( mesh, edges[bi], edges[edges.size() / 2 + bi], stitchParams );
+        stitchHoles( mesh, edges[bi], edges[edges.size() / 2 + bi], stitchParams );
     }
 }
 

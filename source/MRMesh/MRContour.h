@@ -128,6 +128,8 @@ MR_BIND_TEMPLATE( double calcLength( const Contour3<double>& contour ) )
 MR_BIND_TEMPLATE( Vector3<float> calcOrientedArea( const Contour3<float> & contour ) )
 MR_BIND_TEMPLATE( Vector3<double> calcOrientedArea( const Contour3<double> & contour ) )
 
+/// \ingroup ContourGroup
+/// \{
 
 template <typename From> [[nodiscard]] Contour2f convertContourTo2f( const From &from ) { return convertContour<Contour2f>( from ); }
 template <typename From> [[nodiscard]] Contour3f convertContourTo3f( const From &from ) { return convertContour<Contour3f>( from ); }
@@ -138,6 +140,8 @@ template <typename From> [[nodiscard]] Contours2f convertContoursTo2f( const Fro
 template <typename From> [[nodiscard]] Contours3f convertContoursTo3f( const From &from ) { return convertContours<Contours3f>( from ); }
 template <typename From> [[nodiscard]] Contours2d convertContoursTo2d( const From &from ) { return convertContours<Contours2d>( from ); }
 template <typename From> [[nodiscard]] Contours3d convertContoursTo3d( const From &from ) { return convertContours<Contours3d>( from ); }
+
+/// \}
 
 MR_BIND_TEMPLATE( Contour2f convertContourTo2f( const Contour2f & from ) )
 MR_BIND_TEMPLATE( Contour2f convertContourTo2f( const Contour2d & from ) )
@@ -173,4 +177,4 @@ MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours2d & from ) )
 MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours3f & from ) )
 MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours3d & from ) )
 
-} // namespace MR
+} // end namespace MR

@@ -87,5 +87,5 @@ void mrBuildCylinderBetweenTwoHoles( MRMesh* mesh_, MREdgeId a_, MREdgeId b_, co
         params.outNewFaces = auto_cast( params_->outNewFaces );
     }
 
-    buildCylinderBetweenTwoHoles( mesh, a, b, params );
+    stitchHoles( mesh, a, b, params );
 }

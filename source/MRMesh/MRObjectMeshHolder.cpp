@@ -741,10 +741,12 @@ size_t ObjectMeshHolder::numHandles() const
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
     invalidateMetricsCache( mask );
-    setDirtyFlagsFast( mask );
 
     if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
         data_.mesh->invalidateCaches();
+
+    // must be after data_.mesh->invalidateCaches(); for the subscribers of meshChangedSignal
+    setDirtyFlagsFast( mask );
 }
 
 void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )

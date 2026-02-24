@@ -19,15 +19,15 @@ MRFillHoleNicelyParams mrFillHoleNicelyParamsNew( void )
     MRFillHoleNicelyParams params;
     FillHoleNicelySettings defaultParams;
     params.triangulateParams = mrFillHoleParamsNew();
-    params.notFlippable = auto_cast( defaultParams.notFlippable );
+    params.notFlippable = auto_cast( defaultParams.subdivideSettings.notFlippable );
     params.triangulateOnly = defaultParams.triangulateOnly;
-    params.maxEdgeLen = defaultParams.maxEdgeLen;
-    params.maxEdgeSplits = defaultParams.maxEdgeSplits;
-    params.maxAngleChangeAfterFlip = defaultParams.maxAngleChangeAfterFlip;
+    params.maxEdgeLen = defaultParams.subdivideSettings.maxEdgeLen;
+    params.maxEdgeSplits = defaultParams.subdivideSettings.maxEdgeSplits;
+    params.maxAngleChangeAfterFlip = defaultParams.subdivideSettings.maxAngleChangeAfterFlip;
     params.smoothCurvature = defaultParams.smoothCurvature;
-    params.naturalSmooth = defaultParams.naturalSmooth;
-    params.edgeWeights = (MREdgeWeights)defaultParams.edgeWeights;
-    params.vmass = (MRVertexMass)defaultParams.vmass;
+    params.naturalSmooth = defaultParams.smoothSeettings.naturalSmooth;
+    params.edgeWeights = (MREdgeWeights)defaultParams.smoothSeettings.edgeWeights;
+    params.vmass = (MRVertexMass)defaultParams.smoothSeettings.vmass;
 
     return params;
 }
@@ -49,14 +49,14 @@ MRFaceBitSet* mrFillHoleNicely( MRMesh* mesh_, MREdgeId holeEdge_, const MRFillH
         };
 
         params.triangulateOnly = params_->triangulateOnly;
-        params.notFlippable = auto_cast( params_->notFlippable );
-        params.maxEdgeLen = params_->maxEdgeLen;
-        params.maxEdgeSplits = params_->maxEdgeSplits;
-        params.maxAngleChangeAfterFlip = params_->maxAngleChangeAfterFlip;
+        params.subdivideSettings.notFlippable = auto_cast( params_->notFlippable );
+        params.subdivideSettings.maxEdgeLen = params_->maxEdgeLen;
+        params.subdivideSettings.maxEdgeSplits = params_->maxEdgeSplits;
+        params.subdivideSettings.maxAngleChangeAfterFlip = params_->maxAngleChangeAfterFlip;
         params.smoothCurvature = params_->smoothCurvature;
-        params.naturalSmooth = params_->naturalSmooth;
-        params.edgeWeights = (MR::EdgeWeights)params_->edgeWeights;
-        params.vmass = (MR::VertexMass)params_->vmass;
+        params.smoothSeettings.naturalSmooth = params_->naturalSmooth;
+        params.smoothSeettings.edgeWeights = (MR::EdgeWeights)params_->edgeWeights;
+        params.smoothSeettings.vmass = (MR::VertexMass)params_->vmass;
     }
     RETURN_NEW(fillHoleNicely( mesh, holeEdge, params ) );
 }

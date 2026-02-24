@@ -362,7 +362,7 @@ void processCandidate( const Mesh& mesh, const WeightedConn& current,
     queue.push( nextConn );
 }
 
-void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
+void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
 {
     MR_TIMER;
     MR_WRITER( mesh );
@@ -377,7 +377,7 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     if ( mesh.topology.left( a0 ) || mesh.topology.left( b0 ) )
     {
         assert( false );
-        spdlog::error( "buildCylinderBetweenTwoHoles: edges do not represent holes" );
+        spdlog::error( "stitchHoles: edges do not represent holes" );
         return;
     }
     // stitch direction should be independent of input order
@@ -491,14 +491,24 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     mesh.topology.setLeft( e1, newFace() );
 }
 
-bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params )
+bool stitchHoles( Mesh & mesh, const StitchHolesParams& params )
 {
     auto bdEdges = mesh.topology.findHoleRepresentiveEdges();
     if ( bdEdges.size() < 2 )
         return false;
 
-    buildCylinderBetweenTwoHoles( mesh, bdEdges[0], bdEdges[1], params );
+    stitchHoles( mesh, bdEdges[0], bdEdges[1], params );
     return true;
+}
+
+bool buildCylinderBetweenTwoHoles( Mesh& mesh, const StitchHolesParams& params )
+{
+    return stitchHoles( mesh, params );
+}
+
+void buildCylinderBetweenTwoHoles( Mesh& mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
+{
+    stitchHoles( mesh, a0, b0, params );
 }
 
 // returns new edge connecting org(a) and org(b),
@@ -1263,7 +1273,7 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return res;
 }
 
-TEST( MRMesh, buildCylinderBetweenTwoHoles )
+TEST( MRMesh, stitchHoles )
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -1291,7 +1301,7 @@ TEST( MRMesh, buildCylinderBetweenTwoHoles )
     StitchHolesParams params;
     auto fsz0 = mesh.topology.faceSize();
     params.outNewFaces = &newFaces;
-    buildCylinderBetweenTwoHoles( mesh, bdEdges[0], bdEdges[1], params );
+    stitchHoles( mesh, bdEdges[0], bdEdges[1], params );
     auto numNewFaces = mesh.topology.faceSize() - fsz0;
 
     EXPECT_EQ( mesh.topology.numValidVerts(), 6 );

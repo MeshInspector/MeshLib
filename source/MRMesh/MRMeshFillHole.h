@@ -74,16 +74,16 @@ struct FillHoleParams
 };
 
 /** \struct MR::StitchHolesParams
-  * \brief Parameters structure for MR::buildCylinderBetweenTwoHoles\n
-  * Structure has some options to control MR::buildCylinderBetweenTwoHoles
+  * \brief Parameters structure for MR::stitchHoles\n
+  * Structure has some options to control MR::stitchHoles
   *
-  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref stitchHoles
   * \sa \ref FillHoleMetric
   */
 struct StitchHolesParams
 {
     /** Specifies triangulation metric\n
-      * default for MR::buildCylinderBetweenTwoHoles: getComplexStitchMetric
+      * default for MR::stitchHoles: getComplexStitchMetric
       * \sa \ref FillHoleMetric
       */
     FillHoleMetric metric;
@@ -114,9 +114,13 @@ struct StitchHolesParams
   * \sa \ref fillHole
   * \sa \ref StitchHolesParams
   */
+MRMESH_API void stitchHoles( Mesh& mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
+[[deprecated( "Use stitchHoles( mesh, a, b, params )" )]]
 MRMESH_API void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
 
 /// this version finds holes in the mesh by itself and returns false if they are not found
+MRMESH_API bool stitchHoles( Mesh& mesh, const StitchHolesParams& params = {} );
+[[deprecated( "Use stitchHoles( mesh, params )" )]]
 MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params = {} );
 
 
@@ -138,7 +142,7 @@ MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesPara
   * \param a EdgeId which represents hole (should not have valid left FaceId)
   * \param params parameters of hole filling
   * 
-  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref stitchHoles
   * \sa \ref fillHoleTrivially
   * \sa \ref FillHoleParams
   */

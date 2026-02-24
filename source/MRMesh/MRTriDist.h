@@ -2,74 +2,41 @@
 
 #include "MRVector3.h"
 
-/*************************************************************************\
-
-  Copyright 1999 The University of North Carolina at Chapel Hill.
-  All Rights Reserved.
-
-  Permission to use, copy, modify and distribute this software and its
-  documentation for educational, research and non-profit purposes, without
-  fee, and without a written agreement is hereby granted, provided that the
-  above copyright notice and the following three paragraphs appear in all
-  copies.
-
-  IN NO EVENT SHALL THE UNIVERSITY OF NORTH CAROLINA AT CHAPEL HILL BE
-  LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR
-  CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF THE
-  USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY
-  OF NORTH CAROLINA HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
-  DAMAGES.
-
-  THE UNIVERSITY OF NORTH CAROLINA SPECIFICALLY DISCLAIM ANY
-  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE
-  PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF
-  NORTH CAROLINA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT,
-  UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
-
-  The authors may be contacted via:
-
-  US Mail:             E. Larsen
-                       Department of Computer Science
-                       Sitterson Hall, CB #3175
-                       University of N. Carolina
-                       Chapel Hill, NC 27599-3175
-
-  Phone:               (919)962-1749
-
-  EMail:               geom@cs.unc.edu
-
-
-\**************************************************************************/
-
 namespace MR
 {
 
-// This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
-MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
-
-/// \brief computes the closest points on two triangles, and returns the
-/// squared distance between them.
-///
-/// \param s,t are the triangles, stored tri[point][dimension].
-///
-/// \details If the triangles are disjoint, p and q give the closest points of
-/// s and t respectively. However, if the triangles overlap, p and q
-/// are basically a random pair of points from the triangles, not
-/// coincident points on the intersection of the triangles, as might
-/// be expected.
-inline float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t )
+template<class T>
+struct TriTriDistanceResult
 {
-    return triDist( p, q, s.data(), t.data() );
-}
+    /// If the triangles are disjoint, these points are the closest points of
+    /// the corresponding triangles. However, if the triangles overlap, these
+    /// are basically a random pair of points from the triangles, not
+    /// coincident points on the intersection of the triangles, as might
+    /// be expected.
+    Vector3<T> a, b;
 
+    /// If the triangles are disjoint, it is the squared distance them
+    /// (equal to the squared distance between a and b points).
+    /// If the triangles overlap, it is zero.
+    T distSq = 0;
 
+    /// overlap==true means that the triangles are intersecting and not just touch one another => distSq == 0
+    /// if distSq == 0 and overlap == false, then the triangles just touch one another
+    bool overlap = true;
+};
+using TriTriDistanceResultf = TriTriDistanceResult<float>;
+using TriTriDistanceResultd = TriTriDistanceResult<double>;
 
-/// Returns closest points between an segment pair.
-MRMESH_API void segPoints(
-          // if both closest points are in segment endpoints, then directed from closest point 1 to closest point 2,
-          // if both closest points are inner to the segments, then its orthogonal to both segments and directed from 1 to 2,
-          // otherwise it is orthogonal to the segment with inner closest point and rotated toward/away the other closest point in endpoint
+/// computes the closest points on two triangles
+[[nodiscard]] MRMESH_API TriTriDistanceResultf findTriTriDistance( const Triangle3f& a, const Triangle3f& b );
+[[nodiscard]] MRMESH_API TriTriDistanceResultd findTriTriDistance( const Triangle3d& a, const Triangle3d& b );
+
+// This version is not in the bindings, because the pointer parameters are assumed to point to single objects, which is wrong here.
+[[deprecated( "Use findDistance() instead" )]] MRMESH_API MR_BIND_IGNORE float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
+
+[[deprecated( "Use findDistance() instead" )]] MRMESH_API float triDist( Vector3f & p, Vector3f & q, const std::array<Vector3f, 3> & s, const std::array<Vector3f, 3> & t );
+
+[[deprecated( "Use findTwoLineSegmClosestPoints() instead" )]] MRMESH_API void segPoints(
           Vector3f & VEC,
           Vector3f & X, Vector3f & Y,             // closest points
           const Vector3f & P, const Vector3f & A, // seg 1 origin, vector

@@ -263,10 +263,16 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
                 .metric = getUniversalMetric( mesh ),
                 .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
             },
-            .maxEdgeLen = float( avgLen ) * 1.5f,
-            .maxEdgeSplits = 20'000,
+            .subdivideSettings = 
+            {
+                .maxEdgeLen = float( avgLen ) * 1.5f, 
+                .maxEdgeSplits = 20'000,
+            },
             .smoothCurvature = true,
-            .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
+            .smoothSeettings = 
+            {
+                .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
+            }
         };
 
         for ( auto e : boundaryEdge )

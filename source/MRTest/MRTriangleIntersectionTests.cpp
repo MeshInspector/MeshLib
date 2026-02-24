@@ -1,40 +1,57 @@
 #include <MRMesh/MRMeshFwd.h>
-
 #include <MRMesh/MRTriangleIntersection.h>
+#include <MRMesh/MRTriDist.h>
 #include <MRMesh/MRGTest.h>
 
-namespace
-{
-    // triangle lying on XY plane
-    constexpr MR::Triangle3f T1 {
-        MR::Vector3f { -30.f, -52.f, 0.f },
-        MR::Vector3f { +30.f, -52.f, 0.f },
-        MR::Vector3f { 0.f, 0.f, 0.f },
-    };
-    // triangle lying on XZ plane
-    constexpr MR::Triangle3f T2 {
-        MR::Vector3f { -30.f, 0.f, -52.f },
-        MR::Vector3f { +30.f, 0.f, -52.f },
-        MR::Vector3f { 0.f, 0.f, 0.f },
-    };
-    // triangle lying on YZ plane
-    constexpr MR::Triangle3f T3 {
-        MR::Vector3f { 0.f, 0.f, -30.f },
-        MR::Vector3f { 0.f, 0.f, +30.f },
-        MR::Vector3f { 0.f, -52.f, 0.f },
-    };
-    constexpr MR::Triangle3f shift( const MR::Triangle3f& origin, float x, float y, float z )
-    {
-        return {
-            origin[0] + MR::Vector3f { x, y, z },
-            origin[1] + MR::Vector3f { x, y, z },
-            origin[2] + MR::Vector3f { x, y, z },
-        };
-    }
-}
 
 namespace MR
 {
+
+namespace
+{
+
+// triangle lying on XY plane
+constexpr Triangle3f T1 {
+    Vector3f { -30.f, -52.f, 0.f },
+    Vector3f { +30.f, -52.f, 0.f },
+    Vector3f { 0.f, 0.f, 0.f },
+};
+
+// triangle lying on XZ plane
+constexpr Triangle3f T2 {
+    Vector3f { -30.f, 0.f, -52.f },
+    Vector3f { +30.f, 0.f, -52.f },
+    Vector3f { 0.f, 0.f, 0.f },
+};
+
+// triangle lying on YZ plane
+constexpr Triangle3f T3 {
+    Vector3f { 0.f, 0.f, -30.f },
+    Vector3f { 0.f, 0.f, +30.f },
+    Vector3f { 0.f, -52.f, 0.f },
+};
+constexpr Triangle3f shift( const Triangle3f& origin, float x, float y, float z )
+{
+    return {
+        origin[0] + Vector3f { x, y, z },
+        origin[1] + Vector3f { x, y, z },
+        origin[2] + Vector3f { x, y, z },
+    };
+}
+
+using VertexOrder = std::array<size_t, 3>;
+constexpr std::array<VertexOrder, 6> triPermutations
+{
+    VertexOrder { 0, 1, 2 },
+    VertexOrder { 0, 2, 1 },
+    VertexOrder { 1, 0, 2 },
+    VertexOrder { 1, 2, 0 },
+    VertexOrder { 2, 0, 1 },
+    VertexOrder { 2, 1, 0 },
+};
+
+} //anonymous namespace
+
 TEST( MRMesh, TriangleSegmentIntersectFloat )
 {
     Vector3f a{2,  1, 0};
@@ -51,17 +68,17 @@ TEST( MRMesh, TriangleSegmentIntersectFloat )
 
 TEST( MRMesh, PointTriangleIntersectFloat )
 {
-    EXPECT_TRUE( isPointInPlane( ::T1[0], ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_TRUE( isPointInPlane( ( ::T1[0] + ::T1[1] + ::T1[2] ) / 3.0f, ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_TRUE( isPointInPlane( ( ::T1[0] + ::T1[1] ) / 2.0f, ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_TRUE( isPointInPlane( Vector3f( 100, 100, 0 ), ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_FALSE( isPointInPlane( Vector3f( 0, 0, 1 ), ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( T1[0], T1[0], T1[1], T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( ( T1[0] + T1[1] + T1[2] ) / 3.0f, T1[0], T1[1], T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( ( T1[0] + T1[1] ) / 2.0f, T1[0], T1[1], T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( Vector3f( 100, 100, 0 ), T1[0], T1[1], T1[2] ) );
+    EXPECT_FALSE( isPointInPlane( Vector3f( 0, 0, 1 ), T1[0], T1[1], T1[2] ) );
 
-    EXPECT_TRUE( isPointInTriangle( ::T1[0], ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_TRUE( isPointInTriangle( ( ::T1[0] + ::T1[1] + ::T1[2] ) / 3.0f, ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_TRUE( isPointInTriangle( ( ::T1[0] + ::T1[1] ) / 2.0f, ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_FALSE( isPointInTriangle( Vector3f( 100, 100, 0 ), ::T1[0], ::T1[1], ::T1[2] ) );
-    EXPECT_FALSE( isPointInTriangle( Vector3f( 0, 0, 1 ), ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInTriangle( T1[0], T1[0], T1[1], T1[2] ) );
+    EXPECT_TRUE( isPointInTriangle( ( T1[0] + T1[1] + T1[2] ) / 3.0f, T1[0], T1[1], T1[2] ) );
+    EXPECT_TRUE( isPointInTriangle( ( T1[0] + T1[1] ) / 2.0f, T1[0], T1[1], T1[2] ) );
+    EXPECT_FALSE( isPointInTriangle( Vector3f( 100, 100, 0 ), T1[0], T1[1], T1[2] ) );
+    EXPECT_FALSE( isPointInTriangle( Vector3f( 0, 0, 1 ), T1[0], T1[1], T1[2] ) );
 }
 
 using TrianglesIntersectParameters = std::tuple<bool, Triangle3f, Triangle3f>;
@@ -70,20 +87,10 @@ class TrianglesIntersectTestFixture : public testing::TestWithParam<TrianglesInt
 /// check all vertex triplet configurations
 TEST_P( TrianglesIntersectTestFixture, TrianglesIntersect )
 {
-    using VertexOrder = std::array<size_t, 3>;
-    constexpr std::array<VertexOrder, 6> permutations {
-        VertexOrder { 0, 1, 2 },
-        VertexOrder { 0, 2, 1 },
-        VertexOrder { 1, 0, 2 },
-        VertexOrder { 1, 2, 0 },
-        VertexOrder { 2, 0, 1 },
-        VertexOrder { 2, 1, 0 },
-    };
-
     const auto& [result, triA, triB] = GetParam();
-    for ( const auto& orderA : permutations )
+    for ( const auto& orderA : triPermutations )
     {
-        for ( const auto& orderB : permutations )
+        for ( const auto& orderB : triPermutations )
         {
             const auto& a = triA[orderA[0]];
             const auto& b = triA[orderA[1]];
@@ -132,24 +139,14 @@ class TrianglesOverlapTestFixture : public testing::TestWithParam<TrianglesOverl
 /// check all vertex triplet configurations
 TEST_P( TrianglesOverlapTestFixture, TrianglesOverlap )
 {
-    using VertexOrder = std::array<size_t, 3>;
-    constexpr std::array<VertexOrder, 6> permutations{
-        VertexOrder { 0, 1, 2 },
-        VertexOrder { 0, 2, 1 },
-        VertexOrder { 1, 0, 2 },
-        VertexOrder { 1, 2, 0 },
-        VertexOrder { 2, 0, 1 },
-        VertexOrder { 2, 1, 0 },
-    };
-
     Vector2f triA[3];
     Vector2f triB[3];
     const auto& [result,_a,_b,_c,_d,_e,_f] = GetParam();
     triA[0] = _a; triA[1] = _b; triA[2] = _c;
     triB[0] = _d; triB[1] = _e; triB[2] = _f;
-    for ( const auto& orderA : permutations )
+    for ( const auto& orderA : triPermutations )
     {
-        for ( const auto& orderB : permutations )
+        for ( const auto& orderB : triPermutations )
         {
             const auto& a = triA[orderA[0]];
             const auto& b = triA[orderA[1]];
@@ -194,5 +191,88 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, TrianglesOverlapTestFixture, testing::Values(
     // both valid none inside (2 inters)
     , TrianglesOverlapParameters{ true, Vector2f(), Vector2f( 0,1 ), Vector2f( 1,1 ), Vector2f( -0.25f,0.5f ), Vector2f( 0.5,1.25f ), Vector2f( 1,1.25f ) }
 ) );
+
+static void testNoIntersect( const Vector3f (&triA)[3], const Vector3f (&triB)[3], bool ext = false )
+{
+    for ( const auto& orderA : triPermutations )
+    {
+        for ( const auto& orderB : triPermutations )
+        {
+            const auto& a = triA[orderA[0]];
+            const auto& b = triA[orderA[1]];
+            const auto& c = triA[orderA[2]];
+            const auto& d = triB[orderB[0]];
+            const auto& e = triB[orderB[1]];
+            const auto& f = triB[orderB[2]];
+
+            if ( ext )
+            {
+                EXPECT_FALSE( doTrianglesIntersectExt( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, Vector3d{e}, Vector3d{f} ) );
+                EXPECT_FALSE( doTrianglesIntersectExt( Vector3d{d}, Vector3d{e}, Vector3d{f}, Vector3d{a}, Vector3d{b}, Vector3d{c} ) );
+
+                EXPECT_FALSE( doTrianglesIntersectExt( a, b, c, d, e, f ) );
+                EXPECT_FALSE( doTrianglesIntersectExt( d, e, f, a, b, c ) );
+            }
+            else
+            {
+                EXPECT_FALSE( doTrianglesIntersect( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, Vector3d{e}, Vector3d{f} ) );
+                EXPECT_FALSE( doTrianglesIntersect( Vector3d{d}, Vector3d{e}, Vector3d{f}, Vector3d{a}, Vector3d{b}, Vector3d{c} ) );
+
+                EXPECT_FALSE( doTrianglesIntersect( a, b, c, d, e, f ) );
+                EXPECT_FALSE( doTrianglesIntersect( d, e, f, a, b, c ) );
+            }
+
+            EXPECT_GT( findTriTriDistance( { Vector3d{a}, Vector3d{b}, Vector3d{c} }, { Vector3d{d}, Vector3d{e}, Vector3d{f} } ).distSq, 0 );
+            EXPECT_GT( findTriTriDistance( { a, b, c }, { d, e, f } ).distSq, 0 );
+        }
+    }
+}
+
+TEST( MRMesh, DegenerateTrianglesIntersect )
+{
+    testNoIntersect
+    (
+        {
+            { -24.5683002f, -17.7052994f, -21.3701000f },
+            { -24.6611996f, -17.7504997f, -21.3423004f },
+            { -24.6392994f, -17.7071991f, -21.3542995f }
+        },
+        {
+            { -24.5401993f, -17.7504997f, -21.3390007f },
+            { -24.5401993f, -17.7504997f, -21.3390007f }, //same point
+            { -24.5862007f, -17.7504997f, -21.3586998f }
+        }
+    );
+
+    testNoIntersect
+    (
+        {
+            { -5.695016f,  -17.290453f, 5.923905f  },
+            { -6.8302813f, -19.602076f, 1.5111064f },
+            { -6.8302813f, -19.602076f, 1.5111064f } //same point
+        },
+        {
+            { -5.6232224f, -17.31377f,  4.5464506f },
+            { -5.8195434f, -17.221924f, 4.6023197f },
+            { -5.5997314f, -17.227707f, 4.616623f }
+        }
+    );
+
+    // two well separated triangles in one plane
+    testNoIntersect
+    (
+        {
+            { 6.841205f,  10.8885565f, -0.24069165f },
+            { 6.853537f,  10.949715f,  -0.16254053f },
+            { 6.9493885f, 10.92198f,   -0.15596102f }
+        },
+        {
+            { 6.9370565f, 10.860822f,  -0.23411214f },
+            { 7.032908f,  10.833087f,  -0.22753264f },
+            { 7.0452394f, 10.894245f,  -0.14938152f }
+        },
+        true
+    );
+}
 
 } // namespace MR

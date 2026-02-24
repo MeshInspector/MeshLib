@@ -71,71 +71,79 @@ namespace MRTest
             File.Delete(tempFile);
         }
 
-        /*
+        private static Std.Array_MRVertId_3 makeTri(int v0, int v1, int v2)
+        {
+            // TODO: array constructor
+            Std.Array_MRVertId_3 tri;
+            tri.elems._0 = new VertId(v0);
+            tri.elems._1 = new VertId(v1);
+            tri.elems._2 = new VertId(v2);
+            return tri;
+        }
+
         [Test]
         public void TestFromTriangles()
         {
-            List<Vector3f> points = new List<Vector3f>();
-            points.Add(new Vector3f(0, 0, 0));
-            points.Add(new Vector3f(0, 1, 0));
-            points.Add(new Vector3f(1, 1, 0));
-            points.Add(new Vector3f(1, 0, 0));
-            points.Add(new Vector3f(0, 0, 1));
-            points.Add(new Vector3f(0, 1, 1));
-            points.Add(new Vector3f(1, 1, 1));
-            points.Add(new Vector3f(1, 0, 1));
+            var points = new VertCoords();
+            points.pushBack(new Vector3f(0, 0, 0));
+            points.pushBack(new Vector3f(0, 1, 0));
+            points.pushBack(new Vector3f(1, 1, 0));
+            points.pushBack(new Vector3f(1, 0, 0));
+            points.pushBack(new Vector3f(0, 0, 1));
+            points.pushBack(new Vector3f(0, 1, 1));
+            points.pushBack(new Vector3f(1, 1, 1));
+            points.pushBack(new Vector3f(1, 0, 1));
 
-            List<ThreeVertIds> triangles = new List<ThreeVertIds>();
-            triangles.Add(new ThreeVertIds(0, 1, 2));
-            triangles.Add(new ThreeVertIds(2, 3, 0));
-            triangles.Add(new ThreeVertIds(0, 4, 5));
-            triangles.Add(new ThreeVertIds(5, 1, 0));
-            triangles.Add(new ThreeVertIds(0, 3, 7));
-            triangles.Add(new ThreeVertIds(7, 4, 0));
-            triangles.Add(new ThreeVertIds(6, 5, 4));
-            triangles.Add(new ThreeVertIds(4, 7, 6));
-            triangles.Add(new ThreeVertIds(1, 5, 6));
-            triangles.Add(new ThreeVertIds(6, 2, 1));
-            triangles.Add(new ThreeVertIds(6, 7, 3));
-            triangles.Add(new ThreeVertIds(3, 2, 6));
+            var triangles = new Triangulation();
+            triangles.pushBack(makeTri(0, 1, 2));
+            triangles.pushBack(makeTri(2, 3, 0));
+            triangles.pushBack(makeTri(0, 4, 5));
+            triangles.pushBack(makeTri(5, 1, 0));
+            triangles.pushBack(makeTri(0, 3, 7));
+            triangles.pushBack(makeTri(7, 4, 0));
+            triangles.pushBack(makeTri(6, 5, 4));
+            triangles.pushBack(makeTri(4, 7, 6));
+            triangles.pushBack(makeTri(1, 5, 6));
+            triangles.pushBack(makeTri(6, 2, 1));
+            triangles.pushBack(makeTri(6, 7, 3));
+            triangles.pushBack(makeTri(3, 2, 6));
 
-            var mesh = Mesh.FromTriangles(points, triangles);
-            Assert.That(mesh.points.count == 8);
-            Assert.That(mesh.Triangulation.count == 12);
+            var mesh = Mesh.fromTriangles(points, triangles);
+            Assert.That(mesh.points.size() == 8);
+            Assert.That(mesh.topology.getValidFaces().size() == 12);
         }
 
         [Test]
         public void TestFromTrianglesDuplicating()
         {
-            List<Vector3f> points = new List<Vector3f>();
-            points.Add(new Vector3f(0, 0, 0));
-            points.Add(new Vector3f(0, 1, 0));
-            points.Add(new Vector3f(1, 1, 0));
-            points.Add(new Vector3f(1, 0, 0));
-            points.Add(new Vector3f(0, 0, 1));
-            points.Add(new Vector3f(0, 1, 1));
-            points.Add(new Vector3f(1, 1, 1));
-            points.Add(new Vector3f(1, 0, 1));
+            var points = new VertCoords();
+            points.pushBack(new Vector3f(0, 0, 0));
+            points.pushBack(new Vector3f(0, 1, 0));
+            points.pushBack(new Vector3f(1, 1, 0));
+            points.pushBack(new Vector3f(1, 0, 0));
+            points.pushBack(new Vector3f(0, 0, 1));
+            points.pushBack(new Vector3f(0, 1, 1));
+            points.pushBack(new Vector3f(1, 1, 1));
+            points.pushBack(new Vector3f(1, 0, 1));
 
-            List<ThreeVertIds> triangles = new List<ThreeVertIds>();
-            triangles.Add(new ThreeVertIds(0, 1, 2));
-            triangles.Add(new ThreeVertIds(2, 3, 0));
-            triangles.Add(new ThreeVertIds(0, 4, 5));
-            triangles.Add(new ThreeVertIds(5, 1, 0));
-            triangles.Add(new ThreeVertIds(0, 3, 7));
-            triangles.Add(new ThreeVertIds(7, 4, 0));
-            triangles.Add(new ThreeVertIds(6, 5, 4));
-            triangles.Add(new ThreeVertIds(4, 7, 6));
-            triangles.Add(new ThreeVertIds(1, 5, 6));
-            triangles.Add(new ThreeVertIds(6, 2, 1));
-            triangles.Add(new ThreeVertIds(6, 7, 3));
-            triangles.Add(new ThreeVertIds(3, 2, 6));
+            var triangles = new Triangulation();
+            triangles.pushBack(makeTri(0, 1, 2));
+            triangles.pushBack(makeTri(2, 3, 0));
+            triangles.pushBack(makeTri(0, 4, 5));
+            triangles.pushBack(makeTri(5, 1, 0));
+            triangles.pushBack(makeTri(0, 3, 7));
+            triangles.pushBack(makeTri(7, 4, 0));
+            triangles.pushBack(makeTri(6, 5, 4));
+            triangles.pushBack(makeTri(4, 7, 6));
+            triangles.pushBack(makeTri(1, 5, 6));
+            triangles.pushBack(makeTri(6, 2, 1));
+            triangles.pushBack(makeTri(6, 7, 3));
+            triangles.pushBack(makeTri(3, 2, 6));
 
-            var mesh = Mesh.FromTrianglesDuplicatingNonManifoldVertices(points, triangles);
-            Assert.That(mesh.points.count == 8);
-            Assert.That(mesh.Triangulation.count == 12);
+            var mesh = Mesh.fromTrianglesDuplicatingNonManifoldVertices(points, triangles);
+            Assert.That(mesh.points.size() == 8);
+            Assert.That(mesh.topology.getValidFaces().size() == 12);
         }
-        */
 
         [Test]
         public void TestEmptyFile()
@@ -202,91 +210,60 @@ namespace MRTest
             Assert.That(triVerts.elems[2].id, Is.EqualTo(0));
         }
 
-        /*
         [Test]
         public void TestSaveLoadToObj()
         {
             Assert.DoesNotThrow(() =>
             {
-                var objects = new List<NamedMeshXf>();
-                var obj = new NamedMeshXf();
-                obj.mesh = Mesh.makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
-                obj.name = "Cube";
-                obj.toWorld = new AffineXf3f(Vector3f.diagonal(1));
-                objects.Add(obj);
+                var objects = new Std.Vector_MRMeshSaveNamedXfMesh();
 
-                obj.mesh = Mesh.makeSphere(1.0f, 100);
-                obj.name = "LongSphereName"; // must be long enough to deactivate short string optimization (SSO) in C++
-                obj.toWorld = new AffineXf3f(Vector3f.diagonal(-2));
-                objects.Add(obj);
+                // TODO: fix empty NamedXfMesh construction
+                // TODO: fix field assignment
+                //var obj1 = new MeshSave.NamedXfMesh();
+                //obj1.mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
+                //obj1.name = "Cube";
+                //obj1.toWorld = AffineXf3f.translation(Vector3f.diagonal(1));
+                var obj1 = new MeshSave.NamedXfMesh("Cube", AffineXf3f.translation(Vector3f.diagonal(1)), makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f)));
+                objects.pushBack(Misc.Move(obj1));
+
+                // TODO: fix field assignment
+                //var obj2 = new MeshSave.NamedXfMesh();
+                //obj2.mesh = makeSphere(new SphereParams(1.0f, 100));
+                //obj2.name = "LongSphereName"; // must be long enough to deactivate short string optimization (SSO) in C++
+                //obj2.toWorld = AffineXf3f.translation(Vector3f.diagonal(-2));
+                var obj2 = new MeshSave.NamedXfMesh("LongSphereName", AffineXf3f.translation(Vector3f.diagonal(-2)), makeSphere(new SphereParams(1.0f, 100)));
+                objects.pushBack(Misc.Move(obj2));
 
                 var tempFile = Path.GetTempFileName() + ".obj";
-                MeshSave.SceneToObj(objects, tempFile);
+                MeshSave.sceneToObj(objects, tempFile);
 
-                var settings = new ObjLoadSettings();
-                var loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
-                Assert.That(loadedObjs.count == 2);
+                var settings = new MeshLoad.ObjLoadSettings();
+                var loadedObjs = MeshLoad.fromSceneObjFile(tempFile, false, settings);
+                Assert.That(loadedObjs.size() == 2);
 
-                var loadedMesh = loadedObjs[0].mesh;
-                var loadedXf = loadedObjs[0].xf;
-                Assert.That(loadedMesh is not null);
-                Assert.That(loadedXf is not null);
-                if ( loadedMesh is null || loadedXf is null)
-                    return;
-
-                Assert.That(loadedMesh.points.count == 8);
+                Assert.That(loadedObjs[0].mesh.points.size() == 8);
                 Assert.That(loadedObjs[0].name == "Cube");
-                Assert.That(loadedXf.B.X == 0.0f);
+                Assert.That(loadedObjs[0].xf.b.x == 0.0f);
 
-                loadedMesh = loadedObjs[1].mesh;
-                loadedXf = loadedObjs[1].xf;
-                Assert.That(loadedMesh is not null);
-                Assert.That(loadedXf is not null);
-                if (loadedMesh is null || loadedXf is null)
-                    return;
-
-                Assert.That(loadedMesh.points.count == 100);
+                Assert.That(loadedObjs[1].mesh.points.size() == 100);
                 Assert.That(loadedObjs[1].name == "LongSphereName");
-                Assert.That(loadedXf.B.X == 0.0f);
+                Assert.That(loadedObjs[1].xf.b.x == 0.0f);
 
                 settings.customXf = true;
-                loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
-                Assert.That(loadedObjs.count == 2);
+                loadedObjs = MeshLoad.fromSceneObjFile(tempFile, false, settings);
+                Assert.That(loadedObjs.size() == 2);
 
-                loadedMesh = loadedObjs[0].mesh;
-                loadedXf = loadedObjs[0].xf;
-                Assert.That(loadedMesh is not null);
-                Assert.That(loadedXf is not null);
-                if (loadedMesh is null || loadedXf is null)
-                    return;
-
-                Assert.That(loadedMesh.points.count == 8);
+                Assert.That(loadedObjs[0].mesh.points.size() == 8);
                 Assert.That(loadedObjs[0].name == "Cube");
-                Assert.That(loadedXf.B.X == 1.0f);
+                Assert.That(loadedObjs[0].xf.b.x == 1.0f);
 
-                loadedMesh = loadedObjs[1].mesh;
-                loadedXf = loadedObjs[1].xf;
-                Assert.That(loadedMesh is not null);
-                Assert.That(loadedXf is not null);
-                if (loadedMesh is null || loadedXf is null)
-                    return;
-
-                Assert.That(loadedMesh.points.count == 100);
+                Assert.That(loadedObjs[1].mesh.points.size() == 100);
                 Assert.That(loadedObjs[1].name == "LongSphereName");
-                Assert.That(loadedXf.B.X == -2.0f);
-
-                loadedMesh = loadedObjs[0].mesh;
-                if (loadedMesh is not null)
-                    loadedMesh.Dispose();
-
-                loadedMesh = loadedObjs[1].mesh;
-                if (loadedMesh is not null)
-                    loadedMesh.Dispose();
+                Assert.That(loadedObjs[1].xf.b.x == -2.0f);
 
                 File.Delete(tempFile);
             });
         }
-        */
 
         [Test]
         public void TestToTriPoint()

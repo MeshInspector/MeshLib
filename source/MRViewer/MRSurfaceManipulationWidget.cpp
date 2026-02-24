@@ -34,6 +34,7 @@
 #include "MRMesh/MRPointsProject.h"
 #include "MRMesh/MRProjectionMeshAttribute.h"
 #include "MRMesh/MRChangeMeshDataAction.h"
+#include "MRMesh/MRMeshPatch.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -392,47 +393,37 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             const auto delEdges = getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
             UndirectedEdgeBitSet newEdgeSelection = obj_->getSelectedEdges() - delEdges;
             UndirectedEdgeBitSet newCreases = obj_->creases() - delEdges;
-            auto bds = delRegionKeepBd( *newMesh, delFaces );
-            const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
-            for ( const auto & bd : bds )
+
+            FillHoleNicelySettings settings
             {
-                if ( bd.empty() )
-                    continue;
-                // assert( isHoleBd( mesh.topology, bd ) ) can probably fail due to different construction of loops,
-                // so we check every edge of every loop below
-                const auto len = calcPathLength( bd, *newMesh );
-                const auto avgLen = len / bd.size();
-                FillHoleNicelySettings settings
+                .triangulateParams =
                 {
-                    .triangulateParams =
-                    {
-                        .metric = getUniversalMetric( *newMesh ),
-                        .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
-                    }, 
-                    .subdivideSettings = 
-                    {
-                        .maxEdgeLen = 2 * ( float )avgLen
-                    }, 
-                    .smoothSeettings = 
-                    {
-                        .edgeWeights = settings_.edgeWeights
-                    }
-                };
-                settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+                    .metric = getUniversalMetric( *newMesh ),
+                    .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
+                },
+                .subdivideSettings =
                 {
-                    if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
-                        newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
-                    if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
-                        newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
-                    // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
-                    if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
-                         unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
-                        unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
-                };
-                for ( auto e : bd )
-                    if ( !newMesh->topology.left( e ) )
-                        fillHoleNicely( *newMesh, e, settings );
-            }
+                    .maxEdgeLen = 0.0f // to use 'patchMesh' default
+                },
+                .smoothSeettings =
+                {
+                    .edgeWeights = settings_.edgeWeights
+                }
+            };
+            settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+            {
+                if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
+                    newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
+                if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
+                    newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
+                // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
+                if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
+                     unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
+                    unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
+            };
+
+            const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
+            patchMesh( *newMesh, delFaces, settings );
 
             // newFaces include both faces inside the patch and subdivided faces around
             const FaceBitSet newFaces = newMesh->topology.getValidFaces() - oldFaces;

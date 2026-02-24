@@ -143,6 +143,7 @@
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshOrPointsObject.h" />
     <ClInclude Include="MRMeshDoubleLayer.h" />
+    <ClInclude Include="MRMeshPatch.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
@@ -453,6 +454,7 @@
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
+    <ClCompile Include="MRMeshPatch.cpp" />
     <ClCompile Include="MRMeshSave3mf.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROneMeshContours.cpp" />

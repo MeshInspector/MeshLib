@@ -34,6 +34,9 @@ void Locale::init()
 {
     gLocaleGen.add_messages_path( utf8string( localeDir() ) );
     gLocaleGen.add_messages_domain( MR_PROJECT_NAME "/utf-8" );
+    gLocaleGen.categories( boost::locale::category_t::message );
+    // do not generate wide-character facets (this is crucial for Wasm support as we don't use ICU or iconv)
+    gLocaleGen.characters( boost::locale::char_facet_t::char_f );
     gLocale = gLocaleGen.generate( gLocaleName );
 }
 

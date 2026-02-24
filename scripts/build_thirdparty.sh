@@ -145,6 +145,9 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   cmake --build . -j ${NPROC}
   cmake --install .
 
+  # build Boost libraries separately
+  ${SCRIPT_DIR}/thirdparty/boost-libs-download.sh ${MESHLIB_THIRDPARTY_DIR}/boost-libs
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/boost-libs.sh ${MESHLIB_THIRDPARTY_DIR}/boost-libs
   # build Eigen separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/eigen.sh ${MESHLIB_THIRDPARTY_DIR}/eigen
   # build libE57Format separately

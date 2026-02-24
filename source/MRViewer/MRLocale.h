@@ -1,5 +1,9 @@
 #pragma once
 
+#include "config.h"
+#ifndef MRVIEWER_NO_LOCALE
+#include "exports.h"
+
 #pragma warning( push )
 #pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
 #include <boost/locale/message.hpp>
@@ -8,43 +12,41 @@
 namespace MR
 {
 
-/// ...
-class Locale
+namespace Locale
 {
-public:
     /// ...
-    static void init();
+    MRVIEWER_API void init();
     /// ...
-    static const std::locale& get();
+    MRVIEWER_API const std::locale& get();
     /// ...
-    static const char* getName();
+    MRVIEWER_API const char* getName();
     /// ...
-    static const std::locale& set( const char* locale );
+    MRVIEWER_API const std::locale& set( const char* locale );
     /// ...
-    static std::vector<std::string> getAvailableLocales();
+    MRVIEWER_API std::vector<std::string> getAvailableLocales();
 
     /// ...
-    static std::string getDisplayName( const char* locale );
+    MRVIEWER_API std::string getDisplayName( const char* locale );
     /// ...
-    static void addDisplayName( const char* locale, const std::string& name );
+    MRVIEWER_API void addDisplayName( const char* locale, const std::string& name );
 
     /// ...
-    static auto translate( const char* msg )
+    inline auto translate( const char* msg )
     {
         return boost::locale::translate( msg ).str( get() );
     }
     /// ...
-    static auto translate( const char* context, const char* msg )
+    inline auto translate( const char* context, const char* msg )
     {
         return boost::locale::translate( context, msg ).str( get() );
     }
     /// ...
-    static auto translate( const char* single, const char* plural, auto n )
+    inline auto translate( const char* single, const char* plural, auto n )
     {
         return boost::locale::translate( single, plural, n ).str( get() );
     }
     /// ...
-    static auto translate( const char* context, const char* single, const char* plural, auto n )
+    inline auto translate( const char* context, const char* single, const char* plural, auto n )
     {
         return boost::locale::translate( context, single, plural, n ).str( get() );
     }
@@ -76,3 +78,6 @@ inline auto npgettext( const char* context, const char* single, const char* plur
 #ifndef MR_NO_GETTEXT_MACROS
 #define _tr( ... ) MR::Locale::translate( __VA_ARGS__ ).c_str()
 #endif // MR_NO_GETTEXT_MACROS
+
+#endif // MRVIEWER_NO_LOCALE
+

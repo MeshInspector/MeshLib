@@ -1,5 +1,6 @@
 #pragma once
 
 #cmakedefine MRVIEWER_NO_GTK
+#cmakedefine MRVIEWER_NO_LOCALE
 #cmakedefine MRVIEWER_NO_VOXELS
 #cmakedefine MRVIEWER_NO_XDG_DESKTOP_PORTAL

@@ -14,7 +14,7 @@ namespace
 // b. if separating direction confirmed, then additionally tests whether the closest of b-vertices to a-triangle
 //       projects in the interior of a-triangle, then returns them as the closest pair of points.
 template<class T>
-std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const Triangle3<T>& b, bool& overlap )
+std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const Triangle3<T>& b, bool& overlap, const TriTriDistanceParams<T>& params )
 {
     // vectors of a-edges:
     const Vector3<T> av[3] =
@@ -24,11 +24,10 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
         a[0] - a[2]
     };
 
-    const Vector3<T> an = cross( av[0], av[1] ); // Compute normal to a triangle
-    const T anSq = an.lengthSq();
+    const Vector3<T> an = cross( av[0], av[1] ).normalized(); // normal to a-triangle
 
-    // If a-triangles is not degenerate
-    if ( anSq > 0 )
+    // If a-triangle is not degenerate
+    if ( an != Vector3<T>{} )
     {
         // projections of b-points on -an direction
         const T bp[3] =
@@ -56,6 +55,18 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
         if ( point >= 0 )
         {
             overlap = false;
+            if ( params.canExitEarlier() )
+            {
+                const auto planeDistSq = sqr( bp[point] );
+                if ( params.canExitEarlier( planeDistSq ) )
+                    return TriTriDistanceResult<T>
+                    {
+                        .a = a[0],
+                        .b = b[point],
+                        .distSq = planeDistSq,
+                        .overlap = false
+                    };
+            }
 
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face.
@@ -67,7 +78,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                 // b[point] passed the test - it's the closest point for
                 // the b triangle; the other point is on the face of a
                 TriTriDistanceResult<T> res;
-                res.a = b[point] + an * bp[point] / anSq;
+                res.a = b[point] + an * bp[point];
                 res.b = b[point];
                 res.distSq = distanceSq( res.a, res.b );
                 res.overlap = false;
@@ -79,7 +90,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
 }
 
 template<class T>
-TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b )
+TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triangle3<T>& b, const TriTriDistanceParams<T>& params )
 {
     // For each edge pair, the vector connecting the closest points
     // of the edges defines a slab (parallel planes at head and tail
@@ -137,7 +148,19 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 if ( t > 0 ) t = 0;
 
                 // sd.dir is a separating direction
-                if ( ( p - s + t ) >= 0 ) res.overlap = false;
+                if ( ( p - s + t ) >= 0 ) 
+                {
+                    res.overlap = false;
+                    if ( params.canExitEarlier() )
+                    {
+                        const auto planeDistSq = sqr( p - s + t );
+                        if ( params.canExitEarlier( planeDistSq ) )
+                        {
+                            res.distSq = planeDistSq;
+                            return res;
+                        }
+                    }
+                }
             }
         }
     }
@@ -157,10 +180,10 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     //    contain the closest points.
 
     // First check for case 1
-    if ( auto maybeRes = projectBonA( a, b, res.overlap ) )
+    if ( auto maybeRes = projectBonA( a, b, res.overlap, params ) )
         return *maybeRes;
 
-    if ( auto maybeRes = projectBonA( b, a, res.overlap ) )
+    if ( auto maybeRes = projectBonA( b, a, res.overlap, params ) )
     {
         std::swap( maybeRes->a, maybeRes->b );
         return *maybeRes;
@@ -179,14 +202,14 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
 
 } // anonymous namespace
 
-TriTriDistanceResultf findTriTriDistance( const Triangle3f& a, const Triangle3f& b )
+TriTriDistanceResultf findTriTriDistance( const Triangle3f& a, const Triangle3f& b, const TriTriDistanceParamsf& params )
 {
-    return findTriTriDistanceT( a, b );
+    return findTriTriDistanceT( a, b, params );
 }
 
-TriTriDistanceResultd findTriTriDistance( const Triangle3d& a, const Triangle3d& b )
+TriTriDistanceResultd findTriTriDistance( const Triangle3d& a, const Triangle3d& b, const TriTriDistanceParamsd& params )
 {
-    return findTriTriDistanceT( a, b );
+    return findTriTriDistanceT( a, b, params );
 }
 
 float triDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] )

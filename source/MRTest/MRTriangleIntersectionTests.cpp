@@ -275,4 +275,32 @@ TEST( MRMesh, DegenerateTrianglesIntersect )
     );
 }
 
+TEST( MRMesh, DisjointTris )
+{
+    const Triangle3f a
+    {
+        Vector3f{ 579.7053f, -687.2704f,  759.84705f },
+        Vector3f{ 579.7378f, -687.1448f,  759.8795f },
+        Vector3f{ 579.1366f, -690.34125f, 760.1747f }
+    };
+    const Triangle3f b
+    {
+        Vector3f{ 578.9741f, -689.6672f, 759.11584f },
+        Vector3f{ 578.93146f,-689.7801f, 759.0732f },
+        Vector3f{ 595.4107f, -702.8556f, 775.55237f }
+    };
+
+    EXPECT_FALSE( doTrianglesIntersectExt( Vector3d(a[0]), Vector3d(a[1]), Vector3d(a[2]), Vector3d(b[0]), Vector3d(b[1]), Vector3d(b[2]) ) );
+    // it fails in floats, unfortunately:
+    // EXPECT_FALSE( doTrianglesIntersectExt( a[0], a[1], a[2], b[0], b[1], b[2] ) );
+
+    const auto tdd = findTriTriDistance( { Vector3d(a[0]), Vector3d(a[1]), Vector3d(a[2]) }, { Vector3d(b[0]), Vector3d(b[1]), Vector3d(b[2]) } );
+    EXPECT_FALSE( tdd.overlap );
+    EXPECT_NEAR( std::sqrt( tdd.distSq ), 0.58179132501493114, 1e-15 );
+
+    const auto tdf = findTriTriDistance( a, b );
+    EXPECT_FALSE( tdf.overlap );
+    EXPECT_NEAR( std::sqrt( tdf.distSq ), 0.58178324f, 1e-7 );
+}
+
 } // namespace MR

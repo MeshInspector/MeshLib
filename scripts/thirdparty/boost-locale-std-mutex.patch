@@ -1,0 +1,185 @@
+diff -rup a/src/boost/locale/icu/date_time.cpp b/src/boost/locale/icu/date_time.cpp
+--- a/src/boost/locale/icu/date_time.cpp
++++ b/src/boost/locale/icu/date_time.cpp
+@@ -14,9 +14,9 @@
+ #include "boost/locale/icu/icu_util.hpp"
+ #include "boost/locale/icu/time_zone.hpp"
+ #include "boost/locale/icu/uconv.hpp"
+-#include <boost/thread.hpp>
+ #include <cmath>
+ #include <memory>
++#include <mutex>
+ #include <unicode/calendar.h>
+ #include <unicode/gregocal.h>
+ #include <unicode/utypes.h>
+@@ -214,8 +214,8 @@ namespace boost { namespace locale { nam
+         }
+ 
+     private:
+-        typedef boost::unique_lock<boost::mutex> guard;
+-        mutable boost::mutex lock_;
++        typedef std::unique_lock<std::mutex> guard;
++        mutable std::mutex lock_;
+         std::string encoding_;
+         hold_ptr<icu::Calendar> calendar_;
+     };
+diff -rup a/src/boost/locale/shared/date_time.cpp b/src/boost/locale/shared/date_time.cpp
+--- a/src/boost/locale/shared/date_time.cpp
++++ b/src/boost/locale/shared/date_time.cpp
+@@ -7,9 +7,8 @@
+ #include <boost/locale/date_time.hpp>
+ #include <boost/locale/formatting.hpp>
+ #include <boost/core/exchange.hpp>
+-#include <boost/thread/locks.hpp>
+-#include <boost/thread/mutex.hpp>
+ #include <cmath>
++#include <mutex>
+ 
+ namespace boost { namespace locale {
+ 
+@@ -395,9 +394,9 @@ namespace boost { namespace locale {
+     }
+ 
+     namespace time_zone {
+-        boost::mutex& tz_mutex()
++        std::mutex& tz_mutex()
+         {
+-            static boost::mutex m;
++            static std::mutex m;
+             return m;
+         }
+         std::string& tz_id()
+@@ -407,12 +406,12 @@ namespace boost { namespace locale {
+         }
+         std::string global()
+         {
+-            boost::unique_lock<boost::mutex> lock(tz_mutex());
++            std::unique_lock<std::mutex> lock(tz_mutex());
+             return tz_id();
+         }
+         std::string global(const std::string& new_id)
+         {
+-            boost::unique_lock<boost::mutex> lock(tz_mutex());
++            std::unique_lock<std::mutex> lock(tz_mutex());
+             return boost::exchange(tz_id(), new_id);
+         }
+     } // namespace time_zone
+diff -rup a/src/boost/locale/shared/generator.cpp b/src/boost/locale/shared/generator.cpp
+--- a/src/boost/locale/shared/generator.cpp
++++ b/src/boost/locale/shared/generator.cpp
+@@ -7,10 +7,9 @@
+ #include <boost/locale/encoding.hpp>
+ #include <boost/locale/generator.hpp>
+ #include <boost/locale/localization_backend.hpp>
+-#include <boost/thread/locks.hpp>
+-#include <boost/thread/mutex.hpp>
+ #include <algorithm>
+ #include <map>
++#include <mutex>
+ #include <vector>
+ 
+ namespace boost { namespace locale {
+@@ -21,7 +20,7 @@ namespace boost { namespace locale {
+         {}
+ 
+         mutable std::map<std::string, std::locale> cached;
+-        mutable boost::mutex cached_lock;
++        mutable std::mutex cached_lock;
+ 
+         category_t cats;
+         char_facet_t chars;
+@@ -101,7 +100,7 @@ namespace boost { namespace locale {
+     std::locale generator::generate(const std::locale& base, const std::string& id) const
+     {
+         if(d->caching_enabled) {
+-            boost::unique_lock<boost::mutex> guard(d->cached_lock);
++            std::unique_lock<std::mutex> guard(d->cached_lock);
+             const auto p = d->cached.find(id);
+             if(p != d->cached.end())
+                 return p->second;
+@@ -126,7 +125,7 @@ namespace boost { namespace locale {
+                 result = backend->install(result, facet, char_facet_t::nochar);
+         }
+         if(d->caching_enabled) {
+-            boost::unique_lock<boost::mutex> guard(d->cached_lock);
++            std::unique_lock<std::mutex> guard(d->cached_lock);
+             const auto p = d->cached.find(id);
+             if(p == d->cached.end())
+                 d->cached[id] = result;
+diff -rup a/src/boost/locale/shared/localization_backend.cpp b/src/boost/locale/shared/localization_backend.cpp
+--- a/src/boost/locale/shared/localization_backend.cpp
++++ b/src/boost/locale/shared/localization_backend.cpp
+@@ -5,10 +5,9 @@
+ // https://www.boost.org/LICENSE_1_0.txt
+ 
+ #include <boost/locale/localization_backend.hpp>
+-#include <boost/thread/locks.hpp>
+-#include <boost/thread/mutex.hpp>
+ #include <functional>
+ #include <memory>
++#include <mutex>
+ #include <vector>
+ 
+ #ifdef BOOST_LOCALE_WITH_ICU
+@@ -211,9 +210,9 @@ namespace boost { namespace locale {
+             return mgr;
+         }
+ 
+-        boost::mutex& localization_backend_manager_mutex()
++        std::mutex& localization_backend_manager_mutex()
+         {
+-            static boost::mutex the_mutex;
++            static std::mutex the_mutex;
+             return the_mutex;
+         }
+         localization_backend_manager& localization_backend_manager_global()
+@@ -225,12 +224,12 @@ namespace boost { namespace locale {
+ 
+     localization_backend_manager localization_backend_manager::global()
+     {
+-        boost::unique_lock<boost::mutex> lock(localization_backend_manager_mutex());
++        std::unique_lock<std::mutex> lock(localization_backend_manager_mutex());
+         return localization_backend_manager_global();
+     }
+     localization_backend_manager localization_backend_manager::global(const localization_backend_manager& in)
+     {
+-        boost::unique_lock<boost::mutex> lock(localization_backend_manager_mutex());
++        std::unique_lock<std::mutex> lock(localization_backend_manager_mutex());
+         return exchange(localization_backend_manager_global(), in);
+     }
+ 
+diff -rup a/src/boost/locale/win32/lcid.cpp b/src/boost/locale/win32/lcid.cpp
+--- a/src/boost/locale/win32/lcid.cpp
++++ b/src/boost/locale/win32/lcid.cpp
+@@ -10,9 +10,8 @@
+ 
+ #include "boost/locale/win32/lcid.hpp"
+ #include <boost/locale/util/locale_data.hpp>
+-#include <boost/thread/locks.hpp>
+-#include <boost/thread/mutex.hpp>
+ #include <map>
++#include <mutex>
+ #include <sstream>
+ #include <string.h>
+ #include <string>
+@@ -24,9 +23,9 @@ namespace boost { namespace locale { nam
+ 
+     static table_type* volatile table = 0;
+ 
+-    boost::mutex& lcid_table_mutex()
++    std::mutex& lcid_table_mutex()
+     {
+-        static boost::mutex m;
++        static std::mutex m;
+         return m;
+     }
+ 
+@@ -76,7 +75,7 @@ namespace boost { namespace locale { nam
+         if(table)
+             return *table;
+         else {
+-            boost::unique_lock<boost::mutex> lock(lcid_table_mutex());
++            std::unique_lock<std::mutex> lock(lcid_table_mutex());
+             if(table)
+                 return *table;
+             EnumSystemLocalesA(proc, LCID_INSTALLED);

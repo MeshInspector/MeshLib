@@ -28,7 +28,3 @@ xgettext \
     --default-domain=$APP_NAME \
     --output=$LOCALE_DIR/$APP_NAME.pot \
     "$@"
-# xgettext doesn't set any encoding if the messages contain only ASCII symbols
-# which leads to choosing ASCII as a default encoding for .po files
-# so we need to set the encoding manually
-sed -i 's|Content-Type: text/plain; charset=CHARSET|Content-Type: text/plain; charset=UTF-8|' $LOCALE_DIR/$APP_NAME.pot

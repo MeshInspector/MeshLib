@@ -15,6 +15,10 @@ namespace MR
 namespace
 {
 
+// enforce xgettext to use UTF-8 encoding
+// TRANSLATORS: this is a technical string; no need to translate it
+[[maybe_unused]] constexpr auto cEnforceUtf8 = _t( "(^̮^)" );
+
 std::locale gLocale = {};
 std::string gLocaleName = "en";
 boost::locale::generator gLocaleGen = {};

@@ -3,6 +3,7 @@
 #include "MRBitSet.h"
 #include "MRVector.h"
 #include "MRVector3.h"
+#include "MRMeshTriPoint.h"
 #include "MREnums.h"
 #include <MRPch/MREigenSparseCore.h>
 
@@ -60,6 +61,20 @@ public:
     /// return fixed vertices from the first layer around free vertices
     [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
 
+    /// attracts the given point inside some mesh's triangle to the given target with the given weight
+    struct Attractor
+    {
+        MeshTriPoint p;
+        Vector3f target;
+        float weight = 1;
+    };
+
+    /// adds one more attractor to the stored list
+    MRMESH_API void addAttractor( const Attractor& a );
+
+    /// forgets all attractors added previously
+    MRMESH_API void removeAllAttractors();
+
 private:
     // updates solver_ only
     void updateSolver_();
@@ -93,6 +108,8 @@ private:
         int firstElem = 0;      // index in nonZeroElements_
     };
     std::vector<Equation> equations_;
+
+    std::vector<Attractor> attractors_;
 
     struct Element
     {

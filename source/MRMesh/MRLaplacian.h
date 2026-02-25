@@ -65,8 +65,8 @@ public:
     struct Attractor
     {
         MeshTriPoint p;
-        Vector3f target;
-        float weight = 1;
+        Vector3d target;
+        double weight = 1;
     };
 
     /// adds one more attractor to the stored list
@@ -82,8 +82,8 @@ private:
     // updates rhs_ only
     void updateRhs_();
 
-    template <typename I, typename G, typename S>
-    void prepareRhs_( I && iniRhs, G && g, S && s );
+    template <typename I, typename G, typename S, typename P>
+    void prepareRhs_( I && iniRhs, G && g, S && s, P && p );
 
     const MeshTopology & topology_;
     VertCoords & points_;

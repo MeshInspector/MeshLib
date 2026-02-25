@@ -147,6 +147,11 @@ $(error Can't find vcpkg! The path to it should be stored in `$(vcpkg_marker_pat
 endif
 $(info Using vcpkg at: $(VCPKG_DIR))
 endif
+
+# Try to read the triplet from the `VCPKG_DEFAULT_TRIPLET` env variable if it's set.
+VCPKG_TRIPLET := $(if $(VCPKG_DEFAULT_TRIPLET),$(VCPKG_DEFAULT_TRIPLET),x64-windows-meshlib)
+$(info Using vcpkg triplet: $(VCPKG_TRIPLET))
+
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
@@ -189,7 +194,7 @@ MRBIND_GEN_CSHARP_EXE = $(MRBIND_EXE)_gen_csharp
 
 # Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
 ifneq ($(IS_WINDOWS),)
-DEPS_BASE_DIR := $(VCPKG_DIR)/installed/x64-windows-meshlib
+DEPS_BASE_DIR := $(VCPKG_DIR)/installed/$(VCPKG_TRIPLET)
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
 else
 DEPS_BASE_DIR := .

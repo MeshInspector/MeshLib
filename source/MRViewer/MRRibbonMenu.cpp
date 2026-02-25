@@ -2374,16 +2374,6 @@ void RibbonMenu::beginTopPanel_()
     ImGuiMV::SetNextWindowPosMainViewport( ImVec2( 0, 0 ) );
     ImGui::SetNextWindowSize( ImVec2( ( float ) Viewer::instanceRef().framebufferSize.x, currentTopPanelHeight_ * UI::scale() ) );
 
-    ImGuiWindowFlags topPanelFlags =
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse;
-    if ( !topPanelDockingEnabled_ )
-        topPanelFlags |= ImGuiWindowFlags_NoDocking;
-    
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 5.0f * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 5.0f * UI::scale() );
@@ -2400,7 +2390,11 @@ void RibbonMenu::beginTopPanel_()
     ImGui::PushStyleColor( ImGuiCol_WindowBg, colorBg.getUInt32() );
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
-    ImGui::Begin( "TopPanel", nullptr, topPanelFlags );
+    ImGui::Begin(
+        "TopPanel", nullptr,
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
+    );
     ImGui::PopStyleVar();
     // for all items
     ProgressBar::setup();

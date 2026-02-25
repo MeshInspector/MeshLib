@@ -67,6 +67,9 @@ public:
     // set maximum wait time (in seconds) before top panel is closed after mouse leaves it (only when not pinned)
     // minimum value is 0 seconds, panel will close immediately after mouse leaves it
     void setTopPanelMaxOpenedTimer( float sec ) { openedMaxSecs_ = std::max( 0.0f, sec ); }
+    // set top panel can be docked and other windows can be docked into it, which is default behavior,
+    // only if docking is enabled globally
+    MRVIEWER_API void setTopPanelDockingEnabled( bool enabled ) { topPanelDockingEnabled_ = enabled; }
 
     /// set quick access menu item list version
     MRVIEWER_API virtual void setQuickAccessListVersion( int version );
@@ -270,6 +273,7 @@ private:
     int currentTopPanelHeight_ = 113;
     int topPanelOpenedHeight_ = 113;
     int topPanelHiddenHeight_ = 33;
+    bool topPanelDockingEnabled_{ true };
 
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };

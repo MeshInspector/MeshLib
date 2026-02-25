@@ -27,9 +27,9 @@ public:
     };
 
     MRMESH_API explicit Laplacian( Mesh & mesh );
-    Laplacian( const MeshTopology & topology, VertCoords & points ) : topology_( topology ), points_( points ) { }
+    MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
 
-    /// initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
+    /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     /// \param freeVerts must not include all vertices of a mesh connected component
     MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit,
         RememberShape rem = Laplacian::RememberShape::Yes );

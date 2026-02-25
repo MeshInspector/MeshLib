@@ -60,7 +60,7 @@ void rotateToLongestEdge( Vector3<T>& a, Vector3<T>& b, Vector3<T>& c )
 /// checks whether triangles ABC and DEF intersect
 /// returns false if ABC and DEF are coplanar;
 /// due to floating-point errors inside, the result can be wrong in case of various degenerations of input triangles,
-/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors
+/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors but slower
 template <typename T>
 bool doTrianglesIntersect(
     Vector3<T> a, Vector3<T> b, Vector3<T> c,
@@ -267,7 +267,7 @@ bool doesEdgeXySeparate(
 /// checks whether triangles ABC and DEF intersect;
 /// it is designed to resolve false positives from \ref doTrianglesIntersect function
 /// when two triangles are far apart but in one plane;
-/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors
+/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors but slower
 template <typename T>
 bool doTrianglesIntersectExt(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,

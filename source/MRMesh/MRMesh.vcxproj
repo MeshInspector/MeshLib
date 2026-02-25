@@ -64,6 +64,7 @@
     <ClInclude Include="MRMapping.h" />
     <ClInclude Include="MRMarkedContour.h" />
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
+    <ClInclude Include="MRMeshDivideWithPlane.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshMath.h" />
@@ -451,6 +452,7 @@
     <ClCompile Include="MREdgeLengthMesh.cpp" />
     <ClCompile Include="MREnums.cpp" />
     <ClCompile Include="MRImageTransform.cpp" />
+    <ClCompile Include="MRMeshDivideWithPlane.cpp" />
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />

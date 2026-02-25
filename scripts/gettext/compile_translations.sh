@@ -12,6 +12,7 @@ for LOCALE in $(ls $LOCALE_DIR) ; do
     fi
     msgfmt \
       $LOCALE_DIR/$LOCALE/$APP_NAME.po \
-      --output-file=$OUTPUT_DIR/$LOCALE/LC_MESSAGES/$APP_NAME.mo
+      --output-file=$OUTPUT_DIR/$LOCALE/LC_MESSAGES/$APP_NAME.mo \
+      --check
   fi
 done

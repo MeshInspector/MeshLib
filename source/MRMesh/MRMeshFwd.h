@@ -791,6 +791,7 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
+#ifndef __CUDACC__
 #ifndef MR_NO_GETTEXT_MACROS
 /// special no-op inline functions to mark string literal as translatable
 constexpr inline auto _t( const char* str ) noexcept { return str; }
@@ -798,6 +799,7 @@ constexpr inline auto _t( const char* ctx, const char* str ) noexcept { (void)ct
 constexpr inline auto _t( const char* s, const char* p, auto n ) noexcept { return n == decltype( n )( 1 ) ? s : p; }
 constexpr inline auto _t( const char* ctx, const char* s, const char* p, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? s : p; }
 #endif // MR_NO_GETTEXT_MACROS
+#endif // __CUDACC__
 
 } //namespace MR
 

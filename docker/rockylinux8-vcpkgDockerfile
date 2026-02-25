@@ -53,7 +53,7 @@ RUN source /opt/rh/gcc-toolset-11/enable && \
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
-FROM nvidia/cuda:12.6.0-devel-rockylinux8 AS production
+FROM nvidia/cuda:12.0.1-devel-rockylinux8 AS production
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
 

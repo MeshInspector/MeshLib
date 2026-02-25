@@ -40,6 +40,12 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
 
+    for ( auto v : freeVerts_ )
+    {
+        assert( freeVert2id_[v] >= 0 );
+        freeVert2id_[v] = -1;
+    }
+
     solverValid_ = false;
     rhsValid_ = false;
 

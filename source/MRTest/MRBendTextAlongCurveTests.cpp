@@ -44,13 +44,15 @@ TEST( MRMesh, BendTextAlongCurve )
     EXPECT_TRUE( maybeText.has_value() );
     EXPECT_GT( maybeText->topology.numValidFaces(), 0 );
 
-    const auto start = findProjection( { 0, 0, 1 }, sphere ).mtp;
-    const auto end = findProjection( { 0, 0, -1 }, sphere ).mtp;
-    auto maybePath = computeGeodesicPath( sphere, start, end );
+    GeodesicPath path;
+    path.start = findProjection( { 0, 0, 1 }, sphere ).mtp;
+    path.end = findProjection( { 0, 0, -1 }, sphere ).mtp;
+    auto maybePath = computeGeodesicPath( sphere, path.start, path.end );
     EXPECT_TRUE( maybePath.has_value() );
     EXPECT_GT( maybePath->size(), 0 );
+    path.mids = std::move( *maybePath );
 
-    maybeText = bendTextAlongSurfacePath( sphere, start, *maybePath, end,
+    maybeText = bendTextAlongSurfacePath( sphere, path,
         BendTextAlongCurveParams{
             .symbolMesh = s,
             .fontHeight = 0.1f,

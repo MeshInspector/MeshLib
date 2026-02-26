@@ -142,7 +142,7 @@ protected:
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
 
-    void updateDistancesAndRegion_( const Mesh& mesh, const VertBitSet& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
+    void updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
     Settings settings_;
 
@@ -150,7 +150,7 @@ protected:
     VertBitSet unchangeableVerts_;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
-    VertBitSet activePickedVertices_; ///< vertices that are considered under mouse in curernt frame (could be many in case of fast mouse mouvement)
+    std::vector<MeshTriPoint> pointsUnderMouse_; ///< mesh points under mouse in the current frame (could be many in case of fast mouse movement)
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
     VertBitSet visualizationRegion_;  ///< vertices of triangles partially or fully highlighted with red
     VertBitSet generalEditingRegion_; ///< united region of tool application since the last mouse down

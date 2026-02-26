@@ -40,18 +40,30 @@
 namespace MR
 {
 
-void findSpaceDistancesAndVerts( const Mesh& mesh, const VertBitSet& start, float range, VertScalars& distances, VertBitSet& verts, bool codirected, const VertBitSet* untouchable )
+namespace
+{
+
+void findSpaceDistancesAndVerts( const Mesh& mesh, const std::vector<MeshTriPoint>& start, float range, VertScalars& distances, VertBitSet& verts, bool codirected, const VertBitSet* untouchable )
 {
     // note! better update bitset for interesting verts than check for all verts from distances
     MR_TIMER;
-    auto tree = AABBTreePoints( mesh.points, start );
+    VertCoords startPoints;
+    VertNormals startNormals;
+    startPoints.reserve( start.size() );
+    startNormals.reserve( start.size() );
+    for ( const auto& s : start )
+    {
+        startPoints.push_back( mesh.triPoint( s ) );
+        startNormals.push_back( mesh.normal( s ) );
+    }
+    auto tree = AABBTreePoints( startPoints );
 
     EnumNeihbourVertices e;
     e.run( mesh.topology, start, [&] ( VertId v )
     {
         const auto proj = findProjectionOnPoints( mesh.points[v], tree );
         const float dist = std::sqrt( proj.distSq );
-        const bool valid = ( dist <= range ) && ( !codirected || ( dot( mesh.normal( v ), mesh.normal( proj.vId ) ) >= 0.f ) );
+        const bool valid = ( dist <= range ) && ( !codirected || ( dot( mesh.normal( v ), startNormals[proj.vId] ) >= 0.f ) );
         verts.set( v, valid );
         bool canChange = !untouchable || dist < distances[v] || !untouchable->test( v );
         if ( canChange )
@@ -59,6 +71,8 @@ void findSpaceDistancesAndVerts( const Mesh& mesh, const VertBitSet& start, floa
         return valid;
     } );
 }
+
+} // anonymous namespace
 
 /// Undo action for ObjectMesh points only (not topology) change;
 /// It can store all points (uncompressed format), or only modified points (compressed format)
@@ -350,7 +364,7 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
     }
 }
 
-void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const VertBitSet& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
+void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
 {
     findSpaceDistancesAndVerts( mesh, start, settings_.radius, distances, region, editOnlyCodirectedSurface_, untouchable );
 }
@@ -521,7 +535,6 @@ void SurfaceManipulationWidget::reallocData_( size_t size )
     singleEditingRegion_.resize( size, false );
     visualizationRegion_.resize( size, false );
     generalEditingRegion_.resize( size, false );
-    activePickedVertices_.resize( size, false );
     pointsShift_.resize( size, 0.f );
     editingDistanceMap_.resize( size, 0.f );
     visualizationDistanceMap_.resize( size, FLT_MAX );
@@ -539,7 +552,7 @@ void SurfaceManipulationWidget::clearData_()
     visualizationDistanceMap_.clear();
     changedRegion_.clear();
     valueChanges_.clear();
-    activePickedVertices_.clear();
+    pointsUnderMouse_.clear();
 }
 
 void SurfaceManipulationWidget::initConnections_()
@@ -697,12 +710,12 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
 
     const auto& mesh = *objMeshPtr->mesh();
-    activePickedVertices_.reset();
+    pointsUnderMouse_.clear();
     for ( const auto& [obj,pick] : movedPosPick )
     {
         if ( !obj || obj != objMeshPtr )
             continue;
-        activePickedVertices_.set( mesh.getClosestVertex( pick ) );
+        pointsUnderMouse_.push_back( mesh.toTriPoint( pick.face, pick.point ) );
     }
 
     updateVizualizeSelection_();
@@ -713,41 +726,28 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
     else
     {
-        std::vector<MeshTriPoint> triPoints;
-        VertBitSet newVerts( singleEditingRegion_.size() );
-        triPoints.reserve( movedPosPick.size() );
-        for ( int i = 0; i < movedPosPick.size(); ++i )
-        {
-            if ( movedPosPick[i].first == objMeshPtr )
-            {
-                const auto& pick = movedPosPick[i].second;
-                VertId v[3];
-                mesh.topology.getTriVerts( pick.face, v );
-                for ( int j = 0; j < 3; ++j )
-                    newVerts.set( v[j] );
-                triPoints.push_back( mesh.toTriPoint( pick.face, pick.point ) );
-            }
-        }
-
-        if ( triPoints.size() == 1 )
+        if ( pointsUnderMouse_.size() == 1 )
         {
             // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
             bool keepOld = settings_.workMode == WorkMode::Patch;
-            activePickedVertices_.reset();
-            activePickedVertices_.set( mesh.getClosestVertex( triPoints[0] ) );
-            updateDistancesAndRegion_( mesh, activePickedVertices_, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
+            updateDistancesAndRegion_( mesh, pointsUnderMouse_, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
+            for ( auto v : singleEditingRegion_ ) //is it necessary after updateDistancesAndRegion_?
+                singleEditingRegion_.set( v, editingDistanceMap_[v] <= settings_.radius );
         }
         else
         {
             // if the mouse shift is large (more then one point of movement), then the distance map is calculated from the surface of the mesh
             // TODO try to rework with SpaceDistance (for multiple point. does not exist, need to create) if it's not slower
-            singleEditingRegion_ = newVerts;
-            dilateRegion( mesh, singleEditingRegion_, settings_.radius * 1.5f );
-            editingDistanceMap_ = computeSurfaceDistances( mesh, triPoints, settings_.radius * 1.5f, &singleEditingRegion_ );
+            editingDistanceMap_ = computeSurfaceDistances( mesh, pointsUnderMouse_, settings_.radius * 1.5f ); // why 1.5f?
+            singleEditingRegion_.clear();
+            singleEditingRegion_.resize( mesh.points.size() );
+            BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+            {
+                if ( editingDistanceMap_[v] <= settings_.radius )
+                    singleEditingRegion_.set( v );
+            } );
         }
     }
-    for ( auto v : singleEditingRegion_ )
-        singleEditingRegion_.set( v, editingDistanceMap_[v] <= settings_.radius );
     singleEditingRegion_ -= unchangeableVerts_;
 }
 
@@ -815,14 +815,19 @@ void SurfaceManipulationWidget::updateVizualizeSelection_()
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
     badRegion_ = false;
-    if ( activePickedVertices_.none() )
+    if ( pointsUnderMouse_.empty() )
         return;
-    if ( settings_.workMode == WorkMode::Laplacian && unchangeableVerts_.intersects( activePickedVertices_ ) )
+    if ( settings_.workMode == WorkMode::Laplacian )
     {
-        badRegion_ = true;
-        return;
+        for ( auto s : pointsUnderMouse_ )
+            for ( const auto& v : s.getWeightedVerts( mesh.topology ) )
+                if ( v.weight > 0 && unchangeableVerts_.test( v.v ) )
+                {
+                    badRegion_ = true;
+                    return;
+                }
     }
-    updateDistancesAndRegion_( mesh, activePickedVertices_, visualizationDistanceMap_, visualizationRegion_, keepOld ? &generalEditingRegion_ : nullptr );
+    updateDistancesAndRegion_( mesh, pointsUnderMouse_, visualizationDistanceMap_, visualizationRegion_, keepOld ? &generalEditingRegion_ : nullptr );
     expand( mesh.topology, visualizationRegion_ );
     {
         int pointsCount = 0;

@@ -11,6 +11,7 @@
 #include "MRMeshComponents.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include "MRSurfacePath.h"
 #include <cmath>
 
 namespace MR
@@ -193,11 +194,11 @@ Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFu
     return contoursMesh;
 }
 
-Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end,
+Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const GeodesicPath& path,
     const BendContoursAlongCurveParams& params )
 {
     MR_TIMER;
-    return curveFromPoints( meshPathCurvePoints( mesh, start, path, end ) )
+    return curveFromPoints( meshPathCurvePoints( mesh, path ) )
         .and_then( [&]( auto && curve ) { return bendContoursAlongCurve( contours, curve, params ); } );
 }
 
@@ -299,17 +300,24 @@ Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, float * outCurveLen )
     return res;
 }
 
-CurvePoints meshPathCurvePoints( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end )
+CurvePoints meshPathCurvePoints( const Mesh& mesh, const GeodesicPath& path )
 {
     MR_TIMER;
     CurvePoints cp;
-    cp.reserve( path.size() + 2 );
-    cp.push_back( { .pos = mesh.triPoint( start ), .snorm = mesh.normal( start ) } );
-    for ( const auto & ep : path )
+    cp.reserve( path.numVertices() );
+    if (path.start.valid() )
+        cp.push_back( { .pos = mesh.triPoint( path.start ), .snorm = mesh.normal( path.start ) } );
+    for ( const auto & ep : path.mids )
         cp.push_back( { .pos = mesh.triPoint( ep ), .snorm = mesh.normal( ep ) } );
-    cp.push_back( { .pos = mesh.triPoint( end ), .snorm = mesh.normal( end ) } );
-    assert( cp.size() == path.size() + 2 );
+    if ( path.end.valid() )
+        cp.push_back( { .pos = mesh.triPoint( path.end ), .snorm = mesh.normal( path.end ) } );
+    assert( cp.size() == path.numVertices() );
 
+    if ( cp.size() < 2 )
+    {
+        assert( false );
+        return {};
+    }
     cp[0].dir = ( cp[1].pos - cp[0].pos ).normalized();
     for ( int i = 1; i + 1 < cp.size(); ++i )
         cp[i].dir = ( cp[i + 1].pos - cp[i - 1].pos ).normalized();

@@ -404,14 +404,21 @@ template <typename I>
 [[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const TypedBitSet<I> & )
     { return SetBitIteratorT<TypedBitSet<I>>(); }
 
+/// for each set bit of input bitset, writes its sequential number starting from 0 in the given vector that shall have appropriate size
+template <typename I>
+void fillVectorWithSeqNums( const TypedBitSet<I> & bs, Vector<int, I> & vec )
+{
+    int n = 0;
+    for ( auto v : bs )
+        vec[v] = n++;
+}
+
 /// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits
 template <typename I>
 [[nodiscard]] Vector<int, I> makeVectorWithSeqNums( const TypedBitSet<I> & bs )
 {
     Vector<int, I> res( bs.size(), -1 );
-    int n = 0;
-    for ( auto v : bs )
-        res[v] = n++;
+    fillVectorWithSeqNums( bs, res );
     return res;
 }
 

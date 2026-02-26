@@ -14,6 +14,7 @@
 #include "MRMeshSubdivide.h"
 #include "MREdgePaths.h"
 #include "MRFillHoleNicely.h"
+#include "MRMeshPatch.h"
 
 namespace MR
 {
@@ -245,49 +246,32 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     if ( !reportProgress( sbp, 0.25f ) )
         return unexpectedOperationCanceled();
 
-    auto boundaryEdges = delRegionKeepBd( mesh, *regRes );
-
-    auto sb = subprogress( sbp, 0.25f, 1.0f );
-    for ( int i = 0; i < boundaryEdges.size(); ++i )
+    FillHoleNicelySettings psettings
     {
-        const auto& boundaryEdge = boundaryEdges[i];
-        if ( boundaryEdge.empty() )
-            continue;
-
-        const auto len = calcPathLength( boundaryEdge, mesh );
-        const auto avgLen = len / boundaryEdge.size();
-        FillHoleNicelySettings settings
+        .triangulateParams =
         {
-            .triangulateParams =
-            {
-                .metric = getUniversalMetric( mesh ),
-                .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
-            },
-            .subdivideSettings = 
-            {
-                .maxEdgeLen = float( avgLen ) * 1.5f, 
-                .maxEdgeSplits = 20'000,
-            },
-            .smoothCurvature = true,
-            .smoothSeettings = 
-            {
-                .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
-            }
-        };
-
-        for ( auto e : boundaryEdge )
+            .metric = getUniversalMetric( mesh ),
+            .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
+        },
+        .subdivideSettings =
         {
-            if ( mesh.topology.left( e ) )
-                continue;
-            auto newFaces = fillHoleNicely( mesh, e, settings );
-            if ( params.region )
-                *params.region |= newFaces;
+            .maxEdgeLen = 0.0f, // to use default from `patchMesh`
+            .maxEdgeSplits = 20'000,
+        },
+        .smoothCurvature = true,
+        .smoothSeettings =
+        {
+            .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
         }
-        if ( !reportProgress( sb, ( i + 1.f ) / boundaryEdges.size() ) )
-            return unexpectedOperationCanceled();
-    }
+    };
+
+    auto newFaces = patchMesh( mesh, *regRes, psettings );
+
     if ( params.region )
+    {
+        *params.region |= newFaces;
         *params.region &= mesh.topology.getValidFaces();
+    }
     return {};
 }
 

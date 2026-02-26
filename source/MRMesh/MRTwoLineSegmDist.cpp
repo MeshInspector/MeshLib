@@ -12,7 +12,7 @@ namespace
 // On fast computation of distance between line segments.
 // In Information Processing Letters, no. 21, pages 55-61, 1985.
 template<class T>
-TwoLineSegmClosestPoints<T> findTwoLineSegmDistanceT( const LineSegm3<T>& a, const LineSegm3<T>& b )
+TwoLineSegmClosestPoints<T> findTwoLineSegmClosestPointsT( const LineSegm3<T>& a, const LineSegm3<T>& b )
 {
     TwoLineSegmClosestPoints<T> res;
 
@@ -124,12 +124,12 @@ TwoLineSegmClosestPoints<T> findTwoLineSegmDistanceT( const LineSegm3<T>& a, con
 
 TwoLineSegmClosestPointsf findTwoLineSegmClosestPoints( const LineSegm3f& a, const LineSegm3f& b )
 {
-    return findTwoLineSegmDistanceT( a, b );
+    return findTwoLineSegmClosestPointsT( a, b );
 }
 
 TwoLineSegmClosestPointsd findTwoLineSegmClosestPoints( const LineSegm3d& a, const LineSegm3d& b )
 {
-    return findTwoLineSegmDistanceT( a, b );
+    return findTwoLineSegmClosestPointsT( a, b );
 }
 
 } //namespace MR

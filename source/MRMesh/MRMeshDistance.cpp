@@ -105,7 +105,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
             if ( mp.region && !mp.region->test( face ) )
                 continue;
             const auto leafTriangle = mp.mesh.getTriPoints( face );
-            const auto td = findTriTriDistance( t, leafTriangle );
+            const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
             if ( td.distSq > rangeSq )
                 continue;
             if ( call( td.a, face, td.b, td.distSq ) == ProcessOneResult::ContinueProcessing )

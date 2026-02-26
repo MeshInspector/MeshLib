@@ -12,13 +12,8 @@
 namespace MR
 {
 
-Laplacian::Laplacian( Mesh & mesh ) : topology_( mesh.topology ), points_( mesh.points ) { }
-
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
+Laplacian::Laplacian( const MeshTopology & topology, VertCoords & points ) : topology_( topology ), points_( points )
 {
-    MR_TIMER;
-    assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
-
     class SimplicialLDLTSolver final : public Solver
     {
     public:
@@ -36,15 +31,31 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
     };
 
     solver_ = std::make_unique<SimplicialLDLTSolver>();
+}
+
+Laplacian::Laplacian( Mesh & mesh ) : Laplacian( mesh.topology, mesh.points ) { }
+
+void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
+{
+    MR_TIMER;
+    assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
+
+    for ( auto v : freeVerts_ )
+        freeVert2id_[v] = -1;
+
     solverValid_ = false;
+    rhsValid_ = false;
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;
     // free vertices and the first layer around the region
     expand( topology_, region_ );
 
-    // build matrix of equations: vertex pos = mean pos of its neighbors
+    // no need to regionVert2id_.clear(), since not region_ elements from regionVert2id_ are never accessed
     regionVert2id_.resize( region_.size() );
+    freeVert2id_.resize( region_.size(), -1 );
+
+    // build matrix of equations: vertex pos = mean pos of its neighbors
     equations_.clear();
     nonZeroElements_.clear();
     std::vector<Element> rowElements;
@@ -96,7 +107,10 @@ void Laplacian::fixVertex( VertId v, bool smooth )
 {
     rhsValid_ = false;
     if ( freeVerts_.autoResizeTestSet( v, false ) )
+    {
         solverValid_ = false;
+        freeVert2id_[v] = -1;
+    }
     if ( fixedSharpVertices_.autoResizeTestSet( v, !smooth ) != !smooth )
         solverValid_ = false;
 }
@@ -146,7 +160,7 @@ void Laplacian::updateSolver_()
     }
     rhsValid_ = false;
 
-    freeVert2id_ = makeVectorWithSeqNums( freeVerts_ );
+    fillVectorWithSeqNums( freeVerts_, freeVert2id_ );
 
     firstLayerFixedVerts_ = freeVerts_;
     expand( topology_, firstLayerFixedVerts_ );

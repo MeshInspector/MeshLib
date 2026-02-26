@@ -296,6 +296,8 @@ IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRMeshC ./MRMeshC)
 ENDIF()
 
+add_subdirectory(locale)
+
 IF(BUILD_TESTING)
   enable_testing()
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)

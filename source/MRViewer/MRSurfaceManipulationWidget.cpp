@@ -723,9 +723,11 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     {
         editingDistanceMap_ = visualizationDistanceMap_;
         singleEditingRegion_ = visualizationRegion_;
-        for ( auto v : singleEditingRegion_ )
+        BitSetParallelFor( singleEditingRegion_, [&]( VertId v )
+        {
             if ( editingDistanceMap_[v] > settings_.radius )
                 singleEditingRegion_.reset( v );
+        } );
     }
     else
     {

@@ -723,29 +723,16 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     {
         editingDistanceMap_ = visualizationDistanceMap_;
         singleEditingRegion_ = visualizationRegion_;
+        for ( auto v : singleEditingRegion_ )
+            if ( editingDistanceMap_[v] > settings_.radius )
+                singleEditingRegion_.reset( v );
     }
     else
     {
-        if ( pointsUnderMouse_.size() == 1 )
-        {
-            // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
-            bool keepOld = settings_.workMode == WorkMode::Patch;
-            updateDistancesAndRegion_( mesh, pointsUnderMouse_, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
-        }
-        else
-        {
-            // if the mouse shift is large (more then one point of movement), then the distance map is calculated from the surface of the mesh
-            // TODO try to rework with SpaceDistance (for multiple point. does not exist, need to create) if it's not slower
-            editingDistanceMap_ = computeSurfaceDistances( mesh, pointsUnderMouse_, settings_.radius * 1.5f ); // why 1.5f?
-            singleEditingRegion_ = mesh.topology.getValidVerts();
-        }
+        bool keepOld = settings_.workMode == WorkMode::Patch;
+        singleEditingRegion_.reset();
+        updateDistancesAndRegion_( mesh, pointsUnderMouse_, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
     }
-    // it is necessary after taking visualizationRegion_, but probably not after updateDistancesAndRegion_
-    BitSetParallelFor( singleEditingRegion_, [&]( VertId v )
-    {
-        if ( editingDistanceMap_[v] > settings_.radius )
-            singleEditingRegion_.reset( v );
-    } );
     singleEditingRegion_ -= unchangeableVerts_;
 }
 

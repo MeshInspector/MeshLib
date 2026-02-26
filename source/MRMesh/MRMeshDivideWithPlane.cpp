@@ -8,7 +8,7 @@
 namespace MR
 {
 
-void divideMeshWithPlane( ObjectMeshData& data, const DivideMeshWithPlaneParams& params )
+void divideMeshWithPlane( ObjectMeshData& data, const Plane3f& plane, const DivideMeshWithPlaneParams& params )
 {
     MR_TIMER;
     if ( !data.mesh )
@@ -80,7 +80,7 @@ void divideMeshWithPlane( ObjectMeshData& data, const DivideMeshWithPlaneParams&
     std::vector<EdgeLoop> otherHoleContours;
 
     trimWithPlane( mesh,
-               { .plane = params.plane, .eps = params.eps, .onEdgeSplitCallback = onEdgeSplitCallback },
+               { .plane = plane, .eps = params.eps, .onEdgeSplitCallback = onEdgeSplitCallback },
                { .outCutContours = params.fillCut ? &holeContours : nullptr,
                .new2Old = needNew2Old ? &new2Old : nullptr,
                .otherPart = otherPartMesh.get(),

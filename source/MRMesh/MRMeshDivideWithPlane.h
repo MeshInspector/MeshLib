@@ -8,9 +8,6 @@ namespace MR
 
 struct DivideMeshWithPlaneParams
 {
-    /// plane used for division
-    Plane3f plane;
-
     /// if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
     float eps{ 0.0f };
 
@@ -27,8 +24,8 @@ struct DivideMeshWithPlaneParams
     std::vector<std::string>* errors{ nullptr };
 };
 
-/// divide mesh data (with attributes) on two parts by given plane
+/// divide mesh \param data (with attributes) on two parts by given \param plane
 /// optionally fills and subdivides cut area
-MRMESH_API void divideMeshWithPlane( ObjectMeshData& mesh, const DivideMeshWithPlaneParams& divideParams );
+MRMESH_API void divideMeshWithPlane( ObjectMeshData& data, const Plane3f& plane, const DivideMeshWithPlaneParams& divideParams = {} );
 
 }

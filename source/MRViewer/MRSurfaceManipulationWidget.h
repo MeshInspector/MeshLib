@@ -1,10 +1,9 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
-#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MREnums.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRViewer/MRViewport.h"
+#include "MRMesh/MRVector2.h"
 #include <chrono>
 
 namespace MR
@@ -52,6 +51,7 @@ public:
         float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
+        VertexMass vmass = VertexMass::Unit; ///< vertex weights for Laplacian and Patch
     };
 
     /// initialize widget according ObjectMesh

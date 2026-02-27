@@ -421,7 +421,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                 },
                 .smoothSeettings =
                 {
-                    .edgeWeights = settings_.edgeWeights
+                    .edgeWeights = settings_.edgeWeights,
+                    .vmass = settings_.vmass
                 }
             };
             settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
@@ -768,7 +769,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertId_ = mesh.getClosestVertex( pick );
     touchVertIniPos_ = mesh.points[touchVertId_];
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
-    laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
+    laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass );
     historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
     createLastStableObjMesh_();

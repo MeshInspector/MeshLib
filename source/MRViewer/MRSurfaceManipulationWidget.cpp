@@ -145,6 +145,7 @@ SurfaceManipulationWidget::~SurfaceManipulationWidget()
 
 void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectMesh )
 {
+    MR_TIMER;
     assert( objectMesh );
     obj_ = objectMesh;
 
@@ -191,6 +192,9 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 
 void SurfaceManipulationWidget::reset()
 {
+    MR_TIMER;
+
+    laplacian_.reset();
     originalMesh_.reset();
 
     removeLastStableObjMesh_();
@@ -762,6 +766,16 @@ void SurfaceManipulationWidget::abortEdit_()
     generalEditingRegion_.clear();
 }
 
+void SurfaceManipulationWidget::initLaplacian_()
+{
+    MR_TIMER;
+    if ( !laplacian_ )
+        laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
+    assert( &laplacian_->topology() == &obj_->varMesh()->topology );
+    assert( &laplacian_->points() == &obj_->varMesh()->points );
+    laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass );
+}
+
 void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
 {
     appendHistoryAction_ = true;
@@ -769,8 +783,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     const auto& mesh = *obj_->mesh();
     touchVertId_ = mesh.getClosestVertex( pick );
     touchVertIniPos_ = mesh.points[touchVertId_];
-    laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
-    laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass );
+    initLaplacian_();
     historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
     createLastStableObjMesh_();

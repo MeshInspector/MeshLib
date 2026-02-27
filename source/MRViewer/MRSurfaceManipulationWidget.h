@@ -67,7 +67,7 @@ public:
     /// get widget settings 
     MRVIEWER_API const Settings& getSettings() { return settings_; }
 
-    /// mimum radius of editing area.
+    /// minimum radius of editing area.
     MRVIEWER_API float getMinRadius() { return minRadius_; }
 
     /// get palette used for visualization point shifts
@@ -125,6 +125,7 @@ protected:
     void invalidateMetricsCache_();
     void abortEdit_();
     /// Laplacian
+    void initLaplacian_(); // for singleEditingRegion_
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 

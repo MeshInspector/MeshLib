@@ -60,6 +60,12 @@ public:
     /// return fixed vertices from the first layer around free vertices
     [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
 
+    /// return the topology for which Laplacian was constructed
+    [[nodiscard]] const MeshTopology & topology() const { return topology_; }
+
+    /// return the vector of coordinates for which Laplacian was constructed
+    [[nodiscard]] VertCoords & points() const { return points_; }
+
 private:
     // updates solver_ only
     void updateSolver_();

@@ -734,7 +734,8 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     {
         bool keepOld = settings_.workMode == WorkMode::Patch;
         singleEditingRegion_.reset();
-        updateDistancesAndRegion_( mesh, pointsUnderMouse_, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
+        if ( !pointsUnderMouse_.empty() )
+            updateDistancesAndRegion_( mesh, pointsUnderMouse_, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
     }
     singleEditingRegion_ -= unchangeableVerts_;
 }

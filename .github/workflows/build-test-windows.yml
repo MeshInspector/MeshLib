@@ -46,6 +46,7 @@ jobs:
     env:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
 
     steps:
       - name: Checkout
@@ -103,8 +104,6 @@ jobs:
           aws-region: us-east-1
 
       - name: Update vcpkg packages
-        env:
-          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
         run: |
           .\thirdparty\install.bat --write-s3
 

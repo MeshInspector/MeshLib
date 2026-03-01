@@ -18,18 +18,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - triplet: x64-windows-meshlib
+          - vcpkg_triplet: x64-windows-meshlib
             extract_release: MREDist_Release.zip
             extract_debug: MREDist_Debug.zip
             output_zip: MeshLibDist.zip
             artifact_name: DistributivesWin
-          - triplet: x64-windows-meshlib-iterator-debug
+          - vcpkg_triplet: x64-windows-meshlib-iterator-debug
             extract_release: MREDist_Release-IteratorDebug.zip
             extract_debug: MREDist_Debug-IteratorDebug.zip
             output_zip: MeshLibDist-IteratorDebug.zip
             artifact_name: DistributivesWin-IteratorDebug
     env:
       vs19_vcpkg_version: ${{ inputs.vs19_vcpkg_version }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -51,8 +52,6 @@ jobs:
             C:\vcpkg\*
 
       - name: Update vcpkg packages
-        env:
-          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
         run: |
           .\thirdparty\install.bat
 

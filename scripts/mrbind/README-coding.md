@@ -63,13 +63,13 @@ Solutions that are **not** recommended:
 
 ## Adding new things only to the bindings
 
-### Aliases
+### Python aliases
 
 You can add Python aliases for functions, classes, and even non-static class members.
 
 Add them to [`scripts/mrbind/aliases.cpp`](./aliases.cpp).
 
-### Helper functions
+### Python helper functions
 
 You can add extra C++ functions to the bindings by adding them to [`scripts/mrbind/helpers.cpp`](./helpers.cpp).
 
@@ -115,6 +115,158 @@ Function parameters, return values, and class fields of pointer types are assume
 Eventually we want to support `std::span`, but for now use `std::vector` and `std::array` to pass arrays.
 
 Note that function parameters that look like arrays: `void foo(int a[42])` (or `[]` without size) are actually pointers in C++, equivalent to `void foo(int *a)`.
+
+## Lifetime annotations / keep-alive
+
+If you're storing raw pointers or references in your classes, you have the risk of them dangling. Either due to user error, or in C# due to the compiler destroying local variables too early, incorrectly assuming that they aren't needed anymore.
+
+To solve this, each C# and Python object stores a list of other C#/Python objects that it needs to "keep alive".
+
+To automatically fill those lists, functions need to be annotated with special macros, to indicate the relationships between the parameters, `this`, and the return value: which references get stored where, etc.
+
+Some (but not all) of those macros also help Clang emit useful warnings.
+
+The annotations are deduced automatically for:
+
+* Constructors taking references (we assume the resulting object stores that reference), other than copy/move constructors.
+
+  This also happens for the implicitly generated constructors of aggregate types (structs that don't have custom constructors and are initialized with a list of their elements).
+
+* Iterators: `begin()`/`end()`/`operator*`.
+
+* The handwritten custom bindings, such as those for the standard containers.
+
+The annotations need to be specified manually for any function that does any of the following:
+
+* Returns a class reference (unless it refers to a global variable).
+
+* Takes a class reference and stores it somewhere (perhaps in `this` or in another parameter).
+
+Raw pointers need the same treatment as references. Classes storing references or raw pointers also need the same treatment, even if passed around by value.
+
+In particular, custom containers like `MR::Vector` need those annotations on some of their methods. E.g. when inserting an object into a container, the original C#/Python object is lost, and its keep-alive list is lost with it, unless the `push_back()` function of the container is annotated to copy the element (or its list) into the list of the container itself.
+
+The annotations will be silently ignored if applied to an incorrect type, which is convenient in templates. E.g. `MR::Vector<int>` will ignore all the annotations, but `MR::Vector<MR::Mesh>` will benefit from them.
+
+Forgetting to specify those might not cause any issues for a while, and then blow up when the C# compiler feels like optimizing out your variables.
+
+### How to annotate the functions?
+
+For each function, the annotations are stored internally as a list of pairs `(a, b)`, and for each pair we do `a._KeepAlive.push_back(b)` (where `_KeepAlive` is the hidden keep-alive list in `a`).
+
+`a` and `b` can be any of:
+
+* Any function parameter.
+* `this`
+* The return value (only allowed for `a`, not `b`).
+
+To add a pair, you must add a macro to `b`, and which macro to add depends on `a`. Include `<MRMesh/MRMacros.h>` to get access to the macros.
+
+E.g. when `a` is the return value, the macro is `MR_LIFETIMEBOUND`:
+
+* If `b` is a parameter, the macro must be added right after the parameter name:
+
+  ```cpp
+  MR::Mesh& foo( MR::Mesh& m MR_LIFETIMEBOUND )
+  {
+      return m;
+  }
+
+  MR::Mesh& bar( MR::Mesh& m1 MR_LIFETIMEBOUND, MR::Mesh& m2 MR_LIFETIMEBOUND )
+  {
+      if (...)
+          return m1;
+      else
+          return m2;
+  }
+  ```
+* If `b` is `this`, the macro must be added after the method parameter list: (and after `const` if any)
+  ```cpp
+  struct A
+  {
+      MR::Mesh m;
+
+            MR::Mesh& getMesh()       MR_LIFETIMEBOUND { return m; }
+      const MR::Mesh& getMesh() const MR_LIFETIMEBOUND { return m; }
+  }
+  ```
+
+When `a` is a function parameter or `this`, the macro is `MR_LIFETIME_CAPTURE_BY(a)` (where `a` is that parameter name or `this`). And if `b` is `this`, you must use `MR_THIS_LIFETIME_CAPTURE_BY(a)` instead. E.g.:
+
+```cpp
+struct A
+{
+    MR::Mesh& mesh;
+};
+
+void foo( MR::Mesh& mesh MR_LIFETIME_CAPTURE_BY(vec), std::vector<A> &vec )
+{
+    vec.push_back( A{mesh} );
+}
+
+struct B
+{
+    std::vector<A> vec;
+
+    void add( MR::Mesh& mesh MR_LIFETIME_CAPTURE_BY(this) )
+    {
+        vec.add( A{mesh} );
+    }
+}
+
+struct C
+{
+    struct Ptr
+    {
+        C *c;
+    };
+
+    void bar(Ptr &ptr) MR_THIS_LIFETIME_CAPTURE_BY(ptr)
+    {
+        ptr.c = this;
+    }
+};
+```
+
+Incorrectly adding or not adding `THIS_` triggers an error, so you won't miss it.
+
+The macros also exist in the `..._NESTED` variants. Those are used when you're not storing a reference to the object, but are instead copying it, but the copied object might store references to something else, so you want to copy the contents of its keep-alive list into the keep-alive list of your object. This is necessary e.g. for `MR::Vector<T>::push_back()`. For example:
+
+```cpp
+struct A
+{
+    MR::Mesh& mesh;
+};
+
+struct VecA
+{
+    std::vector<A> vec;
+
+    void push_back( MR::Mesh& mesh MR_LIFETIME_CAPTURE_BY(this) )
+    {
+        vec.push_back( A{mesh} );
+    }
+
+    void push_back( A a MR_LIFETIME_CAPTURE_BY_NESTED(this) ) // Same for references to `A` as well.
+    {
+        vec.push_back( A{mesh} );
+    }
+
+    A& get_a() MR_LIFETIMEBOUND
+    {
+        return vec.front();
+    }
+
+    MR::Mesh& get_mesh() MR_THIS_LIFETIMEBOUND_NESTED
+    {
+        return vec.front().mesh;
+    }
+};
+```
+
+Notice that `MR_LIFETIMEBOUND_NESTED` and `MR_LIFETIME_CAPTURE_BY[_NESTED]` all have a `THIS` variant (you'll get an error if you incorrectly add or don't add `THIS`), but `MR_LIFETIMEBOUND` doesn't (it works in both places with the same syntax). This is sadly a technical limitation. (We could add `MR_THIS_LIFETIMEBOUND` with the same contents as `MR_LIFETIMEBOUND`, but there's no point.)
+
+At the time of writing, all those annotations only affect C#, but they will be eventually ported to Python bindings too.
 
 ## How the C++ templates have to be written
 
@@ -176,9 +328,9 @@ This is better than making `template <typename T> A operator+(A, A) {...}` a fre
 
 This is a good practice in C++ anyway, because the friends can only be reached via ADL, meaning the compiler has to search through less functions.
 
-## Missing bindings for `std::` classes and more
+## Missing bindings for `std::` classes and more in Python
 
-There's a rare quirk that will sometimes happen.
+There's a rare quirk that will sometimes happen to the Python bindings
 
 Let's say you use `std::vector<std::vector<Blah>>` somewhere (e.g. as a function parameter). What can happen is that the binding for this type will be generated, but the one for `std::vector<Blah>` won't, rendering the generated one unusable and triggering Stubgen errors (`Invalid expression`, etc).
 

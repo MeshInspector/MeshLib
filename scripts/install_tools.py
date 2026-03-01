@@ -11,7 +11,7 @@ path_to_sources = ''
 path_to_copyright_header = ''
 path_to_objects = ''
 
-include_extensions = ['.h','.hpp','.cuh','.ipp','']
+include_extensions = ['.h','.hpp','.cuh','.ipp','.inc','']
 lib_extentions = ['.lib','.pdb']
 includes_src_dst = list()
 includes_src_dst_thirdparty = list()

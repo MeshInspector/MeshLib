@@ -3,6 +3,7 @@
 #include "MRVector3.h"
 #include "MRIntersectionPrecomputes.h"
 #include "MRTriPoint.h"
+#include "MRTriMath.h"
 #include "MRLineSegm.h"
 
 #include <algorithm>
@@ -27,14 +28,56 @@ struct TriIntersectResult
     }
 };
 
+/// given triangle ABC, rotates its vertices to make
+/// segment AB the longest on exit
+template <typename T>
+void rotateToLongestEdge( Vector3<T>& a, Vector3<T>& b, Vector3<T>& c )
+{
+    const auto ab2 = distanceSq( a, b );
+    const auto bc2 = distanceSq( b, c );
+    const auto ca2 = distanceSq( c, a );
+    if ( ab2 >= bc2 && ab2 >= ca2 )
+        return;
+
+    if ( bc2 >= ca2 )
+    {
+        assert( bc2 >= ab2 );
+        auto t = a;
+        a = b;
+        b = c;
+        c = t;
+        return;
+    }
+
+    assert( ca2 >= ab2 );
+    assert( ca2 >= bc2 );
+    auto t = a;
+    a = c;
+    c = b;
+    b = t;
+}
+
 /// checks whether triangles ABC and DEF intersect
-/// returns false if ABC and DEF are coplanar
+/// returns false if ABC and DEF are coplanar;
+/// due to floating-point errors inside, the result can be wrong in case of various degenerations of input triangles,
+/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors
 template <typename T>
 bool doTrianglesIntersect(
     Vector3<T> a, Vector3<T> b, Vector3<T> c,
     Vector3<T> d, Vector3<T> e, Vector3<T> f
 )
 {
+    if ( dirDblArea( a, b, c ) == Vector3<T>{} ) // triangle ABC is degenerate
+    {
+        rotateToLongestEdge( a, b, c );
+        return doTriangleSegmentIntersect( d, e, f, a, b );
+    }
+    if ( dirDblArea( d, e, f ) == Vector3<T>{} ) // triangle DEF is degenerate
+    {
+        rotateToLongestEdge( d, e, f );
+        return doTriangleSegmentIntersect( a, b, c, d, e );
+    }
+
     const auto abcd = mixed( a - d, b - d, c - d );
     const auto abce = mixed( a - e, b - e, c - e );
     const auto abcf = mixed( a - f, b - f, c - f );
@@ -222,7 +265,9 @@ bool doesEdgeXySeparate(
 }
 
 /// checks whether triangles ABC and DEF intersect;
-/// performs more checks to avoid false positives of simple doTrianglesIntersect
+/// it is designed to resolve false positives from \ref doTrianglesIntersect function
+/// when two triangles are far apart but in one plane;
+/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors
 template <typename T>
 bool doTrianglesIntersectExt(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,

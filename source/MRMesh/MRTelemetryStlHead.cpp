@@ -4,27 +4,35 @@ namespace MR
 {
 
 /// removes white spaces, meaningless or case-specific information from a comment line, then calls telemetry signal
-void telemetryStlHead( std::string s )
+void telemetryStlHead( const char* prefix, std::string s )
 {
     while ( !s.empty() && ( s.back() == ' ' || s.back() == '\t' || s.back() == '\r' || s.back() == '\n' ) )
         s.pop_back();
     while ( !s.empty() && ( s.front() == ' ' || s.front() == '\t' || s.front() == '\r' || s.front() == '\n' ) )
         s = s.substr( 1 );
 
-    // replace specific color with underscores
     const char COLOR[] = "COLOR=";
     static_assert( sizeof( COLOR ) == 7 );
-    auto n = s.find( COLOR );
-    if ( n != std::string::npos && n + sizeof( COLOR )-1 + 4 <= s.size() )
+    if ( s.starts_with( COLOR ) )
     {
-        n += sizeof( COLOR )-1;
-        for ( int i = 0; i < 4; ++i, ++n )
-            s[n] = '_';
+        // the size can be arbitrary with some not-printable characters after
+        s.resize( sizeof( COLOR ) - 1 );
+    }
+    else
+    {
+        // replace specific color with underscores
+        auto n = s.find( COLOR );
+        if ( n != std::string::npos && n + sizeof( COLOR )-1 + 4 <= s.size() )
+        {
+            n += sizeof( COLOR )-1;
+            for ( int i = 0; i < 4; ++i, ++n )
+                s[n] = '_';
+        }
     }
 
     // replace specific material colors with underscores
     const char MATERIAL[] = "MATERIAL=";
-    n = s.find( COLOR );
+    auto n = s.find( COLOR );
     if ( n != std::string::npos && n + sizeof( MATERIAL )-1 + 12 <= s.size() )
     {
         n += sizeof( MATERIAL )-1;
@@ -47,9 +55,25 @@ void telemetryStlHead( std::string s )
     if ( s.starts_with( STLEXP ) )
         s.resize( sizeof( STLEXP ) - 2 );
 
+    // e.g. "$objname"
+    if ( s.starts_with( "$" ) )
+        s = "$objname";
+
+    // e.g. "\"objname\""
+    if ( s.size() >= 2 && s.front() == '"' && s.back() == '"' )
+        s = "\"objname\"";
+
     // e.g. "objname.stl"
     if ( s.ends_with( ".stl" ) )
         s = "objname.stl";
+
+    // e.g. "objname.stl (spaces) COLOR=____"
+    if ( s.size() == 80 && s.substr( 70, sizeof( COLOR ) - 1 ) == COLOR )
+    {
+        n = s.find( ".stl " );
+        if ( n != std::string::npos )
+            s = "objname.stl COLOR=____";
+    }
 
     // e.g. 'SketchUp STL tmpHEPDHM'
     const char SKETCHUP[] = "SketchUp STL ";
@@ -91,12 +115,32 @@ void telemetryStlHead( std::string s )
     if ( s.starts_with( TOPOMILLER ) )
         s.resize( sizeof( TOPOMILLER ) - 2 );
 
+    // e.g. 'STL EXPORTED BY IDEAMAKER. 14-02-2026 22:21:37'
+    const char IDEAMAKER[] = "STL EXPORTED BY IDEAMAKER. ";
+    if ( s.starts_with( IDEAMAKER ) )
+        s.resize( sizeof( IDEAMAKER ) - 2 );
+
+    // e.g. 'SOLID RELIEF MANIFOLD - 20260211-235703'
+    const char RELIEF[] = "SOLID RELIEF MANIFOLD - ";
+    if ( s.starts_with( RELIEF ) )
+        s.resize( sizeof( RELIEF ) - 2 );
+
+    // e.g. 'Created by stlwrite.m 29-Apr-2022 07:10:05'
+    const char STLWRITE_M[] = "Created by stlwrite.m ";
+    if ( s.starts_with( STLWRITE_M ) )
+        s.resize( sizeof( STLWRITE_M ) - 2 );
+
+    // e.g. '# STL binary facet file Clip.stl, v. 18.0, made 18:03, Jan 07, 2018'
+    const char FACET_FILE[] = "# STL binary facet file ";
+    if ( s.starts_with( FACET_FILE ) )
+        s.resize( sizeof( FACET_FILE ) - 2 );
+
     // e.g. "numpy-stl (3.0.0) 2026-01-05 14:46:07.404027 tmphpyx9npt.stl"
     const char NUMPY[] = "numpy-stl (";
     if ( s.starts_with( NUMPY ) )
         s = s.substr( 0, s.find_first_of( ' ', sizeof( NUMPY ) ) ); // till the space after version
 
-    TelemetrySignal( "STL head " + s );
+    TelemetrySignal( prefix + s );
 }
 
 } //namespace MR

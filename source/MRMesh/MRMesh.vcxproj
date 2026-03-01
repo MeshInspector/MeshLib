@@ -143,6 +143,7 @@
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshOrPointsObject.h" />
     <ClInclude Include="MRMeshDoubleLayer.h" />
+    <ClInclude Include="MRMeshPatch.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
@@ -241,6 +242,7 @@
     <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
+    <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
     <ClInclude Include="MRSolarRadiation.h" />
@@ -452,6 +454,7 @@
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
+    <ClCompile Include="MRMeshPatch.cpp" />
     <ClCompile Include="MRMeshSave3mf.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROneMeshContours.cpp" />
@@ -667,6 +670,7 @@
     <ClCompile Include="MRTerrainTriangulation.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
+    <ClCompile Include="MRTwoLineSegmDist.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
     <ClCompile Include="MRQuadraticForm.cpp" />

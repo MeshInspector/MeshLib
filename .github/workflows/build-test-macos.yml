@@ -275,6 +275,7 @@ jobs:
           source ./wheel_venv/bin/activate
           python3 -m pip install delocate==0.10.7
           python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.dylib" "./patched_content/"
+          ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/libMeshLibC2.dylib
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}

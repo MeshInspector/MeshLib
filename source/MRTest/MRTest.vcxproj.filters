@@ -13,7 +13,7 @@
     <ClCompile Include="MRTestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRTriangleIntersection.cpp">
+    <ClCompile Include="MRTriangleIntersectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRZlib.cpp">
@@ -167,6 +167,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRContourTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAABBTreeTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

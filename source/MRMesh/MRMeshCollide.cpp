@@ -6,6 +6,7 @@
 #include "MREnums.h"
 #include "MRTimer.h"
 #include "MRTriMath.h"
+#include "MRTriDist.h"
 #include "MRExpected.h"
 #include "MRProcessSelfTreeSubtasks.h"
 
@@ -279,22 +280,10 @@ Expected<bool> findSelfCollidingTriangles(
                             // else not touching
                         }
                     }
-                    else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
+                    else if ( auto td = findTriTriDistance( { ap[0], ap[1], ap[2] }, { bp[0], bp[1], bp[2] }, { .upDistLimitSq = 0, .upLimitCheck = touchIsIntersection ? UpLimitCheck::Greater : UpLimitCheck::GreaterOrEqual } );
+                        td.distSq > 0 || ( !touchIsIntersection && !td.overlap ) )
                     {
-                        if ( !touchIsIntersection )
-                            return Processing::Continue;
-                        // check touching too
-                        bool touching = false;
-                        for ( int i = 0; i < 3; ++i )
-                        {
-                            if ( isPointInTriangle( ap[i], bp[0], bp[1], bp[2] ) || isPointInTriangle( bp[i], ap[0], ap[1], ap[2] ) )
-                            {
-                                touching = true;
-                                break;
-                            }
-                        }
-                        if ( !touching )
-                            return Processing::Continue;
+                        return Processing::Continue;
                     }
                     myRes.emplace_back( aFace, bFace );
                     if ( !outCollidingPairs )

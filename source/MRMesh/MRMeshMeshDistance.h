@@ -31,7 +31,7 @@ struct MeshMeshSignedDistanceResult
 /**
  * \brief computes minimal distance between two meshes or two mesh regions
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid points
  */
 MRMESH_API MeshMeshDistanceResult findDistance( const MeshPart & a, const MeshPart & b,
     const AffineXf3f * rigidB2A = nullptr, float upDistLimitSq = FLT_MAX );
@@ -39,7 +39,7 @@ MRMESH_API MeshMeshDistanceResult findDistance( const MeshPart & a, const MeshPa
 /**
  * \brief computes minimal distance between two meshes
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param upDistLimitSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
+ * \param upDistLimitSq upper limit on the positive distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid points
  */
 MRMESH_API MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b,
     const AffineXf3f* rigidB2A = nullptr, float upDistLimitSq = FLT_MAX );

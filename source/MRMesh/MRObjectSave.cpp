@@ -243,7 +243,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     if ( preCompress )
         preCompress( scenePath );
 
-    return compressZip( path, scenePath, {}, nullptr, subprogress( settings.progress, 0.9f, 1.0f ) );
+    return compressZip( path, scenePath, { .cb = subprogress( settings.progress, 0.9f, 1.0f ) } );
 }
 
 Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path, const ObjectSave::Settings& settings )

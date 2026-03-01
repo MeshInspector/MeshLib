@@ -34,6 +34,7 @@
 #include "MRMesh/MRPointsProject.h"
 #include "MRMesh/MRProjectionMeshAttribute.h"
 #include "MRMesh/MRChangeMeshDataAction.h"
+#include "MRMesh/MRMeshPatch.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -365,6 +366,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.workMode == WorkMode::Laplacian )
     {
         removeLastStableObjMesh_();
+        invalidateMetricsCache_();
         return true;
     }
 
@@ -388,47 +390,40 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
             FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;
-            UndirectedEdgeBitSet newEdgeSelection = obj_->getSelectedEdges() - getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
-            auto bds = delRegionKeepBd( *newMesh, delFaces );
-            const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
-            for ( const auto & bd : bds )
-            {
-                if ( bd.empty() )
-                    continue;
-                // assert( isHoleBd( mesh.topology, bd ) ) can probably fail due to different construction of loops,
-                // so we check every edge of every loop below
-                const auto len = calcPathLength( bd, *newMesh );
-                const auto avgLen = len / bd.size();
-                FillHoleNicelySettings settings
-                {
-                    .triangulateParams =
-                    {
-                        .metric = getUniversalMetric( *newMesh ),
-                        .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
-                    },
-                    .maxEdgeLen = 2 * (float)avgLen,
-                    .edgeWeights = settings_.edgeWeights
-                };
-                settings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
-                {
-                    if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
-                        newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
-                    if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
-                        newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
-                    // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
-                    if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
-                         unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
-                        unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
-                };
-                for ( auto e : bd )
-                    if ( !newMesh->topology.left( e ) )
-                        fillHoleNicely( *newMesh, e, settings );
-            }
+            const auto delEdges = getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
+            UndirectedEdgeBitSet newEdgeSelection = obj_->getSelectedEdges() - delEdges;
+            UndirectedEdgeBitSet newCreases = obj_->creases() - delEdges;
 
-            if ( newFaceSelection != obj_->getSelectedFaces() )
-                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Face Selection", obj_, std::move( newFaceSelection ) );
-            if ( newEdgeSelection != obj_->getSelectedEdges() )
-                AppendHistory<ChangeMeshEdgeSelectionAction>( "Change Edge Selection", obj_, std::move( newEdgeSelection ) );
+            FillHoleNicelySettings settings
+            {
+                .triangulateParams =
+                {
+                    .metric = getUniversalMetric( *newMesh ),
+                    .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
+                },
+                .subdivideSettings =
+                {
+                    .maxEdgeLen = 0.0f // to use 'patchMesh' default
+                },
+                .smoothSeettings =
+                {
+                    .edgeWeights = settings_.edgeWeights
+                }
+            };
+            settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+            {
+                if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
+                    newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
+                if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
+                    newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
+                // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
+                if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
+                     unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
+                    unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
+            };
+
+            const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
+            patchMesh( *newMesh, delFaces, settings );
 
             // newFaces include both faces inside the patch and subdivided faces around
             const FaceBitSet newFaces = newMesh->topology.getValidFaces() - oldFaces;
@@ -437,6 +432,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             auto projRes = projectObjectMeshData( obj_->data(), newMeshData, &newFaces );
             if ( projRes.has_value() )
             {
+                newMeshData.selectedFaces = std::move( newFaceSelection );
+                newMeshData.selectedEdges = std::move( newEdgeSelection );
+                newMeshData.creases = std::move( newCreases );
                 appendMeshDataChangeHistory_( std::move( newMeshData ), newFaces );
             }
             else
@@ -792,6 +790,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
 
 void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
 {
+    obj_->varMesh()->invalidateCaches();
     ownMeshChangedSignal_ = true;
     auto& viewerRef = getViewerInstance();
     const float zpos = viewerRef.viewport().projectToViewportSpace( obj_->worldXf()( touchVertIniPos_ ) ).z;
@@ -802,7 +801,7 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
     const Vector3f move = obj_->worldXf().A.inverse()* ( pos1 - pos0 );
     laplacian_->fixVertex( touchVertId_, touchVertIniPos_ + move );
     laplacian_->apply();
-    obj_->setDirtyFlags( DIRTY_POSITION );
+    obj_->setDirtyFlagsFast( DIRTY_POSITION );
     updateValueChanges_( singleEditingRegion_ );
 }
 

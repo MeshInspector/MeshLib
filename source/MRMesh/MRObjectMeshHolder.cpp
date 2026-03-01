@@ -741,10 +741,12 @@ size_t ObjectMeshHolder::numHandles() const
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
     invalidateMetricsCache( mask );
-    setDirtyFlagsFast( mask );
 
     if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
         data_.mesh->invalidateCaches();
+
+    // must be after data_.mesh->invalidateCaches(); for the subscribers of meshChangedSignal
+    setDirtyFlagsFast( mask );
 }
 
 void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
@@ -784,14 +786,7 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
     data_.creases = std::move( creases );
     numCreaseEdges_.reset();
     creasesChangedSignal();
-    if ( data_.creases.any() )
-    {
-        setDirtyFlags( DIRTY_CORNERS_RENDER_NORMAL );
-    }
-    else
-    {
-        setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
-    }
+    setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
 }
 
 void ObjectMeshHolder::swapBase_( Object& other )

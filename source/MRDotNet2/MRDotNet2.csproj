@@ -8,12 +8,14 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <BaseOutputPath>..\..\source\x64</BaseOutputPath>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
 
     <!-- Suppressed warnings:
         CS0661 - Missing `GetHashCode()` override when a custom `==` is provided.
         CS0659 - Missing `GetHashCode()` override when a custom `Equals(object)` is provided. (We add this automatically along with `==`, since skipping it causes a warning too.)
+        1591 - Missing comments
     -->
-    <NoWarn>CS0659;CS0661</NoWarn>
+    <NoWarn>CS0659;CS0661;1591</NoWarn>
   </PropertyGroup>
 
 </Project>

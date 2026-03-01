@@ -5,6 +5,7 @@
       "config": "Release",
       "build_system": "CMake",
       "vcpkg-version": "__VCPKG_VERSION_VS19__",
+      "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
       "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
       "CUDA-VERSION": "11.4.2.47141",
@@ -17,6 +18,7 @@
       "config": "Debug",
       "build_system": "MSBuild",
       "vcpkg-version": "__VCPKG_VERSION_VS22__",
+      "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
       "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
       "CUDA-VERSION": "12.0.1.52833",
@@ -29,12 +31,41 @@
       "config": "Release",
       "build_system": "CMake",
       "vcpkg-version": "__VCPKG_VERSION_VS22__",
+      "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
       "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
       "CUDA-VERSION": "12.0.1.52833",
       "CUDA-MAJOR": "12",
       "CUDA-MINOR": "0",
       "test_artifacts_path": "windows/windows-2022/Debug"
+    },
+    {
+      "cxx_compiler": "msvc-2019",
+      "config": "Debug",
+      "build_system": "CMake",
+      "vcpkg-version": "__VCPKG_VERSION_VS19__",
+      "vcpkg_triplet": "x64-windows-meshlib-iterator-debug",
+      "upload_name": "Debug-IteratorDebug",
+      "runner": ["windows-2025"],
+      "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
+      "CUDA-VERSION": "11.4.2.47141",
+      "CUDA-MAJOR": "11",
+      "CUDA-MINOR": "4",
+      "test_artifacts_path": "windows/windows-2019/Debug-IteratorDebug"
+    },
+    {
+      "cxx_compiler": "msvc-2019",
+      "config": "Release",
+      "build_system": "CMake",
+      "vcpkg-version": "__VCPKG_VERSION_VS19__",
+      "vcpkg_triplet": "x64-windows-meshlib-iterator-debug",
+      "upload_name": "Release-IteratorDebug",
+      "runner": ["windows-2025"],
+      "vc-path": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
+      "CUDA-VERSION": "11.4.2.47141",
+      "CUDA-MAJOR": "11",
+      "CUDA-MINOR": "4",
+      "test_artifacts_path": "windows/windows-2019/Release-IteratorDebug"
     }
   ]
 }

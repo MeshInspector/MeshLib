@@ -158,6 +158,12 @@ jobs:
           install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
+      - name: Install gettext utilities
+        if: ${{ inputs.upload_artifacts }}
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm mingw-w64-clang-x86_64-gettext-tools
+
       - name: Install Clang in MSYS2
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: msys2 {0}
@@ -231,6 +237,13 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
+
+      - name: Compile translations
+        if: ${{ inputs.upload_artifacts && matrix.build_system == 'MSBuild' }}
+        env:
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\msys64\clang64
+        run:
+          py -3 scripts\gettext\win_compile_translations.py .\locale\ .\source\x64\${{ matrix.config }}\locale\
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

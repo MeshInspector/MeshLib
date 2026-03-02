@@ -169,7 +169,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Timing_Logs_linux-vcpkg-${{ matrix.arch }}_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
@@ -248,7 +248,7 @@ jobs:
 
       - name: Upload vcpkg Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Distributives_linux-vcpkg-${{ matrix.arch }}
           path: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
@@ -274,7 +274,7 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveLinux-${{ matrix.arch }}
           path: ./patched_content/*

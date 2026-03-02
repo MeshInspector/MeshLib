@@ -629,9 +629,17 @@ void SurfaceManipulationWidget::changeSurface_()
     normal = normal.normalized();
 
     obj_->varMesh()->invalidateCaches();
-    auto& points = obj_->varMesh()->points;
-
     const float maxShift = settings_.editForce;
+
+    initLaplacian_();
+    for ( const auto& p : pointsUnderMouse_ )
+    {
+        laplacian_->addAttractor( { p, Vector3d( mesh.triPoint( p ) + normal * maxShift ), 1. / settings_.radius } );
+    }
+    laplacian_->apply();
+
+/*    auto& points = obj_->varMesh()->points;
+
     const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
@@ -649,7 +657,7 @@ void SurfaceManipulationWidget::changeSurface_()
         else
             return;
         points[v] += direction * pointShift * normal;
-    } );
+    } );*/
     generalEditingRegion_ |= singleEditingRegion_;
     changedRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );

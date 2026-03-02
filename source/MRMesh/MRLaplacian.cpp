@@ -211,7 +211,6 @@ void Laplacian::updateSolver_()
         {
             if ( vs[i].weight == 0 )
                 continue;
-            assert( region_.test( vs[i].v ) );
             auto vid = freeVert2id_[vs[i].v];
             if ( vid < 0 )
                 continue;
@@ -282,7 +281,6 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p )
         {
             if ( vs[i].weight == 0 )
                 continue;
-            assert( region_.test( vs[i].v ) );
             if ( freeVerts_.test( vs[i].v ) )
                 anyFreeVert = true;
             else

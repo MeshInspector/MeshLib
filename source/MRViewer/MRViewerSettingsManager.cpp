@@ -4,6 +4,7 @@
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
+#include "MRLocale.h"
 #include "MRRibbonMenu.h"
 #include "MRToolbar.h"
 #include "MRSpaceMouseHandlerHidapi.h"
@@ -77,6 +78,7 @@ const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
 const std::string cVisualObjectTags = "visualObjectTags";
+const std::string cLanguage = "language";
 }
 
 namespace Defaults
@@ -541,6 +543,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         auto& manager = VisualObjectTagManager::instance();
         deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
     }
+
+    if ( cfg.hasJsonValue( cLanguage ) )
+    {
+        const auto lang = cfg.getJsonValue( cLanguage ).asString();
+        Locale::set( lang.c_str() );
+    }
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -695,6 +703,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         serializeToJson( manager, visualObjectTagsJson );
         cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
+
+    cfg.setJsonValue( cLanguage, Locale::getName() );
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

@@ -1,6 +1,7 @@
 project(MRViewer CXX)
 
 option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux)" OFF)
+option(MRVIEWER_NO_LOCALE "Disable i18n support" OFF)
 option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
 option(MRVIEWER_NO_XDG_DESKTOP_PORTAL "Disable XDG Desktop Portal support (affects file dialog support on Linux)" OFF)
 option(MRVIEWER_WITH_BUNDLED_CURL "Link with cURL for extra functions required for portable Linux builds" OFF)
@@ -99,6 +100,11 @@ ENDIF()
 
 IF(NOT MRVIEWER_NO_VOXELS)
   target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
+ENDIF()
+
+IF(NOT MRVIEWER_NO_LOCALE)
+  find_package(Boost COMPONENTS locale REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Boost::locale)
 ENDIF()
 
 IF(MR_PCH)

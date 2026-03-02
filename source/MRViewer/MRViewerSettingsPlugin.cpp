@@ -38,18 +38,22 @@
 #include "MRViewerConfigConstants.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
+#include "MRLocale.h"
+#include "MRRibbonFontHolder.h"
 
 namespace
 {
+using namespace MR;
+
 const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
 {
     constexpr std::array<const char*, size_t( MR::ViewerSettingsPlugin::TabType::Count )> tabNames{
-        "Quick",
-        "Application",
-        "Control",
-        "3D View",
-        "Units",
-        "Features",
+        _t( "ViewerSettingsPlugin", "Quick" ),
+        _t( "ViewerSettingsPlugin", "Application" ),
+        _t( "ViewerSettingsPlugin", "Control" ),
+        _t( "ViewerSettingsPlugin", "3D View" ),
+        _t( "ViewerSettingsPlugin", "Units" ),
+        _t( "ViewerSettingsPlugin", "Features" ),
     };
     return tabNames[int( tab )];
 }
@@ -103,7 +107,7 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
             }
             auto tab = TabType( i );
             bool neetToSelect = orderedTab_ == tab;
-            if ( UI::beginTabItem( getViewerSettingTabName( tab ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
+            if ( UI::beginTabItem( _tr( "ViewerSettingsPlugin", getViewerSettingTabName( tab ) ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
             {
                 if ( neetToSelect )
                     orderedTab_ = TabType::Count;
@@ -241,7 +245,9 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     if ( !ribbonMenu )
         return;
 
-    drawSeparator_( "General" );
+    drawSeparator_( _tr( "General" ) );
+
+    drawLanguageSelector_();
 
     drawThemeSelector_();
 
@@ -278,7 +284,9 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         return;
     const float btnHalfSizeX = 168.0f * UI::scale();
 
-    drawSeparator_( "Interface" );
+    drawSeparator_( _tr( "Interface" ) );
+
+    drawLanguageSelector_();
 
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
@@ -896,6 +904,41 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
     }
 }
 
+void ViewerSettingsPlugin::drawLanguageSelector_()
+{
+    if ( !viewer->experimentalFeatures )
+        return;
+
+    static const auto sLanguages = Locale::getAvailableLocales();
+    static const auto sLanguageNames = [] ( const auto& languages )
+    {
+        auto results = languages;
+        for ( auto& locale : results )
+            locale = Locale::getDisplayName( locale.c_str() );
+        return results;
+    } ( sLanguages );
+
+    if ( selectedLanguage_ < 0 )
+    {
+        auto it = std::find( sLanguages.begin(), sLanguages.end(), Locale::getName() );
+        if ( it == sLanguages.end() )
+        {
+            it = std::find( sLanguages.begin(), sLanguages.end(), "en" );
+            assert( it != sLanguages.end() );
+        }
+        selectedLanguage_ = (int)std::distance( sLanguages.begin(), it );
+    }
+
+    ImGui::SetNextItemWidth( 200.0f * UI::scale() );
+    if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguageNames ) )
+        Locale::set( sLanguages[selectedLanguage_].c_str() );
+
+    ImGui::SameLine();
+    RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );
+    ImGui::Text( "" );
+    icons.popFont();
+}
+
 void ViewerSettingsPlugin::drawThemeSelector_()
 {
     const auto& style = ImGui::GetStyle();
@@ -903,7 +946,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( "Color Theme", &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( _tr( "Color Theme" ), &selectedUserPreset_, userThemesPresets_ );
     ImGui::PopStyleVar();
     if ( selectedUserPreset_ != selectedUserIdxBackup )
     {
@@ -931,7 +974,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     if ( item != RibbonSchemaHolder::schema().items.end() )
     {
         ImGui::SameLine( 300.0f * UI::scale() );
-        if ( UI::button( "Add",
+        if ( UI::button( _tr( "Add" ),
             item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
             Vector2f( 50.0f * UI::scale(), 0 ) ) )
         {
@@ -1146,7 +1189,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             keysListWithAlt += ", ";
         keysListWithAlt += MouseController::getControlString( ctrlAlt );
     }
-    UI::transparentTextWrapped( "Camera controls can also be used with %s", getAltModName() );
+    // TRANSLATORS: %s is substituted with Alt/Option depending on the platform.
+    UI::transparentTextWrapped( _tr( "Camera controls can also be used with %s" ), getAltModName() );
     if ( !keysListWithAlt.empty() )
         UI::setTooltipIfHovered( keysListWithAlt );
 }

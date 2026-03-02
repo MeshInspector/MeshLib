@@ -121,6 +121,23 @@ void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth )
     fixVertex( v, smooth );
 }
 
+void Laplacian::addAttractor( const Attractor& a )
+{
+    assert( a.weight > 0 );
+    rhsValid_ = false;
+    solverValid_ = false;
+    attractors_.push_back( a );
+}
+
+void Laplacian::removeAllAttractors()
+{
+    if ( attractors_.empty() )
+        return;
+    rhsValid_ = false;
+    solverValid_ = false;
+    attractors_.clear();
+}
+
 void Laplacian::updateSolver()
 {
     updateSolver_();
@@ -148,7 +165,7 @@ void Laplacian::updateSolver_()
     firstLayerFixedVerts_ = freeVerts_;
     expand( topology_, firstLayerFixedVerts_ );
     firstLayerFixedVerts_ -= fixedSharpVertices_;
-    const auto rowSz = firstLayerFixedVerts_.count();
+    [[maybe_unused]] const auto numSmoothVerts = firstLayerFixedVerts_.count();
     firstLayerFixedVerts_ -= freeVerts_;
 
     std::vector< Eigen::Triplet<double> > mTriplets;
@@ -184,9 +201,30 @@ void Laplacian::updateSolver_()
         }
         ++n;
     }
-    assert( n == rowSz );
 
-    M_.resize( rowSz, sz );
+    // equations for attractors
+    for ( const auto & a : attractors_ )
+    {
+        const auto vs = a.p.getWeightedVerts( topology_ );
+        bool anyFreeVert = false;
+        for ( int i = 0; i < 3; ++i )
+        {
+            if ( vs[i].weight == 0 )
+                continue;
+            assert( region_.test( vs[i].v ) );
+            auto vid = freeVert2id_[vs[i].v];
+            if ( vid < 0 )
+                continue;
+            mTriplets.emplace_back( n, vid, a.weight * vs[i].weight );
+            anyFreeVert = true;
+        }
+        if ( anyFreeVert )
+            ++n;
+    }
+
+    assert( n >= numSmoothVerts && n <= numSmoothVerts + attractors_.size() );
+
+    M_.resize( n, sz );
     M_.setFromTriplets( mTriplets.begin(), mTriplets.end() );
 
     SparseMatrix A = M_.adjoint() * M_;
@@ -194,8 +232,8 @@ void Laplacian::updateSolver_()
     solver_->compute( A );
 }
 
-template <typename I, typename G, typename S>
-void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
+template <typename I, typename G, typename S, typename P>
+void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p )
 {
     // equations for free vertices
     int n = 0;
@@ -233,6 +271,27 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
         s( n, r );
         ++n;
     }
+
+    // equations for attractors
+    for ( const auto & a : attractors_ )
+    {
+        auto r = a.weight * p( a.target );
+        const auto vs = a.p.getWeightedVerts( topology_ );
+        bool anyFreeVert = false;
+        for ( int i = 0; i < 3; ++i )
+        {
+            if ( vs[i].weight == 0 )
+                continue;
+            assert( region_.test( vs[i].v ) );
+            if ( freeVerts_.test( vs[i].v ) )
+                anyFreeVert = true;
+            else
+                r -= a.weight * vs[i].weight * g( vs[i].v );
+        }
+        if ( anyFreeVert )
+            s( n++, r );
+    }
+
     assert( n == M_.rows() );
 }
 
@@ -256,7 +315,8 @@ void Laplacian::updateRhs_()
         {
             for ( int i = 0; i < 3; ++i )
                 rhs[i][n] = r[i];
-        }
+        },
+        []( const Vector3d& p ) { return p; }
     );
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
@@ -303,7 +363,8 @@ void Laplacian::applyToScalar( VertScalars & scalarField )
     prepareRhs_(
         [&]( const Equation & ) { return 0.0; },
         [&]( VertId v ) { return scalarField[v]; },
-        [&]( int n, double r ) { rhs[n] = r; }
+        [&]( int n, double r ) { rhs[n] = r; },
+        []( const Vector3d& p ) { return p.x; }
     );
 
     Eigen::VectorXd sol = solver_->solve( M_.adjoint() * rhs );

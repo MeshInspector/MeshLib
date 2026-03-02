@@ -1,10 +1,9 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
-#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MREnums.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRViewer/MRViewport.h"
+#include "MRMesh/MRVector2.h"
 #include <chrono>
 
 namespace MR
@@ -52,6 +51,7 @@ public:
         float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
+        VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
     };
 
     /// initialize widget according ObjectMesh
@@ -67,7 +67,7 @@ public:
     /// get widget settings 
     MRVIEWER_API const Settings& getSettings() { return settings_; }
 
-    /// mimum radius of editing area.
+    /// minimum radius of editing area.
     MRVIEWER_API float getMinRadius() { return minRadius_; }
 
     /// get palette used for visualization point shifts
@@ -125,6 +125,7 @@ protected:
     void invalidateMetricsCache_();
     void abortEdit_();
     /// Laplacian
+    void initLaplacian_(); // for singleEditingRegion_
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 
@@ -142,7 +143,7 @@ protected:
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
 
-    void updateDistancesAndRegion_( const Mesh& mesh, const VertBitSet& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
+    void updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
     Settings settings_;
 
@@ -150,7 +151,7 @@ protected:
     VertBitSet unchangeableVerts_;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
-    VertBitSet activePickedVertices_; ///< vertices that are considered under mouse in curernt frame (could be many in case of fast mouse mouvement)
+    std::vector<MeshTriPoint> pointsUnderMouse_; ///< mesh points under mouse in the current frame (could be many in case of fast mouse movement)
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
     VertBitSet visualizationRegion_;  ///< vertices of triangles partially or fully highlighted with red
     VertBitSet generalEditingRegion_; ///< united region of tool application since the last mouse down

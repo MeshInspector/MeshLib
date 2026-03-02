@@ -158,37 +158,37 @@ jobs:
        uses: actions/checkout@v6
 
      - name: Download NuGet Windows Patch Archive
-       uses: actions/download-artifact@v7
+       uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveWindows-x64
          path: windows_runtime
 
      - name: Download NuGet Linux x64 Patch Archive
-       uses: actions/download-artifact@v7
+       uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveLinux-x64
          path: linux_x64_runtime
 
      - name: Download NuGet Linux Arm Patch Archive
-       uses: actions/download-artifact@v7
+       uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveLinux-arm64
          path: linux_arm64_runtime
 
      - name: Download NuGet MacOS x64 Patch Archive
-       uses: actions/download-artifact@v7
+       uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveMacOs-x64
          path: macos_x64_runtime
 
      - name: Download NuGet MacOS Arm Patch Archive
-       uses: actions/download-artifact@v7
+       uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveMacOs-arm64
          path: macos_arm64_runtime
 
      - name: Download NuGet DLL and XML
-       uses: actions/download-artifact@v7
+       uses: actions/download-artifact@v8
        with:
          pattern: DotNetDllXml
          path: dotnet_dll
@@ -206,7 +206,7 @@ jobs:
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
 
      - name: Upload NuGet Package
-       uses: actions/upload-artifact@v6
+       uses: actions/upload-artifact@v7
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg
@@ -231,7 +231,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: Distributives*
           merge-multiple: true
@@ -312,13 +312,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download runners' system stats
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: RunnerSysStats*
           merge-multiple: true
 
       - name: Download artifact stats
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: ArtifactStats*
           merge-multiple: true
@@ -392,7 +392,7 @@ jobs:
 
       # generate timing logs archive
       - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: Timing_Logs*
           merge-multiple: true
@@ -409,7 +409,7 @@ jobs:
           fi
 
       - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: time_log
           path: time_log.tar.gz

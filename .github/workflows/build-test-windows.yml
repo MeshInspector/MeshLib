@@ -339,7 +339,7 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_${{matrix.config}}
           path: MREDist_${{matrix.config}}.zip
@@ -356,7 +356,7 @@ jobs:
 
       - name: Upload MeshLibC2 headers archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers
           path: MeshLibC2Headers.zip
@@ -372,7 +372,7 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveWindows-x64
           path: ./patched_content/*
@@ -380,7 +380,7 @@ jobs:
 
       - name: Upload NuGet library DLL and XML to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetDllXml
           path: |

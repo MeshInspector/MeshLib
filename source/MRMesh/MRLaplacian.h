@@ -3,6 +3,7 @@
 #include "MRBitSet.h"
 #include "MRVector.h"
 #include "MRVector3.h"
+#include "MRMeshTriPoint.h"
 #include "MREnums.h"
 #include <MRPch/MREigenSparseCore.h>
 
@@ -60,6 +61,24 @@ public:
     /// return the vector of coordinates for which Laplacian was constructed
     [[nodiscard]] VertCoords & points() const { return points_; }
 
+    /// attracts the given point inside some mesh's triangle to the given target with the given weight
+    struct Attractor
+    {
+        MeshTriPoint p;
+        Vector3d target;
+        /// the weight or priority of this attractor relative to all other equations,
+        /// which must be compatible with weights of other equations;
+        /// the weight of ordinary equations is 1 for VertexMass::Unit,
+        /// and 1 / sqrt( double area around central vertex ) for VertexMass::NeiArea
+        double weight = 1;
+    };
+
+    /// adds one more attractor to the stored list
+    MRMESH_API void addAttractor( const Attractor& a );
+
+    /// forgets all attractors added previously
+    MRMESH_API void removeAllAttractors();
+
 private:
     // updates solver_ only
     void updateSolver_();
@@ -67,8 +86,8 @@ private:
     // updates rhs_ only
     void updateRhs_();
 
-    template <typename I, typename G, typename S>
-    void prepareRhs_( I && iniRhs, G && g, S && s );
+    template <typename I, typename G, typename S, typename P>
+    void prepareRhs_( I && iniRhs, G && g, S && s, P && p );
 
     const MeshTopology & topology_;
     VertCoords & points_;
@@ -93,6 +112,8 @@ private:
         int firstElem = 0;      // index in nonZeroElements_
     };
     std::vector<Equation> equations_;
+
+    std::vector<Attractor> attractors_;
 
     struct Element
     {

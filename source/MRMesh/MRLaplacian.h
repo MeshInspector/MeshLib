@@ -20,19 +20,13 @@ namespace MR
 class Laplacian
 {
 public:
-    enum class RememberShape
-    {
-        Yes,  // true Laplacian mode when initial mesh shape is remembered and copied in apply
-        No    // ignore initial mesh shape in the region and just position vertices smoothly in the region
-    };
-
     MRMESH_API explicit Laplacian( Mesh & mesh );
     MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
 
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     /// \param freeVerts must not include all vertices of a mesh connected component
     MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit,
-        RememberShape rem = Laplacian::RememberShape::Yes );
+        RememberShape rem = RememberShape::Yes );
 
     /// notify Laplacian that given vertex has changed after init and must be fixed during apply;
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)

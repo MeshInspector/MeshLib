@@ -371,7 +371,7 @@ void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numI
     std::vector<Vector3f> newPos;
     for( int iter = 0; iter < numIters; ++iter )
     {
-        lap.init( freeVerts, EdgeWeights::Cotan, VertexMass::Unit, Laplacian::RememberShape::No );
+        lap.init( freeVerts, EdgeWeights::Cotan, VertexMass::Unit, RememberShape::No );
         lap.applyToScalar( scalarField );
 
         newPos.clear();

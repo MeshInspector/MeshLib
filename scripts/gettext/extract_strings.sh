@@ -10,6 +10,10 @@ xgettext \
     -ktranslate:1c,2,2t \
     -ktranslate:1,2,3t \
     -ktranslate:1c,2,3,4t \
+    -ktranslate_noop:1,1t \
+    -ktranslate_noop:1c,2,2t \
+    -ktranslate_noop:1,2,3t \
+    -ktranslate_noop:1c,2,3,4t \
     -k_t:1,1t \
     -k_t:1c,2,2t \
     -k_t:1,2,3t \

@@ -15,7 +15,7 @@ jobs:
       - name: Install Doxygen
         uses: ssciwr/doxygen-install@ad81ff239f3be5262e2577abce2d728c426fcc59 # v1
         with:
-          version: "1.11.0"
+          version: "1.14.0"
 
       - name: Checkout MeshLib
         uses: actions/checkout@v6

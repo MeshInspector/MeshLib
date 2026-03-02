@@ -9,6 +9,9 @@
 #include <boost/locale/message.hpp>
 #pragma warning( pop )
 
+#include <filesystem>
+#include <vector>
+
 namespace MR::Locale
 {
 

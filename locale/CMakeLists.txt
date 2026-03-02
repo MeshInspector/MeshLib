@@ -14,6 +14,7 @@ if(MSGFMT_EXECUTABLE)
   endif()
 
   set(MO_OUTPUT_FILES "")
+  set(MO_LOCALES "")
   file(GLOB_RECURSE PO_FILES "*.po")
   foreach(PO_FILE ${PO_FILES})
     get_filename_component(LOCALE_DIR ${PO_FILE} DIRECTORY)
@@ -23,6 +24,7 @@ if(MSGFMT_EXECUTABLE)
     set(MO_OUTPUT_DIR "${ASSETS_OUTPUT_DIR}/locale/${LOCALE_NAME}/LC_MESSAGES")
     set(MO_OUTPUT_FILE "${MO_OUTPUT_DIR}/${DOMAIN_NAME}.mo")
     list(APPEND MO_OUTPUT_FILES ${MO_OUTPUT_FILE})
+    list(APPEND MO_LOCALES ${LOCALE_NAME})
 
     add_custom_command(
       OUTPUT ${MO_OUTPUT_FILE}
@@ -32,14 +34,18 @@ if(MSGFMT_EXECUTABLE)
     )
   endforeach(PO_FILE)
 
-  add_custom_target(meshlib_translations
-    DEPENDS ${MO_OUTPUT_FILES}
-  )
+  if(MO_OUTPUT_FILES)
+    message(STATUS "Found translations for ${MO_LOCALES}")
 
-  install(
-    DIRECTORY ${ASSETS_OUTPUT_DIR}/locale
-    DESTINATION ${MR_RESOURCES_DIR}
-  )
+    add_custom_target(meshlib_translations
+      DEPENDS ${MO_OUTPUT_FILES}
+    )
+
+    install(
+      DIRECTORY ${ASSETS_OUTPUT_DIR}/locale
+      DESTINATION ${MR_RESOURCES_DIR}
+    )
+  endif(MO_OUTPUT_FILES)
 else(MSGFMT_EXECUTABLE)
   message(WARNING "Could not find msgfmt executable. No translations will be available.")
 endif(MSGFMT_EXECUTABLE)

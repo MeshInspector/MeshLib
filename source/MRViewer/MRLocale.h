@@ -12,42 +12,54 @@
 namespace MR::Locale
 {
 
-/// ...
+/// \brief Returns the active locale.
 MRVIEWER_API const std::locale& get();
-/// ...
+/// \brief Returns the active locale's name.
+/// \note If the locale was set manually, this function will return its name as is, without any normalization.
 MRVIEWER_API const std::string& getName();
-/// ...
+/// \brief Sets the active locale by its name. UTF-8 is always used as an encoding.
+/// \returns Reference to the new locale.
 MRVIEWER_API const std::locale& set( std::string localeName );
 
-/// ...
+/// \brief Returns the list of the names of locales with available .mo files.
+/// "en" is always included as the default locale.
 MRVIEWER_API std::vector<std::string> getAvailableLocales();
 
-/// ...
+/// \brief Adds a path to .mo files.
+/// The path is expected to have the following directory structure:
+///   <locale name>/LC_MESSAGES/<domain name>.mo
+/// The active locale is regenerated on every call.
 MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
-/// ...
+/// \brief Adds a new domain.
+/// The active locale is regenerated on every call.
 MRVIEWER_API void addDomain( std::string domainName );
 
-/// ...
+/// \brief Returns a display name for the given locale.
+/// \returns
+///  - The display name explicitly set with setDisplayName;
+///  - or the display name from the compiled-in list of names generated from CLDR data;
+///  - or the locale name as is.
+/// \ref setDisplayName
 MRVIEWER_API std::string getDisplayName( const std::string& localeName );
-/// ...
+/// \brief Adds or updates a display name for the given locale.
 MRVIEWER_API void setDisplayName( const std::string& localeName, const std::string& displayName );
 
-/// ...
+/// \brief Translates a message using the active locale.
 inline auto translate( const char* msg )
 {
     return boost::locale::translate( msg ).str( get() );
 }
-/// ...
+/// \brief Translates a message in context using the active locale.
 inline auto translate( const char* context, const char* msg )
 {
     return boost::locale::translate( context, msg ).str( get() );
 }
-/// ...
+/// \brief Translates a plural message form using the active locale.
 inline auto translate( const char* single, const char* plural, auto n )
 {
     return boost::locale::translate( single, plural, n ).str( get() );
 }
-/// ...
+/// \brief Translates a plural message form in context using the active locale.
 inline auto translate( const char* context, const char* single, const char* plural, auto n )
 {
     return boost::locale::translate( context, single, plural, n ).str( get() );

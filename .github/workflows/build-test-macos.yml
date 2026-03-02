@@ -119,7 +119,7 @@ jobs:
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}
         env:
-          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
           brew install gettext
 

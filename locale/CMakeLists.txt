@@ -5,6 +5,8 @@ find_program(MSGFMT_EXECUTABLE
   PATH_SUFFIXES bin
 )
 if(MSGFMT_EXECUTABLE)
+  message(STATUS "Found msgfmt: ${MSGFMT_EXECUTABLE}")
+
   if(EMSCRIPTEN)
     set(ASSETS_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   else()
@@ -38,6 +40,8 @@ if(MSGFMT_EXECUTABLE)
     DIRECTORY ${ASSETS_OUTPUT_DIR}/locale
     DESTINATION ${MR_RESOURCES_DIR}
   )
+else(MSGFMT_EXECUTABLE)
+  message(WARNING "Could not find msgfmt executable. No translations will be available.")
 endif(MSGFMT_EXECUTABLE)
 
 # extraction of translatable strings

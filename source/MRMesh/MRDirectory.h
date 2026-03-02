@@ -37,6 +37,16 @@ struct DirectoryIterator
     std::error_code & ec;
     DirectoryIterator & operator ++() { it.increment( ec ); return * this; }
     auto operator *() const { return *it; }
+
+    [[nodiscard]] friend DirectoryIterator begin( const Directory & sd )
+    {
+        return DirectoryIterator{ std::filesystem::directory_iterator( sd.dir, sd.ec ), sd.ec };
+    }
+
+    [[nodiscard]] friend std::filesystem::directory_iterator end( const Directory & )
+    {
+        return {};
+    }
 };
 
 /// given file name without final extension, finds in the same folder an existing file with same stem and any extension
@@ -49,31 +59,21 @@ struct DirectoryRecursiveIterator
     std::error_code & ec;
     DirectoryRecursiveIterator & operator ++() { it.increment( ec ); return * this; }
     auto operator *() const { return *it; }
-};
 
-[[nodiscard]] inline DirectoryIterator begin( const Directory & sd )
-{
-    return DirectoryIterator{ std::filesystem::directory_iterator( sd.dir, sd.ec ), sd.ec };
-}
- 
-[[nodiscard]] inline std::filesystem::directory_iterator end( const Directory & )
-{
-    return {};
-}
+    [[nodiscard]] friend DirectoryRecursiveIterator begin( const DirectoryRecursive & sd )
+    {
+        return DirectoryRecursiveIterator{ std::filesystem::recursive_directory_iterator( sd.dir, sd.ec ), sd.ec };
+    }
+
+    [[nodiscard]] friend std::filesystem::recursive_directory_iterator end( const DirectoryRecursive & )
+    {
+        return {};
+    }
+};
 
 [[nodiscard]] inline bool operator !=( const DirectoryIterator & a, const std::filesystem::directory_iterator & b )
 {
     return !a.ec && a.it != b;
-}
-
-[[nodiscard]] inline DirectoryRecursiveIterator begin( const DirectoryRecursive & sd )
-{
-    return DirectoryRecursiveIterator{ std::filesystem::recursive_directory_iterator( sd.dir, sd.ec ), sd.ec };
-}
- 
-[[nodiscard]] inline std::filesystem::recursive_directory_iterator end( const DirectoryRecursive & )
-{
-    return {};
 }
 
 [[nodiscard]] inline bool operator !=( const DirectoryRecursiveIterator & a, const std::filesystem::recursive_directory_iterator & b )

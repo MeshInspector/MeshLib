@@ -18,6 +18,51 @@ namespace MR
  * \{
  */
 
+/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
+template <typename T>
+class MR_BIND_IGNORE_PY SetBitIteratorT
+{
+public:
+    using IndexType = typename T::IndexType;
+
+    using iterator_category = std::forward_iterator_tag;
+    using value_type        = IndexType;
+    using difference_type   = std::ptrdiff_t;
+    using reference         = IndexType; ///< intentionally not a reference
+    using pointer           = const IndexType *;
+
+    /// constructs end iterator
+    SetBitIteratorT() = default;
+
+    /// constructs begin iterator
+    SetBitIteratorT( const T & bitset )
+        : bitset_( &bitset ), index_( bitset.find_first() )
+    {
+    }
+
+    SetBitIteratorT & operator++()
+    {
+        index_ = bitset_->find_next( index_ );
+        return * this;
+    }
+
+    [[nodiscard]] SetBitIteratorT operator++( int )
+    {
+        SetBitIteratorT ret = *this;
+        operator++();
+        return ret;
+    }
+
+    [[nodiscard]] const T * bitset() const { return bitset_; }
+    [[nodiscard]] reference operator *() const { return index_; }
+
+    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
+
+private:
+    const T * bitset_ = nullptr;
+    IndexType index_ = IndexType( ~size_t( 0 ) );
+};
+
 /// std::vector<bool> like container (random-access, size_t - index type, bool - value type)
 /// with all bits after size() considered off during testing
 class BitSet
@@ -217,6 +262,9 @@ private:
     MRMESH_API friend std::ostream& operator<<( std::ostream& s, const BitSet & bs );
     MRMESH_API friend std::istream& operator>>( std::istream& s, BitSet & bs );
 
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const BitSet & a ) { return SetBitIteratorT<BitSet>(a); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const BitSet & ) { return SetBitIteratorT<BitSet>(); }
+
 private:
     std::vector<block_type> blocks_;
     size_type numBits_ = 0;
@@ -306,6 +354,9 @@ public:
     /// [beginId(), endId()) is the range of all bits in the set
     [[nodiscard]] static IndexType beginId() { return IndexType{ size_t( 0 ) }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
+
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const TypedBitSet & a ) { return SetBitIteratorT<TypedBitSet>(a); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const TypedBitSet & ) { return SetBitIteratorT<TypedBitSet>(); }
 };
 
 
@@ -349,60 +400,6 @@ template <typename I>
     return id.valid() && bitset.test( id );
 }
 
-/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
-template <typename T>
-class MR_BIND_IGNORE_PY SetBitIteratorT
-{
-public:
-    using IndexType = typename T::IndexType;
-
-    using iterator_category = std::forward_iterator_tag;
-    using value_type        = IndexType;
-    using difference_type   = std::ptrdiff_t;
-    using reference         = IndexType; ///< intentionally not a reference
-    using pointer           = const IndexType *;
-
-    /// constructs end iterator
-    SetBitIteratorT() = default;
-    /// constructs begin iterator
-    SetBitIteratorT( const T & bitset )
-        : bitset_( &bitset ), index_( bitset.find_first() )
-    {
-    }
-    SetBitIteratorT & operator++( )
-    {
-        index_ = bitset_->find_next( index_ );
-        return * this;
-    }
-    [[nodiscard]] SetBitIteratorT operator++( int )
-    {
-        SetBitIteratorT ret = *this;
-        operator++();
-        return ret;
-    }
-
-    [[nodiscard]] const T * bitset() const { return bitset_; }
-    [[nodiscard]] reference operator *() const { return index_; }
-
-    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
-
-private:
-    const T * bitset_ = nullptr;
-    IndexType index_ = IndexType( ~size_t( 0 ) );
-};
-
-
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( const BitSet & a )
-    { return SetBitIteratorT<BitSet>(a); }
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const BitSet & )
-    { return SetBitIteratorT<BitSet>(); }
-
-template <typename I>
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( const TypedBitSet<I> & a )
-    { return SetBitIteratorT<TypedBitSet<I>>(a); }
-template <typename I>
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const TypedBitSet<I> & )
-    { return SetBitIteratorT<TypedBitSet<I>>(); }
 
 /// for each set bit of input bitset, writes its sequential number starting from 0 in the given vector that shall have appropriate size
 template <typename I>

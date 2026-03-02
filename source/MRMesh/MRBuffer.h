@@ -110,6 +110,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
+    [[nodiscard]] friend auto begin( const Buffer & a ) { return a.data(); }
+    [[nodiscard]] friend auto begin( Buffer & a ) { return a.data(); }
+    [[nodiscard]] friend auto end( const Buffer & a ) { return a.data() + a.size(); }
+    [[nodiscard]] friend auto end( Buffer & a ) { return a.data() + a.size(); }
+
 private:
     std::unique_ptr<T[]> data_;
     ZeroOnMove<size_t> capacity_, size_;
@@ -121,22 +126,6 @@ inline T getAt( const Buffer<T, I> & bmap MR_LIFETIMEBOUND_NESTED, I key, T def 
 {
     return key ? T{bmap[key]} : def;
 }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto begin( const Buffer<T, I> & a )
-    { return a.data(); }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto begin( Buffer<T, I> & a )
-    { return a.data(); }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto end( const Buffer<T, I> & a )
-    { return a.data() + a.size(); }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto end( Buffer<T, I> & a )
-    { return a.data() + a.size(); }
 
 /// flat map: I -> T
 template <typename T, typename I>

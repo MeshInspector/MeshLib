@@ -55,9 +55,9 @@ int main( void )
     MR_StitchHolesParams_Set_metric( params, MR_PassBy_Move, metric );
     MR_FillHoleMetric_Destroy( metric );
 
-    // We also have a version of this function (`MR_buildCylinderBetweenTwoHoles_2()`) that finds the two holes automatically.
+    // We also have a version of this function (`MR_stitchHoles_2()`) that finds the two holes automatically.
     // Here we've found them manually for demonstration purposes.
-    MR_buildCylinderBetweenTwoHoles_4( mesh, *MR_std_vector_MR_EdgeId_at( edges, 0 ), *MR_std_vector_MR_EdgeId_at( edges, 1 ), params );
+    MR_stitchHoles_4( mesh, *MR_std_vector_MR_EdgeId_at( edges, 0 ), *MR_std_vector_MR_EdgeId_at( edges, 1 ), params );
     MR_StitchHolesParams_Destroy( params );
 
     // Save result

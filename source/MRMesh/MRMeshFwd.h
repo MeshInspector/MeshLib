@@ -791,15 +791,18 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
-#ifndef __CUDACC__
-#ifndef MR_NO_GETTEXT_MACROS
+namespace Locale
+{
+
 /// special no-op inline functions to mark string literal as translatable
-constexpr inline auto _t( const char* str ) noexcept { return str; }
-constexpr inline auto _t( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
-constexpr inline auto _t( const char* s, const char* p, auto n ) noexcept { return n == decltype( n )( 1 ) ? s : p; }
-constexpr inline auto _t( const char* ctx, const char* s, const char* p, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? s : p; }
-#endif // MR_NO_GETTEXT_MACROS
+constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
+constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
+#ifndef __CUDACC__
+constexpr inline auto translate_noop( const char* s, const char* p, auto n ) noexcept { return n == decltype( n )( 1 ) ? s : p; }
+constexpr inline auto translate_noop( const char* ctx, const char* s, const char* p, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? s : p; }
 #endif // __CUDACC__
+
+} // namespace Locale
 
 } //namespace MR
 
@@ -816,3 +819,7 @@ constexpr inline auto _t( const char* ctx, const char* s, const char* p, auto n 
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+#ifndef MR_NO_I18N_MACROS
+#define _t( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+#endif // MR_NO_I18N_MACROS

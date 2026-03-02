@@ -17,7 +17,3 @@ MR_BIND_IGNORE inline auto runtimeFmt( std::string_view str )
     return fmt::runtime( str );
 }
 }
-
-#ifndef MR_NO_GETTEXT_MACROS
-#define f_tr( ... ) fmt::runtime( MR::Locale::translate( __VA_ARGS__ ) )
-#endif // MR_NO_GETTEXT_MACROS

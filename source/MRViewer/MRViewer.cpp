@@ -74,7 +74,6 @@
 #include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
 #include "MRViewerConfigConstants.h"
-#include "MRLocale.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -379,8 +378,6 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     {
         firstLaunch = false;
     }
-
-    Locale::init();
 
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
 

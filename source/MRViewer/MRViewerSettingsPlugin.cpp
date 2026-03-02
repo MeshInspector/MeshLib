@@ -912,7 +912,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
     {
         auto results = languages;
         for ( auto& locale : results )
-            locale = Locale::getDisplayName( locale.c_str() );
+            locale = Locale::getDisplayName( locale );
         return results;
     } ( sLanguages );
 
@@ -929,7 +929,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguageNames ) )
-        Locale::set( sLanguages[selectedLanguage_].c_str() );
+        Locale::set( sLanguages[selectedLanguage_] );
 
     ImGui::SameLine();
     RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );

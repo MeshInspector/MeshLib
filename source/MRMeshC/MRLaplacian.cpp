@@ -13,7 +13,7 @@ REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST( VertId )
-REGISTER_AUTO_CAST2( Laplacian::RememberShape, MRLaplacianRememberShape )
+REGISTER_AUTO_CAST2( RememberShape, MRLaplacianRememberShape )
 
 MRLaplacian* mrLaplacianNew( MRMesh* mesh_ )
 {

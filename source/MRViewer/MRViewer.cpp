@@ -225,8 +225,12 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->postSetPosition( xPos, yPos );
     } );
 
-    // it is necessary to redraw the contents of the window when moving the window in Windows OS
-    //
+    // It is necessary to redraw the contents of the window when moving the window in Windows OS
+    // 
+    // (on Windows) The glfw_window_pos callback is called, but glfwWaitEvents does not pass,
+    // and event queue processing is not performed until the end of the move.
+    // For this reason, draw is called outside of EventQueue.
+    // 
     // "On some platforms, a window move, resize or menu operation will cause event processing to block. This is due to how event processing is designed on those platforms"
     // https://www.glfw.org/docs/latest/group__window.html#ga37bd57223967b4211d60ca1a0bf3c832
     // 

@@ -471,7 +471,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         }
     }
     else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
-        !settings_.laplacianBasedAddRemove && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
         ownMeshChangedSignal_ = true;
 
@@ -629,40 +629,27 @@ void SurfaceManipulationWidget::changeSurface_()
     normal = normal.normalized();
 
     obj_->varMesh()->invalidateCaches();
+    auto& points = obj_->varMesh()->points;
+
     const float maxShift = settings_.editForce;
-
-    if ( settings_.laplacianBasedAddRemove )
+    const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
+    const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
+    const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
+    const float direction = settings_.workMode == WorkMode::Remove ? -1.f : 1.f;
+    BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
     {
-        initLaplacian_();
-        for ( const auto& p : pointsUnderMouse_ )
+        const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
+        const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
+        float pointShift = maxShift * k; // shift = F * I(r)
+        if ( pointShift > pointsShift_[v] )
         {
-            laplacian_->addAttractor( { p, Vector3d( mesh.triPoint( p ) + normal * maxShift ), 1. / settings_.radius } );
+            pointShift -= pointsShift_[v];
+            pointsShift_[v] += pointShift;
         }
-        laplacian_->apply();
-    }
-    else
-    {
-        auto& points = obj_->varMesh()->points;
-
-        const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
-        const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
-        const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-        const float direction = settings_.workMode == WorkMode::Remove ? -1.f : 1.f;
-        BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
-        {
-            const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
-            const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
-            float pointShift = maxShift * k; // shift = F * I(r)
-            if ( pointShift > pointsShift_[v] )
-            {
-                pointShift -= pointsShift_[v];
-                pointsShift_[v] += pointShift;
-            }
-            else
-                return;
-            points[v] += direction * pointShift * normal;
-        } );
-    }
+        else
+            return;
+        points[v] += direction * pointShift * normal;
+    } );
     generalEditingRegion_ |= singleEditingRegion_;
     changedRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );

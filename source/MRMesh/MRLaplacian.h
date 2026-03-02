@@ -72,6 +72,10 @@ public:
     {
         MeshTriPoint p;
         Vector3d target;
+        /// the weight or priority of this attractor relative to all other equations,
+        /// which must be compatible with weights of other equations;
+        /// the weight of ordinary equations is 1 for VertexMass::Unit,
+        /// and 1 / sqrt( double area around central vertex ) for VertexMass::NeiArea
         double weight = 1;
     };
 

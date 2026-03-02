@@ -32,8 +32,8 @@ if(MSGFMT_EXECUTABLE)
 
   if(MO_OUTPUT_FILES)
     add_custom_target(meshlib_translations
-      DEPENDS ${MO_OUTPUT_FILES}
       ALL
+      DEPENDS ${MO_OUTPUT_FILES}
     )
 
     install(

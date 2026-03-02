@@ -224,10 +224,19 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
     } );
-    // force redraw window to prevent ghosting on Windows with multi windows enabled
+
+    // It is necessary to redraw the contents of the window when moving the window in Windows OS
+    // 
+    // (on Windows) The glfw_window_pos callback is called, but glfwWaitEvents does not pass,
+    // and event queue processing is not performed until the end of the move.
+    // For this reason, draw is called outside of EventQueue.
+    // 
+    // "On some platforms, a window move, resize or menu operation will cause event processing to block. This is due to how event processing is designed on those platforms"
+    // https://www.glfw.org/docs/latest/group__window.html#ga37bd57223967b4211d60ca1a0bf3c832
+    // 
+    // https://stackoverflow.com/questions/71243906/glfw-window-poll-events-lag
 #ifdef _WIN32
-    if ( viewer->isMultiViewportAvailable() && viewer->getLaunchParams().multiViewport )
-        viewer->draw( true );
+    viewer->draw( true );
 #endif
 }
 

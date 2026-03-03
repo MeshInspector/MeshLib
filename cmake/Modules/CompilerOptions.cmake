@@ -114,7 +114,15 @@ ENDIF()
 
 IF(MSVC)
   add_definitions(-DUNICODE -D_UNICODE)
-  add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+  # Set _ITERATOR_DEBUG_LEVEL based on vcpkg triplet
+  # default val is 0 for backward compatibility
+  IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*")
+    add_definitions(-D_ITERATOR_DEBUG_LEVEL=2)
+    add_definitions(-DMR_ITERATOR_DEBUG_LEVEL=2)
+  ELSE()
+    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+    add_definitions(-DMR_ITERATOR_DEBUG_LEVEL=0)
+  ENDIF()
 ENDIF()
 
 IF(NOT MSVC)

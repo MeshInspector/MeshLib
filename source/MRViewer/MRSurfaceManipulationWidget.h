@@ -126,7 +126,7 @@ protected:
     void invalidateMetricsCache_();
     void abortEdit_();
     /// Laplacian
-    void initLaplacian_(); // for singleEditingRegion_
+    void initLaplacian_( RememberShape rs ); // for singleEditingRegion_
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 

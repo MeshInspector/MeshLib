@@ -595,13 +595,13 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( !singleEditingRegion_.any() || badRegion_ )
         return;
 
+    MR_TIMER;
+
     if ( appendHistoryAction_ )
     {
         appendHistoryAction_ = false;
         AppendHistory( historyAction_ );
     }
-
-    MR_TIMER;
 
     if ( settings_.workMode == WorkMode::Patch )
     {
@@ -627,16 +627,29 @@ void SurfaceManipulationWidget::changeSurface_()
     for ( auto v : singleEditingRegion_ )
         normal += mesh.dirDblArea( v );
     normal = normal.normalized();
+    if ( settings_.workMode == WorkMode::Remove )
+        normal = -normal;
 
     obj_->varMesh()->invalidateCaches();
     const float maxShift = settings_.editForce;
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        initLaplacian_();
+        // all vertices around attractors must be included in free vertices to avoid high peaks:
+        for ( const auto& p : pointsUnderMouse_ )
+            for ( const auto& v : p.getWeightedVerts( mesh.topology ) )
+                if ( v.weight > 0 )
+                    singleEditingRegion_.set( v.v );
+
+        initLaplacian_( RememberShape::No );
         for ( const auto& p : pointsUnderMouse_ )
         {
-            laplacian_->addAttractor( { p, Vector3d( mesh.triPoint( p ) + normal * maxShift ), 1. / settings_.radius } );
+            laplacian_->addAttractor(
+            {
+                .p = p,
+                .target = Vector3d( mesh.triPoint( p ) + normal * maxShift ),
+                .weight = settings_.vmass == VertexMass::Unit ? 1. : 1. / settings_.radius
+            } );
         }
         laplacian_->apply();
     }
@@ -647,7 +660,6 @@ void SurfaceManipulationWidget::changeSurface_()
         const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
         const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
         const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-        const float direction = settings_.workMode == WorkMode::Remove ? -1.f : 1.f;
         BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
         {
             const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
@@ -660,7 +672,7 @@ void SurfaceManipulationWidget::changeSurface_()
             }
             else
                 return;
-            points[v] += direction * pointShift * normal;
+            points[v] += pointShift * normal;
         } );
     }
     generalEditingRegion_ |= singleEditingRegion_;
@@ -779,14 +791,14 @@ void SurfaceManipulationWidget::abortEdit_()
     generalEditingRegion_.clear();
 }
 
-void SurfaceManipulationWidget::initLaplacian_()
+void SurfaceManipulationWidget::initLaplacian_( RememberShape rs )
 {
     MR_TIMER;
     if ( !laplacian_ )
         laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
     assert( &laplacian_->topology() == &obj_->varMesh()->topology );
     assert( &laplacian_->points() == &obj_->varMesh()->points );
-    laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass );
+    laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass, rs );
 }
 
 void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
@@ -796,7 +808,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     const auto& mesh = *obj_->mesh();
     touchVertId_ = mesh.getClosestVertex( pick );
     touchVertIniPos_ = mesh.points[touchVertId_];
-    initLaplacian_();
+    initLaplacian_( RememberShape::Yes );
     historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
     createLastStableObjMesh_();

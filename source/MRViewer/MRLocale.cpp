@@ -9,6 +9,7 @@
 #pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
 #include <boost/locale/generator.hpp>
 #pragma warning( pop )
+#include <boost/version.hpp>
 
 namespace MR
 {
@@ -107,9 +108,21 @@ void Locale::setDisplayName( const std::string& localeName, const std::string& d
 MR_ON_INIT
 {
     // generate message facets only
-    gLocaleGen.categories( boost::locale::category_t::message );
+    gLocaleGen.categories(
+#if BOOST_VERSION >= 108100
+        boost::locale::category_t::message
+#else
+        boost::locale::message_facet
+#endif
+    );
     // do not generate wide-character facets (this is crucial for Wasm support as we don't use ICU or iconv)
-    gLocaleGen.characters( boost::locale::char_facet_t::char_f );
+    gLocaleGen.characters(
+#if BOOST_VERSION >= 108100
+        boost::locale::char_facet_t::char_f
+#else
+        boost::locale::char_facet
+#endif
+    );
     // set MeshLib domain by default
     gLocaleGen.add_messages_domain( "MeshLib/utf-8" );
     Locale::addCatalogPath( getLocaleDir() );

@@ -798,8 +798,8 @@ namespace Locale
 constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
 constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
 #ifndef __CUDACC__
-constexpr inline auto translate_noop( const char* s, const char* p, auto n ) noexcept { return n == decltype( n )( 1 ) ? s : p; }
-constexpr inline auto translate_noop( const char* ctx, const char* s, const char* p, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? s : p; }
+constexpr inline auto translate_noop( const char* single, const char* plural, auto n ) noexcept { return n == decltype( n )( 1 ) ? single : plural; }
+constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? single : plural; }
 #endif // __CUDACC__
 
 } // namespace Locale

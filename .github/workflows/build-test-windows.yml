@@ -244,7 +244,7 @@ jobs:
         env:
           GETTEXT_ROOT: C:\msys64_meshlib_mrbind\msys64\clang64
         run:
-          py -3 scripts\gettext\win_compile_translations.py .\locale\ .\source\x64\${{ matrix.config }}\locale\
+          py -3 scripts\gettext\compile_translations.py .\locale\ .\source\x64\${{ matrix.config }}\locale\
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

@@ -794,8 +794,11 @@ void SurfaceManipulationWidget::abortEdit_()
 void SurfaceManipulationWidget::initLaplacian_( RememberShape rs )
 {
     MR_TIMER;
-    if ( !laplacian_ )
+    if ( laplacian_ )
+        laplacian_->removeAllAttractors();
+    else
         laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
+
     assert( &laplacian_->topology() == &obj_->varMesh()->topology );
     assert( &laplacian_->points() == &obj_->varMesh()->points );
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass, rs );

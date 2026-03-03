@@ -67,32 +67,11 @@ if(XGETTEXT_EXECUTABLE)
   list(JOIN SOURCES "\n" SOURCES_LIST)
   file(WRITE ${SOURCES_LIST_FILE} ${SOURCES_LIST})
 
+  file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/xgettext_options.txt" XGETTEXT_OPTIONS)
   add_custom_target(meshlib_update_translations
     COMMAND
       ${XGETTEXT_EXECUTABLE}
-      -ktranslate:1,1t
-      -ktranslate:1c,2,2t
-      -ktranslate:1,2,3t
-      -ktranslate:1c,2,3,4t
-      -ktranslate_noop:1,1t
-      -ktranslate_noop:1c,2,2t
-      -ktranslate_noop:1,2,3t
-      -ktranslate_noop:1c,2,3,4t
-      -k_t:1,1t
-      -k_t:1c,2,2t
-      -k_t:1,2,3t
-      -k_t:1c,2,3,4t
-      -k_tr:1,1t
-      -k_tr:1c,2,2t
-      -k_tr:1,2,3t
-      -k_tr:1c,2,3,4t
-      -kf_tr:1,1t
-      -kf_tr:1c,2,2t
-      -kf_tr:1,2,3t
-      -kf_tr:1c,2,3,4t
-      --language=C++
-      --from-code=UTF-8
-      --add-comments="TRANSLATORS:"
+      ${XGETTEXT_OPTIONS}
       --default-domain=${MESHLIB_PROJECT_NAME}
       --output=${CMAKE_CURRENT_LIST_DIR}/${MESHLIB_PROJECT_NAME}.pot
       --files-from=${SOURCES_LIST_FILE}

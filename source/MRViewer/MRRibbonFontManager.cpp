@@ -13,7 +13,8 @@
 namespace MR
 {
 
-static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr, const char* additionalFilename = nullptr )
+static ImFont* loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr,
+    const ImWchar* glyph_ranges = nullptr, const char* additionalFilename = nullptr, bool addBold = false )
 {
     auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF( filename, size_pixels, font_cfg, glyph_ranges );
     if ( !font )
@@ -28,6 +29,8 @@ static ImFont* loadFontChecked( const char* filename, float size_pixels, const I
     {
         ImFontConfig cfg = *font_cfg;
         cfg.MergeMode = true;
+        if ( addBold )
+            cfg.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_Bold;
         ImGui::GetIO().Fonts->AddFontFromFileTTF( additionalFilename, size_pixels, &cfg, glyph_ranges );
     }
     return font;
@@ -200,10 +203,18 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* )
         config.GlyphOffset = ImVec2( font.scaledOffset );
     }
 
-    bool addFont = font.fontFile == FontFile::RegularSC;
+    bool addBold = false;
+    std::string additionalFontPath;
+    if ( font.fontFile == FontFile::RegularSC )
+        additionalFontPath = utf8string( fontPaths_[0] );
+    else if ( font.fontFile == FontFile::SemiBold )
+    {
+        additionalFontPath = utf8string( fontPaths_[1] );
+        addBold = true;
+    }
     font.fontPtr = loadFontChecked(
         utf8string( fontPath ).c_str(), fontSize,
-        &config, nullptr, addFont ? utf8string( fontPaths_[0] ).c_str() : nullptr );
+        &config, nullptr, additionalFontPath.empty() ? nullptr : additionalFontPath.c_str(), addBold );
 }
 
 }

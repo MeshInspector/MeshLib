@@ -20,7 +20,7 @@ MRVIEWER_API const std::locale& get();
 /// \brief Returns the active locale's name.
 /// \note If the locale was set manually, this function will return its name as is, without any normalization.
 MRVIEWER_API const std::string& getName();
-/// \brief Sets the active locale by its name. UTF-8 is always used as an encoding.
+/// \brief Loads and sets the active locale by its name. UTF-8 is always used as an encoding.
 /// \returns Reference to the new locale.
 MRVIEWER_API const std::locale& set( std::string localeName );
 
@@ -31,10 +31,10 @@ MRVIEWER_API std::vector<std::string> getAvailableLocales();
 /// \brief Adds a path to .mo files.
 /// The path is expected to have the following directory structure:
 ///   <locale name>/LC_MESSAGES/<domain name>.mo
-/// The active locale is regenerated on every call.
+/// The active locale is reloaded on every call.
 MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// \brief Adds a new domain.
-/// The active locale is regenerated on every call.
+/// The active locale is reloaded on every call.
 MRVIEWER_API void addDomain( std::string domainName );
 
 /// \brief Returns a display name for the given locale.

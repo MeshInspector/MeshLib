@@ -231,6 +231,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     auto zoneAndDistancesBA = findSignedDistanceOneWay( a, b, collisions, true, rigidB2A );
 
     MeshMeshSignedDistanceResult signedRes;
+    signedRes.status = status;
     signedRes.signedDist = FLT_MAX;
 
     auto getTriByVert = [&]( const MeshTopology& topology, VertId id )->FaceId

@@ -208,6 +208,7 @@ jobs:
       - name: Build
         shell: cmd
         env:
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\msys64\clang64
           VCPKG_ROOT: C:\vcpkg
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (

@@ -13,6 +13,14 @@ import sys
 from dataclasses import dataclass, fields
 
 
+def to_title(s: str) -> str:
+    return s[0].upper() + s[1:]
+
+
+# known languages which don't require title case
+NO_TITLECASE_LANGUAGES = ['ka', 'nd', 'sn', 'tok', 'zu']
+
+
 @dataclass
 class LocaleInfo:
     language: str = ""
@@ -27,6 +35,8 @@ class LocaleInfo:
         self.territory = loc.getCountry()
         self.variant = loc.getVariant()
         self.display_name = loc.getDisplayName(loc)
+        if self.language not in NO_TITLECASE_LANGUAGES:
+            self.display_name = to_title(self.display_name)
     
     def to_list(self):
         return [

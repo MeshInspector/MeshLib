@@ -1,7 +1,7 @@
 # message catalog compilation
 find_program(MSGFMT_EXECUTABLE
   NAMES msgfmt
-  PATHS ${GETTEXT_ROOT}
+  PATHS ${GETTEXT_ROOT} $ENV{GETTEXT_ROOT}
   PATH_SUFFIXES bin
 )
 if(MSGFMT_EXECUTABLE)
@@ -46,7 +46,7 @@ endif(MSGFMT_EXECUTABLE)
 # extraction of translatable strings
 find_program(XGETTEXT_EXECUTABLE
   NAMES xgettext
-  PATHS ${GETTEXT_ROOT}
+  PATHS ${GETTEXT_ROOT} $ENV{GETTEXT_ROOT}
   PATH_SUFFIXES bin
 )
 if(XGETTEXT_EXECUTABLE)

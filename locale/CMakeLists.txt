@@ -17,6 +17,7 @@ if(MSGFMT_EXECUTABLE)
     get_filename_component(LOCALE_DIR ${PO_FILE} DIRECTORY)
     get_filename_component(LOCALE_NAME ${LOCALE_DIR} NAME)
     get_filename_component(DOMAIN_NAME ${PO_FILE} NAME_WLE)
+    message(STATUS "Found ${LOCALE_NAME} locale for ${DOMAIN_NAME}")
 
     set(MO_OUTPUT_DIR "${ASSETS_OUTPUT_DIR}/locale/${LOCALE_NAME}/LC_MESSAGES")
     set(MO_OUTPUT_FILE "${MO_OUTPUT_DIR}/${DOMAIN_NAME}.mo")
@@ -41,6 +42,8 @@ if(MSGFMT_EXECUTABLE)
       DESTINATION ${MR_RESOURCES_DIR}
     )
   endif(MO_OUTPUT_FILES)
+else(MSGFMT_EXECUTABLE)
+  message(WARNING "No msgfmt executable was found, unable to compile translation files.")
 endif(MSGFMT_EXECUTABLE)
 
 # extraction of translatable strings

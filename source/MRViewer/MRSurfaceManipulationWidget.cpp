@@ -592,7 +592,7 @@ void SurfaceManipulationWidget::resetConnections_()
 
 void SurfaceManipulationWidget::changeSurface_()
 {
-    if ( !singleEditingRegion_.any() || badRegion_ )
+    if ( singleEditingRegion_.none() ) // keep working even for badRegion_ if at least one vertex is movable
         return;
 
     MR_TIMER;
@@ -635,10 +635,10 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        // all vertices around attractors must be included in free vertices to avoid high peaks:
+        // all vertices around attractors must be included in Laplacian free vertices to avoid high peaks:
         for ( const auto& p : pointsUnderMouse_ )
             for ( const auto& v : p.getWeightedVerts( mesh.topology ) )
-                if ( v.weight > 0 )
+                if ( v.weight > 0 && !unchangeableVerts_.test( v.v ) )
                     singleEditingRegion_.set( v.v );
 
         initLaplacian_( RememberShape::No );

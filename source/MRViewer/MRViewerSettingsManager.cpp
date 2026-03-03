@@ -547,7 +547,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cLanguage ) )
     {
         const auto lang = cfg.getJsonValue( cLanguage ).asString();
-        Locale::set( lang.c_str() );
+        Locale::set( lang );
     }
 }
 

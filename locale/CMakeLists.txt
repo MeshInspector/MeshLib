@@ -67,7 +67,7 @@ if(XGETTEXT_EXECUTABLE)
   list(JOIN SOURCES "\n" SOURCES_LIST)
   file(WRITE ${SOURCES_LIST_FILE} ${SOURCES_LIST})
 
-  add_custom_target(meshlib_extract_strings
+  add_custom_target(meshlib_update_translations
     COMMAND
       ${XGETTEXT_EXECUTABLE}
       -ktranslate:1,1t

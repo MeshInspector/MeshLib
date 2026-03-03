@@ -241,6 +241,8 @@ IF(MESHLIB_BUILD_MRVIEWER)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 
+  add_subdirectory(locale)
+
   IF(MESHLIB_BUILD_MESHVIEWER)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
   ENDIF()
@@ -295,8 +297,6 @@ ENDIF()
 IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRMeshC ./MRMeshC)
 ENDIF()
-
-add_subdirectory(locale)
 
 IF(BUILD_TESTING)
   enable_testing()

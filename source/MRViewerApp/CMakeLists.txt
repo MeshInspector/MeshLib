@@ -25,6 +25,12 @@ install(
   DESTINATION "${MR_BIN_DIR}"
 )
 
+include(I18nHelpers)
+mr_add_translations(meshlib_translations "../../locale/MeshLib.pot")
+if(TARGET meshlib_translations)
+  add_dependencies(${PROJECT_NAME} meshlib_translations)
+endif()
+
 file(GLOB PNGS "*.png")
 file(
   COPY ${PNGS}
@@ -45,10 +51,6 @@ IF(EMSCRIPTEN)
     FILES ${LOCAL_WASM_FILES}
     DESTINATION "${MR_RESOURCES_DIR}/wasm"
   )
-
-  if(TARGET meshlib_translations)
-    add_dependencies(${PROJECT_NAME} meshlib_translations)
-  endif()
 ENDIF()
 
 IF(MR_PCH)

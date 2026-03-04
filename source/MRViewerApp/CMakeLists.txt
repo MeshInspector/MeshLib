@@ -45,6 +45,10 @@ IF(EMSCRIPTEN)
     FILES ${LOCAL_WASM_FILES}
     DESTINATION "${MR_RESOURCES_DIR}/wasm"
   )
+
+  if(TARGET meshlib_translations)
+    add_dependencies(${PROJECT_NAME} meshlib_translations)
+  endif()
 ENDIF()
 
 IF(MR_PCH)

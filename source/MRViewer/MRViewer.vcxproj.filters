@@ -83,6 +83,9 @@
     <Filter Include="UserInputs">
       <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Localization">
+      <UniqueIdentifier>{29097c41-4b59-45fe-9b71-20f6095be069}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -513,6 +516,9 @@
     </ClCompile>
     <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp">
       <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLocale.cpp">
+      <Filter>Localization</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1020,6 +1026,9 @@
     <ClInclude Include="MRSpaceMouseHandlerWinEvents.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
+    <ClInclude Include="MRLocale.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -1028,6 +1037,9 @@
     </None>
     <None Include="MRFileDialogCocoa.mm">
       <Filter>CustomOpenDialog</Filter>
+    </None>
+    <None Include="MRLocaleNames.inl">
+      <Filter>Localization</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

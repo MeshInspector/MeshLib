@@ -1,0 +1,28 @@
+# Esperanto translations for PACKAGE package.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-02 14:39+0000\n"
+"PO-Revision-Date: 2026-03-02 15:46+0100\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: eo\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.8\n"
+
+#. TRANSLATORS: this is a technical string; no need to translate it
+#: source/MRViewer/MRLocale.cpp:21
+msgid "(^̮^)"
+msgstr ""
+
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:931
+msgid "Language"
+msgstr "Lingvo"

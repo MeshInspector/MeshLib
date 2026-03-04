@@ -791,6 +791,19 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
+namespace Locale
+{
+
+/// special no-op inline functions to mark string literal as translatable
+constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
+constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
+#ifndef __CUDACC__
+constexpr inline auto translate_noop( const char* single, const char* plural, auto n ) noexcept { return n == decltype( n )( 1 ) ? single : plural; }
+constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? single : plural; }
+#endif // __CUDACC__
+
+} // namespace Locale
+
 } //namespace MR
 
 #ifdef __cpp_lib_unreachable
@@ -806,3 +819,7 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+#ifndef MR_NO_I18N_MACROS
+#define _t( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+#endif // MR_NO_I18N_MACROS

@@ -351,6 +351,13 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
+            if ( settings_.laplacianBasedAddRemove
+                && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
+            {
+                fixedPickedVerts_.clear();
+                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
+            }
+
             historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( name, obj_ );
         }
         changeSurface_();
@@ -630,27 +637,55 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( settings_.workMode == WorkMode::Remove )
         normal = -normal;
 
-    obj_->varMesh()->invalidateCaches();
+    auto& varMesh = *obj_->varMesh();
+    varMesh.invalidateCaches();
     const float maxShift = settings_.editForce;
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        // all vertices around attractors must be included in Laplacian free vertices to avoid high peaks:
-        for ( const auto& p : pointsUnderMouse_ )
-            for ( const auto& v : p.getWeightedVerts( mesh.topology ) )
-                if ( v.weight > 0 && !unchangeableVerts_.test( v.v ) )
-                    singleEditingRegion_.set( v.v );
-
-        initLaplacian_( RememberShape::No );
+        // fix vertices near new pick points
+        bool newFixedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
-            laplacian_->addAttractor(
+            auto v = mesh.getClosestVertex( p );
+            // do not change the position of already fixed vertex, otherwise
+            // it will result in appearance of very short edges with both ends fixed:
+            if ( !fixedPickedVerts_.test( v ) )
             {
-                .p = p,
-                .target = Vector3d( mesh.triPoint( p ) + normal * maxShift ),
-                .weight = settings_.vmass == VertexMass::Unit ? 1. : 1. / settings_.radius
-            } );
+                bool fixedTri = false;
+                for ( EdgeId e : orgRing( mesh.topology, v ) )
+                {
+                    if ( !mesh.topology.left( e ) )
+                        continue;
+                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
+                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
+                    {
+                        fixedTri = true;
+                        break;
+                    }
+                }
+                if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
+                {
+                    fixedPickedVerts_.set( v );
+                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
+                    newFixedVert = true;
+                    // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
+                    for ( EdgeId e : orgRing( mesh.topology, v ) )
+                    {
+                        if ( auto d = mesh.topology.dest( e ); !unchangeableVerts_.test( d ) )
+                            singleEditingRegion_.set( d );
+                    }
+                }
+            }
         }
+        if ( !newFixedVert )
+            return;
+
+        initLaplacian_( RememberShape::No );
+        // fix vertices near current and previous pick points
+        for ( auto v : fixedPickedVerts_ )
+            laplacian_->fixVertex( v );
+
         laplacian_->apply();
     }
     else

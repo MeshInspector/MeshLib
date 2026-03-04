@@ -637,16 +637,12 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( settings_.workMode == WorkMode::Remove )
         normal = -normal;
 
-    obj_->varMesh()->invalidateCaches();
+    auto& varMesh = *obj_->varMesh();
+    varMesh.invalidateCaches();
     const float maxShift = settings_.editForce;
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        initLaplacian_( RememberShape::No );
-        // fix vertices near old pick points
-        for ( auto v : fixedPickedVerts_ )
-            laplacian_->fixVertex( v );
-
         // fix vertices near new pick points
         bool newFixedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
@@ -669,13 +665,25 @@ void SurfaceManipulationWidget::changeSurface_()
                 if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
                 {
                     fixedPickedVerts_.set( v );
-                    laplacian_->fixVertex( v, mesh.triPoint( p ) + normal * maxShift );
+                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
                     newFixedVert = true;
+                    // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
+                    for ( EdgeId e : orgRing( mesh.topology, v ) )
+                    {
+                        if ( !unchangeableVerts_.test( v ) )
+                            singleEditingRegion_.set( v );
+                    }
                 }
             }
         }
         if ( !newFixedVert )
             return;
+
+        initLaplacian_( RememberShape::No );
+        // fix vertices near current and previous pick points
+        for ( auto v : fixedPickedVerts_ )
+            laplacian_->fixVertex( v );
+
         laplacian_->apply();
     }
     else

@@ -351,6 +351,13 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
+            if ( settings_.laplacianBasedAddRemove
+                && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
+            {
+                fixedPickedVerts_.clear();
+                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
+            }
+
             historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( name, obj_ );
         }
         changeSurface_();
@@ -636,8 +643,14 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( settings_.laplacianBasedAddRemove )
     {
         initLaplacian_( RememberShape::No );
+        for ( auto v : fixedPickedVerts_ )
+            laplacian_->fixVertex( v );
         for ( const auto& p : pointsUnderMouse_ )
-            laplacian_->fixVertex( mesh.getClosestVertex( p ), mesh.triPoint( p ) + normal * maxShift );
+        {
+            auto v = mesh.getClosestVertex( p );
+            laplacian_->fixVertex( v, mesh.triPoint( p ) + normal * maxShift );
+            fixedPickedVerts_.set( v );
+        }
         laplacian_->apply();
     }
     else

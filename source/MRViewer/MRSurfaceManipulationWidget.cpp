@@ -635,22 +635,9 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        // all vertices around attractors must be included in Laplacian free vertices to avoid high peaks:
-        for ( const auto& p : pointsUnderMouse_ )
-            for ( const auto& v : p.getWeightedVerts( mesh.topology ) )
-                if ( v.weight > 0 && !unchangeableVerts_.test( v.v ) )
-                    singleEditingRegion_.set( v.v );
-
         initLaplacian_( RememberShape::No );
         for ( const auto& p : pointsUnderMouse_ )
-        {
-            laplacian_->addAttractor(
-            {
-                .p = p,
-                .target = Vector3d( mesh.triPoint( p ) + normal * maxShift ),
-                .weight = settings_.vmass == VertexMass::Unit ? 1. : 1. / settings_.radius
-            } );
-        }
+            laplacian_->fixVertex( mesh.getClosestVertex( p ), mesh.triPoint( p ) + normal * maxShift );
         laplacian_->apply();
     }
     else

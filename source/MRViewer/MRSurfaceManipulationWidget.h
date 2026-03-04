@@ -181,6 +181,9 @@ protected:
     Vector3f touchVertIniPos_; /// initial position of fixed vertex
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
+
+    /// these are all vertices manually moved to be under mouse and lifted to material width since last mouse down
+    /// in laplacianBasedAddRemove mode not including the vertices around moved by the laplacian
     VertBitSet fixedPickedVerts_;
 
     /// prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here

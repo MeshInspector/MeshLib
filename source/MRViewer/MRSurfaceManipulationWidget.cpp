@@ -643,16 +643,35 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( settings_.laplacianBasedAddRemove )
     {
         initLaplacian_( RememberShape::No );
+        // fix vertices near old pick points
         for ( auto v : fixedPickedVerts_ )
             laplacian_->fixVertex( v );
+
+        // fix vertices near new pick points
         bool newFixedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
             auto v = mesh.getClosestVertex( p );
-            if ( !fixedPickedVerts_.test_set( v ) )
+            if ( !fixedPickedVerts_.test( v ) )
             {
-                laplacian_->fixVertex( v, mesh.triPoint( p ) + normal * maxShift );
-                newFixedVert = true;
+                bool fixedTri = false;
+                for ( EdgeId e : orgRing( mesh.topology, v ) )
+                {
+                    if ( !mesh.topology.left( e ) )
+                        continue;
+                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
+                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
+                    {
+                        fixedTri = true;
+                        break;
+                    }
+                }
+                if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
+                {
+                    fixedPickedVerts_.set( v );
+                    laplacian_->fixVertex( v, mesh.triPoint( p ) + normal * maxShift );
+                    newFixedVert = true;
+                }
             }
         }
         if ( !newFixedVert )

@@ -336,6 +336,7 @@
     <ClInclude Include="MRWebResponseCallback.h" />
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
+    <ClInclude Include="MRI18n.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

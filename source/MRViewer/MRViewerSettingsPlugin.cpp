@@ -38,6 +38,7 @@
 #include "MRViewerConfigConstants.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
+#include "MRI18n.h"
 #include "MRLocale.h"
 #include "MRRibbonFontHolder.h"
 

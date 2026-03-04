@@ -797,10 +797,8 @@ namespace Locale
 /// special no-op inline functions to mark string literal as translatable
 constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
 constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
-#ifndef __CUDACC__
-constexpr inline auto translate_noop( const char* single, const char* plural, auto n ) noexcept { return n == decltype( n )( 1 ) ? single : plural; }
-constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, auto n ) noexcept { (void)ctx; return n == decltype( n )( 1 ) ? single : plural; }
-#endif // __CUDACC__
+constexpr inline auto translate_noop( const char* single, const char* plural, long long n ) noexcept { return n == 1 ? single : plural; }
+constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, long long n ) noexcept { (void)ctx; return n == 1 ? single : plural; }
 
 } // namespace Locale
 

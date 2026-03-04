@@ -645,12 +645,18 @@ void SurfaceManipulationWidget::changeSurface_()
         initLaplacian_( RememberShape::No );
         for ( auto v : fixedPickedVerts_ )
             laplacian_->fixVertex( v );
+        bool newFixedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
             auto v = mesh.getClosestVertex( p );
             if ( !fixedPickedVerts_.test_set( v ) )
+            {
                 laplacian_->fixVertex( v, mesh.triPoint( p ) + normal * maxShift );
+                newFixedVert = true;
+            }
         }
+        if ( !newFixedVert )
+            return;
         laplacian_->apply();
     }
     else

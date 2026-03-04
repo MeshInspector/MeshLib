@@ -648,6 +648,8 @@ void SurfaceManipulationWidget::changeSurface_()
         for ( const auto& p : pointsUnderMouse_ )
         {
             auto v = mesh.getClosestVertex( p );
+            // do not change the position of already fixed vertex, otherwise
+            // it will result in appearance of very short edges with both ends fixed:
             if ( !fixedPickedVerts_.test( v ) )
             {
                 bool fixedTri = false;

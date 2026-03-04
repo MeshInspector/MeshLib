@@ -672,8 +672,8 @@ void SurfaceManipulationWidget::changeSurface_()
                     // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
                     for ( EdgeId e : orgRing( mesh.topology, v ) )
                     {
-                        if ( !unchangeableVerts_.test( v ) )
-                            singleEditingRegion_.set( v );
+                        if ( auto d = mesh.topology.dest( e ); !unchangeableVerts_.test( d ) )
+                            singleEditingRegion_.set( d );
                     }
                 }
             }

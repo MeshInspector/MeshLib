@@ -6,6 +6,7 @@
 #include "MRMeshTriPoint.h"
 #include "MREnums.h"
 #include <MRPch/MREigenSparseCore.h>
+#include <array>
 
 namespace MR
 {
@@ -80,11 +81,8 @@ public:
     MRMESH_API void removeAllAttractors();
 
 private:
-    // updates solver_ only
-    void updateSolver_();
-
-    // updates rhs_ only
-    void updateRhs_();
+    // computes right-hand-side from the given fixed points
+    std::array<Eigen::VectorXd, 3> findRhs_( const VertCoords & points );
 
     template <typename I, typename G, typename S, typename P>
     void prepareRhs_( I && iniRhs, G && g, S && s, P && p );
@@ -142,10 +140,6 @@ private:
         virtual Eigen::VectorXd solve( const Eigen::VectorXd& rhs ) = 0;
     };
     std::unique_ptr<Solver> solver_;
-
-    // if true then we do not need to recompute rhs_ in the apply
-    bool rhsValid_ = false;
-    Eigen::VectorXd rhs_[3];
 };
 
 } //namespace MR

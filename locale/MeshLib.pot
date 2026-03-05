@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-02 14:39+0000\n"
+"POT-Creation-Date: 2026-03-06 08:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,11 +17,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#. TRANSLATORS: this is a technical string; no need to translate it
-#: source/MRViewer/MRLocale.cpp:21
-msgid "(^̮^)"
-msgstr ""
-
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:931
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:932
 msgid "Language"
 msgstr ""

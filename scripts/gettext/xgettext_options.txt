@@ -20,4 +20,4 @@
 -kf_tr:1c,2,3,4t
 --language=C++
 --from-code=UTF-8
---add-comments="TRANSLATORS:"
+--add-comments=TRANSLATORS:

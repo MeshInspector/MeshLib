@@ -5,8 +5,6 @@
 #include "MRVector3.h"
 #include "MRMeshTriPoint.h"
 #include "MREnums.h"
-#include <MRPch/MREigenSparseCore.h>
-#include <array>
 
 namespace MR
 {
@@ -24,6 +22,8 @@ class Laplacian
 public:
     MRMESH_API explicit Laplacian( Mesh & mesh );
     MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
+    MRMESH_API Laplacian( Laplacian && ) noexcept;
+    MRMESH_API ~Laplacian();
 
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     /// \param freeVerts must not include all vertices of a mesh connected component;
@@ -65,7 +65,7 @@ public:
     [[nodiscard]] const VertBitSet & freeVerts() const { return freeVerts_; }
 
     /// return fixed vertices from the first layer around free vertices
-    [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
+    [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solver_ ); return firstLayerFixedVerts_; }
 
     /// return the topology for which Laplacian was constructed
     [[nodiscard]] const MeshTopology & topology() const { return topology_; }
@@ -92,9 +92,6 @@ public:
     MRMESH_API void removeAllAttractors();
 
 private:
-    // computes right-hand-side from the given fixed points
-    std::array<Eigen::VectorXd, 3> findRhs_( const VertCoords & points ) const;
-
     template <typename I, typename G, typename S, typename P>
     void prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const;
 
@@ -135,21 +132,7 @@ private:
     Vector< int, VertId > regionVert2id_;
     Vector< int, VertId > freeVert2id_;
 
-    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
-    SparseMatrix M_;
-
-    // if true then we do not need to recompute solver_ in the apply
-    bool solverValid_ = false;
-    using SparseMatrixColMajor = Eigen::SparseMatrix<double,Eigen::ColMajor>;
-
-    // interface needed to hide implementation headers
-    class Solver
-    {
-    public:
-        virtual ~Solver() = default;
-        virtual void compute( const SparseMatrixColMajor& A ) = 0;
-        virtual Eigen::VectorXd solve( const Eigen::VectorXd& rhs ) = 0;
-    };
+    class Solver;
     std::unique_ptr<Solver> solver_;
 };
 

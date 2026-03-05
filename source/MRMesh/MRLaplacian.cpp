@@ -218,7 +218,7 @@ void Laplacian::updateSolver()
 }
 
 template <typename I, typename G, typename S, typename P>
-void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p )
+void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const
 {
     // equations for free vertices
     int n = 0;
@@ -279,7 +279,7 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p )
     assert( n == M_.rows() );
 }
 
-std::array<Eigen::VectorXd, 3> Laplacian::findRhs_( const VertCoords & points )
+std::array<Eigen::VectorXd, 3> Laplacian::findRhs_( const VertCoords & points ) const
 {
     assert( solverValid_ );
 
@@ -303,14 +303,14 @@ std::array<Eigen::VectorXd, 3> Laplacian::findRhs_( const VertCoords & points )
     return rhs;
 }
 
-void Laplacian::apply()
+void Laplacian::apply( VertCoords & points )
 {
     MR_TIMER;
     if ( !freeVerts_.any() )
         return;
     updateSolver();
 
-    auto rhs = findRhs_( points_ );
+    auto rhs = findRhs_( points );
     Eigen::VectorXd sol[3];
     tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
@@ -322,7 +322,7 @@ void Laplacian::apply()
     for ( auto v : freeVerts_ )
     {
         int mapv = freeVert2id_[v];
-        auto & pt = points_[v];
+        auto & pt = points[v];
         pt.x = (float) sol[0][mapv];
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];

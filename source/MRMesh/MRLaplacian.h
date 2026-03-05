@@ -41,10 +41,16 @@ public:
     /// if you manually call this method after initialization and fixing vertices then next apply call will be much faster
     MRMESH_API void updateSolver();
 
-    /// given fixed vertices, computes positions of remaining region vertices
-    MRMESH_API void apply();
+    /// takes fixed vertex positions from the given points vector,
+    /// computes and writes free vertex positions in the given points vector as well
+    MRMESH_API void apply( VertCoords & points );
 
-    /// given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
+    /// takes fixed vertex positions from the points vector passed to a constructor,
+    /// computes and writes free vertex positions in the points vector passed to a constructor as well
+    void apply() { apply( points_ ); }
+
+    /// takes fixed vertex scalars from the given field,
+    /// computes and writes free vertex scalars in the given field as well
     MRMESH_API void applyToScalar( VertScalars & scalarField );
 
     /// return all initially free vertices and the first layer of vertices around them
@@ -82,10 +88,10 @@ public:
 
 private:
     // computes right-hand-side from the given fixed points
-    std::array<Eigen::VectorXd, 3> findRhs_( const VertCoords & points );
+    std::array<Eigen::VectorXd, 3> findRhs_( const VertCoords & points ) const;
 
     template <typename I, typename G, typename S, typename P>
-    void prepareRhs_( I && iniRhs, G && g, S && s, P && p );
+    void prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const;
 
     const MeshTopology & topology_;
     VertCoords & points_;

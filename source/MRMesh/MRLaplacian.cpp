@@ -303,7 +303,7 @@ std::array<Eigen::VectorXd, 3> Laplacian::findRhs_( const VertCoords & points ) 
     return rhs;
 }
 
-void Laplacian::apply( VertCoords & points )
+void Laplacian::applyToVector( VertCoords & points )
 {
     MR_TIMER;
     if ( !freeVerts_.any() )

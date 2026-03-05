@@ -48,11 +48,11 @@ public:
 
     /// takes fixed vertex positions from the given points vector,
     /// computes and writes free vertex positions in the given points vector as well
-    MRMESH_API void apply( VertCoords & points );
+    MRMESH_API void applyToVector( VertCoords & points );
 
     /// takes fixed vertex positions from the points vector passed to a constructor,
     /// computes and writes free vertex positions in the points vector passed to a constructor as well
-    void apply() { apply( points_ ); }
+    void apply() { applyToVector( points_ ); }
 
     /// takes fixed vertex scalars from the given field,
     /// computes and writes free vertex scalars in the given field as well

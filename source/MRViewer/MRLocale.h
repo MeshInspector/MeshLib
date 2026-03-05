@@ -30,7 +30,12 @@ MRVIEWER_API std::vector<std::string> getAvailableLocales();
 MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// \brief Adds a new domain.
 /// The active locale is reloaded on every call.
-MRVIEWER_API void addDomain( std::string domainName );
+/// \returns The id of the added domain.
+MRVIEWER_API int addDomain( const char* domainName );
+/// \brief Find an id for the given domain that can be passed to the `translate` functions.
+/// \returns The domain id if the domain is previously added and 0 (the default domain id) otherwise.
+/// \ref translate
+MRVIEWER_API int findDomain( const char* domainName );
 
 /// \brief Returns a display name for the given locale.
 /// \returns

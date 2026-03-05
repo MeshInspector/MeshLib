@@ -158,6 +158,7 @@
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
     <ClCompile Include="MRFileDialogPortal.cpp" />
     <ClCompile Include="MRWin32MessageHandler.cpp" />
+    <ClCompile Include="MRI18n.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />

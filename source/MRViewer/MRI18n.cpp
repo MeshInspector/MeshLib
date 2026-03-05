@@ -10,24 +10,24 @@
 namespace MR::Locale
 {
 
-std::string translate( const char* msg )
+std::string translate( const char* msg, int domainId )
 {
-    return boost::locale::translate( msg ).str( get() );
+    return boost::locale::translate( msg ).str( get(), domainId );
 }
 
-std::string translate( const char* context, const char* msg )
+std::string translate( const char* context, const char* msg, int domainId )
 {
-    return boost::locale::translate( context, msg ).str( get() );
+    return boost::locale::translate( context, msg ).str( get(), domainId );
 }
 
-std::string translate( const char* single, const char* plural, long long n )
+std::string translate( const char* single, const char* plural, long long n, int domainId )
 {
-    return boost::locale::translate( single, plural, n ).str( get() );
+    return boost::locale::translate( single, plural, n ).str( get(), domainId );
 }
 
-std::string translate( const char* context, const char* single, const char* plural, long long n )
+std::string translate( const char* context, const char* single, const char* plural, long long n, int domainId )
 {
-    return boost::locale::translate( context, single, plural, n ).str( get() );
+    return boost::locale::translate( context, single, plural, n ).str( get(), domainId );
 }
 
 } // namespace MR::Locale

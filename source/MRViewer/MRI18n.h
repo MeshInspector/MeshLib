@@ -10,16 +10,16 @@ namespace MR::Locale
 {
 
 /// \brief Translates a message using the active locale.
-MRVIEWER_API std::string translate( const char* msg );
+MRVIEWER_API std::string translate( const char* msg, int domainId = 0 );
 
 /// \brief Translates a message in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* msg );
+MRVIEWER_API std::string translate( const char* context, const char* msg, int domainId = 0 );
 
 /// \brief Translates a plural message form using the active locale.
-MRVIEWER_API std::string translate( const char* single, const char* plural, long long n );
+MRVIEWER_API std::string translate( const char* single, const char* plural, long long n, int domainId = 0 );
 
 /// \brief Translates a plural message form in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, long long n );
+MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, long long n, int domainId = 0 );
 
 } // namespace MR::Locale
 

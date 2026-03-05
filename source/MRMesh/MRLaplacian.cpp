@@ -35,10 +35,11 @@ Laplacian::Laplacian( const MeshTopology & topology, VertCoords & points ) : top
 
 Laplacian::Laplacian( Mesh & mesh ) : Laplacian( mesh.topology, mesh.points ) { }
 
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
+void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem, const VertCoords * usePoints )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
+    const auto& points = usePoints ? *usePoints : points_;
 
     for ( auto v : freeVerts_ )
         freeVert2id_[v] = -1;
@@ -70,10 +71,10 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         {
             double w = 1;
             if ( weights == EdgeWeights::Cotan )
-                w = std::clamp( cotan( topology_, points_, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+                w = std::clamp( cotan( topology_, points, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             auto d = topology_.dest( e );
             rowElements.push_back( { -w, d } );
-            sumWPos -= w * Vector3d( points_[d] );
+            sumWPos -= w * Vector3d( points[d] );
             sumW += w;
         }
         if ( sumW == 0 )
@@ -84,7 +85,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             // in updateSolver_ we build A = M_^T * M_;
             // if here we divide each row of M_ on square root of mass,
             // then M' = sqrt(Mass^-1) * M_; A = M'^T * M' = M_^T * Mass^-1 * M_
-            if ( auto d = dblArea( topology_, points_, v ); d > 0 )
+            if ( auto d = dblArea( topology_, points, v ); d > 0 )
                 a =  1 / std::sqrt( d );
         }
         const double rSumW = a / sumW;
@@ -93,7 +94,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             el.coeff *= rSumW;
             nonZeroElements_.push_back( el );
         }
-        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points_[v] ) : Vector3d();
+        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points[v] ) : Vector3d();
         eq.centerCoeff = a;
         equations_.push_back( eq );
     }

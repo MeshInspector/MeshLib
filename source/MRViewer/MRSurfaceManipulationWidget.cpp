@@ -836,7 +836,9 @@ void SurfaceManipulationWidget::initLaplacian_( RememberShape rs )
 
     assert( &laplacian_->topology() == &obj_->varMesh()->topology );
     assert( &laplacian_->points() == &obj_->varMesh()->points );
-    laplacian_->init( singleEditingRegion_, settings_.edgeWeights, settings_.vmass, rs );
+
+    laplacian_->initFromPoints( lastStableObjMesh_ ? lastStableObjMesh_->mesh()->points : obj_->mesh()->points,
+        singleEditingRegion_, settings_.edgeWeights, settings_.vmass, rs );
 }
 
 void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )

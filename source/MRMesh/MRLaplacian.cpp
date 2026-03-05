@@ -35,11 +35,10 @@ Laplacian::Laplacian( const MeshTopology & topology, VertCoords & points ) : top
 
 Laplacian::Laplacian( Mesh & mesh ) : Laplacian( mesh.topology, mesh.points ) { }
 
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem, const VertCoords * usePoints )
+void Laplacian::initFromPoints( const VertCoords & points, const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
-    const auto& points = usePoints ? *usePoints : points_;
 
     for ( auto v : freeVerts_ )
         freeVert2id_[v] = -1;

@@ -28,8 +28,12 @@ public:
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     /// \param freeVerts must not include all vertices of a mesh connected component;
     /// \param usePoints is not nullptr, then these points will be used instead of passed to a constructor for weights computation and shape memory
-    MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit,
-        RememberShape rem = RememberShape::Yes, const VertCoords * usePoints = nullptr );
+    void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes )
+        { initFromPoints( points_, freeVerts, weights, vmass, rem ); }
+
+    /// same as init() but uses the given points instead of ones passed to a constructor for weights computation and shape memory
+    MRMESH_API void initFromPoints( const VertCoords & points, const VertBitSet & freeVerts, EdgeWeights weights,
+        VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes );
 
     /// notify Laplacian that given vertex has changed after init and must be fixed during apply;
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)

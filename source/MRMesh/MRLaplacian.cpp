@@ -35,7 +35,7 @@ Laplacian::Laplacian( const MeshTopology & topology, VertCoords & points ) : top
 
 Laplacian::Laplacian( Mesh & mesh ) : Laplacian( mesh.topology, mesh.points ) { }
 
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
+void Laplacian::initFromPoints( const VertCoords & points, const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
@@ -44,7 +44,6 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         freeVert2id_[v] = -1;
 
     solverValid_ = false;
-    rhsValid_ = false;
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;
@@ -71,10 +70,10 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         {
             double w = 1;
             if ( weights == EdgeWeights::Cotan )
-                w = std::clamp( cotan( topology_, points_, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+                w = std::clamp( cotan( topology_, points, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             auto d = topology_.dest( e );
             rowElements.push_back( { -w, d } );
-            sumWPos -= w * Vector3d( points_[d] );
+            sumWPos -= w * Vector3d( points[d] );
             sumW += w;
         }
         if ( sumW == 0 )
@@ -85,7 +84,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             // in updateSolver_ we build A = M_^T * M_;
             // if here we divide each row of M_ on square root of mass,
             // then M' = sqrt(Mass^-1) * M_; A = M'^T * M' = M_^T * Mass^-1 * M_
-            if ( auto d = dblArea( topology_, points_, v ); d > 0 )
+            if ( auto d = dblArea( topology_, points, v ); d > 0 )
                 a =  1 / std::sqrt( d );
         }
         const double rSumW = a / sumW;
@@ -94,7 +93,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             el.coeff *= rSumW;
             nonZeroElements_.push_back( el );
         }
-        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points_[v] ) : Vector3d();
+        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points[v] ) : Vector3d();
         eq.centerCoeff = a;
         equations_.push_back( eq );
     }
@@ -105,7 +104,6 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
 
 void Laplacian::fixVertex( VertId v, bool smooth )
 {
-    rhsValid_ = false;
     if ( freeVerts_.autoResizeTestSet( v, false ) )
     {
         solverValid_ = false;
@@ -124,7 +122,6 @@ void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth )
 void Laplacian::addAttractor( const Attractor& a )
 {
     assert( a.weight > 0 );
-    rhsValid_ = false;
     solverValid_ = false;
     attractors_.push_back( a );
 }
@@ -133,18 +130,11 @@ void Laplacian::removeAllAttractors()
 {
     if ( attractors_.empty() )
         return;
-    rhsValid_ = false;
     solverValid_ = false;
     attractors_.clear();
 }
 
 void Laplacian::updateSolver()
-{
-    updateSolver_();
-    updateRhs_();
-}
-
-void Laplacian::updateSolver_()
 {
     if ( solverValid_ )
         return;
@@ -154,11 +144,7 @@ void Laplacian::updateSolver_()
 
     const auto sz = freeVerts_.count();
     if ( sz <= 0 )
-    {
-        rhsValid_ = true;
         return;
-    }
-    rhsValid_ = false;
 
     fillVectorWithSeqNums( freeVerts_, freeVert2id_ );
 
@@ -232,7 +218,7 @@ void Laplacian::updateSolver_()
 }
 
 template <typename I, typename G, typename S, typename P>
-void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p )
+void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const
 {
     // equations for free vertices
     int n = 0;
@@ -293,22 +279,19 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p )
     assert( n == M_.rows() );
 }
 
-void Laplacian::updateRhs_()
+std::array<Eigen::VectorXd, 3> Laplacian::findRhs_( const VertCoords & points ) const
 {
     assert( solverValid_ );
-    if ( rhsValid_ )
-        return;
-    rhsValid_ = true;
 
     MR_TIMER;
 
-    Eigen::VectorXd rhs[3];
+    std::array<Eigen::VectorXd, 3> rhs;
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( M_.rows() );
 
     prepareRhs_(
         [&]( const Equation & eq ) { return eq.rhs; },
-        [&]( VertId v ) { return Vector3d{ points_[v] }; },
+        [&]( VertId v ) { return Vector3d{ points[v] }; },
         [&]( int n, const Vector3d & r )
         {
             for ( int i = 0; i < 3; ++i )
@@ -317,32 +300,29 @@ void Laplacian::updateRhs_()
         []( const Vector3d& p ) { return p; }
     );
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
-    {
-        for ( int i = range.begin(); i < range.end(); ++i )
-            rhs_[i] = M_.adjoint() * rhs[i];
-    } );
+    return rhs;
 }
 
-void Laplacian::apply()
+void Laplacian::applyToVector( VertCoords & points )
 {
     MR_TIMER;
     if ( !freeVerts_.any() )
         return;
     updateSolver();
 
+    auto rhs = findRhs_( points );
     Eigen::VectorXd sol[3];
     tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
         for ( int i = range.begin(); i < range.end(); ++i )
-            sol[i] = solver_->solve( rhs_[i] );
+            sol[i] = solver_->solve( M_.adjoint() * rhs[i] );
     } );
 
     // copy solution back into mesh points
     for ( auto v : freeVerts_ )
     {
         int mapv = freeVert2id_[v];
-        auto & pt = points_[v];
+        auto & pt = points[v];
         pt.x = (float) sol[0][mapv];
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];

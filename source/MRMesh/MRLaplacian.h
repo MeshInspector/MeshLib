@@ -6,6 +6,7 @@
 #include "MRMeshTriPoint.h"
 #include "MREnums.h"
 #include <MRPch/MREigenSparseCore.h>
+#include <array>
 
 namespace MR
 {
@@ -25,9 +26,14 @@ public:
     MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
 
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
-    /// \param freeVerts must not include all vertices of a mesh connected component
-    MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit,
-        RememberShape rem = RememberShape::Yes );
+    /// \param freeVerts must not include all vertices of a mesh connected component;
+    /// \param usePoints is not nullptr, then these points will be used instead of passed to a constructor for weights computation and shape memory
+    void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes )
+        { initFromPoints( points_, freeVerts, weights, vmass, rem ); }
+
+    /// same as init() but uses the given points instead of ones passed to a constructor for weights computation and shape memory
+    MRMESH_API void initFromPoints( const VertCoords & points, const VertBitSet & freeVerts, EdgeWeights weights,
+        VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes );
 
     /// notify Laplacian that given vertex has changed after init and must be fixed during apply;
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
@@ -40,10 +46,16 @@ public:
     /// if you manually call this method after initialization and fixing vertices then next apply call will be much faster
     MRMESH_API void updateSolver();
 
-    /// given fixed vertices, computes positions of remaining region vertices
-    MRMESH_API void apply();
+    /// takes fixed vertex positions from the given points vector,
+    /// computes and writes free vertex positions in the given points vector as well
+    MRMESH_API void applyToVector( VertCoords & points );
 
-    /// given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
+    /// takes fixed vertex positions from the points vector passed to a constructor,
+    /// computes and writes free vertex positions in the points vector passed to a constructor as well
+    void apply() { applyToVector( points_ ); }
+
+    /// takes fixed vertex scalars from the given field,
+    /// computes and writes free vertex scalars in the given field as well
     MRMESH_API void applyToScalar( VertScalars & scalarField );
 
     /// return all initially free vertices and the first layer of vertices around them
@@ -80,14 +92,11 @@ public:
     MRMESH_API void removeAllAttractors();
 
 private:
-    // updates solver_ only
-    void updateSolver_();
-
-    // updates rhs_ only
-    void updateRhs_();
+    // computes right-hand-side from the given fixed points
+    std::array<Eigen::VectorXd, 3> findRhs_( const VertCoords & points ) const;
 
     template <typename I, typename G, typename S, typename P>
-    void prepareRhs_( I && iniRhs, G && g, S && s, P && p );
+    void prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const;
 
     const MeshTopology & topology_;
     VertCoords & points_;
@@ -142,10 +151,6 @@ private:
         virtual Eigen::VectorXd solve( const Eigen::VectorXd& rhs ) = 0;
     };
     std::unique_ptr<Solver> solver_;
-
-    // if true then we do not need to recompute rhs_ in the apply
-    bool rhsValid_ = false;
-    Eigen::VectorXd rhs_[3];
 };
 
 } //namespace MR

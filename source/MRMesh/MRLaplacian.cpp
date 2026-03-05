@@ -69,6 +69,7 @@ void Laplacian::initFromPoints( const VertCoords & points, const VertBitSet & fr
         freeVert2id_[v] = -1;
 
     solver_.reset();
+    fixedSharpVertices_.clear();
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;
@@ -172,6 +173,7 @@ void Laplacian::updateSolver()
 
     fillVectorWithSeqNums( freeVerts_, freeVert2id_ );
 
+    assert( !fixedSharpVertices_.intersects( freeVerts_ ) );
     firstLayerFixedVerts_ = freeVerts_;
     expand( topology_, firstLayerFixedVerts_ );
     firstLayerFixedVerts_ -= fixedSharpVertices_;
@@ -197,7 +199,7 @@ void Laplacian::updateSolver()
         ++n;
     }
 
-    // equations for free neighbors of fixed vertices
+    // equations for free neighbors of smooth fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];
@@ -257,7 +259,7 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const
         ++n;
     }
 
-    // equations for free neighbors of fixed vertices
+    // equations for free neighbors of smooth fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];

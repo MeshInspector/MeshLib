@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlignContoursToMesh.h" />
+    <ClInclude Include="MRBoxNesting.h" />
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
@@ -156,6 +157,7 @@
     <ClInclude Include="MRMultiwayAligningTransform.h" />
     <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MRMutexOwner.h" />
+    <ClInclude Include="MRNestingStructures.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MRObjectMeshData.h" />
@@ -446,6 +448,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />

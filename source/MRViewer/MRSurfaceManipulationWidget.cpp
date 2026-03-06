@@ -353,7 +353,11 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
 
             if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
+            {
+                fixedPickedVerts_.clear();
+                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
                 fixedPickedVertsToDistSq_.clear();
+            }
 
             historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( name, obj_ );
         }
@@ -647,16 +651,15 @@ void SurfaceManipulationWidget::changeSurface_()
             bool changedThisFixedVert = false;
             auto v = mesh.getClosestVertex( p );
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
-            auto vIt = fixedPickedVertsToDistSq_.find( v );
-            if ( vIt == fixedPickedVertsToDistSq_.end() )
+            if ( !fixedPickedVerts_.test( v ) )
             {
                 bool fixedTri = false;
                 for ( EdgeId e : orgRing( mesh.topology, v ) )
                 {
                     if ( !mesh.topology.left( e ) )
                         continue;
-                    if ( fixedPickedVertsToDistSq_.count( mesh.topology.dest( e ) ) > 0
-                      && fixedPickedVertsToDistSq_.count( mesh.topology.dest( mesh.topology.next( e ) ) ) > 0 )
+                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
+                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
                     {
                         fixedTri = true;
                         break;
@@ -664,17 +667,23 @@ void SurfaceManipulationWidget::changeSurface_()
                 }
                 if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
                 {
+                    fixedPickedVerts_.set( v );
                     fixedPickedVertsToDistSq_.insert( { v, vDistSq } );
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
                     changedThisFixedVert = changedAnyFixedVert = true;
                 }
             }
-            else if ( vIt->second > vDistSq )
+            else
             {
-                // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
-                vIt->second = vDistSq;
-                varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                changedThisFixedVert = changedAnyFixedVert = true;
+                auto vIt = fixedPickedVertsToDistSq_.find( v );
+                assert( vIt != fixedPickedVertsToDistSq_.end() );
+                if ( vIt->second > vDistSq )
+                {
+                    // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
+                    vIt->second = vDistSq;
+                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
+                    changedThisFixedVert = changedAnyFixedVert = true;
+                }
             }
             if ( changedThisFixedVert )
             {
@@ -691,7 +700,7 @@ void SurfaceManipulationWidget::changeSurface_()
 
         initLaplacian_( RememberShape::No );
         // fix vertices near current and previous pick points
-        for ( auto& [v, dSq] : fixedPickedVertsToDistSq_ )
+        for ( auto v : fixedPickedVerts_ )
             laplacian_->fixVertex( v );
 
         laplacian_->apply();

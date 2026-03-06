@@ -52,7 +52,7 @@ public:
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
-        bool laplacianBasedAddRemove = false;
+        bool idealGrooves = false; ///< if true in Add/Remove modes, the closest vertices will be moved under mouse cursor to form ideal ridges or grooves
     };
 
     /// initialize widget according ObjectMesh
@@ -159,7 +159,6 @@ protected:
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
-    VertBitSet changedRegion_;
     VertScalars valueChanges_;
     VertScalars lastStableValueChanges_;
     std::shared_ptr<Mesh> originalMesh_; ///< original input mesh
@@ -182,10 +181,16 @@ protected:
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
 
-    /// these are all vertices manually moved to be under mouse and lifted to material width since last mouse down
-    /// in laplacianBasedAddRemove mode not including the vertices around moved by the laplacian;
+     /// these are all vertices manually moved to be under mouse and lifted to material width since last mouse down
+     /// in idealGrooves mode not including free vertices around relaxed and lifted
+     VertBitSet fixedPickedVerts_;
+
+    /// same vertices as in fixedPickedVerts_
     /// mapped float value is the minimal distance from point under mouse to that vertex
     HashMap<VertId, float> fixedPickedVertsToDistSq_;
+
+    /// this map is used inside changeSurface_() and stored here to avoid reallocations on every call
+    HashMap<VertId, float> relaxRegionHeights_;
 
     /// prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
     class SmartChangeMeshPointsAction;

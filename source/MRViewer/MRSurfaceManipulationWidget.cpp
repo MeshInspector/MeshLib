@@ -351,9 +351,13 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
-            if ( settings_.laplacianBasedAddRemove
+            if ( settings_.idealGrooves
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
+            {
+                fixedPickedVerts_.clear();
+                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
                 fixedPickedVertsToDistSq_.clear();
+            }
 
             historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( name, obj_ );
         }
@@ -475,7 +479,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         }
     }
     else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
-        !settings_.laplacianBasedAddRemove && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
         ownMeshChangedSignal_ = true;
 
@@ -547,7 +551,6 @@ void SurfaceManipulationWidget::reallocData_( size_t size )
     pointsShift_.resize( size, 0.f );
     editingDistanceMap_.resize( size, 0.f );
     visualizationDistanceMap_.resize( size, FLT_MAX );
-    changedRegion_.resize( size, false );
     valueChanges_.resize( size, 0.f );
 }
 
@@ -559,7 +562,6 @@ void SurfaceManipulationWidget::clearData_()
     pointsShift_.clear();
     editingDistanceMap_.clear();
     visualizationDistanceMap_.clear();
-    changedRegion_.clear();
     valueChanges_.clear();
     pointsUnderMouse_.clear();
 }
@@ -638,7 +640,7 @@ void SurfaceManipulationWidget::changeSurface_()
     varMesh.invalidateCaches();
     const float maxShift = settings_.editForce;
 
-    if ( settings_.laplacianBasedAddRemove )
+    if ( settings_.idealGrooves )
     {
         // fix vertices near new pick points
         bool changedAnyFixedVert = false;
@@ -647,16 +649,15 @@ void SurfaceManipulationWidget::changeSurface_()
             bool changedThisFixedVert = false;
             auto v = mesh.getClosestVertex( p );
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
-            auto vIt = fixedPickedVertsToDistSq_.find( v );
-            if ( vIt == fixedPickedVertsToDistSq_.end() )
+            if ( !fixedPickedVerts_.test( v ) )
             {
                 bool fixedTri = false;
                 for ( EdgeId e : orgRing( mesh.topology, v ) )
                 {
                     if ( !mesh.topology.left( e ) )
                         continue;
-                    if ( fixedPickedVertsToDistSq_.count( mesh.topology.dest( e ) ) > 0
-                      && fixedPickedVertsToDistSq_.count( mesh.topology.dest( mesh.topology.next( e ) ) ) > 0 )
+                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
+                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
                     {
                         fixedTri = true;
                         break;
@@ -664,17 +665,23 @@ void SurfaceManipulationWidget::changeSurface_()
                 }
                 if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
                 {
+                    fixedPickedVerts_.set( v );
                     fixedPickedVertsToDistSq_.insert( { v, vDistSq } );
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
                     changedThisFixedVert = changedAnyFixedVert = true;
                 }
             }
-            else if ( vIt->second > vDistSq )
+            else
             {
-                // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
-                vIt->second = vDistSq;
-                varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                changedThisFixedVert = changedAnyFixedVert = true;
+                auto vIt = fixedPickedVertsToDistSq_.find( v );
+                assert( vIt != fixedPickedVertsToDistSq_.end() );
+                if ( vIt->second > vDistSq )
+                {
+                    // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
+                    vIt->second = vDistSq;
+                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
+                    changedThisFixedVert = changedAnyFixedVert = true;
+                }
             }
             if ( changedThisFixedVert )
             {
@@ -689,37 +696,44 @@ void SurfaceManipulationWidget::changeSurface_()
         if ( !changedAnyFixedVert )
             return;
 
-        initLaplacian_( RememberShape::No );
-        // fix vertices near current and previous pick points
-        for ( auto& [v, dSq] : fixedPickedVertsToDistSq_ )
-            laplacian_->fixVertex( v );
+        // remember heights of all vertices being relaxed
+        const auto relaxRegion = singleEditingRegion_ - fixedPickedVerts_;
+        relaxRegionHeights_.clear();
+        for ( auto v : relaxRegion )
+            relaxRegionHeights_[v] = dot( normal, varMesh.points[v] );
 
-        laplacian_->apply();
-    }
-    else
-    {
-        auto& points = obj_->varMesh()->points;
+        relax( varMesh, { { .region = &relaxRegion } } );
 
-        const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
-        const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
-        const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-        BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
+        // restore heights of all vertices after relax
+        for ( const auto& [v, h] : relaxRegionHeights_ )
         {
-            const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
-            const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
-            float pointShift = maxShift * k; // shift = F * I(r)
-            if ( pointShift > pointsShift_[v] )
-            {
-                pointShift -= pointsShift_[v];
-                pointsShift_[v] += pointShift;
-            }
-            else
-                return;
-            points[v] += pointShift * normal;
-        } );
+            auto & p = varMesh.points[v];
+            p = p + ( h - dot( normal, p ) ) * normal;
+        }
     }
+
+    auto& points = varMesh.points;
+
+    const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
+    const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
+    const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
+    BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
+    {
+        if ( fixedPickedVerts_.test( v ) )
+            return;
+        const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
+        const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
+        float pointShift = maxShift * k; // shift = F * I(r)
+        if ( pointShift > pointsShift_[v] )
+        {
+            pointShift -= pointsShift_[v];
+            pointsShift_[v] += pointShift;
+        }
+        else
+            return;
+        points[v] += pointShift * normal;
+    } );
     generalEditingRegion_ |= singleEditingRegion_;
-    changedRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );
     obj_->setDirtyFlagsFast( DIRTY_POSITION );
 }
@@ -864,7 +878,6 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertIniPos_ = mesh.points[touchVertId_];
     initLaplacian_( RememberShape::Yes );
     historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
-    changedRegion_ |= singleEditingRegion_;
     createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;
 }

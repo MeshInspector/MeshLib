@@ -351,7 +351,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
-            if ( settings_.laplacianBasedAddRemove
+            if ( settings_.idealGrooves
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
             {
                 fixedPickedVerts_.clear();
@@ -479,7 +479,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         }
     }
     else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
-        !settings_.laplacianBasedAddRemove && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
         ownMeshChangedSignal_ = true;
 
@@ -640,7 +640,7 @@ void SurfaceManipulationWidget::changeSurface_()
     varMesh.invalidateCaches();
     const float maxShift = settings_.editForce;
 
-    if ( settings_.laplacianBasedAddRemove )
+    if ( settings_.idealGrooves )
     {
         // fix vertices near new pick points
         bool changedAnyFixedVert = false;

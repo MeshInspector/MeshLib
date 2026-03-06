@@ -52,7 +52,7 @@ public:
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
-        bool laplacianBasedAddRemove = false;
+        bool idealGrooves = false; ///< if true in Add/Remove modes, the closest vertices will be moved under mouse cursor to form ideal ridges or grooves
     };
 
     /// initialize widget according ObjectMesh

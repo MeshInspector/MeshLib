@@ -749,7 +749,7 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
     VertColors vColorMap;
     initDefaultFillament_( loader );
     std::optional<Color> baseFilament;
-    if ( defaultFillamentId_ >= 0 && defaultFillamentId_ < loader.filamentColors_.size() )
+    if ( defaultFillamentId_ < loader.filamentColors_.size() )
         baseFilament = loader.filamentColors_[defaultFillamentId_];
     bool allTrisHaveConstColors = true;
     bool someTrisHaveNotBgColor = !bgColor.has_value();

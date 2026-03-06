@@ -4,6 +4,8 @@
 #ifndef MRVIEWER_NO_LOCALE
 #include "exports.h"
 
+#include <MRMesh/MRMeshFwd.h>
+
 #include <string>
 
 namespace MR::Locale
@@ -16,10 +18,10 @@ MRVIEWER_API std::string translate( const char* msg, int domainId = 0 );
 MRVIEWER_API std::string translate( const char* context, const char* msg, int domainId = 0 );
 
 /// \brief Translates a plural message form using the active locale.
-MRVIEWER_API std::string translate( const char* single, const char* plural, long long n, int domainId = 0 );
+MRVIEWER_API std::string translate( const char* single, const char* plural, Int64 n, int domainId = 0 );
 
 /// \brief Translates a plural message form in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, long long n, int domainId = 0 );
+MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, Int64 n, int domainId = 0 );
 
 } // namespace MR::Locale
 

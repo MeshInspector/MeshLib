@@ -12,6 +12,9 @@
 #pragma warning( pop )
 #include <boost/version.hpp>
 
+#include <cassert>
+#include <map>
+
 namespace MR
 {
 

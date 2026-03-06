@@ -20,12 +20,12 @@ std::string translate( const char* context, const char* msg, int domainId )
     return boost::locale::translate( context, msg ).str( get(), domainId );
 }
 
-std::string translate( const char* single, const char* plural, long long n, int domainId )
+std::string translate( const char* single, const char* plural, Int64 n, int domainId )
 {
     return boost::locale::translate( single, plural, n ).str( get(), domainId );
 }
 
-std::string translate( const char* context, const char* single, const char* plural, long long n, int domainId )
+std::string translate( const char* context, const char* single, const char* plural, Int64 n, int domainId )
 {
     return boost::locale::translate( context, single, plural, n ).str( get(), domainId );
 }

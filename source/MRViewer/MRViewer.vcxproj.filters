@@ -520,6 +520,9 @@
     <ClCompile Include="MRLocale.cpp">
       <Filter>Localization</Filter>
     </ClCompile>
+    <ClCompile Include="MRI18n.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -1025,6 +1028,9 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandlerWinEvents.h">
       <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRI18n.h">
+      <Filter>Localization</Filter>
     </ClInclude>
     <ClInclude Include="MRLocale.h">
       <Filter>Localization</Filter>

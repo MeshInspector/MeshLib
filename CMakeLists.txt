@@ -241,8 +241,6 @@ IF(MESHLIB_BUILD_MRVIEWER)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 
-  add_subdirectory(locale)
-
   IF(MESHLIB_BUILD_MESHVIEWER)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
   ENDIF()

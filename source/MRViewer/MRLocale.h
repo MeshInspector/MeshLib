@@ -4,11 +4,6 @@
 #ifndef MRVIEWER_NO_LOCALE
 #include "exports.h"
 
-#pragma warning( push )
-#pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
-#include <boost/locale/message.hpp>
-#pragma warning( pop )
-
 #include <filesystem>
 #include <vector>
 
@@ -35,7 +30,12 @@ MRVIEWER_API std::vector<std::string> getAvailableLocales();
 MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// \brief Adds a new domain.
 /// The active locale is reloaded on every call.
-MRVIEWER_API void addDomain( std::string domainName );
+/// \returns The id of the added domain.
+MRVIEWER_API int addDomain( const char* domainName );
+/// \brief Find an id for the given domain that can be passed to the `translate` functions.
+/// \returns The domain id if the domain is previously added and 0 (the default domain id) otherwise.
+/// \ref translate
+MRVIEWER_API int findDomain( const char* domainName );
 
 /// \brief Returns a display name for the given locale.
 /// \returns
@@ -47,39 +47,5 @@ MRVIEWER_API std::string getDisplayName( const std::string& localeName );
 /// \brief Adds or updates a display name for the given locale.
 MRVIEWER_API void setDisplayName( const std::string& localeName, const std::string& displayName );
 
-/// \brief Translates a message using the active locale.
-inline auto translate( const char* msg )
-{
-    return boost::locale::translate( msg ).str( get() );
-}
-/// \brief Translates a message in context using the active locale.
-inline auto translate( const char* context, const char* msg )
-{
-    return boost::locale::translate( context, msg ).str( get() );
-}
-/// \brief Translates a plural message form using the active locale.
-inline auto translate( const char* single, const char* plural, auto n )
-{
-    return boost::locale::translate( single, plural, n ).str( get() );
-}
-/// \brief Translates a plural message form in context using the active locale.
-inline auto translate( const char* context, const char* single, const char* plural, auto n )
-{
-    return boost::locale::translate( context, single, plural, n ).str( get() );
-}
-
 } // namespace MR::Locale
-
-#ifndef MR_NO_I18N_MACROS
-#define _tr( ... ) MR::Locale::translate( __VA_ARGS__ ).c_str()
-#define f_tr( ... ) fmt::runtime( MR::Locale::translate( __VA_ARGS__ ) )
-#endif // MR_NO_I18N_MACROS
-
-#else // MRVIEWER_NO_LOCALE
-
-#ifndef MR_NO_I18N_MACROS
-#define _tr( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
-#define f_tr( ... ) fmt::runtime( MR::Locale::translate_noop( __VA_ARGS__ ) )
-#endif // MR_NO_I18N_MACROS
-
 #endif // MRVIEWER_NO_LOCALE

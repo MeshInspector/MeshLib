@@ -8,18 +8,18 @@
 #pragma warning( push )
 #pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
 #include <boost/locale/generator.hpp>
+#include <boost/locale/message.hpp>
 #pragma warning( pop )
 #include <boost/version.hpp>
+
+#include <cassert>
+#include <map>
 
 namespace MR
 {
 
 namespace
 {
-
-// enforce xgettext to use UTF-8 encoding
-// TRANSLATORS: this is a technical string; no need to translate it
-[[maybe_unused]] constexpr auto cEnforceUtf8 = _t( "(^̮^)" );
 
 std::locale gLocale = {};
 std::string gLocaleName = "en";
@@ -34,6 +34,8 @@ std::filesystem::path getLocaleDir()
 std::unordered_map<std::string, std::string> gKnownLocales = {
 #include "MRLocaleNames.inl"
 };
+
+std::map<const char*, int> gDomainCache = {};
 
 } // namespace
 
@@ -80,16 +82,24 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
     gLocale = gLocaleGen.generate( gLocaleName );
 }
 
-void Locale::addDomain( std::string domainName )
+int Locale::addDomain( const char* domainName )
 {
-    // force set UTF-8 encoding
-    if ( auto pos = domainName.find( '/' ); pos != std::string::npos )
-        domainName.replace( pos, domainName.size(), "/utf-8" );
-    else
-        domainName.append( "/utf-8" );
-
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
+
+    using facet_type = boost::locale::message_format<char>;
+    assert( std::has_facet<facet_type>( gLocale ) );
+    return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+}
+
+int Locale::findDomain( const char* domainName )
+{
+    if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
+        return it->second;
+
+    using facet_type = boost::locale::message_format<char>;
+    assert( std::has_facet<facet_type>( gLocale ) );
+    return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
 }
 
 std::string Locale::getDisplayName( const std::string& localeName )
@@ -124,7 +134,7 @@ MR_ON_INIT
 #endif
     );
     // set MeshLib domain by default
-    gLocaleGen.add_messages_domain( "MeshLib/utf-8" );
+    Locale::addDomain( "MeshLib" );
     Locale::addCatalogPath( getLocaleDir() );
 };
 

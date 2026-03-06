@@ -158,6 +158,7 @@
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
     <ClCompile Include="MRFileDialogPortal.cpp" />
     <ClCompile Include="MRWin32MessageHandler.cpp" />
+    <ClCompile Include="MRI18n.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -336,6 +337,7 @@
     <ClInclude Include="MRWebResponseCallback.h" />
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
+    <ClInclude Include="MRI18n.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

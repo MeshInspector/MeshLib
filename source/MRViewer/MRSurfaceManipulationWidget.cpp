@@ -551,7 +551,6 @@ void SurfaceManipulationWidget::reallocData_( size_t size )
     pointsShift_.resize( size, 0.f );
     editingDistanceMap_.resize( size, 0.f );
     visualizationDistanceMap_.resize( size, FLT_MAX );
-    changedRegion_.resize( size, false );
     valueChanges_.resize( size, 0.f );
 }
 
@@ -563,7 +562,6 @@ void SurfaceManipulationWidget::clearData_()
     pointsShift_.clear();
     editingDistanceMap_.clear();
     visualizationDistanceMap_.clear();
-    changedRegion_.clear();
     valueChanges_.clear();
     pointsUnderMouse_.clear();
 }
@@ -698,37 +696,42 @@ void SurfaceManipulationWidget::changeSurface_()
         if ( !changedAnyFixedVert )
             return;
 
-        initLaplacian_( RememberShape::No );
-        // fix vertices near current and previous pick points
-        for ( auto v : fixedPickedVerts_ )
-            laplacian_->fixVertex( v );
+        editingVertToHeight_.clear();
+        for ( auto v : singleEditingRegion_ )
+            editingVertToHeight_[v] = dot( normal, varMesh.points[v] );
 
-        laplacian_->apply();
-    }
-    else
-    {
-        auto& points = obj_->varMesh()->points;
+        generalEditingRegion_ |= fixedPickedVerts_;
+        singleEditingRegion_ -= fixedPickedVerts_;
 
-        const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
-        const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
-        const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-        BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
+        relax( varMesh, { { .region = &singleEditingRegion_ } } );
+
+        for ( const auto& [v, h] : editingVertToHeight_ )
         {
-            const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
-            const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
-            float pointShift = maxShift * k; // shift = F * I(r)
-            if ( pointShift > pointsShift_[v] )
-            {
-                pointShift -= pointsShift_[v];
-                pointsShift_[v] += pointShift;
-            }
-            else
-                return;
-            points[v] += pointShift * normal;
-        } );
+            auto & p = varMesh.points[v];
+            p = p + ( h - dot( normal, p ) ) * normal;
+        }
     }
+
+    auto& points = varMesh.points;
+
+    const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
+    const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
+    const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
+    BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
+    {
+        const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
+        const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
+        float pointShift = maxShift * k; // shift = F * I(r)
+        if ( pointShift > pointsShift_[v] )
+        {
+            pointShift -= pointsShift_[v];
+            pointsShift_[v] += pointShift;
+        }
+        else
+            return;
+        points[v] += pointShift * normal;
+    } );
     generalEditingRegion_ |= singleEditingRegion_;
-    changedRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );
     obj_->setDirtyFlagsFast( DIRTY_POSITION );
 }
@@ -873,7 +876,6 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertIniPos_ = mesh.points[touchVertId_];
     initLaplacian_( RememberShape::Yes );
     historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
-    changedRegion_ |= singleEditingRegion_;
     createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;
 }

@@ -159,7 +159,6 @@ protected:
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
-    VertBitSet changedRegion_;
     VertScalars valueChanges_;
     VertScalars lastStableValueChanges_;
     std::shared_ptr<Mesh> originalMesh_; ///< original input mesh
@@ -189,6 +188,8 @@ protected:
     /// same vertices as in fixedPickedVerts_
     /// mapped float value is the minimal distance from point under mouse to that vertex
     HashMap<VertId, float> fixedPickedVertsToDistSq_;
+
+    HashMap<VertId, float> editingVertToHeight_;
 
     /// prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
     class SmartChangeMeshPointsAction;

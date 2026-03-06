@@ -696,16 +696,16 @@ void SurfaceManipulationWidget::changeSurface_()
         if ( !changedAnyFixedVert )
             return;
 
-        editingVertToHeight_.clear();
-        for ( auto v : singleEditingRegion_ )
-            editingVertToHeight_[v] = dot( normal, varMesh.points[v] );
+        // remember heights of all vertices being relaxed
+        const auto relaxRegion = singleEditingRegion_ - fixedPickedVerts_;
+        relaxRegionHeights_.clear();
+        for ( auto v : relaxRegion )
+            relaxRegionHeights_[v] = dot( normal, varMesh.points[v] );
 
-        generalEditingRegion_ |= fixedPickedVerts_;
-        singleEditingRegion_ -= fixedPickedVerts_;
+        relax( varMesh, { { .region = &relaxRegion } } );
 
-        relax( varMesh, { { .region = &singleEditingRegion_ } } );
-
-        for ( const auto& [v, h] : editingVertToHeight_ )
+        // restore heights of all vertices after relax
+        for ( const auto& [v, h] : relaxRegionHeights_ )
         {
             auto & p = varMesh.points[v];
             p = p + ( h - dot( normal, p ) ) * normal;
@@ -719,6 +719,8 @@ void SurfaceManipulationWidget::changeSurface_()
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
     {
+        if ( fixedPickedVerts_.test( v ) )
+            return;
         const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
         const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
         float pointShift = maxShift * k; // shift = F * I(r)

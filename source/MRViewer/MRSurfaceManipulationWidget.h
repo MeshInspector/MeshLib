@@ -189,7 +189,8 @@ protected:
     /// mapped float value is the minimal distance from point under mouse to that vertex
     HashMap<VertId, float> fixedPickedVertsToDistSq_;
 
-    HashMap<VertId, float> editingVertToHeight_;
+    /// this map is used inside changeSurface_() and stored here to avoid reallocations on every call
+    HashMap<VertId, float> relaxRegionHeights_;
 
     /// prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
     class SmartChangeMeshPointsAction;

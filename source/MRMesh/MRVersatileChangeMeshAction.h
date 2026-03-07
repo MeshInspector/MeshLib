@@ -7,7 +7,7 @@ namespace MR
 /// Undo action for ObjectMesh points only (not topology) change;
 /// It starts its life storing all points (uncompressed format),
 /// but can be switched to store only modified points (compressed format)
-class VersatileChangeMeshPointsAction : public HistoryAction
+class MRMESH_CLASS VersatileChangeMeshPointsAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;

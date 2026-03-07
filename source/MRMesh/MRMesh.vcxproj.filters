@@ -1401,6 +1401,9 @@
     <ClInclude Include="MRBoxNesting.h">
       <Filter>Source Files\Nesting</Filter>
     </ClInclude>
+    <ClInclude Include="MRVersatileChangeMeshAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2299,6 +2302,9 @@
     </ClCompile>
     <ClCompile Include="MRBoxNesting.cpp">
       <Filter>Source Files\Nesting</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVersatileChangeMeshAction.cpp">
+      <Filter>Source Files\History</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

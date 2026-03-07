@@ -363,6 +363,7 @@
     <ClInclude Include="MRUnsigned.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVector2.h" />
+    <ClInclude Include="MRVersatileChangeMeshAction.h" />
     <ClInclude Include="MRVertCoordsDiff.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
@@ -685,6 +686,7 @@
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
     <ClCompile Include="MRUnitInfo.cpp" />
+    <ClCompile Include="MRVersatileChangeMeshAction.cpp" />
     <ClCompile Include="MRVertCoordsDiff.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />

@@ -192,9 +192,9 @@ protected:
     /// this map is used inside changeSurface_() and stored here to avoid reallocations on every call
     HashMap<VertId, float> relaxRegionHeights_;
 
-    /// prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
-    class SmartChangeMeshPointsAction;
-    std::shared_ptr<SmartChangeMeshPointsAction> historyAction_;
+    /// prior to add/remove/smooth/deform modification, this action is created and 
+    /// the current mesh coordinates are copied here
+    std::shared_ptr<VersatileChangeMeshPointsAction> historyAction_;
 
     /// true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;

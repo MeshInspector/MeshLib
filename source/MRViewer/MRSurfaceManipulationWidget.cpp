@@ -15,7 +15,6 @@
 #include "MRMesh/MRSurfaceDistance.h"
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
-#include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRegionBoundary.h"
@@ -25,8 +24,7 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRParallelFor.h"
-#include "MRMesh/MRChangeMeshAction.h"
-#include "MRMesh/MRPartialChangeMeshAction.h"
+#include "MRMesh/MRVersatileChangeMeshAction.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRChangeSelectionAction.h"
 #include "MRMesh/MRObjectsAccess.h"
@@ -73,65 +71,6 @@ void findSpaceDistancesAndVerts( const Mesh& mesh, const std::vector<MeshTriPoin
 }
 
 } // anonymous namespace
-
-/// Undo action for ObjectMesh points only (not topology) change;
-/// It can store all points (uncompressed format), or only modified points (compressed format)
-class SurfaceManipulationWidget::SmartChangeMeshPointsAction : public HistoryAction
-{
-public:
-    using Obj = ObjectMesh;
-
-    /// use this constructor to remember object's mesh points in uncompressed format before making any changes in it
-    SmartChangeMeshPointsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
-        stdAction_{ std::make_unique<ChangeMeshPointsAction>( std::move( name ), obj ) }
-    {
-    }
-
-    virtual std::string name() const override
-    {
-        return stdAction_ ? stdAction_->name() : diffAction_->name();
-    }
-
-    virtual void action( HistoryAction::Type t ) override
-    {
-        if ( stdAction_ )
-            stdAction_->action( t );
-        else
-            diffAction_->action( t );
-    }
-
-    static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
-    {
-        if ( obj )
-            obj->setDirtyFlags( DIRTY_POSITION );
-    }
-
-    [[nodiscard]] virtual size_t heapBytes() const override
-    {
-        return MR::heapBytes( stdAction_ ) + MR::heapBytes( diffAction_ );
-    }
-
-    /// switch from uncompressed to compressed format to occupy less amount of memory
-    void compress()
-    {
-        assert( stdAction_ );
-        if ( stdAction_ )
-        {
-            diffAction_ = std::make_unique<PartialChangeMeshPointsAction>(
-                stdAction_->name(), stdAction_->obj(), cmpOld, stdAction_->clonePoints() );
-            stdAction_.reset();
-        }
-        assert( !stdAction_ );
-        assert( diffAction_ );
-    }
-
-private:
-    std::unique_ptr<ChangeMeshPointsAction> stdAction_;
-    std::unique_ptr<PartialChangeMeshPointsAction> diffAction_;
-};
-
-
-//const float k = r < 1-a ? std::sqrt( sqr( 1 - a ) - sqr( r ) ) + ( 1 - a ) : -std::sqrt( sqr( a ) - sqr( r - 1 ) ) + a; // alternative version F_point_shift(r,i) (i == a)
 
 // not in the header to be able to destroy Laplacian
 SurfaceManipulationWidget::SurfaceManipulationWidget()
@@ -359,7 +298,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
                 fixedPickedVertsToDistSq_.clear();
             }
 
-            historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( name, obj_ );
+            historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( name, obj_ );
         }
         changeSurface_();
     }
@@ -877,7 +816,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertId_ = mesh.getClosestVertex( pick );
     touchVertIniPos_ = mesh.points[touchVertId_];
     initLaplacian_( RememberShape::Yes );
-    historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
+    historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( "Brush: Deform", obj_ );
     createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;
 }

@@ -34,6 +34,7 @@
 #include "MRMesh/MRChangeMeshDataAction.h"
 #include "MRMesh/MRMeshPatch.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRMeshSubdivide.h"
 
 namespace MR
 {
@@ -308,11 +309,11 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
 
 void SurfaceManipulationWidget::compressChangePointsAction_()
 {
-    if ( historyAction_ )
-    {
+    // appendHistoryAction_ == false if historyAction_ was already appended
+    if ( historyAction_ && !appendHistoryAction_ )
         historyAction_->compress();
-        historyAction_.reset();
-    }
+
+    historyAction_.reset();
 }
 
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
@@ -325,13 +326,12 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( button != MouseButton::Left || !mousePressed_ )
         return false;
 
-    MR_FINALLY{ compressChangePointsAction_(); };
-
     mousePressed_ = false;
     if ( settings_.workMode == WorkMode::Laplacian )
     {
         removeLastStableObjMesh_();
         invalidateMetricsCache_();
+        compressChangePointsAction_();
         return true;
     }
 
@@ -433,10 +433,34 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     else
         invalidateMetricsCache_();
 
-    generalEditingRegion_.clear();
-    generalEditingRegion_.resize( numV, false );
-
     removeLastStableObjMesh_();
+    compressChangePointsAction_();
+
+    if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
+    {
+        auto subdivData = obj_->data().clone();
+        auto fs = getIncidentFaces( obj_->mesh()->topology, generalEditingRegion_ );
+        if ( subdivideMesh( subdivData, SubdivideSettings
+            {
+                .maxEdgeLen = settings_.radius,
+                .curvaturePriority = 100,
+                .maxEdgeSplits = 1000,
+                .maxDeviationAfterFlip = FLT_MAX,
+                .region = &fs,
+                .smoothMode = true,
+                .minSharpDihedralAngle = FLT_MAX
+            } ) )
+        {
+            ownMeshChangedSignal_ = true;
+            AppendHistory<PartialChangeMeshDataAction>( "Subdivide Ridges/Grooves", obj_, std::move( subdivData ) );
+            reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
+            sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+            setDeviationCalculationMethod( deviationCalculationMethod_ );
+            obj_->setDirtyFlags( DIRTY_ALL );
+        }
+    }
+
+    generalEditingRegion_.clear();
 
     return true;
 }
@@ -486,7 +510,7 @@ void SurfaceManipulationWidget::reallocData_( size_t size )
 {
     singleEditingRegion_.resize( size, false );
     visualizationRegion_.resize( size, false );
-    generalEditingRegion_.resize( size, false );
+    generalEditingRegion_.clear();
     pointsShift_.resize( size, 0.f );
     editingDistanceMap_.resize( size, 0.f );
     visualizationDistanceMap_.resize( size, FLT_MAX );

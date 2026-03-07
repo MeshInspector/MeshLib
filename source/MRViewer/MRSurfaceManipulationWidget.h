@@ -141,8 +141,10 @@ protected:
     void removeLastStableObjMesh_();
 
     /// this function is called after all modifications are finished;
-    /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
+    /// if we previously appended VersatileChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
+
+    void subdivideAfterAddRemove_();
 
     void updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 

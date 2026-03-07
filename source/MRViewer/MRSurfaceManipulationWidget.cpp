@@ -316,6 +316,31 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
     historyAction_.reset();
 }
 
+void SurfaceManipulationWidget::subdivideAfterAddRemove_()
+{
+    MR_TIMER;
+    auto subdivData = obj_->data().clone();
+    auto fs = getIncidentFaces( obj_->mesh()->topology, generalEditingRegion_ );
+    if ( subdivideMesh( subdivData, SubdivideSettings
+        {
+            .maxEdgeLen = settings_.radius,
+            .curvaturePriority = 100,
+            .maxEdgeSplits = 1000,
+            .maxDeviationAfterFlip = FLT_MAX,
+            .region = &fs,
+            .smoothMode = true,
+            .minSharpDihedralAngle = FLT_MAX
+        } ) )
+    {
+        ownMeshChangedSignal_ = true;
+        AppendHistory<PartialChangeMeshDataAction>( "Subdivide Ridges/Grooves", obj_, std::move( subdivData ) );
+        reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
+        sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+        setDeviationCalculationMethod( deviationCalculationMethod_ );
+        obj_->setDirtyFlags( DIRTY_ALL );
+    }
+}
+
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
 {
     findSpaceDistancesAndVerts( mesh, start, settings_.radius, distances, region, editOnlyCodirectedSurface_, untouchable );
@@ -436,29 +461,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     removeLastStableObjMesh_();
     compressChangePointsAction_();
 
-    if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
-    {
-        auto subdivData = obj_->data().clone();
-        auto fs = getIncidentFaces( obj_->mesh()->topology, generalEditingRegion_ );
-        if ( subdivideMesh( subdivData, SubdivideSettings
-            {
-                .maxEdgeLen = settings_.radius,
-                .curvaturePriority = 100,
-                .maxEdgeSplits = 1000,
-                .maxDeviationAfterFlip = FLT_MAX,
-                .region = &fs,
-                .smoothMode = true,
-                .minSharpDihedralAngle = FLT_MAX
-            } ) )
-        {
-            ownMeshChangedSignal_ = true;
-            AppendHistory<PartialChangeMeshDataAction>( "Subdivide Ridges/Grooves", obj_, std::move( subdivData ) );
-            reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
-            sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
-            setDeviationCalculationMethod( deviationCalculationMethod_ );
-            obj_->setDirtyFlags( DIRTY_ALL );
-        }
-    }
+    if ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
+        subdivideAfterAddRemove_();
 
     generalEditingRegion_.clear();
 
@@ -510,7 +514,7 @@ void SurfaceManipulationWidget::reallocData_( size_t size )
 {
     singleEditingRegion_.resize( size, false );
     visualizationRegion_.resize( size, false );
-    generalEditingRegion_.clear();
+    generalEditingRegion_.clear(); // there is no setting of bits by index in the code
     pointsShift_.resize( size, 0.f );
     editingDistanceMap_.resize( size, 0.f );
     visualizationDistanceMap_.resize( size, FLT_MAX );

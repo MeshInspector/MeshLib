@@ -53,6 +53,7 @@ public:
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool idealGrooves = false; ///< if true in Add/Remove modes, the closest vertices will be moved under mouse cursor to form ideal ridges or grooves
+        bool subdivideGrooves = false; ///< if true in Add/Remove modes, changed parts of mesh will be subdivided on mouse up
     };
 
     /// initialize widget according ObjectMesh

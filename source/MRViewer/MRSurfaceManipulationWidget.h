@@ -53,19 +53,23 @@ public:
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool idealGrooves = false; ///< if true in Add/Remove modes, the closest vertices will be moved under mouse cursor to form ideal ridges or grooves
+        bool subdivideGrooves = false; ///< if true in Add/Remove modes, changed parts of mesh will be subdivided on mouse up
     };
 
     /// initialize widget according ObjectMesh
     MRVIEWER_API void init( const std::shared_ptr<ObjectMesh>& objectMesh );
+
     /// reset widget state
     MRVIEWER_API void reset();
+
     /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
     /// @note boundary edges can be split to improve quality of the patch
     MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)
     MRVIEWER_API void setSettings( const Settings& settings );
-    /// get widget settings 
+
+    /// get widget settings
     MRVIEWER_API const Settings& getSettings() { return settings_; }
 
     /// minimum radius of editing area.
@@ -73,19 +77,26 @@ public:
 
     /// get palette used for visualization point shifts
     Palette& palette() { return *palette_; }
+
     /// update texture used for colorize surface (use after change colorMap in palette)
     MRVIEWER_API void updateTexture();
+
     /// update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
+
     /// enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
+
     /// set method for calculating mesh changes
     MRVIEWER_API void setDeviationCalculationMethod( DeviationCalculationMethod method );
+
     /// get method for calculating mesh changes
     MRVIEWER_API DeviationCalculationMethod deviationCalculationMethod() const { return deviationCalculationMethod_; }
-    /// checks for a one-to-one correspondence between the vertices of the original grid and the modified one
-    MRVIEWER_API bool sameValidVerticesAsInOriginMesh() const { return sameValidVerticesAsInOriginMesh_; }
-    /// get min / max point shifts for (usefull for setup palette)
+
+    /// returns true if the current object's mesh has the same topology as original input mesh (and vertices with same IDs can be compared)
+    MRVIEWER_API bool sameOriginalMeshTopology() const { return sameOriginalMeshTopology_; }
+
+    /// get min / max point shifts for (useful for setup palette)
     MRVIEWER_API Vector2f getMinMax();
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
@@ -94,15 +105,20 @@ public:
 
     /// restricts editable area to vertices whose normals look into the same half-space as normal under cursor
     void setEditOnlyCodirectedSurface( bool edit ) { editOnlyCodirectedSurface_ = edit; }
+
     /// get state of an editable region restriction 
     bool isEditOnlyCodirectedSurface() const { return editOnlyCodirectedSurface_; }
+
 protected:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
+
     /// stop modifying mesh surface, generate history action
     MRVIEWER_API bool onMouseUp_( MouseButton button, int modifiers ) override;
+
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
+
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
 
@@ -125,6 +141,7 @@ protected:
     void updateRegion_( const Vector2f& mousePos );
     void invalidateMetricsCache_();
     void abortEdit_();
+
     /// Laplacian
     void initLaplacian_( RememberShape rs ); // for singleEditingRegion_
     void laplacianPickVert_( const PointOnFace& pick );
@@ -141,8 +158,10 @@ protected:
     void removeLastStableObjMesh_();
 
     /// this function is called after all modifications are finished;
-    /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
+    /// if we previously appended VersatileChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
+
+    void subdivideAfterAddRemove_();
 
     void updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
@@ -202,7 +221,7 @@ protected:
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = false;
     DeviationCalculationMethod deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
-    bool sameValidVerticesAsInOriginMesh_ = true;
+    bool sameOriginalMeshTopology_ = true;
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;

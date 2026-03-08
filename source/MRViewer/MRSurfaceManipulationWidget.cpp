@@ -335,7 +335,7 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
         ownMeshChangedSignal_ = true;
         AppendHistory<PartialChangeMeshDataAction>( "Subdivide Ridges/Grooves", obj_, std::move( subdivData ) );
         reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
-        sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+        sameValidVerticesAsInOriginMesh_ = false;
         setDeviationCalculationMethod( deviationCalculationMethod_ );
         obj_->setDirtyFlags( DIRTY_ALL );
     }
@@ -434,7 +434,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             }
 
             reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
-            sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+            sameValidVerticesAsInOriginMesh_ = false;
             setDeviationCalculationMethod( deviationCalculationMethod_ );
             obj_->setDirtyFlags( DIRTY_ALL );
 
@@ -549,7 +549,7 @@ void SurfaceManipulationWidget::initConnections_()
         reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
         if ( settings_.workMode == WorkMode::Patch )
             updateUVmap_( false, true );
-        sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+        sameValidVerticesAsInOriginMesh_ = originalMesh_->topology == obj_->mesh()->topology;
         setDeviationCalculationMethod( deviationCalculationMethod_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
     } );

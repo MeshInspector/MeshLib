@@ -24,10 +24,11 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
         a[0] - a[2]
     };
 
-    const Vector3<T> an = cross( av[0], av[1] ).normalized(); // normal to a-triangle
+    const Vector3<T> an = cross( av[0], av[1] ); // not unit normal to a-triangle
+    const T anSq = an.lengthSq();
 
     // If a-triangle is not degenerate
-    if ( an != Vector3<T>{} )
+    if ( anSq > 0 )
     {
         // projections of b-points on -an direction
         const T bp[3] =
@@ -57,7 +58,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
             overlap = false;
             if ( params.canExitEarlier() )
             {
-                const auto planeDistSq = sqr( bp[point] );
+                const auto planeDistSq = sqr( bp[point] ) / anSq;
                 if ( params.canExitEarlier( planeDistSq ) )
                     return TriTriDistanceResult<T>
                     {
@@ -78,7 +79,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                 // b[point] passed the test - it's the closest point for
                 // the b triangle; the other point is on the face of a
                 TriTriDistanceResult<T> res;
-                res.a = b[point] + an * bp[point];
+                res.a = b[point] + an * bp[point] / anSq;
                 res.b = b[point];
                 res.distSq = distanceSq( res.a, res.b );
                 res.overlap = false;

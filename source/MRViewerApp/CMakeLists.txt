@@ -26,7 +26,13 @@ install(
 )
 
 include(I18nHelpers)
-mr_add_translations(meshlib_translations "../../locale/MeshLib.pot")
+mr_add_translations(meshlib_translations
+  DOMAINS
+    MeshLib
+    MRRibbonCommonMenuStructure
+  PATHS
+    "${CMAKE_CURRENT_LIST_DIR}/../../locale"
+)
 if(TARGET meshlib_translations)
   add_dependencies(${PROJECT_NAME} meshlib_translations)
 endif()

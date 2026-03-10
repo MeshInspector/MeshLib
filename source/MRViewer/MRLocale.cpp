@@ -84,6 +84,9 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
 
 int Locale::addDomain( const char* domainName )
 {
+    if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
+        return it->second;
+
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
 

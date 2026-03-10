@@ -439,7 +439,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         }
     }
     else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
-        !settings_.laplacianBasedAddRemove && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
         ownMeshChangedSignal_ = true;
 
@@ -654,11 +654,18 @@ void SurfaceManipulationWidget::changeSurface_()
         if ( !changedAnyFixedVert )
             return;
 
-        initLaplacian_( RememberShape::No );
+        initLaplacian_( RememberShape::Yes );
         // fix vertices near current and previous pick points
         for ( auto& [v, dSq] : fixedPickedVertsToDistSq_ )
-            laplacian_->fixVertex( v );
-
+            if ( singleEditingRegion_.test( v ) )
+            {
+                laplacian_->addAttractor(
+                {
+                    .p = MeshTriPoint( varMesh.topology, v ),
+                    .target = Vector3d( varMesh.points[v] ),
+                    .weight = ( settings_.vmass == VertexMass::NeiArea ? 1 : std::sqrt( mesh.dblArea( v ) ) ) / settings_.radius
+                } );
+            }
         laplacian_->apply();
     }
     else

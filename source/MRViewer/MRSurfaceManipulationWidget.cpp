@@ -309,8 +309,8 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
     if ( historyAction_ && !appendHistoryAction_ )
         historyAction_->compress();
 
-        historyAction_.reset();
-    }
+    historyAction_.reset();
+}
 
 void SurfaceManipulationWidget::subdivideAfterAddRemove_()
 {

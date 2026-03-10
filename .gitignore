@@ -40,11 +40,16 @@ wheelhouse/*
 /source/MeshLibC2/include
 /source/MeshLibC2/src
 /source/MeshLibC2/temp
+/source/MeshLibC2Cuda/include
+/source/MeshLibC2Cuda/src
 compile_commands.json
 /source/CustomMRPlatform.props
 /source/MRDotNet2/bin
 /source/MRDotNet2/obj
 /source/MRDotNet2/src
+/source/MRDotNet2Cuda/bin
+/source/MRDotNet2Cuda/obj
+/source/MRDotNet2Cuda/src
 /source/MRDotNet2Test/obj
 # `MRDotNet2Test` places binaries there on Linux: [
 /source/Debug

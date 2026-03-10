@@ -218,6 +218,9 @@ IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
   option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
+
+  # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
 ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)

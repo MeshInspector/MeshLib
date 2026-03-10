@@ -291,13 +291,9 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
-            if ( settings_.idealGrooves
+            if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
-            {
-                fixedPickedVerts_.clear();
-                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
                 fixedPickedVertsToDistSq_.clear();
-            }
 
             historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( name, obj_ );
         }
@@ -313,8 +309,8 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
     if ( historyAction_ && !appendHistoryAction_ )
         historyAction_->compress();
 
-    historyAction_.reset();
-}
+        historyAction_.reset();
+    }
 
 void SurfaceManipulationWidget::subdivideAfterAddRemove_()
 {
@@ -443,7 +439,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         }
     }
     else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
-        settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        !settings_.laplacianBasedAddRemove && settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
         ownMeshChangedSignal_ = true;
 
@@ -607,7 +603,7 @@ void SurfaceManipulationWidget::changeSurface_()
     varMesh.invalidateCaches();
     const float maxShift = settings_.editForce;
 
-    if ( settings_.idealGrooves )
+    if ( settings_.laplacianBasedAddRemove )
     {
         // fix vertices near new pick points
         bool changedAnyFixedVert = false;
@@ -616,15 +612,16 @@ void SurfaceManipulationWidget::changeSurface_()
             bool changedThisFixedVert = false;
             auto v = mesh.getClosestVertex( p );
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
-            if ( !fixedPickedVerts_.test( v ) )
+            auto vIt = fixedPickedVertsToDistSq_.find( v );
+            if ( vIt == fixedPickedVertsToDistSq_.end() )
             {
                 bool fixedTri = false;
                 for ( EdgeId e : orgRing( mesh.topology, v ) )
                 {
                     if ( !mesh.topology.left( e ) )
                         continue;
-                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
-                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
+                    if ( fixedPickedVertsToDistSq_.count( mesh.topology.dest( e ) ) > 0
+                      && fixedPickedVertsToDistSq_.count( mesh.topology.dest( mesh.topology.next( e ) ) ) > 0 )
                     {
                         fixedTri = true;
                         break;
@@ -632,24 +629,18 @@ void SurfaceManipulationWidget::changeSurface_()
                 }
                 if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
                 {
-                    fixedPickedVerts_.set( v );
                     fixedPickedVertsToDistSq_.insert( { v, vDistSq } );
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
                     changedThisFixedVert = changedAnyFixedVert = true;
                 }
             }
-            else
-            {
-                auto vIt = fixedPickedVertsToDistSq_.find( v );
-                assert( vIt != fixedPickedVertsToDistSq_.end() );
-                if ( vIt->second > vDistSq )
+            else if ( vIt->second > vDistSq )
                 {
                     // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
                     vIt->second = vDistSq;
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
                     changedThisFixedVert = changedAnyFixedVert = true;
                 }
-            }
             if ( changedThisFixedVert )
             {
                 // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
@@ -663,31 +654,22 @@ void SurfaceManipulationWidget::changeSurface_()
         if ( !changedAnyFixedVert )
             return;
 
-        // remember heights of all vertices being relaxed
-        const auto relaxRegion = singleEditingRegion_ - fixedPickedVerts_;
-        relaxRegionHeights_.clear();
-        for ( auto v : relaxRegion )
-            relaxRegionHeights_[v] = dot( normal, varMesh.points[v] );
+        initLaplacian_( RememberShape::No );
+        // fix vertices near current and previous pick points
+        for ( auto& [v, dSq] : fixedPickedVertsToDistSq_ )
+            laplacian_->fixVertex( v );
 
-        relax( varMesh, { { .region = &relaxRegion } } );
-
-        // restore heights of all vertices after relax
-        for ( const auto& [v, h] : relaxRegionHeights_ )
-        {
-            auto & p = varMesh.points[v];
-            p = p + ( h - dot( normal, p ) ) * normal;
-        }
+        laplacian_->apply();
     }
-
-    auto& points = varMesh.points;
+    else
+        {
+        auto& points = obj_->varMesh()->points;
 
     const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
     const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
     const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
     BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
     {
-        if ( fixedPickedVerts_.test( v ) )
-            return;
         const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
         const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
         float pointShift = maxShift * k; // shift = F * I(r)
@@ -700,6 +682,7 @@ void SurfaceManipulationWidget::changeSurface_()
             return;
         points[v] += pointShift * normal;
     } );
+    }
     generalEditingRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );
     obj_->setDirtyFlagsFast( DIRTY_POSITION );

@@ -956,29 +956,29 @@ generate:
 		$(call, ### Handle sub-libraries) \
 		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
 	)
-	$(call, ### Now copy over the generated sub-libraries)
-	true $(strip $(foreach m,$(MODULES),\
-		$(foreach p,$($m_InputProjects),\
-			$(if $($m_CSharpSubLibraryOutputProject),\
-				$(call var,_target_dir := $(CSHARP_CODE_OUTPUT_DIR)/../$($m_CSharpSubLibraryOutputProject)/src)\
-				&& rm -rf $(_target_dir)\
-				&& mkdir -p $(_target_dir)\
-				&& mv $(CSHARP_CODE_OUTPUT_DIR)/src/$(call CPP_TO_C_DIR_NAME,$p) $(_target_dir)\
-			)\
-		)\
-	))
+# # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
+# $(call, ### Now copy over the generated sub-libraries)
+# true $(strip $(foreach m,$(MODULES),\
+# 	$(foreach p,$($m_InputProjects),\
+# 		$(if $($m_CSharpSubLibraryOutputProject),\
+# 			$(call var,_target_dir := $(CSHARP_CODE_OUTPUT_DIR)/../$($m_CSharpSubLibraryOutputProject)/src)\
+# 			&& rm -rf $(_target_dir)\
+# 			&& mkdir -p $(_target_dir)\
+# 			&& mv $(CSHARP_CODE_OUTPUT_DIR)/src/$(call CPP_TO_C_DIR_NAME,$p) $(_target_dir)\
+# 		)\
+# 	)\
+# ))
 
 
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-	$(strip \
-		dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))\
-		$(foreach m,$(MODULES),\
-			$(if $($m_CSharpSubLibraryOutputProject),\
-				&& dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/../$($m_CSharpSubLibraryOutputProject)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))\
-			)\
-		)\
-	)
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))
+# # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
+# $(foreach m,$(MODULES),\
+# 	$(if $($m_CSharpSubLibraryOutputProject),\
+# 		&& dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/../$($m_CSharpSubLibraryOutputProject)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))\
+# 	)\
+# )\
 
 endif

@@ -47,9 +47,6 @@ compile_commands.json
 /source/MRDotNet2/bin
 /source/MRDotNet2/obj
 /source/MRDotNet2/src
-/source/MRDotNet2Cuda/bin
-/source/MRDotNet2Cuda/obj
-/source/MRDotNet2Cuda/src
 /source/MRDotNet2Test/obj
 # `MRDotNet2Test` places binaries there on Linux: [
 /source/Debug

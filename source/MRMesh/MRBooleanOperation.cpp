@@ -326,8 +326,6 @@ Expected<MR::Mesh> doBooleanOperation(
 
 FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].cut2newFaces.empty() )
         return {};
     FaceBitSet afterCutBS;
@@ -347,8 +345,6 @@ FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) co
 
 EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].old2newEdges.empty() )
         return {};
     EdgeBitSet res;
@@ -363,8 +359,6 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
 
 UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].old2newEdges.empty() )
         return {};
     UndirectedEdgeBitSet res;
@@ -379,8 +373,6 @@ UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS
 
 VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].old2newVerts.empty() )
         return {};
     VertBitSet res;
@@ -413,8 +405,6 @@ FaceBitSet BooleanResultMapper::newFaces() const
 FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj )
 {
     const auto& map = maps[int( obj )];
-    if ( map.identity )
-        return oldBS;
     FaceBitSet outBs( oldBS.size() );
     for ( FaceId i = 0_f; i < map.cut2origin.size(); ++i )
     {

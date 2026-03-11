@@ -89,8 +89,6 @@ struct BooleanResultMapper
         WholeEdgeMap old2newEdges;
         /// "origin" vertices to "after stitch" vertices (1-1)
         VertMap old2newVerts;
-        /// old topology indexes are valid if true
-        bool identity{false};
     };
     std::array<Maps, size_t( MapObject::Count )> maps;
 

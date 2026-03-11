@@ -44,6 +44,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../../scripts/mrbind/cuda_placeholder)
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../MeshLibC2/include)
+target_include_directories(${PROJECT_NAME} PRIVATE include src ../MeshLibC2/src)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)
 
 install(

@@ -101,7 +101,7 @@ static int mainInternal( int argc, char **argv )
         ("timings", "print performance timings in the end")
         ("input-file", po::value<std::filesystem::path>( &inFilePath ), "filename of input mesh")
         ("output-file", po::value<std::filesystem::path>( &outFilePath ), "filename of output mesh")
-        ("output-format", po::value<std::string>( &outFormat ), "format of output mesh")
+        ("output-ext", po::value<std::string>( &outFormat ), "extension of output mesh \".ext\"")
         ;
 
     po::options_description commands( "Commands" );
@@ -191,7 +191,8 @@ static int mainInternal( int argc, char **argv )
 
     if ( outFilePath.empty() && !outFormat.empty() )
     {
-        outFilePath = inFilePath.parent_path() / ( inFilePath.stem().string() + outFormat );
+        outFilePath = inFilePath;
+        outFilePath.replace_extension( outFormat );
         std::cout << "outFilePath = " << outFilePath << "\n";
     }
 

@@ -294,9 +294,9 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
             {
-                fixedPickedVerts_.clear();
-                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
-                fixedPickedVertsToDistSq_.clear();
+                pickedVerts_.clear();
+                pickedVerts_.resize( obj_->mesh()->points.size() );
+                pickedVertsToDistSq_.clear();
             }
 
             historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( name, obj_ );
@@ -609,22 +609,22 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        // fix vertices near new pick points
-        bool changedAnyFixedVert = false;
+        // vertices near new pick points
+        bool changedAnyPickedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
-            bool changedThisFixedVert = false;
+            bool changedThisPickedVert = false;
             auto v = mesh.getClosestVertex( p );
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
-            if ( !fixedPickedVerts_.test( v ) )
+            if ( !pickedVerts_.test( v ) )
             {
                 bool fixedTri = false;
                 for ( EdgeId e : orgRing( mesh.topology, v ) )
                 {
                     if ( !mesh.topology.left( e ) )
                         continue;
-                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
-                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
+                    if ( pickedVerts_.test( mesh.topology.dest( e ) )
+                      && pickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
                     {
                         fixedTri = true;
                         break;
@@ -632,25 +632,25 @@ void SurfaceManipulationWidget::changeSurface_()
                 }
                 if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
                 {
-                    fixedPickedVerts_.set( v );
-                    fixedPickedVertsToDistSq_.insert( { v, vDistSq } );
+                    pickedVerts_.set( v );
+                    pickedVertsToDistSq_.insert( { v, vDistSq } );
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                    changedThisFixedVert = changedAnyFixedVert = true;
+                    changedThisPickedVert = changedAnyPickedVert = true;
                 }
             }
             else
             {
-                auto vIt = fixedPickedVertsToDistSq_.find( v );
-                assert( vIt != fixedPickedVertsToDistSq_.end() );
+                auto vIt = pickedVertsToDistSq_.find( v );
+                assert( vIt != pickedVertsToDistSq_.end() );
                 if ( vIt->second > vDistSq )
                 {
                     // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
                     vIt->second = vDistSq;
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                    changedThisFixedVert = changedAnyFixedVert = true;
+                    changedThisPickedVert = changedAnyPickedVert = true;
                 }
             }
-            if ( changedThisFixedVert )
+            if ( changedThisPickedVert )
             {
                 // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
                 for ( EdgeId e : orgRing( mesh.topology, v ) )
@@ -660,13 +660,13 @@ void SurfaceManipulationWidget::changeSurface_()
                 }
             }
         }
-        if ( !changedAnyFixedVert )
+        if ( !changedAnyPickedVert )
             return;
 
         initLaplacian_( RememberShape::Yes );
-        // fix vertices near current and previous pick points
+        // attract current and previous picked vertices
         for ( auto v : singleEditingRegion_ )
-            if ( fixedPickedVerts_.test( v ) )
+            if ( pickedVerts_.test( v ) )
             {
                 laplacian_->addAttractor(
                 {

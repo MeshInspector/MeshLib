@@ -200,13 +200,12 @@ protected:
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
 
-     /// these are all vertices manually moved to be under mouse and lifted to material width since last mouse down
-     /// in laplacianBasedAddRemove mode not including free vertices around relaxed and lifted
-     VertBitSet fixedPickedVerts_;
+    /// these are all vertices, which will are attracted to be under mouse considering material width since last mouse down
+    VertBitSet pickedVerts_;
 
-    /// same vertices as in fixedPickedVerts_
+    /// same vertices as in pickedVerts_
     /// mapped float value is the minimal distance from point under mouse to that vertex
-    HashMap<VertId, float> fixedPickedVertsToDistSq_;
+    HashMap<VertId, float> pickedVertsToDistSq_;
 
     /// prior to add/remove/smooth/deform modification, this action is created and 
     /// the current mesh coordinates are copied here

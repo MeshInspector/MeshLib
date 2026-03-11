@@ -8,6 +8,7 @@
 #include "MRAffineXf3.h"
 #include "MRMapEdge.h"
 #include "MRPartMappingAdapters.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -326,8 +327,6 @@ Expected<MR::Mesh> doBooleanOperation(
 
 FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].cut2newFaces.empty() )
         return {};
     FaceBitSet afterCutBS;
@@ -347,8 +346,6 @@ FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) co
 
 EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].old2newEdges.empty() )
         return {};
     EdgeBitSet res;
@@ -363,8 +360,6 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
 
 UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].old2newEdges.empty() )
         return {};
     UndirectedEdgeBitSet res;
@@ -379,8 +374,6 @@ UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS
 
 VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) const
 {
-    if ( maps[int( obj )].identity )
-        return oldBS;
     if ( maps[int( obj )].old2newVerts.empty() )
         return {};
     VertBitSet res;
@@ -410,11 +403,9 @@ FaceBitSet BooleanResultMapper::newFaces() const
     return res;
 }
 
-FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj )
+FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj ) const
 {
     const auto& map = maps[int( obj )];
-    if ( map.identity )
-        return oldBS;
     FaceBitSet outBs( oldBS.size() );
     for ( FaceId i = 0_f; i < map.cut2origin.size(); ++i )
     {
@@ -425,6 +416,46 @@ FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, 
             outBs.set( orgF );
     }
     return outBs;
+}
+
+FaceMap BooleanResultMapper::getNew2OldFaceMap( MapObject obj ) const
+{
+    const auto& map = maps[int( obj )];
+    size_t maxNewFace = 0;
+    // find last "new face" for given obj part
+    maxNewFace = tbb::parallel_reduce( tbb::blocked_range( size_t( 0 ), map.cut2origin.size() ), size_t( 0 ),
+        [&map] ( const auto& range, auto curr )
+    {
+        for ( auto i = range.begin(); i < range.end(); ++i )
+        {
+            FaceId cf = FaceId( i );
+            auto of = map.cut2origin[cf];
+            if ( !of )
+                continue;
+            auto nf = cf < map.cut2newFaces.size() ? map.cut2newFaces[cf] : FaceId();
+            if ( !nf )
+                continue;
+            curr = std::max( curr, size_t( nf ) );
+        }
+        return curr;
+    }, [] ( auto a, auto b )
+    {
+        return std::max( a, b );
+    } );
+
+    // fill map in parallel
+    FaceMap outMap( maxNewFace );
+    ParallelFor( map.cut2origin, [&] ( FaceId cf )
+    {
+        auto of = map.cut2origin[cf];
+        if ( !of )
+            return;
+        auto nf = cf < map.cut2newFaces.size() ? map.cut2newFaces[cf] : FaceId();
+        if ( !nf )
+            return;
+        outMap[nf] = of;
+    } );
+    return outMap;
 }
 
 } //namespace MR

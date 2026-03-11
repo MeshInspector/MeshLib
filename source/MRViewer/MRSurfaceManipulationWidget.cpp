@@ -665,9 +665,11 @@ void SurfaceManipulationWidget::changeSurface_()
 
         initLaplacian_( RememberShape::Yes );
         // attract current and previous picked vertices
+        const auto weightFactor = 1 - settings_.sharpness * 0.01;
         for ( auto v : singleEditingRegion_ )
             if ( pickedVerts_.test( v ) )
             {
+                laplacian_->multVertexWeight( v, weightFactor );
                 laplacian_->addAttractor(
                 {
                     .p = MeshTriPoint( varMesh.topology, v ),

@@ -145,6 +145,22 @@ void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth )
     fixVertex( v, smooth );
 }
 
+void Laplacian::multVertexWeight( VertId v, double factor )
+{
+    if ( !region_.test( v ) )
+        return;
+
+    solver_.reset();
+
+    int eqN = regionVert2id_[v];
+    auto& eq = equations_[eqN];
+    eq.centerCoeff *= factor;
+    eq.rhs *= factor;
+    const auto lastElem = equations_[eqN+1].firstElem;
+    for ( int ei = eq.firstElem; ei < lastElem; ++ei )
+        nonZeroElements_[ei].coeff *= factor;
+}
+
 void Laplacian::addAttractor( const Attractor& a )
 {
     assert( a.weight > 0 );

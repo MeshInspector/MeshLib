@@ -43,6 +43,9 @@ public:
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
     MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos, bool smooth = true );
 
+    /// multiplies vertex equation's weight on the given factor
+    MRMESH_API void multVertexWeight( VertId v, double factor );
+
     /// if you manually call this method after initialization and fixing vertices then next apply call will be much faster
     MRMESH_API void updateSolver();
 

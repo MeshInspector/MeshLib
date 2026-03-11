@@ -610,7 +610,6 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( settings_.laplacianBasedAddRemove )
     {
         // find vertices near new pick points
-        bool changedAnyPickedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
             auto v = mesh.getClosestVertex( p );
@@ -622,7 +621,6 @@ void SurfaceManipulationWidget::changeSurface_()
                         .target = mesh.triPoint( p ) + normal * maxShift,
                         .minMouseDistSq = vDistSq
                     } );
-                changedAnyPickedVert = true;
             }
             else
             {
@@ -636,12 +634,9 @@ void SurfaceManipulationWidget::changeSurface_()
                         .target = mesh.triPoint( p ) + normal * maxShift,
                         .minMouseDistSq = vDistSq
                     } );
-                    changedAnyPickedVert = true;
                 }
             }
         }
-        if ( !changedAnyPickedVert )
-            return;
 
         initLaplacian_( RememberShape::Yes );
         // attract current and previous picked vertices

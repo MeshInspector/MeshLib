@@ -76,7 +76,10 @@ struct BooleanResultMapper
     MRMESH_API FaceBitSet newFaces() const;
 
     /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
-    MRMESH_API FaceBitSet filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj );
+    MRMESH_API FaceBitSet filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj ) const;
+
+    /// returns map: new_face_id->old_obj_face_id for faces from \param obj
+    [[nodiscard]] MRMESH_API FaceMap getNew2OldFaceMap( MapObject obj ) const;
 
     struct Maps
     {

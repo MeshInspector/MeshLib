@@ -8,6 +8,7 @@
 #include "MRAffineXf3.h"
 #include "MRMapEdge.h"
 #include "MRPartMappingAdapters.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -402,7 +403,7 @@ FaceBitSet BooleanResultMapper::newFaces() const
     return res;
 }
 
-FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj )
+FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj ) const
 {
     const auto& map = maps[int( obj )];
     FaceBitSet outBs( oldBS.size() );
@@ -415,6 +416,46 @@ FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, 
             outBs.set( orgF );
     }
     return outBs;
+}
+
+FaceMap BooleanResultMapper::getNew2OldFaceMap( MapObject obj ) const
+{
+    const auto& map = maps[int( obj )];
+    size_t maxNewFace = 0;
+    // find last "new face" for given obj part
+    maxNewFace = tbb::parallel_reduce( tbb::blocked_range( size_t( 0 ), map.cut2origin.size() ), size_t( 0 ),
+        [&map] ( const auto& range, auto curr )
+    {
+        for ( auto i = range.begin(); i < range.end(); ++i )
+        {
+            FaceId cf = FaceId( i );
+            auto of = map.cut2origin[cf];
+            if ( !of )
+                continue;
+            auto nf = cf < map.cut2newFaces.size() ? map.cut2newFaces[cf] : FaceId();
+            if ( !nf )
+                continue;
+            curr = std::max( curr, size_t( nf ) );
+        }
+        return curr;
+    }, [] ( auto a, auto b )
+    {
+        return std::max( a, b );
+    } );
+
+    // fill map in parallel
+    FaceMap outMap( maxNewFace );
+    ParallelFor( map.cut2origin, [&] ( FaceId cf )
+    {
+        auto of = map.cut2origin[cf];
+        if ( !of )
+            return;
+        auto nf = cf < map.cut2newFaces.size() ? map.cut2newFaces[cf] : FaceId();
+        if ( !nf )
+            return;
+        outMap[nf] = of;
+    } );
+    return outMap;
 }
 
 } //namespace MR

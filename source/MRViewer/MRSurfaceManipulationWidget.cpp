@@ -296,7 +296,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             {
                 pickedVerts_.clear();
                 pickedVerts_.resize( obj_->mesh()->points.size() );
-                pickedVertsToDistSq_.clear();
+                pickedVertsToData_.clear();
             }
 
             historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( name, obj_ );
@@ -613,50 +613,30 @@ void SurfaceManipulationWidget::changeSurface_()
         bool changedAnyPickedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
-            bool changedThisPickedVert = false;
             auto v = mesh.getClosestVertex( p );
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
-            if ( !pickedVerts_.test( v ) )
+            if ( !pickedVerts_.test_set( v ) )
             {
-                bool allTriVertices = false;
-                for ( EdgeId e : orgRing( mesh.topology, v ) )
-                {
-                    if ( !mesh.topology.left( e ) )
-                        continue;
-                    if ( pickedVerts_.test( mesh.topology.dest( e ) )
-                      && pickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
+                pickedVertsToData_[v] = PickedVertData(
                     {
-                        allTriVertices = true;
-                        break;
-                    }
-                }
-                if ( !allTriVertices ) //otherwise a triangle appear with all vertices attracted (it was bad in case of strict fixing, but probably not that bad for mild attraction)
-                {
-                    pickedVerts_.set( v );
-                    pickedVertsToDistSq_.insert( { v, vDistSq } );
-                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                    changedThisPickedVert = changedAnyPickedVert = true;
-                }
+                        .target = mesh.triPoint( p ) + normal * maxShift,
+                        .minMouseDistSq = vDistSq
+                    } );
+                changedAnyPickedVert = true;
             }
             else
             {
-                auto vIt = pickedVertsToDistSq_.find( v );
-                assert( vIt != pickedVertsToDistSq_.end() );
-                if ( vIt->second > vDistSq )
+                auto vIt = pickedVertsToData_.find( v );
+                assert( vIt != pickedVertsToData_.end() );
+                if ( vIt->second.minMouseDistSq > vDistSq )
                 {
-                    // change position of previously picked vertex if mouse cursor came closer to its location on stable mesh
-                    vIt->second = vDistSq;
-                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                    changedThisPickedVert = changedAnyPickedVert = true;
-                }
-            }
-            if ( changedThisPickedVert )
-            {
-                // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
-                for ( EdgeId e : orgRing( mesh.topology, v ) )
-                {
-                    if ( auto d = mesh.topology.dest( e ); !unchangeableVerts_.test( d ) )
-                        singleEditingRegion_.set( d );
+                    // change the attractor of previously picked vertex if mouse cursor came closer to its location on stable mesh
+                    vIt->second = PickedVertData(
+                    {
+                        .target = mesh.triPoint( p ) + normal * maxShift,
+                        .minMouseDistSq = vDistSq
+                    } );
+                    changedAnyPickedVert = true;
                 }
             }
         }
@@ -673,7 +653,7 @@ void SurfaceManipulationWidget::changeSurface_()
                 laplacian_->addAttractor(
                 {
                     .p = MeshTriPoint( varMesh.topology, v ),
-                    .target = Vector3d( varMesh.points[v] ),
+                    .target = Vector3d( pickedVertsToData_[v].target ),
                     .weight = ( settings_.vmass == VertexMass::NeiArea ? 1 : std::sqrt( mesh.dblArea( v ) ) ) / settings_.radius
                 } );
             }

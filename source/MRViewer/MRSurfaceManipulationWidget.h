@@ -203,9 +203,14 @@ protected:
     /// these are all vertices, which will are attracted to be under mouse considering material width since last mouse down
     VertBitSet pickedVerts_;
 
-    /// same vertices as in pickedVerts_
-    /// mapped float value is the minimal distance from point under mouse to that vertex
-    HashMap<VertId, float> pickedVertsToDistSq_;
+    struct PickedVertData
+    {
+        Vector3f target; // attraction point
+        float minMouseDistSq = FLT_MAX; // minimal distance from a point under mouse to this vertex
+    };
+
+    /// same vertices as in pickedVerts_ mapped to PickedVertData
+    HashMap<VertId, PickedVertData> pickedVertsToData_;
 
     /// prior to add/remove/smooth/deform modification, this action is created and 
     /// the current mesh coordinates are copied here

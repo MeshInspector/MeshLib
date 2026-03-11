@@ -930,12 +930,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguageNames ) )
-    {
         Locale::set( sLanguages[selectedLanguage_] );
-
-        RibbonSchemaLoader::recalcItemSizes();
-        RibbonSchemaHolder::schema().updateCaptions();
-    }
 
     ImGui::SameLine();
     RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );

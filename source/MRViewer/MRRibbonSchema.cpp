@@ -386,6 +386,12 @@ void RibbonSchemaLoader::loadSchema() const
     RibbonSchemaHolder::schema().eliminateEmptyGroups();
     RibbonSchemaHolder::schema().sortTabsByPriority();
     RibbonSchemaHolder::schema().updateCaptions();
+
+    [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [] ( const std::string& )
+    {
+        recalcItemSizes();
+        RibbonSchemaHolder::schema().updateCaptions();
+    } );
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
@@ -581,7 +587,7 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
 
 void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const std::string& schemaName ) const
 {
-    const auto domainId = !schemaName.empty() ? Locale::addDomain( schemaName.c_str() ) : -1;
+    const auto domainId = !schemaName.empty() ? Locale::addDomain( schemaName ) : -1;
 
     auto items = itemsStruct["Items"];
     if ( !items.isArray() )

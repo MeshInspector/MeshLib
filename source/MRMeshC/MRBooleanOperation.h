@@ -81,9 +81,6 @@ MRMESHC_API MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBoolea
 /// "origin" vertices to "after stitch" vertices (1-1)
 MRMESHC_API MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps );
 
-/// old topology indexes are valid if true
-MRMESHC_API bool mrBooleanResultMapperMapsIdentity( const MRBooleanResultMapperMaps* maps );
-
 /// deallocates a BooleanResultMapper object
 MRMESHC_API void mrBooleanResultMapperFree( MRBooleanResultMapper* mapper );
 

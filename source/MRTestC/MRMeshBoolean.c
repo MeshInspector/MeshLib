@@ -200,13 +200,11 @@ void testBooleanMapper( void )
     TEST_ASSERT( mrBitSetCount( (MRBitSet*)newFaces ) == 252 )
 
     const MRBooleanResultMapperMaps* mapsA = mrBooleanResultMapperGetMaps( mapper, MRBooleanResultMapperMapObjectA );
-    TEST_ASSERT( !mrBooleanResultMapperMapsIdentity( mapsA ) )
     TEST_ASSERT( mrBooleanResultMapperMapsOld2NewVerts( mapsA ).size == 160 )
     TEST_ASSERT( mrBooleanResultMapperMapsCut2newFaces( mapsA ).size == 348 )
     TEST_ASSERT( mrBooleanResultMapperMapsCut2origin( mapsA ).size == 348 )
 
     const MRBooleanResultMapperMaps* mapsB = mrBooleanResultMapperGetMaps( mapper, MRBooleanResultMapperMapObjectB );
-    TEST_ASSERT( !mrBooleanResultMapperMapsIdentity( mapsB ) )
     TEST_ASSERT( mrBooleanResultMapperMapsOld2NewVerts( mapsB ).size == 160 )
     TEST_ASSERT( mrBooleanResultMapperMapsCut2newFaces( mapsB ).size == 384 )
     TEST_ASSERT( mrBooleanResultMapperMapsCut2origin( mapsB ).size == 384 )

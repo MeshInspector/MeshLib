@@ -35,11 +35,16 @@ ENDIF()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
-  MRCuda
   MeshLibC2
   # Boost.stacktrace uses something from libdl in its headers.
   ${CMAKE_DL_LIBS}
 )
+
+IF(MESHLIB_BUILD_MRCUDA)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRCuda
+  )
+ENDIF()
 
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../../scripts/mrbind/cuda_placeholder)

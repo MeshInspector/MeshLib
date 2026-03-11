@@ -4,7 +4,7 @@
 #include "MRMesh/MREnums.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRVector2.h"
-#include <chrono>
+#include <cfloat>
 
 namespace MR
 {
@@ -188,7 +188,6 @@ protected:
 
     bool mousePressed_ = false;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> timePoint_;
     boost::signals2::scoped_connection meshChangedConnection_;
     bool ownMeshChangedSignal_ = false;
 

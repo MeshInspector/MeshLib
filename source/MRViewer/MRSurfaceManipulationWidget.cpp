@@ -609,7 +609,7 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.laplacianBasedAddRemove )
     {
-        // vertices near new pick points
+        // find vertices near new pick points
         bool changedAnyPickedVert = false;
         for ( const auto& p : pointsUnderMouse_ )
         {
@@ -618,7 +618,7 @@ void SurfaceManipulationWidget::changeSurface_()
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
             if ( !pickedVerts_.test( v ) )
             {
-                bool fixedTri = false;
+                bool allTriVertices = false;
                 for ( EdgeId e : orgRing( mesh.topology, v ) )
                 {
                     if ( !mesh.topology.left( e ) )
@@ -626,11 +626,11 @@ void SurfaceManipulationWidget::changeSurface_()
                     if ( pickedVerts_.test( mesh.topology.dest( e ) )
                       && pickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
                     {
-                        fixedTri = true;
+                        allTriVertices = true;
                         break;
                     }
                 }
-                if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
+                if ( !allTriVertices ) //otherwise a triangle appear with all vertices attracted (it was bad in case of strict fixing, but probably not that bad for mild attraction)
                 {
                     pickedVerts_.set( v );
                     pickedVertsToDistSq_.insert( { v, vDistSq } );
@@ -644,7 +644,7 @@ void SurfaceManipulationWidget::changeSurface_()
                 assert( vIt != pickedVertsToDistSq_.end() );
                 if ( vIt->second > vDistSq )
                 {
-                    // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
+                    // change position of previously picked vertex if mouse cursor came closer to its location on stable mesh
                     vIt->second = vDistSq;
                     varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
                     changedThisPickedVert = changedAnyPickedVert = true;

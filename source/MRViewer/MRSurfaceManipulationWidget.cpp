@@ -291,12 +291,12 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
-            if ( settings_.idealGrooves
+            if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
             {
-                fixedPickedVerts_.clear();
-                fixedPickedVerts_.resize( obj_->mesh()->points.size() );
-                fixedPickedVertsToDistSq_.clear();
+                pickedVerts_.clear();
+                pickedVerts_.resize( obj_->mesh()->points.size() );
+                pickedVertsToData_.clear();
             }
 
             historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( name, obj_ );
@@ -607,99 +607,75 @@ void SurfaceManipulationWidget::changeSurface_()
     varMesh.invalidateCaches();
     const float maxShift = settings_.editForce;
 
-    if ( settings_.idealGrooves )
+    if ( settings_.laplacianBasedAddRemove )
     {
-        // fix vertices near new pick points
-        bool changedAnyFixedVert = false;
+        // find vertices near new pick points
         for ( const auto& p : pointsUnderMouse_ )
         {
-            bool changedThisFixedVert = false;
             auto v = mesh.getClosestVertex( p );
             auto vDistSq = distanceSq( mesh.points[v], mesh.triPoint( p ) );
-            if ( !fixedPickedVerts_.test( v ) )
+            if ( !pickedVerts_.test_set( v ) )
             {
-                bool fixedTri = false;
-                for ( EdgeId e : orgRing( mesh.topology, v ) )
-                {
-                    if ( !mesh.topology.left( e ) )
-                        continue;
-                    if ( fixedPickedVerts_.test( mesh.topology.dest( e ) )
-                      && fixedPickedVerts_.test( mesh.topology.dest( mesh.topology.next( e ) ) ) )
+                pickedVertsToData_[v] = PickedVertData(
                     {
-                        fixedTri = true;
-                        break;
-                    }
-                }
-                if ( !fixedTri ) //otherwise a triangle appear with all vertices fixed
-                {
-                    fixedPickedVerts_.set( v );
-                    fixedPickedVertsToDistSq_.insert( { v, vDistSq } );
-                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                    changedThisFixedVert = changedAnyFixedVert = true;
-                }
+                        .target = mesh.triPoint( p ) + normal * maxShift,
+                        .minMouseDistSq = vDistSq
+                    } );
             }
             else
             {
-                auto vIt = fixedPickedVertsToDistSq_.find( v );
-                assert( vIt != fixedPickedVertsToDistSq_.end() );
-                if ( vIt->second > vDistSq )
+                auto vIt = pickedVertsToData_.find( v );
+                assert( vIt != pickedVertsToData_.end() );
+                if ( vIt->second.minMouseDistSq > vDistSq )
                 {
-                    // change position of previously fixed vertex if mouse cursor came closer to its location on stable mesh
-                    vIt->second = vDistSq;
-                    varMesh.points[v] = mesh.triPoint( p ) + normal * maxShift;
-                    changedThisFixedVert = changedAnyFixedVert = true;
+                    // change the attractor of previously picked vertex if mouse cursor came closer to its location on stable mesh
+                    vIt->second = PickedVertData(
+                    {
+                        .target = mesh.triPoint( p ) + normal * maxShift,
+                        .minMouseDistSq = vDistSq
+                    } );
                 }
             }
-            if ( changedThisFixedVert )
+        }
+
+        initLaplacian_( RememberShape::Yes );
+        // attract current and previous picked vertices
+        const auto weightFactor = 1 - settings_.sharpness * 0.01;
+        for ( auto v : laplacian_->region() ) // not singleEditingRegion_ to multiply weight of boundary fixed vertices as well
+            if ( pickedVerts_.test( v ) )
             {
-                // all vertices around fixed vertices must be included in Laplacian free vertices to optimize surrounding triangles:
-                for ( EdgeId e : orgRing( mesh.topology, v ) )
+                laplacian_->multVertexWeight( v, weightFactor );
+                laplacian_->addAttractor(
                 {
-                    if ( auto d = mesh.topology.dest( e ); !unchangeableVerts_.test( d ) )
-                        singleEditingRegion_.set( d );
-                }
+                    .p = MeshTriPoint( varMesh.topology, v ),
+                    .target = Vector3d( pickedVertsToData_[v].target ),
+                    .weight = ( settings_.vmass == VertexMass::NeiArea ? 1 : std::sqrt( mesh.dblArea( v ) ) ) / settings_.radius
+                } );
             }
-        }
-        if ( !changedAnyFixedVert )
-            return;
-
-        // remember heights of all vertices being relaxed
-        const auto relaxRegion = singleEditingRegion_ - fixedPickedVerts_;
-        relaxRegionHeights_.clear();
-        for ( auto v : relaxRegion )
-            relaxRegionHeights_[v] = dot( normal, varMesh.points[v] );
-
-        relax( varMesh, { { .region = &relaxRegion } } );
-
-        // restore heights of all vertices after relax
-        for ( const auto& [v, h] : relaxRegionHeights_ )
-        {
-            auto & p = varMesh.points[v];
-            p = p + ( h - dot( normal, p ) ) * normal;
-        }
+        laplacian_->apply();
     }
-
-    auto& points = varMesh.points;
-
-    const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
-    const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
-    const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
-    BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
+    else
     {
-        if ( fixedPickedVerts_.test( v ) )
-            return;
-        const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
-        const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
-        float pointShift = maxShift * k; // shift = F * I(r)
-        if ( pointShift > pointsShift_[v] )
+        auto& points = obj_->varMesh()->points;
+
+        const float intensity = ( 100.f - settings_.sharpness ) / 100.f * 0.5f + 0.25f;
+        const float a1 = -1.f * ( 1 - intensity ) / intensity / intensity;
+        const float a2 = intensity / ( 1 - intensity ) / ( 1 - intensity );
+        BitSetParallelFor( singleEditingRegion_, [&] ( VertId v )
         {
-            pointShift -= pointsShift_[v];
-            pointsShift_[v] += pointShift;
-        }
-        else
-            return;
-        points[v] += pointShift * normal;
-    } );
+            const float r = std::clamp( editingDistanceMap_[v] / settings_.radius, 0.f, 1.f );
+            const float k = r < intensity ? a1 * r * r + 1 : a2 * ( r - 1 ) * ( r - 1 ); // I(r)
+            float pointShift = maxShift * k; // shift = F * I(r)
+            if ( pointShift > pointsShift_[v] )
+            {
+                pointShift -= pointsShift_[v];
+                pointsShift_[v] += pointShift;
+            }
+            else
+                return;
+            points[v] += pointShift * normal;
+        } );
+    }
     generalEditingRegion_ |= singleEditingRegion_;
     updateValueChanges_( singleEditingRegion_ );
     obj_->setDirtyFlagsFast( DIRTY_POSITION );

@@ -36,8 +36,6 @@ ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
   MeshLibC2
-  # Boost.stacktrace uses something from libdl in its headers.
-  ${CMAKE_DL_LIBS}
 )
 
 IF(MESHLIB_BUILD_MRCUDA)

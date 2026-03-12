@@ -979,7 +979,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
         {
             item->second.item->action();
         }
-        UI::setTooltipIfHovered( item->second.tooltip );
+        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), item->second.localeDomainId ) );
     }
 }
 

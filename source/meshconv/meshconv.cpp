@@ -192,8 +192,9 @@ static int mainInternal( int argc, char **argv )
     std::shared_ptr<MR::ObjectMesh> objMeshPtr;
     std::shared_ptr<MR::ObjectLines> objLinesPtr;
     std::shared_ptr<MR::ObjectPoints> objPointsPtr;
-    if ( objMeshPtr = std::dynamic_pointer_cast< MR::ObjectMesh >( objPtr ) )
+    if ( auto tryObjMeshPtr = std::dynamic_pointer_cast< MR::ObjectMesh >( objPtr ) )
     {
+        objMeshPtr = tryObjMeshPtr;
         if ( !objMeshPtr->varMesh() )
         {
             std::cerr << "Error: mesh not found!\n";
@@ -218,16 +219,18 @@ static int mainInternal( int argc, char **argv )
             }
         }
     }
-    else if ( objLinesPtr = std::dynamic_pointer_cast<MR::ObjectLines>( objPtr ) )
+    else if ( auto tryObjLinesPtr = std::dynamic_pointer_cast<MR::ObjectLines>( objPtr ) )
     {
+        objLinesPtr = tryObjLinesPtr;
         if ( !objLinesPtr->polyline() )
         {
             std::cerr << "Error: polyline not found!\n";
             MC_EXIT( 1 );
         }
     }
-    else if ( objPointsPtr = std::dynamic_pointer_cast<MR::ObjectPoints>( objPtr ) )
+    else if ( auto tryObjPointsPtr = std::dynamic_pointer_cast<MR::ObjectPoints>( objPtr ) )
     {
+        objPointsPtr = tryObjPointsPtr;
         if ( !objPointsPtr->pointCloud() )
         {
             std::cerr << "Error: point cloud not found!\n";

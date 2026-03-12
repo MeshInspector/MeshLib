@@ -2,7 +2,7 @@
 # They are bindings-only, and can't be added to the PCH itself.
 
 
-project(MeshLibC2 CXX)
+project(MeshLibC2Cuda CXX)
 
 IF(MSVC)
   # Disabling following warnings:
@@ -35,12 +35,23 @@ ENDIF()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
-  MRIOExtras
-  MRSymbolMesh
-  MRVoxels
+  MeshLibC2
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
+IF(MESHLIB_BUILD_MRCUDA)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRCuda
+  )
+ENDIF()
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+  include
+  src
+  ../..
+  ../../scripts/mrbind/cuda_placeholder
+  ../MeshLibC2/include
+  ../MeshLibC2/src
+)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)
 
 install(

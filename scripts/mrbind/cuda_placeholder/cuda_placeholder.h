@@ -7,10 +7,18 @@ namespace MR::Cuda
 // Since Cuda is not supported on this platform, this function always returns false.
 inline bool isCudaAvailable( int* driverVersion = nullptr, int* runtimeVersion = nullptr, int* computeMajor = nullptr, int* computeMinor = nullptr )
 {
-    (void)driverVersion;
-    (void)runtimeVersion;
-    (void)computeMajor;
-    (void)computeMinor;
+    if (driverVersion)
+        *driverVersion = 0;
+
+    if (runtimeVersion)
+        *runtimeVersion = 0;
+
+    if (computeMajor)
+        *computeMajor = 0;
+
+    if (computeMinor)
+        *computeMinor = 0;
+
     return false;
 }
 

@@ -92,6 +92,7 @@ static int mainInternal( int argc, char **argv )
 
     std::filesystem::path inFilePath;
     std::filesystem::path outFilePath;
+    std::string outFormat;
 
     namespace po = boost::program_options;
     po::options_description generalOptions( "General options" );
@@ -100,6 +101,7 @@ static int mainInternal( int argc, char **argv )
         ("timings", "print performance timings in the end")
         ("input-file", po::value<std::filesystem::path>( &inFilePath ), "filename of input mesh")
         ("output-file", po::value<std::filesystem::path>( &outFilePath ), "filename of output mesh")
+        ("output-ext", po::value<std::string>( &outFormat ), "extension of output mesh \".ext\"")
         ;
 
     po::options_description commands( "Commands" );
@@ -185,6 +187,13 @@ static int mainInternal( int argc, char **argv )
             std::cerr << "Error in command : \""<< o.string_key << " " << o.value[0] << "\"\nBreak\n";
             return 1;
         }
+    }
+
+    if ( outFilePath.empty() && !outFormat.empty() )
+    {
+        outFilePath = inFilePath;
+        outFilePath.replace_extension( outFormat );
+        std::cout << "outFilePath = " << outFilePath << "\n";
     }
 
     if ( !outFilePath.empty() )

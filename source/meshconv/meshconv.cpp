@@ -112,6 +112,15 @@ static int mainInternal( int argc, char **argv )
         ("output-ext", po::value<std::string>( &outFormat ), "extension of output file \".ext\"")
         ;
 
+    bool waitOnExit = false;
+    po::options_description hiddenOptions( "Hidden options" );
+    hiddenOptions.add_options()
+        ( "wait-on-exit", po::bool_switch( &waitOnExit ), "wait before closing the program" )
+        ;
+
+    po::options_description allGeneralOptions( "All general options" );
+    allGeneralOptions.add( generalOptions ).add( hiddenOptions );
+
     po::options_description commands( "Mesh Commands" );
     commands.add_options()
         ( "remesh", po::value<float>()->implicit_value( 0 ), "optional argument if positive is target edge length after remeshing" )
@@ -129,22 +138,16 @@ static int mainInternal( int argc, char **argv )
     p.add("output-file", 1);
 
     po::parsed_options parsedGeneral = po::command_line_parser( argc, argv )
-        .options( generalOptions )
+        .options( allGeneralOptions )
         .positional( p )
         .allow_unregistered()
         .run();
 
-    bool waitOnExit = false;
     std::vector<std::string> unregisteredOptions;
     for ( const auto& o : parsedGeneral.options )
     {
         if ( o.unregistered )
-        {
-            if ( o.string_key == "wait-on-exit" )
-                waitOnExit = true;
-            else
-                unregisteredOptions.insert( unregisteredOptions.end(), o.original_tokens.begin(), o.original_tokens.end() );
-        }
+            unregisteredOptions.insert( unregisteredOptions.end(), o.original_tokens.begin(), o.original_tokens.end() );
     }
     
     po::variables_map vm;

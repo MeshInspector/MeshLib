@@ -25,7 +25,11 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
 
+#ifdef _WIN32
 #define MC_EXIT( exitCode ) if ( waitOnExit ) system( "pause" ); return exitCode;
+#else
+#define MC_EXIT( exitCode ) return exitCode;
+#endif
 
 // Fix parsing std::filesystem::path with spaces (see https://github.com/boostorg/program_options/issues/69)
 namespace boost
@@ -112,14 +116,17 @@ static int mainInternal( int argc, char **argv )
         ("output-ext", po::value<std::string>( &outFormat ), "extension of output file \".ext\"")
         ;
 
+    po::options_description allGeneralOptions( "All general options" );
+    allGeneralOptions.add( generalOptions );
+
+#ifdef  _WIN32
     bool waitOnExit = false;
     po::options_description hiddenOptions( "Hidden options" );
     hiddenOptions.add_options()
         ( "wait-on-exit", po::bool_switch( &waitOnExit ), "wait before closing the program" )
         ;
-
-    po::options_description allGeneralOptions( "All general options" );
-    allGeneralOptions.add( generalOptions ).add( hiddenOptions );
+    allGeneralOptions.add( hiddenOptions );
+#endif
 
     po::options_description commands( "Mesh Commands" );
     commands.add_options()

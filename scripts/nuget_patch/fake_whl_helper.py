@@ -75,6 +75,12 @@ def patch_whl(out_dir,libs_dir):
                     sys.executable, "-m", "auditwheel",
                     "repair",
                     "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
+
+                    # Must exclude the C library, because we have other libraries depending on it (`libMeshLibC2Cuda.so`).
+                    # If we don't do this, then another copy of this library gets copied, with a hash added to the name.
+                    # For some reason this only happes on Linux.
+                    "--exclude", "libMeshLibC2.so",
+
                     "dummy-1.0-py3-none-any.whl"
                 ]
             )

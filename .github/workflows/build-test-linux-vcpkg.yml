@@ -270,7 +270,7 @@ jobs:
           python3 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
           python3 -m pip install auditwheel patchelf
-          python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.so" "./patched_content/"
+          python3 ./scripts/nuget_patch/patch_library_deps.py ./build/Release/bin libMeshLibC2.so:libMeshLibC2Cuda.so ./patched_content/
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}

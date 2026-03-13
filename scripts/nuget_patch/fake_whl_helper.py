@@ -7,7 +7,7 @@ from pathlib import Path
 
 SYSTEM = platform.system()
 
-def make_fake_whl(dll_path : Path):
+def make_fake_whl(dll_paths):
     w_dir = Path(".").resolve()
     whl_dir = w_dir / "temp_whl_dir"
     os.mkdir(whl_dir)
@@ -16,12 +16,14 @@ def make_fake_whl(dll_path : Path):
     os.mkdir( whl_libs_path )
     os.mkdir( whl_info_path )
     # copy dll
-    shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
+    for dll_path in dll_paths:
+        shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
     # create servant files
     with open( whl_info_path / "WHEEL", "w" ) as wheel_file:
         pass
     with open( whl_info_path / "RECORD", "w" ) as record_file:
-        record_file.write( "dummy.libs/" + dll_path.name )
+        for dll_path in dll_paths:
+            record_file.write( "dummy.libs/" + dll_path.name )
     # actually create whl file
     shutil.make_archive("dummy-1.0-py3-none-any","zip",whl_dir)
     os.rename("dummy-1.0-py3-none-any.zip","dummy-1.0-py3-none-any.whl")

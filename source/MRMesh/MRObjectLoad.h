@@ -41,11 +41,14 @@ MRMESH_API Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem:
  */
 MRMESH_API Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filename, const ProgressCallback& callback = {} );
 
-// check if there are any supported files folder and subfolders
-MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
+/// checks if there are any supported files folder and subfolders
+[[nodiscard]] MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
 
-//tries to load scene from every format listed in SceneFormatFilters
+/// tries to load scene from every format listed in SceneFormatFilters
 MRMESH_API Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback = {} );
+
+/// constructs new ObjectMesh from the given data
+[[nodiscard]] MRMESH_API LoadedObject makeObjectMesh( std::string objName, LoadedMeshData data );
 
 /**
  * \brief loads objects tree from given scene file (zip/mru)
@@ -73,7 +76,7 @@ MRMESH_API Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::fi
 
 
 /// returns filters for all supported file formats for all types of objects
-MRMESH_API IOFilters getAllFilters();
+[[nodiscard]] MRMESH_API IOFilters getAllFilters();
 
 /// \}
 

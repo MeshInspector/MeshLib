@@ -139,7 +139,7 @@ std::string getMeshFragmentShaderColoringBlock()
     if ( mirrored )
         dot_prod = -dot_prod;
 
-    if ( !gl_FrontFacing )
+    if ( gl_FrontFacing == false ) // don't use !gl_FrontFacing for some rare mac issue
         if ( !selected )
             colorCpy = backColor;
         else

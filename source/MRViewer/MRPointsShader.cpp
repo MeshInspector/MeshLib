@@ -149,7 +149,7 @@ std::string getPointsFragmentShaderColoringBlock()
     }
 
     bool frontFacing = dot_prod >= 0.0;
-    if ( !frontFacing )
+    if ( gl_FrontFacing == false ) // don't use !gl_FrontFacing for some rare mac issue
     {
         if ( !selected )
             colorCpy = backColor;

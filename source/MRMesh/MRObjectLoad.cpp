@@ -398,10 +398,15 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
         result = LoadedObjects{ .objs = { objTree->obj }, .warnings = std::move( objTree->warnings ), .lengthUnit = objTree->lengthUnit };
         loadedFromSceneFile = true;
     }
-    else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
+    else for ( const auto& filter : ObjectLoad::getFilters() )
     {
-        const auto loader = ObjectLoad::getObjectLoader( *filter );
-        result = loader( filename, callback );
+        if ( filter.isSupportedExtension( ext ) )
+        {
+            const auto loader = ObjectLoad::getObjectLoader( filter );
+            result = loader( filename, callback );
+            if ( result.has_value() || result.error() == stringOperationCanceled() )
+                break;
+        }
     }
     // no else to support same extensions in object and mesh loaders
     if ( tryOtherLoaders() )
@@ -410,7 +415,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
         if ( maybe )
         {
             maybe->obj->select( true );
-            result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
+            result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( maybe->warnings ) };
         }
         else if ( !maybe.error().starts_with( stringUnsupportedFileExtension() ) )
             result = unexpected( std::move( maybe.error() ) );

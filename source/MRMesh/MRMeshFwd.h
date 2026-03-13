@@ -685,6 +685,7 @@ class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
 struct ObjectMeshData;
+struct LoadedMeshData;
 class ObjectPointsHolder;
 class ObjectPoints;
 class ObjectLinesHolder;

@@ -18,6 +18,7 @@
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRImageTransform.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
+    <ClInclude Include="MRLoadedMeshData.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />

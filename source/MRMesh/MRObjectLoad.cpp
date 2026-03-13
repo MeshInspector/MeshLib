@@ -148,22 +148,19 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 {
     MR_TIMER;
 
-    VertColors colors;
-    FaceColors faceColors;
-    VertUVCoords uvCoords;
+    ObjectMeshData odata;
     VertNormals normals;
     MeshTexture texture;
     std::optional<Edges> edges;
     int skippedFaceCount = 0;
     int duplicatedVertexCount = 0;
-    int holesCount = 0;
     AffineXf3f xf;
     MeshLoadSettings settings
     {
         .edges = &edges,
-        .colors = &colors,
-        .faceColors = &faceColors,
-        .uvCoords = &uvCoords,
+        .colors = &odata.vertColors,
+        .faceColors = &odata.faceColors,
+        .uvCoords = &odata.uvCoordinates,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &texture,
         .skippedFaceCount = &skippedFaceCount,
@@ -191,9 +188,9 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
             objectLines->setName( utf8string( file.stem() ) );
             objectLines->setPolyline( polyline );
 
-            if ( !colors.empty() )
+            if ( !odata.vertColors.empty() )
             {
-                objectLines->setVertsColorMap( std::move( colors ) );
+                objectLines->setVertsColorMap( std::move( odata.vertColors ) );
                 objectLines->setColoringType( ColoringType::VertsColorMap );
             }
 
@@ -211,9 +208,9 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         objectPoints->setName( utf8string( file.stem() ) );
         objectPoints->setPointCloud( pointCloud );
 
-        if ( !colors.empty() )
+        if ( !odata.vertColors.empty() )
         {
-            objectPoints->setVertsColorMap( std::move( colors ) );
+            objectPoints->setVertsColorMap( std::move( odata.vertColors ) );
             objectPoints->setColoringType( ColoringType::VertsColorMap );
         }
 
@@ -222,46 +219,51 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         return LoadedObject{ .obj = std::move( objectPoints ) };
     }
 
+    std::string warnings;
     const auto numVerts = mesh->points.size();
-    const bool hasColors = colors.size() >= numVerts;
+    bool hasVertColors = !odata.vertColors.empty();
+    if ( hasVertColors && odata.vertColors.size() < numVerts )
+    {
+        hasVertColors = false;
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", odata.vertColors.size(), numVerts );
+        odata.vertColors.clear();
+    }
+    bool hasUV = !odata.uvCoordinates.empty();
+    if ( hasUV && odata.uvCoordinates.size() < numVerts )
+    {
+        hasUV = false;
+        warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", odata.uvCoordinates.size(), numVerts );
+        odata.uvCoordinates.clear();
+    }
+
     const auto numFaces = (int)mesh->topology.lastValidFace() + 1;
-    const bool hasFaceColors = faceColors.size() >= numFaces;
-    const bool hasUV = uvCoords.size() >= numVerts;
-    const bool hasTexture = !texture.pixels.empty();
+    bool hasFaceColors = !odata.faceColors.empty();
+    if ( hasFaceColors && odata.faceColors.size() < numFaces )
+    {
+        hasFaceColors = false;
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} triangles.\n", odata.faceColors.size(), numVerts );
+        odata.faceColors.clear();
+    }
 
     auto objectMesh = std::make_unique<ObjectMesh>();
     objectMesh->setName( utf8string( file.stem() ) );
-    objectMesh->setMesh( std::make_shared<Mesh>( std::move( mesh.value() ) ) );
+    odata.mesh = std::make_shared<Mesh>( std::move( mesh.value() ) );
+    objectMesh->setData( std::move( odata ) );
+    objectMesh->setXf( xf );
 
-    holesCount = int( objectMesh->numHoles() );
-    std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
-
-    if ( hasColors )
-        objectMesh->setVertsColorMap( std::move( colors ) );
-    else if ( !colors.empty() )
-        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
-
-    if ( hasFaceColors )
-        objectMesh->setFacesColorMap( std::move( faceColors ) );
-    else if ( !faceColors.empty() )
-        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} triangles.\n", faceColors.size(), numVerts );
-
-    if ( hasUV )
-        objectMesh->setUVCoords( std::move( uvCoords ) );
-    else if ( !uvCoords.empty() )
-        warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
-
+    const bool hasTexture = !texture.pixels.empty();
     if ( hasTexture )
         objectMesh->setTextures( { std::move( texture ) } );
 
     if ( hasUV && hasTexture )
         objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-    else if ( hasColors )
+    else if ( hasVertColors )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     else if ( hasFaceColors )
         objectMesh->setColoringType( ColoringType::PrimitivesColorMap );
 
-    objectMesh->setXf( xf );
+    int holesCount = int( objectMesh->numHoles() );
+    warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount ) + warnings;
 
     return LoadedObject{ .obj = std::move( objectMesh ), .warnings = std::move( warnings ) };
 }

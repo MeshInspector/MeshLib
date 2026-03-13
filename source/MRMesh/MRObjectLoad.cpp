@@ -151,7 +151,6 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 
     LoadedMeshData data;
     VertNormals normals;
-    MeshTexture texture;
     std::optional<Edges> edges;
     MeshLoadSettings settings
     {
@@ -160,7 +159,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         .faceColors = &data.faceColors,
         .uvCoords = &data.uvCoordinates,
         .normals = returnOnlyMesh ? nullptr : &normals,
-        .texture = &texture,
+        .texture = &data.texture,
         .skippedFaceCount = &data.skippedFaceCount,
         .duplicatedVertexCount = &data.duplicatedVertexCount,
         .xf = &data.xf,
@@ -217,8 +216,17 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         return LoadedObject{ .obj = std::move( objectPoints ) };
     }
 
+    data.mesh = std::make_shared<Mesh>( std::move( mesh.value() ) );
+    return makeObjectMesh( utf8string( file.stem() ), std::move( data ) );
+}
+
+LoadedObject makeObjectMesh( std::string objName, LoadedMeshData data )
+{
+    MR_TIMER;
+    assert( data.mesh );
+
     std::string warnings;
-    const auto numVerts = mesh->points.size();
+    const auto numVerts = data.mesh->points.size();
     bool hasVertColors = !data.vertColors.empty();
     if ( hasVertColors && data.vertColors.size() < numVerts )
     {
@@ -234,7 +242,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         data.uvCoordinates.clear();
     }
 
-    const auto numFaces = (int)mesh->topology.lastValidFace() + 1;
+    const auto numFaces = (int)data.mesh->topology.lastValidFace() + 1;
     bool hasFaceColors = !data.faceColors.empty();
     if ( hasFaceColors && data.faceColors.size() < numFaces )
     {
@@ -244,14 +252,13 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     }
 
     auto objectMesh = std::make_unique<ObjectMesh>();
-    objectMesh->setName( utf8string( file.stem() ) );
-    data.mesh = std::make_shared<Mesh>( std::move( mesh.value() ) );
+    objectMesh->setName( objName );
     objectMesh->setData( std::move( data ) );
     objectMesh->setXf( data.xf );
 
-    const bool hasTexture = !texture.pixels.empty();
+    const bool hasTexture = !data.texture.pixels.empty();
     if ( hasTexture )
-        objectMesh->setTextures( { std::move( texture ) } );
+        objectMesh->setTextures( { std::move( data.texture ) } );
 
     if ( hasUV && hasTexture )
         objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );

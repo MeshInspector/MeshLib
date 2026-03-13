@@ -23,7 +23,7 @@ def make_fake_whl(dll_paths):
         pass
     with open( whl_info_path / "RECORD", "w" ) as record_file:
         for dll_path in dll_paths:
-            record_file.write( "dummy.libs/" + dll_path.name )
+            record_file.write( "dummy.libs/" + dll_path.name + "\n" )
     # actually create whl file
     shutil.make_archive("dummy-1.0-py3-none-any","zip",whl_dir)
     os.rename("dummy-1.0-py3-none-any.zip","dummy-1.0-py3-none-any.whl")

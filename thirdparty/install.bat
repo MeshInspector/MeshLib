@@ -40,21 +40,21 @@ for %%i in (%*) do (
     )
 )
 if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
-    echo Error: --write-s3 requires AWS CLI to be installed.
+    echo "Error: --write-s3 requires AWS CLI to be installed."
     exit /b 1
 )
 
 REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
 if "!aws_cli_available!"=="true" (
     if "!write_s3_option!"=="true" (
-        echo Mode: pull-push vcpkg binary cache. AWS credentials are required.
+        echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
         set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
     ) else (
-        echo Mode: pull vcpkg binary cache. No AWS credentials are required.
+        echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
         set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
     )
 ) else (
-    echo Mode: build from source (no S3 binary cache).
+    echo "Mode: build from source (no S3 binary cache)."
     set "VCPKG_BINARY_SOURCES=clear"
 )
 

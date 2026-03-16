@@ -701,6 +701,10 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 {
     MR_TIMER;
 
+    auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
+    if ( !objMeshPtr )
+        return;
+
     const auto& viewerRef = getViewerInstance();
     const ViewportId viewportId = viewerRef.viewport().id;
     std::vector<Vector2f> viewportPoints;
@@ -720,7 +724,6 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
     mousePos_ = mousePos;
 
-    auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     std::vector<ObjAndPick> movedPosPick;
     if ( ignoreOcclusion_ )
         movedPosPick = getViewerInstance().viewport().multiPickObjects( { { static_cast< VisualObject* >( objMeshPtr.get() ) } }, viewportPoints );

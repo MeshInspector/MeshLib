@@ -220,10 +220,11 @@ Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, C
 {
     using namespace boost::spirit::x3;
 
-    int i = 0;
-    auto coord = [&] ( auto& ctx ){ v[i++] = _attr( ctx ); };
-    auto skip_pos = [&] ( auto& ){ i++;};
-    auto col = [&] ( auto& ctx ) { ((uint8_t*)&c)[i++ -4] = _attr( ctx ); };
+    int vi = 0, ci = 0;
+    auto coord = [&] ( auto& ctx ) { v[vi++] = _attr( ctx ); };
+    auto color = [&] ( auto& ctx ) { ((uint8_t*)&c)[ci++] = _attr( ctx ); };
+    auto intensity = [&] ( auto& ctx ) { (void)ctx; }; // value not used
+    auto normal = [&] ( auto& ctx ) { (void)ctx; }; // value not used
 
     using uint8_type = uint_parser<uint8_t>;
     constexpr uint8_type uint8_ = {};
@@ -232,8 +233,10 @@ Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, C
         str.end(),
         (
             floatT[coord] >> floatT[coord] >> floatT[coord] >>
-            double_[skip_pos] >>
-            uint8_[col] >> uint8_[col] >> uint8_[col] ),
+            -( floatT[intensity] >>
+            -( uint8_[color] >> uint8_[color] >> uint8_[color] >>
+            -( floatT[normal] >> floatT[normal] >> floatT[normal] ) ) )
+        ),
         ascii::space
     );
     if ( !r )

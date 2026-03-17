@@ -1,0 +1,329 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: eo\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.8\n"
+
+msgid "Undo"
+msgstr "Malfari"
+
+msgid "Undo the last action."
+msgstr "Malfari la lastan agadon."
+
+msgid "Redo"
+msgstr "Redo"
+
+msgid "Redo last undone action."
+msgstr "Malfari la lastan agadon."
+
+msgid "New"
+msgstr "Nova"
+
+msgid "Remove all objects from the scene."
+msgstr "Forigu ĉiujn objektojn el la sceno."
+
+msgid "Open Files"
+msgstr "Malfermitaj dosieroj"
+
+msgid "Select files from the dialog and open them in the viewer window."
+msgstr ""
+"Elektu dosierojn el la dialogo kaj malfermu ilin en la fenestro de la "
+"programo."
+
+msgid "Open Directory"
+msgstr "Malferma Katalogo"
+
+msgid "Load all supported files from given directory and subdirectories."
+msgstr ""
+"Ŝargi ĉiujn subtenatajn dosierojn el la donita dosirejo kaj ĝiaj "
+"subdosirejoj."
+
+msgid "Open DICOMs"
+msgstr "Malfermitaj DICOM-dosieroj"
+
+msgid "Load all DICOM volumes from a given directory and its subdirectories."
+msgstr "Ŝargi ĉiujn DICOM-dosierojn el donita dosirejo kaj ĝiaj subdosirejoj."
+
+msgid "Open RAW Voxels"
+msgstr "Malfermu RAW-volumojn"
+
+msgid "Load *.raw file with user-specified parameters."
+msgstr "Ŝargi *.raw-dosieron kun parametroj specifitaj de la uzanto."
+
+msgid "Binary Operations"
+msgstr "Duaraj operacioj"
+
+msgid ""
+"Various bivariate functions on individual voxel pairs: Union, Intersection, "
+"Difference, Max, Min, Sum, Multiply, Divide, Replace."
+msgstr ""
+"Diversaj du-variablaj funkcioj aplikitaj al paroj de individuaj volumetraj "
+"elementoj: Unio, Intersekco, Diferenco, Maksimumo, Minimumo, Sumo, "
+"Multipliko, Divido, Anstataŭigo."
+
+msgid "Open Voxels From TIFF"
+msgstr "Konvertu TIFF-dosierojn al voluma dataro"
+
+msgid "Load voxels from a set of TIFF images"
+msgstr "Ŝargi voloksajn datumojn el aro de TIFF-bildoj."
+
+msgid "Export"
+msgstr "Eksportado"
+
+msgid "Save selected objects to files."
+msgstr "Konservi elektitajn objektojn en dosieroj."
+
+msgid "Save Selected"
+msgstr "Konservi la selektajn elementojn"
+
+msgid "Save scene tree branches with selected objects to MRU format."
+msgstr ""
+"Konservu la strukturon de la sceno kun la selektitaj objektoj en MRU-formato."
+
+msgid "Save Scene"
+msgstr "Konservi scenon"
+
+msgid "Save MRU scene to the file from which it was opened."
+msgstr "Konservi la MRU-scenon en la dosieron, el kiu ĝi estis malfermata."
+
+msgid "Save Scene As"
+msgstr "Konservi scenon kiel"
+
+msgid "Saves scene in a file."
+msgstr "Konservas la scenon en dosiero."
+
+msgid "Screenshot"
+msgstr "Ekranbildo"
+
+msgid "Saves screenshot of the scene to file."
+msgstr "Konservis ekranbildon de la sceno en dosiero."
+
+msgid "Save Screenshot"
+msgstr "Konservi ekranbildon"
+
+msgid "Saves a screenshot of the current view to file."
+msgstr "Ĝi savas ekranbildon de la aktuala vido en dosiero."
+
+msgid "Screenshot to Clipboard"
+msgstr "Capturo de ekrano al la tamporilo"
+
+msgid "Copies screenshot of the scene to clipboard"
+msgstr "Kopias la ekranbildon de la sceno al la tamponejo."
+
+msgid "Fit Data"
+msgstr "Donitaj datumoj pri agado"
+
+msgid ""
+"Changes current viewport settings to fit all visible objects in the scene."
+msgstr ""
+"Ŝanĝas la aktualajn agordojn de la vidfenestro por ke ĉiuj videblaj objektoj "
+"en la sceno estu montritaj."
+
+msgid "Fit Selected Objects"
+msgstr "Adapigi elektitajn objektojn"
+
+msgid ""
+"Changes current viewport settings to fit selected visible objects in scene."
+msgstr ""
+"Modifas la aktualajn vidajn parametrojn por montri la selektitajn videblajn "
+"objektojn en la sceno."
+
+msgid "Fit Selected Primitives"
+msgstr "Ajusti elektitajn bazajn elementojn"
+
+msgid "Changes current viewport settings to fit selection."
+msgstr ""
+"Modifas la aktualajn agordojn de la vidfenestro por ĝui la selektitan areon."
+
+msgid "Camera"
+msgstr "Fotilo"
+
+msgid "Manually set camera."
+msgstr "Maniere agordi la fotilon."
+
+msgid "Front View"
+msgstr "Vido de la antaŭa parto"
+
+msgid "A view of XZ plane with camera looking along Y."
+msgstr "Vido de la ebeno XZ, kun la kamerao rigardanta laŭ la akso Y."
+
+msgid "Top View"
+msgstr "Supra perspektivo"
+
+msgid "A view of XY plane with Z axis looking in camera."
+msgstr "Vido de la ebeno XY, kun la akso Z direktita al la fotilo."
+
+msgid "Bottom View"
+msgstr "Suba perspektivo"
+
+msgid "A view of XY plane with camera looking along Z."
+msgstr "Vido de la ebeno XY, kun la kamerao direktita laŭ la akso Z."
+
+msgid "Left View"
+msgstr "Maldekstra perspektivo"
+
+msgid "A view of YZ plane with camera looking along X."
+msgstr "Vido de la ebeno YZ, kun la kamerao rigardanta laŭ la akso X."
+
+msgid "Back View"
+msgstr "Malanta vido"
+
+msgid "A view of XZ plane with Y axis looking in camera."
+msgstr "Vido de la ebeno XZ, kun la akso Y direktita al la fotilo."
+
+msgid "Right View"
+msgstr "Korekta perspektivo"
+
+msgid "A view of YZ plane with X axis looking in camera."
+msgstr "Vido de la ebeno YZ, kun la akso X direktita al la fotilo."
+
+msgid "Isometric View"
+msgstr "Izometra perspektivo"
+
+msgid ""
+"Look at the object so the axes X,Y,Z form 120 degree angles on the view."
+msgstr ""
+"Rigardu la objekton, por ke la aksoj X, Y, Z formu anglojn de 120 gradoj en "
+"la vido."
+
+msgid "Invert View"
+msgstr "Inversa Vido"
+
+msgid "Rotates the camera 180 degrees around the current vertical axis."
+msgstr "Rotoras la kameron 180 gradojn ĉirkaŭ la aktuala vertikala akso."
+
+msgid "Single Viewport"
+msgstr "Ununura fenestrumo"
+
+msgid "Setup single viewport for the whole window."
+msgstr "Konfiguru ununuran vidfenestron por la tuta fenestro."
+
+msgid "Horizontal Viewports"
+msgstr "Horizontaj fenestroj"
+
+msgid "Setup two horizontal viewports for the whole window."
+msgstr "Konfigurigu du horizontalajn fenestrojn por la tuta ekrano."
+
+msgid "Vertical Viewports"
+msgstr "Vertikalaj fenestroj"
+
+msgid "Setup two vertical viewports for the whole window."
+msgstr "Konfiguru du vertikalajn fenestrojn por montri la tutan bildon."
+
+msgid "Quad Viewports"
+msgstr "Kvar bildfenestroj"
+
+msgid "Setup four equal viewports for the whole window."
+msgstr "Krei kvar egale grandajn fenestrojn por la tuta ekrano."
+
+msgid "Add Custom Theme"
+msgstr "Aldoni kutiman temon"
+
+msgid "Customize and save the color theme."
+msgstr "Personaligu kaj konservu la kolorajn agordojn."
+
+msgid "Toggle Global Basis"
+msgstr "Alterni la tutmondan bazon"
+
+msgid "Show or hide global 0 and X,Y,Z axes, also allows showing 3d grid."
+msgstr ""
+"Montru aŭ kaŝu la tutmondajn aksojn 0 kaj X, Y, Z, kaj ankaŭ permesas montri "
+"la tridimensian reton."
+
+msgid "Settings"
+msgstr "Agordo"
+
+msgid "Show application settings window."
+msgstr "Montru la fenestron de agordo de la programo."
+
+msgid "Select Objects"
+msgstr "Elektu objektojn"
+
+msgid "Selects objects by clicking them in the scene"
+msgstr "Selektas objektojn per klako en la sceno."
+
+msgid "Move Object"
+msgstr "Movi objekton"
+
+msgid "Move an object in a scene using a mouse"
+msgstr "Movigu objekton en la sceno per la muso."
+
+msgid "Sort by Name"
+msgstr "Ordinigi laŭ nomo"
+
+msgid "Sort all objects in the scene by name"
+msgstr "Ordinigu ĉiujn objektojn en la sceno laŭ ilia nomo."
+
+msgid "Show All"
+msgstr "Montru ĉion"
+
+msgid "Show all objects in the scene"
+msgstr "Montru ĉiujn objektojn en la sceno."
+
+msgid "Hide All"
+msgstr "Kaŝi ĉion"
+
+msgid "Hide all objects in the scene"
+msgstr "Kaŝu ĉiujn objektojn en la sceno."
+
+msgid "Select All"
+msgstr "Selekti ĉion"
+
+msgid "Select all objects in the scene"
+msgstr "Selektu ĉiujn objektojn en la sceno."
+
+msgid "Unselect All"
+msgstr "Malmarki ĉion"
+
+msgid "Unselect all objects in the scene"
+msgstr "Malaktivigu ĉiujn objektojn en la sceno."
+
+msgid "Show Only Previous"
+msgstr "Nur montru la antaŭajn elementojn"
+
+msgid "Select and show only previous"
+msgstr "Elektu kaj montru nur la antaŭajn elementojn."
+
+msgid "Show Only Next"
+msgstr "Montru nur la sekvan"
+
+msgid "Select and show only next"
+msgstr "Elektu kaj montru nur la sekvan."
+
+msgid "Rename"
+msgstr "Renomi"
+
+msgid "Rename object"
+msgstr "Renomi objekton."
+
+msgid "Remove Selected"
+msgstr "Forigi elektitan"
+
+msgid "Remove selected objects"
+msgstr "Forigi selektitajn objektojn."
+
+msgid "Active List"
+msgstr "Aktiva listo."
+
+msgid "Show list of active tools"
+msgstr "Montru liston de la aktivaj iloj."
+
+msgid "Rotator"
+msgstr "Rotaciilo"
+
+msgid "Permanently rotates the scene around vertical axis."
+msgstr "Ĝi konstante rotacias la scenon ĉirkaŭ vertikala akso."
+
+msgid "Object Info"
+msgstr "Informoj pri la objekto"
+
+msgid "Show information about currently selected object."
+msgstr "Montru informojn pri la objekto, kiu estas elektita."

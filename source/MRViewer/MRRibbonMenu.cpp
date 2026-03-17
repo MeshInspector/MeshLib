@@ -22,6 +22,7 @@
 #include "MRToolbar.h"
 #include "MRStatePlugin.h"
 #include "MRRibbonFontHolder.h"
+#include "MRI18n.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -57,12 +58,13 @@ namespace
 
 constexpr auto cTransformContextName = "TransformContextWindow";
 
-auto getItemCaption( const std::string& name )->const std::string&
+std::string getItemCaption( const std::string& name )
 {
     auto it = RibbonSchemaHolder::schema().items.find( name );
     if ( it == RibbonSchemaHolder::schema().items.end() )
         return name;
-    return  it->second.caption.empty() ? name : it->second.caption;
+    const auto& item = it->second;
+    return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
 }
 
 } //anonymous namespace
@@ -854,7 +856,7 @@ void RibbonMenu::drawActiveList_()
         {
             if ( !item )
                 return;
-            const auto& name = getItemCaption( item->name() );
+            const auto name = getItemCaption( item->name() );
             auto childName = "##CloseItemBlock" + item->name();
 
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
@@ -2102,14 +2104,6 @@ void RibbonMenu::setupShortcuts_()
         if ( menuUIConfig_.drawSearchBar )
             searcher_.activate();
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_I,0 }, { ShortcutManager::Category::View, "Invert normals of selected objects",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        const auto& viewportid = viewport.id;
-        const auto& selected = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
-        for ( const auto& sel : selected )
-            sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
-    } }  );
     shortcutManager_->setShortcut( { GLFW_KEY_L,0 }, { ShortcutManager::Category::View, "Toggle edges on selected meshes",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -2282,7 +2276,7 @@ void RibbonMenu::drawShortcutsWindow_()
         for ( int i = 0; i < shortcutList.size(); ++i )
         {
             const auto& [key, category, name] = shortcutList[i];
-            const auto& caption = getItemCaption( name );
+            const auto caption = getItemCaption( name );
 
             if ( !secondColumnStarted && int( category ) >= int( ShortcutManager::Category::Count ) / 2 )
             {

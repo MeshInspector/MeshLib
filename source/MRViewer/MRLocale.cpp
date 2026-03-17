@@ -1,6 +1,7 @@
 #include "MRLocale.h"
 
 #include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
@@ -10,6 +11,7 @@
 #include <boost/locale/generator.hpp>
 #include <boost/locale/message.hpp>
 #pragma warning( pop )
+#include <boost/signals2/signal.hpp>
 #include <boost/version.hpp>
 
 #include <cassert>
@@ -23,6 +25,7 @@ namespace
 
 std::locale gLocale = {};
 std::string gLocaleName = "en";
+boost::signals2::signal<void ( const std::string& )> gLocaleNameChanged = {};
 boost::locale::generator gLocaleGen = {};
 std::vector<std::filesystem::path> gLocaleDirs = {};
 
@@ -52,11 +55,19 @@ const std::string& Locale::getName()
 const std::locale& Locale::set( std::string localeName )
 {
     gLocaleName = localeName;
+    MR_FINALLY {
+        gLocaleNameChanged( gLocaleName );
+    };
 
     // TODO: correct encoding processing
     if ( !localeName.ends_with( ".UTF-8" ) )
         localeName.append( ".UTF-8" );
     return ( gLocale = gLocaleGen.generate( localeName ) );
+}
+
+boost::signals2::connection Locale::onChanged( const std::function<void ( const std::string& )>& cb )
+{
+    return gLocaleNameChanged.connect( cb );
 }
 
 std::vector<std::string> Locale::getAvailableLocales()
@@ -84,12 +95,23 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
 
 int Locale::addDomain( const char* domainName )
 {
+    if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
+        return it->second;
+
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
 
     using facet_type = boost::locale::message_format<char>;
     assert( std::has_facet<facet_type>( gLocale ) );
     return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+}
+
+int Locale::addDomain( const std::string& domainName )
+{
+    gLocaleGen.add_messages_domain( domainName );
+    gLocale = gLocaleGen.generate( gLocaleName );
+
+    return findDomain( domainName );
 }
 
 int Locale::findDomain( const char* domainName )
@@ -100,6 +122,13 @@ int Locale::findDomain( const char* domainName )
     using facet_type = boost::locale::message_format<char>;
     assert( std::has_facet<facet_type>( gLocale ) );
     return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+}
+
+int Locale::findDomain( const std::string& domainName )
+{
+    using facet_type = boost::locale::message_format<char>;
+    assert( std::has_facet<facet_type>( gLocale ) );
+    return std::use_facet<facet_type>( gLocale ).domain( domainName );
 }
 
 std::string Locale::getDisplayName( const std::string& localeName )

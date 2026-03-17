@@ -54,6 +54,11 @@ const char* SceneColors::getName( Type type )
         case UnselectedMeasurementsZ:         return "UnselectedMeasurementsZ";
         case SelectedTemporaryMeasurements:   return "SelectedTemporaryMeasurements";
         case UnselectedTemporaryMeasurements: return "UnselectedTemporaryMeasurements";
+        case BrushAdd:                        return "BrushAdd";
+        case BrushRemove:                     return "BrushRemove";
+        case BrushSmooth:                     return "BrushSmooth";
+        case BrushDeform:                     return "BrushDeform";
+        case BrushPatch:                      return "BrushPatch";
         case Count:                           break;
     }
     assert( false && "Invalid enum." );
@@ -94,6 +99,13 @@ SceneColors::SceneColors()
 
     colors_[SelectedMeasurements] = Color( 50, 255, 240, 255 );
     colors_[UnselectedMeasurements] = Color( 255, 255, 255, 255 );
+
+    // Brush preview colors (semi-transparent, alpha=128)
+    colors_[BrushAdd]    = Color( 144, 238, 144, 128 ); // light green
+    colors_[BrushRemove] = Color( 205,  92,  92, 128 ); // light red / brick
+    colors_[BrushSmooth] = Color( 255, 255, 255, 128 ); // white
+    colors_[BrushDeform] = Color( 255, 140,   0, 128 ); // vivid orange
+    colors_[BrushPatch]  = Color( 160,  90, 220, 128 ); // medium purple
 }
 
 }

@@ -1617,10 +1617,10 @@ float ImGuiMenu::drawSelectionInformation_()
         UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
-    auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units )
+    auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units, std::optional<ImVec4> valueColor = {} )
     {
         ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
+        UI::readOnlyValue<Units>( label, value, valueColor ? *valueColor : textColor, {}, labelColor );
     };
 
     if ( selectedObjs.size() == 1 )
@@ -1646,7 +1646,7 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( showLocalBox )
             {
                 boldFont.pushFont();
-                drawDimensionsVec3( "Local Box Size", selectionLocalBox_.size(), LengthUnit{} );
+                drawDimensionsVec3( "Local Box Size", selectionLocalBox_.size(), LengthUnit{}, labelColor );
                 boldFont.popFont();
                 UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the local object space." );
 
@@ -1660,7 +1660,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
         case CoordType::World:
             boldFont.pushFont();
-            drawDimensionsVec3( "World Box Size", selectionWorldBox_.size(), LengthUnit{} );
+            drawDimensionsVec3( "World Box Size", selectionWorldBox_.size(), LengthUnit{}, labelColor );
             boldFont.popFont();
             UI::setTooltipIfHovered( "The edges of the tight axis-aligned bounding box in the world space." );
 
@@ -2214,7 +2214,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Subfeatures", FeatureVisualizePropertyType::Subfeatures, viewportid );
     }
-    someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
     if ( allIsFeatureObj )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );

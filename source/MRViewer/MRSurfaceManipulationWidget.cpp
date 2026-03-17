@@ -6,8 +6,9 @@
 #include "MRMouse.h"
 #include "MRPalette.h"
 #include "MRSceneCache.h"
-#include "MRViewer/MRGladGlfw.h"
-#include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRGladGlfw.h"
+#include "MRImGuiMultiViewport.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MREdgePaths.h"
@@ -158,17 +159,32 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     if ( mousePressed_ )
         return;
 
+    const bool workModeChanged = settings_.workMode != settings.workMode;
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, 1.e-5f );
     settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
     settings_.editForce = std::max( settings_.editForce, 1.e-5f );
     settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 0.5f );
     settings_.sharpness = std::clamp( settings_.sharpness, 0.f, 100.f );
+    if ( workModeChanged )
+        updateTexture();
     updateRegion_( mousePos_ );
 }
 
 void SurfaceManipulationWidget::updateTexture()
 {
+    // Determine preview color from theme based on current work mode
+    SceneColors::Type colorType = SceneColors::BrushAdd;
+    switch ( settings_.workMode )
+    {
+    case WorkMode::Add:       colorType = SceneColors::BrushAdd;    break;
+    case WorkMode::Remove:    colorType = SceneColors::BrushRemove; break;
+    case WorkMode::Relax:     colorType = SceneColors::BrushSmooth; break;
+    case WorkMode::Laplacian: colorType = SceneColors::BrushDeform; break;
+    case WorkMode::Patch:     colorType = SceneColors::BrushPatch;  break;
+    }
+    const Color brushColor = SceneColors::get( colorType );
+
     MeshTexture texture;
     if ( enableDeviationTexture_ )
     {
@@ -180,20 +196,20 @@ void SurfaceManipulationWidget::updateTexture()
             texture.pixels.resize( texture.resolution.x * texture.resolution.y );
             for ( int x = 0; x < palleteTexture.resolution.x; ++x )
             {
-                texture.pixels[x] = Color( 255, 64, 64, 255 );
+                texture.pixels[x] = brushColor;
                 texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
             }
         }
         else
         {
-            texture.pixels = { Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ),
+            texture.pixels = { brushColor, brushColor, brushColor,
                 Color::blue(), Color::green(), Color::red() };
             texture.resolution = { 2, 2 };
         }
     }
     else
     {
-        texture.pixels = { Color( 255, 64, 64, 255 ), Color( 0, 0, 0, 0 ) };
+        texture.pixels = { brushColor, Color( 0, 0, 0, 0 ) };
         texture.resolution = { 1, 2 };
     }
     obj_->setAncillaryTexture( texture );
@@ -701,6 +717,10 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 {
     MR_TIMER;
 
+    auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
+    if ( !objMeshPtr )
+        return;
+
     const auto& viewerRef = getViewerInstance();
     const ViewportId viewportId = viewerRef.viewport().id;
     std::vector<Vector2f> viewportPoints;
@@ -720,7 +740,6 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
     mousePos_ = mousePos;
 
-    auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     std::vector<ObjAndPick> movedPosPick;
     if ( ignoreOcclusion_ )
         movedPosPick = getViewerInstance().viewport().multiPickObjects( { { static_cast< VisualObject* >( objMeshPtr.get() ) } }, viewportPoints );

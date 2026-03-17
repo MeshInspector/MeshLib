@@ -48,8 +48,8 @@ if "!write_s3_option!"=="true" (
     set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
 )
 
-REM mirror on S3 for missing or old files
-set "VCPKG_ASSET_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/downloads/,read;"
+REM Asset cache: x-script tries S3 then curl
+set "X_VCPKG_ASSET_SOURCES=clear;x-script,powershell -NoProfile -Command \"$u='{url}'; $d='{dst}'; aws s3 cp s3://vcpkg-export/downloads/$(Split-Path -Leaf $u) $d --no-sign-request 2>$null; if(!(Test-Path $d)){curl.exe -L -s -o $d $u}\""
 
 REM Ensure vcpkg downloads folder exists
 if not exist "!vcpkg_path!downloads\" mkdir "!vcpkg_path!downloads"

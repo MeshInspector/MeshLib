@@ -128,6 +128,23 @@ jobs:
           name: CBindings
           path: ./source/MeshLibC2/include
           retention-days: 1
+          
+      - name: Upload C bindings Cuda headers
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        run: |
+          ls ./source/MeshLibC2Cuda
+          ls ./source/MeshLibC2Cuda/include
+
+          
+      - name: Upload C bindings headers TEST
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CBindingsTEST
+          path: |
+            ./source/MeshLibC2/include
+            ./source/MeshLibC2Cuda/include
+          retention-days: 1
 
       - name: Generate C# bindings # generate only sources
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}

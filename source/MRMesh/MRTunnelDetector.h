@@ -71,6 +71,11 @@ struct DetectTunnelSettings
 /// if you remove these faces and patch every boundary with disk, then the surface will be topology equivalent to sphere
 MRMESH_API Expected<FaceBitSet> detectTunnelFaces( const MeshPart& mp, const DetectTunnelSettings & settings = {} );
 
+/// gets rid of the tunnels in the given region of mesh (or whole mesh if region is nullptr) by
+/// 1) detecting tunnels, 2) deleting tunnel faces, and 3) filling holes appeared
+MRMESH_API Expected<void> eliminateTunnels( Mesh& mesh, const FaceBitSet* region = {}, const DetectTunnelSettings& settings = {} );
+MRMESH_API Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleParams& fillHoleParams, const FaceBitSet* region = {}, const DetectTunnelSettings& settings = {} );
+
 /// \}
 
 } // namespace MR

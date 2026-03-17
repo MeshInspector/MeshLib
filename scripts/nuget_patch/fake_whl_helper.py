@@ -56,7 +56,7 @@ def patch_whl(out_dir : Path, libs_dirs : list[Path]):
                     #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
                     #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
 
-                    "--add-path", ":".join(libs_dirs), # path where input dependencies are located
+                    "--add-path", ":".join(str(x) for x in libs_dirs), # path where input dependencies are located
 
                     # main option - needed to mangle whl/libs/ content (only thing we doing it for)
                     "--analyze-existing",

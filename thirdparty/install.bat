@@ -5,7 +5,8 @@ REM options: use --write-s3 to push vcpkg binary cache to S3
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
-set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
+if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
+echo Using vcpkg triplet: %VCPKG_DEFAULT_TRIPLET%
 
 REM Check if AWS CLI is installed
 aws.exe --version >nul 2>&1
@@ -38,14 +39,17 @@ for %%i in (%*) do (
     )
 )
 
-REM Configure VCPKG_BINARY_SOURCES
+REM Configure VCPKG_BINARY_SOURCES (use %VCPKG_DEFAULT_TRIPLET% for S3 path)
 if "!write_s3_option!"=="true" (
     echo Mode: pull-push vcpkg binary cache. AWS credentials are required.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
 ) else (
     echo Mode: pull vcpkg binary cache. No AWS credentials are required.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
 )
+
+REM Asset cache: x-script tries S3 then curl
+set "X_VCPKG_ASSET_SOURCES=clear;x-script,powershell -NoProfile -Command \"$u='{url}'; $d='{dst}'; aws s3 cp s3://vcpkg-export/downloads/$(Split-Path -Leaf $u) $d --no-sign-request 2>$null; if(!(Test-Path $d)){curl.exe -L -s -o $d $u}\""
 
 REM Ensure vcpkg downloads folder exists
 if not exist "!vcpkg_path!downloads\" mkdir "!vcpkg_path!downloads"

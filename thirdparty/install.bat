@@ -48,6 +48,9 @@ if "!write_s3_option!"=="true" (
     set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
 )
 
+REM mirror on S3 for missing or old files
+set "VCPKG_ASSET_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/downloads/,read;"
+
 REM Ensure vcpkg downloads folder exists
 if not exist "!vcpkg_path!downloads\" mkdir "!vcpkg_path!downloads"
 if exist "%~dp0vcpkg\downloads\" (

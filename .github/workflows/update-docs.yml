@@ -42,7 +42,12 @@ jobs:
         continue-on-error: true
         with:
           name: CBindings
-          path: MeshLib/Cbindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        run: |
+          mv MeshLib/CbindingsTmp/MeshLibC2 MeshLib/Cbindings
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda MeshLib/CbindingsCuda
 
       - name: Download C# bindings
         uses: actions/download-artifact@v8

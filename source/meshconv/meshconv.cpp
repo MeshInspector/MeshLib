@@ -186,7 +186,7 @@ static int mainInternal( int argc, char **argv )
 
     std::cout << "Loading " << inFilePath << "..." << std::endl;
     MR::Timer t( "Load file" );
-    auto objLoadRes = MR::makeObjectFromMeshFile( inFilePath );
+    auto objLoadRes = MR::loadObjectFromFile( inFilePath );
     if ( !objLoadRes.has_value() )
     {
         std::cerr << "File load error: " << objLoadRes.error() << "\n";
@@ -195,11 +195,20 @@ static int mainInternal( int argc, char **argv )
     std::cout << "Loaded successfully in " << t.secondsPassed().count() << "s" << std::endl;
     t.finish();
 
-    MR::ObjectPtr objPtr = objLoadRes->obj;
+    std::vector<MR::ObjectPtr> allObjPtrs = std::move( objLoadRes->objs );
+    if ( allObjPtrs.empty() )
+    {
+        std::cerr << "Error: No objects in the file.\n";
+        MC_EXIT( 1 );
+    }
+    if ( allObjPtrs.size() > 1 || !allObjPtrs[0]->children().empty() )
+        std::cerr << "Warning: Too many objects in the file. Only first object will be converted.\n";
+
+    MR::ObjectPtr firstObjPtr = allObjPtrs[0];
     std::shared_ptr<MR::ObjectMesh> objMeshPtr;
     std::shared_ptr<MR::ObjectLines> objLinesPtr;
     std::shared_ptr<MR::ObjectPoints> objPointsPtr;
-    if ( auto tryObjMeshPtr = std::dynamic_pointer_cast< MR::ObjectMesh >( objPtr ) )
+    if ( auto tryObjMeshPtr = std::dynamic_pointer_cast<MR::ObjectMesh>( firstObjPtr ) )
     {
         objMeshPtr = tryObjMeshPtr;
         if ( !objMeshPtr->varMesh() )
@@ -226,7 +235,7 @@ static int mainInternal( int argc, char **argv )
             }
         }
     }
-    else if ( auto tryObjLinesPtr = std::dynamic_pointer_cast<MR::ObjectLines>( objPtr ) )
+    else if ( auto tryObjLinesPtr = std::dynamic_pointer_cast<MR::ObjectLines>( firstObjPtr ) )
     {
         objLinesPtr = tryObjLinesPtr;
         if ( !objLinesPtr->polyline() )
@@ -235,7 +244,7 @@ static int mainInternal( int argc, char **argv )
             MC_EXIT( 1 );
         }
     }
-    else if ( auto tryObjPointsPtr = std::dynamic_pointer_cast<MR::ObjectPoints>( objPtr ) )
+    else if ( auto tryObjPointsPtr = std::dynamic_pointer_cast<MR::ObjectPoints>( firstObjPtr ) )
     {
         objPointsPtr = tryObjPointsPtr;
         if ( !objPointsPtr->pointCloud() )

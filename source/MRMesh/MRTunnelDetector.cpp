@@ -8,6 +8,7 @@
 #include "MREdgePathsBuilder.h"
 #include "MRParallelFor.h"
 #include "MRFillContourByGraphCut.h"
+#include "MRMeshFillHole.h"
 
 namespace MR
 {
@@ -504,6 +505,29 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
     }
 
     return tunnelFaces;
+}
+
+Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleParams& fillHoleParams, const FaceBitSet* region, const DetectTunnelSettings& settings )
+{
+    MR_TIMER;
+
+    return detectTunnelFaces( { mesh, region }, settings ).transform( [&]( FaceBitSet && tunnelFaces )
+    {
+        auto bdEdges = findAllLeftBdEdges( mesh.topology, &tunnelFaces, true );
+
+        mesh.deleteFaces( tunnelFaces );
+
+        for ( auto e : bdEdges )
+        {
+            if ( !mesh.topology.left( e ) )
+                fillHole( mesh, e, fillHoleParams );
+        }
+    } );
+}
+
+Expected<void> eliminateTunnels( Mesh& mesh, const FaceBitSet* region, const DetectTunnelSettings& settings )
+{
+    return eliminateTunnels( mesh, {}, region, settings );
 }
 
 } //namespace MR

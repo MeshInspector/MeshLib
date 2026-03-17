@@ -16,8 +16,9 @@
 #include "MRParallelFor.h"
 #include "MRMeshIntersect.h"
 #include "MRSurfacePath.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRphmap.h"
+#include "MRFillContourByGraphCut.h"
+#include "MRPch/MRSpdlog.h"
 #include <numeric>
 
 namespace MR
@@ -1326,7 +1327,7 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
     auto cutRes = cutMesh( mesh, oneMeshContours );
     if ( !cutRes.fbsWithContourIntersections.none() )
         return unexpected( "Cannot cut mesh because of contour self intersections" );
-    auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
+    auto sideFbv = fillContourLeftByGraphCut( mesh.topology, cutRes.resultCut, edgeLengthMetric( mesh ) );
     return sideFbv;
 }
 

@@ -7,6 +7,7 @@
 #include "MRViewer.h"
 #include "MRRibbonFontHolder.h"
 #include "MRImGuiMultiViewport.h"
+#include "MRI18n.h"
 #include <imgui_internal.h>
 
 namespace MR
@@ -73,13 +74,13 @@ bool ModalDialog::beginPopup()
 
     if ( auto* dontShowAgain = settings_.dontShowAgain )
     {
-        constexpr const auto* cDontShowAgainText = "Do not show this message again";
-        const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( cDontShowAgainText ).x;
+        const std::string cDontShowAgainText = MR::Locale::translate( "Do not show this message again" );
+        const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( cDontShowAgainText.c_str() ).x;
         ImGui::SetCursorPosX( ( windowWidth - checkboxWidth ) * 0.5f );
         auto color = ImGui::GetStyleColorVec4( ImGuiCol_Text );
         color.w = 0.5f;
         ImGui::PushStyleColor( ImGuiCol_Text, color );
-        UI::checkbox( cDontShowAgainText, dontShowAgain );
+        UI::checkbox( cDontShowAgainText.c_str(), dontShowAgain );
         ImGui::PopStyleColor();
     }
 

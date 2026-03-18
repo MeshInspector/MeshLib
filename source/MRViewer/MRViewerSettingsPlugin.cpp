@@ -621,16 +621,16 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         // If the separator is empty or a space, display a string explaining that on top of the textbox.
         if ( !ImGui::IsItemActive() )
         {
-            const char* label = nullptr;
+            std::string label;
             if ( thouSep[0] == 0 )
-                label = "None";
+                label = _tr( "None" );
             else if ( thouSep[0] == ' ' )
-                label = "Space";
+                label = _tr( "Space" );
 
-            if ( label )
+            if ( !label.empty() )
             {
-                ImVec2 textSize = ImGui::CalcTextSize( label );
-                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
+                ImVec2 textSize = ImGui::CalcTextSize( label.c_str() );
+                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label.c_str() );
             }
         }
     }
@@ -709,7 +709,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
         const auto unitsAngleLabel = std::string( _tr( "Units" ) ) + "##angle";
-        if ( UI::combo( unitsAngleLabel.c_str(), &flavorOption, flavorOptions ) )
+        if ( UI::combo( unitsAngleLabel.c_str(), &flavorOption, Locale::translateAll( flavorOptions ) ) )
             UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
         UI::setTooltipIfHovered( _tr( "It selects angular units to be show in the user interface." ) );
 
@@ -1109,7 +1109,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
 
         const float posY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( posY + cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
-        ImGui::Text( "%s", modeName.c_str() );
+        ImGui::Text( "%s", _tr( modeName.c_str() ) );
 
         ImGui::SetCursorPosX( 110.0f * UI::scale() );
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );

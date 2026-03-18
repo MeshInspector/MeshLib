@@ -1199,7 +1199,7 @@ PaletteChanges Palette(
                 if ( PalettePresets::loadPreset( presets[presetIndex], palette ) )
                     presetName = presets[presetIndex];
                 else
-                    showError( std::string( _tr( "Cannot load preset with name: \"" ) ) + presets[presetIndex] + "\"" );
+                    showError( fmt::format( "{}: \"{}\"", _tr( "Cannot load preset with name" ), presets[presetIndex] ) );
             }
 
             if ( fixZero )

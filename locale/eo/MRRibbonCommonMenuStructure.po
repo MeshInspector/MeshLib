@@ -19,10 +19,10 @@ msgid "Undo the last action."
 msgstr "Malfari la lastan agadon."
 
 msgid "Redo"
-msgstr "Redo"
+msgstr "Refari"
 
 msgid "Redo last undone action."
-msgstr "Malfari la lastan agadon."
+msgstr "Refari la lastan malfaran agadon."
 
 msgid "New"
 msgstr "Nova"
@@ -31,7 +31,7 @@ msgid "Remove all objects from the scene."
 msgstr "Forigu ĉiujn objektojn el la sceno."
 
 msgid "Open Files"
-msgstr "Malfermitaj dosieroj"
+msgstr "Malfermi dosierojn"
 
 msgid "Select files from the dialog and open them in the viewer window."
 msgstr ""
@@ -39,7 +39,7 @@ msgstr ""
 "programo."
 
 msgid "Open Directory"
-msgstr "Malferma Katalogo"
+msgstr "Malfermi dosierujon"
 
 msgid "Load all supported files from given directory and subdirectories."
 msgstr ""
@@ -47,13 +47,13 @@ msgstr ""
 "subdosirejoj."
 
 msgid "Open DICOMs"
-msgstr "Malfermitaj DICOM-dosieroj"
+msgstr "Malfermi DICOM-dosierojn"
 
 msgid "Load all DICOM volumes from a given directory and its subdirectories."
 msgstr "Ŝargi ĉiujn DICOM-dosierojn el donita dosirejo kaj ĝiaj subdosirejoj."
 
 msgid "Open RAW Voxels"
-msgstr "Malfermu RAW-volumojn"
+msgstr "Malfermi krudajn vokselojn"
 
 msgid "Load *.raw file with user-specified parameters."
 msgstr "Ŝargi *.raw-dosieron kun parametroj specifitaj de la uzanto."
@@ -70,10 +70,10 @@ msgstr ""
 "Multipliko, Divido, Anstataŭigo."
 
 msgid "Open Voxels From TIFF"
-msgstr "Konvertu TIFF-dosierojn al voluma dataro"
+msgstr "Malfermi vokselojn el TIFF"
 
 msgid "Load voxels from a set of TIFF images"
-msgstr "Ŝargi voloksajn datumojn el aro de TIFF-bildoj."
+msgstr "Ŝargi vokselojn el aro de TIFF-bildoj."
 
 msgid "Export"
 msgstr "Eksportado"
@@ -104,7 +104,7 @@ msgid "Screenshot"
 msgstr "Ekranbildo"
 
 msgid "Saves screenshot of the scene to file."
-msgstr "Konservis ekranbildon de la sceno en dosiero."
+msgstr "Konservas ekranbildon de la sceno en dosiero."
 
 msgid "Save Screenshot"
 msgstr "Konservi ekranbildon"
@@ -113,13 +113,13 @@ msgid "Saves a screenshot of the current view to file."
 msgstr "Ĝi savas ekranbildon de la aktuala vido en dosiero."
 
 msgid "Screenshot to Clipboard"
-msgstr "Capturo de ekrano al la tamporilo"
+msgstr "Ekranbildo al la tondujo"
 
 msgid "Copies screenshot of the scene to clipboard"
 msgstr "Kopias la ekranbildon de la sceno al la tamponejo."
 
 msgid "Fit Data"
-msgstr "Donitaj datumoj pri agado"
+msgstr "Adapti datumojn"
 
 msgid ""
 "Changes current viewport settings to fit all visible objects in the scene."
@@ -141,7 +141,8 @@ msgstr "Ajusti elektitajn bazajn elementojn"
 
 msgid "Changes current viewport settings to fit selection."
 msgstr ""
-"Modifas la aktualajn agordojn de la vidfenestro por ĝui la selektitan areon."
+"Modifas la aktualajn agordojn de la vidfenestro por montri la selektitan "
+"areon."
 
 msgid "Camera"
 msgstr "Fotilo"
@@ -174,13 +175,13 @@ msgid "A view of YZ plane with camera looking along X."
 msgstr "Vido de la ebeno YZ, kun la kamerao rigardanta laŭ la akso X."
 
 msgid "Back View"
-msgstr "Malanta vido"
+msgstr "Malantaŭa vido"
 
 msgid "A view of XZ plane with Y axis looking in camera."
 msgstr "Vido de la ebeno XZ, kun la akso Y direktita al la fotilo."
 
 msgid "Right View"
-msgstr "Korekta perspektivo"
+msgstr "Dekstra perspektivo"
 
 msgid "A view of YZ plane with X axis looking in camera."
 msgstr "Vido de la ebeno YZ, kun la akso X direktita al la fotilo."
@@ -311,7 +312,7 @@ msgid "Remove selected objects"
 msgstr "Forigi selektitajn objektojn."
 
 msgid "Active List"
-msgstr "Aktiva listo."
+msgstr "Aktiva listo"
 
 msgid "Show list of active tools"
 msgstr "Montru liston de la aktivaj iloj."
@@ -327,3 +328,23 @@ msgstr "Informoj pri la objekto"
 
 msgid "Show information about currently selected object."
 msgstr "Montru informojn pri la objekto, kiu estas elektita."
+
+msgctxt "Tab name"
+msgid "Home"
+msgstr "Hejmo"
+
+msgctxt "Tab name"
+msgid "View"
+msgstr "Vido"
+
+msgctxt "Tab name"
+msgid "Select"
+msgstr "Elektado"
+
+msgctxt "Tab name"
+msgid "CT"
+msgstr "KT"
+
+msgctxt "Tab name"
+msgid "Test"
+msgstr "Testo"

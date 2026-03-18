@@ -557,22 +557,26 @@ bool MeshTopology::isInnerOrBdVertex( VertId v, const FaceBitSet * region ) cons
     return false;
 }
 
-EdgeId MeshTopology::nextLeftBd( EdgeId e, const FaceBitSet * region ) const
+EdgeId MeshTopology::nextLeftBd( EdgeId e, const FaceBitSet * region, Turn turn ) const
 {
     assert( isLeftBdEdge( e, region ) );
 
-    for ( e = next( e.sym() ); !isLeftBdEdge( e, region ); e = next( e ) )
+    for ( e = ( turn == Turn::Leftmost ) ? prev( e.sym() ) : next( e.sym() );
+          !isLeftBdEdge( e, region );
+          e = ( turn == Turn::Leftmost ) ? prev( e ) : next( e ) )
     {
         assert( !isLeftBdEdge( e.sym(), region ) );
     }
     return e;
 }
 
-EdgeId MeshTopology::prevLeftBd( EdgeId e, const FaceBitSet * region ) const
+EdgeId MeshTopology::prevLeftBd( EdgeId e, const FaceBitSet * region, Turn turn ) const
 {
     assert( isLeftBdEdge( e, region ) );
 
-    for ( e = prev( e ); !isLeftBdEdge( e.sym(), region ); e = prev( e ) )
+    for ( e = ( turn == Turn::Leftmost ) ? next( e ) : prev( e );
+          !isLeftBdEdge( e.sym(), region );
+          e = ( turn == Turn::Leftmost ) ? next( e ) : prev( e ) )
     {
         assert( !isLeftBdEdge( e, region ) );
     }

@@ -1,11 +1,3 @@
-// This file is part of libigl, a simple c++ geometry processing library.
-//
-// Copyright (C) 2018 Jérémie Dumas <jeremie.dumas@ens-lyon.org>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public License
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can
-// obtain one at http://mozilla.org/MPL/2.0/.
-////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
 #include "MRMesh/MRChrono.h"
 #include "MRMesh/MRObjectDimensionsEnum.h"
@@ -197,7 +189,13 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 5.0f;
-        reload_font();
+
+        // update scales
+        hidpiScale_ = hidpiScale();
+        pixelRatio_ = pixelRatio();
+        UI::detail::setScale( menu_scaling() );
+
+        reloadFonts();
 
         connect( _viewer, 0, boost::signals2::connect_position::at_front );
     }
@@ -438,7 +436,7 @@ static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR:
     return { atLeastOneTrue,allTrue };
 }
 
-void ImGuiMenu::load_font(int font_size)
+void ImGuiMenu::loadFonts( int font_size )
 {
 #ifdef _WIN32
     if ( viewer->isGLInitialized() )
@@ -469,17 +467,12 @@ void ImGuiMenu::load_font(int font_size)
 #endif
 }
 
-void ImGuiMenu::reload_font(int font_size)
+void ImGuiMenu::reloadFonts( int fontSize )
 {
-  hidpi_scaling_ = hidpi_scaling();
-  pixel_ratio_ = pixel_ratio();
-  UI::detail::setScale( menu_scaling() ); // Send the menu scale to the UI.
-
   ImGuiIO& io = ImGui::GetIO();
   io.Fonts->Clear();
 
-  load_font(font_size);
-
+  loadFonts( fontSize );
 }
 
 void ImGuiMenu::shutdown()
@@ -510,7 +503,11 @@ void ImGuiMenu::postResize_( int width, int height )
 
 void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
 {
-    reload_font();
+    hidpiScale_ = hidpiScale();
+    pixelRatio_ = pixelRatio();
+    UI::detail::setScale( menu_scaling() ); // Send the menu scale to the UI.
+
+    reloadFonts();
     rescaleStyle_();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 }
@@ -719,36 +716,28 @@ bool ImGuiMenu::onKeyRepeat_( int key, int modifiers )
 // Draw menu
 void ImGuiMenu::draw_menu()
 {
-  // Text labels
-  draw_labels_window();
+    // Text labels
+    drawLabelsWindow();
 
-  // Viewer settings
-  if (callback_draw_viewer_window) { callback_draw_viewer_window(); }
-  else { draw_viewer_window(); }
+    drawViewerWindow();
 
-  // Other windows
-  if (callback_draw_custom_window) { callback_draw_custom_window(); }
-  else { draw_custom_window(); }
+    drawAdditionalWindows();
 }
 
-void ImGuiMenu::draw_viewer_window()
+void ImGuiMenu::drawViewerWindow()
 {
-  float menu_width = 180.f * UI::scale();
-  ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSizeConstraints(ImVec2(menu_width, -1.0f), ImVec2(menu_width, -1.0f));
-  ImGui::Begin(
-      "Viewer", nullptr,
-      ImGuiWindowFlags_NoSavedSettings
-      | ImGuiWindowFlags_AlwaysAutoResize
-  );
-  ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.4f);
-  if (callback_draw_viewer_menu) { callback_draw_viewer_menu(); }
-  ImGui::PopItemWidth();
-  ImGui::End();
+    float menu_width = 180.f * UI::scale();
+    ImGui::SetNextWindowPos( ImVec2( 0.0f, 0.0f ), ImGuiCond_FirstUseEver );
+    ImGui::SetNextWindowSize( ImVec2( 0.0f, 0.0f ), ImGuiCond_FirstUseEver );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( menu_width, -1.0f ), ImVec2( menu_width, -1.0f ) );
+    ImGui::Begin( "Viewer", nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize );
+    ImGui::PushItemWidth( ImGui::GetWindowWidth() * 0.4f );
+    drawViewerWindowContent();
+    ImGui::PopItemWidth();
+    ImGui::End();
 }
 
-void ImGuiMenu::draw_labels_window()
+void ImGuiMenu::drawLabelsWindow()
 {
   // Text labels
   ImGuiMV::SetNextWindowPosMainViewport(ImVec2(0,0), ImGuiCond_Always);
@@ -771,60 +760,30 @@ void ImGuiMenu::draw_labels_window()
   ImGui::PopStyleVar();
 }
 
-void ImGuiMenu::draw_text(
-    const Viewport& viewport,
-    const Vector3f& posOriginal,
-    const Vector3f& normal,
-    const std::string& text,
-    const Color& color,
-    bool clipByViewport )
+float ImGuiMenu::pixelRatio()
 {
-  Vector3f pos = posOriginal;
-  pos += normal * 0.005f * viewport.getParameters().objectScale;
-  const auto& viewportRect = viewport.getViewportRect();
-  Vector3f coord = viewport.clipSpaceToViewportSpace( viewport.projectToClipSpace( pos ) );
-  auto viewerCoord = viewer->viewportToScreen( coord, viewport.id );
-
-  // Draw text labels slightly bigger than normal text
-  ImDrawList* drawList = ImGui::GetWindowDrawList();
-  ImVec4 clipRect( viewportRect.min.x,
-                   viewer->framebufferSize.y - ( viewportRect.min.y + height( viewportRect ) ),
-                   viewportRect.min.x + width( viewportRect ),
-                   viewer->framebufferSize.y - viewportRect.min.y );
-  drawList->AddText( ImGui::GetFont(), ImGui::GetFontSize() * 1.2f,
-                     ImVec2( viewerCoord.x / pixel_ratio_, viewerCoord.y / pixel_ratio_ ),
-                     color.getUInt32(),
-                     &text[0], &text[0] + text.size(), 0.0f,
-                     clipByViewport ? &clipRect : nullptr );
-}
-
-float ImGuiMenu::pixel_ratio()
-{
-    // Computes pixel ratio for hidpi devices
-    int buf_size[2];
-    int win_size[2];
+    int bufferSize[2];
+    int windowSize[2];
     GLFWwindow* window = glfwGetCurrentContext();
     if ( window )
     {
-        glfwGetFramebufferSize( window, &buf_size[0], &buf_size[1] );
-        glfwGetWindowSize( window, &win_size[0], &win_size[1] );
-        return ( float )buf_size[0] / ( float )win_size[0];
+        glfwGetFramebufferSize( window, &bufferSize[0], &bufferSize[1] );
+        glfwGetWindowSize( window, &windowSize[0], &windowSize[1] );
+        return (float) bufferSize[0] / (float) windowSize[0];
     }
     return 1.0f;
 }
 
-float ImGuiMenu::hidpi_scaling()
+float ImGuiMenu::hidpiScale()
 {
-    // Computes scaling factor for hidpi devices
-    float xscale{ 1.0f }, yscale{ 1.0f };
+    float xScale = 1.0f;
+    float yScale = 1.0f;
 #ifndef __EMSCRIPTEN__
     GLFWwindow* window = glfwGetCurrentContext();
     if ( window )
-    {
-        glfwGetWindowContentScale( window, &xscale, &yscale );
-    }
+        glfwGetWindowContentScale( window, &xScale, &yScale );
 #endif
-    return 0.5f * ( xscale + yscale );
+    return 0.5f * ( xScale + yScale );
 }
 
 float ImGuiMenu::menu_scaling() const
@@ -832,9 +791,9 @@ float ImGuiMenu::menu_scaling() const
 #ifdef __EMSCRIPTEN__
     return float( emscripten_get_device_pixel_ratio() ) * userScaling_;
 #elif defined __APPLE__
-    return pixel_ratio_ * userScaling_;
+    return pixelRatio_ * userScaling_;
 #else
-    return hidpi_scaling_ / pixel_ratio_ * userScaling_;
+    return hidpiScale_ / pixelRatio_ * userScaling_;
 #endif
 }
 

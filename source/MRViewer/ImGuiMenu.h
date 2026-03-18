@@ -1,12 +1,4 @@
 #pragma  once
-// This file is part of libigl, a simple c++ geometry processing library.
-//
-// Copyright (C) 2018 Jérémie Dumas <jeremie.dumas@ens-lyon.org>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public License
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can
-// obtain one at http://mozilla.org/MPL/2.0/.
-
 #include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRNotificationType.h"
@@ -66,11 +58,11 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         PostResizeListener, PostRescaleListener, PostFocusListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
-  float hidpi_scaling_;
+  float hidpiScale_;
 
-  // Ratio between the framebuffer size and the window size.
+  // The ratio of the framebuffer size to the window size.
   // May be different from the hipdi scaling!
-  float pixel_ratio_;
+  float pixelRatio_;
 
   // user defined additional scaling modifier
   float userScaling_ = 1.0f;
@@ -179,8 +171,8 @@ public:
   // call this to draw valid imgui context at the end of the frame
   MRVIEWER_API virtual void finishFrame();
 
-  MRVIEWER_API virtual void load_font(int font_size = 13);
-  MRVIEWER_API virtual void reload_font(int font_size = 13);
+  MRVIEWER_API virtual void loadFonts( int fontSize = 13 );
+  MRVIEWER_API virtual void reloadFonts( int fontSize = 13 );
 
   MRVIEWER_API virtual void shutdown() override;
 
@@ -189,30 +181,17 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
-  // Can be overwritten by `callback_draw_viewer_window`
-  MRVIEWER_API virtual void draw_viewer_window();
+  MRVIEWER_API virtual void drawViewerWindow();
+  virtual void drawViewerWindowContent() {}
+  virtual void drawAdditionalWindows() {}
 
-  // Can be overwritten by `callback_draw_custom_window`
-  virtual void draw_custom_window() {}
+  void drawLabelsWindow();
 
-  // Easy-to-customize callbacks
-  std::function<void(void)> callback_draw_viewer_window;
-  std::function<void(void)> callback_draw_viewer_menu;
-  std::function<void(void)> callback_draw_custom_window;
+  // Computes pixel ratio for hidpi devices
+  MRVIEWER_API float pixelRatio();
 
-  void draw_labels_window();
-
-  MRVIEWER_API void draw_text(
-      const Viewport& viewport,
-      const Vector3f& pos,
-      const Vector3f& normal,
-      const std::string& text,
-      const Color& color,
-      bool clipByViewport );
-
-  MRVIEWER_API float pixel_ratio();
-
-  MRVIEWER_API float hidpi_scaling();
+  // Computes scaling factor for hidpi devices
+  MRVIEWER_API float hidpiScale();
 
   MRVIEWER_API float menu_scaling() const;
 

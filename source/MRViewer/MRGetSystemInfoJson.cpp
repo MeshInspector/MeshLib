@@ -94,8 +94,8 @@ Json::Value GetSystemInfoJson()
     }
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
-        windowInfo["Pixel ratio"] = fmt::format( "{}", menu->pixel_ratio() );
-        windowInfo["System scaling"] = fmt::format( "{}", menu->hidpi_scaling() );
+        windowInfo["Pixel ratio"] = fmt::format( "{}", menu->pixelRatio() );
+        windowInfo["System scaling"] = fmt::format( "{}", menu->hidpiScale() );
         windowInfo["Menu scaling"] = fmt::format( "{}", menu->menu_scaling() );
     }
 

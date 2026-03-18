@@ -19,6 +19,7 @@
 #include "imgui_internal.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
+#include "MRI18n.h"
 #include <boost/exception/diagnostic_information.hpp>
 #include <GLFW/glfw3.h>
 #include <atomic>
@@ -164,7 +165,7 @@ bool ProgressBarImpl::tryRun_( const std::function<bool ()>& task )
         onFinish_ = [msg = std::string( badAllocE.what() )]
         {
             spdlog::error( msg );
-            showError( "Not enough memory for the requested operation." );
+            showError( _tr( "Not enough memory for the requested operation." ) );
         };
         return true;
     }
@@ -195,7 +196,7 @@ bool ProgressBarImpl::tryRunWithSehHandler_( const std::function<bool()>& task )
     {
         onFinish_ = []
         {
-            showError( "Unknown exception occurred" );
+            showError( _tr( "Unknown exception occurred" ) );
         };
         return true;
     }
@@ -269,7 +270,7 @@ void setup()
             ImGui::SetCursorPos( ImVec2( ( windowSize.x - btnSize.x ) * 0.5f, 92.0f * UI::scale() ) );
             if ( !instance.canceled_ )
             {
-                if ( UI::button( "Cancel", btnSize, ImGuiKey_Escape ) )
+                if ( UI::button( _tr( "Cancel" ), btnSize, ImGuiKey_Escape ) )
                 {
                     std::unique_lock lock( instance.mutex_ );
                     spdlog::info( "Operation progress: \"{}\" - Canceling", instance.title_ );
@@ -278,13 +279,13 @@ void setup()
             }
             else
             {
-                ImGui::Text( "Canceling..." );
+                ImGui::Text( "%s", _tr( "Canceling..." ) );
             }
         }
 #else
-        auto textSize = ImGui::CalcTextSize( "Operation is in progress, please wait..." );
+        auto textSize = ImGui::CalcTextSize( _tr( "Operation is in progress, please wait..." ) );
         ImGui::SetCursorPos( 0.5f * ( windowSize - Vector2f( textSize ) ) );
-        ImGui::Text( "Operation is in progress, please wait..." );
+        ImGui::Text( "%s", _tr( "Operation is in progress, please wait..." ) );
 #endif
         if ( instance.closeDialogNextFrame_ )
         {

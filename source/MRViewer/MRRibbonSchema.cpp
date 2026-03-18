@@ -674,10 +674,13 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         assert( false );
         return;
     }
-    readUIJson_( *itemsStructRes );
+    const auto filename = utf8string( path.filename() );
+    const auto stem = filename.substr( 0, filename.find( '.' ) );
+    const auto domainId = Locale::findDomain( stem );
+    readUIJson_( *itemsStructRes, domainId );
 }
 
-void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
+void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, int domainId ) const
 {
     auto tabs = itemsStructure["Tabs"];
     if ( !tabs.isArray() )
@@ -755,7 +758,7 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
         auto& tabRef = RibbonSchemaHolder::schema().tabsMap[tabName.asString()];
         if ( tabRef.empty() )
         {
-            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority,experementalTab } );
+            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(), tabPriority, experementalTab, domainId } );
             tabRef = std::move( newGroupsVec );
         }
         else

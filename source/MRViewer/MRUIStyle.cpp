@@ -355,7 +355,6 @@ bool buttonEx( const char* label, bool active, const Vector2f& size /*= Vector2f
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-    const auto menu = ImGuiMenu::instance();
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * UI::scale() ) );
 
@@ -371,8 +370,6 @@ bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
 {
-    const auto menu = ImGuiMenu::instance();
-
     Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
@@ -707,7 +704,6 @@ bool toggle( const char* label, bool* value )
         return false;
     const ImGuiStyle& style = ImGui::GetStyle();
 
-    const auto menu = ImGuiMenu::instance();
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
     sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
@@ -761,8 +757,6 @@ bool toggle( const char* label, bool* value )
 static bool checkboxWithoutTestEngine( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-
-    const auto menu = ImGuiMenu::instance();
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
@@ -1006,8 +1000,6 @@ bool radioButton( const char* label, int* value, int valButton )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
 
-    const auto menu = ImGuiMenu::instance();
-
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
 
@@ -1050,7 +1042,6 @@ bool radioButton( const char* label, int* value, int valButton )
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
-        const auto menu = ImGuiMenu::instance();
         const ImVec2 pos = window->DC.CursorPos;
         const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
         const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
@@ -1699,8 +1690,7 @@ static void drawDragCursor()
     auto mousePos = ImGui::GetMousePos();
     mousePos.x += 5.f;
 
-    const auto menuPlugin = MR::ImGuiMenu::instance();
-    const float scale = menuPlugin ? menuPlugin->menuScaling() : 1.f;
+    const float scale = UI::scale();
 
     const float spaceX = 10 * scale;
     const float sizeX = 12 * scale;

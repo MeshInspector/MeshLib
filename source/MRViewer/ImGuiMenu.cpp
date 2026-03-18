@@ -189,12 +189,7 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 5.0f;
-
-        // update scales
-        hidpiScale_ = hidpiScale();
-        pixelRatio_ = pixelRatio();
-        UI::detail::setScale( menu_scaling() );
-
+        updateScaling();
         reloadFonts();
 
         connect( _viewer, 0, boost::signals2::connect_position::at_front );
@@ -469,10 +464,8 @@ void ImGuiMenu::loadFonts( int font_size )
 
 void ImGuiMenu::reloadFonts( int fontSize )
 {
-  ImGuiIO& io = ImGui::GetIO();
-  io.Fonts->Clear();
-
-  loadFonts( fontSize );
+    ImGui::GetIO().Fonts->Clear();
+    loadFonts( fontSize );
 }
 
 void ImGuiMenu::shutdown()
@@ -503,10 +496,7 @@ void ImGuiMenu::postResize_( int width, int height )
 
 void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
 {
-    hidpiScale_ = hidpiScale();
-    pixelRatio_ = pixelRatio();
-    UI::detail::setScale( menu_scaling() ); // Send the menu scale to the UI.
-
+    updateScaling();
     reloadFonts();
     rescaleStyle_();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
@@ -774,7 +764,7 @@ float ImGuiMenu::pixelRatio()
     return 1.0f;
 }
 
-float ImGuiMenu::hidpiScale()
+float ImGuiMenu::hidpiScaling()
 {
     float xScale = 1.0f;
     float yScale = 1.0f;
@@ -786,15 +776,26 @@ float ImGuiMenu::hidpiScale()
     return 0.5f * ( xScale + yScale );
 }
 
-float ImGuiMenu::menu_scaling() const
+void ImGuiMenu::updateScaling()
 {
+    hidpiScale_ = hidpiScaling();
+    pixelRatio_ = pixelRatio();
+
+    float newScaling = userScaling_;
 #ifdef __EMSCRIPTEN__
-    return float( emscripten_get_device_pixel_ratio() ) * userScaling_;
+    newScaling *= float( emscripten_get_device_pixel_ratio() );
 #elif defined __APPLE__
-    return pixelRatio_ * userScaling_;
+    newScaling *= pixelRatio_;
 #else
-    return hidpiScale_ / pixelRatio_ * userScaling_;
+    newScaling *= hidpiScale_ / pixelRatio_;
 #endif
+
+    UI::detail::setScale( newScaling ); // Send the menu scale to the UI.
+}
+
+float ImGuiMenu::menuScaling() const
+{
+    return UI::scale();
 }
 
 void ImGuiMenu::setUserScaling( float scaling )
@@ -805,7 +806,7 @@ void ImGuiMenu::setUserScaling( float scaling )
     userScaling_ = scaling;
     CommandLoop::appendCommand( [&] ()
     {
-        auto scaling = menu_scaling();
+        auto scaling = menuScaling();
         getViewerInstance().postRescale( scaling, scaling );
     } );
 }
@@ -2948,12 +2949,12 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
 
     if constexpr ( std::is_same_v<ValueT, float> )
     {
-        ImGui::PushItemWidth( 50 * menu_scaling() );
+        ImGui::PushItemWidth( 50 * menuScaling() );
         UI::drag<PixelSizeUnit>( label, value, 0.02f, 0.5f, 30.0f );
     }
     else
     {
-        ImGui::PushItemWidth( 120 * menu_scaling() );
+        ImGui::PushItemWidth( 120 * menuScaling() );
         UI::drag<NoUnit>( label, value, 0.02f, uint8_t( 0 ), uint8_t( 50 ) );
     }
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;

@@ -1700,7 +1700,7 @@ static void drawDragCursor()
     mousePos.x += 5.f;
 
     const auto menuPlugin = MR::ImGuiMenu::instance();
-    const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
+    const float scale = menuPlugin ? menuPlugin->menuScaling() : 1.f;
 
     const float spaceX = 10 * scale;
     const float sizeX = 12 * scale;

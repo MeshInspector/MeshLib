@@ -651,7 +651,7 @@ void Viewport::initBaseAxes()
     // find relative points for axes
     auto scaling = 1.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        scaling = menu->menu_scaling(); // Note! This function gets called early, so `UI::scale()` isn't yet set at this point.
+        scaling = menu->menuScaling(); // Note! This function gets called early, so `UI::scale()` isn't yet set at this point.
     float axesX, axesY;
     if(pixelXoffset_ < 0)
         axesX = width( viewportRect_ ) + pixelXoffset_ * scaling;

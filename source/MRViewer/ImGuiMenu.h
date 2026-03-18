@@ -191,9 +191,11 @@ public:
   MRVIEWER_API float pixelRatio();
 
   // Computes scaling factor for hidpi devices
-  MRVIEWER_API float hidpiScale();
+  MRVIEWER_API float hidpiScaling();
 
-  MRVIEWER_API float menu_scaling() const;
+  MRVIEWER_API void updateScaling();
+
+  MRVIEWER_API float menuScaling() const;
 
   // returns UI scaling modifier specified by user
   float getUserScaling() const { return userScaling_; }
@@ -368,7 +370,7 @@ protected:
     // Other events
     MRVIEWER_API virtual void postFocus_( bool focused ) override;
 
-    // This function reset ImGui style to current theme and scale it by menu_scaling
+    // This function reset ImGui style to current theme and scale it by menuScaling
     // called in ImGuiMenu::postRescale_()
     MRVIEWER_API virtual void rescaleStyle_();
 

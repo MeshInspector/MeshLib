@@ -361,7 +361,7 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
     float fontSize = 20.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        fontSize *= menu->menu_scaling();
+        fontSize *= menu->menuScaling();
     label->setFontHeight( fontSize );
     obj.addChild( label );
 }
@@ -924,7 +924,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         menuPlugin_->init( this );
     }
 
-    // print after menu init to know valid menu_scaling
+    // print after menu init to know valid menuScaling
     spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
 
     init_();
@@ -2160,7 +2160,7 @@ void Viewer::initBasisAxesObject_()
             return;
         auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
         for ( const auto& label : labels )
-            label->setFontHeight( 20.0f * menuPlugin_->menu_scaling() );
+            label->setFontHeight( 20.0f * menuPlugin_->menuScaling() );
     } ) );
 }
 

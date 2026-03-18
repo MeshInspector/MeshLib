@@ -388,7 +388,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const auto menu = ImGuiMenu::instance();
     const auto& viewportSize = Viewport::get().getViewportRect();
 
-    const auto style = getStyleVariables_( menu->menu_scaling() );
+    const auto style = getStyleVariables_( menu->menuScaling() );
     const auto maxLabelWidth = getMaxLabelWidth_( onlyTopHalf );
     const ImVec2 windowSizeMin {
         style.windowPaddingA.x + maxLabelWidth + style.labelToColoredRectSpacing + style.minColoredRectWidth + style.windowPaddingB.x,
@@ -438,8 +438,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const ImVec2 windowPos = ImGui::GetWindowPos();
     const ImVec2 windowSize = ImGui::GetWindowSize();
 
-    const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * menu->menu_scaling() );
-    const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * menu->menu_scaling() );
+    const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * menu->menuScaling() );
+    const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * menu->menuScaling() );
     const float labelHeight = ImGui::GetTextLineHeight() + bgPaddingA.y + bgPaddingB.y;
     if ( showLabels_ && labels_.size() == 0 )
     {
@@ -447,7 +447,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         resetLabels();
     }
 
-    draw( ImGui::GetWindowDrawList(), menu->menu_scaling(), windowPos, windowSize, onlyTopHalf );
+    draw( ImGui::GetWindowDrawList(), menu->menuScaling(), windowPos, windowSize, onlyTopHalf );
 }
 
 void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, const Color& labelBgColor, bool onlyTopHalf ) const

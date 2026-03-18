@@ -234,7 +234,7 @@ void init()
 
 ImGuiKey getImGuiModPrimaryCtrl()
 {
-    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL || 
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL ||
         ( getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER && ImGui::GetIO().ConfigMacOSXBehaviors ) ) // In new version of ImGui ImGuiMod_Ctrl is already swapped with ImGuiMod_Super internally, so we don't swap it on our end
     {
         return ImGuiMod_Ctrl;
@@ -1004,6 +1004,8 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
 
 bool radioButton( const char* label, int* value, int valButton )
 {
+    const bool simulateClick = TestEngine::createButton( label );
+
     const ImGuiStyle& style = ImGui::GetStyle();
 
     const auto menu = ImGuiMenu::instance();
@@ -1097,9 +1099,7 @@ bool radioButton( const char* label, int* value, int valButton )
         return pressed;
     };
 
-    auto res = drawCustomRadioButton( label, value, valButton );
-
-    return res;
+    return drawCustomRadioButton( label, value, valButton ) || simulateClick;
 }
 
 bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std::optional<int> valueOverride )

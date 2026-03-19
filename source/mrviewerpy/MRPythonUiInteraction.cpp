@@ -93,7 +93,7 @@ namespace
         return ret;
     }
 
-    static std::string pathToString( const std::vector<std::string>& path )
+    static std::string stringVectorToString( const std::vector<std::string>& path )
     {
         std::string pathString;
         for ( const auto & s : path )
@@ -109,7 +109,7 @@ namespace
     {
         if ( path.empty() )
             throw std::runtime_error( "pressButton: empty path not allowed here." );
-        const std::string pathString = pathToString( path );
+        const std::string pathString = stringVectorToString( path );
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             spdlog::info( "pressButton {}: frame {}", pathString, MR::getViewerInstance().getTotalFrames() );
@@ -229,7 +229,7 @@ namespace
         if ( path.empty() )
             throw std::runtime_error( "writeValue: empty path not allowed here." );
 
-        const std::string pathString = pathToString( path );
+        const std::string pathString = stringVectorToString( path );
         spdlog::info( "writeValue {} = {}, frame {}", pathString, value, MR::getViewerInstance().getTotalFrames() );
 
         MR::pythonAppendOrRun( [&]
@@ -249,7 +249,7 @@ namespace
                 if constexpr ( std::is_same_v<U, std::string> )
                 {
                     if ( target.allowedValues && std::find( target.allowedValues->begin(), target.allowedValues->end(), fixedValue ) == target.allowedValues->end() )
-                        throw std::runtime_error( fmt::format( "writeValue {}: string `{}` is not in the allowed list {}.", pathString, fixedValue, target.allowedValues ) );
+                        throw std::runtime_error( fmt::format( "writeValue {}: string `{}` is not allowed here. Allowew values: {}.", pathString, fixedValue, stringVectorToString( *target.allowedValues ) ) );
                 }
                 else
                 {

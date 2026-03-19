@@ -12,35 +12,43 @@
 namespace MR::Locale
 {
 
+/// Information about locale domains. Contains the only field `id`.
+/// The purpose of the struct is to resolve an ambiguous overload `translate( "str", "str", 0 )`
+/// which otherwise could be treated as both "context, message, domain id" and "single, plural, number".
+struct Domain
+{
+    int id = 0;
+};
+
 /// \brief Translates a message using the active locale.
-MRVIEWER_API std::string translate( const char* msg, int domainId = 0 );
+MRVIEWER_API std::string translate( const char* msg, Domain domain = {} );
 
 /// \brief Translates a message in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* msg, int domainId = 0 );
+MRVIEWER_API std::string translate( const char* context, const char* msg, Domain domain = {} );
 
 /// \brief Translates a plural message form using the active locale.
-MRVIEWER_API std::string translate( const char* single, const char* plural, Int64 n, int domainId = 0 );
+MRVIEWER_API std::string translate( const char* single, const char* plural, Int64 n, Domain domain = {} );
 
 /// \brief Translates a plural message form in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, Int64 n, int domainId = 0 );
+MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, Int64 n, Domain domain = {} );
 
 /// \brief Translates all strings in a vector using the active locale.
-inline std::vector<std::string> translateAll( const std::vector<std::string>& items, int domainId = 0 )
+inline std::vector<std::string> translateAll( const std::vector<std::string>& items, Domain domain = {} )
 {
     std::vector<std::string> result;
     result.reserve( items.size() );
     for ( const auto& s : items )
-        result.push_back( MR::Locale::translate( s.c_str(), domainId ) );
+        result.push_back( MR::Locale::translate( s.c_str(), domain ) );
     return result;
 }
 
 /// \brief Translates all strings in a vector with context using the active locale.
-inline std::vector<std::string> translateAll( const char* context, const std::vector<std::string>& items, int domainId = 0 )
+inline std::vector<std::string> translateAll( const char* context, const std::vector<std::string>& items, Domain domain = {} )
 {
     std::vector<std::string> result;
     result.reserve( items.size() );
     for ( const auto& s : items )
-        result.push_back( MR::Locale::translate( context, s.c_str(), domainId ) );
+        result.push_back( MR::Locale::translate( context, s.c_str(), domain ) );
     return result;
 }
 

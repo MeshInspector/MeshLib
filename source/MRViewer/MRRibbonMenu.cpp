@@ -64,7 +64,7 @@ std::string getItemCaption( const std::string& name )
     if ( it == RibbonSchemaHolder::schema().items.end() )
         return name;
     const auto& item = it->second;
-    return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+    return Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
 }
 
 } //anonymous namespace

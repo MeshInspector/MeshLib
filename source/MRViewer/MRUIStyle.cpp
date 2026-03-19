@@ -1005,6 +1005,8 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
 bool radioButton( const char* label, int* value, int valButton )
 {
     const bool simulateClick = TestEngine::createButton( label );
+    if ( simulateClick )
+        *value = valButton;
 
     const ImGuiStyle& style = ImGui::GetStyle();
 

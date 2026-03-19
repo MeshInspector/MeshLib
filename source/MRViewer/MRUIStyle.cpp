@@ -1551,6 +1551,8 @@ namespace
         // Don't render the UI, but collect the calls to `comboElem()`, and possibly override their return values.
         bool uiIsHidden = false;
 
+        bool testEngineEnabled = false;
+
         // This could eventually be made a set. Then you'd need to change `allowedValue` in the test engine to a set too.
         std::vector<std::string> collectedElems;
     };
@@ -1558,7 +1560,7 @@ namespace
     thread_local std::vector<ActiveCombo> activeCombos;
 }
 
-bool beginCombo( const char* label, const std::string& text )
+bool beginCombo( const char* label, const std::string& text, bool enableTestEngine /*= true*/ )
 {
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, StyleConsts::CustomCombo::framePadding );
@@ -1593,12 +1595,16 @@ bool beginCombo( const char* label, const std::string& text )
         ActiveCombo &activeCombo = activeCombos.emplace_back();
         activeCombo.label = label;
         activeCombo.value = text;
-        activeCombo.simulateClickForElem = TestEngine::createValueTentative<std::string>( label );
-        activeCombo.uiIsHidden = !res;
 
-        // Force return true to discover the contents.
-        // We could eventually make this conditional, and disable this behavior when the test engine is disabled.
-        res = true;
+        if ( enableTestEngine )
+        {
+            activeCombo.simulateClickForElem = TestEngine::createValueTentative<std::string>( label );
+            activeCombo.uiIsHidden = !res;
+            activeCombo.testEngineEnabled = true;
+
+            // Force return true to discover the contents.
+            res = true;
+        }
     }
 
     return res;
@@ -1616,7 +1622,8 @@ void endCombo()
         // I think this can only trigger if the offending element disappears from the list on the same frame as it's clicked through the test engine.
         assert( !active.simulateClickForElem && "A non-existing element was clicked through the test engine." );
 
-        (void)TestEngine::createValue( active.label, active.value, true, active.collectedElems );
+        if ( active.testEngineEnabled )
+            (void)TestEngine::createValue( active.label, active.value, true, active.collectedElems );
 
         callEndCombo = !active.uiIsHidden;
 
@@ -1632,7 +1639,8 @@ bool comboElem( const char* label, bool selected )
     assert( !activeCombos.empty() );
 
     ActiveCombo& active = activeCombos.back();
-    active.collectedElems.push_back( label );
+    if ( active.testEngineEnabled )
+        active.collectedElems.push_back( label );
 
     bool ret = false;
     if ( active.simulateClickForElem && *active.simulateClickForElem == label )

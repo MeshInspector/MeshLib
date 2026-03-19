@@ -312,7 +312,10 @@ MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::strin
     bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
 /// draw custom content combo box
-MRVIEWER_API bool beginCombo( const char* label, const std::string& text );
+/// If `enableTestEngine == true`, the ONLY thing you can call inside the combo-box is `comboElem()`. Then this function may always return true (so that we can discover the elements),
+///   but if it wasn't actually opened by the user, the `comboElem()`s called inside won't draw anything.
+/// If `enableTestEngine == false`, then you can call anything inside of this combo-box, but it won't be exposed to the test engine.
+MRVIEWER_API bool beginCombo( const char* label, const std::string& text, bool enableTestEngine = true );
 /// Only call this if `beginCombo()` returned true!
 MRVIEWER_API void endCombo();
 

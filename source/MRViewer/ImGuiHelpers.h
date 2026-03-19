@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "MRMesh/MRFlagOperators.h"
 #include "exports.h"
 #include "MRMesh/MRVector2.h"
@@ -34,6 +34,11 @@ static const char* getVectorValue( void* vec, int idx )
     }
     return vector.at( idx ).c_str();
 }
+
+[[deprecated]] static auto vector_getter = [] ( void* vec, int idx ) -> const char*
+{
+    return getVectorValue( vec, idx );
+};
 
 inline bool Combo( const char* label, int* idx, const std::vector<std::string>& values )
 {

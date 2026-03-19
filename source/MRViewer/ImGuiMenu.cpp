@@ -711,7 +711,7 @@ void ImGuiMenu::draw_menu()
 
     drawViewerWindow();
 
-    drawAdditionalWindows();
+    drawAdditionalWindows();   
 }
 
 void ImGuiMenu::drawViewerWindow()
@@ -750,6 +750,33 @@ void ImGuiMenu::drawLabelsWindow()
   ImGui::PopStyleVar();
 }
 
+void ImGuiMenu::draw_text(
+    const Viewport& viewport,
+    const Vector3f& posOriginal,
+    const Vector3f& normal,
+    const std::string& text,
+    const Color& color,
+    bool clipByViewport )
+{
+    Vector3f pos = posOriginal;
+    pos += normal * 0.005f * viewport.getParameters().objectScale;
+    const auto& viewportRect = viewport.getViewportRect();
+    Vector3f coord = viewport.clipSpaceToViewportSpace( viewport.projectToClipSpace( pos ) );
+    auto viewerCoord = viewer->viewportToScreen( coord, viewport.id );
+
+    // Draw text labels slightly bigger than normal text
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec4 clipRect( viewportRect.min.x,
+                     viewer->framebufferSize.y - ( viewportRect.min.y + height( viewportRect ) ),
+                     viewportRect.min.x + width( viewportRect ),
+                     viewer->framebufferSize.y - viewportRect.min.y );
+    drawList->AddText( ImGui::GetFont(), ImGui::GetFontSize() * 1.2f,
+                       ImVec2( viewerCoord.x / pixelRatio_, viewerCoord.y / pixelRatio_ ),
+                       color.getUInt32(),
+                       &text[0], &text[0] + text.size(), 0.0f,
+                       clipByViewport ? &clipRect : nullptr );
+}
+
 float ImGuiMenu::pixelRatio()
 {
     int bufferSize[2];
@@ -781,6 +808,7 @@ void ImGuiMenu::updateScaling()
     hidpiScale_ = hidpiScaling();
     pixelRatio_ = pixelRatio();
 
+
     float newScaling = userScaling_;
 #ifdef __EMSCRIPTEN__
     newScaling *= float( emscripten_get_device_pixel_ratio() );
@@ -796,6 +824,20 @@ void ImGuiMenu::updateScaling()
 float ImGuiMenu::menuScaling() const
 {
     return UI::scale();
+}
+
+float ImGuiMenu::menu_scaling() const
+{
+    float newScaling = userScaling_;
+#ifdef __EMSCRIPTEN__
+    newScaling *= float( emscripten_get_device_pixel_ratio() );
+#elif defined __APPLE__
+    newScaling *= pixelRatio_;
+#else
+    newScaling *= hidpiScale_ / pixelRatio_;
+#endif
+
+    return newScaling;
 }
 
 void ImGuiMenu::setUserScaling( float scaling )

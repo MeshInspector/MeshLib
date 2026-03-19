@@ -172,7 +172,9 @@ public:
   MRVIEWER_API virtual void finishFrame();
 
   MRVIEWER_API virtual void loadFonts( int fontSize = 13 );
+  [[deprecated]] virtual void load_font( int fontSize = 13 ) { loadFonts( fontSize ); }
   MRVIEWER_API virtual void reloadFonts( int fontSize = 13 );
+  [[deprecated]] virtual void reload_font( int fontSize = 13 ) { reloadFonts( fontSize ); }
 
   MRVIEWER_API virtual void shutdown() override;
 
@@ -181,21 +183,38 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
+  // override this instead using callback_draw_viewer_window
   MRVIEWER_API virtual void drawViewerWindow();
+  virtual void draw_viewer_window() { drawViewerWindow(); }
+  // override this instead using callback_draw_viewer_menu
   virtual void drawViewerWindowContent() {}
+  // override this instead using callback_draw_custom_window
   virtual void drawAdditionalWindows() {}
+  [[deprecated]] virtual void draw_custom_window() { drawAdditionalWindows(); }
+
+  [[deprecated]] MRVIEWER_API void draw_text(
+      const Viewport& viewport,
+      const Vector3f& pos,
+      const Vector3f& normal,
+      const std::string& text,
+      const Color& color,
+      bool clipByViewport );
 
   void drawLabelsWindow();
+  [[deprecated]] void draw_labels_window() { drawLabelsWindow(); }
 
   // Computes pixel ratio for hidpi devices
   MRVIEWER_API float pixelRatio();
+  [[deprecated]] float pixel_ratio() { return pixelRatio(); }
 
   // Computes scaling factor for hidpi devices
   MRVIEWER_API float hidpiScaling();
+  [[deprecated]] float hidpi_scaling() { return hidpiScaling(); }
 
   MRVIEWER_API void updateScaling();
 
   MRVIEWER_API float menuScaling() const;
+  [[deprecated]] MRVIEWER_API float menu_scaling() const;
 
   // returns UI scaling modifier specified by user
   float getUserScaling() const { return userScaling_; }

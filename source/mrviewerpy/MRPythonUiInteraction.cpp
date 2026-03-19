@@ -249,7 +249,7 @@ namespace
                 if constexpr ( std::is_same_v<U, std::string> )
                 {
                     if ( target.allowedValues && std::find( target.allowedValues->begin(), target.allowedValues->end(), fixedValue ) == target.allowedValues->end() )
-                        throw std::runtime_error( fmt::format( "writeValue {}: this string is not in the allowed list.", pathString ) );
+                        throw std::runtime_error( fmt::format( "writeValue {}: string `{}` is not in the allowed list {}.", pathString, fixedValue, target.allowedValues ) );
                 }
                 else
                 {

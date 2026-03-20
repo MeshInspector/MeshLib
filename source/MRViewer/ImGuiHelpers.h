@@ -29,7 +29,7 @@ static const char* getVectorValue( void* vec, int idx )
     auto& vector = *static_cast<std::vector<std::string>*>( vec );
     if ( idx < 0 || idx >= static_cast< int >( vector.size() ) )
     {
-        assert( false && "Combo: vectorGetter invalid index" );
+        assert( false && "Combo: getVectorValue invalid index" );
         return "";
     }
     return vector.at( idx ).c_str();

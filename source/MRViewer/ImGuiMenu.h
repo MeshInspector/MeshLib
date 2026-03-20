@@ -173,6 +173,7 @@ public:
 
   MRVIEWER_API virtual void loadFonts( int fontSize = 13 );
   [[deprecated]] virtual void load_font( int fontSize = 13 ) { loadFonts( fontSize ); }
+
   MRVIEWER_API virtual void reloadFonts( int fontSize = 13 );
   [[deprecated]] virtual void reload_font( int fontSize = 13 ) { reloadFonts( fontSize ); }
 
@@ -183,12 +184,14 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
-  // override this instead using callback_draw_viewer_window
+  /// override this instead using callback_draw_viewer_window
   MRVIEWER_API virtual void drawViewerWindow();
   virtual void draw_viewer_window() { drawViewerWindow(); }
-  // override this instead using callback_draw_viewer_menu
+
+  /// override this instead using callback_draw_viewer_menu
   virtual void drawViewerWindowContent() {}
-  // override this instead using callback_draw_custom_window
+
+  /// override this instead using callback_draw_custom_window
   virtual void drawAdditionalWindows() {}
   [[deprecated]] virtual void draw_custom_window() { drawAdditionalWindows(); }
 

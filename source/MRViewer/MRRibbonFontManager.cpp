@@ -119,7 +119,7 @@ void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )
     {
         CommandLoop::appendCommand( [menu] ()
         {
-            menu->reload_font();
+            menu->reloadFonts();
             ImGui_ImplOpenGL3_DestroyDeviceObjects(); // needed to update font
         } );
     }

@@ -50,10 +50,14 @@ public:
 
     MRVIEWER_API virtual void shutdown() override;
 
+    virtual void drawViewerWindow() override {}
+
+    MRVIEWER_API  virtual void drawAdditionalWindows() override;
+
     /// open Toolbar Customize modal popup
     MRVIEWER_API void openToolbarCustomize();
 
-    MRVIEWER_API virtual void load_font( int font_size = 13 ) override;
+    MRVIEWER_API virtual void loadFonts( int font_size = 13 ) override;
 
     MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const override;
 

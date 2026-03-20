@@ -5,6 +5,7 @@
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPointsSave.h"
@@ -121,6 +122,9 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
         for ( auto& newPtr : objPtr->children() )
             objsQueue.push_back( newPtr );
 
+        if ( objPtr->typeName() == MR::Object::StaticTypeName() )
+            continue;
+
         if ( auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh >( objPtr ) )
         {
             if ( resType == Type::NotDefined )
@@ -128,8 +132,17 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
             else if ( resType != Type::Mesh )
                 return MR::unexpected( "Error: File contains objects of different types!" );
             
-            if ( objMesh->mesh() )
-                resMeshPtr->addMesh( *objMesh->mesh() );
+            if ( !objMesh->mesh() )
+                continue;
+
+            MR::VertMap vmap;
+            resMeshPtr->addMesh( *objMesh->mesh(), nullptr, &vmap );
+
+            auto& points = resMeshPtr->points;
+            const auto xf = objMesh->worldXf();
+            for ( const auto v : vmap )
+                if ( v.valid() )
+                    points[v] = xf( points[v] );
         }
         else if ( auto objLines = std::dynamic_pointer_cast<MR::ObjectLines>( objPtr ) )
         {
@@ -138,8 +151,17 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
             else if ( resType != Type::Lines )
                 return MR::unexpected( "Error: File contains objects of different types!" );
 
-            if ( objLines->polyline() )
-                resLinesPtr->addPart( *objLines->polyline() );
+            if ( !objLines->polyline() )
+                continue;
+
+            MR::VertMap vmap;
+            resLinesPtr->addPart( *objLines->polyline(), &vmap );
+
+            auto& points = resLinesPtr->points;
+            const auto xf = objLines->worldXf();
+            for ( const auto& v : vmap )
+                if ( v.valid() )
+                    points[v] = xf( points[v] );
         }
         else if ( auto objPoints = std::dynamic_pointer_cast<MR::ObjectPoints>( objPtr ) )
         {
@@ -148,8 +170,21 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
             else if ( resType != Type::Points )
                 return MR::unexpected( "Error: File contains objects of different types!" );
 
-            if ( objPoints->pointCloud() )
-                resPointsPtr->addPartByMask( *objPoints->pointCloud(), objPoints->pointCloud()->validPoints );
+            if ( !objPoints->pointCloud() )
+                continue;
+
+            MR::VertMap vmap;
+            resPointsPtr->addPartByMask( *objPoints->pointCloud(), objPoints->pointCloud()->validPoints, { .src2tgtVerts = &vmap } );
+
+            auto& points = resPointsPtr->points;
+            const auto xf = objPoints->worldXf();
+            for ( const auto v : vmap )
+                if ( v.valid() )
+                    points[v] = xf( points[v] );
+        }
+        else
+        {
+            return MR::unexpected( "Error: File contains unsupported objects!" );
         }
     }
     

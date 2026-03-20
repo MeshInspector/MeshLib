@@ -40,7 +40,7 @@ static const char* getVectorValue( void* vec, int idx )
     return getVectorValue( vec, idx );
 };
 
-inline bool Combo( const char* label, int* idx, const std::vector<std::string>& values )
+[[deprecated]] inline bool Combo( const char* label, int* idx, const std::vector<std::string>& values )
 {
     if ( values.empty() )
         return false;
@@ -64,7 +64,7 @@ inline bool Combo( const char* label, int* idx, std::function<const char*( int )
     return Combo( label, idx, func, reinterpret_cast< void* >( &getter ), itemsCount );
 }
 
-inline bool ListBox( const char* label, int* idx, const std::vector<std::string>& values )
+[[deprecated]] inline bool ListBox( const char* label, int* idx, const std::vector<std::string>& values )
 {
     if ( values.empty() )
         return false;

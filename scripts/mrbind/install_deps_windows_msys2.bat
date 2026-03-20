@@ -9,6 +9,9 @@ rem some other MSYS2 copy.
 
 setlocal
 
+rem Make sure we're not running from the VS dev prompt.
+rem Doing this just in case. `scripts/mrbind/install_mrbind_windows_msys2.bat` is known not to work there,
+rem   but this script could possibly work. But it's easier to not support this.
 if not "%VCToolsInstallDir%" == "" (
     echo Must not run this script from the VS developer command prompt. Use the regular terminal.
     exit /b 1

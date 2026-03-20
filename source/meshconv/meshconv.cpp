@@ -1,8 +1,11 @@
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPointsSave.h"
@@ -95,6 +98,115 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
         }
     }
     return true;
+}
+
+
+MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::Object>>& objs )
+{
+    std::vector<std::shared_ptr<MR::Object>> objsQueue = objs;
+    enum class Type
+    {
+        NotDefined,
+        Mesh,
+        Lines,
+        Points
+    } resType = Type::NotDefined;
+
+    std::shared_ptr<MR::Mesh> resMeshPtr = std::make_shared<MR::Mesh>();
+    std::shared_ptr<MR::Polyline3> resLinesPtr = std::make_shared<MR::Polyline3>();
+    std::shared_ptr<MR::PointCloud> resPointsPtr = std::make_shared<MR::PointCloud>();
+
+    for ( int i = 0; i < objsQueue.size(); ++i )
+    {
+        auto& objPtr = objsQueue[i];
+        for ( auto& newPtr : objPtr->children() )
+            objsQueue.push_back( newPtr );
+
+        if ( objPtr->typeName() == MR::Object::StaticTypeName() )
+            continue;
+
+        if ( auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh >( objPtr ) )
+        {
+            if ( resType == Type::NotDefined )
+                resType = Type::Mesh;
+            else if ( resType != Type::Mesh )
+                return MR::unexpected( "Error: File contains objects of different types!" );
+            
+            if ( !objMesh->mesh() )
+                continue;
+
+            MR::VertMap vmap;
+            resMeshPtr->addMesh( *objMesh->mesh(), nullptr, &vmap );
+
+            auto& points = resMeshPtr->points;
+            const auto xf = objMesh->worldXf();
+            for ( const auto v : vmap )
+                if ( v.valid() )
+                    points[v] = xf( points[v] );
+        }
+        else if ( auto objLines = std::dynamic_pointer_cast<MR::ObjectLines>( objPtr ) )
+        {
+            if ( resType == Type::NotDefined )
+                resType = Type::Lines;
+            else if ( resType != Type::Lines )
+                return MR::unexpected( "Error: File contains objects of different types!" );
+
+            if ( !objLines->polyline() )
+                continue;
+
+            MR::VertMap vmap;
+            resLinesPtr->addPart( *objLines->polyline(), &vmap );
+
+            auto& points = resLinesPtr->points;
+            const auto xf = objLines->worldXf();
+            for ( const auto& v : vmap )
+                if ( v.valid() )
+                    points[v] = xf( points[v] );
+        }
+        else if ( auto objPoints = std::dynamic_pointer_cast<MR::ObjectPoints>( objPtr ) )
+        {
+            if ( resType == Type::NotDefined )
+                resType = Type::Points;
+            else if ( resType != Type::Points )
+                return MR::unexpected( "Error: File contains objects of different types!" );
+
+            if ( !objPoints->pointCloud() )
+                continue;
+
+            MR::VertMap vmap;
+            resPointsPtr->addPartByMask( *objPoints->pointCloud(), objPoints->pointCloud()->validPoints, { .src2tgtVerts = &vmap } );
+
+            auto& points = resPointsPtr->points;
+            const auto xf = objPoints->worldXf();
+            for ( const auto v : vmap )
+                if ( v.valid() )
+                    points[v] = xf( points[v] );
+        }
+        else
+        {
+            return MR::unexpected( "Error: File contains unsupported objects!" );
+        }
+    }
+    
+    if ( resType == Type::Mesh )
+    {
+        std::shared_ptr<MR::ObjectMesh> res = std::make_shared<MR::ObjectMesh>();
+        res->setMesh( resMeshPtr );
+        return res;
+    }
+    else if ( resType == Type::Lines )
+    {
+        std::shared_ptr<MR::ObjectLines> res = std::make_shared<MR::ObjectLines>();
+        res->setPolyline( resLinesPtr );
+        return res;
+    }
+    else if ( resType == Type::Points )
+    {
+        std::shared_ptr<MR::ObjectPoints> res = std::make_shared<MR::ObjectPoints>();
+        res->setPointCloud( resPointsPtr );
+        return res;
+    }
+    return MR::unexpected( "Error: File does not contain supported object types." );
 }
 
 // can throw
@@ -202,7 +314,16 @@ static int mainInternal( int argc, char **argv )
         MC_EXIT( 1 );
     }
     if ( allObjPtrs.size() > 1 || !allObjPtrs[0]->children().empty() )
-        std::cerr << "Warning: Too many objects in the file. Only first object will be converted.\n";
+    {
+        auto combineRes = combineObjs( allObjPtrs );
+        if ( combineRes.has_value() )
+            allObjPtrs = { std::move( *combineRes ) };
+        else
+        {
+            std::cerr << combineRes.error() << "\n";
+            MC_EXIT( 1 );
+        }
+    }
 
     MR::ObjectPtr firstObjPtr = allObjPtrs[0];
     std::shared_ptr<MR::ObjectMesh> objMeshPtr;

@@ -100,47 +100,6 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
     RibbonIcons::load();
 
-    callback_draw_viewer_window = [] ()
-    {};
-
-    // Draw additional windows
-    callback_draw_custom_window = [&] ()
-    {
-        const bool cShowTopPanel = menuUIConfig_.topLayout != RibbonTopPanelLayoutMode::None;
-        const bool cShowAny = cShowTopPanel || menuUIConfig_.drawScenePanel;
-
-        if ( cShowTopPanel )
-        {
-            drawTopPanel_( menuUIConfig_.topLayout == RibbonTopPanelLayoutMode::RibbonWithTabs, menuUIConfig_.centerRibbonItems );
-
-            drawActiveBlockingDialog_();
-            drawActiveNonBlockingDialogs_();
-        }
-
-        if ( cShowTopPanel && menuUIConfig_.drawToolbar )
-        {
-            toolbar_->drawToolbar();
-            toolbar_->drawCustomize();
-        }
-
-        if ( menuUIConfig_.drawScenePanel )
-            drawRibbonSceneList_();
-
-        if ( menuUIConfig_.drawViewportTags )
-            drawRibbonViewportsLabels_();
-
-        if ( cShowTopPanel )
-            drawActiveList_();
-
-        if ( cShowAny )
-            draw_helpers();
-
-        if ( menuUIConfig_.drawNotifications )
-            drawNotifications_();
-
-        prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
-    };
-
     buttonDrawer_.setMenu( this );
     buttonDrawer_.setShortcutManager( getShortcutManager().get() );
     buttonDrawer_.setOnPressAction( [&] ( std::shared_ptr<RibbonMenuItem> item, const std::string& req )
@@ -174,13 +133,50 @@ void RibbonMenu::shutdown()
     RibbonIcons::free();
 }
 
+void RibbonMenu::drawAdditionalWindows()
+{
+    const bool cShowTopPanel = menuUIConfig_.topLayout != RibbonTopPanelLayoutMode::None;
+    const bool cShowAny = cShowTopPanel || menuUIConfig_.drawScenePanel;
+
+    if ( cShowTopPanel )
+    {
+        drawTopPanel_( menuUIConfig_.topLayout == RibbonTopPanelLayoutMode::RibbonWithTabs, menuUIConfig_.centerRibbonItems );
+
+        drawActiveBlockingDialog_();
+        drawActiveNonBlockingDialogs_();
+    }
+
+    if ( cShowTopPanel && menuUIConfig_.drawToolbar )
+    {
+        toolbar_->drawToolbar();
+        toolbar_->drawCustomize();
+    }
+
+    if ( menuUIConfig_.drawScenePanel )
+        drawRibbonSceneList_();
+
+    if ( menuUIConfig_.drawViewportTags )
+        drawRibbonViewportsLabels_();
+
+    if ( cShowTopPanel )
+        drawActiveList_();
+
+    if ( cShowAny )
+        draw_helpers();
+
+    if ( menuUIConfig_.drawNotifications )
+        drawNotifications_();
+
+    prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
+}
+
 void RibbonMenu::openToolbarCustomize()
 {
     toolbar_->openCustomize();
 }
 
 // we use design preset font size
-void RibbonMenu::load_font( int )
+void RibbonMenu::loadFonts( int )
 {
     fontManager_.loadAllFonts( nullptr );
 }

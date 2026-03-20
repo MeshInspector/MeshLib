@@ -39,7 +39,7 @@ bool GcodeToolsLibrary::drawInterface()
 {
     bool result = false;
 
-    if ( UI::beginCombo( "Tool Mesh", selectedFileName_ ) )
+    if ( UI::beginCombo( "Tool Mesh", selectedFileName_, false ) )
     {
         bool selected = selectedFileName_ == defaultName;
         if ( ImGui::Selectable( defaultName, &selected ) )

@@ -6,6 +6,8 @@
 
 Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on Linux and MacOS - as root), then **`scripts/mrbind/install_mrbind_<platform>`** to build MRBind (not at root). MRBind is our bindings generator.
 
+**NOTE:** On windows, instead of `install_deps_windows_msys2.bat`, manually download https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip and unzip it to `C:\msys64_meshlib_mrbind`. We will fix the script eventually. This replaces only the first of the two scripts, after that run `scripts/mrbind/install_mrbind_windows_msys2.bat` normally.
+
 You can re-run those scripts to update the dependencies and/or MRBind itself.
 
 Among other things, the scripts do following:

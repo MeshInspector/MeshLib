@@ -381,8 +381,8 @@ jobs:
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
-          python -m pip install delvewheel
-          python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MeshLibC2.dll" "./patched_content/"
+          py -3 -m pip install delvewheel
+          py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/x64/Release/MeshLibC2.dll ./source/x64/Release/MeshLibC2Cuda.dll
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
@@ -401,4 +401,3 @@ jobs:
             ./source/x64/Release/MRDotNet2.dll
             ./source/x64/Release/MRDotNet2.xml
           retention-days: 1
-          

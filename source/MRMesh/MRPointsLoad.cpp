@@ -203,22 +203,37 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     const auto& data = *dataExp;
     auto lineOffsets = splitByLines( data.data(), data.size() );
 
+    // detect normals and colors
+    constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
+    constexpr Color cInvalidColor( 0, 0, 0, 0 );
     int firstLine = 1;
     Vector3d firstLineCoord;
-    Color firstLineColor;
+    Vector3d firstLineNormal = cInvalidNormal;
+    Color firstLineColor = cInvalidColor;
+    auto hasNormals = false;
+    auto hasColors = false;
     std::string_view shiftLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
-    auto shiftLineRes = parsePtsCoordinate( shiftLine, firstLineCoord, firstLineColor );
+    auto shiftLineRes = parsePtsCoordinate( shiftLine, firstLineCoord, &firstLineColor, &firstLineNormal );
     if ( !shiftLineRes.has_value() )
         return unexpected( shiftLineRes.error() );
 
     if ( settings.outXf )
         *settings.outXf = AffineXf3f::translation( Vector3f( firstLineCoord ) );
 
-    if ( settings.colors )
-        settings.colors->resize( lineOffsets.size() - firstLine - 1 );
+    if ( settings.colors && firstLineColor != cInvalidColor )
+    {
+        hasColors = true;
+        settings.colors->resizeNoInit( lineOffsets.size() - firstLine - 1 );
+    }
 
     PointCloud pc;
-    pc.points.resize( lineOffsets.size() - firstLine - 1 );
+    pc.points.resizeNoInit( lineOffsets.size() - firstLine - 1 );
+
+    if ( firstLineNormal != cInvalidNormal )
+    {
+        hasNormals = true;
+        pc.normals.resizeNoInit( lineOffsets.size() - firstLine - 1 );
+    }
 
     std::string parseError;
     tbb::task_group_context ctx;
@@ -226,13 +241,16 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     {
         std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
         Vector3d tempDoubleCoord;
+        Vector3d tempDoubleNormal;
         Color tempColor;
-        auto parseRes = parsePtsCoordinate( line, tempDoubleCoord, tempColor );
+        auto parseRes = parsePtsCoordinate( line, tempDoubleCoord, hasColors ? &tempColor : nullptr, hasNormals ? &tempDoubleNormal : nullptr );
         if ( !parseRes.has_value() && ctx.cancel_group_execution() )
             parseError = std::move( parseRes.error() );
 
         pc.points[VertId( i )] = Vector3f( tempDoubleCoord - firstLineCoord );
-        if ( settings.colors )
+        if ( hasNormals )
+            pc.normals[VertId( i )] = Vector3f( tempDoubleNormal );
+        if ( hasColors )
             ( *settings.colors )[VertId( i )] = tempColor;
     }, subprogress( settings.callback, 0.25f, 1.0f ) );
 

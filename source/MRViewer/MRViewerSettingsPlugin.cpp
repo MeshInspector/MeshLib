@@ -660,7 +660,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
         static const std::vector<std::string> uiLengthUnitNames = makeLengthUnitsVec( _t( "No Units" ) );
         const auto uiUnitsLengthLabel = std::string( _tr( "UI Units" ) ) + "##length";
-        if ( UI::combo( uiUnitsLengthLabel.c_str(), &targetOption, Locale::translateAll(uiLengthUnitNames ) ) )
+        if ( UI::combo( uiUnitsLengthLabel.c_str(), &targetOption, Locale::translateAll( uiLengthUnitNames ) ) )
         {
             if ( targetOption == int( LengthUnit::_count ) )
                 UnitSettings::setUiLengthUnit( {}, true );
@@ -672,7 +672,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
         static const std::vector<std::string> modelLengthUnitNames = makeLengthUnitsVec( _t( "Same as UI Units" ) );
         const auto modelUnitsLengthLabel = std::string( _tr( "Model Units" ) ) + "##length";
-        if ( UI::combo( modelUnitsLengthLabel.c_str(), &sourceOption, Locale::translateAll(modelLengthUnitNames ) ) )
+        if ( UI::combo( modelUnitsLengthLabel.c_str(), &sourceOption, Locale::translateAll( modelLengthUnitNames ) ) )
         {
             if ( sourceOption == int( LengthUnit::_count ) )
                 UnitSettings::setModelLengthUnit( {} );
@@ -1021,11 +1021,11 @@ void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float toolWidth 
 {
     const auto& style = ImGui::GetStyle();
 
-    static std::vector<std::string> shadingModes = { _t( "Auto Detect" ), _t( "Smooth" ), _t( "Flat" ) };
+    const std::vector<std::string> shadingModes = { _tr( "Auto Detect" ), _tr( "Smooth" ), _tr( "Flat" ) };
     SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
     ImGui::SetNextItemWidth( toolWidth );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( inGroup ? _tr( "Shading Mode" ) : _tr( "Default Shading Mode" ), ( int* )&shadingMode, Locale::translateAll(shadingModes ) );
+    UI::combo( inGroup ? _tr( "Shading Mode" ) : _tr( "Default Shading Mode" ), ( int* )&shadingMode, shadingModes );
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( _tr( "Shading mode for mesh objects imported from files\n"
         "Detection depends on source format and mesh shape\n"
@@ -1039,10 +1039,10 @@ void ViewerSettingsPlugin::drawProjectionModeSelector_( float toolWidth )
     const auto& style = ImGui::GetStyle();
 
     ImGui::SetNextItemWidth( toolWidth );
-    static std::vector<std::string> projectionModes = { _t( "Orthographic" ), _t( "Perspective" ) };
+    const std::vector<std::string> projectionModes = { _tr( "Orthographic" ), _tr( "Perspective" ) };
     int projectionMode = viewer->viewport().getParameters().orthographic ? 0 : 1;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::combo( _tr( "Projection Mode" ), &projectionMode, Locale::translateAll(projectionModes ) ) )
+    if ( UI::combo( _tr( "Projection Mode" ), &projectionMode, projectionModes ) )
         viewer->viewport().setOrthographic( projectionMode == 0 );
     ImGui::PopStyleVar();
 }
@@ -1254,7 +1254,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
 
     drawSeparator_( _t( "Touchpad" ) );
 
-    const std::vector<std::string> swipeModeList = { _t( "Swipe Rotates Camera" ), _t( "Swipe Moves Camera" ) };
+    const std::vector<std::string> swipeModeList = { _tr( "Swipe Rotates Camera" ), _tr( "Swipe Moves Camera" ) };
     assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
@@ -1266,7 +1266,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::combo( _tr( "Swipe Mode" ), (int*)&touchpadParameters_.swipeMode, Locale::translateAll(swipeModeList ) ) )
+    if ( UI::combo( _tr( "Swipe Mode" ), (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;
     ImGui::PopStyleVar();
     if ( updateSettings )
@@ -1281,12 +1281,12 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     const std::vector<std::string> pointsFormatNames = { meshFormatNames[0], meshFormatNames[1] };
     const std::vector<std::string> voxelsFormatNames = { "VDB", "RAW" };
 
-    const std::vector<std::string> meshFormatTooltips = { _t( "Slowest, high memory consumption, but best compression (typically) format" ),
-                                                    _t( "Fast and still relatively small format" ),
-                                                    _t( "Largest by size, but fastest to load / save and without any losses" ) };
+    const std::vector<std::string> meshFormatTooltips = { _tr( "Slowest, high memory consumption, but best compression (typically) format" ),
+                                                    _tr( "Fast and still relatively small format" ),
+                                                    _tr( "Largest by size, but fastest to load / save and without any losses" ) };
     const std::vector<std::string> pointsFormatTooltips = { meshFormatTooltips[0], meshFormatTooltips[1] };
-    const std::vector<std::string> voxelsFormatTooltips = { _t( "Fast and efficient format for sparse data" ),
-                                                            _t( "Simplest but high disk space consumption format" ) };
+    const std::vector<std::string> voxelsFormatTooltips = { _tr( "Fast and efficient format for sparse data" ),
+                                                            _tr( "Simplest but high disk space consumption format" ) };
 
     std::string format = defaultSerializeMeshFormat();
     if ( format == ".ctm" )
@@ -1311,7 +1311,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     #endif
 
     ImGui::PushItemWidth( menuWidth * 0.5f );
-    if ( UI::combo( _tr( "Mesh Format" ), ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, Locale::translateAll(meshFormatTooltips ) ) )
+    if ( UI::combo( _tr( "Mesh Format" ), ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, meshFormatTooltips ) )
     {
         switch ( mruFormatParameters_.meshFormat )
         {
@@ -1329,7 +1329,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         setDefaultSerializeMeshFormat( format );
     }
 
-    if ( UI::combo( _tr( "Points Format" ), ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, Locale::translateAll(pointsFormatTooltips ) ) )
+    if ( UI::combo( _tr( "Points Format" ), ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, pointsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.pointsFormat )
         {
@@ -1344,7 +1344,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         setDefaultSerializePointsFormat( format );
     } 
     #ifndef MRVIEWER_NO_VOXELS
-    if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, Locale::translateAll(voxelsFormatTooltips ) ) )
+    if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )
         {

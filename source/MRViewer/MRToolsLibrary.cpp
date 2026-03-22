@@ -131,15 +131,15 @@ bool GcodeToolsLibrary::drawCreateToolDialog()
 
     UI::inputTextCentered( _tr( "Name" ), createToolName_, itemWidth );
 
-    static const std::vector<std::string> cToolTypeNames {
-        _t( "Flat End Mill" ),
-        _t( "Ball End Mill" ),
-        _t( "Bull Nose End Mill" ),
-        _t( "Chamfer End Mill" ),
+    const std::vector<std::string> cToolTypeNames {
+        _tr( "Flat End Mill" ),
+        _tr( "Ball End Mill" ),
+        _tr( "Bull Nose End Mill" ),
+        _tr( "Chamfer End Mill" ),
     };
     assert( cToolTypeNames.size() == (int)EndMillCutter::Type::Count );
     ImGui::SetNextItemWidth( itemWidth );
-    UI::combo( _tr( "Type" ), &createToolType_, MR::Locale::translateAll( cToolTypeNames ) );
+    UI::combo( _tr( "Type" ), &createToolType_, cToolTypeNames );
 
     UI::separator( _tr( "Specifications" ) );
 

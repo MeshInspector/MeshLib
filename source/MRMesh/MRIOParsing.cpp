@@ -215,27 +215,58 @@ Expected<void> parseObjCoordinate( const std::string_view& str, Vector3<T>& v, V
     return {};
 }
 
-template<typename T>
-Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
+template <typename T>
+Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color* c, Vector3<T>* n )
 {
     using namespace boost::spirit::x3;
 
-    int i = 0;
-    auto coord = [&] ( auto& ctx ){ v[i++] = _attr( ctx ); };
-    auto skip_pos = [&] ( auto& ){ i++;};
-    auto col = [&] ( auto& ctx ) { ((uint8_t*)&c)[i++ -4] = _attr( ctx ); };
+    int vi = 0, ci = 0, ni = 0;
+    auto coord = [&] ( auto& ctx ) { v[vi++] = _attr( ctx ); };
+    auto intensity = [&] ( auto& ctx ) { (void)ctx; }; // value not used
+    auto color = [&] ( auto& ctx ) { ((uint8_t*)c)[ci++] = _attr( ctx ); };
+    auto normal = [&] ( auto& ctx ) { (*n)[ni++] = _attr( ctx ); };
 
     using uint8_type = uint_parser<uint8_t>;
     constexpr uint8_type uint8_ = {};
-    bool r = phrase_parse(
-        str.begin(),
-        str.end(),
-        (
-            floatT[coord] >> floatT[coord] >> floatT[coord] >>
-            double_[skip_pos] >>
-            uint8_[col] >> uint8_[col] >> uint8_[col] ),
-        ascii::space
-    );
+    bool r;
+    if ( n != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                floatT[coord] >> floatT[coord] >> floatT[coord] >>
+                -( floatT[intensity] >>
+                -( uint8_[color] >> uint8_[color] >> uint8_[color] >>
+                -( floatT[normal] >> floatT[normal] >> floatT[normal] ) ) )
+            ),
+            ascii::space
+        );
+    }
+    else if ( c != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                floatT[coord] >> floatT[coord] >> floatT[coord] >>
+                -( floatT[intensity] >>
+                -( uint8_[color] >> uint8_[color] >> uint8_[color] ) )
+            ),
+            ascii::space
+        );
+    }
+    else
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                floatT[coord] >> floatT[coord] >> floatT[coord]
+            ),
+            ascii::space
+        );
+    }
     if ( !r )
         return unexpected( "Failed to parse vertex: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
@@ -347,8 +378,8 @@ Expected<void> parseAscCoordinate( const std::string_view& str, Vector3<T>& v, V
 template Expected<void> parseSingleNumber<float>( const std::string_view& str, float& num );
 template Expected<void> parseSingleNumber<int>( const std::string_view& str, int& num );
 
-template Expected<void> parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
-template Expected<void> parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );
+template Expected<void> parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color* c, Vector3f* n );
+template Expected<void> parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color* c, Vector3d* n );
 
 template Expected<void> parseTextCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
 template Expected<void> parseTextCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );

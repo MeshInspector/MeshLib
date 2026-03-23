@@ -186,7 +186,7 @@ public:
 
   /// override this instead using callback_draw_viewer_window
   MRVIEWER_API virtual void drawViewerWindow();
-  virtual void draw_viewer_window() { drawViewerWindow(); }
+  [[deprecated]] virtual void draw_viewer_window() { drawViewerWindow(); }
 
   /// override this instead using callback_draw_viewer_menu
   virtual void drawViewerWindowContent() {}

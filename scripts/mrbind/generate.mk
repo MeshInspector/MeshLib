@@ -106,9 +106,10 @@ FOR_WHEEL := 0
 override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 $(info Those modules are for a Python wheel? $(if $(FOR_WHEEL),YES,NO))
 
-# Build `libpybind11nonlimitedapi_meshlib_X.Y.so` shims automatically?
+# Build `libpybind11nonlimitedapi_meshlib_X.Y.so` shims automatically, for all installed Python versions?
 # You can always build them manually via `make shims -B`.
-BUILD_SHIMS := $(FOR_WHEEL)
+# The default is "yes" if we're either building for a Wheel, or if we're doing `make shims` (then we're enabling this variable to use the correct detection logic on Windows).
+BUILD_SHIMS := $(if $(or $(FOR_WHEEL),$(filter shims,$(MAKECMDGOALS))),1,0)
 override BUILD_SHIMS := $(filter-out 0,$(BUILD_SHIMS))
 $(info Build shims? $(if $(BUILD_SHIMS),YES,NO))
 
@@ -291,7 +292,7 @@ $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_ve
 # Obtain the resulting flags by calling `$(call get_python_cflags,3.10)` (and similarly for ldflags).
 PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
-ifneq ($(and $(IS_WINDOWS),$(FOR_WHEEL)),)
+ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
 # On Windows wheel, hardcode the flags to point to appdata.
 PYTHON_CFLAGS := -I$(localappdata)/Programs/Python/Python@XY@/Include
 PYTHON_LDFLAGS := -L$(localappdata)/Programs/Python/Python@XY@/libs -lpython@XY@

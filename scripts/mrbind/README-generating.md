@@ -80,6 +80,8 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
     * If you built MeshLib in a different directory (e.g. if using CMake), also pass `MESHLIB_SHLIB_DIR=...`, pointing to the directory where `MRMesh.dll` was built.<br/>
     When using CMake, `VS_MODE` has to be set to `Debug` when `CMAKE_BUILD_TYPE` is `Debug`, and to `Release` otherwise. It controls which libraries (debug vs release) we use from Vcpkg.
 
+* Windows is prone to Python version mismatches. If you see errors such as ``pybind11 non-limited-api: Failed to load library `pybind11nonlimitedapi_meshlib_3.13` with error `126`.``, proceed to [Dealing with Python version mismatches]()
+
 ### Linux
 
 * Run <code>make -f scripts\mrbind\generate.mk -B --trace MESHLIB_SHLIB_DIR=<b>\<see below\></b></code>
@@ -130,7 +132,37 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
 
   When this is disabled, a stub Cuda bindings are still generated, with a single function that reports that Cuda is not available.
 
+* **`BUILD_SHIMS=1` — support multiple Python versions.** This enables support for all Python versions found on the system, as opposed a single default one. See the relevant section in the [troubleshooting guide](#troubleshooting-python-bindings).
+
+* **`shims` — add support for multiple Python versions.** Same effect as `BUILD_SHIMS=1`, but instead of regenerating the bindings, this just adds the missing version support to existing bindings. This is great if you forgot the flag during the initial compilation.
+
+* **`FOR_WHEEL=1` — build for wheel packaging.** This is primarily for CI, not for local use. Indicates that you want to package the resulting module into a wheel (a Python module archive for distribution), instead of using it locally. Enabling this might prevent the module from working locally.
+
+  This automatically enables `BUILD_SHIMS=1`, among other things.
+
 ### Troubleshooting Python bindings
+
+* **Importing the wheel prints error ``pybind11 non-limited-api: Failed to load library `pybind11nonlimitedapi_meshlib_3.13` with error `126`.`` or similar.**
+
+  * This primarily happens on Windows.
+
+  * When built locally, Python bindings only support one speific Python version by default. If you try to import them from another version, you will get errors such as the one above.
+
+  * To check which version you built for, look for shared libraried named `pybind11nonlimitedapi_meshlib_3.??` next to the Python modules. On Windows, those should be in `source/x64/Release/meshlib` (or `.../Debug/...`). The number in the filename is the Python version.
+
+  * The easiest fix to use that Python version.
+
+    * On Windows, run e.g. `py -3.12` to use that specific version (`3.12` is our default for the bindings at the time of writing). You might need to install it first from [here](https://www.python.org/downloads/windows/).
+
+    * On Linux, just running `python3` without specifying the minor version should use the correct version by default.
+
+  * Alternatively, you can add the missing shared libraries to support your preferred Python version.
+
+    * You can build them by rerunning the generation script with additional flag `shims`. This will build the libraries for all Python versions found on your system.
+
+      This commands only builds the libraries and does nothing else. You can use `BUILD_SHIMS=1` instead of `shims` to regenerate the bindings and build those libraries at the same time.
+
+    * You can also download the prebuilt libraries from [here](https://pypi.org/project/meshlib/#files). Download the archive for your OS and extract the `pybind11nonlimitedapi_meshlib_...` shared libraries next to yours.
 
 * **`could not open 'MRMesh.lib': No such file or directory`**
 
@@ -144,7 +176,7 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
 
   * Update your VS 2022.
 
-* **Undefined references to MeshLib functions**.
+* **Undefined references to MeshLib functions**
 
   * This can only happen on Linux/Mac. If you look at the offending functions in the headers, they should have `requires` on them.
 

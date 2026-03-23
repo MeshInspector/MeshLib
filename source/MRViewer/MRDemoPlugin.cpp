@@ -8,6 +8,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include "ImGuiHelpers.h"
 #include "MRUIStyle.h"
+#include "MRI18n.h"
 #include <GLFW/glfw3.h>
 
 namespace MR
@@ -32,7 +33,7 @@ void DemoPlugin::preDraw_()
     ImGui::SetNextWindowSize( ImVec2( 100, 100 ), ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowPos( ImVec2( 500, 500 ), ImGuiCond_FirstUseEver );
     ImGui::Begin( "Demo Plugin window", nullptr );
-    ImGui::Text( "DEMO" );
+    ImGui::Text( "%s", _tr( "DEMO" ) );
     ImGui::End();
 
     if ( showCloseModal_ )
@@ -41,18 +42,18 @@ void DemoPlugin::preDraw_()
         ImGui::SetNextWindowSize( ImVec2( 200 * UI::scale(), -1 ), ImGuiCond_Always );
         ImGui::BeginModalNoAnimation( "Close##sureClose", nullptr, ImGuiWindowFlags_NoResize );
 
-        ImGui::Text( "Are you sure?" );
+        ImGui::Text( "%s", _tr( "Are you sure?" ) );
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( UI::buttonCommonSize( "Ok", Vector2f( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( _tr( "Ok" ), Vector2f( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;
             showCloseModal_ = false;
         }
         ImGui::SameLine( 0, p );
-        if ( UI::buttonCommonSize( "Cancel", Vector2f( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( _tr( "Cancel" ), Vector2f( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
             showCloseModal_ = false;
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )

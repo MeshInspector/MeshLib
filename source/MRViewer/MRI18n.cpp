@@ -7,35 +7,49 @@
 #include <boost/locale/message.hpp>
 #pragma warning( pop )
 
+#include <cassert>
+#include <cstring>
+
 namespace MR::Locale
 {
 
-std::string translate( const char* msg, Domain domain )
+namespace
 {
-    if ( domain.id < 0 )
-        return translate_noop( msg );
-    return boost::locale::translate( msg ).str( get(), domain.id );
+
+inline const char* asCStr( std::string_view sv )
+{
+    assert( std::strlen( sv.data() ) == sv.size() );
+    return sv.data();
 }
 
-std::string translate( const char* context, const char* msg, Domain domain )
+} // namespace
+
+std::string translate( std::string_view msg, Domain domain )
 {
     if ( domain.id < 0 )
-        return translate_noop( context, msg );
-    return boost::locale::translate( context, msg ).str( get(), domain.id );
+        return translate_noop( asCStr( msg ) );
+    return boost::locale::translate( asCStr( msg ) ).str( get(), domain.id );
 }
 
-std::string translate( const char* single, const char* plural, Int64 n, Domain domain )
+std::string translate( std::string_view context, std::string_view msg, Domain domain )
 {
     if ( domain.id < 0 )
-        return translate_noop( single, plural, n );
-    return boost::locale::translate( single, plural, n ).str( get(), domain.id );
+        return translate_noop( asCStr( context ), asCStr( msg ) );
+    return boost::locale::translate( asCStr( context ), asCStr( msg ) ).str( get(), domain.id );
 }
 
-std::string translate( const char* context, const char* single, const char* plural, Int64 n, Domain domain )
+std::string translate( std::string_view single, std::string_view plural, Int64 n, Domain domain )
 {
     if ( domain.id < 0 )
-        return translate_noop( context, single, plural, n );
-    return boost::locale::translate( context, single, plural, n ).str( get(), domain.id );
+        return translate_noop( asCStr( single ), asCStr( plural ), n );
+    return boost::locale::translate( asCStr( single ), asCStr( plural ), n ).str( get(), domain.id );
+}
+
+std::string translate( std::string_view context, std::string_view single, std::string_view plural, Int64 n, Domain domain )
+{
+    if ( domain.id < 0 )
+        return translate_noop( asCStr( context ), asCStr( single ), asCStr( plural ), n );
+    return boost::locale::translate( asCStr( context ), asCStr( single ), asCStr( plural ), n ).str( get(), domain.id );
 }
 
 } // namespace MR::Locale

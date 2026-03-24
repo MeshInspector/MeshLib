@@ -7,6 +7,7 @@
 #include <MRMesh/MRMeshFwd.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace MR::Locale
@@ -21,16 +22,16 @@ struct Domain
 };
 
 /// \brief Translates a message using the active locale.
-MRVIEWER_API std::string translate( const char* msg, Domain domain = {} );
+MRVIEWER_API std::string translate( std::string_view msg, Domain domain = {} );
 
 /// \brief Translates a message in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* msg, Domain domain = {} );
+MRVIEWER_API std::string translate( std::string_view context, std::string_view msg, Domain domain = {} );
 
 /// \brief Translates a plural message form using the active locale.
-MRVIEWER_API std::string translate( const char* single, const char* plural, Int64 n, Domain domain = {} );
+MRVIEWER_API std::string translate( std::string_view single, std::string_view plural, Int64 n, Domain domain = {} );
 
 /// \brief Translates a plural message form in context using the active locale.
-MRVIEWER_API std::string translate( const char* context, const char* single, const char* plural, Int64 n, Domain domain = {} );
+MRVIEWER_API std::string translate( std::string_view context, std::string_view single, std::string_view plural, Int64 n, Domain domain = {} );
 
 /// \brief Translates all strings in a vector using the active locale.
 inline std::vector<std::string> translateAll( const std::vector<std::string>& items, Domain domain = {} )
@@ -38,7 +39,7 @@ inline std::vector<std::string> translateAll( const std::vector<std::string>& it
     std::vector<std::string> result;
     result.reserve( items.size() );
     for ( const auto& s : items )
-        result.push_back( MR::Locale::translate( s.c_str(), domain ) );
+        result.push_back( MR::Locale::translate( s, domain ) );
     return result;
 }
 
@@ -48,7 +49,7 @@ inline std::vector<std::string> translateAll( const char* context, const std::ve
     std::vector<std::string> result;
     result.reserve( items.size() );
     for ( const auto& s : items )
-        result.push_back( MR::Locale::translate( context, s.c_str(), domain ) );
+        result.push_back( MR::Locale::translate( context, s, domain ) );
     return result;
 }
 

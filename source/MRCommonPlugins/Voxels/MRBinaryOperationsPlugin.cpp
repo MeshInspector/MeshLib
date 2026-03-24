@@ -278,7 +278,7 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
         }
     }
     else
-        ProgressBar::orderWithMainThreadPostProcessing( _tr( operationNames[int( op )].c_str() ), [this, op, func] () -> std::function<void()> {
+        ProgressBar::orderWithMainThreadPostProcessing( _tr( operationNames[int( op )]), [this, op, func] () -> std::function<void()> {
             std::function<void()> cancelRes = []
             {
                 showError(stringOperationCanceled());

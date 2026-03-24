@@ -30,7 +30,7 @@ void SaveOnClosePlugin::preDraw_()
     if ( !initialized_ )
         return;
 
-    const auto popupId = std::string( _tr( "Application Close" ) ) + "##modal";
+    const auto popupId = s_tr( "Application Close" ) + "##modal";
 
     if ( showCloseModal_ )
     {

@@ -69,7 +69,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                                 customFunction();
                         }
                         else
-                            showError( std::string( _tr( "Error saving scene: " ) ) + res.error() );
+                            showError( s_tr( "Error saving scene: " ) + res.error() );
                     };
                 } );
             }

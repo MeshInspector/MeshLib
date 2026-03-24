@@ -560,7 +560,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
         ImGui::SameLine();
         ImGui::PopStyleVar();
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * UI::scale() );
-        const auto showClippingPlaneLabel = std::string( _tr( "Show" ) ) + "##ClippingPlane";
+        const auto showClippingPlaneLabel = s_tr( "Show" ) + "##ClippingPlane";
         UI::checkbox( showClippingPlaneLabel.c_str(), &showPlane );
         viewport.setClippingPlane( plane );
         viewport.showClippingPlane( showPlane );
@@ -659,7 +659,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
         static const std::vector<std::string> uiLengthUnitNames = makeLengthUnitsVec( _t( "No Units" ) );
-        const auto uiUnitsLengthLabel = std::string( _tr( "UI Units" ) ) + "##length";
+        const auto uiUnitsLengthLabel = s_tr( "UI Units" ) + "##length";
         if ( UI::combo( uiUnitsLengthLabel.c_str(), &targetOption, Locale::translateAll( uiLengthUnitNames ) ) )
         {
             if ( targetOption == int( LengthUnit::_count ) )
@@ -671,7 +671,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
         static const std::vector<std::string> modelLengthUnitNames = makeLengthUnitsVec( _t( "Same as UI Units" ) );
-        const auto modelUnitsLengthLabel = std::string( _tr( "Model Units" ) ) + "##length";
+        const auto modelUnitsLengthLabel = s_tr( "Model Units" ) + "##length";
         if ( UI::combo( modelUnitsLengthLabel.c_str(), &sourceOption, Locale::translateAll( modelLengthUnitNames ) ) )
         {
             if ( sourceOption == int( LengthUnit::_count ) )
@@ -683,7 +683,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();
-        if ( UI::drag<NoUnit>( ( std::string( _tr( "Precision" ) ) + "##length" ).c_str(), precision, 1, 0, cMaxPrecision ) )
+        if ( UI::drag<NoUnit>( ( s_tr( "Precision" ) + "##length" ).c_str(), precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiLengthPrecision( precision );
         UI::setTooltipIfHovered( _tr( "The number of digits to be shown after decimal point for length measurements." ) );
 
@@ -708,7 +708,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         // Degree mode.
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        const auto unitsAngleLabel = std::string( _tr( "Units" ) ) + "##angle";
+        const auto unitsAngleLabel = s_tr( "Units" ) + "##angle";
         if ( UI::combo( unitsAngleLabel.c_str(), &flavorOption, Locale::translateAll( flavorOptions ) ) )
             UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
         UI::setTooltipIfHovered( _tr( "It selects angular units to be show in the user interface." ) );
@@ -720,7 +720,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
             // --- Precision
 
             int precision = UnitSettings::getUiAnglePrecision();
-            if ( UI::drag<NoUnit>( ( std::string( _tr( "Precision" ) ) + "##angle" ).c_str(), precision, 1, 0, cMaxPrecision ) )
+            if ( UI::drag<NoUnit>( ( s_tr( "Precision" ) + "##angle" ).c_str(), precision, 1, 0, cMaxPrecision ) )
                 UnitSettings::setUiAnglePrecision( precision );
             UI::setTooltipIfHovered( _tr( "The number of digits to be shown after decimal point for angular measurements." ) );
         }
@@ -738,7 +738,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         // --- Precision
 
         int precision = UnitSettings::getUiRatioPrecision();
-        if ( UI::drag<NoUnit>( ( std::string( _tr( "Precision" ) ) + "##ratio" ).c_str(), precision, 1, 0, cMaxPrecision ) )
+        if ( UI::drag<NoUnit>( ( s_tr( "Precision" ) + "##ratio" ).c_str(), precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiRatioPrecision( precision );
         UI::setTooltipIfHovered( _tr( "The number of digits to be shown after decimal point for dimensionless measurements." ) );
 
@@ -989,7 +989,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
 
 void ViewerSettingsPlugin::drawResetDialog_( bool activated )
 {
-    const auto settingsResetId = std::string( _tr( "Settings reset" ) ) + "##reset";
+    const auto settingsResetId = s_tr( "Settings reset" ) + "##reset";
     if ( activated )
         ImGui::OpenPopup( settingsResetId.c_str() );
     ModalDialog dialog( settingsResetId, {
@@ -1109,7 +1109,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
 
         const float posY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( posY + cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
-        ImGui::Text( "%s", _tr( modeName.c_str() ) );
+        ImGui::Text( "%s", _tr( modeName) );
 
         ImGui::SetCursorPosX( 110.0f * UI::scale() );
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
@@ -1212,7 +1212,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + ( cInputPadding - cCheckboxPadding ) * UI::scale() );
-        changed = UI::checkbox( ( std::string( _tr( "Inverse" ) ) + "##" + label ).c_str(), &inverse ) || changed;
+        changed = UI::checkbox( ( s_tr( "Inverse" ) + "##" + label ).c_str(), &inverse ) || changed;
         if ( changed )
             value = valueAbs * ( inverse ? -1.f : 1.f );
         anyChanged = anyChanged || changed;
@@ -1375,7 +1375,7 @@ void ViewerSettingsPlugin::drawCustomSettings_( const std::string& separatorName
     if ( numRequired == 0 )
         return;
     if ( needSeparator )
-        UI::separator( UI::SeparatorParams{ .label = std::string( _tr( separatorName.c_str() ) ), .extraScale = cSeparatorIndentMultiplier } );
+        UI::separator( UI::SeparatorParams{ .label = s_tr( separatorName), .extraScale = cSeparatorIndentMultiplier } );
     for ( auto& settings : comboSettings_[size_t( activeTab_ )] )
     {
         if ( settings->separatorName() == separatorName )
@@ -1386,7 +1386,7 @@ void ViewerSettingsPlugin::drawCustomSettings_( const std::string& separatorName
 
 void ViewerSettingsPlugin::drawSeparator_( const std::string& separatorName )
 {
-    UI::separator( UI::SeparatorParams{ .label = std::string( _tr( separatorName.c_str() ) ), .extraScale = cSeparatorIndentMultiplier } );
+    UI::separator( UI::SeparatorParams{ .label = s_tr( separatorName), .extraScale = cSeparatorIndentMultiplier } );
     drawCustomSettings_( separatorName, false );
 }
 

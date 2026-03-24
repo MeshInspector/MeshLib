@@ -476,7 +476,7 @@ void sOpenDICOMs( const std::filesystem::path & directory )
 
 std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    const std::string reason = isMobileBrowser() ? std::string( _tr( "This web browser doesn't support directory selection" ) ) : std::string();
+    const std::string reason = isMobileBrowser() ? s_tr( "This web browser doesn't support directory selection" ) : std::string();
     return reason;
 }
 
@@ -766,7 +766,7 @@ bool SaveSelectedMenuItem::action()
                 if ( res )
                     getViewerInstance().recentFilesStore().storeFile(savePath);
                 else
-                    showError( std::string( _tr( "Error saving selected:" ) ) + " " + res.error() );
+                    showError( s_tr( "Error saving selected:" ) + " " + res.error() );
             };
         } );
     }
@@ -785,7 +785,7 @@ bool SaveSelectedMenuItem::action()
                 if ( res.has_value() )
                     getViewerInstance().recentFilesStore().storeFile( savePath );
                 else
-                    showError( std::string( _tr( "Error saving selected:" ) ) + " " + res.error() );
+                    showError( s_tr( "Error saving selected:" ) + " " + res.error() );
             };
         } );
     }
@@ -815,7 +815,7 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
             if ( res )
                 getViewerInstance().onSceneSaved( savePath );
             else
-                showError( std::string( _tr( "Error saving scene:" ) ) + " " + res.error() );
+                showError( s_tr( "Error saving scene:" ) + " " + res.error() );
         };
     } );
 }
@@ -924,7 +924,7 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
             }
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
-                showError( std::string( _tr( "Error saving screenshot:" ) ) + " " + res.error() );
+                showError( s_tr( "Error saving screenshot:" ) + " " + res.error() );
         }
     }
     ImGui::EndCustomStatePlugin();
@@ -951,7 +951,7 @@ bool CaptureUIScreenshotMenuItem::action()
         {
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
-                showError( std::string( _tr( "Error saving screenshot:" ) ) + " " + res.error() );
+                showError( s_tr( "Error saving screenshot:" ) + " " + res.error() );
         }
     } );
     return false;

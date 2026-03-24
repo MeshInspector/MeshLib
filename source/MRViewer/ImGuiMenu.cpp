@@ -1122,17 +1122,17 @@ void ImGuiMenu::drawModalMessage_()
     if ( modalMessageType_ == NotificationType::Error )
     {
         titleKey = "Error";
-        titleDisplay = std::string( _tr( "Error" ) );
+        titleDisplay = s_tr( "Error" );
     }
     else if ( modalMessageType_ == NotificationType::Warning )
     {
         titleKey = "Warning";
-        titleDisplay = std::string( _tr( "Warning" ) );
+        titleDisplay = s_tr( "Warning" );
     }
     else //if ( modalMessageType_ == MessageType::Info )
     {
         titleKey = "Info";
-        titleDisplay = std::string( _tr( "Info" ) );
+        titleDisplay = s_tr( "Info" );
     }
 
     const std::string titleImGui = " " + titleKey + "##modal";
@@ -2307,7 +2307,7 @@ bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualO
         }
     }
 
-    make_color_selector<VisualObject>( selectedVisualObjs, (std::string( _tr( "Selected color" ) ) + "##" + std::to_string(selectedViewport_.value())).c_str(), [&] ( const VisualObject* data )
+    make_color_selector<VisualObject>( selectedVisualObjs, (s_tr( "Selected color" ) + "##" + std::to_string(selectedViewport_.value())).c_str(), [&] ( const VisualObject* data )
     {
         return Vector4f( data->getFrontColor(true, selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )

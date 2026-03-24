@@ -879,7 +879,7 @@ void RibbonMenu::drawActiveList_()
             std::string btnText;
             if ( needFocusBtn )
             {
-                btnText = std::string( _tr( "Focus" ) ) + "##" + childName;
+                btnText = s_tr( "Focus" ) + "##" + childName;
                 if ( UI::button( btnText.c_str(), btnSize ) )
                     [&]
                 {
@@ -900,7 +900,7 @@ void RibbonMenu::drawActiveList_()
                 ImGui::SetCursorPosY( savedPos );
             }
 
-            btnText = std::string( _tr( "Close" ) ) + "##" + childName;
+            btnText = s_tr( "Close" ) + "##" + childName;
             if ( UI::button( btnText.c_str(), btnSize ) )
                 close = true;
             ImGui::EndChild();
@@ -1539,8 +1539,8 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
         if ( stateChanged && getViewerInstance().mouseController().getMouseConflicts() > conflicts )
         {
             pushNotification( {
-                .text = std::string( _tr( "Camera operations that are controlled by left mouse button "
-                        "may not work while this tool is active" ) ) + "\n"
+                .text = s_tr( "Camera operations that are controlled by left mouse button "
+                        "may not work while this tool is active" ) + "\n"
                         + fmt::format( f_tr( "Hold {} additionally to control camera" ), getAltModName() ),
                 .type = NotificationType::Info,
                 .lifeTimeSec = 3.0f } );
@@ -2289,7 +2289,7 @@ void RibbonMenu::drawShortcutsWindow_()
             {
                 // draw category line
                 RibbonFontHolder font( MR::RibbonFontManager::FontType::BigSemiBold );
-                UI::separator( _tr( ShortcutManager::categoryNames[int( category )].c_str() ) );
+                UI::separator( _tr( ShortcutManager::categoryNames[int( category )]) );
                 font.popFont();
                 lastCategory = category;
             }

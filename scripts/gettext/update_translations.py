@@ -40,15 +40,6 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    msgmerge = find_gettext_command('msgmerge')
-    if not msgmerge:
-        print(
-            "Cannot find msgmerge. Set GETTEXT_ROOT environment variable.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    output_dir = pot_file.parent
     domain_name = pot_file.stem
 
     input_files = list(map(str, itertools.chain(
@@ -85,14 +76,3 @@ if __name__ == "__main__":
             print(line, end='')
 
     # TODO: parse .items.json files
-
-    for po_file in output_dir.glob(f"*/{domain_name}.po"):
-        locale_name = po_file.parent.name
-        print(f"Updating {locale_name} locale ...")
-
-        subprocess.run([
-            msgmerge,
-            "--update",
-            po_file,
-            pot_file,
-        ], check=True)

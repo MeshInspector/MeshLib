@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 import json
-import os
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -15,20 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\\n"
 
 '''
-
-
-def find_gettext_command(cmd):
-    if path := shutil.which(cmd):
-        return path
-    if gettext_root := os.getenv('GETTEXT_ROOT'):
-        lookup_paths = [
-            Path(gettext_root),
-            Path(gettext_root) / "bin",
-            ]
-        lookup_path = os.pathsep.join(str(p) for p in lookup_paths)
-        if path := shutil.which(cmd, path=lookup_path):
-            return path
-    return None
 
 
 if __name__ == "__main__":
@@ -45,15 +28,6 @@ if __name__ == "__main__":
         ui_json_path = input_json.with_suffix('').with_suffix('.ui.json')
         ui_json = ui_json_path if ui_json_path.exists() else None
 
-    msgmerge = find_gettext_command('msgmerge')
-    if not msgmerge:
-        print(
-            "Cannot find msgmerge. Set GETTEXT_ROOT environment variable.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    output_dir = pot_file.parent
     domain_name = pot_file.stem
 
     # Contextless records from .items.json (captions, tooltips)
@@ -92,13 +66,3 @@ if __name__ == "__main__":
             f.write('msgstr ""\n')
             f.write('\n')
 
-    for po_file in output_dir.glob(f"*/{domain_name}.po"):
-        locale_name = po_file.parent.name
-        print(f"Updating {locale_name} locale ...")
-
-        subprocess.run([
-            msgmerge,
-            "--update",
-            po_file,
-            pot_file,
-        ], check=True)

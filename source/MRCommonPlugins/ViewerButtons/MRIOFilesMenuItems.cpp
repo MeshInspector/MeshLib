@@ -755,10 +755,10 @@ bool SaveSelectedMenuItem::action()
         ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone]()->std::function<void()>
         {
             auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath,
-                {
+                { {
                     .lengthUnit = UnitSettings::getActualModelLengthUnit(),
                     .progress = ProgressBar::callBackSetProgress
-                } );
+                } } );
 
             return[savePath, res]()
             {
@@ -804,10 +804,10 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
             return [] { showError( "File name is not set" ); };
 
         auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
-            {
+            { {
                 .lengthUnit = UnitSettings::getActualModelLengthUnit(),
                 .progress = ProgressBar::callBackSetProgress
-            } );
+            } } );
 
         return[savePath, res]()
         {

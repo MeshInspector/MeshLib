@@ -741,6 +741,7 @@ class WatershedGraph;
 struct TbbTaskArenaAndGroup;
 
 struct SaveSettings;
+namespace SceneSave  { struct Settings; }
 namespace ObjectSave { struct Settings; }
 
 /// Argument value - progress in [0,1];

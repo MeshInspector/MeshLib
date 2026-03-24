@@ -8,6 +8,8 @@ setlocal
 rem Push enable extensions (for `mkdir` to behave like Linux `mkdir -p`).
 setlocal enableextensions
 
+rem Make sure we're not running from the VS dev prompt. It's known to break MRBind builds,
+rem   because it somehow forces MSYS2 CMake to use Vcpkg. Possibly via an env variable, I didn't investiate further.
 if not "%VCToolsInstallDir%" == "" (
     echo Must not run this script from the VS developer command prompt. Use the regular terminal.
     exit /b 1

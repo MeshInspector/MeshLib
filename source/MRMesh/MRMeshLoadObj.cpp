@@ -905,17 +905,24 @@ void trimComment( std::string_view& line )
         return;
     }
 
-    //'Reconstructed 4D: Element_V5', '1', 'MI_2.5.6.175'
+    //'Reconstructed 4D: Element_V5'
     if ( line.starts_with( "Reconstructed 4D: " ) )
     {
-        line = line.substr( 0, line.find_first_of( ' ', 17 ) ); // 'Reconstructed 4D:'
+        line = line.substr( 0, 17 ); // 'Reconstructed 4D:'
         return;
     }
 
     //'Apple ModelIO OBJ File: model'
     if ( line.starts_with( "Apple ModelIO OBJ File: " ) )
     {
-        line = line.substr( 0, line.find_first_of( ' ', 23 ) ); // 'Apple ModelIO OBJ File:'
+        line = line.substr( 0, 23 ); // 'Apple ModelIO OBJ File:'
+        return;
+    }
+
+    //'Wavefront OBJ file written 2018-08-03T14:33:08'
+    if ( line.starts_with( "Wavefront OBJ file written " ) )
+    {
+        line = line.substr( 0, 26 ); // 'Wavefront OBJ file written'
         return;
     }
 }

@@ -9,6 +9,11 @@ rem some other MSYS2 copy.
 
 setlocal
 
+if not "%VCToolsInstallDir%" == "" (
+    echo Must not run this script from the VS developer command prompt. Use the regular terminal.
+    exit /b 1
+)
+
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 if "%CLANG_VER%" == "" set /p CLANG_VER=<%~dp0\clang_version_msys2.txt
 

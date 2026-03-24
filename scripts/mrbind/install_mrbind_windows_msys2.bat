@@ -8,6 +8,11 @@ setlocal
 rem Push enable extensions (for `mkdir` to behave like Linux `mkdir -p`).
 setlocal enableextensions
 
+if not "%VCToolsInstallDir%" == "" (
+    echo Must not run this script from the VS developer command prompt. Use the regular terminal.
+    exit /b 1
+)
+
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
 if "%MRBIND_DIR%" == "" set MRBIND_DIR=%~dp0\..\..\thirdparty\mrbind

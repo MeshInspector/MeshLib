@@ -55,10 +55,10 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction = settings.onOk, savePath, &root = SceneRoot::get()] ()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
-                        {
+                        { {
                             .lengthUnit = UnitSettings::getActualModelLengthUnit(),
                             .progress = ProgressBar::callBackSetProgress
-                        } );
+                        } } );
 
                     return[customFunction = customFunction, savePath, res] ()
                     {

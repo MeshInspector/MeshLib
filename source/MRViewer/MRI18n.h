@@ -57,6 +57,7 @@ inline std::vector<std::string> translateAll( const char* context, const std::ve
 
 #ifndef MR_NO_I18N_MACROS
 #define _tr( ... ) MR::Locale::translate( __VA_ARGS__ ).c_str()
+#define s_tr( ... ) MR::Locale::translate( __VA_ARGS__ )
 #define f_tr( ... ) fmt::runtime( MR::Locale::translate( __VA_ARGS__ ) )
 #endif // MR_NO_I18N_MACROS
 
@@ -64,6 +65,7 @@ inline std::vector<std::string> translateAll( const char* context, const std::ve
 
 #ifndef MR_NO_I18N_MACROS
 #define _tr( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+#define s_tr( ... ) std::string( MR::Locale::translate_noop( __VA_ARGS__ ) )
 #define f_tr( ... ) fmt::runtime( MR::Locale::translate_noop( __VA_ARGS__ ) )
 #endif // MR_NO_I18N_MACROS
 

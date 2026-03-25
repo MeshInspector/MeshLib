@@ -15,13 +15,13 @@
 namespace MR
 {
 
-static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
+static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left, Turn turn )
 {
     std::function<EdgeId( EdgeId )> next;
     if ( left )
-        next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region ); };
+        next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region, turn ); };
     else
-        next = [&] ( EdgeId e ) { return topology.prevLeftBd( e.sym(), region ).sym(); };
+        next = [&] ( EdgeId e ) { return topology.prevLeftBd( e.sym(), region, turn ).sym(); };
 
     EdgeLoop res;
     auto e = e0;
@@ -34,14 +34,14 @@ static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, cons
     return res;
 }
 
-EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
+EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, Turn turn )
 {
-    return trackBoundaryLoop( topology, e0, region, true );
+    return trackBoundaryLoop( topology, e0, region, true, turn );
 }
 
-EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
+EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, Turn turn )
 {
-    return trackBoundaryLoop( topology, e0, region, false );
+    return trackBoundaryLoop( topology, e0, region, false, turn );
 }
 
 EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )

@@ -118,7 +118,7 @@ EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* r
     return bdEdges;
 }
 
-static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
+static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region, bool left, Turn turn )
 {
     MR_TIMER;
 
@@ -130,12 +130,12 @@ static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, c
     if ( left )
     {
         insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e ).second; };
-        track = [&] ( EdgeId e ) { return trackLeftBoundaryLoop( topology, e, region ); };
+        track = [&] ( EdgeId e ) { return trackLeftBoundaryLoop( topology, e, region, turn ); };
     }
     else
     {
         insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e.sym() ).second; };
-        track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region ); };
+        track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region, turn ); };
     }
 
     EdgeBitSet bdEdges = findAllLeftBdEdges( topology, region );
@@ -158,16 +158,18 @@ static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, c
 
 }
 
-std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
+std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region, Turn turn )
 {
-    return findRegionBoundary( topology, region, true );
+    return findRegionBoundary( topology, region, true, turn );
 }
 
 std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */, bool keepLoneHoles )
 {
     MR_TIMER;
 
-    auto bds = splitOnSimpleLoops( mesh.topology, findLeftBoundary( mesh.topology, region ) );
+    // Turn::Leftmost is to get same loops as inside fillHole function: a = mesh.topology.prev( a.sym() )
+    auto bds = splitOnSimpleLoops( mesh.topology, findLeftBoundary( mesh.topology, region, Turn::Leftmost ) );
+
     UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
     std::vector<EdgeLoop> filteredBds;
     filteredBds.reserve( bds.size() );
@@ -183,9 +185,9 @@ std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*
     return filteredBds;
 }
 
-std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
+std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region, Turn turn )
 {
-    return findRegionBoundary( topology, region, false );
+    return findRegionBoundary( topology, region, false, turn );
 }
 
 std::vector<EdgeLoop> findLeftBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region )

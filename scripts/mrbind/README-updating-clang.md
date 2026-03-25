@@ -12,4 +12,6 @@ Perform a fresh MSYS2 installation, and in there run:
 
 * Run `scripts/mrbind/msys2_remember_current_packages.sh`.
 
-* Commit the modified files to Git: `scripts/mrbind/msys2_package_{urls,hashes}.txt`
+* Commit the modified files to Git: `scripts/mrbind/msys2_package_{urls,hashes}.txt`.
+
+* Running that script downloads some files to `scripts/mrbind/msys2_packages`. You can either delete them to save space, or archive them somewhere in case they stop being available for download.

@@ -491,7 +491,13 @@ bool MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
     if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return false;
     if ( validInQueue_.test( ue ) )
+    {
+        // assume that collapse error for an edge only increases,
+        // and we do not need to put the edge in queue again before old error-version is extracted from the queue
+        if ( !outdated_.test_set( ue ) )
+            ++numOutdated_; 
         return true;
+    }
     addInQueue_( ue, settings_.optimizeVertexPos );
     return false;
 }
@@ -738,8 +744,7 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         // update edges around remaining vertex
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
-            if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
-                ++numOutdated_; // collapse error for of all neighbor edges with vo must increase
+            addInQueueIfMissing_( e.undirected() );
             if ( mesh_.topology.left( e ) )
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
         }

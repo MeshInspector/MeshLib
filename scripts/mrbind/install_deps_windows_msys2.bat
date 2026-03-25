@@ -48,5 +48,6 @@ if exist %MSYS2_DIR% (
 
 rem ------ Install MSYS2 packages
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh' && '%~dp0\msys2_install_packages.sh'"
+echo Please ignore the errors above, if any, after the words `:: Running post-transaction hooks...`.
 
 endlocal

@@ -12,5 +12,5 @@ for ENTRY in "${ENTRIES[@]}"; do
     FILES+=("${ENTRY#*" *"}")
 done
 
-# Need `|| true` because this is prone to crashing after install, if the core packages were touched.
+# Adding `|| true` because this is prone to crashing after install, if the core packages were touched. Though I haven't checked if the crash affects the exit code or not.
 pacman -U --noconfirm --needed "${FILES[@]}" || true

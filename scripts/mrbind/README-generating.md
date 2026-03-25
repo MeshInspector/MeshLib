@@ -12,8 +12,7 @@ Those are installed system-wide, this usually only needs to be done once, unless
 
 ### Windows
 
-* Download https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip
-* Unzip into `C:\msys64_meshlib_mrbind`
+* Run `scripts/mrbind/install_deps_windows_msys2.bat`, either by double-clicking or in the terminal (**not** in the VS developer command prompt).
 
 <details><summary>What does this do?</summary>
 

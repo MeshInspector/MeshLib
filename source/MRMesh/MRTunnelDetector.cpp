@@ -8,7 +8,7 @@
 #include "MREdgePathsBuilder.h"
 #include "MRParallelFor.h"
 #include "MRFillContourByGraphCut.h"
-#include "MRMeshFillHole.h"
+#include "MRMeshPatch.h"
 
 namespace MR
 {
@@ -507,27 +507,19 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
     return tunnelFaces;
 }
 
-Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleParams& fillHoleParams, const FaceBitSet* region, const DetectTunnelSettings& settings )
+Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleNicelySettings& fillSettings, const FaceBitSet* region, const DetectTunnelSettings& detectSettings )
 {
     MR_TIMER;
 
-    return detectTunnelFaces( { mesh, region }, settings ).transform( [&]( FaceBitSet && tunnelFaces )
+    return detectTunnelFaces( { mesh, region }, detectSettings ).transform( [&]( FaceBitSet && tunnelFaces )
     {
-        auto bdEdges = findAllLeftBdEdges( mesh.topology, &tunnelFaces, true );
-
-        mesh.deleteFaces( tunnelFaces );
-
-        for ( auto e : bdEdges )
-        {
-            if ( !mesh.topology.left( e ) )
-                fillHole( mesh, e, fillHoleParams );
-        }
+        patchMesh( mesh, tunnelFaces, fillSettings );
     } );
 }
 
-Expected<void> eliminateTunnels( Mesh& mesh, const FaceBitSet* region, const DetectTunnelSettings& settings )
+Expected<void> eliminateTunnels( Mesh& mesh, const FaceBitSet* region, const DetectTunnelSettings& detectSettings )
 {
-    return eliminateTunnels( mesh, {}, region, settings );
+    return eliminateTunnels( mesh, {}, region, detectSettings );
 }
 
 } //namespace MR

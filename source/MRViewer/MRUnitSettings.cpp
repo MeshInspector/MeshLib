@@ -38,6 +38,7 @@ void resetToDefaults()
 {
     UnitSettings::setThousandsSeparator( ' ' );
     UnitSettings::setUiLengthUnit( LengthUnit::millimeters, true );
+    UnitSettings::setModelLengthUnit( {} );
     UnitSettings::setUiLengthPrecision( 3 );
     UnitSettings::setDegreesMode( DegreesMode::degrees, true );
     UnitSettings::setUiRatioPrecision( 3 );

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "MRMesh/MRFlagOperators.h"
 #include "exports.h"
 #include "MRMesh/MRVector2.h"

@@ -11,13 +11,15 @@ namespace MR
 /// returns closed loop of region boundary starting from given region boundary edge (region faces on the left, and not-region faces or holes on the right);
 /// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to right
 [[nodiscard]] MRMESH_API EdgeLoop trackLeftBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
-[[nodiscard]] inline EdgeLoop trackLeftBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
+// This is skipped in the bindings to get nicer overload names in C.
+[[nodiscard]] MR_BIND_IGNORE inline EdgeLoop trackLeftBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
     { return trackLeftBoundaryLoop( topology, e0, &region ); }
 
 /// returns closed loop of region boundary starting from given region boundary edge (region faces on the right, and not-region faces or holes on the left);
 /// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to left
 [[nodiscard]] MRMESH_API EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
-[[nodiscard]] inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
+// This is skipped in the bindings to get nicer overload names in C.
+[[nodiscard]] MR_BIND_IGNORE inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
     { return trackRightBoundaryLoop( topology, e0, &region ); }
 
 /// track the path of edges with set bits in (edges) starting from (e0);

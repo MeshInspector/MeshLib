@@ -130,7 +130,7 @@ void testBooleanMultipleEdgePropogationSort( void )
         const MR_MeshTopology* meshATopology = MR_Mesh_Get_topology( meshA );
         MR_std_vector_MR_EdgeId* meshAHoles = MR_MeshTopology_findHoleRepresentiveEdges( meshATopology, NULL );
 
-        MR_std_vector_MR_EdgeId* border = MR_trackRightBoundaryLoop_MR_EdgeId( meshATopology, *MR_std_vector_MR_EdgeId_at( meshAHoles, 0 ), NULL );
+        MR_std_vector_MR_EdgeId* border = MR_trackRightBoundaryLoop( meshATopology, *MR_std_vector_MR_EdgeId_at( meshAHoles, 0 ), NULL, MR_Turn_Rightmost );
 
         MR_std_vector_std_vector_MR_EdgeId* borderVec = MR_std_vector_std_vector_MR_EdgeId_DefaultConstruct();
         MR_std_vector_std_vector_MR_EdgeId_push_back( borderVec, MR_PassBy_Move, border );

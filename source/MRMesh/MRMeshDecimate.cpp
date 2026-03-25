@@ -739,9 +739,18 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
             if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
-                ++numOutdated_; // collapse error for of all neighbor edges with vo must increase
+            {
+                // collapse error for all the edges (including this one) incident to remaining vertex (vo) must increase,
+                // we do not put the edge in the queue again before previous (smaller) error-version is extracted from the queue
+                ++numOutdated_;
+            }
             if ( mesh_.topology.left( e ) )
+            {
+                // an edge can be missed in the queue before because some criterion did not allow collapsing it,
+                // and after just happened collapse that edge can become eligible again, so we try adding it in the queue;
+                // but if the edge was already in the queue, assume that its error does not change so numOutdated_ is not modified
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            }
         }
     }
     return vo;

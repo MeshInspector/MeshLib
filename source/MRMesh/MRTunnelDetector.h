@@ -72,9 +72,9 @@ struct DetectTunnelSettings
 MRMESH_API Expected<FaceBitSet> detectTunnelFaces( const MeshPart& mp, const DetectTunnelSettings & settings = {} );
 
 /// gets rid of the tunnels in the given region of mesh (or whole mesh if region is nullptr) by
-/// 1) detecting tunnels, 2) deleting tunnel faces, and 3) filling holes appeared
+/// 1) detecting tunnels, 2) calling patchMesh, which 2a) deletes tunnel faces, and 2b) fills holes appeared
 MRMESH_API Expected<void> eliminateTunnels( Mesh& mesh, const FaceBitSet* region = {}, const DetectTunnelSettings& settings = {} );
-MRMESH_API Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleParams& fillHoleParams, const FaceBitSet* region = {}, const DetectTunnelSettings& settings = {} );
+MRMESH_API Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleNicelySettings& fillSettings, const FaceBitSet* region = {}, const DetectTunnelSettings& detectSettings = {} );
 
 /// \}
 

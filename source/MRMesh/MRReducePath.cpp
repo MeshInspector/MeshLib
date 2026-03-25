@@ -35,11 +35,11 @@ static T lineIsect( const Vector2<T> & b, const Vector2<T> & c, const Vector2<T>
     if ( c1 == 0 && c2 == 0 )
     {
         // special degenerate case
-        // either both needle faces or both cap faces
+        // either b==0 or c-d collinear to 0-b
         const auto bb = dot( b, b ); // b magnitude squared
         if ( bb == 0 )
-            return 0; // both needles
-        return ( dot( c, b ) + dot( d, b ) ) / ( 2 * bb ); // both caps
+            return 0; // b==0, x is arbitrary, and we return x=0
+        return ( dot( c, b ) + dot( d, b ) ) / ( 2 * bb ); // both c and d lay on 0-b line so return c-d middle point relative to 0-b segment
     }
     const auto cc = c1 + c2;
     if ( cc == 0 )

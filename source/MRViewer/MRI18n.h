@@ -39,7 +39,7 @@ inline std::vector<std::string> translateAll( const std::vector<std::string>& it
     std::vector<std::string> result;
     result.reserve( items.size() );
     for ( const auto& s : items )
-        result.push_back( MR::Locale::translate( s, domain ) );
+        result.push_back( translate( s, domain ) );
     return result;
 }
 
@@ -49,7 +49,7 @@ inline std::vector<std::string> translateAll( const char* context, const std::ve
     std::vector<std::string> result;
     result.reserve( items.size() );
     for ( const auto& s : items )
-        result.push_back( MR::Locale::translate( context, s, domain ) );
+        result.push_back( translate( context, s, domain ) );
     return result;
 }
 

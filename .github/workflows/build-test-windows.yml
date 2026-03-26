@@ -148,31 +148,12 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
-        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        with:
-          msystem: clang64
-          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
-          location: C:\msys64_meshlib_mrbind
-
-      - name: Install gettext utilities
-        if: ${{ inputs.upload_artifacts }}
-        shell: msys2 {0}
         run: |
-          pacman -S --noconfirm mingw-w64-clang-x86_64-gettext-tools
-
-      - name: Install Clang in MSYS2
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        shell: msys2 {0}
-        run: |
-          ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
-
-      - name: Install Ninja for CMake
-        if: ${{ matrix.build_system == 'CMake' }}
-        uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
+          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
+          rm msys64_meshlib_mrbind.zip
 
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}

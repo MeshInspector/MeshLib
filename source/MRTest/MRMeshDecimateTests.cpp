@@ -103,7 +103,7 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
         return ( l == 1_f && r == 5_f ) || ( l == 5_f && r == 1_f );
     };
     auto res = decimateMesh( mesh, dsettings );
-    ASSERT_EQ( res.vertsDeleted, 1 );
+    EXPECT_EQ( res.vertsDeleted, 1 );
 
     // rotate triangulation in a way that 46 edge is further from beginning than 26 and 24 (to change decimation queue order)
     std::swap( t[1_f], t[7_f] );
@@ -117,7 +117,7 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
         return ( l == 6_f && r == 7_f ) || ( l == 7_f && r == 6_f );
     };
     res = decimateMesh( mesh, dsettings );
-    ASSERT_EQ( res.vertsDeleted, 1 );
+    EXPECT_EQ( res.vertsDeleted, 1 );
 }
 
 } //namespace MR

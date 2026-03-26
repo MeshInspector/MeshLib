@@ -49,11 +49,7 @@ function(mr_add_translations TARGET_NAME)
       endforeach(LOCALE_DIR)
 
       list(LENGTH FOUND_LOCALES FOUND_LOCALES_COUNT)
-      if(${FOUND_LOCALES_COUNT} EQUAL 1)
-        message(STATUS "Found ${FOUND_LOCALES_COUNT} translation for ${DOMAIN_NAME}.")
-      else()
-        message(STATUS "Found ${FOUND_LOCALES_COUNT} translations for ${DOMAIN_NAME}.")
-      endif()
+      message(STATUS "Found ${FOUND_LOCALES_COUNT} translation(s) for ${DOMAIN_NAME}.")
     endforeach(DOMAIN_NAME)
 
     if(POT_FILES)

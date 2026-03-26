@@ -639,6 +639,7 @@ struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
 struct FillHoleParams;
+struct FillHoleNicelySettings;
 struct TriMesh;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,

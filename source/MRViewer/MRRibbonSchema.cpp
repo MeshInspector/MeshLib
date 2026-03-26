@@ -580,6 +580,7 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
         assert( false );
         return;
     }
+    // cannot use `path.stem()` because of two segment extensions (.items.json)
     const auto filename = utf8string( path.filename() );
     const auto stem = filename.substr( 0, filename.find( '.' ) );
     readItemsJson_( *itemsStructRes, stem );
@@ -674,6 +675,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         assert( false );
         return;
     }
+    // cannot use `path.stem()` because of two segment extensions (.ui.json)
     const auto filename = utf8string( path.filename() );
     const auto stem = filename.substr( 0, filename.find( '.' ) );
     const auto domainId = Locale::findDomain( stem );

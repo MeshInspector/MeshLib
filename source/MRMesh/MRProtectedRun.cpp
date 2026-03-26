@@ -1,6 +1,10 @@
 #include "MRProtectedRun.h"
 #include <boost/exception/diagnostic_information.hpp>
 
+#ifdef _WIN32
+#include <excpt.h>
+#endif
+
 namespace MR
 {
 
@@ -10,6 +14,7 @@ namespace
 bool protectedRun_( const std::function<void ()>& task, std::string & s )
 {
 #ifndef NDEBUG
+    (void)s;
     task();
 #else
     try

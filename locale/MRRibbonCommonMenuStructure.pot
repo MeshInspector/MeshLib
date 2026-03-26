@@ -299,3 +299,23 @@ msgstr ""
 msgid "Show information about currently selected object."
 msgstr ""
 
+msgctxt "Tab name"
+msgid "Home"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "View"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "Select"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "CT"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "Test"
+msgstr ""
+

@@ -148,7 +148,7 @@ void ProgressBarImpl::initialize_( std::string title, int taskCount, std::functi
 
 void ProgressBarImpl::tryRun_( const std::function<void ()>& task )
 {
-    auto maybeOk = protectedRunEx( task );
+    auto maybeOk = protectedRun( task );
     if ( !maybeOk )
     {
         onFinish_ = [msg = std::move( maybeOk.error() )]

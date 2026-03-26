@@ -1,4 +1,5 @@
 #include "MRProtectedRun.h"
+#include <MRPch/MRSpdlog.h>
 #include <boost/exception/diagnostic_information.hpp>
 
 #ifdef _WIN32
@@ -38,14 +39,7 @@ bool protectedRun_( const std::function<void ()>& task, std::string & s )
 
 bool protectedRunEx_( const std::function<void ()>& task, std::string & s )
 {
-#ifndef _WIN32
-    return protectedRun_( task, s );
-#else
-#ifndef NDEBUG
-    task();
-    (void)s;
-    return true;
-#else
+#if defined _WIN32 && defined NDEBUG
     __try
     {
         return protectedRun_( task, s );
@@ -55,7 +49,8 @@ bool protectedRunEx_( const std::function<void ()>& task, std::string & s )
         s = "Unknown exception occurred";
         return false;
     }
-#endif
+#else
+    return protectedRun_( task, s );
 #endif
 }
 
@@ -64,17 +59,19 @@ bool protectedRunEx_( const std::function<void ()>& task, std::string & s )
 Expected<void> protectedRun( const std::function<void ()>& task )
 {
     std::string s;
-    if ( protectedRun_( task, s ) )
+    if ( protectedRunEx_( task, s ) )
         return {};
     return unexpected( std::move( s ) );
 }
 
-Expected<void> protectedRunEx( const std::function<void ()>& task )
+std::function<void ()> protectedFunc( std::function<void ()> unprotectedFunc )
 {
-    std::string s;
-    if ( protectedRunEx_( task, s ) )
-        return {};
-    return unexpected( std::move( s ) );
+    return [f = std::move( unprotectedFunc )]
+    {
+        auto maybeOk = protectedRun( f );
+        if ( !maybeOk )
+            spdlog::error( "protectedFunc error: {}", maybeOk.error() );
+    };
 }
 
 } //namespace MR

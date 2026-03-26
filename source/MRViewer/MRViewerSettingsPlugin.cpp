@@ -623,9 +623,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         {
             std::string label;
             if ( thouSep[0] == 0 )
-                label = _tr( "None" );
+                label = s_tr( "None" );
             else if ( thouSep[0] == ' ' )
-                label = _tr( "Space" );
+                label = s_tr( "Space" );
 
             if ( !label.empty() )
             {

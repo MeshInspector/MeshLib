@@ -1303,8 +1303,8 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 8.f * UI::scale(), 3.f * UI::scale() } );
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, style.ItemInnerSpacing );
         RibbonFontHolder iconsFont( RibbonFontManager::FontType::SemiBold, 0.75f );
-        const std::string worldText = MR::Locale::translate( "WORLD" );
-        const std::string localText = MR::Locale::translate( "LOCAL" );
+        const auto worldText = s_tr( "WORLD" );
+        const auto localText = s_tr( "LOCAL" );
         const auto worldTextSize = ImGui::CalcTextSize( worldText.c_str() );
         const auto localTextSize = ImGui::CalcTextSize( localText.c_str() );
         const ImVec2 layoutSize {

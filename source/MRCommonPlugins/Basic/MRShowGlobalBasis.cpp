@@ -110,13 +110,13 @@ public:
         switch ( state )
         {
         case State::none:
-            tooltip = _tr( "Basis: hide basis and grid" );
+            tooltip = s_tr( "Basis: hide basis and grid" );
             break;
         case State::basis:
-            tooltip = _tr( "Basis: show basis" );
+            tooltip = s_tr( "Basis: show basis" );
             break;
         case State::basisAndGrid:
-            tooltip = _tr( "Basis: show both basis and grid" );
+            tooltip = s_tr( "Basis: show both basis and grid" );
             break;
         case State::_count:
             // Should be unreachable.

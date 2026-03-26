@@ -288,9 +288,10 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     std::string unitSuffix;
     if ( params.unitSuffix )
     {
-        std::string_view rawSuffix = params.targetUnit ? getUnitInfo( *params.targetUnit ).unitSuffix : params.sourceUnit ? getUnitInfo( *params.sourceUnit ).unitSuffix : "";
-        if ( !rawSuffix.empty() )
-            unitSuffix = _tr( rawSuffix.data() );
+        if ( params.targetUnit )
+            unitSuffix = _tr( getUnitInfo( *params.targetUnit ).unitSuffix );
+        else if ( params.sourceUnit )
+            unitSuffix = _tr( getUnitInfo( *params.sourceUnit ).unitSuffix );
     }
     std::string ret;
 

@@ -103,7 +103,7 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
         if ( themeName_.empty() )
             UI::setTooltipIfHovered( _tr( "Cannot save theme with empty name" ) );
         else
-            UI::setTooltipIfHovered( _tr( "Please do not use any of these symbols" ) + std::string( ": \? * / \\ \" < >" ) );
+            UI::setTooltipIfHovered( s_tr( "Please do not use any of these symbols" ) + ": \? * / \\ \" < >" );
     }
 
     ModalDialog modalDialog( "File already exists", {

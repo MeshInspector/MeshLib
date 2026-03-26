@@ -39,7 +39,7 @@ bool protectedRun_( const std::function<void ()>& task, std::string & s )
 bool protectedRunEx_( const std::function<void ()>& task, std::string & s )
 {
 #ifndef _WIN32
-    return protectedRun( task, s );
+    return protectedRun_( task, s );
 #else
 #ifndef NDEBUG
     task();

@@ -64,7 +64,7 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
     //          0               /
 
     // this test checks scenario where 46 cannot collapse due to creating multiple edge
-    // but flipping 26->35 and 24->15 allows collision of 46
+    // but flipping 26->35 and 24->15 allows the collapse of 46
     VertCoords points( 7 );
     points[0_v] = Vector3f();
     points[1_v] = Vector3f( 3, 2, 0 );
@@ -95,7 +95,7 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
         .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .maxAngleChange = PI_F / 3
     };
-    // only allow to collapse 46 edge
+    // only allow collapsing 46 edge
     dsettings.preCollapse = [&mesh] ( EdgeId e, const Vector3f )->bool
     {
         auto l = mesh.topology.left( e );

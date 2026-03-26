@@ -53,15 +53,15 @@ TEST( MRMesh, MeshDecimateParallel )
 
 TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
 {
-    //          2
-    //         /|\     
-    //       // 5 \\
-    //     / / / \ \ \
-    //   /  //     \\  \
-    //  3---6-------4---1
-    //    \  \     /  /
-    //       \ \ / /
-    //          0
+    //          2               /
+    //         /|\              /
+    //       // 5 \\            /
+    //     / / / \ \ \          /
+    //   /  //     \\  \        /
+    //  3---6-------4---1       /
+    //    \  \     /  /         /
+    //       \ \ / /            /
+    //          0               /
 
     // this test checks scenario where 46 cannot collapse due to creating multiple edge
     // but flipping 26->35 and 24->15 allows collision of 46

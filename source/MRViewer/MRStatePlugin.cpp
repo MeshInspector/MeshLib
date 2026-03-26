@@ -41,7 +41,7 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
                 name = item->second.caption;
             localeDomainId = item->second.localeDomainId;
         }
-        plugin_name = Locale::translate( name.c_str(), localeDomainId );
+        plugin_name = Locale::translate( name.c_str(), Locale::Domain{ localeDomainId } );
         plugin_name += UINameSuffix();
     }, CommandLoop::StartPosition::AfterPluginInit );
     tab_ = tab;

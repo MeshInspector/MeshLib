@@ -46,7 +46,7 @@ if __name__ == "__main__":
         if not mo_output_dir.exists():
             mo_output_dir.mkdir(parents=True)
         
-        mo_output_file = mo_output_dir / f"{domain_name}.po"
+        mo_output_file = mo_output_dir / f"{domain_name}.mo"
         subprocess.run([
             msgfmt,
             po_file,

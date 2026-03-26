@@ -8,6 +8,7 @@
 #include "MRShortcutManager.h"
 #include "MRSpaceMouseController.h"
 #include "MRMesh/MRConstants.h"
+#include "MRI18n.h"
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRWasm.h"
@@ -91,16 +92,16 @@ std::string MouseController::getControlString( const MouseControlKey& key )
     switch ( key.btn )
     {
     case MouseButton::Left:
-        res += "LMB";
+        res += _tr( "LMB" );
         break;
     case MouseButton::Right:
-        res += "RMB";
+        res += _tr( "RMB" );
         break;
     case MouseButton::Middle:
-        res += "MMB";
+        res += _tr( "MMB" );
         break;
     default:
-        res += "Error";
+        res += _tr( "Error" );
         break;
     }
     return res;

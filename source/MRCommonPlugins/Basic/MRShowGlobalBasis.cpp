@@ -5,6 +5,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRCommonPlugins/Basic/MRDrawViewportWidgetsItem.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -105,24 +106,24 @@ public:
 
         state = nextState( state );
 
-        const char* tooltip = nullptr;
+        std::string tooltip;
         switch ( state )
         {
         case State::none:
-            tooltip = "Basis: hide basis and grid";
+            tooltip = s_tr( "Basis: hide basis and grid" );
             break;
         case State::basis:
-            tooltip = "Basis: show basis";
+            tooltip = s_tr( "Basis: show basis" );
             break;
         case State::basisAndGrid:
-            tooltip = "Basis: show both basis and grid";
+            tooltip = s_tr( "Basis: show both basis and grid" );
             break;
         case State::_count:
             // Should be unreachable.
             break;
         }
 
-        in.addButton( 20, "Basis", false, icon, tooltip,
+        in.addButton( 20, "Basis", false, icon, tooltip.c_str(),
             [this, id, state]{ setState( id, state ); }
         );
     }

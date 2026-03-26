@@ -64,7 +64,7 @@ std::string getItemCaption( const std::string& name )
     if ( it == RibbonSchemaHolder::schema().items.end() )
         return name;
     const auto& item = it->second;
-    return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+    return Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
 }
 
 } //anonymous namespace
@@ -519,13 +519,15 @@ void RibbonMenu::drawHeaderPannel_()
     const auto& schema = RibbonSchemaHolder::schema();
     std::vector<float> textSizes( schema.tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time
     std::vector<float> tabSizes( schema.tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time
+    std::vector<std::string> translatedTabNames( schema.tabsOrder.size() );// TODO_store: add to some store at the beginning not to calc each time
     auto summaryTabPannelSize = 2 * 12.0f * UI::scale() - cTabsInterval * UI::scale(); // init shift (by eye, not defined in current design maket)
     for ( int i = 0; i < tabSizes.size(); ++i )
     {
         if ( schema.tabsOrder[i].experimental && !getViewerInstance().experimentalFeatures )
             continue;
-        const auto& tabStr = schema.tabsOrder[i].name;
-        textSizes[i] = ImGui::CalcTextSize( tabStr.c_str() ).x;
+        const auto& tab = schema.tabsOrder[i];
+        translatedTabNames[i] = Locale::translate( "Tab name", tab.name.c_str(), tab.localeDomainId );
+        textSizes[i] = ImGui::CalcTextSize( translatedTabNames[i].c_str() ).x;
         tabSizes[i] = std::max( textSizes[i] + cTabLabelMinPadding * 2 * UI::scale(), cTabMinimumWidth * UI::scale() );
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * UI::scale() );
     }
@@ -605,6 +607,7 @@ void RibbonMenu::drawHeaderPannel_()
             continue;
         }
         const auto& tabStr = schema.tabsOrder[i].name;
+        const auto& translatedTabStr = translatedTabNames[i];
         const auto& tabWidth = tabSizes[i];
         ImVec2 tabBbMaxPoint( basePos.x + tabWidth, basePos.y + cTabHeight * UI::scale() + 2 ); // +2 due to TabItemBackground internal offset
         ImRect tabRect( basePos, tabBbMaxPoint );
@@ -646,7 +649,7 @@ void RibbonMenu::drawHeaderPannel_()
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ).getUInt32() );
         else
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
-        ImGui::RenderText( ImGui::GetCursorPos(), tabStr.c_str(), tabStr.c_str() + tabStr.size(), false );
+        ImGui::RenderText( ImGui::GetCursorPos(), translatedTabStr.c_str(), translatedTabStr.c_str() + translatedTabStr.size(), false );
         ImGui::PopStyleColor();
 
         basePos.x += ( tabWidth + cTabsInterval * UI::scale() );

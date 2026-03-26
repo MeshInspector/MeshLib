@@ -14,6 +14,10 @@
 -k_tr:1c,2,2t
 -k_tr:1,2,3t
 -k_tr:1c,2,3,4t
+-ks_tr:1,1t
+-ks_tr:1c,2,2t
+-ks_tr:1,2,3t
+-ks_tr:1c,2,3,4t
 -kf_tr:1,1t
 -kf_tr:1c,2,2t
 -kf_tr:1,2,3t

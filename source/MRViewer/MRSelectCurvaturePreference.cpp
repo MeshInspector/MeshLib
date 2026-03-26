@@ -1,5 +1,6 @@
 #include "MRSelectCurvaturePreference.h"
 #include "MRUIStyle.h"
+#include "MRI18n.h"
 
 namespace MR
 {
@@ -11,8 +12,8 @@ float SelectCurvaturePreference( PathPreference* pp )
     if ( !pp )
         return 0.0f;
 
-    UI::combo( "Curvature Preference", ( int* )pp, { "Geodesic", "Convex", "Concave" }, true, { "Select the shortest boundary", "Select longer boundary but going in convex regions", "Select longer path but going in concave regions" } );
-    UI::setTooltipIfHovered( "Select to prefer in selection convex/concave angles or neither" );
+    UI::combo( _tr( "Curvature Preference" ), ( int* )pp, { _tr( "Geodesic" ), _tr( "Convex" ), _tr( "Concave" ) }, true, { _tr( "Select the shortest boundary" ), _tr( "Select longer boundary but going in convex regions" ), _tr( "Select longer path but going in concave regions" ) } );
+    UI::setTooltipIfHovered( _tr( "Select to prefer in selection convex/concave angles or neither" ) );
     return factors[int( *pp )];
 }
 

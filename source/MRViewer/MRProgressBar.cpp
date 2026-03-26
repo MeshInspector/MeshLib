@@ -15,6 +15,7 @@
 #include "MRUITestEngine.h"
 #include "MRImGuiMultiViewport.h"
 #include "imgui_internal.h"
+#include "MRI18n.h"
 #include "MRMesh/MRProtectedRun.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimeRecord.h"
@@ -224,7 +225,7 @@ void setup()
             ImGui::SetCursorPos( ImVec2( ( windowSize.x - btnSize.x ) * 0.5f, 92.0f * UI::scale() ) );
             if ( !instance.canceled_ )
             {
-                if ( UI::button( "Cancel", btnSize, ImGuiKey_Escape ) )
+                if ( UI::button( _tr( "Cancel" ), btnSize, ImGuiKey_Escape ) )
                 {
                     std::unique_lock lock( instance.mutex_ );
                     spdlog::info( "Operation progress: \"{}\" - Canceling", instance.title_ );
@@ -233,13 +234,13 @@ void setup()
             }
             else
             {
-                ImGui::Text( "Canceling..." );
+                ImGui::Text( "%s", _tr( "Canceling..." ) );
             }
         }
 #else
-        auto textSize = ImGui::CalcTextSize( "Operation is in progress, please wait..." );
+        auto textSize = ImGui::CalcTextSize( _tr( "Operation is in progress, please wait..." ) );
         ImGui::SetCursorPos( 0.5f * ( windowSize - Vector2f( textSize ) ) );
-        ImGui::Text( "Operation is in progress, please wait..." );
+        ImGui::Text( "%s", _tr( "Operation is in progress, please wait..." ) );
 #endif
         if ( instance.closeDialogNextFrame_ )
         {

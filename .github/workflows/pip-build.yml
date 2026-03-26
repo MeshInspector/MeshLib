@@ -141,10 +141,10 @@ jobs:
         run: |
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
-          
+
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
             export PKG_CONFIG_PATH=$(uv run --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
-          
+
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \
               CXX_FOR_ABI=${{ matrix.compiler }} \
@@ -164,11 +164,11 @@ jobs:
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
           REQUIREMENTS_FILE=${PWD}/requirements/python.txt
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
-          
+
           cd build/Release/bin
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
             PYTHON_LIB_DIR=$(uv run --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBDIR)
-          
+
             LD_LIBRARY_PATH=${PYTHON_LIB_DIR} \
             uv run \
               --python ${PYTHON_VER} \
@@ -324,32 +324,19 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
-        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
-        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2
-        with:
-          msystem: clang64
-          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
-          location: C:\msys64_meshlib_mrbind
-
-      - name: Install Clang in MSYS2
-        shell: msys2 {0}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         run: |
-          ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
+          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
+          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
+          rm msys64_meshlib_mrbind.zip
 
       - name: Build MRBind
         shell: cmd
-        env:
-          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
-          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate and build MRBind bindings
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1

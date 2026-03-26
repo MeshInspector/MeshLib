@@ -5,8 +5,6 @@
 #include "MRFrameRedrawRequest.h"
 #include "MRImGui.h"
 #include "MRRibbonButtonDrawer.h"
-#include "MRMesh/MRSystem.h"
-#include "MRMesh/MRTimeRecord.h"
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
 #include "MRCommandLoop.h"
@@ -14,20 +12,19 @@
 #include "MRRibbonFontManager.h"
 #include "MRRibbonFontHolder.h"
 #include "MRRibbonMenu.h"
-#include "MRViewer/MRUITestEngine.h"
+#include "MRUITestEngine.h"
 #include "MRImGuiMultiViewport.h"
 #include "imgui_internal.h"
+#include "MRI18n.h"
+#include "MRMesh/MRProtectedRun.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRTimeRecord.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
-#include "MRI18n.h"
-#include <boost/exception/diagnostic_information.hpp>
 #include <GLFW/glfw3.h>
 #include <atomic>
 #include <thread>
 
-#ifdef _WIN32
-#include <excpt.h>
-#endif
 #if defined( __EMSCRIPTEN__ )
 #if  !defined( __EMSCRIPTEN_PTHREADS__ )
 namespace
@@ -68,8 +65,7 @@ public:
 
     // cover task execution with try catch block (in release only)
     // if catches exception shows error in main thread overriding user defined main thread post-processing
-    [[maybe_unused]] bool tryRun_( const std::function<bool ()>& task );
-    bool tryRunWithSehHandler_( const std::function<bool ()>& task );
+    void tryRun_( const std::function<void ()>& task );
 
     float lastOperationTimeSec_{ -1.0f };
     Time operationStartTime_;
@@ -151,57 +147,16 @@ void ProgressBarImpl::initialize_( std::string title, int taskCount, std::functi
         postInit();
 }
 
-bool ProgressBarImpl::tryRun_( const std::function<bool ()>& task )
+void ProgressBarImpl::tryRun_( const std::function<void ()>& task )
 {
-#ifndef NDEBUG
-    return task();
-#else
-    try
+    auto maybeOk = protectedRun( task );
+    if ( !maybeOk )
     {
-        return task();
-    }
-    catch ( const std::bad_alloc& badAllocE )
-    {
-        onFinish_ = [msg = std::string( badAllocE.what() )]
+        onFinish_ = [msg = std::move( maybeOk.error() )]
         {
-            spdlog::error( msg );
-            showError( _tr( "Not enough memory for the requested operation." ) );
+            showError( msg.c_str() );
         };
-        return true;
     }
-    catch ( ... )
-    {
-        onFinish_ = [msg = boost::current_exception_diagnostic_information()]
-        {
-            showError( msg );
-        };
-        return true;
-    }
-#endif
-}
-
-bool ProgressBarImpl::tryRunWithSehHandler_( const std::function<bool()>& task )
-{
-#ifndef _WIN32
-    return tryRun_( task );
-#else
-#ifndef NDEBUG
-    return task();
-#else
-    __try
-    {
-        return tryRun_( task );
-    }
-    __except ( EXCEPTION_EXECUTE_HANDLER )
-    {
-        onFinish_ = []
-        {
-            showError( _tr( "Unknown exception occurred" ) );
-        };
-        return true;
-    }
-#endif
-#endif
 }
 
 } //anonymous namespace
@@ -367,10 +322,9 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
             registerThreadRootTimeRecord( instance.rootTimeRecord_ );
             SetCurrentThreadName( "ProgressBar" );
 
-            instance.tryRunWithSehHandler_( [&instance, task]
+            instance.tryRun_( [&instance, task]
             {
                 instance.onFinish_ = task();
-                return true;
             } );
             finish();
 
@@ -379,10 +333,9 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 #else
         staticTaskForLaterCall = [&instance, task]
         {
-            instance.tryRunWithSehHandler_( [&instance, task]
+            instance.tryRun_( [&instance, task]
             {
                 instance.onFinish_ = task();
-                return true;
             } );
             finish();
         };
@@ -416,10 +369,9 @@ void orderWithManualFinish( const char* name, std::function<void ()> task, int t
             registerThreadRootTimeRecord( instance.rootTimeRecord_ );
             SetCurrentThreadName( "ProgressBar" );
 
-            instance.tryRunWithSehHandler_( [task]
+            instance.tryRun_( [task]
             {
                 task();
-                return true;
             } );
 
             unregisterThreadRootTimeRecord( instance.rootTimeRecord_ );
@@ -427,10 +379,9 @@ void orderWithManualFinish( const char* name, std::function<void ()> task, int t
 #else
         staticTaskForLaterCall = [&instance, task]
         {
-            instance.tryRunWithSehHandler_( [task]
+            instance.tryRun_( [task]
             {
                 task();
-                return true;
             } );
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );

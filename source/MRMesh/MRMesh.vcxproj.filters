@@ -1407,6 +1407,9 @@
     <ClInclude Include="MRLoadedMeshData.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRProtectedRun.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2308,6 +2311,9 @@
     </ClCompile>
     <ClCompile Include="MRVersatileChangeMeshAction.cpp">
       <Filter>Source Files\History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRProtectedRun.cpp">
+      <Filter>Source Files\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

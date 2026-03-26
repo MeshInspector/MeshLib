@@ -4,7 +4,10 @@
 namespace MR
 {
 
-Expected<void> protectedRun( const std::function<void ()>& task )
+namespace
+{
+
+bool protectedRun_( const std::function<void ()>& task, std::string & s )
 {
 #ifndef NDEBUG
     task();
@@ -15,37 +18,57 @@ Expected<void> protectedRun( const std::function<void ()>& task )
     }
     catch ( const std::bad_alloc& badAllocE )
     {
-        return unexpected( std::string( badAllocE.what() ) );
+        s = std::string( badAllocE.what() );
+        return false;
     }
     catch ( ... )
     {
-        return unexpected( boost::current_exception_diagnostic_information() );
+        s = boost::current_exception_diagnostic_information();
+        return false;
     }
 #endif
-    return {};
+    return true;
 }
 
-Expected<void> protectedRunEx1( const std::function<void ()>& task )
+bool protectedRunEx_( const std::function<void ()>& task, std::string & s )
 {
 #ifndef _WIN32
-    return protectedRun( task );
+    return protectedRun( task, s );
 #else
 #ifndef NDEBUG
     task();
-    return {};
+    (void)s;
+    return true;
 #else
     __try
     {
-        ///*return*/(void) protectedRun( task );
-        task();
+        return protectedRun_( task, s );
     }
     __except ( EXCEPTION_EXECUTE_HANDLER )
     {
-        //return unexpected( std::string( "Unknown exception occurred" ) );
+        s = "Unknown exception occurred";
+        return false;
     }
 #endif
 #endif
-    return {};
+}
+
+} // anonymous namespace
+
+Expected<void> protectedRun( const std::function<void ()>& task )
+{
+    std::string s;
+    if ( protectedRun_( task, s ) )
+        return {};
+    return unexpected( std::move( s ) );
+}
+
+Expected<void> protectedRunEx( const std::function<void ()>& task )
+{
+    std::string s;
+    if ( protectedRunEx_( task, s ) )
+        return {};
+    return unexpected( std::move( s ) );
 }
 
 } //namespace MR

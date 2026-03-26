@@ -51,4 +51,73 @@ TEST( MRMesh, MeshDecimateParallel )
     ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
 }
 
+TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
+{
+    //          2
+    //         /|\     
+    //       // 5 \\
+    //     / / / \ \ \
+    //   /  //     \\  \
+    //  3---6-------4---1
+    //    \  \     /  /
+    //       \ \ / /
+    //          0
+
+    // this test checks scenario where 46 cannot collapse due to creating multiple edge
+    // but flipping 26->35 and 24->15 allows collision of 46
+    VertCoords points( 7 );
+    points[0_v] = Vector3f();
+    points[1_v] = Vector3f( 3, 2, 0 );
+    points[2_v] = Vector3f( 0, 6, 0 );
+    points[3_v] = Vector3f( -3, 2, 0 );
+    points[4_v] = Vector3f( 0, 2, 0 );
+    points[5_v] = Vector3f( 0, 4, 0 );
+    points[6_v] = Vector3f( 0, 2, 0 );
+    // 46 is degenerate
+
+    Triangulation t( 8 );
+    t[0_f] = { 0_v,1_v,4_v };
+    t[1_f] = { 0_v,4_v,6_v };
+    t[2_f] = { 0_v,6_v,3_v };
+    t[3_f] = { 4_v,1_v,2_v };
+    t[4_f] = { 4_v,2_v,5_v };
+    t[5_f] = { 4_v,5_v,6_v };
+    t[6_f] = { 6_v,5_v,2_v };
+    t[7_f] = { 6_v,2_v,3_v };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+
+    DecimateSettings dsettings
+    {
+        .strategy = DecimateStrategy::ShortestEdgeFirst,
+        .maxEdgeLen = 0.1f,
+        .criticalTriAspectRatio = 1e4f,
+        .tinyEdgeLength = 0.025f,
+        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
+        .maxAngleChange = PI_F / 3
+    };
+    // only allow to collapse 46 edge
+    dsettings.preCollapse = [&mesh] ( EdgeId e, const Vector3f )->bool
+    {
+        auto l = mesh.topology.left( e );
+        auto r = mesh.topology.right( e );
+        return ( l == 1_f && r == 5_f ) || ( l == 5_f && r == 1_f );
+    };
+    auto res = decimateMesh( mesh, dsettings );
+    ASSERT_EQ( res.vertsDeleted, 1 );
+
+    // rotate triangulation in a way that 46 edge is further from beginning than 26 and 24 (to change decimation queue order)
+    std::swap( t[1_f], t[7_f] );
+    std::swap( t[5_f], t[6_f] );
+    mesh = Mesh::fromTriangles( points, t ); // reversed
+    // only allow to collapse 46 edge
+    dsettings.preCollapse = [&mesh] ( EdgeId e, const Vector3f )->bool
+    {
+        auto l = mesh.topology.left( e );
+        auto r = mesh.topology.right( e );
+        return ( l == 6_f && r == 7_f ) || ( l == 7_f && r == 6_f );
+    };
+    res = decimateMesh( mesh, dsettings );
+    ASSERT_EQ( res.vertsDeleted, 1 );
+}
+
 } //namespace MR

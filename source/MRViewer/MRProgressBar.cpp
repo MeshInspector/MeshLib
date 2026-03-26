@@ -332,10 +332,9 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 #else
         staticTaskForLaterCall = [&instance, task]
         {
-            instance.tryRunWithSehHandler_( [&instance, task]
+            instance.tryRun_( [&instance, task]
             {
                 instance.onFinish_ = task();
-                return true;
             } );
             finish();
         };
@@ -379,10 +378,9 @@ void orderWithManualFinish( const char* name, std::function<void ()> task, int t
 #else
         staticTaskForLaterCall = [&instance, task]
         {
-            instance.tryRunWithSehHandler_( [task]
+            instance.tryRun_( [task]
             {
                 task();
-                return true;
             } );
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );

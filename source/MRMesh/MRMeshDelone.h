@@ -43,6 +43,12 @@ struct DeloneSettings
 /// converts arguments in double and calls above function
 [[nodiscard]] MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange = FLT_MAX );
 
+/// given quadrangle ABCD, checks whether its edge AC is shorter than BD;
+/// useful as Delone alternative for degenerate quads
+[[nodiscard]] MRMESH_API bool checkShortDiagonalQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d );
+/// converts arguments in double and calls above function
+[[nodiscard]] MRMESH_API bool checkShortDiagonalQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d );
+
 enum class FlipEdge : int
 {
     Can,    ///< edge flipping is possible

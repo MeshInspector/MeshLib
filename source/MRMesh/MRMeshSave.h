@@ -95,3 +95,6 @@ MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::st
 } // namespace MeshSave
 
 } // namespace MR
+
+//( { ,,MRMesh.dll }::saveMesh )( ( void* )meshPtr,( void* )faceBitSet, "E:/debug.mru" )
+MRMESH_API void saveMesh( void* mesh, void* faces, const char* path );

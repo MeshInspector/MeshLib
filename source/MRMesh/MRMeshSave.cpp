@@ -9,6 +9,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRMeshTexture.h"
 #include "MRImageSave.h"
+#include "MRSerializer.h"
 
 namespace MR
 {
@@ -555,3 +556,9 @@ MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly, { .storesV
 } //namespace MeshSave
 
 } //namespace MR
+
+void saveMesh( void* mesh, void* faces, const char* path )
+{
+    using namespace MR;
+    ( void )serializeMesh( *( const Mesh* )mesh, pathFromUtf8( path ), ( const FaceBitSet* )faces );
+}

@@ -50,6 +50,20 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     return checkDeloneQuadrangle( Vector3d( a ), Vector3d( b ), Vector3d( c ), Vector3d( d ), double( maxAngleChange ) );
 }
 
+bool checkShortDiagonalQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d )
+{
+    // there should be significant difference in metrics (above floating point error) to return false
+    constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
+    const auto acDSq = distanceSq( a, c );
+    const auto bdDSq = distanceSq( b, d );
+    return acDSq <= bdDSq + eps * ( acDSq + bdDSq );
+}
+
+bool checkShortDiagonalQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+{
+    return checkShortDiagonalQuadrangle( Vector3d( a ), Vector3d( b ), Vector3d( c ), Vector3d( d ) );
+}
+
 FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitSet* region, const UndirectedEdgeBitSet* notFlippable, const VertBitSet* vertRegion )
 {
     if ( notFlippable && notFlippable->test( edge ) )
@@ -133,18 +147,23 @@ bool checkDeloneQuadrangleInMesh( const MeshTopology & topology, const VertCoord
     if ( !isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
         return true; // cannot flip because 2d quadrangle is concave
 
+    bool needleVsCaps = false; // two degenerate faces
     auto maxAngleChange = settings.maxAngleChange;
     if ( settings.criticalTriAspectRatio < FLT_MAX && maxAngleChange < NoAngleChangeLimit )
     {
-        const auto maxAspect = std::max( triangleAspectRatio( ap, cp, dp ), triangleAspectRatio( cp, ap, bp ) );
-        if ( maxAspect > settings.criticalTriAspectRatio )
+        const auto acdDegen = triangleAspectRatio( ap, cp, dp ) > settings.criticalTriAspectRatio;
+        const auto cabDegen = triangleAspectRatio( cp, ap, bp ) > settings.criticalTriAspectRatio;
+        if ( acdDegen || cabDegen )
         {
             // triangle ACD or ABC is degenerate based on their aspect ratio
             maxAngleChange = NoAngleChangeLimit;
+            needleVsCaps = acdDegen && cabDegen;
         }
     }
-
-    return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
+    if ( !needleVsCaps )
+        return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
+    else
+        return checkShortDiagonalQuadrangle( ap, bp, cp, dp );
 }
 
 bool bestQuadrangleDiagonal( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )

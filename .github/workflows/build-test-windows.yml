@@ -186,7 +186,7 @@ jobs:
       - name: Build
         shell: cmd
         env:
-          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\msys64\clang64
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
           VCPKG_ROOT: C:\vcpkg
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
@@ -218,7 +218,7 @@ jobs:
       - name: Compile translations
         if: ${{ inputs.upload_artifacts && matrix.build_system == 'MSBuild' }}
         env:
-          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\msys64\clang64
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
         run:
           py -3 scripts\gettext\compile_translations.py .\locale\ .\source\x64\${{ matrix.config }}\locale\
 

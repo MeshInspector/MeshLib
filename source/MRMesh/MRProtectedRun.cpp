@@ -23,7 +23,8 @@ bool protectedRun_( const std::function<void ()>& task, std::string & s )
     }
     catch ( const std::bad_alloc& badAllocE )
     {
-        s = std::string( badAllocE.what() );
+        s = "Not enough memory for the requested operation: ";
+        s += badAllocE.what();
         return false;
     }
     catch ( ... )

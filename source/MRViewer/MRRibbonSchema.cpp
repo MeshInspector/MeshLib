@@ -439,23 +439,15 @@ SplitCaptionInfo sAutoSplit( const std::string& str, float fontSize, float maxWi
     if ( baseSize < maxWidth )
         return { { str.size(), baseSize } };
 
-    std::vector<std::string_view> substr;
-
-    size_t begin = 0;
-    size_t end = str.find( ' ', begin );
-
-    if ( end == std::string::npos )
+    if ( str.find( ' ' ) == std::string::npos )
         return { { str.size(), baseSize } };
 
-    while ( end != std::string::npos )
+    std::vector<std::string_view> substr;
+    split( str, " ", [&] ( std::string_view s )
     {
-        if ( begin < end )
-            substr.emplace_back( &str[begin], std::distance( &str[begin], &str[end] ) );
-        begin = end + 1;
-        end = str.find( ' ', begin );
-    }
-    if ( begin < str.length() - 1 )
-        substr.emplace_back( &str[begin], std::distance( str.begin() + begin, str.end() ) );
+        substr.emplace_back( s );
+        return false;
+    } );
 
     std::vector<float> substrWidth;
     for ( const auto& s : substr )

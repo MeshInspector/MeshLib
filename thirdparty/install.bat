@@ -1,11 +1,16 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM options: use --write-s3 to push vcpkg binary cache to S3
+REM options:
+REM   --write-s3                  push vcpkg binary cache to S3 (needs AWS credentials)
+REM   --use-s3-asset-provider     fetch vcpkg download assets via thirdparty\asset-provider-s3.bat (S3 then curl).
+REM                               Use only when pinned to an older vcpkg whose upstream download URLs are stale or broken;
+REM                               newer vcpkg ports usually do not need this.
+
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
-if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
+if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib-iterator-debug
 echo Using vcpkg triplet: %VCPKG_DEFAULT_TRIPLET%
 
 REM Check if AWS CLI is installed
@@ -31,12 +36,12 @@ if not defined vcpkg_path (
 
 echo Using vcpkg version: !VCPKG_TAG!
 
-REM Check for --write-s3 option
+REM Check for CLI options
 set "write_s3_option=false"
+set "use_s3_assets=false"
 for %%i in (%*) do (
-    if /I "%%i"=="--write-s3" (
-        set "write_s3_option=true"
-    )
+    if /I "%%i"=="--write-s3" set "write_s3_option=true"
+    if /I "%%i"=="--use-s3-asset-provider" set "use_s3_assets=true"
 )
 
 REM Configure VCPKG_BINARY_SOURCES (use %VCPKG_DEFAULT_TRIPLET% for S3 path)
@@ -47,9 +52,15 @@ if "!write_s3_option!"=="true" (
     echo Mode: pull vcpkg binary cache. No AWS credentials are required.
     set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
 )
+set "VCPKG_BINARY_SOURCES=clear"
 
-REM Asset cache: x-script tries S3 then curl
-set "X_VCPKG_ASSET_SOURCES=clear;x-script,powershell -NoProfile -Command \"$u='{url}'; $d='{dst}'; aws s3 cp s3://vcpkg-export/downloads/$(Split-Path -Leaf $u) $d --no-sign-request 2>$null; if(!(Test-Path $d)){curl.exe -L -s -o $d $u}\""
+if "!use_s3_assets!"=="true" (
+    echo Mode: S3 asset provider ^(thirdparty\asset-provider-s3.bat^).
+    set "SCRIPT_PATH=%~dp0asset-provider-s3.bat"
+    set "X_VCPKG_ASSET_SOURCES=clear;x-script,!SCRIPT_PATH! {url} {sha512} {dst}"
+) else (
+    set "X_VCPKG_ASSET_SOURCES="
+)
 
 REM Ensure vcpkg downloads folder exists
 if not exist "!vcpkg_path!downloads\" mkdir "!vcpkg_path!downloads"

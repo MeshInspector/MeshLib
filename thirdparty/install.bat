@@ -10,7 +10,7 @@ REM                               newer vcpkg ports usually do not need this.
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
-if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib-iterator-debug
+if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 echo Using vcpkg triplet: %VCPKG_DEFAULT_TRIPLET%
 
 REM Check if AWS CLI is installed
@@ -54,10 +54,10 @@ REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
 if "!aws_cli_available!"=="true" (
     if "!write_s3_option!"=="true" (
         echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
     ) else (
         echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
     )
 ) else (
     echo "Mode: build from source (no S3 binary cache)."

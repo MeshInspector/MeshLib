@@ -182,4 +182,4 @@ jobs:
         env:
           VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
         run: |
-          .\thirdparty\install.bat --write-s3
+          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider

@@ -105,7 +105,7 @@ jobs:
 
       - name: Update vcpkg packages
         run: |
-          .\thirdparty\install.bat --write-s3
+          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg

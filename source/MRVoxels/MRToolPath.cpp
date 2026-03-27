@@ -829,7 +829,10 @@ Expected<ToolPathResult> lacingToolPathDM( const MeshPart& mp, const ToolPathPar
     m.z = Vector3f::minusZ();
     Vector2i resolution{ (int) std::ceil( box.size().x / params.sectionStep), (int) std::ceil( box.size().y / params.sectionStep ) };
     MeshToDistanceMapParams paramsDM( m, { boxMin.x, boxMin.y, 0.f }, resolution, { box.size().x, box.size().y } );
-    DistanceMap distanceMap = computeDistanceMapD( mesh, paramsDM );
+    res.dm = std::make_shared<DistanceMap>( computeDistanceMapD( mesh, paramsDM ) );
+    res.xf = paramsDM.xf();
+    res.modifiedMesh = mesh;
+    DistanceMap& distanceMap = *res.dm;
 
     Vector2<size_t> resDM = { distanceMap.resX(), distanceMap.resY() };
 
@@ -874,37 +877,71 @@ Expected<ToolPathResult> lacingToolPathDM( const MeshPart& mp, const ToolPathPar
     }
     else
     {
-        /*
+        // logic for skipping points that not will milling
+        // to speed up, we use tbb::parallel_reduce
         class CommandCreator {
             DistanceMap* dm_;
+            Vector2<size_t> resDM_ = {};
+            Vector3f boxMin_ = {};
+            float sectionStep_;
+            bool cutDirectionIsX_ = true;
+            int cutDirectionIdx_ = 0;
+            Axis sideDirection_ = Axis::Y;
+            int sideDirectionIdx_ = 1;
+
+            bool toolWork_ = false;
         public:
             std::vector<GCommand> commands;
             void operator()( const tbb::blocked_range<size_t>& r )
             {
-                for ( size_t i = r.begin(); i != r.end(); ++i )
+                auto& distanceMap = *dm_;
+                commands.reserve( r.end() - r.begin() );
+                for ( size_t index = r.begin(); index != r.end(); ++index )
                 {
                     Vector2<size_t> coord;
-                    coord[sideDirectionIdx] = index / resDM[cutDirectionIdx];
-                    coord[cutDirectionIdx] = index % resDM[cutDirectionIdx];
-                    if ( coord[sideDirectionIdx] & 1 ) // backward direction
-                        coord[cutDirectionIdx] = resDM[cutDirectionIdx] - 1 - coord[cutDirectionIdx];
+                    coord[sideDirectionIdx_] = index / resDM_[cutDirectionIdx_];
+                    coord[cutDirectionIdx_] = index % resDM_[cutDirectionIdx_];
+                    if ( coord[sideDirectionIdx_] & 1 ) // backward direction
+                        coord[cutDirectionIdx_] = resDM_[cutDirectionIdx_] - 1 - coord[cutDirectionIdx_];
 
                     auto zRes = distanceMap.get( coord.x, coord.y );
-                    float z = zRes ? -*zRes : boxMin.z;
+                    float z = zRes ? -*zRes : boxMin_.z;
+
+                    // TODO need process tool state (on work or out)
+                    // 1. if the current point is not being milled and the milling cutter is not in working state, skip the point
+                    // 2. if we are processing the current point and the milling cutter is in working state, we add the working movement to the current point.
+                    // 3. if the current point is working and the milling cutter is in a non-working state,
+                    // add the idle movement to the current XY coordinates and add the working stroke along the Z to the desired height.
+                    // 4. is not being milled and the milling cutter is in working state, add an idle lift along the Z axis to a safe height.
 
                     //res.commands.push_back( { .x = coord[cutDirectionIdx] * params.sectionStep + boxMin.x, .z = z } );
-                    commands[index + 2] = GCommand( { .x = coord.x * params.sectionStep + boxMin.x,
-                        .y = coord.y * params.sectionStep + boxMin.y,
-                        .z = z } );
+                    //commands.push_back( GCommand( { .x = coord.x * sectionStep_ + boxMin_.x,
+                    //    .y = coord.y * sectionStep_ + boxMin_.y,
+                    //    .z = z } ) );
                 }
             }
 
-
-            CommandCreator( CommandCreator& cc, tbb::split ) : dm_( cc.dm_ ) {}
-            void join( const CommandCreator& cc ) { commands.append_range( cc.commands ); }
-            CommandCreator( DistanceMap* dm ) : dm_( dm ) {}
+            CommandCreator( CommandCreator& cc, tbb::split ) : dm_( cc.dm_ ), resDM_( cc.resDM_ ),
+                cutDirectionIsX_( cc.cutDirectionIsX_ ), cutDirectionIdx_( cc.cutDirectionIdx_ ),
+                sideDirection_( cc.sideDirection_ ), sideDirectionIdx_( cc.sideDirectionIdx_ ) {}
+            void join( const CommandCreator& cc )
+            {
+                // TODO to connect two sets of commands, you need to take into account the positions of the tool at the end of the main set and at the beginning of the additional one.
+                commands.append_range( cc.commands );
+            }
+            CommandCreator( DistanceMap* dm, const Vector2<size_t>& resDM, const Vector3f& boxMin, float sectionStep, Axis cutDirection ) :
+                dm_( dm ), resDM_( resDM ), boxMin_( boxMin ), sectionStep_( sectionStep )
+            {
+                cutDirectionIsX_ = cutDirection == Axis::X;
+                cutDirectionIdx_ = int( cutDirection );
+                sideDirection_ = cutDirectionIsX_ ? Axis::Y : Axis::X;
+                sideDirectionIdx_ = int( sideDirection_ );
+            }
         };
-        */
+        CommandCreator commandCreator( &distanceMap, resDM, boxMin, params.sectionStep, cutDirection );
+
+        tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, resDM.x * resDM.y ), commandCreator );
+        res.commands = std::move( commandCreator.commands );
     }
 
     return res;

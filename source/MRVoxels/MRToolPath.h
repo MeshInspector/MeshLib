@@ -6,6 +6,7 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRAffineXf3.h" // DEBUG
 
 namespace MR
 {
@@ -131,6 +132,8 @@ struct ToolPathResult
     FaceBitSet modifiedRegion;
     // constains type of movement and its feed
     std::vector<GCommand> commands;
+    std::shared_ptr<DistanceMap> dm; // DEBUG
+    AffineXf3f xf; // DEBUG
 };
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )

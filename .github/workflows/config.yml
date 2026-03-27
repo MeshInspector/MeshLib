@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2026.01.16" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.03.18" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -128,13 +128,13 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: linux-changes
         with:
           filters: |
@@ -147,7 +147,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**)'
 
       - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: linux-vcpkg-changes
         with:
           filters: |
@@ -157,7 +157,7 @@ jobs:
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: windows-changes
         with:
           filters: |
@@ -199,7 +199,7 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@f29500c9d60a99ed5168e39ee367e0976884c46e # v6.0.1
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
         id: version
         with:
           tag_prefix: "v"
@@ -239,7 +239,7 @@ jobs:
 
           jq \
             --arg vs19 "2024.10.21" \
-            --arg vs22 "2026.01.16" \
+            --arg vs22 "2026.03.18" \
             '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
             | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
             "$MATRIX_FILE" > tmp.json

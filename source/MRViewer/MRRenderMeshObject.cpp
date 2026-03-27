@@ -79,7 +79,6 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     }
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "onlyOddFragments" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::OnlyOddFragments, renderParams.viewportId ) ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "invertNormals" ), objMesh_->getVisualizeProperty( VisualizeMaskType::InvertedNormals, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "mirrored" ), renderParams.modelMatrix.det() < 0.0f ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "enableShading" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::EnableShading, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "flatShading" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::FlatShading, renderParams.viewportId ) ) );
@@ -350,7 +349,6 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
         GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
     }
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "invertNormals" ), objMesh_->getVisualizeProperty( VisualizeMaskType::InvertedNormals, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objMesh_->getColoringType() == ColoringType::VertsColorMap ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->globalClippedByPlane( renderParams.viewportId ) ) );
@@ -831,7 +829,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
             vertPosSize_ = (int)mesh->points.size();
         }
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ );
-        std::copy( MR::begin( mesh->points ), MR::begin( mesh->points ) + vertPosSize_, buffer.data() );
+        std::copy( begin( mesh->points ), begin( mesh->points ) + vertPosSize_, buffer.data() );
         return buffer;
     }
 }
@@ -849,7 +847,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
     const auto& creases = objMesh_->creases();
-    
+
     if ( creases.any() )
     {
         assert( cornerMode_ );
@@ -947,7 +945,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
             vertColorsSize_ = (int)vertsColorMap.size();
         }
         auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ );
-        std::copy( MR::begin( vertsColorMap ), MR::begin( vertsColorMap ) + vertColorsSize_, buffer.data() );
+        std::copy( begin( vertsColorMap ), begin( vertsColorMap ) + vertColorsSize_, buffer.data() );
         return buffer;
     }
 }

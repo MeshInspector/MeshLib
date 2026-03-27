@@ -55,7 +55,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/install_apt_cuda.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \

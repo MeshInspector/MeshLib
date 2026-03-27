@@ -224,10 +224,19 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
     } );
-    // force redraw window to prevent ghosting on Windows with multi windows enabled
+
+    // It is necessary to redraw the contents of the window when moving the window in Windows OS
+    // 
+    // (on Windows) The glfw_window_pos callback is called, but glfwWaitEvents does not pass,
+    // and event queue processing is not performed until the end of the move.
+    // For this reason, draw is called outside of EventQueue.
+    // 
+    // "On some platforms, a window move, resize or menu operation will cause event processing to block. This is due to how event processing is designed on those platforms"
+    // https://www.glfw.org/docs/latest/group__window.html#ga37bd57223967b4211d60ca1a0bf3c832
+    // 
+    // https://stackoverflow.com/questions/71243906/glfw-window-poll-events-lag
 #ifdef _WIN32
-    if ( viewer->isMultiViewportAvailable() && viewer->getLaunchParams().multiViewport )
-        viewer->draw( true );
+    viewer->draw( true );
 #endif
 }
 
@@ -352,7 +361,7 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
     float fontSize = 20.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        fontSize *= menu->menu_scaling();
+        fontSize *= menu->menuScaling();
     label->setFontHeight( fontSize );
     obj.addChild( label );
 }
@@ -915,7 +924,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         menuPlugin_->init( this );
     }
 
-    // print after menu init to know valid menu_scaling
+    // print after menu init to know valid menuScaling
     spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
 
     init_();
@@ -2151,7 +2160,7 @@ void Viewer::initBasisAxesObject_()
             return;
         auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
         for ( const auto& label : labels )
-            label->setFontHeight( 20.0f * menuPlugin_->menu_scaling() );
+            label->setFontHeight( 20.0f * menuPlugin_->menuScaling() );
     } ) );
 }
 

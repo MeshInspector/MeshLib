@@ -40,6 +40,8 @@ wheelhouse/*
 /source/MeshLibC2/include
 /source/MeshLibC2/src
 /source/MeshLibC2/temp
+/source/MeshLibC2Cuda/include
+/source/MeshLibC2Cuda/src
 compile_commands.json
 /source/CustomMRPlatform.props
 /source/MRDotNet2/bin
@@ -50,3 +52,5 @@ compile_commands.json
 /source/Debug
 /source/Release
 # ]
+/thirdparty/boost-libs/
+/scripts/mrbind/msys2_packages

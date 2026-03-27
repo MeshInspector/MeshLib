@@ -116,6 +116,13 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
           CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
 
+      - name: Install gettext utilities
+        if: ${{ inputs.upload_artifacts }}
+        env:
+          HOMEBREW_NO_INSTALL_UPGRADE: 1
+        run: |
+          brew install gettext
+
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: |
@@ -250,7 +257,7 @@ jobs:
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         env:
           ACTIONS_ARTIFACT_UPLOAD_TIMEOUT_MS: 1800000
         with:
@@ -274,12 +281,12 @@ jobs:
           python3 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
           python3 -m pip install delocate==0.10.7
-          python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.dylib" "./patched_content/"
+          python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.dylib
           ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/libMeshLibC2.dylib
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
           path: ./patched_content/*

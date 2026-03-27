@@ -14,6 +14,7 @@ if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshl
 echo Using vcpkg triplet: %VCPKG_DEFAULT_TRIPLET%
 
 REM Check if AWS CLI is installed
+set "aws_cli_available=false"
 aws.exe --version >nul 2>&1
 if errorlevel 1 (
     echo AWS CLI v2: not found
@@ -21,6 +22,7 @@ if errorlevel 1 (
 ) else (
     echo AWS CLI v2: found
     echo "Vcpkg binary cache (if available) will be downloaded from S3"
+    set "aws_cli_available=true"
 )
 
 REM Detect vcpkg path
@@ -43,15 +45,25 @@ for %%i in (%*) do (
     if /I "%%i"=="--write-s3" set "write_s3_option=true"
     if /I "%%i"=="--use-s3-asset-provider" set "use_s3_assets=true"
 )
-
-REM Configure VCPKG_BINARY_SOURCES (use %VCPKG_DEFAULT_TRIPLET% for S3 path)
-if "!write_s3_option!"=="true" (
-    echo Mode: pull-push vcpkg binary cache. AWS credentials are required.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
-) else (
-    echo Mode: pull vcpkg binary cache. No AWS credentials are required.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/%VCPKG_DEFAULT_TRIPLET%/,readwrite;"
+if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
+    echo "Error: --write-s3 requires AWS CLI to be installed."
+    exit /b 1
 )
+
+REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
+if "!aws_cli_available!"=="true" (
+    if "!write_s3_option!"=="true" (
+        echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
+        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    ) else (
+        echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    )
+) else (
+    echo "Mode: build from source (no S3 binary cache)."
+    set "VCPKG_BINARY_SOURCES=clear"
+)
+
 set "VCPKG_BINARY_SOURCES=clear"
 
 if "!use_s3_assets!"=="true" (

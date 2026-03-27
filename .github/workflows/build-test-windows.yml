@@ -141,7 +141,7 @@ jobs:
 
       - name: Add msbuild to PATH
         if: ${{ matrix.build_system == 'MSBuild' }}
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Install .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -149,40 +149,26 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
-        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        with:
-          msystem: clang64
-          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
-          location: C:\msys64_meshlib_mrbind
-
-      - name: Install Clang in MSYS2
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        shell: msys2 {0}
         run: |
-          ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
+          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
+          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
+          rm msys64_meshlib_mrbind.zip
 
-      - name: Install Ninja for CMake
-        if: ${{ matrix.build_system == 'CMake' }}
-        uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+      - name: Install gettext utilities
+        if: ${{ inputs.upload_artifacts }}
+        run: |
+          C:\msys64_meshlib_mrbind\msys2_shell.cmd -clang64 -defterm -no-start -c "pacman -S --noconfirm --needed mingw-w64-clang-x86_64-gettext-tools"
 
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: cmd
-        env:
-          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
-          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate C bindings
         if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
@@ -192,8 +178,6 @@ jobs:
       - name: Generate C# bindings
         if: ${{ env.BUILD_C_SHARP == 'true' }}
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
@@ -203,6 +187,7 @@ jobs:
       - name: Build
         shell: cmd
         env:
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
         run: |
@@ -227,12 +212,17 @@ jobs:
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind}}
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
+
+      - name: Compile translations
+        if: ${{ inputs.upload_artifacts && matrix.build_system == 'MSBuild' }}
+        env:
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
+        run:
+          py -3 scripts\gettext\compile_translations.py .\locale\ .\source\x64\${{ matrix.config }}\locale\
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
@@ -342,7 +332,7 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
           path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
@@ -359,7 +349,7 @@ jobs:
 
       - name: Upload MeshLibC2 headers archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers
           path: MeshLibC2Headers.zip
@@ -370,12 +360,12 @@ jobs:
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
-          python -m pip install delvewheel
-          python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MeshLibC2.dll" "./patched_content/"
+          py -3 -m pip install delvewheel
+          py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/x64/Release/MeshLibC2.dll ./source/x64/Release/MeshLibC2Cuda.dll
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveWindows-x64
           path: ./patched_content/*
@@ -383,11 +373,10 @@ jobs:
 
       - name: Upload NuGet library DLL and XML to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetDllXml
           path: |
             ./source/x64/Release/MRDotNet2.dll
             ./source/x64/Release/MRDotNet2.xml
           retention-days: 1
-          

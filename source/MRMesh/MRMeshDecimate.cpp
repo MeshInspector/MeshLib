@@ -65,7 +65,9 @@ private:
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
-    int numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t numInitialEdges_ = 0; // initial number of edges in the queue
+    size_t numFlipsDone_ = 0; // total number of flip-edge operations done so far
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -329,6 +331,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
         v = {};
     }
     assert( elms.size() == queueSize );
+    numInitialEdges_ = queueSize;
     return elms;
 }
 
@@ -412,7 +415,8 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     auto earlyReturn = [&]( float errSq )
     {
         EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
-        if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
+        // ( numFlipsDone_ < numInitialEdges_ ) prevents never ending flips scenario
+        if ( settings_.maxAngleChange >= 0 && numFlipsDone_ < numInitialEdges_ && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
@@ -510,15 +514,20 @@ void MeshDecimator::addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos )
 
 void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
 {
+    ++numFlipsDone_;
     EdgeId e = ue;
     mesh_.topology.flipEdge( e );
     assert( mesh_.topology.left( e ) );
     assert( mesh_.topology.right( e ) );
     addInQueueIfMissing_( e.undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e.sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.next( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.prev( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes
@@ -739,9 +748,18 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
             if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
-                ++numOutdated_; // collapse error for of all neighbor edges with vo must increase
+            {
+                // collapse error for all the edges (including this one) incident to remaining vertex (vo) must increase,
+                // we do not put the edge in the queue again before previous (smaller) error-version is extracted from the queue
+                ++numOutdated_;
+            }
             if ( mesh_.topology.left( e ) )
+            {
+                // an edge can be missed in the queue before because some criterion did not allow collapsing it,
+                // and after just happened collapse that edge can become eligible again, so we try adding it in the queue;
+                // but if the edge was already in the queue, assume that its error does not change so numOutdated_ is not modified
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            }
         }
     }
     return vo;

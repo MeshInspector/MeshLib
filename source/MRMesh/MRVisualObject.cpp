@@ -311,8 +311,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
         case VisualizeMaskType::Visibility:
             (void)visibilityMask(); // Call this for the side effects, in case it's overridden. Can't return it directly, as it returns by value.
             return visibilityMask_;
-        case VisualizeMaskType::InvertedNormals:
-            return invertNormals_;
         case VisualizeMaskType::ClippedByPlane:
             return clipByPlane_;
         case VisualizeMaskType::Name:
@@ -334,7 +332,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
 void VisualObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
-    root["InvertNormals"] = !invertNormals_.empty();
 
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
@@ -359,9 +356,6 @@ void VisualObject::serializeFields_( Json::Value& root ) const
 void VisualObject::deserializeFields_( const Json::Value& root )
 {
     Object::deserializeFields_( root );
-
-    if ( root["InvertNormals"].isBool() ) // Support old versions
-        invertNormals_ = root["InvertNormals"].asBool() ? ViewportMask::all() : ViewportMask{};
 
     auto readColors = [&root]( const char* fieldName, Color& res )
     {

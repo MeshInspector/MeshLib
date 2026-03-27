@@ -163,7 +163,9 @@ private:
     std::vector<UVCoord> uvGroup_;
     std::shared_ptr<Object> obj_;
     std::vector<Color> colors_;
+    int defaultFillamentId_{ -1 };
 
+    void initDefaultFillament_( ThreeMFLoader& loader );
     void setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::string& id, FaceColors& fColorMap );
 
 
@@ -745,13 +747,20 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
 
     FaceColors fColorMap;
     VertColors vColorMap;
+    initDefaultFillament_( loader );
+    std::optional<Color> baseFilament;
+    if ( defaultFillamentId_ < loader.filamentColors_.size() )
+        baseFilament = loader.filamentColors_[defaultFillamentId_];
     bool allTrisHaveConstColors = true;
     bool someTrisHaveNotBgColor = !bgColor.has_value();
     VertUVCoords vUVCoords;
 
     Triangulation tris;
 #if TINYXML2_MAJOR_VERSION > 10
-    tris.reserve( trianglesNode->ChildElementCount( "triangle" ) );
+    const auto cNumTriangles = trianglesNode->ChildElementCount( "triangle" );
+    tris.reserve( cNumTriangles );
+    if ( baseFilament )
+        fColorMap.reserve( cNumTriangles );
 #endif
     for ( auto triangleNode = trianglesNode->FirstChildElement( "triangle" ); triangleNode; triangleNode = triangleNode->NextSiblingElement( "triangle" ) )
     {
@@ -775,6 +784,8 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
                 hasFilamentId = triangleNode->QueryStringAttribute( "paint_color", &filamentId );
             if ( hasFilamentId == tinyxml2::XML_SUCCESS )
                 setFilamentFaceColor_( loader, tris.backId(), std::string( filamentId ), fColorMap );
+            else if ( baseFilament )
+                fColorMap.push_back( *baseFilament );
             else if ( allTrisHaveConstColors && bgColor )
                 fColorMap.push_back( *bgColor );
             continue;
@@ -1200,6 +1211,58 @@ void ThreeMFLoader::initFilamentColors_()
     }
     if ( filamentColors_.size() != fColors.size() )
         filamentColors_.clear();
+}
+
+void Node::initDefaultFillament_( ThreeMFLoader& loader )
+{
+    const tinyxml2::XMLDocument* foundModelSettings{ nullptr };
+    for ( const auto& [path, xml] : loader.xmlDocuments_ )
+    {
+        if ( pathFromUtf8( path ).stem() == "model_settings" )
+        {
+            foundModelSettings = xml.doc.get();
+            break;
+        }
+    }
+    if ( !foundModelSettings )
+        return;
+    const auto& modelSettings = *foundModelSettings;
+    auto rootNode = modelSettings.FirstChildElement();
+    if ( rootNode->Name() != std::string( "config" ) )
+        return;
+
+    auto lookupMeta = [] ( const tinyxml2::XMLElement& root )->int
+    {
+        for ( auto metaNode = root.FirstChildElement( "metadata" ); metaNode; metaNode = metaNode->NextSiblingElement( "metadata" ) )
+        {
+            if ( !metaNode->Attribute( "key", "extruder" ) )
+                continue;
+            return metaNode->IntAttribute( "value", 0 ) - 1;;
+        }
+        return -1;
+    };
+
+    for ( auto objNode = rootNode->FirstChildElement( "object" ); objNode; objNode = objNode->NextSiblingElement( "object" ) )
+    {
+        int currentRootFillamentId = -1;
+        currentRootFillamentId = lookupMeta( *objNode );
+        if ( objNode->IntAttribute( "id" ) == id_ )
+        {
+            defaultFillamentId_ = currentRootFillamentId;
+            return;
+        }
+        for ( auto partNode = objNode->FirstChildElement( "part" ); partNode; partNode = partNode->NextSiblingElement( "part" ) )
+        {
+            auto thisFilamentId = lookupMeta( *partNode );
+            if ( thisFilamentId == -1 )
+                thisFilamentId = currentRootFillamentId;
+            if ( partNode->IntAttribute( "id" ) == id_ )
+            {
+                defaultFillamentId_ = thisFilamentId;
+                return;
+            }
+        }
+    }
 }
 
 void Node::setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::string& fId, FaceColors& fColorMap )

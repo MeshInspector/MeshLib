@@ -62,7 +62,7 @@ struct BendContoursAlongCurveParams
 MRMESH_API Expected<Mesh> bendContoursAlongCurve( const Contours2f& contours, const CurveFunc& curve, const BendContoursAlongCurveParams& params );
 
 /// Converts contours in thick mesh, and deforms it along given surface path: start->path->end
-MRMESH_API Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end,
+MRMESH_API Expected<Mesh> bendContoursAlongSurfacePath( const Contours2f& contours, const Mesh& mesh, const GeodesicPath& path,
     const BendContoursAlongCurveParams& params );
 
 /// Converts contours in thick mesh, and deforms it along given surface path
@@ -86,7 +86,7 @@ MRMESH_API Expected<CurveFunc> curveFromPoints( const CurvePoints& cp, float * o
 MRMESH_API Expected<CurveFunc> curveFromPoints( CurvePoints&& cp, float* outCurveLen = nullptr );
 
 /// converts polyline given as a number of MeshTriPoint/MeshEdgePoint into CurvePoints
-[[nodiscard]] MRMESH_API CurvePoints meshPathCurvePoints( const Mesh& mesh, const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end );
+[[nodiscard]] MRMESH_API CurvePoints meshPathCurvePoints( const Mesh& mesh, const GeodesicPath& path );
 [[nodiscard]] MRMESH_API CurvePoints meshPathCurvePoints( const Mesh& mesh, const SurfacePath& path );
 
 /// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset (along -Z if zOffset is negative) to make a volumetric closed mesh

@@ -56,7 +56,7 @@ jobs:
           .\thirdparty\install.bat
 
       - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: WindowsArchive*
           merge-multiple: true
@@ -71,7 +71,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.triplet }}
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
@@ -82,7 +82,7 @@ jobs:
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
 
       - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.output_zip }}

@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Doxygen
-        uses: ssciwr/doxygen-install@ad81ff239f3be5262e2577abce2d728c426fcc59 # v1
+        uses: ssciwr/doxygen-install@329d88f5a303066a5bd006db7516b1925b86350e # v1
         with:
-          version: "1.11.0"
+          version: "1.14.0"
 
       - name: Checkout MeshLib
         uses: actions/checkout@v6
@@ -31,21 +31,26 @@ jobs:
           submodules: recursive
 
       - name: Download Python Stubs
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib
 
       - name: Download C bindings headers
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: CBindings
-          path: MeshLib/Cbindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        run: |
+          mv MeshLib/CbindingsTmp/MeshLibC2 MeshLib/Cbindings
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda MeshLib/CbindingsCuda
 
       - name: Download C# bindings
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: CsharpBindings

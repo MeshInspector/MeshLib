@@ -19,6 +19,7 @@
 #include <stack>
 #include <iterator>
 #include "MRCommandLoop.h"
+#include "MRI18n.h"
 
 namespace MR
 {
@@ -611,7 +612,7 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     if ( !sceneReorderWithUndo( sceneReorderCommand_ ) )
     {
         if ( !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to )
-            showModal( "Cannot perform such reorder", NotificationType::Error );
+            showModal( _tr( "Cannot perform such reorder" ), NotificationType::Error );
         else
         {
             sceneReorderCommand_ = {};

@@ -48,6 +48,7 @@
     <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
+    <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
@@ -66,6 +67,7 @@
     <ClCompile Include="MRFillingSurface.cpp" />
     <ClCompile Include="MRBendTextAlongCurveTests.cpp" />
     <ClCompile Include="MRFormatTests.cpp" />
+    <ClCompile Include="MRMeshMeshDistanceTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

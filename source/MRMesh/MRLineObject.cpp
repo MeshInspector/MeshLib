@@ -29,7 +29,7 @@ void LineObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
     auto currentXf = xf( id );
     currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s_.get( id );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 void LineObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
@@ -43,6 +43,14 @@ void LineObject::setLength( float size, ViewportId id /*= {}*/ )
 {
     auto currentXf = xf( id );
     currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineObjectLength_ ) );
+    setXf( currentXf, id );
+}
+
+void LineObject::setPoints( const Vector3f& a, const Vector3f& b, ViewportId id /*= {}*/ )
+{
+    auto currentXf = xf( id );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), b - a ) * Matrix3f::scale( Vector3f::diagonal( ( b - a ).length() / baseLineObjectLength_ ) );
+    currentXf.b = ( a + b ) * 0.5f;
     setXf( currentXf, id );
 }
 

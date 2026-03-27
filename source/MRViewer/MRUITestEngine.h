@@ -63,9 +63,11 @@ concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::str
 // Create a "value" (slider/drag/...).
 // `T` must be a scalar; vector support must be implemented manually.
 // Pass `min >= max` to disable the range checks.
-// If this returns true, use the new value in place of the current one.
-// \param consumeValueOverride If true - retrieves (deletes) a value from storage.
-// If false - copies the value from the storage (saves the original to the storage to be retrieved again, for example, in the next frame)
+// If this returns non-null, use the new value in place of the current one.
+// \param consumeValueOverride If true, retrieves (deletes) a value from storage.
+// If false, copies the value from the storage (keeps the original value in the storage to be retrieved again in the next frame).
+// Note that regardless of `consumeValueOverride`, you can't call this function multiple times per frame with the same name (unless the names
+//   are in different groups created with `pushTree()`/`popTree()`).
 template <AllowedValueType T>
 requires std::is_arithmetic_v<T>
 [[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max, bool consumeValueOverride = true )
@@ -87,7 +89,7 @@ requires std::is_arithmetic_v<T>
 
 // Usually you don't need this function.
 // This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
-// For those, call this version first to read the value override, then draw the widget, then call the normal `CreateValue()` with the same name
+// For those, call this version first to read the value override, then draw the widget, then call the normal `createValue()` with the same name
 //   and with the new value, and discard its return value.
 template <AllowedValueType T>
 [[nodiscard]] std::optional<T> createValueTentative( std::string_view name, bool consumeValueOverride = true )

@@ -60,6 +60,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **DXF** | Yes | Yes |
 | **GAV** | Yes | Yes |
 | **PTS** | Yes | Yes |
+| **SVG** | Yes | No |
 
 ### Distance Map Formats
 

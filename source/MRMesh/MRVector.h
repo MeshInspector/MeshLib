@@ -155,29 +155,18 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
-    /// the user can directly manipulate the vector, anyway she cannot break anything
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const Vector<T, I> & a ) { return a.vec_.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( Vector<T, I> & a ) { return a.vec_.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const Vector<T, I> & a ) { return a.vec_.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec_.end(); }
+
+    /// The user can directly manipulate the vector, they can't break anything anyway.
     std::vector<T> vec_;
 
 #if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );
 #endif
 };
-
-template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( const Vector<T, I> & a )
-    { return a.vec_.begin(); }
-
-template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto begin( Vector<T, I> & a )
-    { return a.vec_.begin(); }
-
-template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( const Vector<T, I> & a )
-    { return a.vec_.end(); }
-
-template <typename T, typename I>
-[[nodiscard]] MR_BIND_IGNORE_PY inline auto end( Vector<T, I> & a )
-    { return a.vec_.end(); }
 
 /// given some std::vector and a key, returns the value associated with the key, or default value if key is invalid or outside the std::vector
 template <typename T>

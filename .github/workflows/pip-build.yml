@@ -695,24 +695,21 @@ jobs:
           failOnError: false
 
       - name: Delete Python Stubs
-        if: needs.update-documentation.result == 'success'
-        if: ${{ github.event_name == 'release' || inputs.publish }}
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: PythonStubs
           failOnError: false
 
       - name: Delete C bindings headers
-        if: needs.update-documentation.result == 'success'
-        if: ${{ github.event_name == 'release' || inputs.publish }}
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CBindings
           failOnError: false
 
       - name: Delete Csharp bindings
-        if: needs.update-documentation.result == 'success'
-        if: ${{ github.event_name == 'release' || inputs.publish }}
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CsharpBindings

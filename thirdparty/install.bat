@@ -64,8 +64,6 @@ if "!aws_cli_available!"=="true" (
     set "VCPKG_BINARY_SOURCES=clear"
 )
 
-set "VCPKG_BINARY_SOURCES=clear"
-
 if "!use_s3_assets!"=="true" (
     echo Mode: S3 asset provider ^(thirdparty\asset-provider-s3.bat^).
     set "SCRIPT_PATH=%~dp0asset-provider-s3.bat"

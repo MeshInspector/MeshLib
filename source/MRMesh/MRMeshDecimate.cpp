@@ -515,10 +515,14 @@ void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
     assert( mesh_.topology.left( e ) );
     assert( mesh_.topology.right( e ) );
     addInQueueIfMissing_( e.undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e.sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.next( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.prev( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes

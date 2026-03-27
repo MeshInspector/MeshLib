@@ -6,7 +6,7 @@ find_program(MSGFMT_EXECUTABLE
 
 function(mr_add_translations TARGET_NAME)
   if(MSGFMT_EXECUTABLE)
-    set(options "")
+    set(options NO_POT_DEPLOY)
     set(oneValueArgs "")
     set(multiValueArgs DOMAINS PATHS)
     cmake_parse_arguments(LOCALE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -52,12 +52,12 @@ function(mr_add_translations TARGET_NAME)
       message(STATUS "Found ${FOUND_LOCALES_COUNT} translation(s) for ${DOMAIN_NAME}.")
     endforeach(DOMAIN_NAME)
 
-    if(POT_FILES)
+    if(POT_FILES AND NOT LOCALE_NO_POT_DEPLOY)
       install(
         FILES ${POT_FILES}
         DESTINATION ${MR_RESOURCES_DIR}/locale
       )
-    endif(POT_FILES)
+    endif()
 
     if(MO_OUTPUT_FILES)
       add_custom_target(${TARGET_NAME}

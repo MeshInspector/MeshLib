@@ -65,7 +65,9 @@ private:
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
-    int numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t numInitialEdges_ = 0; // initial number of edges in the queue
+    size_t numFlipsDone_ = 0; // total number of flip-edge operations done so far
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -329,6 +331,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
         v = {};
     }
     assert( elms.size() == queueSize );
+    numInitialEdges_ = queueSize;
     return elms;
 }
 
@@ -412,7 +415,8 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     auto earlyReturn = [&]( float errSq )
     {
         EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
-        if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
+        // ( numFlipsDone_ < numInitialEdges_ ) prevents never ending flips scenario
+        if ( settings_.maxAngleChange >= 0 && numFlipsDone_ < numInitialEdges_ && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
@@ -510,6 +514,7 @@ void MeshDecimator::addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos )
 
 void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
 {
+    ++numFlipsDone_;
     EdgeId e = ue;
     mesh_.topology.flipEdge( e );
     assert( mesh_.topology.left( e ) );

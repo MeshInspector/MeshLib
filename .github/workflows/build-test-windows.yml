@@ -210,7 +210,7 @@ jobs:
           )
 
       - name: Generate and build Python bindings
-        if: ${{inputs.mrbind}}
+        if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         shell: cmd
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |

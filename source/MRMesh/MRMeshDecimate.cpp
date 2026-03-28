@@ -66,8 +66,7 @@ private:
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
     size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
-    size_t numInitialEdges_ = 0; // initial number of edges in the queue
-    size_t numFlipsDone_ = 0; // total number of flip-edge operations done so far
+    size_t maxRemainingFlips_ = 0; // the number of flip-edge operations that can be performed before stop adding them in the queue
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -284,6 +283,8 @@ bool MeshDecimator::initialize_()
     if ( settings_.progressCallback && !settings_.progressCallback( 0.15f ) )
         return false;
 
+    // (maxRemainingFlips_ = 1) allows adding flip operations in the queue
+    maxRemainingFlips_ = settings_.maxAngleChange >= 0 ? 1 : 0;
     initializeQueue_();
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
@@ -331,7 +332,8 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
         v = {};
     }
     assert( elms.size() == queueSize );
-    numInitialEdges_ = queueSize;
+    // prevents never ending flips scenario, (maxRemainingFlips_ = queueSize) was not enough in real cases
+    maxRemainingFlips_ = settings_.maxAngleChange >= 0 ? 10 * queueSize : 0;
     return elms;
 }
 
@@ -415,8 +417,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     auto earlyReturn = [&]( float errSq )
     {
         EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
-        // ( numFlipsDone_ < numInitialEdges_ ) prevents never ending flips scenario
-        if ( settings_.maxAngleChange >= 0 && numFlipsDone_ < numInitialEdges_ && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
+        if ( maxRemainingFlips_ > 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
@@ -514,7 +515,6 @@ void MeshDecimator::addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos )
 
 void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
 {
-    ++numFlipsDone_;
     EdgeId e = ue;
     mesh_.topology.flipEdge( e );
     assert( mesh_.topology.left( e ) );
@@ -528,6 +528,9 @@ void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
         addInQueueIfMissing_( oe.undirected() );
     for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.prev( e ).sym() ) )
         addInQueueIfMissing_( oe.undirected() );
+
+    if ( maxRemainingFlips_ > 0 )
+        --maxRemainingFlips_;
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes

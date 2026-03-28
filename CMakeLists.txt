@@ -74,6 +74,14 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_BUILD_MESHCONV OFF)
 ENDIF()
 
+# Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the
+# vcpkg python3 port ships pre-built Release binaries (IDL=0) that cannot load
+# .pyd files built against a different debug CRT (error 1114 on Windows).
+IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*")
+  set(MESHLIB_PYTHON_SUPPORT OFF)
+  set(MESHLIB_BUILD_PYTHON_MODULES OFF)
+ENDIF()
+
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 
 set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")

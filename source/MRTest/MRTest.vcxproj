@@ -22,6 +22,7 @@
     <ClCompile Include="MRContoursCutTests.cpp" />
     <ClCompile Include="MRContourTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRDeloneTests.cpp" />
     <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />

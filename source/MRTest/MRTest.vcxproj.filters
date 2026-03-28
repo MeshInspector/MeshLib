@@ -178,6 +178,9 @@
     <ClCompile Include="MRReducePathTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRDeloneTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

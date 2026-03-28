@@ -41,7 +41,8 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
     {
         if ( !std::isfinite( metricBD ) )
         {
-            // if both cases are absolutely degenerate, prefer two needle-triangles to two cap-triangles with longer diagonal
+            // we are here if both configurations include a zero area obtuse triangle with all 3 vertices distinct;
+            // select the configuration with shorter diagonal
             return distanceSq( a, c ) <= distanceSq( b, d );
         }
         return metricAC <= metricBD; // (metricAC <= metricBD + eps * ( metricAC + metricBD ))==true if metricAC is +infinity and metricBD is finite

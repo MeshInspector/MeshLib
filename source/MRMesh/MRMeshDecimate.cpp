@@ -530,7 +530,10 @@ void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
         addInQueueIfMissing_( oe.undirected() );
 
     if ( maxRemainingFlips_ > 0 )
+    {
         --maxRemainingFlips_;
+        assert( maxRemainingFlips_ > 0 ); // otherwise either the limit on the number of flips is too tight or flips are in never ending cycle
+    }
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes

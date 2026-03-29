@@ -152,6 +152,7 @@
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />
+    <ClInclude Include="MRMeshTotalAngle.h" />
     <ClInclude Include="MRMinMaxArg.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
@@ -464,6 +465,7 @@
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRMeshPatch.cpp" />
     <ClCompile Include="MRMeshSave3mf.cpp" />
+    <ClCompile Include="MRMeshTotalAngle.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROneMeshContours.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />

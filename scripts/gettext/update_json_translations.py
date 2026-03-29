@@ -32,6 +32,9 @@ if __name__ == "__main__":
 
     # Contextless records from .items.json (captions, tooltips)
     records = []
+    def add_record(s):
+        if s and s not in records:
+            records.append(s)
     with open(input_json, 'r') as f:
         doc = json.load(f)
         for item in doc['Items']:
@@ -39,11 +42,11 @@ if __name__ == "__main__":
             if 'Name' not in item:
                 continue
             if 'Caption' in item:
-                records.append(item['Caption'])
+                add_record(item['Caption'])
             else:
-                records.append(item['Name'])
+                add_record(item['Name'])
             if 'Tooltip' in item:
-                records.append(item['Tooltip'])
+                add_record(item['Tooltip'])
 
     # Tab name records from .ui.json (with "Tab name" context)
     tab_name_records = []
@@ -55,6 +58,7 @@ if __name__ == "__main__":
     with open(pot_file, 'w') as f:
         f.write(POT_HEADER)
         for rec in records:
+            rec = rec.replace('\n', "\\n")
             # TODO: support line numbers
             #f.write(f"#: {input_json}:{rec.lineno}\n")
             f.write(f'msgid "{rec}"\n')

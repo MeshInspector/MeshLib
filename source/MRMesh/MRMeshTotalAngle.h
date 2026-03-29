@@ -17,4 +17,6 @@ struct FlipRegion
     const VertBitSet* vertRegion = nullptr;
 };
 
+MRMESH_API int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const FlipRegion& region, const ProgressCallback& progressCallback );
+
 } //namespace MR

@@ -2,6 +2,8 @@
 #include "MRMeshDelone.h"
 #include "MRMesh.h"
 #include "MRTriMath.h"
+#include "MRBitSetParallelFor.h"
+#include "MRTimer.h"
 #include <cfloat>
 
 namespace MR
@@ -62,6 +64,47 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     }
 
     return res;
+}
+
+int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const FlipRegion& region, const ProgressCallback& progressCallback )
+{
+    if ( numIters <= 0 )
+        return 0;
+    MR_TIMER;
+
+    UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
+    UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
+
+    int flipsDone = 0;
+    for ( int iter = 0; iter < numIters; ++iter )
+    {
+        if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
+            return flipsDone;
+
+        flipCandidates.reset();
+        BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
+        {
+            if ( totalAngleIncreaseOnFlip( topology, points, e, region ) < 0 )
+                flipCandidates.set( e );
+        } );
+        nextFlipCandidates.reset();
+        int flipsDoneBeforeThisIter = flipsDone;
+        for ( UndirectedEdgeId e : flipCandidates )
+        {
+            if ( totalAngleIncreaseOnFlip( topology, points, e, region ) >= 0 )
+                continue;
+
+            ++flipsDone;
+            topology.flipEdge( e );
+            nextFlipCandidates.set( topology.next( EdgeId( e ) ) );
+            nextFlipCandidates.set( topology.prev( EdgeId( e ) ) );
+            nextFlipCandidates.set( topology.next( EdgeId( e ).sym() ) );
+            nextFlipCandidates.set( topology.prev( EdgeId( e ).sym() ) );
+        }
+        if ( flipsDoneBeforeThisIter == flipsDone )
+            break;
+    }
+    return flipsDone;
 }
 
 } // namespace MR

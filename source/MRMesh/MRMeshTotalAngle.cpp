@@ -41,29 +41,34 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     auto cp = points[c];
     auto dp = points[d];
     
-    float res = calcAngleLength( bp, cp, dp, ap ) - calcAngleLength( ap, bp, cp, dp );
+    float oldAngleLength = calcAngleLength( ap, bp, cp, dp );
+    float newAngleLength = calcAngleLength( bp, cp, dp, ap );
     if ( topology.right( e0 ) )
     {
         auto ep = points[topology.dest( topology.prev( e0 ) )];
-        res += calcAngleLength( ap, ep, bp, dp ) - calcAngleLength( ap, ep, bp, cp );
+        newAngleLength += calcAngleLength( ap, ep, bp, dp );
+        oldAngleLength += calcAngleLength( ap, ep, bp, cp );
     }
     if ( auto e1 = topology.next( e.sym() ); topology.left( e1 ) )
     {
         auto fp = points[topology.dest( topology.next( e1 ) )];
-        res += calcAngleLength( bp, fp, cp, dp ) - calcAngleLength( bp, fp, cp, ap );
+        newAngleLength += calcAngleLength( bp, fp, cp, dp );
+        oldAngleLength += calcAngleLength( bp, fp, cp, ap );
     }
     if ( auto e2 = topology.prev( e.sym() ); topology.right( e2 ) )
     {
         auto gp = points[topology.dest( topology.prev( e2 ) )];
-        res += calcAngleLength( cp, gp, dp, bp ) - calcAngleLength( cp, gp, dp, ap );
+        newAngleLength += calcAngleLength( cp, gp, dp, bp );
+        oldAngleLength += calcAngleLength( cp, gp, dp, ap );
     }
     if ( auto e3 = topology.next( e ); topology.left( e3 ) )
     {
         auto hp = points[topology.dest( topology.next( e3 ) )];
-        res += calcAngleLength( dp, hp, ap, bp ) - calcAngleLength( dp, hp, ap, cp );
+        newAngleLength += calcAngleLength( dp, hp, ap, bp );
+        oldAngleLength += calcAngleLength( dp, hp, ap, cp );
     }
 
-    return res;
+    return newAngleLength - oldAngleLength;
 }
 
 int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const FlipRegion& region, const ProgressCallback& progressCallback )

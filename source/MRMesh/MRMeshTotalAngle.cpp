@@ -23,18 +23,18 @@ float calcAngleLength( const Vector3f& a, const Vector3f& b, const Vector3f& c, 
 
 } //anonymous namespace
 
-float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords & points, EdgeId edge, const FlipRegion & r )
+float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords & points, EdgeId e, const FlipRegion & r )
 {
-    const auto can = canFlipEdge( topology, edge, r.region, r.notFlippable, r.vertRegion );
+    const auto can = canFlipEdge( topology, e, r.region, r.notFlippable, r.vertRegion );
     if ( can == FlipEdge::Cannot )
         return FLT_MAX;
     if ( can == FlipEdge::Must )
         return -FLT_MAX;
 
     VertId a, b, c, d;
-    topology.getLeftTriVerts( edge, a, c, d );
-    auto prevEdge = topology.prev( edge );
-    b = topology.dest( prevEdge );
+    topology.getLeftTriVerts( e, a, c, d );
+    auto e0 = topology.prev( e );
+    b = topology.dest( e0 );
 
     auto ap = points[a];
     auto bp = points[b];
@@ -42,22 +42,22 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     auto dp = points[d];
     
     float res = calcAngleLength( bp, cp, dp, ap ) - calcAngleLength( ap, bp, cp, dp );
-    if ( topology.right( prevEdge ) )
+    if ( topology.right( e0 ) )
     {
-        auto ep = points[topology.dest( topology.prev( prevEdge ) )];
+        auto ep = points[topology.dest( topology.prev( e0 ) )];
         res += calcAngleLength( ap, ep, bp, dp ) - calcAngleLength( ap, ep, bp, cp );
     }
-    if ( auto e1 = topology.next( edge.sym() ); topology.left( e1 ) )
+    if ( auto e1 = topology.next( e.sym() ); topology.left( e1 ) )
     {
         auto fp = points[topology.dest( topology.next( e1 ) )];
         res += calcAngleLength( bp, fp, cp, dp ) - calcAngleLength( bp, fp, cp, ap );
     }
-    if ( auto e2 = topology.prev( edge.sym() ); topology.right( e2 ) )
+    if ( auto e2 = topology.prev( e.sym() ); topology.right( e2 ) )
     {
         auto gp = points[topology.dest( topology.prev( e2 ) )];
         res += calcAngleLength( cp, gp, dp, bp ) - calcAngleLength( cp, gp, dp, ap );
     }
-    if ( auto e3 = topology.next( edge ); topology.left( e3 ) )
+    if ( auto e3 = topology.next( e ); topology.left( e3 ) )
     {
         auto hp = points[topology.dest( topology.next( e3 ) )];
         res += calcAngleLength( dp, hp, ap, bp ) - calcAngleLength( dp, hp, ap, cp );
@@ -89,17 +89,49 @@ int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numI
         } );
         nextFlipCandidates.reset();
         int flipsDoneBeforeThisIter = flipsDone;
-        for ( UndirectedEdgeId e : flipCandidates )
+        for ( UndirectedEdgeId ue : flipCandidates )
         {
+            const EdgeId e = ue;
             if ( totalAngleIncreaseOnFlip( topology, points, e, region ) >= 0 )
                 continue;
 
             ++flipsDone;
             topology.flipEdge( e );
-            nextFlipCandidates.set( topology.next( EdgeId( e ) ) );
-            nextFlipCandidates.set( topology.prev( EdgeId( e ) ) );
-            nextFlipCandidates.set( topology.next( EdgeId( e ).sym() ) );
-            nextFlipCandidates.set( topology.prev( EdgeId( e ).sym() ) );
+
+            if ( iter + 1 >= numIters )
+                continue;
+
+            const auto e0 = topology.prev( e );
+            nextFlipCandidates.set( e0 );
+            if ( topology.right( e0 ) )
+            {
+                nextFlipCandidates.set( topology.prev( e0 ) );
+                nextFlipCandidates.set( topology.next( e0.sym() ) );
+            }
+
+            const auto e1 = topology.next( e.sym() );
+            nextFlipCandidates.set( e1 );
+            if ( topology.left( e1 ) )
+            {
+                nextFlipCandidates.set( topology.next( e1 ) );
+                nextFlipCandidates.set( topology.prev( e1.sym() ) );
+            }
+
+            const auto e2 = topology.prev( e.sym() );
+            nextFlipCandidates.set( e2 );
+            if ( topology.right( e2 ) )
+            {
+                nextFlipCandidates.set( topology.prev( e2 ) );
+                nextFlipCandidates.set( topology.next( e2.sym() ) );
+            }
+
+            const auto e3 = topology.next( e );
+            nextFlipCandidates.set( e3 );
+            if ( topology.left( e3 ) )
+            {
+                nextFlipCandidates.set( topology.next( e3 ) );
+                nextFlipCandidates.set( topology.prev( e3.sym() ) );
+            }
         }
         if ( flipsDoneBeforeThisIter == flipsDone )
             break;

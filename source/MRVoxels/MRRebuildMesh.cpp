@@ -7,6 +7,7 @@
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshSubdivide.h"
+#include "MRMesh/MRMeshTotalAngle.h"
 
 namespace MR
 {
@@ -62,13 +63,31 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
         progress = subprogress( progress, 0.1f, 1.0f );
     }
 
+    ProgressCallback preDecimateProgress, decimateProgress;
+    if ( settings.decimate )
+    {
+        preDecimateProgress = subprogress( progress, 0.0f, 0.7f );
+        decimateProgress = subprogress( progress, 0.7f, 1.0f );
+    }
+    else
+        preDecimateProgress = progress;
+
+    ProgressCallback preDecimateReduceAngleProgress, postDecimateReduceAngleProgress;
+    if ( settings.reduceAngleNumIters > 0 )
+    {
+        preDecimateReduceAngleProgress = subprogress( preDecimateProgress, 0.9f, 1.0f );
+        preDecimateProgress = subprogress( preDecimateProgress, 0.0f, 0.9f );
+        postDecimateReduceAngleProgress = subprogress( decimateProgress, 0.9f, 1.0f );
+        decimateProgress = subprogress( decimateProgress, 0.0f, 0.9f );
+    }
+
     genOffsetParams.closeHolesInHoleWindingNumber = settings.closeHolesInHoleWindingNumber;
     genOffsetParams.voxelSize = settings.voxelSize;
     genOffsetParams.mode = settings.offsetMode;
     genOffsetParams.windingNumberThreshold = settings.windingNumberThreshold;
     genOffsetParams.windingNumberBeta = settings.windingNumberBeta;
     genOffsetParams.fwn = settings.fwn;
-    genOffsetParams.callBack = subprogress( progress, 0.0f, ( settings.decimate ? 0.7f : 1.0f ) );
+    genOffsetParams.callBack = preDecimateProgress;
 
     UndirectedEdgeBitSet sharpEdges;
     genOffsetParams.outSharpEdges = &sharpEdges;
@@ -77,10 +96,21 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     if ( !resMesh.has_value() )
         return resMesh;
 
+    ReduceTotalAngleParams reduceTotalAngleParams
+    {
+        .notFlippable = sharpEdges.any() ? &sharpEdges : nullptr
+    };
+    if ( settings.reduceAngleNumIters > 0 )
+    {
+        reduceTotalAngleInMesh( *resMesh, settings.reduceAngleNumIters, reduceTotalAngleParams, preDecimateReduceAngleProgress );
+        if ( !reportProgress( preDecimateReduceAngleProgress, 1.0f ) )
+            return unexpectedOperationCanceled();
+    }
+
     if ( settings.decimate && resMesh->topology.numValidFaces() > 0 )
     {
         const auto map = resMesh->packOptimally( false );
-        if ( !reportProgress( progress, 0.75f ) )
+        if ( !reportProgress( decimateProgress, 0.1f ) )
             return unexpectedOperationCanceled();
 
         sharpEdges = mapEdges( map.e, sharpEdges );
@@ -92,11 +122,18 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
             .stabilizer = 1e-5f, // 1e-6 here resulted in a bit worse mesh
             .notFlippable = sharpEdges.any() ? &sharpEdges : nullptr,
             .packMesh = true,
-            .progressCallback = subprogress( progress, 0.75f, 1.0f ),
+            .progressCallback = subprogress( decimateProgress, 0.1f, 1.0f ),
             .subdivideParts = 64
         };
         if ( decimateMesh( *resMesh, decimSettings ).cancelled )
             return unexpectedOperationCanceled();
+
+        if ( settings.reduceAngleNumIters > 0 )
+        {
+            reduceTotalAngleInMesh( *resMesh, settings.reduceAngleNumIters, reduceTotalAngleParams, postDecimateReduceAngleProgress );
+            if ( !reportProgress( postDecimateReduceAngleProgress, 1.0f ) )
+                return unexpectedOperationCanceled();
+        }
     }
 
     if ( settings.outSharpEdges )

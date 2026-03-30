@@ -31,44 +31,70 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     if ( can == FlipEdge::Must )
         return -FLT_MAX;
 
-    VertId a, b, c, d;
-    topology.getLeftTriVerts( e, a, c, d );
-    auto e0 = topology.prev( e );
-    b = topology.dest( e0 );
+    VertId av, bv, cv, dv;
+    topology.getLeftTriVerts( e, av, cv, dv );
+    const auto e0 = topology.prev( e );
+    bv = topology.dest( e0 );
 
-    auto ap = points[a];
-    auto bp = points[b];
-    auto cp = points[c];
-    auto dp = points[d];
+    const auto a = points[av];
+    const auto b = points[bv];
+    const auto c = points[cv];
+    const auto d = points[dv];
     
-    float oldAngleLength = calcAngleLength( ap, bp, cp, dp );
-    float newAngleLength = calcAngleLength( bp, cp, dp, ap );
+    float oldAngleLength = calcAngleLength( a, b, c, d );
+    float newAngleLength = calcAngleLength( b, c, d, a );
     if ( topology.right( e0 ) )
     {
         auto ep = points[topology.dest( topology.prev( e0 ) )];
-        newAngleLength += calcAngleLength( ap, ep, bp, dp );
-        oldAngleLength += calcAngleLength( ap, ep, bp, cp );
+        newAngleLength += calcAngleLength( a, ep, b, d );
+        oldAngleLength += calcAngleLength( a, ep, b, c );
     }
     if ( auto e1 = topology.next( e.sym() ); topology.left( e1 ) )
     {
-        auto fp = points[topology.dest( topology.next( e1 ) )];
-        newAngleLength += calcAngleLength( bp, fp, cp, dp );
-        oldAngleLength += calcAngleLength( bp, fp, cp, ap );
+        auto f = points[topology.dest( topology.next( e1 ) )];
+        newAngleLength += calcAngleLength( b, f, c, d );
+        oldAngleLength += calcAngleLength( b, f, c, a );
     }
     if ( auto e2 = topology.prev( e.sym() ); topology.right( e2 ) )
     {
-        auto gp = points[topology.dest( topology.prev( e2 ) )];
-        newAngleLength += calcAngleLength( cp, gp, dp, bp );
-        oldAngleLength += calcAngleLength( cp, gp, dp, ap );
+        auto g = points[topology.dest( topology.prev( e2 ) )];
+        newAngleLength += calcAngleLength( c, g, d, b );
+        oldAngleLength += calcAngleLength( c, g, d, a );
     }
     if ( auto e3 = topology.next( e ); topology.left( e3 ) )
     {
-        auto hp = points[topology.dest( topology.next( e3 ) )];
-        newAngleLength += calcAngleLength( dp, hp, ap, bp );
-        oldAngleLength += calcAngleLength( dp, hp, ap, cp );
+        auto h = points[topology.dest( topology.next( e3 ) )];
+        newAngleLength += calcAngleLength( d, h, a, b );
+        oldAngleLength += calcAngleLength( d, h, a, c );
     }
 
-    return newAngleLength - oldAngleLength;
+    const auto oldCircumDiameter = std::sqrt( std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) ) );
+    const auto newCircumDiameter = std::sqrt( std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) ) );
+
+    // f * newAngleLength / oldAngleLength + (1-f) * newCircumDiameter / oldCircumDiameter
+    const auto f = 0.9f;
+    float res;
+    if ( oldAngleLength == 0 )
+    {
+        if ( newAngleLength == 0 )
+            res = f;
+        else
+            return FLT_MAX;
+    }
+    else
+        res = f * newAngleLength / oldAngleLength;
+
+    if ( oldCircumDiameter == 0 )
+    {
+        if ( newCircumDiameter == 0 )
+            res = 1 - f;
+        else
+            return FLT_MAX;
+    }
+    else
+        res += ( 1 - f ) * newCircumDiameter / oldCircumDiameter;
+
+    return res;
 }
 
 int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const FlipRegion& region, const ProgressCallback& progressCallback )
@@ -89,7 +115,7 @@ int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numI
         flipCandidates.reset();
         BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
         {
-            if ( totalAngleIncreaseOnFlip( topology, points, e, region ) < 0 )
+            if ( totalAngleIncreaseOnFlip( topology, points, e, region ) < 1 )
                 flipCandidates.set( e );
         } );
         nextFlipCandidates.reset();
@@ -97,7 +123,7 @@ int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numI
         for ( UndirectedEdgeId ue : flipCandidates )
         {
             const EdgeId e = ue;
-            if ( totalAngleIncreaseOnFlip( topology, points, e, region ) >= 0 )
+            if ( totalAngleIncreaseOnFlip( topology, points, e, region ) >= 1 )
                 continue;
 
             ++flipsDone;

@@ -34,9 +34,9 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
         return 0;
 
     //          g
-    //       /    \
+    //       /    \ 
     //     d < e2 - c
-    //   / ^      ^ | \
+    //   / ^      ^ | \ 
     //  h  e3   e  e1  f
     //   \ |  /     v /
     //     a - e0 > b

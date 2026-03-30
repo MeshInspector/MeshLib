@@ -526,7 +526,7 @@ void RibbonMenu::drawHeaderPannel_()
         if ( schema.tabsOrder[i].experimental && !getViewerInstance().experimentalFeatures )
             continue;
         const auto& tab = schema.tabsOrder[i];
-        translatedTabNames[i] = Locale::translate( "Tab name", tab.name.c_str(), tab.localeDomainId );
+        translatedTabNames[i] = Locale::translate( "Tab name", tab.name.c_str(), Locale::Domain{ tab.localeDomainId } );
         textSizes[i] = ImGui::CalcTextSize( translatedTabNames[i].c_str() ).x;
         tabSizes[i] = std::max( textSizes[i] + cTabLabelMinPadding * 2 * UI::scale(), cTabMinimumWidth * UI::scale() );
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * UI::scale() );

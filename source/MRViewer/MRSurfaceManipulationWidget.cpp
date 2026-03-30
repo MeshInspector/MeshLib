@@ -411,7 +411,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                 {
                     .maxEdgeLen = 0.0f // to use 'patchMesh' default
                 },
-                .smoothSeettings =
+                .smoothSettings =
                 {
                     .edgeWeights = settings_.edgeWeights,
                     .vmass = settings_.vmass

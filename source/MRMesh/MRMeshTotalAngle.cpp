@@ -21,15 +21,17 @@ float calcAngleLength( const Vector3f& a, const Vector3f& b, const Vector3f& c, 
     return ac.length() * std::abs( MR::dihedralAngle( ln, rn, ac ) );
 }
 
-} //anonymous namespace
-
-float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords & points, EdgeId e, const FlipRegion & r )
+// returns not-negative value:
+// 0 means huge improvement in mixed total angle and Delaunay criterion after flip,
+// 1 means that that the flip will result in exactly same value of the criterion,
+// FLT_MAX means huge degradation of the mixed criterion after flip
+float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords & points, EdgeId e, const ReduceTotalAngleParams & params )
 {
-    const auto can = canFlipEdge( topology, e, r.region, r.notFlippable, r.vertRegion );
+    const auto can = canFlipEdge( topology, e, params.region, params.notFlippable, params.vertRegion );
     if ( can == FlipEdge::Cannot )
         return FLT_MAX;
     if ( can == FlipEdge::Must )
-        return -FLT_MAX;
+        return 0;
 
     VertId av, bv, cv, dv;
     topology.getLeftTriVerts( e, av, cv, dv );
@@ -71,33 +73,35 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     const auto oldCircumDiameter = std::sqrt( std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) ) );
     const auto newCircumDiameter = std::sqrt( std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) ) );
 
-    // f * newAngleLength / oldAngleLength + (1-f) * newCircumDiameter / oldCircumDiameter
-    const auto f = 0.9f;
+    // ( 1 - f ) * newAngleLength / oldAngleLength + f * newCircumDiameter / oldCircumDiameter
+    const auto f = params.factorDelone;
     float res;
     if ( oldAngleLength == 0 )
     {
         if ( newAngleLength == 0 )
-            res = f;
-        else
-            return FLT_MAX;
-    }
-    else
-        res = f * newAngleLength / oldAngleLength;
-
-    if ( oldCircumDiameter == 0 )
-    {
-        if ( newCircumDiameter == 0 )
             res = 1 - f;
         else
             return FLT_MAX;
     }
     else
-        res += ( 1 - f ) * newCircumDiameter / oldCircumDiameter;
+        res = ( 1 - f ) * newAngleLength / oldAngleLength;
+
+    if ( oldCircumDiameter == 0 )
+    {
+        if ( newCircumDiameter == 0 )
+            res += f;
+        else
+            return FLT_MAX;
+    }
+    else
+        res += f * newCircumDiameter / oldCircumDiameter;
 
     return res;
 }
 
-int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const FlipRegion& region, const ProgressCallback& progressCallback )
+} //anonymous namespace
+
+int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const ReduceTotalAngleParams& region, const ProgressCallback& progressCallback )
 {
     if ( numIters <= 0 )
         return 0;
@@ -168,6 +172,14 @@ int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numI
             break;
     }
     return flipsDone;
+}
+
+int reduceTotalAngleInMesh( Mesh& mesh, int numIters, const ReduceTotalAngleParams& params, const ProgressCallback& progressCallback )
+{
+    auto res = reduceTotalAngle( mesh.topology, mesh.points, numIters, params, progressCallback );
+    if ( res > 0 )
+        mesh.invalidateCaches( false );
+    return res;
 }
 
 } // namespace MR

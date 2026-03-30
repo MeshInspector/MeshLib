@@ -5,8 +5,14 @@
 namespace MR
 {
 
-struct FlipRegion
+struct ReduceTotalAngleParams
 {
+    /// This value must be in [0,1] range;
+    /// factorDelone = 0 means that only dihedral angles are minimized, ignoring Delaunay criterion;
+    /// factorDelone = 1 means that only Delaunay criterion is optimized ignoring dihedral angles;
+    /// other values mean that a mixture of both criteria will be optimized
+    float factorDelone = 0.1f;
+
     /// Only edges with left and right faces in this set can be flipped
     const FaceBitSet* region = nullptr;
 
@@ -17,6 +23,12 @@ struct FlipRegion
     const VertBitSet* vertRegion = nullptr;
 };
 
-MRMESH_API int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters, const FlipRegion& region, const ProgressCallback& progressCallback );
+/// minimizes summed deviation of triangle-triangle angles from plane, where each edge is weighted by its length;
+/// performs the given number of iterations, during each the edges are flipped;
+/// returns the total number of flips done
+MRMESH_API int reduceTotalAngle( MeshTopology& topology, const VertCoords& points, int numIters,
+    const ReduceTotalAngleParams& params = {}, const ProgressCallback& progressCallback = {} );
+MRMESH_API int reduceTotalAngleInMesh( Mesh& mesh, int numIters,
+    const ReduceTotalAngleParams& params = {}, const ProgressCallback& progressCallback = {} );
 
 } //namespace MR

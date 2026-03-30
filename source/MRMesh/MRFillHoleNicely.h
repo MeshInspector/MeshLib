@@ -67,7 +67,7 @@ struct FillHoleNicelySettings
     bool smoothCurvature = true;
 
     /// if `smoothCurvature` is true and `triangulateOnly is false - these settings are used to smooth new filling
-    SmoothFillingSettings smoothSeettings;
+    SmoothFillingSettings smoothSettings;
 
     /// structure with optional output attributes
     OutAttributesFillingSettings outAttributes;
@@ -96,7 +96,7 @@ struct StitchHolesNicelySettings
     bool smoothCurvature = true;
 
     /// if `smoothCurvature` is true and `triangulateOnly is false - these settings are used to smooth new filling
-    SmoothFillingSettings smoothSeettings;
+    SmoothFillingSettings smoothSettings;
 
     /// structure with optional output attributes
     OutAttributesFillingSettings outAttributes;

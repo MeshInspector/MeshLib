@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#ifndef MRVIEWER_NO_LOCALE
 #include "exports.h"
 
 #include <MRMesh/MRMeshFwd.h>
@@ -56,17 +55,13 @@ inline std::vector<std::string> translateAll( const char* context, const std::ve
 } // namespace MR::Locale
 
 #ifndef MR_NO_I18N_MACROS
-#define _tr( ... ) MR::Locale::translate( __VA_ARGS__ ).c_str()
-#define s_tr( ... ) MR::Locale::translate( __VA_ARGS__ )
-#define f_tr( ... ) fmt::runtime( MR::Locale::translate( __VA_ARGS__ ) )
-#endif // MR_NO_I18N_MACROS
-
+#ifndef MRVIEWER_NO_LOCALE
+    #define _tr( ... ) MR::Locale::translate( __VA_ARGS__ ).c_str()
+    #define s_tr( ... ) MR::Locale::translate( __VA_ARGS__ )
+    #define f_tr( ... ) fmt::runtime( MR::Locale::translate( __VA_ARGS__ ) )
 #else // MRVIEWER_NO_LOCALE
-
-#ifndef MR_NO_I18N_MACROS
-#define _tr( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
-#define s_tr( ... ) std::string( MR::Locale::translate_noop( __VA_ARGS__ ) )
-#define f_tr( ... ) fmt::runtime( MR::Locale::translate_noop( __VA_ARGS__ ) )
-#endif // MR_NO_I18N_MACROS
-
+    #define _tr( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+    #define s_tr( ... ) std::string( MR::Locale::translate_noop( __VA_ARGS__ ) )
+    #define f_tr( ... ) fmt::runtime( MR::Locale::translate_noop( __VA_ARGS__ ) )
 #endif // MRVIEWER_NO_LOCALE
+#endif // MR_NO_I18N_MACROS

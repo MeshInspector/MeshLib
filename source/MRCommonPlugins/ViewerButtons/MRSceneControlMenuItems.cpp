@@ -95,11 +95,11 @@ void ResetSceneMenuItem::preDraw_()
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
     UI::SaveChangesPopupSettings settings;
-    settings.header = _tr( "New Scene" );
-    settings.shortCloseText = _tr( "New" );
-    settings.saveTooltip = _tr( "Save current scene and then remove all objects" );
-    settings.dontSaveTooltip = _tr( "Remove all objects without saving and ability to restore them" );
-    settings.cancelTooltip = _tr( "Do not remove any objects, return back" );
+    settings.header = s_tr( "New Scene" );
+    settings.shortCloseText = s_tr( "New" );
+    settings.saveTooltip = s_tr( "Save current scene and then remove all objects" );
+    settings.dontSaveTooltip = s_tr( "Remove all objects without saving and ability to restore them" );
+    settings.cancelTooltip = s_tr( "Do not remove any objects, return back" );
     settings.onOk =  [this] () { resetScene_(); };
     UI::saveChangesPopup( "New scene##new scene", settings );
 }

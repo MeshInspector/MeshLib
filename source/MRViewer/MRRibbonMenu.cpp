@@ -1995,12 +1995,12 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
                 }
                 else
                 {
-                    errorString = _tr( "Cannot parse transform" );
+                    errorString = s_tr( "Cannot parse transform" );
                 }
             }
             else
             {
-                errorString = _tr( "Cannot parse transform" );
+                errorString = s_tr( "Cannot parse transform" );
             }
             if ( !errorString.empty() )
                 pushNotification( { .text = errorString, .type = NotificationType::Error } );

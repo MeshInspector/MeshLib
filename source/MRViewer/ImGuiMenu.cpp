@@ -1918,7 +1918,7 @@ void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& 
     {
         std::string name;
         if ( numTols == 1 )
-            name = _tr( "Tolerance" );
+            name = s_tr( "Tolerance" );
         else
             name = fmt::format( "{} {}", object.getComparablePropertyName( i ), _tr( "tolerance" ) );
 

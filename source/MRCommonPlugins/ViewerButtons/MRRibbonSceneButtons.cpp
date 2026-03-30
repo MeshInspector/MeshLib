@@ -191,7 +191,7 @@ std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::share
     {
         if ( !res.empty() )
             res += "\n";
-        res += _tr( "Deleting objects is blocked" );
+        res += s_tr( "Deleting objects is blocked" );
     }
     return res;
 }

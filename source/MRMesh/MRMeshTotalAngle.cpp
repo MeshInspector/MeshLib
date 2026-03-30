@@ -33,6 +33,16 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     if ( can == FlipEdge::Must )
         return 0;
 
+    //          g
+    //       /    \
+    //     d < e2 - c
+    //   / ^      ^ | \
+    //  h  e3   e  e1  f
+    //   \ |  /     v /
+    //     a - e0 > b
+    //       \    /
+    //         ep
+
     VertId av, bv, cv, dv;
     topology.getLeftTriVerts( e, av, cv, dv );
     const auto e0 = topology.prev( e );

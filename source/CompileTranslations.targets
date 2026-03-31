@@ -6,6 +6,8 @@
     Importing projects must define TranslationLocaleDir items pointing to the
     root locale directories (each containing <lang>/<domain>.po files), e.g.:
       <TranslationLocaleDir Include="$(SolutionDir)locale" />
+
+    The target is silently skipped if msgfmt is not found.
   -->
 
   <!-- Find msgfmt: vcpkg tools, then GETTEXT_ROOT. Leave empty to skip the target. -->
@@ -15,23 +17,14 @@
     <_MsgfmtExe Condition="'$(_MsgfmtExe)' == '' AND '$(GETTEXT_ROOT)' != '' AND Exists('$(GETTEXT_ROOT)\msgfmt.exe')">$(GETTEXT_ROOT)\msgfmt.exe</_MsgfmtExe>
   </PropertyGroup>
 
-  <ItemGroup>
-    <_TranslationPoFile Include="%(TranslationLocaleDir.Identity)\**\*.po" />
-  </ItemGroup>
-
-  <PropertyGroup>
-    <!-- Stamp file tracks last successful compilation for incremental builds -->
-    <_TranslationStampFile>$(IntDir)translations.stamp</_TranslationStampFile>
-  </PropertyGroup>
-
   <Target
     Name="CompileTranslations"
     BeforeTargets="Build"
-    Inputs="@(_TranslationPoFile)"
-    Outputs="$(_TranslationStampFile)"
-    Condition="'$(_MsgfmtExe)' != '' AND '@(_TranslationPoFile)' != ''">
+    Condition="'$(_MsgfmtExe)' != '' AND '@(TranslationLocaleDir)' != ''">
+    <ItemGroup>
+      <_TranslationPoFile Include="%(TranslationLocaleDir.Identity)\**\*.po" />
+    </ItemGroup>
     <MakeDir Directories="$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES" />
     <Exec Command="&quot;$(_MsgfmtExe)&quot; &quot;%(_TranslationPoFile.Identity)&quot; --output-file=&quot;$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES\%(_TranslationPoFile.Filename).mo&quot; --check" />
-    <Touch Files="$(_TranslationStampFile)" AlwaysCreate="true" />
   </Target>
 </Project>

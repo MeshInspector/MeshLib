@@ -40,6 +40,26 @@ template <typename T>
     return std::sqrt( circumcircleDiameterSq( a, b, c ) );
 }
 
+/// Computes the squared diameter of the smallest enclosed circle around ABC;
+/// For acute triangles it is the same as circumcircle, for obtuse triangles - the circle with the longest triangle's edge as a diameter
+/// \ingroup MathGroup
+template <typename T>
+[[nodiscard]] T mincircleDiameterSq( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    const auto ab = ( b - a ).lengthSq();
+    const auto ca = ( a - c ).lengthSq();
+    const auto bc = ( c - b ).lengthSq();
+    if ( ca >= bc + ab )
+        return ca;
+    if ( bc >= ab + ca )
+        return bc;
+    if ( ab >= ca + bc )
+        return ab;
+    const auto f = cross( b - a, c - a ).lengthSq();
+    assert( f > 0 );
+    return ab * ca * bc / f;
+}
+
 /// Computes the center of the the triangle's 0AB circumcircle
 template <typename T>
 [[nodiscard]] Vector3<T> circumcircleCenter( const Vector3<T> & a, const Vector3<T> & b )

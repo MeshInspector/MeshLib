@@ -3,6 +3,7 @@
 
 #include "MRVector2.h"
 #include "MRVector3.h"
+#include "MRPch/MRBindingMacros.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -31,6 +32,9 @@ template <typename T>
         return std::numeric_limits<T>::infinity();
     return ab * ca * bc / f;
 }
+
+MR_BIND_TEMPLATE(  float circumcircleDiameterSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double circumcircleDiameterSq( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// Computes the diameter of the triangle's ABC circumcircle
 /// \ingroup MathGroup

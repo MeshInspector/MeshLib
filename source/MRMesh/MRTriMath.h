@@ -538,8 +538,8 @@ template <typename T>
     return a;
 }
 
-MR_BIND_TEMPLATE( std::optional<float > gradientInTri( const Vector3f&, const Vector3f&, const Vector3f& ) );
-MR_BIND_TEMPLATE( std::optional<double> gradientInTri( const Vector3d&, const Vector3d&, const Vector3d& ) );
+MR_BIND_TEMPLATE( std::optional<float > findTriExitPos( const Vector3f&, const Vector3f&, const Vector3f& ) );
+MR_BIND_TEMPLATE( std::optional<double> findTriExitPos( const Vector3d&, const Vector3d&, const Vector3d& ) );
 
 /// Given 3 spheres:
 /// 1) sphere with center at b and radius rb

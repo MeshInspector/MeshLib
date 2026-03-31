@@ -23,13 +23,13 @@ Source translations live under a `locale/` directory at the project root:
 
 \code
 locale/
-  MyModule.pot                           <- template (all extractable strings)
+  MyPlugin.pot                           <- template (all extractable strings)
   MRRibbonMyMenu.pot                     <- template for ribbon JSON strings
   de/
-    MyModule.po                          <- German translations
+    MyPlugin.po                          <- German translations
     MRRibbonMyMenu.po
   fr/
-    MyModule.po                          <- French translations
+    MyPlugin.po                          <- French translations
     MRRibbonMyMenu.po
 \endcode
 
@@ -39,9 +39,9 @@ At build time, `.po` files are compiled to `.mo` and placed in the output direct
 <build>/locale/<lang>/LC_MESSAGES/<Domain>.mo
 \endcode
 
-For example: `build/Release/bin/locale/de/LC_MESSAGES/MyModule.mo`.
+For example: `build/Release/bin/locale/de/LC_MESSAGES/MyPlugin.mo`.
 
-\note The domain name is always derived from the filename stem: `MyModule.po` belongs to domain `"MyModule"`.
+\note The domain name is always derived from the filename stem: `MyPlugin.po` belongs to domain `"MyPlugin"`.
 
 # Gettext utilities and helper scripts {#I18nTooling}
 
@@ -62,8 +62,8 @@ All scripts are in `scripts/gettext/`:
 
 \code{.sh}
 python3 scripts/gettext/update_translations.py \
-    locale/MyModule.pot \
-    source/MyModule/
+    locale/MyPlugin.pot \
+    source/MyPlugin/
 \endcode
 
 This scans all `.cpp`, `.h`, and `.hpp` files and extracts strings marked by the recognized macros.
@@ -73,7 +73,7 @@ This scans all `.cpp`, `.h`, and `.hpp` files and extracts strings marked by the
 \code{.sh}
 python3 scripts/gettext/update_json_translations.py \
     locale/MRRibbonMyMenu.pot \
-    source/MyModule/MRRibbonMyMenu.items.json
+    source/MyPlugin/MRRibbonMyMenu.items.json
 \endcode
 
 ### Compiling translations
@@ -93,15 +93,15 @@ This produces `build/Release/bin/locale/<lang>/LC_MESSAGES/<Domain>.mo` for ever
 \code{.cmake}
 include(I18nHelpers)
 
-mr_add_translations(mymodule_translations
+mr_add_translations(myplugin_translations
   DOMAINS
-    MyModule
+    MyPlugin
     MRRibbonMyMenu
   PATHS
     "${CMAKE_CURRENT_PROJECT_DIR}/locale"
 )
-if(TARGET mymodule_translations)
-  add_dependencies(MyApp mymodule_translations)
+if(TARGET myplugin_translations)
+  add_dependencies(MyApp myplugin_translations)
 endif()
 \endcode
 
@@ -131,16 +131,16 @@ Call `addDomain()` once and use a returned value from `findDomain()`, before any
 \code{.cpp}
 #include <MRViewer/MRLocale.h>
 
-MR::Locale::addDomain( "MyModule" );
+MR::Locale::addDomain( "MyPlugin" );
 
-static const int kMyDomainId = MR::Locale::findDomain( "MyModule" );
+static const int kMyDomainId = MR::Locale::findDomain( "MyPlugin" );
 \endcode
 
 The returned integer is stable for the process lifetime. You can pass it to `translate()` via `MR::Locale::Domain{ kMyDomainId }`.
 
 ## Registering a custom catalog path
 
-If your module stores `.mo` files outside the standard resources directory, register the path before any UI is shown:
+If your plugin stores `.mo` files outside the standard resources directory, register the path before any UI is shown:
 
 \code{.cpp}
 MR::Locale::addCatalogPath( myPlugin.resourceDir() / "locale" );
@@ -272,18 +272,18 @@ ImGui::Text( "%s", _tr( "Empty result" ) );
 
 ## Custom header file for your domain {#I18nCustomHeader}
 
-When building a plugin or module with its own translation domain, create a project-local header file
-that redefines the macros to use your domain automatically. This way, every `_tr()` call in your module
+When building a plugin with its own translation domain, create a project-local header file
+that redefines the macros to use your domain automatically. This way, every `_tr()` call in your plugin
 looks up the correct catalog without passing domain IDs explicitly.
 
 Copy and adapt the following template (also available at `examples/cpp-samples/MRI18nDomainExample.h`):
 
 \snippet MRI18nDomainExample.h custom-domain-header
 
-To use this header in your module:
+To use this header in your plugin:
 
 1. Include your local header file instead of `<MRViewer/MRI18n.h>` in every `.cpp` file.
-2. Register the domain at startup: `MR::Locale::addDomain( MY_MODULE_I18N_DOMAIN );`
+2. Register the domain at startup: `MR::Locale::addDomain( MY_PLUGIN_I18N_DOMAIN );`
 3. All `_tr()`, `s_tr()`, and `f_tr()` calls will now use your domain.
 
 \note `findDomain()` performs a cache lookup by pointer address for `const char*` literals, so the runtime cost is minimal.
@@ -320,7 +320,7 @@ Tab names in the `"Tabs"` array are extracted with the context `"Tab name"`:
 \code{.json}
 {
   "Order": 10,
-  "LibName": "MyModule",
+  "LibName": "MyPlugin",
   "Tabs": [
     {
       "Name": "Analysis",
@@ -345,7 +345,7 @@ Run `update_json_translations.py` for each JSON pair:
 \code{.sh}
 python3 scripts/gettext/update_json_translations.py \
     locale/MRRibbonMyMenu.pot \
-    source/MyModule/MRRibbonMyMenu.items.json
+    source/MyPlugin/MRRibbonMyMenu.items.json
 \endcode
 
 The script extracts `"Caption"` (or `"Name"`) and `"Tooltip"` from `.items.json`, and tab `"Name"` fields

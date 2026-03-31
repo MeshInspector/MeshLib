@@ -44,6 +44,9 @@ template <typename T>
     return std::sqrt( circumcircleDiameterSq( a, b, c ) );
 }
 
+MR_BIND_TEMPLATE(  float circumcircleDiameter( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double circumcircleDiameter( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
 /// Computes the squared diameter of the smallest enclosed circle around ABC;
 /// For acute triangles it is the same as circumcircle, for obtuse triangles - the circle with the longest triangle's edge as a diameter
 /// \ingroup MathGroup
@@ -64,6 +67,9 @@ template <typename T>
     return ab * ca * bc / f;
 }
 
+MR_BIND_TEMPLATE(  float mincircleDiameterSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double mincircleDiameterSq( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
 /// Computes the center of the the triangle's 0AB circumcircle
 template <typename T>
 [[nodiscard]] Vector3<T> circumcircleCenter( const Vector3<T> & a, const Vector3<T> & b )
@@ -82,12 +88,18 @@ template <typename T>
     return ( bb * ( aa - ab ) * a + aa * ( bb - ab ) * b ) / ( 2 * xabSq );
 }
 
+MR_BIND_TEMPLATE( Vector3f circumcircleCenter( const Vector3f & a, const Vector3f & b ) );
+MR_BIND_TEMPLATE( Vector3d circumcircleCenter( const Vector3d & a, const Vector3d & b ) );
+
 /// Computes the center of the the triangle's ABC circumcircle
 template <typename T>
 [[nodiscard]] inline Vector3<T> circumcircleCenter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
 {
     return circumcircleCenter( a - c, b - c ) + c;
 }
+
+MR_BIND_TEMPLATE( Vector3f circumcircleCenter( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( Vector3d circumcircleCenter( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// Given triangle ABC and ball radius, finds two centers of balls each touching all 3 triangle's vertices;
 /// \return false if such balls do not exist (radius is smaller that circumcircle radius)
@@ -110,6 +122,9 @@ template <typename T>
     return true;
 }
 
+MR_BIND_TEMPLATE( bool circumballCenters( const Vector3f & a, const Vector3f & b, const Vector3f & c,  float radius, Vector3f & centerPos, Vector3f & centerNeg ) );
+MR_BIND_TEMPLATE( bool circumballCenters( const Vector3d & a, const Vector3d & b, const Vector3d & c, double radius, Vector3d & centerPos, Vector3d & centerNeg ) );
+
 /// Computes sine of minimal angle in ABC triangle, which is equal to ratio of minimal edge length to circumcircle diameter
 /// \ingroup MathGroup
 template <typename T>
@@ -124,11 +139,17 @@ template <typename T>
     return f * std::min( { ab, ca, bc } ) / ( ab * ca * bc );
 }
 
+MR_BIND_TEMPLATE(  float minTriangleAngleSin( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double minTriangleAngleSin( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
 template <typename T>
 [[nodiscard]] T minTriangleAngle( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
 {
     return std::asin( minTriangleAngleSin( a, b, c ) );
 }
+
+MR_BIND_TEMPLATE(  float minTriangleAngle( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double minTriangleAngle( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// Aspect ratio of a triangle is the ratio of the circum-radius to twice its in-radius
 /// \ingroup MathGroup
@@ -146,12 +167,18 @@ template<typename T>
     return bc * ca * ab / den;
 }
 
+MR_BIND_TEMPLATE(  float triangleAspectRatio( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double triangleAspectRatio( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
 /// computes directed double area of given triangle
 template<typename T>
 [[nodiscard]] inline Vector3<T> dirDblArea( const Triangle3<T> & t )
 {
     return cross( t[1] - t[0], t[2] - t[0] );
 }
+
+MR_BIND_TEMPLATE( Vector3f dirDblArea( const Triangle3f & t ) );
+MR_BIND_TEMPLATE( Vector3d dirDblArea( const Triangle3d & t ) );
 
 /// computes directed double area of triangle 0QR
 template<typename T>
@@ -160,12 +187,18 @@ template<typename T>
     return cross( q, r );
 }
 
+MR_BIND_TEMPLATE( Vector3f dirDblArea( const Vector3f & a, const Vector3f & b ) );
+MR_BIND_TEMPLATE( Vector3d dirDblArea( const Vector3d & a, const Vector3d & b ) );
+
 /// computes directed double area of triangle PQR
 template<typename T>
 [[nodiscard]] inline Vector3<T> dirDblArea( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return cross( q - p, r - p );
 }
+
+MR_BIND_TEMPLATE( Vector3f dirDblArea( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( Vector3d dirDblArea( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// computes unit normal of triangle 0QR
 template<typename T>

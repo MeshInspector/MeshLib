@@ -169,7 +169,7 @@ boost::signals2::connection conn = MR::Locale::onChanged( [&]( const std::string
 
 ## Defining human-readable locale names
 
-Many common languages and regions alreadyhave a pre-loaded human-readable name provided by CLDR.
+Many common languages and regions already have a pre-loaded human-readable name provided by CLDR.
 If your locale is not in the list, you can add it in runtime.
 
 \code{.cpp}

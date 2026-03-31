@@ -2,9 +2,6 @@ name: Create release
 
 on:
   workflow_call:
-    secrets:
-      BUILD_MACHINE_TOKEN:
-        required: false
     inputs:
       app_version:
         required: true
@@ -43,7 +40,7 @@ jobs:
         id: create_release
         uses: mikepenz/action-gh-release@5c3d16ffbdc3e0fbfe2c8a69a448798f5d9b30c2 # v2.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}
         with:
           name: Release ${{ inputs.release_tag }}

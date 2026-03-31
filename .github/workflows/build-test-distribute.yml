@@ -54,8 +54,6 @@ jobs:
       app_version:       ${{ needs.config.outputs.app_version }}
       release_tag:       ${{ needs.config.outputs.release_tag }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
@@ -254,7 +252,7 @@ jobs:
           shopt -s nullglob
           PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
-            echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
+            echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
@@ -268,8 +266,6 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   test-distribution:
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
@@ -282,7 +278,7 @@ jobs:
       test_macos:        ${{ needs.config.outputs.build_enable_macos == 'true' }}
       test_windows:      ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     secrets:
-      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-dev-documentation:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),

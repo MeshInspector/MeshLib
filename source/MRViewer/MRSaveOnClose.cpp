@@ -67,10 +67,10 @@ void SaveOnClosePlugin::preDraw_()
     }
 
     UI::SaveChangesPopupSettings settings;
-    settings.header = _tr( "Application Close" );
-    settings.saveTooltip = _tr( "Save the current scene and close the application" );
-    settings.dontSaveTooltip = _tr( "Close the application without saving" );
-    settings.cancelTooltip = _tr( "Do not close the application" );
+    settings.header = s_tr( "Application Close" );
+    settings.saveTooltip = s_tr( "Save the current scene and close the application" );
+    settings.dontSaveTooltip = s_tr( "Close the application without saving" );
+    settings.cancelTooltip = s_tr( "Do not close the application" );
     settings.onOk = [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );

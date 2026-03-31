@@ -426,8 +426,8 @@ template <typename T>
     return ( *p - *p1 ).length();
 }
 
-MR_BIND_TEMPLATE( std::optional<float > posFromTriEdgeLengths( float, float, float, float, float ) );
-MR_BIND_TEMPLATE( std::optional<double> posFromTriEdgeLengths( double, double, double, double, double ) );
+MR_BIND_TEMPLATE( std::optional<float > quadrangleOtherDiagonal( float, float, float, float, float ) );
+MR_BIND_TEMPLATE( std::optional<double> quadrangleOtherDiagonal( double, double, double, double, double ) );
 
 /// given (a, b, c) - the side lengths of a triangle,
 /// returns the squared tangent of half angle opposite the side with length (a)

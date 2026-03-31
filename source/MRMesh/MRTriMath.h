@@ -207,12 +207,18 @@ template<typename T>
     return dirDblArea( q, r ).normalized();
 }
 
+MR_BIND_TEMPLATE( Vector3f normal( const Vector3f & a, const Vector3f & b ) );
+MR_BIND_TEMPLATE( Vector3d normal( const Vector3d & a, const Vector3d & b ) );
+
 /// computes unit normal of triangle PQR
 template<typename T>
 [[nodiscard]] inline Vector3<T> normal( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return normal( q - p, r - p );
 }
+
+MR_BIND_TEMPLATE( Vector3f normal( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( Vector3d normal( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// computes unit normal of the given triangle
 template<typename T>
@@ -221,12 +227,18 @@ template<typename T>
     return normal( t[1] - t[0], t[2] - t[0] );
 }
 
+MR_BIND_TEMPLATE( Vector3f normal( const Triangle3f & t ) );
+MR_BIND_TEMPLATE( Vector3d normal( const Triangle3d & t ) );
+
 /// computes the square of double area of given triangle
 template<typename T>
 [[nodiscard]] inline T dblAreaSq( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return dirDblArea( p, q, r ).lengthSq();
 }
+
+MR_BIND_TEMPLATE(  float dblAreaSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double dblAreaSq( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// computes twice the area of given triangle
 template<typename T>
@@ -235,12 +247,18 @@ template<typename T>
     return dirDblArea( t ).length();
 }
 
+MR_BIND_TEMPLATE(  float dblArea( const Triangle3f & t ) );
+MR_BIND_TEMPLATE( double dblArea( const Triangle3d & t ) );
+
 /// computes twice the area of given triangle
 template<typename T>
 [[nodiscard]] inline T dblArea( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return dirDblArea( p, q, r ).length();
 }
+
+MR_BIND_TEMPLATE(  float dblArea( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double dblArea( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
 /// computes twice the area of given triangle
 template<typename T>
@@ -249,6 +267,9 @@ template<typename T>
     return dblArea( p, q, r ) / 2;
 }
 
+MR_BIND_TEMPLATE(  float area( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double area( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
 /// computes twice the area of given triangle
 template<typename T>
 [[nodiscard]] inline T dblArea( const Vector2<T> & p, const Vector2<T> & q, const Vector2<T> & r )
@@ -256,12 +277,18 @@ template<typename T>
     return std::abs( cross( q - p, r - p ) );
 }
 
+MR_BIND_TEMPLATE(  float dblArea( const Vector2f & a, const Vector2f & b, const Vector2f & c ) );
+MR_BIND_TEMPLATE( double dblArea( const Vector2d & a, const Vector2d & b, const Vector2d & c ) );
+
 /// computes twice the area of given triangle
 template<typename T>
 [[nodiscard]] inline T area( const Vector2<T> & p, const Vector2<T> & q, const Vector2<T> & r )
 {
     return dblArea( p, q, r ) / 2;
 }
+
+MR_BIND_TEMPLATE(  float area( const Vector2f & a, const Vector2f & b, const Vector2f & c ) );
+MR_BIND_TEMPLATE( double area( const Vector2d & a, const Vector2d & b, const Vector2d & c ) );
 
 /// make degenerate triangle (all 3 points on a line) that maximally resembles the input one and has the same centroid
 template <typename T>
@@ -287,6 +314,9 @@ template <typename T>
     return res;
 }
 
+MR_BIND_TEMPLATE( Triangle3f makeDegenerate( const Triangle3f & t ) );
+MR_BIND_TEMPLATE( Triangle3d makeDegenerate( const Triangle3d & t ) );
+
 /// project given triangle on a plane passing via its centroid and having unit normal (n);
 /// if after projection triangle normal turns out to be inversed, then collapses the triangle into degenerate line segment
 template <typename T>
@@ -302,6 +332,9 @@ template <typename T>
     return res;
 }
 
+MR_BIND_TEMPLATE( Triangle3f triangleWithNormal( const Triangle3f & t, const Vector3f & n ) );
+MR_BIND_TEMPLATE( Triangle3d triangleWithNormal( const Triangle3d & t, const Vector3d & n ) );
+
 /// given an edge direction between two faces with given normals, computes sine of dihedral angle between the faces:
 /// 0 if both faces are in the same plane,
 /// positive if the faces form convex surface,
@@ -314,6 +347,9 @@ template <typename T>
     return dot( edgeDir, cross( leftNorm, rightNorm ) );
 }
 
+MR_BIND_TEMPLATE(  float dihedralAngleSin( const Vector3f&, const Vector3f&, const Vector3f& ) );
+MR_BIND_TEMPLATE( double dihedralAngleSin( const Vector3d&, const Vector3d&, const Vector3d& ) );
+
 /// given two face normals, computes cosine of dihedral angle between the faces:
 /// 1 if both faces are in the same plane,
 /// 0 if the surface makes right angle turn at the edge,
@@ -324,6 +360,9 @@ template <typename T>
 {
     return dot( leftNorm, rightNorm );
 }
+
+MR_BIND_TEMPLATE(  float dihedralAngleCos( const Vector3f&, const Vector3f& ) );
+MR_BIND_TEMPLATE( double dihedralAngleCos( const Vector3d&, const Vector3d& ) );
 
 /// given an edge direction between two faces with given normals (not necessary of unit length), computes the dihedral angle between the faces:
 /// 0 if both faces are in the same plane,
@@ -338,6 +377,9 @@ template <typename T>
     auto cos = dihedralAngleCos( leftNorm, rightNorm );
     return std::atan2( sin, cos );
 }
+
+MR_BIND_TEMPLATE(  float dihedralAngle( const Vector3f&, const Vector3f&, const Vector3f& ) );
+MR_BIND_TEMPLATE( double dihedralAngle( const Vector3d&, const Vector3d&, const Vector3d& ) );
 
 /// given the lengths of 3 edges of triangle ABC, and
 /// assuming that point B has coordinates (0,0); point A - (0,c);
@@ -361,6 +403,9 @@ template <typename T>
     return Vector2<T>{ x, y };
 }
 
+MR_BIND_TEMPLATE( std::optional<Vector2f> posFromTriEdgeLengths( float, float, float ) );
+MR_BIND_TEMPLATE( std::optional<Vector2d> posFromTriEdgeLengths( double, double, double ) );
+
 /// given two triangles on same plane sharing one side, with edge lengths in same order: (a, b, c) and (b1, a1, c);
 /// they can be considered as a quadrangle with a diagonal of length (c); and the lengths of consecutive edges (a, b, b1, a1);
 /// returns the length of the other quadrangle's diagonal if the quadrangle is valid and convex or std::nullopt otherwise
@@ -381,6 +426,9 @@ template <typename T>
     return ( *p - *p1 ).length();
 }
 
+MR_BIND_TEMPLATE( std::optional<float > posFromTriEdgeLengths( float, float, float, float, float ) );
+MR_BIND_TEMPLATE( std::optional<double> posFromTriEdgeLengths( double, double, double, double, double ) );
+
 /// given (a, b, c) - the side lengths of a triangle,
 /// returns the squared tangent of half angle opposite the side with length (a)
 /// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
@@ -396,6 +444,9 @@ template <typename T>
     return num / den;
 }
 
+MR_BIND_TEMPLATE( float  tanSqOfHalfAngle( float, float, float ) );
+MR_BIND_TEMPLATE( double tanSqOfHalfAngle( double, double, double ) );
+
 /// given triangle by its three vertices: t[0], t[1], t[2],
 /// returns the cotangent of the angle at t[2], but not larger by magnitude than absMaxVal
 template <typename T>
@@ -409,6 +460,9 @@ template <typename T>
         return absMaxVal * sgn( nom );
     return nom / den;
 }
+
+MR_BIND_TEMPLATE( float  cotan( const Triangle3f&, float ) );
+MR_BIND_TEMPLATE( double cotan( const Triangle3d&, double ) );
 
 /// given (a, b, c) - the side lengths of a triangle,
 /// returns the cotangent of the angle opposite the side with length a
@@ -426,6 +480,9 @@ template <typename T>
     return ( 1 - tanSq ) / ( 2 * std::sqrt( tanSq ) );
 }
 
+MR_BIND_TEMPLATE( float  cotan( float, float, float ) );
+MR_BIND_TEMPLATE( double cotan( double, double, double ) );
+
 /// Consider triangle 0BC, where a linear scalar field is defined in all 3 vertices: v(0) = 0, v(b) = vb, v(c) = vc;
 /// returns field gradient in the triangle or std::nullopt if the triangle is degenerate
 template <typename T>
@@ -442,6 +499,9 @@ template <typename T>
     return kb * b + kc * c;
 }
 
+MR_BIND_TEMPLATE( std::optional<Vector3f> gradientInTri( const Vector3f&, const Vector3f&, float, float ) );
+MR_BIND_TEMPLATE( std::optional<Vector3d> gradientInTri( const Vector3d&, const Vector3d&, double, double ) );
+
 /// Consider triangle ABC, where a linear scalar field is defined in all 3 vertices: v(a) = va, v(b) = vb, v(c) = vc;
 /// returns field gradient in the triangle or std::nullopt if the triangle is degenerate
 template <typename T>
@@ -449,6 +509,9 @@ template <typename T>
 {
     return gradientInTri( b - a, c - a, vb - va, vc - va );
 }
+
+MR_BIND_TEMPLATE( std::optional<Vector3f> gradientInTri( const Vector3f&, const Vector3f&, const Vector3f&, float, float, float ) );
+MR_BIND_TEMPLATE( std::optional<Vector3d> gradientInTri( const Vector3d&, const Vector3d&, const Vector3d&, double, double, double ) );
 
 // consider triangle 0BC, where gradient of linear scalar field is given;
 // computes the intersection of the ray (org=0, dir=-grad) with the open line segment BC
@@ -475,6 +538,9 @@ template <typename T>
     return a;
 }
 
+MR_BIND_TEMPLATE( std::optional<float > gradientInTri( const Vector3f&, const Vector3f&, const Vector3f& ) );
+MR_BIND_TEMPLATE( std::optional<double> gradientInTri( const Vector3d&, const Vector3d&, const Vector3d& ) );
+
 /// Given 3 spheres:
 /// 1) sphere with center at b and radius rb
 /// 2) sphere with center at c and radius rc
@@ -493,6 +559,9 @@ template <typename T>
     return sqrt( 1 - gradSq ) * normal( b, c ) - *grad; // unit normal
 }
 
+MR_BIND_TEMPLATE( std::optional<Vector3f> tangentPlaneNormalToSpheres( const Vector3f&, const Vector3f&, float, float ) );
+MR_BIND_TEMPLATE( std::optional<Vector3d> tangentPlaneNormalToSpheres( const Vector3d&, const Vector3d&, double, double ) );
+
 /// Given 3 spheres:
 /// 1) sphere with center at a and radius ra
 /// 2) sphere with center at b and radius rb
@@ -506,5 +575,8 @@ template <typename T>
         return Plane3<T>( *n, dot( *n, a ) + ra );
     return {}; // the larger of the spheres contains another sphere inside - no touch plane exists
 }
+
+MR_BIND_TEMPLATE( std::optional<Plane3f> tangentPlaneToSpheres( const Vector3f&, const Vector3f&, const Vector3f&, float, float, float ) );
+MR_BIND_TEMPLATE( std::optional<Plane3d> tangentPlaneToSpheres( const Vector3d&, const Vector3d&, const Vector3d&, double, double, double ) );
 
 } // namespace MR

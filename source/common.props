@@ -111,4 +111,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <TranslationLocaleDir Include="$(MeshLibDir)\locale" />
+  </ItemGroup>
 </Project>

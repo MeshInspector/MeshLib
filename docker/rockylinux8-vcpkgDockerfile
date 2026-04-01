@@ -33,6 +33,7 @@ RUN python3.12 -m venv venv && \
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
 COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ARG VCPKG_VERSION
@@ -47,10 +48,19 @@ WORKDIR /root/vcpkg
 RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/vcpkg-make/portfile.cmake && \
     sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
 
+# install aws cli for vcpkg cache
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update && \
+    rm -rf awscliv2.zip aws/
+
 # build vcpkg packages
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-RUN source /opt/rh/gcc-toolset-11/enable && \
+RUN --mount=type=secret,id=aws_access_key_id \
+    --mount=type=secret,id=aws_secret_access_key \
+    source ../MeshLib/configure_s3_cache.sh && \
+    source /opt/rh/gcc-toolset-11/enable && \
     source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
     $(: network may flake ) \

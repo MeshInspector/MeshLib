@@ -183,7 +183,17 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux vcpkg image
-        run: docker build -f ./docker/${{ matrix.os }}-vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          DOCKER_BUILDKIT=1 docker build \
+            -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+            -t ${{ env.image }} \
+            --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
+            --secret id=aws_access_key_id,env=AWS_ACCESS_KEY_ID \
+            --secret id=aws_secret_access_key,env=AWS_SECRET_ACCESS_KEY \
+            . --progress=plain
 
       - name: Push Linux vcpkg image
         run: docker push ${{ env.image }}

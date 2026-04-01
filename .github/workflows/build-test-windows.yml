@@ -217,13 +217,6 @@ jobs:
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
-      - name: Compile translations
-        if: ${{ inputs.upload_artifacts && matrix.build_system == 'MSBuild' }}
-        env:
-          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
-        run:
-          py -3 scripts\gettext\compile_translations.py .\locale\ .\source\x64\${{ matrix.config }}\locale\
-
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
         working-directory: source\x64\${{ matrix.config }}

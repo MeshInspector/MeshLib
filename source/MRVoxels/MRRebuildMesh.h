@@ -48,6 +48,11 @@ struct RebuildMeshSettings
     /// whether to decimate resulting mesh
     bool decimate = true;
 
+    /// the number of iterations to minimizes summed deviation of triangle-triangle angles from plane;
+    /// this mode highlights sharp edges;
+    /// if decimation is on, this mode is performed before and after decimation and further reduces the number of triangles
+    int reduceAngleNumIters = 0;
+
     /// only if decimate = true:
     /// edges not longer than this value will be collapsed even if it results in appearance of a triangle with high aspect ratio
     float tinyEdgeLength = -1;

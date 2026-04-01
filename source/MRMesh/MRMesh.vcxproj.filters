@@ -1410,6 +1410,9 @@
     <ClInclude Include="MRProtectedRun.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshTotalAngle.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2314,6 +2317,9 @@
     </ClCompile>
     <ClCompile Include="MRProtectedRun.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshTotalAngle.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

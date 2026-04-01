@@ -17,30 +17,55 @@ constexpr float NoAngleChangeLimit = 2 * PI_F;
 
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
-    const auto dirABD = dirDblArea( a, b, d );
-    const auto dirDBC = dirDblArea( d, b, c );
+    static constexpr double criticalDot = -0.9;
+    const auto nABC = normal( a, b, c );
+    const auto nACD = normal( a, c, d );
+    // true if the current triangles ABC and ACD are almost oppositely oriented
+    const bool oldPocket = dot( nABC, nACD ) < criticalDot;
 
-    if ( dot( dirABD, dirDBC ) < 0 )
-        return true; // flipping of given edge will create two faces with opposite normals
+    const auto nABD = normal( a, b, d );
+    const auto nDBC = normal( d, b, c );
+    // true if after flip the triangles ABD and DBC are almost oppositely oriented
+    const bool newPocket = dot( nABD, nDBC ) < criticalDot;
+
+    if ( oldPocket != newPocket )
+        return newPocket; // prefer the configuration without pocket
+
+    // there should be significant difference in metrics (above floating point error) to return false
+    static constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
+    if ( oldPocket )
+    {
+        // before and after flip there are pockets, select the configuration with the smallest triangles
+        const auto metricAC = std::max( mincircleDiameterSq( a, c, d ), mincircleDiameterSq( c, a, b ) );
+        const auto metricBD = std::max( mincircleDiameterSq( b, d, a ), mincircleDiameterSq( d, b, c ) );
+        return metricAC <= metricBD + eps * ( metricAC + metricBD );
+    }
+
+    // before and after flip there are no pockets
 
     if ( maxAngleChange < NoAngleChangeLimit )
     {
-        const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
-        const auto dirABC = dirDblArea( a, b, c );
-        const auto dirACD = dirDblArea( a, c, d );
-        const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
+        const auto oldAngle = dihedralAngle( nABD, nDBC, d - b );
+        const auto newAngle = dihedralAngle( nABC, nACD, a - c );
         const auto angleChange = std::abs( oldAngle - newAngle );
         if ( angleChange > maxAngleChange )
             return true;
     }
 
-    auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
-    auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
+    const auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+    const auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
 
-    // there should be significant difference in metrics (above floating point error) to return false
-    constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
     if ( !std::isfinite( metricAC ) )
-        return metricAC <= metricBD; // below line returns true if metricAC is +infinity
+    {
+        if ( !std::isfinite( metricBD ) )
+        {
+            // we are here if both configurations include a zero area obtuse triangle with all 3 vertices distinct;
+            // select the configuration with shorter diagonal
+            return distanceSq( a, c ) <= distanceSq( b, d );
+        }
+        return metricAC <= metricBD; // (metricAC <= metricBD + eps * ( metricAC + metricBD ))==true if metricAC is +infinity and metricBD is finite
+    }
+
     return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
 }
 

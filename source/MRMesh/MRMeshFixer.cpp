@@ -259,7 +259,7 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
             .maxEdgeSplits = 20'000,
         },
         .smoothCurvature = true,
-        .smoothSeettings =
+        .smoothSettings =
         {
             .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
         }

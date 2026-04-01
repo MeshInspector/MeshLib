@@ -1102,7 +1102,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
         if ( mode == MouseMode::None )
             continue;
         std::string modeName = getMouseModeString( mode );
-        std::string ctrlStr = _tr( "None" );
+        std::string ctrlStr = s_tr( "None" );
         auto ctrl = viewer->mouseController().findControlByMode( mode );
         if ( ctrl )
             ctrlStr = MouseController::getControlString( *ctrl );

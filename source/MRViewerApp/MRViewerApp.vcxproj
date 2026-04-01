@@ -122,4 +122,5 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Import Project="$(MeshLibDir)\source\CompileTranslations.targets" />
 </Project>

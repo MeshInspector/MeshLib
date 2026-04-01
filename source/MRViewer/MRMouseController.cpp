@@ -92,16 +92,16 @@ std::string MouseController::getControlString( const MouseControlKey& key )
     switch ( key.btn )
     {
     case MouseButton::Left:
-        res += _tr( "LMB" );
+        res += s_tr( "LMB" );
         break;
     case MouseButton::Right:
-        res += _tr( "RMB" );
+        res += s_tr( "RMB" );
         break;
     case MouseButton::Middle:
-        res += _tr( "MMB" );
+        res += s_tr( "MMB" );
         break;
     default:
-        res += _tr( "Error" );
+        res += s_tr( "Error" );
         break;
     }
     return res;

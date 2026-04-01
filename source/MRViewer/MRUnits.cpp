@@ -289,9 +289,9 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     if ( params.unitSuffix )
     {
         if ( params.targetUnit )
-            unitSuffix = _tr( getUnitInfo( *params.targetUnit ).unitSuffix );
+            unitSuffix = s_tr( getUnitInfo( *params.targetUnit ).unitSuffix );
         else if ( params.sourceUnit )
-            unitSuffix = _tr( getUnitInfo( *params.sourceUnit ).unitSuffix );
+            unitSuffix = s_tr( getUnitInfo( *params.sourceUnit ).unitSuffix );
     }
     std::string ret;
 

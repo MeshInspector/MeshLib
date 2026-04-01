@@ -18,6 +18,12 @@ TEST( MRMesh, TriMath )
     EXPECT_NEAR( ( centerPos - Vector3d( 1, 1,  1 ) ).length(), 0.0, 1e-15 );
     EXPECT_NEAR( ( centerNeg - Vector3d( 1, 1, -1 ) ).length(), 0.0, 1e-15 );
 
+    EXPECT_NEAR( circumcircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), 2, 1e-15 );
+    EXPECT_NEAR(    mincircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), 2, 1e-15 );
+
+    EXPECT_GT( circumcircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 2, 0, 0 } ), DBL_MAX );
+    EXPECT_EQ(    mincircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 2, 0, 0 } ), 4 );
+
     EXPECT_EQ( posFromTriEdgeLengths( 4., 5., 3. ), Vector2d( 4., 0. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 3. ), Vector2d( 4., 3. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 10. ), std::nullopt );

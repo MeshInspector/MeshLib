@@ -4,6 +4,8 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRMeshLoad.h>
+#include <sstream>
 
 namespace MR
 {
@@ -119,5 +121,80 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
     res = decimateMesh( mesh, dsettings );
     EXPECT_EQ( res.vertsDeleted, 1 );
 }
+
+static void testResolveDegen( const char * offMesh )
+{
+    std::istringstream s( offMesh );
+    auto maybeMesh = MeshLoad::fromOff( s );
+    EXPECT_TRUE( maybeMesh );
+
+    DecimateSettings dsettings
+    {
+        .strategy = DecimateStrategy::ShortestEdgeFirst,
+        .maxError = 8e-6f,
+        .criticalTriAspectRatio = 1000,
+        .tinyEdgeLength = 8e-7f,
+        .stabilizer = 1e-6f,
+        .optimizeVertexPos = false,
+        .maxAngleChange = PI_F / 3
+    };
+
+    auto res = decimateMesh( *maybeMesh, dsettings );
+    EXPECT_EQ( res.vertsDeleted, 1 );
+    EXPECT_EQ( res.facesDeleted, 2 );
+}
+
+TEST( MRMesh, MeshDecimateResolveDegen )
+{
+    testResolveDegen
+    (
+        "OFF\n"
+        "8 8 0\n"
+        "\n"
+        "0.25991842 0.11936638 0.40698087\n"
+        "0.22987929 0.1279805 0.40149236\n"
+        "0.25991842 0.11936638 0.4017116\n"
+        "0.25991842 0.11936644 0.40171158\n"
+        "0.25831458 0.113773495 0.395957\n"
+        "0.25991842 0.11936644 0.39124623\n"
+        "0.22980908 0.1280007 0.37024236\n"
+        "0.25991842 0.11936638 0.37573087\n"
+        "\n"
+        "3 0 1 2\n"
+        "3 3 4 0\n"
+        "3 5 2 1\n"
+        "3 6 7 5\n"
+        "3 7 3 0\n"
+        "3 7 4 3\n"
+        "3 5 0 2\n"
+        "3 0 5 7\n"
+    );
+
+    testResolveDegen
+    (
+        "OFF\n"
+        "9 8 0\n"
+        "\n"
+        "0.25991842 0.11936644 0.4636269\n"
+        "0.23033604 0.12784958 0.46399236\n"
+        "0.25991842 0.11936638 0.45374623\n"
+        "0.25991842 0.11936638 0.46948087\n"
+        "0.2422457 0.12443432 0.47700337\n"
+        "0.25991842 0.11936638 0.4642116\n"
+        "0.25991842 0.11936644 0.46421158\n"
+        "0.25985792 0.11915526 0.46666718\n"
+        "0.25979832 0.118947595 0.4617465\n"
+        "\n"
+        "3 0 1 2\n"
+        "3 3 4 5\n"
+        "3 0 5 4\n"
+        "3 2 6 3\n"
+        "3 7 3 6\n"
+        "3 8 6 2\n"
+        "3 0 3 5\n"
+        "3 2 3 0\n"
+    );
+}
+
 
 } //namespace MR

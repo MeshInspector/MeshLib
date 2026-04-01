@@ -72,6 +72,7 @@
       <tab type="user" url="__BEGIN_URL__ExamplePluginOverview__END_URL__" title="How to use С++ Example Plugin"/>
       <tab type="user" url="__BEGIN_URL__StatePluginsHelp__END_URL__" title="State Plugins Overview"/>
       <tab type="user" url="__BEGIN_URL__HowtoAddPluginOverview__END_URL__" title="How to Add Plugin"/>
+      <tab type="user" url="__BEGIN_URL__I18nGuide__END_URL__" title="Internationalization Guide"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__APIPage__END_URL__" title="API">
       <!-- API_CPP_PAGE -->

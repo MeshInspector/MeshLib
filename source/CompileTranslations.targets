@@ -24,7 +24,7 @@
     <ItemGroup>
       <_TranslationPoFile Include="%(TranslationLocaleDir.Identity)\**\*.po" />
     </ItemGroup>
-    <MakeDir Directories="$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES" />
-    <Exec Command="&quot;$(_MsgfmtExe)&quot; &quot;%(_TranslationPoFile.Identity)&quot; --output-file=&quot;$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES\%(_TranslationPoFile.Filename).mo&quot; --check" />
+    <MakeDir Condition="'@(_TranslationPoFile)' != ''" Directories="$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES" />
+    <Exec Condition="'@(_TranslationPoFile)' != ''" Command="&quot;$(_MsgfmtExe)&quot; &quot;%(_TranslationPoFile.Identity)&quot; --output-file=&quot;$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES\%(_TranslationPoFile.Filename).mo&quot; --check" />
   </Target>
 </Project>

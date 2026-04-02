@@ -863,6 +863,7 @@ DecimateResult MeshDecimator::run()
     if ( !initialize_() )
         return res_;
 
+    int ep14 = 0;
     res_.errorIntroduced = settings_.maxError;
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
@@ -963,6 +964,11 @@ DecimateResult MeshDecimator::run()
                     && computeQueueElement_( ep, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( ep, collapsePos );
+                    if ( ep == 19_e )
+                        canCollapseRes.status = CollapseStatus::NormalFlip;
+                    if ( ep == 14_e )
+                        if ( ++ep14 < 4 )
+                            canCollapseRes.status = CollapseStatus::NormalFlip;
                     if ( settings_.debugLog )
                         spdlog::info( "Decimate: ep={}, canCollapseRes={}", (int)ep, (int)canCollapseRes.status );
                     if ( canCollapseRes.status == CollapseStatus::Ok )

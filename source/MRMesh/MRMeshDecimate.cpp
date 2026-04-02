@@ -705,7 +705,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         return { .status =  CollapseStatus::LongEdge }; // new edge would be longer than all of old edges and longer than allowed in settings
 
     // if at least one remaining triangle flips its normal, checks that new normal is consistent with the average normal of new vertex neighborhood
-    if ( !triDblAreas_.empty() && ( ( po != pd ) || ( po != collapsePos ) ) )
+    if ( !tinyEdge && !triDblAreas_.empty() && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
         auto n = Vector3f{ sumDblArea.normalized() };
         for ( const auto da : triDblAreas_ )

@@ -5,6 +5,8 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshSave.h>
+#include <MRPch/MRSpdlog.h>
 #include <sstream>
 
 namespace MR
@@ -140,6 +142,11 @@ static void testResolveDegen( const char * offMesh, float maxError, int vertsDel
     };
 
     auto res = decimateMesh( *maybeMesh, dsettings );
+
+    std::ostringstream os;
+    (void)MeshSave::toOff( *maybeMesh, os );
+    spdlog::info( "decimated mesh:\n{}", os.str() );
+
     EXPECT_EQ( res.vertsDeleted, vertsDeleted );
     EXPECT_EQ( res.facesDeleted, facesDeleted );
 }

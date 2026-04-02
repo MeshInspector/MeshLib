@@ -20,6 +20,7 @@
 #include "MRMeshDecimateCallbacks.h"
 #include "MRMapEdge.h"
 #include "MRObjectMesh.h"
+#include <MRPch/MRSpdlog.h>
 
 namespace MR
 {
@@ -915,6 +916,7 @@ DecimateResult MeshDecimator::run()
                 --numOutdated_;
             continue;
         }
+        spdlog::info( "Decimate: ue={}, op={}, c={}", (int)ue, (int)topQE.x.edgeOp, qe->c );
 
         validInQueue_.reset( ue );
 
@@ -929,6 +931,7 @@ DecimateResult MeshDecimator::run()
         {
             // edge collapse
             auto canCollapseRes = canCollapse_( ue, collapsePos );
+            spdlog::info( "Decimate: canCollapseRes={}", (int)canCollapseRes.status );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
@@ -949,6 +952,7 @@ DecimateResult MeshDecimator::run()
                     && computeQueueElement_( en, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( en, collapsePos );
+                    spdlog::info( "Decimate: en canCollapseRes={}", (int)canCollapseRes.status );
                     if ( canCollapseRes.status == CollapseStatus::Ok )
                         ue = en;
                 }
@@ -956,6 +960,7 @@ DecimateResult MeshDecimator::run()
                     && computeQueueElement_( ep, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( ep, collapsePos );
+                    spdlog::info( "Decimate: ep canCollapseRes={}", (int)canCollapseRes.status );
                     if ( canCollapseRes.status == CollapseStatus::Ok )
                         ue = ep;
                 }

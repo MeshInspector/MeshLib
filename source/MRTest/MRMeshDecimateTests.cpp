@@ -122,7 +122,7 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
     EXPECT_EQ( res.vertsDeleted, 1 );
 }
 
-static void testResolveDegen( const char * offMesh )
+static void testResolveDegen( const char * offMesh, float maxError, int vertsDeleted, int facesDeleted )
 {
     std::istringstream s( offMesh );
     auto maybeMesh = MeshLoad::fromOff( s );
@@ -131,21 +131,22 @@ static void testResolveDegen( const char * offMesh )
     DecimateSettings dsettings
     {
         .strategy = DecimateStrategy::ShortestEdgeFirst,
-        .maxError = 8e-6f,
+        .maxError = maxError,
         .criticalTriAspectRatio = 1000,
-        .tinyEdgeLength = 8e-7f,
+        .tinyEdgeLength = 0.1f * maxError,
         .stabilizer = 1e-6f,
         .optimizeVertexPos = false,
         .maxAngleChange = PI_F / 3
     };
 
     auto res = decimateMesh( *maybeMesh, dsettings );
-    EXPECT_EQ( res.vertsDeleted, 1 );
-    EXPECT_EQ( res.facesDeleted, 2 );
+    EXPECT_EQ( res.vertsDeleted, vertsDeleted );
+    EXPECT_EQ( res.facesDeleted, facesDeleted );
 }
 
 TEST( MRMesh, MeshDecimateResolveDegen )
 {
+    // this case failed before special treatment of pockets in checkDeloneQuadrangle
     testResolveDegen
     (
         "OFF\n"
@@ -167,9 +168,10 @@ TEST( MRMesh, MeshDecimateResolveDegen )
         "3 7 3 0\n"
         "3 7 4 3\n"
         "3 5 0 2\n"
-        "3 0 5 7\n"
+        "3 0 5 7\n", 8e-6f, 1, 2
     );
 
+    // this case failed before special treatment of pockets in checkDeloneQuadrangle
     testResolveDegen
     (
         "OFF\n"
@@ -192,9 +194,9 @@ TEST( MRMesh, MeshDecimateResolveDegen )
         "3 7 3 6\n"
         "3 8 6 2\n"
         "3 0 3 5\n"
-        "3 2 3 0\n"
+        "3 2 3 0\n", 8e-6f, 1, 2
     );
-}
 
+}
 
 } //namespace MR

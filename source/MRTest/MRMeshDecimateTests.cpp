@@ -122,7 +122,7 @@ TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
     EXPECT_EQ( res.vertsDeleted, 1 );
 }
 
-static void testResolveDegen( const char * offMesh, int vertsDeleted, int facesDeleted )
+static void testResolveDegen( const char * offMesh, float maxError, int vertsDeleted, int facesDeleted )
 {
     std::istringstream s( offMesh );
     auto maybeMesh = MeshLoad::fromOff( s );
@@ -131,9 +131,9 @@ static void testResolveDegen( const char * offMesh, int vertsDeleted, int facesD
     DecimateSettings dsettings
     {
         .strategy = DecimateStrategy::ShortestEdgeFirst,
-        .maxError = 8e-6f,
+        .maxError = maxError,
         .criticalTriAspectRatio = 1000,
-        .tinyEdgeLength = 8e-7f,
+        .tinyEdgeLength = 0.1f * maxError,
         .stabilizer = 1e-6f,
         .optimizeVertexPos = false,
         .maxAngleChange = PI_F / 3
@@ -168,7 +168,7 @@ TEST( MRMesh, MeshDecimateResolveDegen )
         "3 7 3 0\n"
         "3 7 4 3\n"
         "3 5 0 2\n"
-        "3 0 5 7\n", 1, 2
+        "3 0 5 7\n", 8e-6f, 1, 2
     );
 
     // this case failed before special treatment of pockets in checkDeloneQuadrangle
@@ -194,7 +194,7 @@ TEST( MRMesh, MeshDecimateResolveDegen )
         "3 7 3 6\n"
         "3 8 6 2\n"
         "3 0 3 5\n"
-        "3 2 3 0\n", 1, 2
+        "3 2 3 0\n", 8e-6f, 1, 2
     );
 
     // this case failed before special treatment of MultipleEdge error in MeshDecimate
@@ -234,7 +234,7 @@ TEST( MRMesh, MeshDecimateResolveDegen )
         "3 2 7 6\n"
         "3 7 2 4\n"
         "3 4 2 3\n"
-        "3 9 8 12\n", 6, 12
+        "3 9 8 12\n", 3e-5f, 6, 12
     );
 }
 

@@ -122,6 +122,12 @@ public:
     /// returns the number of edges around the given vertex
     [[nodiscard]] int getVertDegree( VertId v ) const { return getOrgDegree( edgeWithOrg( v ) ); }
 
+    /// returns true if the origin of given edge is inner to the mesh (no boundary passes via it), and has the given number of incident edges (including input one)
+    [[nodiscard]] MRMESH_API bool isOrgInnerAndHasDegree( EdgeId a, int d ) const;
+
+    /// returns true if the given vertex is inner to the mesh (no boundary passes via it), and has the given number of incident edges
+    [[nodiscard]] bool isVertInnerAndHasDegree( VertId v, int d ) const { return isOrgInnerAndHasDegree( edgeWithOrg( v ), d ); }
+
     /// returns the number of edges around the left face: 3 for triangular faces, ...
     [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
 

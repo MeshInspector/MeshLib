@@ -350,6 +350,23 @@ int MeshTopology::getOrgDegree( EdgeId a ) const
     return degree;
 }
 
+bool MeshTopology::isOrgInnerAndHasDegree( EdgeId a, int d ) const
+{
+    int counter = 0;
+    for ( auto e : orgRing( *this, a ) )
+    {
+        if ( !left( e ) )
+            return false;
+        ++counter;
+        if ( counter > d )
+            return false;
+    }
+    if ( counter < d )
+        return false;
+    assert( counter == d );
+    return true;
+}
+
 int MeshTopology::getLeftDegree( EdgeId a ) const
 {
     assert( a.valid() );

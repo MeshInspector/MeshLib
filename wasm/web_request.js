@@ -65,6 +65,14 @@ var web_req_get_payload = function (ctxId) {
     return payload ?? web_req_ctxs[ctxId].formdata ?? web_req_ctxs[ctxId].body;
 }
 
+var str_to_bytearray = function (str) {
+    const bytes = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; ++i) {
+        bytes[i] = str.charCodeAt(i) & 0xff;
+    }
+    return bytes;
+}
+
 var web_req_send = function (url, async, ctxId) {
     create_web_ctx_if_needed(ctxId);
     var urlCpy = url;
@@ -111,6 +119,8 @@ var web_req_sync_download = function (url, outputPath, ctxId) {
 
     var req = new XMLHttpRequest();
     req.open(web_req_ctxs[ctxId].method, url, false);
+    // Preserve raw byte values in responseText for binary reconstruction via FS.writeFile;
+    // this older pattern is kept here for maximum sync-XHR compatibility across browsers.
     req.overrideMimeType("text/plain; charset=x-user-defined");
     for (var i = 0; i < web_req_ctxs[ctxId].headers.length; i++) {
         req.setRequestHeader(web_req_ctxs[ctxId].headers[i].key, web_req_ctxs[ctxId].headers[i].value);
@@ -119,12 +129,7 @@ var web_req_sync_download = function (url, outputPath, ctxId) {
     req.send(web_req_get_payload(ctxId));
 
     if (req.status >= 200 && req.status < 300) {
-        const responseText = req.responseText || "";
-        const bytes = new Uint8Array(responseText.length);
-        for (var i = 0; i < responseText.length; ++i) {
-            bytes[i] = responseText.charCodeAt(i) & 0xff;
-        }
-        FS.writeFile(outputPath, bytes);
+        FS.writeFile(outputPath, str_to_bytearray(req.responseText || ""));
         if (web_req_ctxs[ctxId].use_download_callback) {
             Module.ccall('emsCallDownloadCallback', 'number', ['number', 'number'], [1, ctxId]);
         }

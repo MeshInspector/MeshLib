@@ -77,7 +77,7 @@ private:
     std::vector<QueueElement> makeQueueElements_();
     void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
-    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos, float maxErrorSq,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
 
     /// adds given edge in the queue if it was missing there;
@@ -313,7 +313,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
             if ( !regionEdges_.test( ue ) )
                 return;
         }
-        if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
+        if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos, maxErrorSq_ ) )
         {
             threadData.local().push_back( *qe );
             validInQueue_.set( ue );
@@ -367,7 +367,7 @@ void MeshDecimator::updateQueue_()
             return;
         if ( !outdated_.test( ue ) )
             return;
-        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos ) )
+        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos, maxErrorSq_ ) )
             qe = *n;
         else
             del.set( i );
@@ -401,7 +401,7 @@ QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3
     return sumAt( vo, po, vd, pd, collapsePos );
 }
 
-auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos, float maxErrorSq,
     QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
 {
     EdgeId e{ ue };
@@ -427,7 +427,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
                 errSq = deviationSqAfterFlip;
             }
         }
-        if ( ( edgeOp == EdgeOp::Flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
+        if ( ( edgeOp == EdgeOp::Flip || !settings_.adjustCollapse ) && errSq > maxErrorSq )
             return true;
         res.emplace();
         res->x.uedgeId = (int)ue;
@@ -477,7 +477,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     {
         const auto pos0 = pos;
         settings_.adjustCollapse( ue, res->c, pos );
-        if ( res->c > maxErrorSq_ )
+        if ( res->c > maxErrorSq )
             return {};
         if ( outCollapseForm && pos != pos0 )
             qf.c = vo.eval( po - pos ) + vd.eval( pd - pos );
@@ -504,7 +504,7 @@ bool MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 void MeshDecimator::addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos )
 {
     assert ( !validInQueue_.test( ue ) );
-    if ( auto qe = computeQueueElement_( ue, optimizeVertexPos ) )
+    if ( auto qe = computeQueueElement_( ue, optimizeVertexPos, maxErrorSq_ ) )
     {
         queue_.push( *qe );
         validInQueue_.set( ue );
@@ -901,7 +901,7 @@ DecimateResult MeshDecimator::run()
 
         QuadraticForm3f collapseForm;
         Vector3f collapsePos;
-        auto qe = computeQueueElement_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos, &collapseForm, &collapsePos );
+        auto qe = computeQueueElement_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos, maxErrorSq_, &collapseForm, &collapsePos );
         if ( !qe )
         {
             validInQueue_.reset( ue );
@@ -943,14 +943,17 @@ DecimateResult MeshDecimator::run()
                 // test whether left or right triangle contains single 3-degree vertex inside, then collapse it instead
                 const auto en = mesh_.topology.next( ue ).sym();
                 const auto ep = mesh_.topology.prev( ue ).sym();
+                // the check that left/right triangle exists is done by isOrgInnerAndHasDegree
                 ue = {};
-                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en, 3 ) )
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en, 3 )
+                    && computeQueueElement_( en, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( en, collapsePos );
                     if ( canCollapseRes.status == CollapseStatus::Ok )
                         ue = en;
                 }
-                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep, 3 ) )
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep, 3 )
+                    && computeQueueElement_( ep, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( ep, collapsePos );
                     if ( canCollapseRes.status == CollapseStatus::Ok )

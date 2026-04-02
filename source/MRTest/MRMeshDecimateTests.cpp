@@ -138,7 +138,8 @@ static void testResolveDegen( const char * offMesh, float maxError, int vertsDel
         .tinyEdgeLength = 0.1f * maxError,
         .stabilizer = 1e-6f,
         .optimizeVertexPos = false,
-        .maxAngleChange = PI_F / 3
+        .maxAngleChange = PI_F / 3,
+        .debugLog = true
     };
 
     auto res = decimateMesh( *maybeMesh, dsettings );

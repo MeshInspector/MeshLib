@@ -160,6 +160,8 @@ struct DecimateSettings
 
     /// minimum number of faces in one subdivision part for ( subdivideParts > 1 ) mode
     int minFacesInPart = 0;
+
+    bool debugLog = false;
 };
 
 /**

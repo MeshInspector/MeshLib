@@ -275,25 +275,14 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     return {};
 }
 
-VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
+VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
 {
     const auto& zone = topology.getVertIds( region );
     VertBitSet result( zone.size() );
     BitSetParallelFor( zone, [&] ( VertId v )
     {
-        int counter = 0;
-        for ( auto e : orgRing( topology, v ) )
-        {
-            if ( !topology.left( e ) )
-                return;
-            ++counter;
-            if ( counter > n )
-                return;
-        }
-        if ( counter < n )
-            return;
-        assert( counter == n );
-        result.set( v );
+        if ( topology.isVertInnerAndHasDegree( v, n ) )
+            result.set( v );
     } );
     return result;
 }

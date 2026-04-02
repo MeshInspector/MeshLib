@@ -43,9 +43,7 @@ var web_req_clear = function (ctxId) {
         delete web_req_ctxs[ctxId];
 }
 
-var web_req_send = function (url, async, ctxId) {
-    create_web_ctx_if_needed(ctxId);
-    var urlCpy = url;
+var web_req_build_url = function (url, ctxId) {
     for (var i = 0; i < web_req_ctxs[ctxId].params.length; i++) {
         if (i == 0)
             url += "?";
@@ -53,6 +51,32 @@ var web_req_send = function (url, async, ctxId) {
             url += "&";
         url += web_req_ctxs[ctxId].params[i].key + "=" + web_req_ctxs[ctxId].params[i].value;
     }
+    return url;
+}
+
+var web_req_get_payload = function (ctxId) {
+    var payload = null;
+    if (web_req_ctxs[ctxId].filename != "") {
+        if (FS.analyzePath(web_req_ctxs[ctxId].filename).exists) {
+            const content = FS.readFile(web_req_ctxs[ctxId].filename);
+            payload = new Blob([content]);
+        }
+    }
+    return payload ?? web_req_ctxs[ctxId].formdata ?? web_req_ctxs[ctxId].body;
+}
+
+var str_to_bytearray = function (str) {
+    const bytes = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; ++i) {
+        bytes[i] = str.charCodeAt(i) & 0xff;
+    }
+    return bytes;
+}
+
+var web_req_send = function (url, async, ctxId) {
+    create_web_ctx_if_needed(ctxId);
+    var urlCpy = url;
+    url = web_req_build_url(url, ctxId);
     var req = new XMLHttpRequest();
     if (async)
         req.timeout = web_req_ctxs[ctxId].timeout;
@@ -85,39 +109,52 @@ var web_req_send = function (url, async, ctxId) {
         };
         Module.ccall('emsCallResponseCallback', 'number', ['string', 'bool', 'number'], [JSON.stringify(res), async, ctxId]);
     };
-    var payload = null;
-    if (web_req_ctxs[ctxId].filename != "") {
-        if (FS.analyzePath(web_req_ctxs[ctxId].filename).exists) {
-            const content = FS.readFile(web_req_ctxs[ctxId].filename);
-            payload = new Blob([content]);
+    req.send(web_req_get_payload(ctxId));
+}
+
+var web_req_sync_download = function (url, outputPath, ctxId) {
+    create_web_ctx_if_needed(ctxId);
+    var urlCpy = url;
+    url = web_req_build_url(url, ctxId);
+
+    var req = new XMLHttpRequest();
+    req.open(web_req_ctxs[ctxId].method, url, false);
+    // Preserve raw byte values in responseText for binary reconstruction via FS.writeFile;
+    // this older pattern is kept here for maximum sync-XHR compatibility across browsers.
+    req.overrideMimeType("text/plain; charset=x-user-defined");
+    for (var i = 0; i < web_req_ctxs[ctxId].headers.length; i++) {
+        req.setRequestHeader(web_req_ctxs[ctxId].headers[i].key, web_req_ctxs[ctxId].headers[i].value);
+    }
+
+    req.send(web_req_get_payload(ctxId));
+
+    if (req.status >= 200 && req.status < 300) {
+        FS.writeFile(outputPath, str_to_bytearray(req.responseText || ""));
+        if (web_req_ctxs[ctxId].use_download_callback) {
+            Module.ccall('emsCallDownloadCallback', 'number', ['number', 'number'], [1, ctxId]);
         }
     }
-    req.send(payload ?? web_req_ctxs[ctxId].formdata ?? web_req_ctxs[ctxId].body);
+
+    var res = {
+        url: urlCpy,
+        code: req.status,
+        text: "",
+        error: req.statusText
+    };
+    Module.ccall('emsCallResponseCallback', 'number', ['string', 'bool', 'number'], [JSON.stringify(res), false, ctxId]);
 }
 
 var web_req_async_download = function (url, outputPath, ctxId) {
     create_web_ctx_if_needed(ctxId);
     var urlCpy = url;
-    for (var i = 0; i < web_req_ctxs[ctxId].params.length; i++) {
-        if (i == 0)
-            url += "?";
-        else
-            url += "&";
-        url += web_req_ctxs[ctxId].params[i].key + "=" + web_req_ctxs[ctxId].params[i].value;
-    }
+    url = web_req_build_url(url, ctxId);
 
     var headers = new Headers();
     for (var i = 0; i < web_req_ctxs[ctxId].headers.length; i++) {
         headers.append(web_req_ctxs[ctxId].headers[i].key, web_req_ctxs[ctxId].headers[i].value);
     }
 
-    var payload = null;
-    if (web_req_ctxs[ctxId].filename != "") {
-        if (FS.analyzePath(web_req_ctxs[ctxId].filename).exists) {
-            const content = FS.readFile(web_req_ctxs[ctxId].filename);
-            payload = new Blob([content]);
-        }
-    }
+    var payload = web_req_get_payload(ctxId);
 
     var options = {
         method: web_req_ctxs[ctxId].method,

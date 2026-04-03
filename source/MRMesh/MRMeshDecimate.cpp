@@ -20,7 +20,6 @@
 #include "MRMeshDecimateCallbacks.h"
 #include "MRMapEdge.h"
 #include "MRObjectMesh.h"
-#include <MRPch/MRSpdlog.h>
 
 namespace MR
 {

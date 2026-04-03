@@ -916,7 +916,6 @@ DecimateResult MeshDecimator::run()
                 --numOutdated_;
             continue;
         }
-        spdlog::info( "Decimate: ue={}, op={}, c={}", (int)ue, (int)topQE.x.edgeOp, qe->c );
 
         validInQueue_.reset( ue );
 
@@ -931,7 +930,6 @@ DecimateResult MeshDecimator::run()
         {
             // edge collapse
             auto canCollapseRes = canCollapse_( ue, collapsePos );
-            spdlog::info( "Decimate: canCollapseRes={}", (int)canCollapseRes.status );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
@@ -942,27 +940,30 @@ DecimateResult MeshDecimator::run()
                 if ( canCollapseRes.status != CollapseStatus::MultipleEdge )
                     continue;
 
-                // if the collapse failed because of appearance of multiple edges,
+                const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 && topQE.x.edgeOp == EdgeOp::CollapseEnd )
+                    ? mesh_.edgeLengthSq( ue ) <= sqr( settings_.tinyEdgeLength ) : false;
+                if ( !tinyEdge )
+                    continue;
+
+                // if the collapse of a tiny edge failed because of appearance of multiple edges,
                 // test whether left or right triangle contains single 3-degree vertex inside, then collapse it instead
-                const auto en = mesh_.topology.next( ue ).sym();
-                const auto ep = mesh_.topology.prev( ue ).sym();
+                const auto en = mesh_.topology.next( ue );
+                const auto ep = mesh_.topology.prev( ue );
                 // the check that left/right triangle exists is done by isOrgInnerAndHasDegree
                 ue = {};
-                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en, 3 )
-                    && computeQueueElement_( en, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en.sym(), 3 ) )
                 {
-                    canCollapseRes = canCollapse_( en, collapsePos );
-                    spdlog::info( "Decimate: en canCollapseRes={}", (int)canCollapseRes.status );
-                    if ( canCollapseRes.status == CollapseStatus::Ok )
-                        ue = en;
+                    auto vo = mesh_.topology.org( en );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    ue = en;
                 }
-                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep, 3 )
-                    && computeQueueElement_( ep, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep.sym(), 3 ) )
                 {
-                    canCollapseRes = canCollapse_( ep, collapsePos );
-                    spdlog::info( "Decimate: ep canCollapseRes={}", (int)canCollapseRes.status );
-                    if ( canCollapseRes.status == CollapseStatus::Ok )
-                        ue = ep;
+                    auto vo = mesh_.topology.org( ep );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    ue = ep;
                 }
                 if ( !ue )
                     continue;

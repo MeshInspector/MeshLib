@@ -1,12 +1,20 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include <cfloat>
 
 namespace MR
 {
 
 struct ReduceTotalAngleParams
 {
+    /// Maximal allowed dihedral angle change (in radians) over the flipped edge
+    float maxAngleChange = FLT_MAX;
+
+    /// if this value is less than FLT_MAX then the algorithm will
+    /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
+    float criticalTriAspectRatio = FLT_MAX;
+
     /// This value must be in [0,1] range;
     /// factorDelone = 0 means that only dihedral angles are minimized, ignoring Delaunay criterion;
     /// factorDelone = 1 means that only Delaunay criterion is optimized ignoring dihedral angles;

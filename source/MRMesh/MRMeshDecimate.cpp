@@ -876,7 +876,7 @@ DecimateResult MeshDecimator::run()
                 break; // if old queue was filled only with invalid elements
         }
         const auto topQE = queue_.top();
-        const auto ue = topQE.uedgeId();
+        auto ue = topQE.uedgeId();
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -918,33 +918,65 @@ DecimateResult MeshDecimator::run()
 
         validInQueue_.reset( ue );
 
-        UndirectedEdgeId twin;
-        if ( settings_.twinMap )
-            twin = getAt( *settings_.twinMap, ue );
-
         if ( qe->x.edgeOp == EdgeOp::Flip )
         {
             flipEdge_( ue );
-            if ( twin )
-                flipEdge_( twin );
+            if ( settings_.twinMap )
+                if ( auto twin = getAt( *settings_.twinMap, ue ) )
+                    flipEdge_( twin );
         }
         else
         {
             // edge collapse
-            const auto canCollapseRes = canCollapse_( ue, collapsePos );
+            auto canCollapseRes = canCollapse_( ue, collapsePos );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
+                {
                     addInQueue_( ue, false );
-                continue;
-            }
-            if ( twin )
-            {
-                const auto twinCollapseForm = collapseForm_( twin, collapsePos );
-                const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
-                if ( twinCollapseRes.status != CollapseStatus::Ok )
+                    continue;
+                }
+                if ( canCollapseRes.status != CollapseStatus::MultipleEdge )
+                    continue;
+
+                const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 && topQE.x.edgeOp == EdgeOp::CollapseEnd )
+                    ? mesh_.edgeLengthSq( ue ) <= sqr( settings_.tinyEdgeLength ) : false;
+                if ( !tinyEdge )
+                    continue;
+
+                // if the collapse of a tiny edge failed because of appearance of multiple edges,
+                // test whether left or right triangle contains single 3-degree vertex inside, then collapse it instead
+                const auto en = mesh_.topology.next( ue );
+                const auto ep = mesh_.topology.prev( ue );
+                // the check that left/right triangle exists is done by isOrgInnerAndHasDegree
+                ue = {};
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en.sym(), 3 ) )
+                {
+                    auto vo = mesh_.topology.org( en );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ en };
+                    ue = en;
+                }
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep.sym(), 3 ) )
+                {
+                    auto vo = mesh_.topology.org( ep );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ ep };
+                    ue = ep;
+                }
+                if ( !ue )
                     continue;
             }
+            if ( settings_.twinMap )
+                if ( auto twin = getAt( *settings_.twinMap, ue ) )
+                {
+                    const auto twinCollapseForm = collapseForm_( twin, collapsePos );
+                    const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
+                    if ( twinCollapseRes.status != CollapseStatus::Ok )
+                        continue;
+                }
             forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
     }

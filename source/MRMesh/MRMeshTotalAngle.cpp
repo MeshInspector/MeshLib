@@ -12,13 +12,13 @@ namespace MR
 namespace
 {
 
-// given quadrangle ABCD, computes AC * |angle(AC)|
-float calcAngleLength( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+// given quadrangle ABCD, computes |angle(AC)|
+float dihedralAngle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
 {
     const auto ln = dirDblArea( a, c, d );
     const auto rn = dirDblArea( a, b, c );
     const auto ac = c - a;
-    return ac.length() * std::abs( MR::dihedralAngle( ln, rn, ac ) );
+    return MR::dihedralAngle( ln, rn, ac );
 }
 
 // returns not-negative value:
@@ -53,48 +53,68 @@ float totalAngleIncreaseOnFlip( const MeshTopology & topology, const VertCoords 
     const auto c = points[cv];
     const auto d = points[dv];
     
-    float oldAngleLength = calcAngleLength( a, b, c, d );
-    float newAngleLength = calcAngleLength( b, c, d, a );
+    const float oldAngle = dihedralAngle( a, b, c, d );
+    const float newAngle = dihedralAngle( b, c, d, a );
+    constexpr static float NoAngleChangeLimit = 2 * PI_F;
+    if ( params.maxAngleChange < NoAngleChangeLimit )
+    {
+        const auto maxAspect = params.criticalTriAspectRatio < FLT_MAX ?
+            std::max( triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ) ) : 0;
+        if ( maxAspect < params.criticalTriAspectRatio )
+        {
+            // angle change over the flipped edge must be the largest compared to angle changes over remaining edges
+            const auto angleChange = std::abs( oldAngle - newAngle );
+            if ( angleChange > params.maxAngleChange )
+                return FLT_MAX;
+        }
+    }
+
+    float oldAbsAngleLength = std::abs( oldAngle ) * distance( a, c );
+    float newAbsAngleLength = std::abs( newAngle ) * distance( b, d );
     if ( topology.right( e0 ) )
     {
         auto ep = points[topology.dest( topology.prev( e0 ) )];
-        newAngleLength += calcAngleLength( a, ep, b, d );
-        oldAngleLength += calcAngleLength( a, ep, b, c );
+        const auto ab = distance( a, b );
+        newAbsAngleLength += std::abs( dihedralAngle( a, ep, b, d ) ) * ab;
+        oldAbsAngleLength += std::abs( dihedralAngle( a, ep, b, c ) ) * ab;
     }
     if ( auto e1 = topology.next( e.sym() ); topology.left( e1 ) )
     {
         auto f = points[topology.dest( topology.next( e1 ) )];
-        newAngleLength += calcAngleLength( b, f, c, d );
-        oldAngleLength += calcAngleLength( b, f, c, a );
+        const auto bc = distance( b, c );
+        newAbsAngleLength += std::abs( dihedralAngle( b, f, c, d ) ) * bc;
+        oldAbsAngleLength += std::abs( dihedralAngle( b, f, c, a ) ) * bc;
     }
     if ( auto e2 = topology.prev( e.sym() ); topology.right( e2 ) )
     {
         auto g = points[topology.dest( topology.prev( e2 ) )];
-        newAngleLength += calcAngleLength( c, g, d, b );
-        oldAngleLength += calcAngleLength( c, g, d, a );
+        const auto cd = distance( c, d );
+        newAbsAngleLength += std::abs( dihedralAngle( c, g, d, b ) ) * cd;
+        oldAbsAngleLength += std::abs( dihedralAngle( c, g, d, a ) ) * cd;
     }
     if ( auto e3 = topology.next( e ); topology.left( e3 ) )
     {
         auto h = points[topology.dest( topology.next( e3 ) )];
-        newAngleLength += calcAngleLength( d, h, a, b );
-        oldAngleLength += calcAngleLength( d, h, a, c );
+        const auto da = distance( d, a );
+        newAbsAngleLength += std::abs( dihedralAngle( d, h, a, b ) ) * da;
+        oldAbsAngleLength += std::abs( dihedralAngle( d, h, a, c ) ) * da;
     }
 
     const auto oldCircumDiameter = std::sqrt( std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) ) );
     const auto newCircumDiameter = std::sqrt( std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) ) );
 
-    // ( 1 - f ) * newAngleLength / oldAngleLength + f * newCircumDiameter / oldCircumDiameter
+    // ( 1 - f ) * newAbsAngleLength / oldAbsAngleLength + f * newCircumDiameter / oldCircumDiameter
     const auto f = params.factorDelone;
     float res;
-    if ( oldAngleLength == 0 )
+    if ( oldAbsAngleLength == 0 )
     {
-        if ( newAngleLength == 0 )
+        if ( newAbsAngleLength == 0 )
             res = 1 - f;
         else
             return FLT_MAX;
     }
     else
-        res = ( 1 - f ) * newAngleLength / oldAngleLength;
+        res = ( 1 - f ) * newAbsAngleLength / oldAbsAngleLength;
 
     if ( oldCircumDiameter == 0 )
     {

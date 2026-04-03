@@ -955,6 +955,7 @@ DecimateResult MeshDecimator::run()
                     auto vo = mesh_.topology.org( en );
                     collapsePos = mesh_.points[vo];
                     collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ en };
                     ue = en;
                 }
                 if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep.sym(), 3 ) )
@@ -962,6 +963,7 @@ DecimateResult MeshDecimator::run()
                     auto vo = mesh_.topology.org( ep );
                     collapsePos = mesh_.points[vo];
                     collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ ep };
                     ue = ep;
                 }
                 if ( !ue )

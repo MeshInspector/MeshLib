@@ -916,8 +916,7 @@ DecimateResult MeshDecimator::run()
                 --numOutdated_;
             continue;
         }
-        if ( settings_.debugLog )
-            spdlog::info( "Decimate: e={}, op={}, c={}", (int)EdgeId(ue), (int)topQE.x.edgeOp, qe->c );
+        spdlog::info( "Decimate: ue={}, op={}, c={}", (int)ue, (int)topQE.x.edgeOp, qe->c );
 
         validInQueue_.reset( ue );
 
@@ -932,8 +931,7 @@ DecimateResult MeshDecimator::run()
         {
             // edge collapse
             auto canCollapseRes = canCollapse_( ue, collapsePos );
-            if ( settings_.debugLog )
-                spdlog::info( "Decimate: canCollapseRes={}", (int)canCollapseRes.status );
+            spdlog::info( "Decimate: canCollapseRes={}", (int)canCollapseRes.status );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
@@ -954,8 +952,7 @@ DecimateResult MeshDecimator::run()
                     && computeQueueElement_( en, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( en, collapsePos );
-                    if ( settings_.debugLog )
-                        spdlog::info( "Decimate: en={}, canCollapseRes={}", (int)en, (int)canCollapseRes.status );
+                    spdlog::info( "Decimate: en canCollapseRes={}", (int)canCollapseRes.status );
                     if ( canCollapseRes.status == CollapseStatus::Ok )
                         ue = en;
                 }
@@ -963,8 +960,7 @@ DecimateResult MeshDecimator::run()
                     && computeQueueElement_( ep, topQE.x.edgeOp == EdgeOp::CollapseOptPos, std::numeric_limits<float>::infinity(), &collapseForm, &collapsePos ) )
                 {
                     canCollapseRes = canCollapse_( ep, collapsePos );
-                    if ( settings_.debugLog )
-                        spdlog::info( "Decimate: ep={}, canCollapseRes={}", (int)ep, (int)canCollapseRes.status );
+                    spdlog::info( "Decimate: ep canCollapseRes={}", (int)canCollapseRes.status );
                     if ( canCollapseRes.status == CollapseStatus::Ok )
                         ue = ep;
                 }
@@ -981,13 +977,6 @@ DecimateResult MeshDecimator::run()
                 }
             forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
-        if ( settings_.debugLog )
-            for ( auto f : mesh_.topology.getValidFaces() )
-                if ( mesh_.dirDblArea( f ).x > 1e-7f )
-                {
-                    spdlog::info( "Decimate: inversion detected!" );
-                    break;
-                }
     }
 
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )

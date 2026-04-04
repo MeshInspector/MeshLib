@@ -495,6 +495,8 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), TriPoint,
     ( TriPointd, TriPoint<double> )
 )
 
+struct FaceFace;
+struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
 struct MeshTriPoint;

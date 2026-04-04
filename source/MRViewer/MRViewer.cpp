@@ -280,7 +280,7 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static constexpr int minEmsSleep = 3; // ms - more than 300 fps possible
 static EM_BOOL emsEmptyCallback( double, void* )
 {
     return EM_TRUE;
@@ -595,7 +595,7 @@ void Viewer::mainLoopFunc_()
         }
         else if ( !isAnimating && eventQueue_ && eventQueue_->empty() )
         {
-            emscripten_sleep( minEmsSleep ); // more then 300 fps possible
+            emscripten_sleep( minEmsSleep ); // more than 300 fps possible
             continue;
         }
 

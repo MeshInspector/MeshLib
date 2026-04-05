@@ -136,10 +136,12 @@ TEST( MRMesh, HoleFillPlan3 )
     EXPECT_EQ( p1.items.size(), 0 );
     EXPECT_EQ( p1.numTris, 1 );
 
+    EXPECT_TRUE( doesFillingMultipleEdgeFree( mesh.topology, p0 ) );
     executeHoleFillPlan( mesh, e, p0 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
     EXPECT_FALSE( mesh.topology.isClosed() );
 
+    EXPECT_TRUE( doesFillingMultipleEdgeFree( mesh.topology, p1 ) );
     executeHoleFillPlan( mesh, e.sym(), p1 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
     EXPECT_TRUE( mesh.topology.isClosed() );
@@ -164,6 +166,7 @@ TEST( MRMesh, HoleFillPlan4 )
     EXPECT_EQ( p1.items.size(), 1 );
     EXPECT_EQ( p1.numTris, 2 );
 
+    EXPECT_TRUE( doesFillingMultipleEdgeFree( mesh.topology, p0 ) );
     executeHoleFillPlan( mesh, e, p0 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
     EXPECT_FALSE( mesh.topology.isClosed() );
@@ -171,16 +174,18 @@ TEST( MRMesh, HoleFillPlan4 )
 
     auto mesh1 = mesh;
 
+    // independently produced plans can result in multiple edges after execution:
+    EXPECT_FALSE( doesFillingMultipleEdgeFree( mesh.topology, p1 ) );
     executeHoleFillPlan( mesh, e.sym(), p1 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
     EXPECT_TRUE( mesh.topology.isClosed() );
-    // independently produced plans can result in multiple edges after execution:
     EXPECT_TRUE( hasMultipleEdges( mesh.topology ) );
 
     // if the plan to fill the second hole is prepared after the first hole is filled, no multiple edges appear
     auto p11 = getPlanarHoleFillPlan( mesh1, e.sym() );
     EXPECT_EQ( p11.items.size(), 1 );
     EXPECT_EQ( p11.numTris, 2 );
+    EXPECT_TRUE( doesFillingMultipleEdgeFree( mesh1.topology, p11 ) );
     executeHoleFillPlan( mesh1, e.sym(), p11 );
     EXPECT_EQ( mesh1.topology.numValidFaces(), 4 );
     EXPECT_TRUE( mesh1.topology.isClosed() );

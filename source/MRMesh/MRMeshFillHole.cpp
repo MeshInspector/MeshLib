@@ -587,6 +587,27 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
 
+bool doesFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan )
+{
+    if ( plan.items.empty() )
+        return true;
+
+    auto getVert = [&]( int code )
+    {
+        while ( code < 0 )
+            code = plan.items[ -(code+1) ].edgeCode1;
+        return topology.org( EdgeId( code ) );
+    };
+    for ( int i = 0; i < plan.items.size(); ++i )
+    {
+        auto v1 = getVert( plan.items[i].edgeCode1 );
+        auto v2 = getVert( plan.items[i].edgeCode2 );
+        if ( topology.findEdge( v1, v2 ) )
+            return false;
+    }
+    return true;
+}
+
 /// this class allows you to prepare fill plans for several holes with no new memory allocations on
 /// second and subsequent calls
 class HoleFillPlanner

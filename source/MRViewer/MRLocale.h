@@ -61,5 +61,9 @@ MRVIEWER_API std::string getDisplayName( const std::string& localeName );
 /// \brief Adds or updates a display name for the given locale.
 MRVIEWER_API void setDisplayName( const std::string& localeName, const std::string& displayName );
 
+/// \brief Returns a list of system locales.
+/// The first one in the list is always the active system locale.
+MRVIEWER_API std::vector<std::string> getSystemLocales();
+
 } // namespace MR::Locale
 #endif // MRVIEWER_NO_LOCALE

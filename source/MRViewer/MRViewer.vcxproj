@@ -338,6 +338,7 @@
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
     <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRLocaleMacos.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

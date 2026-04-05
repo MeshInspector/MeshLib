@@ -1,6 +1,7 @@
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MRGTest.h>
 
 namespace MR
@@ -115,6 +116,26 @@ TEST( MRMesh, makeBridgeEdge )
 
     x = makeBridgeEdge( topology, a, b );
     EXPECT_FALSE( x.valid() );
+}
+
+TEST( MRMesh, HoleFillPlan )
+{
+    Mesh mesh;
+    const auto e = mesh.addSeparateEdgeLoop
+    ( {
+        {  0, -1, 0 },
+        {  2,  0, 0 },
+        {  0,  1, 0 },
+        { -2,  0, 0 }
+    } );
+    auto p0 = getPlanarHoleFillPlan( mesh, e );
+    auto p1 = getPlanarHoleFillPlan( mesh, e.sym() );
+
+    executeHoleFillPlan( mesh, e, p0 );
+    executeHoleFillPlan( mesh, e.sym(), p1 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_TRUE( hasMultipleEdges( mesh.topology ) );
 }
 
 } //namespace MR

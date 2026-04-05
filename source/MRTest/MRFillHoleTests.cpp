@@ -118,7 +118,34 @@ TEST( MRMesh, makeBridgeEdge )
     EXPECT_FALSE( x.valid() );
 }
 
-TEST( MRMesh, HoleFillPlan )
+TEST( MRMesh, HoleFillPlan3 )
+{
+    Mesh mesh;
+    const auto e = mesh.addSeparateEdgeLoop
+    ( {
+        {  0, -1, 0 },
+        {  2,  0, 0 },
+        {  0,  1, 0 }
+    } );
+
+    auto p0 = getPlanarHoleFillPlan( mesh, e );
+    EXPECT_EQ( p0.items.size(), 0 );
+    EXPECT_EQ( p0.numTris, 1 );
+
+    auto p1 = getPlanarHoleFillPlan( mesh, e.sym() );
+    EXPECT_EQ( p1.items.size(), 0 );
+    EXPECT_EQ( p1.numTris, 1 );
+
+    executeHoleFillPlan( mesh, e, p0 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
+    EXPECT_FALSE( mesh.topology.isClosed() );
+
+    executeHoleFillPlan( mesh, e.sym(), p1 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+}
+
+TEST( MRMesh, HoleFillPlan4 )
 {
     Mesh mesh;
     const auto e = mesh.addSeparateEdgeLoop
@@ -128,13 +155,24 @@ TEST( MRMesh, HoleFillPlan )
         {  0,  1, 0 },
         { -2,  0, 0 }
     } );
+
     auto p0 = getPlanarHoleFillPlan( mesh, e );
+    EXPECT_EQ( p0.items.size(), 1 );
+    EXPECT_EQ( p0.numTris, 2 );
+
     auto p1 = getPlanarHoleFillPlan( mesh, e.sym() );
+    EXPECT_EQ( p1.items.size(), 1 );
+    EXPECT_EQ( p1.numTris, 2 );
 
     executeHoleFillPlan( mesh, e, p0 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_FALSE( mesh.topology.isClosed() );
+    EXPECT_FALSE( hasMultipleEdges( mesh.topology ) );
+
     executeHoleFillPlan( mesh, e.sym(), p1 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
     EXPECT_TRUE( mesh.topology.isClosed() );
+    // independently produced plans can result in multiple edges after execution:
     EXPECT_TRUE( hasMultipleEdges( mesh.topology ) );
 }
 

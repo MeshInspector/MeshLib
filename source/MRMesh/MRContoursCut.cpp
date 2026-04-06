@@ -1280,8 +1280,15 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         params.new2OldMap->reserve( expectedTotalTris );
 
     for ( size_t i = 0; i < holeRepresentativeEdges.size(); ++i )
-        executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i], 
+    {
+        // regenerate fill plan, if the execution of the old one (prepared before filling of other holes)
+        // leads to the appearance of multiple edges
+        if ( !isFillingMultipleEdgeFree( mesh.topology, fillPlans[i] ) )
+            fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i] );
+
+        executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i],
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );
+    }
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )

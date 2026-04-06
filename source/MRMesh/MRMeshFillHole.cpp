@@ -587,7 +587,7 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
 
-bool doesFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan )
+bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan )
 {
     if ( plan.items.empty() )
         return true;

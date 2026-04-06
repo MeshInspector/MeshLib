@@ -29,7 +29,7 @@ public:
     };
 
     /// constructs an empty heap
-    explicit Heap( P pred = {} ) : pred_( pred ) {}
+    Heap( P pred = {} ) : pred_( pred ) {}
 
     /// constructs heap for given number of elements, assigning given default value to each element
     explicit Heap( size_t size, T def MR_LIFETIMEBOUND_NESTED = {}, P pred = {} );

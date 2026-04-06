@@ -132,8 +132,7 @@ std::optional<Graph::EndVertices> MeshSegmenter::mergeNext_()
     if ( metric == NoEdgeMetric )
         return std::nullopt;
     assert( graph_.valid( ge ) );
-    [[maybe_unused]] auto m0 = vertMetricAfterMerge_( ge );
-    assert( metric == m0 );
+    assert( metric == vertMetricAfterMerge_( ge ) );
     heap_.setSmallerValue( ge, NoEdgeMetric );
 
     auto ends = graph_.ends( ge );
@@ -141,9 +140,11 @@ std::optional<Graph::EndVertices> MeshSegmenter::mergeNext_()
     graph_.merge( ends.v0, ends.v1, [&]( Graph::EdgeId remnant, Graph::EdgeId dead )
         {
             graphEdgeMetrics_[remnant] += graphEdgeMetrics_[dead];
-            heap_.setValue( remnant, vertMetricAfterMerge_( remnant ) );
             heap_.setSmallerValue( dead, NoEdgeMetric );
         } );
+
+    for ( auto ne : graph_.neighbours( ends.v0 ) )
+        heap_.setValue( ne, vertMetricAfterMerge_( ne ) );
 
     return ends;
 }

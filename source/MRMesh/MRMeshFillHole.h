@@ -192,7 +192,7 @@ MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan
 
 /// returns true if executeHoleFillPlan() with the same topology and plan
 /// does not introduce any edge with the same end-vertices as any existed edge in the mesh;
-/// note: this function can be used for checking a fill plan generated before filling other holes
+/// note: this function can be used for checking a fill plan that was generated before filling other holes
 [[nodiscard]] MRMESH_API bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan );
 
 /** \brief Triangulates face of hole in mesh trivially\n

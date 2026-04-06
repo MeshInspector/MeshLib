@@ -3,6 +3,7 @@
 #include "MRGraph.h"
 #include "MRParallelFor.h"
 #include "MRRingIterator.h"
+#include "MRHeap.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -26,6 +27,8 @@ private:
     Graph graph_;
     Vector<double, Graph::VertId> graphVertMetrics_;
     Vector<double, Graph::EdgeId> graphEdgeMetrics_;
+
+    Heap<double, GraphEdgeId, std::greater<double>> heap_;
 };
 
 MeshSegmenter::MeshSegmenter( const MeshTopology& topology, const EdgeMetric& metric )

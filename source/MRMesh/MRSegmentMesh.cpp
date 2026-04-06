@@ -2,8 +2,10 @@
 #include "MRMesh.h"
 #include "MRGraph.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRHeap.h"
+#include "MRUnionFind.h"
 #include "MRTimer.h"
 #include <cfloat>
 #include <optional>
@@ -103,6 +105,7 @@ void MeshSegmenter::constructGraph_()
             m += graphEdgeMetrics_[ge];
         }
         graphVertMetrics_[gv] = m;
+        std::sort( n.begin(), n.end() );
         neis[gv] = std::move( n );
     } );
     graph_.construct( std::move( neis ), std::move( ends ) );
@@ -129,7 +132,8 @@ std::optional<Graph::EndVertices> MeshSegmenter::mergeNext_()
     if ( metric == NoEdgeMetric )
         return std::nullopt;
     assert( graph_.valid( ge ) );
-    assert( metric == vertMetricAfterMerge_( ge ) );
+    [[maybe_unused]] auto m0 = vertMetricAfterMerge_( ge );
+    assert( metric == m0 );
     heap_.setSmallerValue( ge, NoEdgeMetric );
 
     auto ends = graph_.ends( ge );
@@ -163,6 +167,38 @@ Expected<GroupOrder> segmentMesh( const MeshTopology& topology, const EdgeMetric
 
     MeshSegmenter s( topology, metric );
     return s.run();
+}
+
+UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
+    const GroupOrder& groupOrder, int numSegments )
+{
+    MR_TIMER;
+    int numMerges = topology.numValidFaces() - numSegments;
+    assert( numMerges >= 0 );
+    assert( numMerges <= groupOrder.size() );
+    numMerges = std::clamp( numMerges, 0, (int)groupOrder.size() );
+
+    UnionFind<FaceId> unionFindStruct( topology.faceSize() );
+    for ( int i = 0; i < numMerges; ++i )
+    {
+       [[maybe_unused]] auto p = unionFindStruct.unite( groupOrder[i].aFace, groupOrder[i].bFace );
+       assert( p.second );
+    }
+    const auto & roots = unionFindStruct.roots();
+
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        const auto l = topology.left( ue );
+        if ( !l )
+            return;
+        const auto r = topology.right( ue );
+        if ( !r )
+            return;
+        if ( roots[l] != roots[r] )
+            res.set( ue );
+    } );
+    return res;
 }
 
 } //namespace MR

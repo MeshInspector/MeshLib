@@ -1,6 +1,7 @@
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MRGTest.h>
 
 namespace MR
@@ -115,6 +116,80 @@ TEST( MRMesh, makeBridgeEdge )
 
     x = makeBridgeEdge( topology, a, b );
     EXPECT_FALSE( x.valid() );
+}
+
+TEST( MRMesh, HoleFillPlan3 )
+{
+    Mesh mesh;
+    const auto e = mesh.addSeparateEdgeLoop
+    ( {
+        {  0, -1, 0 },
+        {  2,  0, 0 },
+        {  0,  1, 0 }
+    } );
+
+    auto p0 = getPlanarHoleFillPlan( mesh, e );
+    EXPECT_EQ( p0.items.size(), 0 );
+    EXPECT_EQ( p0.numTris, 1 );
+
+    auto p1 = getPlanarHoleFillPlan( mesh, e.sym() );
+    EXPECT_EQ( p1.items.size(), 0 );
+    EXPECT_EQ( p1.numTris, 1 );
+
+    EXPECT_TRUE( isFillingMultipleEdgeFree( mesh.topology, p0 ) );
+    executeHoleFillPlan( mesh, e, p0 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
+    EXPECT_FALSE( mesh.topology.isClosed() );
+
+    EXPECT_TRUE( isFillingMultipleEdgeFree( mesh.topology, p1 ) );
+    executeHoleFillPlan( mesh, e.sym(), p1 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+}
+
+TEST( MRMesh, HoleFillPlan4 )
+{
+    Mesh mesh;
+    const auto e = mesh.addSeparateEdgeLoop
+    ( {
+        {  0, -1, 0 },
+        {  2,  0, 0 },
+        {  0,  1, 0 },
+        { -2,  0, 0 }
+    } );
+
+    auto p0 = getPlanarHoleFillPlan( mesh, e );
+    EXPECT_EQ( p0.items.size(), 1 );
+    EXPECT_EQ( p0.numTris, 2 );
+
+    auto p1 = getPlanarHoleFillPlan( mesh, e.sym() );
+    EXPECT_EQ( p1.items.size(), 1 );
+    EXPECT_EQ( p1.numTris, 2 );
+
+    EXPECT_TRUE( isFillingMultipleEdgeFree( mesh.topology, p0 ) );
+    executeHoleFillPlan( mesh, e, p0 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_FALSE( mesh.topology.isClosed() );
+    EXPECT_FALSE( hasMultipleEdges( mesh.topology ) );
+
+    auto mesh1 = mesh;
+
+    // independently produced plans can result in multiple edges after execution:
+    EXPECT_FALSE( isFillingMultipleEdgeFree( mesh.topology, p1 ) );
+    executeHoleFillPlan( mesh, e.sym(), p1 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_TRUE( hasMultipleEdges( mesh.topology ) );
+
+    // if the plan to fill the second hole is prepared after the first hole is filled, no multiple edges appear
+    auto p11 = getPlanarHoleFillPlan( mesh1, e.sym() );
+    EXPECT_EQ( p11.items.size(), 1 );
+    EXPECT_EQ( p11.numTris, 2 );
+    EXPECT_TRUE( isFillingMultipleEdgeFree( mesh1.topology, p11 ) );
+    executeHoleFillPlan( mesh1, e.sym(), p11 );
+    EXPECT_EQ( mesh1.topology.numValidFaces(), 4 );
+    EXPECT_TRUE( mesh1.topology.isClosed() );
+    EXPECT_FALSE( hasMultipleEdges( mesh1.topology ) );
 }
 
 } //namespace MR

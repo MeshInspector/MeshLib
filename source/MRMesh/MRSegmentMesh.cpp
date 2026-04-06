@@ -6,6 +6,7 @@
 #include "MRHeap.h"
 #include "MRTimer.h"
 #include <cfloat>
+#include <optional>
 
 namespace MR
 {
@@ -19,12 +20,14 @@ class MeshSegmenter
 {
 public:
     MeshSegmenter( const MeshTopology& topology, const EdgeMetric& metric );
+    GroupOrder run();
 
 private:
     double vertMetricAfterMerge_( Graph::EdgeId ge ) const;
 
     void constructGraph_();
     void constructHeap_();
+    std::optional<Graph::EndVertices> mergeNext_();
 
 private:
     const MeshTopology& topology_;
@@ -113,11 +116,41 @@ void MeshSegmenter::constructHeap_()
     ParallelFor( graphEdgeMetrics_, [&]( Graph::EdgeId ge )
     {
         elements[ge].id = ge;
-        if ( !graph_.validEdges().test( ge ) )
+        if ( !graph_.valid( ge ) )
             return;
         elements[ge].val = vertMetricAfterMerge_( ge );
     } );
     heap_ = Heap( std::move( elements ) );
+}
+
+std::optional<Graph::EndVertices> MeshSegmenter::mergeNext_()
+{
+    const auto [ge, metric] = heap_.top();
+    if ( metric == NoEdgeMetric )
+        return std::nullopt;
+    assert( graph_.valid( ge ) );
+    assert( metric == vertMetricAfterMerge_( ge ) );
+    heap_.setSmallerValue( ge, NoEdgeMetric );
+
+    auto ends = graph_.ends( ge );
+    graphVertMetrics_[ends.v0] = metric;
+    graph_.merge( ends.v0, ends.v1, [&]( Graph::EdgeId remnant, Graph::EdgeId dead )
+        {
+            graphEdgeMetrics_[remnant] += graphEdgeMetrics_[dead];
+            heap_.setValue( remnant, vertMetricAfterMerge_( remnant ) );
+            heap_.setSmallerValue( dead, NoEdgeMetric );
+        } );
+
+    return ends;
+}
+
+GroupOrder MeshSegmenter::run()
+{
+    MR_TIMER;
+    GroupOrder res;
+    while ( auto vv = mergeNext_() )
+        res.push_back( { FaceId( int( vv->v0 ) ), FaceId( int( vv->v1 ) ) } );
+    return res;
 }
 
 } //anonymous namespace
@@ -129,9 +162,7 @@ Expected<GroupOrder> segmentMesh( const MeshTopology& topology, const EdgeMetric
         return unexpected( "no metric given" );
 
     MeshSegmenter s( topology, metric );
-
-    GroupOrder res;
-    return res;
+    return s.run();
 }
 
 } //namespace MR

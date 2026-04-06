@@ -5,6 +5,7 @@
 #include "MRRingIterator.h"
 #include "MRHeap.h"
 #include "MRTimer.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -12,13 +13,18 @@ namespace MR
 namespace
 {
 
+static constexpr double NoEdgeMetric = DBL_MAX;
+
 class MeshSegmenter
 {
 public:
     MeshSegmenter( const MeshTopology& topology, const EdgeMetric& metric );
 
 private:
+    double vertMetricAfterMerge_( Graph::EdgeId ge ) const;
+
     void constructGraph_();
+    void constructHeap_();
 
 private:
     const MeshTopology& topology_;
@@ -28,13 +34,21 @@ private:
     Vector<double, Graph::VertId> graphVertMetrics_;
     Vector<double, Graph::EdgeId> graphEdgeMetrics_;
 
-    Heap<double, GraphEdgeId, std::greater<double>> heap_;
+    using Heap = MR::Heap<double, GraphEdgeId, std::greater<double>>;
+    Heap heap_;
 };
 
 MeshSegmenter::MeshSegmenter( const MeshTopology& topology, const EdgeMetric& metric )
     : topology_( topology ), metric_( metric )
 {
     constructGraph_();
+    constructHeap_();
+}
+
+inline double MeshSegmenter::vertMetricAfterMerge_( Graph::EdgeId ge ) const
+{
+    const auto & vv = graph_.ends( ge );
+    return graphVertMetrics_[vv.v0] + graphVertMetrics_[vv.v1] - 2 * graphEdgeMetrics_[ge];
 }
 
 void MeshSegmenter::constructGraph_()
@@ -89,6 +103,21 @@ void MeshSegmenter::constructGraph_()
         neis[gv] = std::move( n );
     } );
     graph_.construct( std::move( neis ), std::move( ends ) );
+}
+
+void MeshSegmenter::constructHeap_()
+{
+    MR_TIMER;
+
+    std::vector<Heap::Element> elements( topology_.undirectedEdgeSize(), { .val = NoEdgeMetric } );
+    ParallelFor( graphEdgeMetrics_, [&]( Graph::EdgeId ge )
+    {
+        elements[ge].id = ge;
+        if ( !graph_.validEdges().test( ge ) )
+            return;
+        elements[ge].val = vertMetricAfterMerge_( ge );
+    } );
+    heap_ = Heap( std::move( elements ) );
 }
 
 } //anonymous namespace

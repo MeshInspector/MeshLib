@@ -97,7 +97,7 @@ EdgeMetric edgeDihedralAngleMetric( const MeshTopology& topology, const VertCoor
         if ( topology.isBdEdge( e, nullptr ) )
             return params.boundaryValue;
 
-        auto a = dihedralAngleSin( topology, points, e );
+        auto a = dihedralAngle( topology, points, e );
         return a >= 0 ? params.convexFactor * a : params.concaveFactor * a;
     };
 }

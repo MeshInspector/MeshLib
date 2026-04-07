@@ -1,6 +1,7 @@
 #include "MREdgePaths.h"
 #include "MREdgePathsBuilder.h"
 #include "MREdgeIterator.h"
+#include "MREdgeMetric.h"
 #include "MRRegionBoundary.h"
 #include "MRPlane3.h"
 #include "MRTimer.h"
@@ -84,6 +85,11 @@ double calcPathMetric( const EdgePath & path, EdgeMetric metric )
     return res;
 }
 
+double calcPathLength( const EdgePath & path, const Mesh & mesh )
+{
+    return calcPathMetric( path, edgeLengthMetric( mesh ) );
+}
+
 Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh )
 {
     assert( isEdgeLoop( mesh.topology, loop ) );
@@ -113,6 +119,11 @@ void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric )
         sorted[i] = std::move( paths[sortedIds[i]] );
     }
     paths = std::move( sorted );
+}
+
+void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh )
+{
+    sortPathsByMetric( paths, edgeLengthMetric( mesh ) );
 }
 
 void addLeftBand( const MeshTopology & topology, const EdgeLoop & loop, FaceBitSet & addHere )

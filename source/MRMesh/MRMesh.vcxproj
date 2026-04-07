@@ -458,6 +458,7 @@
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
+    <ClCompile Include="MREdgePathsBuilder.cpp" />
     <ClCompile Include="MREnums.cpp" />
     <ClCompile Include="MRImageTransform.cpp" />
     <ClCompile Include="MRMeshDivideWithPlane.cpp" />

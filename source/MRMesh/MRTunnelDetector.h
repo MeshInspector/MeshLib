@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MREdgeMetric.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include <cfloat>

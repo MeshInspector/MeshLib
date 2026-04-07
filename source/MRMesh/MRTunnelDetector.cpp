@@ -1,6 +1,7 @@
 #include "MRTunnelDetector.h"
 #include "MRMesh.h"
 #include "MREdgePaths.h"
+#include "MREdgeMetric.h"
 #include "MRInTreePathBuilder.h"
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"

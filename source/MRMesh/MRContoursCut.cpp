@@ -18,6 +18,7 @@
 #include "MRSurfacePath.h"
 #include "MRphmap.h"
 #include "MRFillContourByGraphCut.h"
+#include "MREdgeMetric.h"
 #include "MRPch/MRSpdlog.h"
 #include <numeric>
 

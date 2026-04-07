@@ -118,9 +118,6 @@ If `msgfmt` is not found, the function silently does nothing and no target is cr
 ## MSBuild integration
 
 `source/CompileTranslations.targets` provides an equivalent build-time `.po` → `.mo` compilation step for Visual Studio projects.
-
-### Setup
-
 Import the targets file and declare one or more `TranslationLocaleDir` items pointing at your `locale/` root directories:
 
 \code{.xml}
@@ -136,11 +133,9 @@ Import the targets file and declare one or more `TranslationLocaleDir` items poi
 
 MeshLib's own `common.props` already adds `$(MeshLibDir)\locale` to `TranslationLocaleDir`, so projects that import `common.props` inherit MeshLib's translations automatically.
 
-### How it works
-
 The `CompileTranslations` target runs before `Build` and:
 
-1. Globs every `<TranslationLocaleDir>/**/*.po` file.
+1. Globs every *.po file in specified locale dirs.
 2. Creates `$(OutDir)locale\<lang>\LC_MESSAGES\` output directories.
 3. Calls `msgfmt --check` on each `.po` to produce the corresponding `.mo`.
 

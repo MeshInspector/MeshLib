@@ -47,7 +47,8 @@ For example: `build/Release/bin/locale/de/LC_MESSAGES/MyPlugin.mo`.
 
 ## Prerequisites
 
-- **gettext tools**: `xgettext`, `msgmerge`, `msgfmt`. Install via your OS package manager or from vcpkg (`vcpkg install gettext[tools]`). Alternatively, set the `GETTEXT_ROOT` environment variable to a standalone gettext install prefix.
+- **gettext tools**: `xgettext`, `msgmerge`, `msgfmt`. Install via your OS package manager or from vcpkg (`vcpkg install gettext[tools]`). Alternatively, set the `GETTEXT_ROOT` environment variable to a standalone gettext install path
+  (e.g. <a href="https://github.com/vslavik/gettext-tools-windows/releases">gettext-tools-windows</a>).
 - **Python 3** for the helper scripts in `scripts/gettext/`.
 
 ## Helper scripts

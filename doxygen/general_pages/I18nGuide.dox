@@ -47,7 +47,8 @@ For example: `build/Release/bin/locale/de/LC_MESSAGES/MyPlugin.mo`.
 
 ## Prerequisites
 
-- **gettext tools**: `xgettext`, `msgmerge`, `msgfmt`. Install via your OS package manager. On Windows, set the `GETTEXT_ROOT` environment variable to the install prefix.
+- **gettext tools**: `xgettext`, `msgmerge`, `msgfmt`. Install via your OS package manager or from vcpkg (`vcpkg install gettext[tools]`). Alternatively, set the `GETTEXT_ROOT` environment variable to a standalone gettext install path
+  (e.g. <a href="https://github.com/vslavik/gettext-tools-windows/releases">gettext-tools-windows</a>).
 - **Python 3** for the helper scripts in `scripts/gettext/`.
 
 ## Helper scripts
@@ -113,6 +114,32 @@ The function:
 5. Installs `.pot` templates and compiled `.mo` files to `${MR_RESOURCES_DIR}/locale/`.
 
 If `msgfmt` is not found, the function silently does nothing and no target is created. This is why the `if(TARGET ...)` guard is needed before `add_dependencies`.
+
+## MSBuild integration
+
+`source/CompileTranslations.targets` provides an equivalent build-time `.po` → `.mo` compilation step for Visual Studio projects.
+Import the targets file and declare one or more `TranslationLocaleDir` items pointing at your `locale/` root directories:
+
+\code{.xml}
+<Project>
+  <!-- Tell CompileTranslations where your .po files live. -->
+  <ItemGroup>
+    <TranslationLocaleDir Include="$(SolutionDir)..\locale" />
+  </ItemGroup>
+
+  <Import Project="$(MeshLibDir)\source\CompileTranslations.targets" />
+</Project>
+\endcode
+
+MeshLib's own `common.props` already adds `$(MeshLibDir)\locale` to `TranslationLocaleDir`, so projects that import `common.props` inherit MeshLib's translations automatically.
+
+The `CompileTranslations` target runs before `Build` and:
+
+1. Globs every *.po file in specified locale dirs.
+2. Creates `$(OutDir)locale\<lang>\LC_MESSAGES\` output directories.
+3. Calls `msgfmt --check` on each `.po` to produce the corresponding `.mo`.
+
+If `msgfmt` is not found, the target is silently skipped and the build continues without compiling translations.
 
 # In-app initialization and configuration {#I18nInit}
 

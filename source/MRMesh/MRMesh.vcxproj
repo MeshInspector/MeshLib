@@ -149,6 +149,7 @@
     <ClInclude Include="MRMeshPatch.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
+    <ClInclude Include="MRSegmentMesh.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />
@@ -465,6 +466,7 @@
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRMeshPatch.cpp" />
     <ClCompile Include="MRMeshSave3mf.cpp" />
+    <ClCompile Include="MRSegmentMesh.cpp" />
     <ClCompile Include="MRMeshTotalAngle.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROneMeshContours.cpp" />

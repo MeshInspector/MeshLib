@@ -21,7 +21,7 @@ static constexpr double NoEdgeMetric = DBL_MAX;
 class MeshSegmenter
 {
 public:
-    MeshSegmenter( const MeshTopology& topology, const EdgeMetric& metric );
+    MeshSegmenter( const Mesh& mesh, const EdgeMetric& lengthCurvMetric );
     GroupOrder run();
 
 private:
@@ -32,8 +32,8 @@ private:
     std::optional<Graph::EndVertices> mergeNext_();
 
 private:
-    const MeshTopology& topology_;
-    const EdgeMetric& metric_;
+    const Mesh& mesh_;
+    const EdgeMetric& lengthCurvMetric_;
 
     Graph graph_;
     Vector<double, Graph::VertId> graphVertMetrics_;
@@ -43,8 +43,8 @@ private:
     Heap heap_;
 };
 
-MeshSegmenter::MeshSegmenter( const MeshTopology& topology, const EdgeMetric& metric )
-    : topology_( topology ), metric_( metric )
+MeshSegmenter::MeshSegmenter( const Mesh& mesh, const EdgeMetric& lengthCurvMetric )
+    : mesh_( mesh ), lengthCurvMetric_( lengthCurvMetric )
 {
     constructGraph_();
     constructHeap_();
@@ -64,18 +64,18 @@ void MeshSegmenter::constructGraph_()
     //   Graph::VertId = Mesh::FaceId
     //   Graph::EdgeId = Mesh::UndirectedEdgeId
 
-    graphEdgeMetrics_.resize( topology_.undirectedEdgeSize() );
-    Graph::EndsPerEdge ends( topology_.undirectedEdgeSize() );
+    graphEdgeMetrics_.resize( mesh_.topology.undirectedEdgeSize() );
+    Graph::EndsPerEdge ends( mesh_.topology.undirectedEdgeSize() );
     ParallelFor( graphEdgeMetrics_, [&]( Graph::EdgeId ge )
     {
         UndirectedEdgeId ue( (int)ge );
-        if ( topology_.isLoneEdge( ue ) )
+        if ( mesh_.topology.isLoneEdge( ue ) )
             return;
-        graphEdgeMetrics_[ge] = metric_( ue );
+        graphEdgeMetrics_[ge] = lengthCurvMetric_( ue );
 
         Graph::EndVertices vv;
-        vv.v0 = Graph::VertId( (int)topology_.left( ue ) );
-        vv.v1 = Graph::VertId( (int)topology_.right( ue ) );
+        vv.v0 = Graph::VertId( (int)mesh_.topology.left( ue ) );
+        vv.v1 = Graph::VertId( (int)mesh_.topology.right( ue ) );
         if ( vv.v0 && vv.v1 )
         {
             assert( vv.v0 != vv.v1 );
@@ -85,22 +85,22 @@ void MeshSegmenter::constructGraph_()
         }
     } );
 
-    graphVertMetrics_.resize( topology_.faceSize() );
-    Graph::NeighboursPerVertex neis( topology_.faceSize() );
+    graphVertMetrics_.resize( mesh_.topology.faceSize() );
+    Graph::NeighboursPerVertex neis( mesh_.topology.faceSize() );
     ParallelFor( graphVertMetrics_, [&]( Graph::VertId gv )
     {
         FaceId f( (int)gv );
-        if ( !topology_.hasFace( f ) )
+        if ( !mesh_.topology.hasFace( f ) )
             return;
 
         Graph::Neighbours n;
-        n.reserve( topology_.getFaceDegree( f ) );
+        n.reserve( mesh_.topology.getFaceDegree( f ) );
         double m = 0;
-        for ( auto e : leftRing( topology_, f ) )
+        for ( auto e : leftRing( mesh_.topology, f ) )
         {
             Graph::EdgeId ge( int( e.undirected() ) );
-            assert( topology_.left( e ) = f );
-            if ( topology_.right( e ) )
+            assert( mesh_.topology.left( e ) = f );
+            if ( mesh_.topology.right( e ) )
                 n.push_back( ge );
             m += graphEdgeMetrics_[ge];
         }
@@ -115,7 +115,7 @@ void MeshSegmenter::constructHeap_()
 {
     MR_TIMER;
 
-    std::vector<Heap::Element> elements( topology_.undirectedEdgeSize(), { .val = NoEdgeMetric } );
+    std::vector<Heap::Element> elements( mesh_.topology.undirectedEdgeSize(), { .val = NoEdgeMetric } );
     ParallelFor( graphEdgeMetrics_, [&]( Graph::EdgeId ge )
     {
         elements[ge].id = ge;
@@ -128,15 +128,15 @@ void MeshSegmenter::constructHeap_()
 
 std::optional<Graph::EndVertices> MeshSegmenter::mergeNext_()
 {
-    const auto [ge, metric] = heap_.top();
-    if ( metric == NoEdgeMetric )
+    const auto [ge, lengthCurvMetric] = heap_.top();
+    if ( lengthCurvMetric == NoEdgeMetric )
         return std::nullopt;
     assert( graph_.valid( ge ) );
-    assert( metric == vertMetricAfterMerge_( ge ) );
+    assert( lengthCurvMetric == vertMetricAfterMerge_( ge ) );
     heap_.setSmallerValue( ge, NoEdgeMetric );
 
     auto ends = graph_.ends( ge );
-    graphVertMetrics_[ends.v0] = metric;
+    graphVertMetrics_[ends.v0] = lengthCurvMetric;
     graph_.merge( ends.v0, ends.v1, [&]( Graph::EdgeId remnant, Graph::EdgeId dead )
         {
             graphEdgeMetrics_[remnant] += graphEdgeMetrics_[dead];
@@ -160,13 +160,13 @@ GroupOrder MeshSegmenter::run()
 
 } //anonymous namespace
 
-Expected<GroupOrder> segmentMesh( const MeshTopology& topology, const EdgeMetric& metric )
+Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& lengthCurvMetric )
 {
     MR_TIMER;
-    if ( !metric )
-        return unexpected( "no metric given" );
+    if ( !lengthCurvMetric )
+        return unexpected( "no lengthCurvMetric given" );
 
-    MeshSegmenter s( topology, metric );
+    MeshSegmenter s( mesh, lengthCurvMetric );
     return s.run();
 }
 

@@ -21,7 +21,7 @@ static constexpr double ProhibitMergePenalty = DBL_MAX;
 class MeshSegmenter
 {
 public:
-    MeshSegmenter( const Mesh& mesh, const EdgeMetric& lengthCurvMetric );
+    MeshSegmenter( const Mesh& mesh, const EdgeMetric& curvMetric );
     GroupOrder run();
 
 private:
@@ -33,7 +33,7 @@ private:
 
 private:
     const Mesh& mesh_;
-    const EdgeMetric& lengthCurvMetric_;
+    const EdgeMetric& curvMetric_;
 
     Graph graph_;
 
@@ -56,8 +56,8 @@ private:
     Heap heap_;
 };
 
-MeshSegmenter::MeshSegmenter( const Mesh& mesh, const EdgeMetric& lengthCurvMetric )
-    : mesh_( mesh ), lengthCurvMetric_( lengthCurvMetric )
+MeshSegmenter::MeshSegmenter( const Mesh& mesh, const EdgeMetric& curvMetric )
+    : mesh_( mesh ), curvMetric_( curvMetric )
 {
     constructGraph_();
     constructHeap_();
@@ -87,10 +87,11 @@ void MeshSegmenter::constructGraph_()
         UndirectedEdgeId ue( (int)ge );
         if ( mesh_.topology.isLoneEdge( ue ) )
             return;
+        const auto len = mesh_.edgeLength( ue );
         graphEdgeData_[ge] =
         {
-            .length = mesh_.edgeLength( ue ),
-            .lengthCurv = lengthCurvMetric_( ue )
+            .length = len,
+            .lengthCurv = len * curvMetric_( ue )
         };
 
         Graph::EndVertices vv;
@@ -178,13 +179,13 @@ GroupOrder MeshSegmenter::run()
 
 } //anonymous namespace
 
-Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& lengthCurvMetric )
+Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric )
 {
     MR_TIMER;
-    if ( !lengthCurvMetric )
-        return unexpected( "no lengthCurvMetric given" );
+    if ( !curvMetric )
+        return unexpected( "no curvMetric given" );
 
-    MeshSegmenter s( mesh, lengthCurvMetric );
+    MeshSegmenter s( mesh, curvMetric );
     return s.run();
 }
 

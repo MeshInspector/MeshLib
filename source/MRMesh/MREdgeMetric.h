@@ -47,7 +47,7 @@ namespace MR
 struct DihedralAngleProcessParams
 {
     float convexFactor = 1;     ///< positive convex dihedral angles are returned multiplied on this factor
-    float concaveFactor = 1;    ///< positive convex dihedral angles are returned multiplied on this factor
+    float concaveFactor = 1;    ///< negative concave dihedral angles are returned multiplied on this factor
     float boundaryValue = 0;    ///< this value will be returned as dihedral angle for boundary edges
 };
 

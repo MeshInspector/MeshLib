@@ -23,7 +23,7 @@ jobs:
 
       - name: Install tools
         run: |
-          dnf install -y gettext gh git
+          dnf install -y gettext gh git python3
 
       - name: Update translation templates
         run: |

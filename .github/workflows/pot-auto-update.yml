@@ -34,9 +34,9 @@ jobs:
         id: check-diff
         run: |
           # ignore auto-updated timestamp, ignore source line comments
-          DIFF=$(git diff --unified=0 --ignore-matching-lines="POT-Creation-Date.*" --ignore-matching-lines="#: .*" locale/*.pot)
-          if [ -n "$DIFF" ] ; then
-            echo $DIFF
+          pot_diff () { git diff --unified=0 --ignore-matching-lines="POT-Creation-Date.*" --ignore-matching-lines="#: .*" locale/*.pot ; }
+          pot_diff
+          if [ -n "$(pot_diff)" ] ; then
             echo "need_update=true" >> $GITHUB_OUTPUT
           else
             echo "need_update=false" >> $GITHUB_OUTPUT

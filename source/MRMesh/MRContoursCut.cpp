@@ -1018,7 +1018,7 @@ void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 // Checks if cut mesh has valid loops in intersections
 // if error occurs returns bad faces bit set, otherwise returns empty one
 FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult& preRes,
-                               const FullRemovedFacesInfo& oldFaces )
+                               const FullRemovedFacesInfo& oldFaces, BitSet* badContours )
 {
     MR_TIMER;
     FaceBitSet badFacesBS( topology.getValidFaces().size() );
@@ -1042,7 +1042,11 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
             {
                 visited.set( e );
                 if ( e == e0.sym() )
+                {
                     badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
+                    if ( badContours )
+                        badContours->autoResizeSet( pathId );
+                }
             }
         }
     }
@@ -1225,7 +1229,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap, params.new2oldEdgesMap );
 
-    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
+    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces, params.badContours );
     if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
         return res;
 

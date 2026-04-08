@@ -101,6 +101,12 @@ struct BooleanParameters
     /// \warning not recommended in most cases
     bool forceCut = false;
     
+    /// if not null: contours with ids from this bitset will be skipped
+    const BitSet* skipContours{ nullptr };
+
+    /// if not null: inconsistent and self-intersecting contour ids will be added to this bitset
+    BitSet* outBadContours{ nullptr };
+
     ProgressCallback cb = {};
 };
 

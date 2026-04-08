@@ -107,6 +107,8 @@ struct BooleanInternalParameters
     const Mesh* originalMeshB{ nullptr };
     /// Optional output cut edges of booleaned meshes
     std::vector<EdgeLoop>* optionalOutCut{ nullptr };
+    /// Optional output ids of inconsistent contours
+    BitSet* inconsistentContours{ nullptr };
 };
 
 /// Perform boolean operation on cut meshes

@@ -46,6 +46,20 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
     {
+        if ( intParams.inconsistentContours )
+        {
+            // fill inconsistentContours if required
+            for ( int i = 0; i < cutPaths.size(); ++i )
+            {
+                const auto& path = cutPaths[i];
+                if ( path.empty() )
+                    continue;
+                auto l = origin.topology.left( path[0] );
+                auto r = origin.topology.right( path[0] );
+                if ( l && r && unionFind.find( l ) == unionFind.find( r ) )
+                    intParams.inconsistentContours->autoResizeSet( i );
+            }
+        }
         // unite regions separately to the left and to the right of cutPaths
         for ( const auto& path : cutPaths )
             for ( auto e : path )

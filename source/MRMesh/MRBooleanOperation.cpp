@@ -10,6 +10,9 @@
 #include "MRPartMappingAdapters.h"
 #include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
+#include "MRFillContourByGraphCut.h"
+#include "MREdgeMetric.h"
+#include "MRRegionBoundary.h"
 
 namespace MR
 {
@@ -34,6 +37,11 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
         for ( const auto& path : cutPaths )
             for ( auto e : path )
                 cutEdges.set( e );
+        if ( intParams.forceMode )
+        {
+            auto left = fillContourLeftByGraphCut( origin.topology, cutPaths, edgeAbsCurvMetric( origin ) );
+            cutEdges |= findRegionBoundaryUndirectedEdgesInsideMesh( origin.topology, left );
+        }
         unionFind = MeshComponents::getUnionFindStructureFaces( origin, MeshComponents::PerEdge, &cutEdges );
     }
 

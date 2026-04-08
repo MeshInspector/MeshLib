@@ -251,6 +251,35 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
 }
 }
 
+BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& inParams /*= {} */ )
+{
+    auto params = inParams;
+    BitSet badContours;
+    BitSet skipContours;
+    params.outBadContours = &badContours;
+    params.skipContours = &skipContours;
+    auto res = boolean( meshA, meshB, operation, params );
+    int i = 0;
+    const int cMaxInters = 5;
+    while ( !res.valid() && i++ < cMaxInters )
+    {
+        if ( badContours.empty() )
+            break;
+        auto newSkipConts = skipContours;
+        for ( auto badC : badContours )
+        {
+            for ( auto skipC : skipContours )
+                if ( skipC <= badC )
+                    ++badC;
+            newSkipConts.autoResizeSet( badC );
+        }
+        badContours.reset();
+        skipContours = newSkipConts;
+        res = boolean( meshA, meshB, operation, params );
+    }
+    return res;
+}
+
 Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
@@ -660,6 +689,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     intParams.optionalOutCut = params.outCutEdges;
     intParams.inconsistentContours = params.outBadContours;
+    intParams.forceMode = params.forceCut;
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 

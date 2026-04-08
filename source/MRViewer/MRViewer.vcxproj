@@ -159,6 +159,7 @@
     <ClCompile Include="MRFileDialogPortal.cpp" />
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
+    <ClCompile Include="MRUITestEngineControl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -338,6 +339,7 @@
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
     <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRUITestEngineControl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

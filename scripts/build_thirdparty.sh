@@ -32,38 +32,10 @@ else
   echo "Host system: ${OSTYPE}"
 fi
 
-MR_EMSCRIPTEN_SINGLETHREAD=0
-if [[ $OSTYPE == "linux"* ]] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N) (s - singlethreaded, l - 64-bit)" -rsn 1
-    echo;
-    case $REPLY in
-      Y|y)
-        MR_EMSCRIPTEN="ON";;
-      S|s)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_SINGLETHREAD=1;;
-      L|l)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_WASM64=1;;
-      *)
-        MR_EMSCRIPTEN="OFF";;
-    esac
-  fi  
-else
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    MR_EMSCRIPTEN="OFF"
-  fi
-fi
-echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}, 64-bit ${MR_EMSCRIPTEN_WASM64}"
+. "$SCRIPT_DIR/ask_emscripten_mode.src"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
-  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
-    MR_EMSCRIPTEN_SINGLETHREAD=1
-  fi
-  if [[ $MR_EMSCRIPTEN_WASM64 == "ON" ]]; then
-    MR_EMSCRIPTEN_WASM64=1
-  fi
+  true # Nothing.
 elif [ -n "${INSTALL_REQUIREMENTS}" ]; then
   echo "Check requirements. Running ${INSTALL_REQUIREMENTS} ..."
   ${SCRIPT_DIR}/$INSTALL_REQUIREMENTS

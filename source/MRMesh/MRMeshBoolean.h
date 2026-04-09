@@ -109,7 +109,7 @@ MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanO
 MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 
-/// calls boolean in force mode, also unites close vertices and fill holes afterwards
+/// calls boolean in force mode, also unites close vertices and fills holes afterwards
 /// \note expects closed mesh on input, and fills all holes
 /// \warning params.mapper might be not correctly updated when new holes are filled
 MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,

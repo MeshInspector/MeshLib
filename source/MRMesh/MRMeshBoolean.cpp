@@ -567,7 +567,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         params.outPreCutA->contours = std::move( meshAContours );
         params.outPreCutA->mesh = std::move( meshA );
     }
-    BitSet badContsCpy;
     if ( needCutMeshA && !params.outPreCutA )
     {
         taskGroup.run( [&] ()
@@ -634,6 +633,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();
+
 
     if ( !params.forceCut && result.meshABadContourFaces.any() )
     {

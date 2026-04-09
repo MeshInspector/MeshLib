@@ -339,6 +339,7 @@
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
     <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRLocaleMacos.h" />
     <ClInclude Include="MRUITestEngineControl.h" />
   </ItemGroup>
   <ItemGroup>
@@ -356,6 +357,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="MRLocaleMacos.mm" />
     <None Include="MRLocaleNames.inl" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

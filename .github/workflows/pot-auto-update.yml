@@ -15,15 +15,20 @@ jobs:
       GIT_BRANCH_NAME: auto-ci/update_pot_files
 
     steps:
+      - name: Install tools
+        run: |
+          dnf install -y gettext gh git python3
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: master
           token: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
 
-      - name: Install tools
+      # https://github.com/actions/checkout/issues/766
+      - name: Fix git permissions
         run: |
-          dnf install -y gettext gh git python3
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Update translation templates
         run: |

@@ -25,6 +25,7 @@ MRVIEWER_API boost::signals2::connection onChanged( const std::function<void ( c
 
 /// \brief Returns the list of the names of locales with available .mo files.
 /// "en" is always included as the default locale.
+/// The returned list is always sorted alphabetically.
 MRVIEWER_API std::vector<std::string> getAvailableLocales();
 
 /// \brief Adds a path to .mo files.
@@ -60,6 +61,10 @@ MRVIEWER_API int findDomain( const std::string& domainName );
 MRVIEWER_API std::string getDisplayName( const std::string& localeName );
 /// \brief Adds or updates a display name for the given locale.
 MRVIEWER_API void setDisplayName( const std::string& localeName, const std::string& displayName );
+
+/// \brief Returns a list of system locales.
+/// The first one in the list is always the active system locale.
+MRVIEWER_API std::vector<std::string> getSystemLocales();
 
 } // namespace MR::Locale
 #endif // MRVIEWER_NO_LOCALE

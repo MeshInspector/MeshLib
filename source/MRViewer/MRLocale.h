@@ -25,6 +25,7 @@ MRVIEWER_API boost::signals2::connection onChanged( const std::function<void ( c
 
 /// \brief Returns the list of the names of locales with available .mo files.
 /// "en" is always included as the default locale.
+/// The returned list is always sorted alphabetically.
 MRVIEWER_API std::vector<std::string> getAvailableLocales();
 
 /// \brief Adds a path to .mo files.

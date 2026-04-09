@@ -91,6 +91,7 @@ std::vector<std::string> Locale::getAvailableLocales()
             if ( entry.is_directory( ec ) )
                 results.emplace_back( utf8string( entry.path().filename() ) );
     std::sort( results.begin(), results.end() );
+    results.erase( std::unique( results.begin(), results.end() ), results.end() );
     return results;
 }
 

@@ -4,7 +4,7 @@
 [[ ${MR_EMSCRIPTEN_SINGLETHREAD:=} ]] || export MR_EMSCRIPTEN_SINGLETHREAD=0
 [[ ${MR_EMSCRIPTEN_WASM64:=} ]] || export MR_EMSCRIPTEN_WASM64=0
 
-if [[ $OSTYPE == "linux"* ]]; then
+if [[ $OSTYPE == "linux"* && $MR_STATE != "DOCKER_BUILD" ]]; then
   if [ ! -n "$MR_EMSCRIPTEN" ]; then
     read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N) (s - singlethreaded, l - 64-bit)" -rsn 1
     echo;

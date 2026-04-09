@@ -107,6 +107,8 @@ struct BooleanInternalParameters
     const Mesh* originalMeshB{ nullptr };
     /// Optional output cut edges of booleaned meshes
     std::vector<EdgeLoop>* optionalOutCut{ nullptr };
+    /// If true uses graphcut for inside/outside separation
+    bool graphCutSeparation{ false };
 };
 
 /// Perform boolean operation on cut meshes

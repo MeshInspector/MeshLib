@@ -24,6 +24,7 @@
 #include "MREdgePaths.h"
 #include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMeshFillHole.h"
 
 namespace MR
 {
@@ -249,6 +250,18 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
     subdivideLoneContours( mesh, loneFInts );
     return LoneProccessingState::Processed;
 }
+}
+
+BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& inParams /*= {} */ )
+{
+    auto params = inParams;
+    params.forceCut = true;
+    auto res = boolean( meshA, meshB, operation, params );
+    MeshBuilder::uniteCloseVertices( res.mesh, { .duplicateNonManifold = true } );
+    FillHoleParams fhp;
+    fhp.metric = getMinAreaMetric( res.mesh );
+    fillHoles( res.mesh, res.mesh.topology.findHoleRepresentiveEdges(), fhp );
+    return res;
 }
 
 Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
@@ -643,6 +656,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         return {};
 
     intParams.optionalOutCut = params.outCutEdges;
+    intParams.graphCutSeparation = params.forceCut;
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 

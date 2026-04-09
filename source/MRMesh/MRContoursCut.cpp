@@ -50,8 +50,8 @@ struct EdgeIntersectionData
 enum class TrianglesSortRes
 {
     Undetermined, // triangles positions cannot be determined
-    Left,         // second triangle is form left side of oriented ABC
-    Right         // second triangle is form right side of oriented ABC
+    Left,         // second triangle is from left side of oriented first triangle
+    Right         // second triangle is from right side of oriented first triangle
 };
 
 using EdgeData = std::vector<EdgeIntersectionData>;
@@ -78,51 +78,34 @@ struct PreCutResult
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
 };
 
-// Indicates if one of sorted faces was reverted in contour (only can be during propagation sort)
-enum class EdgeSortState
-{
-    Straight, // both intersection edges are in original state
-    LReverted, // left sort candidate returned
-    RReverted // right sort candidate returned
-};
-
-void preparePreciseVerts( const SortIntersectionsData& sortData, const VertId* verts, PreciseVertCoords* preciseVerts, int n )
+/// prepares precise-coordinates for a vertex from the other mesh
+PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortData )
 {
     if ( sortData.isOtherA )
-    {
-        for ( int i = 0; i < n; ++i )
-            preciseVerts[i] = {verts[i],sortData.converter( sortData.otherMesh.points[verts[i]] )};
-    }
-    else
-    {
-        if ( !sortData.rigidB2A )
-        {
-            for ( int i = 0; i < n; ++i )
-                preciseVerts[i] = {verts[i] + int( sortData.meshAVertsNum ),sortData.converter( sortData.otherMesh.points[verts[i]] )};
-        }
-        else
-        {
-            for ( int i = 0; i < n; ++i )
-                preciseVerts[i] = {verts[i] + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[verts[i]] ) )};
-        }
-    }
+        return { v, sortData.converter( sortData.otherMesh.points[v] ) };
+
+    if ( !sortData.rigidB2A )
+        return { v + int( sortData.meshAVertsNum ), sortData.converter( sortData.otherMesh.points[v] )};
+
+    return { v + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[v] ) )};
 }
 
-TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData, EdgeId  sharedEdge )
+TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData, EdgeId sharedEdge )
 {
     const auto& topology = sortData.otherMesh.topology;
 
-    std::array<PreciseVertCoords, 4> preciseVerts;
-    std::array<VertId, 4> verts;
-    verts[0] = topology.dest( topology.next( sharedEdge ) );
-    verts[1] = topology.org( sharedEdge );
-    verts[2] = topology.dest( sharedEdge );
-    verts[3] = topology.dest( topology.prev( sharedEdge ) );
-
-    if ( verts[0] == verts[3] )
+    const auto v0 = topology.dest( topology.next( sharedEdge ) );
+    const auto v3 = topology.dest( topology.prev( sharedEdge ) );
+    if ( v0 == v3 )
         return TrianglesSortRes::Undetermined;
 
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
+    const std::array<PreciseVertCoords, 4> preciseVerts
+    {
+        preciseOtherVert( v0, sortData ),
+        preciseOtherVert( topology.org( sharedEdge ), sortData ),
+        preciseOtherVert( topology.dest( sharedEdge ), sortData ),
+        preciseOtherVert( v3, sortData )
+    };
 
     if ( orient3d( preciseVerts ) )
         return TrianglesSortRes::Left;
@@ -136,7 +119,6 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     const auto& edgePerFaces = topology.edgePerFace();
     auto el = edgePerFaces[fl];
 
-    std::array<PreciseVertCoords, 5> preciseVerts;
     std::array<VertId, 5> verts;
     verts[0] = topology.org( el );
     verts[1] = topology.dest( el );
@@ -150,10 +132,19 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     if ( multiple3 && multiple4 )
         return TrianglesSortRes::Undetermined;
     if ( multiple3 )
-        std::swap( preciseVerts[3], preciseVerts[4] );
+        std::swap( verts[3], verts[4] );
+
+    std::array<PreciseVertCoords, 5> preciseVerts
+    {
+        preciseOtherVert( verts[0], sortData ),
+        preciseOtherVert( verts[1], sortData ),
+        preciseOtherVert( verts[2], sortData ),
+        preciseOtherVert( verts[3], sortData ),
+        preciseOtherVert( verts[4], sortData )
+    };
+
     if ( multiple3 || multiple4 )
     {
-        preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
         if ( orient3d( preciseVerts.data() ) )
             return TrianglesSortRes::Left;
         else
@@ -161,8 +152,6 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     }
 
     // common non-multiple case
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 5 );
-
     bool oneRes = orient3d( preciseVerts.data() );
     std::swap( preciseVerts[3], preciseVerts[4] );
     bool otherRes = orient3d( preciseVerts.data() );
@@ -182,16 +171,15 @@ TrianglesSortRes sortTrianglesNoShared( const SortIntersectionsData& sortData, F
     auto el = edgePerFaces[fl];
     auto er = edgePerFaces[fr];
 
-    std::array<PreciseVertCoords, 6> preciseVerts;
-    std::array<VertId, 6> verts;
-    verts[0] = topology.org( el );
-    verts[1] = topology.dest( el );
-    verts[2] = topology.dest( topology.next( el ) );
-    verts[3] = topology.org( er );
-    verts[4] = topology.dest( er );
-    verts[5] = topology.dest( topology.next( er ) );
-
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 6 );
+    std::array<PreciseVertCoords, 6> preciseVerts
+    {
+        preciseOtherVert( topology.org( el ), sortData ),
+        preciseOtherVert( topology.dest( el ), sortData ),
+        preciseOtherVert( topology.dest( topology.next( el ) ), sortData ),
+        preciseOtherVert( topology.org( er ), sortData ),
+        preciseOtherVert( topology.dest( er ), sortData ),
+        preciseOtherVert( topology.dest( topology.next( er ) ), sortData )
+    };
 
     bool arRes = orient3d( preciseVerts.data() );
     std::swap( preciseVerts[3], preciseVerts[4] );
@@ -223,23 +211,21 @@ TrianglesSortRes sortTriangles( const SortIntersectionsData& sortData, FaceId fl
 
 // Try sort left face by right, and right by left
 TrianglesSortRes sortTrianglesSymmetrical( const SortIntersectionsData& sortData,
-    EdgeId el, EdgeId er,
-    FaceId fl, FaceId fr, EdgeId baseEdgeOr, EdgeSortState state )
+    FaceId fl, bool lReverted,   //  first triangle and whether its orientation must be reversed
+    FaceId fr, bool rReverted )  // second triangle and whether its orientation must be reversed
 {
     // try sort right face by left
     TrianglesSortRes res = sortTriangles( sortData, fl, fr );
     if ( res != TrianglesSortRes::Undetermined )
     {
-        bool correctOrder = ( state == EdgeSortState::LReverted ) ? ( el != baseEdgeOr ) : ( el == baseEdgeOr );
-        return correctOrder == ( res == TrianglesSortRes::Left ) ?
+        return !lReverted == ( res == TrianglesSortRes::Left ) ?
             TrianglesSortRes::Left : TrianglesSortRes::Right;
     }
     // try sort left face by right
     res = sortTriangles( sortData, fr, fl );
     if ( res != TrianglesSortRes::Undetermined )
     {
-        bool correctOrder = ( state == EdgeSortState::RReverted ) ? ( er != baseEdgeOr ) : ( er == baseEdgeOr );
-        return correctOrder == ( res == TrianglesSortRes::Right ) ?
+        return !rReverted == ( res == TrianglesSortRes::Right ) ?
             TrianglesSortRes::Left : TrianglesSortRes::Right;
     }
     return TrianglesSortRes::Undetermined;
@@ -335,21 +321,22 @@ TrianglesSortRes sortPropagateContour(
 
             FaceId fl;
             FaceId fr;
-            EdgeSortState state;
             if ( lReturned )
             {
                 fl = lContour[lOtherRef].tri();
                 fr = rContour[startR].tri();
-                state = EdgeSortState::LReverted;
             }
             else
             {
                 assert( rReturned );
                 fl = lContour[startL].tri();
                 fr = rContour[rOtherRef].tri();
-                state = EdgeSortState::RReverted;
             }
-            return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, state );
+            assert( el.undirected() == baseEdgeOr.undirected() );
+            assert( er.undirected() == baseEdgeOr.undirected() );
+            const bool lReverted = lReturned ? ( el == baseEdgeOr ) : ( el != baseEdgeOr );
+            const bool rReverted = rReturned ? ( er == baseEdgeOr ) : ( er != baseEdgeOr );
+            return sortTrianglesSymmetrical( sortData, fl, lReverted, fr, rReverted );
         }
 
         if ( otherEL != otherER )
@@ -394,7 +381,9 @@ TrianglesSortRes sortPropagateContour(
         if ( fl == fr )
             return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
 
-        return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
+        assert( el.undirected() == baseEdgeOr.undirected() );
+        assert( er.undirected() == baseEdgeOr.undirected() );
+        return sortTrianglesSymmetrical( sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
     };
     bool lPassedFullRing = false;
     bool rPassedFullRing = false;
@@ -451,7 +440,7 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
         assert( er.undirected() == baseEdgeOr.undirected() );
 
         // try sort by faces (topology)
-        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
+        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
         if ( res != TrianglesSortRes::Undetermined )
             return res == TrianglesSortRes::Left;
 

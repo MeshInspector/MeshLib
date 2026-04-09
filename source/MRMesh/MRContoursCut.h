@@ -47,9 +47,6 @@ struct CutMeshParameters
         All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
     } forceFillMode{ ForceFill::None };
 
-    /// Optional output ids of contours with intersections
-    BitSet* badContours{ nullptr };
-
     /// Optional output map for each new edge introduced after cut maps edge from old topology or old face
     NewEdgesMap* new2oldEdgesMap{ nullptr };
 };

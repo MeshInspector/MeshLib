@@ -24,6 +24,7 @@
 #include "MREdgePaths.h"
 #include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMeshFillHole.h"
 
 namespace MR
 {
@@ -254,29 +255,12 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
 BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& inParams /*= {} */ )
 {
     auto params = inParams;
-    BitSet badContours;
-    BitSet skipContours;
-    params.outBadContours = &badContours;
-    params.skipContours = &skipContours;
+    params.forceCut = true;
     auto res = boolean( meshA, meshB, operation, params );
-    int i = 0;
-    const int cMaxInters = 5;
-    while ( !res.valid() && i++ < cMaxInters )
-    {
-        if ( badContours.empty() )
-            break;
-        auto newSkipConts = skipContours;
-        for ( auto badC : badContours )
-        {
-            for ( auto skipC : skipContours )
-                if ( skipC <= badC )
-                    ++badC;
-            newSkipConts.autoResizeSet( badC );
-        }
-        badContours.reset();
-        skipContours = newSkipConts;
-        res = boolean( meshA, meshB, operation, params );
-    }
+    MeshBuilder::uniteCloseVertices( res.mesh, { .duplicateNonManifold = true } );
+    FillHoleParams fhp;
+    fhp.metric = getMinAreaMetric( res.mesh );
+    fillHoles( res.mesh, res.mesh.topology.findHoleRepresentiveEdges(), fhp );
     return res;
 }
 
@@ -548,14 +532,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         } );
     }
 
-    if ( params.skipContours )
-    {
-        contours.erase( std::remove_if( contours.begin(), contours.end(), [&] ( const auto& c )
-        {
-            return params.skipContours->test( ptrdiff_t( &c - contours.data() ) );
-        } ), contours.end() );
-    }
-
     if ( needCutMeshB )
     {
         if ( needCutMeshA )
@@ -594,9 +570,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     BitSet badContsCpy;
     if ( needCutMeshA && !params.outPreCutA )
     {
-
-        if ( params.outBadContours )
-            badContsCpy = *params.outBadContours;
         taskGroup.run( [&] ()
         {
             Timer t( "CutMeshA" );
@@ -607,8 +580,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             cmParams.new2OldMap = cut2oldAPtr;
             if ( params.forceCut )
                 cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
-            if ( params.outBadContours )
-                cmParams.badContours = &badContsCpy;
             auto res = cutMesh( meshA, meshAContours, cmParams );
             meshAContours.clear();
             meshAContours.shrink_to_fit(); // free memory
@@ -644,7 +615,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cmParams.new2OldMap = cut2oldBPtr;
         if ( params.forceCut )
             cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
-        cmParams.badContours = params.outBadContours;
         auto res = cutMesh( meshB, meshBContours, cmParams );
         meshBContours.clear();
         meshBContours.shrink_to_fit(); // free memory
@@ -664,8 +634,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();
-    if ( params.outBadContours )
-        *params.outBadContours |= std::move( badContsCpy ); // move does not speedup cause there is internal copy, but still free unused memory
 
     if ( !params.forceCut && result.meshABadContourFaces.any() )
     {
@@ -688,8 +656,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         return {};
 
     intParams.optionalOutCut = params.outCutEdges;
-    intParams.inconsistentContours = params.outBadContours;
-    intParams.forceMode = params.forceCut;
+    intParams.graphCutSeparation = params.forceCut;
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 

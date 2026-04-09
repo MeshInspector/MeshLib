@@ -97,15 +97,9 @@ struct BooleanParameters
     bool mergeAllNonIntersectingComponents = false;
     
     /// If this option is enabled boolean will try to cut meshes even if there are self-intersections in intersecting area
-    /// it might work in some cases, but in general it might prevent fast error report and lead to other errors along the way
+    /// if enabled returned meshes will not be stitched but merged, consider \ref MR::MeshBuilder::uniteCloseVertices and \ref MR::fillHoles afterwards
     /// \warning not recommended in most cases
     bool forceCut = false;
-    
-    /// if not null: contours with ids from this bitset will be skipped
-    const BitSet* skipContours{ nullptr };
-
-    /// if not null: inconsistent and self-intersecting contour ids will be added to this bitset
-    BitSet* outBadContours{ nullptr };
 
     ProgressCallback cb = {};
 };
@@ -115,6 +109,9 @@ MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanO
 MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 
+/// calls boolean in force mode, also unites close vertices and fill holes afterwards
+/// \note expects closed mesh on input, and fills all holes
+/// \warning params.mapper might be not correctly updated when new holes are filled
 MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 

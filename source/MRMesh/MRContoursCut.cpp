@@ -78,43 +78,34 @@ struct PreCutResult
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
 };
 
-void preparePreciseVerts( const SortIntersectionsData& sortData, const VertId* verts, PreciseVertCoords* preciseVerts, int n )
+/// prepares precise-coordinates for a vertex from the other mesh
+PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortData )
 {
     if ( sortData.isOtherA )
-    {
-        for ( int i = 0; i < n; ++i )
-            preciseVerts[i] = {verts[i],sortData.converter( sortData.otherMesh.points[verts[i]] )};
-    }
-    else
-    {
-        if ( !sortData.rigidB2A )
-        {
-            for ( int i = 0; i < n; ++i )
-                preciseVerts[i] = {verts[i] + int( sortData.meshAVertsNum ),sortData.converter( sortData.otherMesh.points[verts[i]] )};
-        }
-        else
-        {
-            for ( int i = 0; i < n; ++i )
-                preciseVerts[i] = {verts[i] + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[verts[i]] ) )};
-        }
-    }
+        return { v, sortData.converter( sortData.otherMesh.points[v] ) };
+
+    if ( !sortData.rigidB2A )
+        return { v + int( sortData.meshAVertsNum ), sortData.converter( sortData.otherMesh.points[v] )};
+
+    return { v + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[v] ) )};
 }
 
-TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData, EdgeId  sharedEdge )
+TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData, EdgeId sharedEdge )
 {
     const auto& topology = sortData.otherMesh.topology;
 
-    std::array<PreciseVertCoords, 4> preciseVerts;
-    std::array<VertId, 4> verts;
-    verts[0] = topology.dest( topology.next( sharedEdge ) );
-    verts[1] = topology.org( sharedEdge );
-    verts[2] = topology.dest( sharedEdge );
-    verts[3] = topology.dest( topology.prev( sharedEdge ) );
-
-    if ( verts[0] == verts[3] )
+    const auto v0 = topology.dest( topology.next( sharedEdge ) );
+    const auto v3 = topology.dest( topology.prev( sharedEdge ) );
+    if ( v0 == v3 )
         return TrianglesSortRes::Undetermined;
 
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
+    const std::array<PreciseVertCoords, 4> preciseVerts
+    {
+        preciseOtherVert( v0, sortData ),
+        preciseOtherVert( topology.org( sharedEdge ), sortData ),
+        preciseOtherVert( topology.dest( sharedEdge ), sortData ),
+        preciseOtherVert( v3, sortData )
+    };
 
     if ( orient3d( preciseVerts ) )
         return TrianglesSortRes::Left;
@@ -128,7 +119,6 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     const auto& edgePerFaces = topology.edgePerFace();
     auto el = edgePerFaces[fl];
 
-    std::array<PreciseVertCoords, 5> preciseVerts;
     std::array<VertId, 5> verts;
     verts[0] = topology.org( el );
     verts[1] = topology.dest( el );
@@ -142,10 +132,19 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     if ( multiple3 && multiple4 )
         return TrianglesSortRes::Undetermined;
     if ( multiple3 )
-        std::swap( preciseVerts[3], preciseVerts[4] );
+        std::swap( verts[3], verts[4] );
+
+    std::array<PreciseVertCoords, 5> preciseVerts
+    {
+        preciseOtherVert( verts[0], sortData ),
+        preciseOtherVert( verts[1], sortData ),
+        preciseOtherVert( verts[2], sortData ),
+        preciseOtherVert( verts[3], sortData ),
+        preciseOtherVert( verts[4], sortData )
+    };
+
     if ( multiple3 || multiple4 )
     {
-        preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
         if ( orient3d( preciseVerts.data() ) )
             return TrianglesSortRes::Left;
         else
@@ -153,8 +152,6 @@ TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData,
     }
 
     // common non-multiple case
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 5 );
-
     bool oneRes = orient3d( preciseVerts.data() );
     std::swap( preciseVerts[3], preciseVerts[4] );
     bool otherRes = orient3d( preciseVerts.data() );
@@ -174,16 +171,15 @@ TrianglesSortRes sortTrianglesNoShared( const SortIntersectionsData& sortData, F
     auto el = edgePerFaces[fl];
     auto er = edgePerFaces[fr];
 
-    std::array<PreciseVertCoords, 6> preciseVerts;
-    std::array<VertId, 6> verts;
-    verts[0] = topology.org( el );
-    verts[1] = topology.dest( el );
-    verts[2] = topology.dest( topology.next( el ) );
-    verts[3] = topology.org( er );
-    verts[4] = topology.dest( er );
-    verts[5] = topology.dest( topology.next( er ) );
-
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 6 );
+    std::array<PreciseVertCoords, 6> preciseVerts
+    {
+        preciseOtherVert( topology.org( el ), sortData ),
+        preciseOtherVert( topology.dest( el ), sortData ),
+        preciseOtherVert( topology.dest( topology.next( el ) ), sortData ),
+        preciseOtherVert( topology.org( er ), sortData ),
+        preciseOtherVert( topology.dest( er ), sortData ),
+        preciseOtherVert( topology.dest( topology.next( er ) ), sortData )
+    };
 
     bool arRes = orient3d( preciseVerts.data() );
     std::swap( preciseVerts[3], preciseVerts[4] );

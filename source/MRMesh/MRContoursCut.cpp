@@ -50,8 +50,8 @@ struct EdgeIntersectionData
 enum class TrianglesSortRes
 {
     Undetermined, // triangles positions cannot be determined
-    Left,         // second triangle is form left side of oriented ABC
-    Right         // second triangle is form right side of oriented ABC
+    Left,         // second triangle is from left side of oriented first triangle
+    Right         // second triangle is from right side of oriented first triangle
 };
 
 using EdgeData = std::vector<EdgeIntersectionData>;
@@ -76,14 +76,6 @@ struct PreCutResult
     std::vector<EdgePath> paths;
     FullRemovedFacesInfo removedFaces;
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
-};
-
-// Indicates if one of sorted faces was reverted in contour (only can be during propagation sort)
-enum class EdgeSortState
-{
-    Straight, // both intersection edges are in original state
-    LReverted, // left sort candidate returned
-    RReverted // right sort candidate returned
 };
 
 void preparePreciseVerts( const SortIntersectionsData& sortData, const VertId* verts, PreciseVertCoords* preciseVerts, int n )
@@ -223,23 +215,21 @@ TrianglesSortRes sortTriangles( const SortIntersectionsData& sortData, FaceId fl
 
 // Try sort left face by right, and right by left
 TrianglesSortRes sortTrianglesSymmetrical( const SortIntersectionsData& sortData,
-    EdgeId el, EdgeId er,
-    FaceId fl, FaceId fr, EdgeId baseEdgeOr, EdgeSortState state )
+    FaceId fl, bool lReverted,   //  first triangle and whether its orientation must be reversed
+    FaceId fr, bool rReverted )  // second triangle and whether its orientation must be reversed
 {
     // try sort right face by left
     TrianglesSortRes res = sortTriangles( sortData, fl, fr );
     if ( res != TrianglesSortRes::Undetermined )
     {
-        bool correctOrder = ( state == EdgeSortState::LReverted ) ? ( el != baseEdgeOr ) : ( el == baseEdgeOr );
-        return correctOrder == ( res == TrianglesSortRes::Left ) ?
+        return !lReverted == ( res == TrianglesSortRes::Left ) ?
             TrianglesSortRes::Left : TrianglesSortRes::Right;
     }
     // try sort left face by right
     res = sortTriangles( sortData, fr, fl );
     if ( res != TrianglesSortRes::Undetermined )
     {
-        bool correctOrder = ( state == EdgeSortState::RReverted ) ? ( er != baseEdgeOr ) : ( er == baseEdgeOr );
-        return correctOrder == ( res == TrianglesSortRes::Right ) ?
+        return !rReverted == ( res == TrianglesSortRes::Right ) ?
             TrianglesSortRes::Left : TrianglesSortRes::Right;
     }
     return TrianglesSortRes::Undetermined;
@@ -335,21 +325,22 @@ TrianglesSortRes sortPropagateContour(
 
             FaceId fl;
             FaceId fr;
-            EdgeSortState state;
             if ( lReturned )
             {
                 fl = lContour[lOtherRef].tri();
                 fr = rContour[startR].tri();
-                state = EdgeSortState::LReverted;
             }
             else
             {
                 assert( rReturned );
                 fl = lContour[startL].tri();
                 fr = rContour[rOtherRef].tri();
-                state = EdgeSortState::RReverted;
             }
-            return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, state );
+            assert( el.undirected() == baseEdgeOr.undirected() );
+            assert( er.undirected() == baseEdgeOr.undirected() );
+            const bool lReverted = lReturned ? ( el == baseEdgeOr ) : ( el != baseEdgeOr );
+            const bool rReverted = rReturned ? ( er == baseEdgeOr ) : ( er != baseEdgeOr );
+            return sortTrianglesSymmetrical( sortData, fl, lReverted, fr, rReverted );
         }
 
         if ( otherEL != otherER )
@@ -394,7 +385,9 @@ TrianglesSortRes sortPropagateContour(
         if ( fl == fr )
             return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
 
-        return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
+        assert( el.undirected() == baseEdgeOr.undirected() );
+        assert( er.undirected() == baseEdgeOr.undirected() );
+        return sortTrianglesSymmetrical( sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
     };
     bool lPassedFullRing = false;
     bool rPassedFullRing = false;
@@ -451,7 +444,7 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
         assert( er.undirected() == baseEdgeOr.undirected() );
 
         // try sort by faces (topology)
-        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
+        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
         if ( res != TrianglesSortRes::Undetermined )
             return res == TrianglesSortRes::Left;
 

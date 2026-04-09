@@ -4,6 +4,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRUITestEngine.h"
 
+#include <algorithm>
 #include <span>
 #include <utility>
 #include <variant>

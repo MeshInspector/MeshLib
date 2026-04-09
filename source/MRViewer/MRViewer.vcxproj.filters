@@ -1035,6 +1035,9 @@
     <ClInclude Include="MRLocale.h">
       <Filter>Localization</Filter>
     </ClInclude>
+    <ClInclude Include="MRLocaleMacos.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -1045,6 +1048,9 @@
       <Filter>CustomOpenDialog</Filter>
     </None>
     <None Include="MRLocaleNames.inl">
+      <Filter>Localization</Filter>
+    </None>
+    <None Include="MRLocaleMacos.mm">
       <Filter>Localization</Filter>
     </None>
   </ItemGroup>

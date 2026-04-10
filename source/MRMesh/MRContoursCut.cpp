@@ -474,7 +474,10 @@ public:
     PreciseTriComparator( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData );
 
     // compare two triangles, returns Unknown only if both triangles share the same 3 vertices
-    CompareResult compare(  const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
+    CompareResult compare( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
+
+    // for the cases where simple compare returned Unknown, this goes along contours to resolve the ambiguity if possible
+    CompareResult propagate( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
 
 private:
     const EdgeId intersectedEdge_;
@@ -540,14 +543,13 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
     return segmentIntersectionOrder( preciseVerts ) ? CompareResult::Less : CompareResult::Greater;
 }
 
-/*CompareResult comparePropagateContour(
-    const MeshTopology& tp,
-    const SortIntersectionsData& sortData,
-    const IntersectionData& il, const IntersectionData& ir,
-    EdgeId baseEdgeOr )
+CompareResult PreciseTriComparator::propagate( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const
 {
-    const auto& lContour = sortData.contours[il.contourId];
-    const auto& rContour = sortData.contours[ir.contourId];
+    const auto& tp = mesh_.topology;
+    const auto& il = l.interOnEdge;
+    const auto& ir = r.interOnEdge;
+    const auto& lContour = sortData_.contours[il.contourId];
+    const auto& rContour = sortData_.contours[ir.contourId];
     const EdgeId el = lContour[il.intersectionId].edge;
     const EdgeId er = rContour[ir.intersectionId].edge;
 
@@ -587,8 +589,8 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
     IntersectionId rNext = ir.intersectionId;
     IntersectionId lPrev = il.intersectionId;
     IntersectionId rPrev = ir.intersectionId;
-    EdgeId lastCommonEdgeNext = baseEdgeOr;
-    EdgeId lastCommonEdgePrev = baseEdgeOr;
+    EdgeId lastCommonEdgeNext = intersectedEdge_;
+    EdgeId lastCommonEdgePrev = intersectedEdge_;
     // check if next/prev intersection can determine sort
     auto checkOther = [&] ( bool next )->CompareResult
     {
@@ -640,10 +642,10 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
                 fl = lContour[startL].tri();
                 fr = rContour[rOtherRef].tri();
             }
-            assert( el.undirected() == baseEdgeOr.undirected() );
-            assert( er.undirected() == baseEdgeOr.undirected() );
-            const bool lReverted = lReturned ? ( el == baseEdgeOr ) : ( el != baseEdgeOr );
-            const bool rReverted = rReturned ? ( er == baseEdgeOr ) : ( er != baseEdgeOr );
+            assert( el.undirected() == intersectedEdge_.undirected() );
+            assert( er.undirected() == intersectedEdge_.undirected() );
+            const bool lReverted = lReturned ? ( el == intersectedEdge_ ) : ( el != intersectedEdge_ );
+            const bool rReverted = rReturned ? ( er == intersectedEdge_ ) : ( er != intersectedEdge_ );
             return CompareResult::Unknown;//  sortTrianglesSymmetrical( sortData, fl, lReverted, fr, rReverted );
         }
 
@@ -660,9 +662,9 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
 
             // determined condition, intersections leave face in different edges (not returned)
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
+                return sortData_.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
             else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
+                return sortData_.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
             else
             {
                 // TODO: support this case
@@ -689,9 +691,9 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
         if ( fl == fr )
             return CompareResult::Unknown; // go next if we came to same intersection 
 
-        assert( el.undirected() == baseEdgeOr.undirected() );
-        assert( er.undirected() == baseEdgeOr.undirected() );
-        return CompareResult::Unknown; //sortTrianglesSymmetrical( sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
+        assert( el.undirected() == intersectedEdge_.undirected() );
+        assert( er.undirected() == intersectedEdge_.undirected() );
+        return CompareResult::Unknown; //sortTrianglesSymmetrical( sortData, fl, el != intersectedEdge_, fr, er != intersectedEdge_ );
     };
     bool lPassedFullRing = false;
     bool rPassedFullRing = false;
@@ -717,7 +719,7 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
     }
 
     return res;
-}*/
+}
 
 void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting

@@ -232,7 +232,7 @@ TrianglesSortRes sortTrianglesSymmetrical( const SortIntersectionsData& sortData
 }
 
 // try determine sort looking on next or prev intersection
-TrianglesSortRes sortPropagateContour(
+[[maybe_unused]] TrianglesSortRes sortPropagateContour(
     const MeshTopology& tp,
     const SortIntersectionsData& sortData,
     const IntersectionData& il, const IntersectionData& ir,
@@ -413,7 +413,7 @@ TrianglesSortRes sortPropagateContour(
 
 // baseEdge - cutting edge representation with orientation of first intersection
 std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> getLessFunc(
-    const MeshTopology& tp,
+    const Mesh& mesh,
     const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
 {
     if ( !sortData )
@@ -423,34 +423,52 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
             return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
         };
     }
-    // sym baseEdge if other is not A:
-    // if other is A intersection edge is going inside - out
-    // otherwise it is going outside - in
-    return[&tp, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]
-    ( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+
+    VertId vo = mesh.topology.org( baseEdge );
+    VertId vd = mesh.topology.dest( baseEdge );
+
+    auto po = mesh.points[vo];
+    auto pd = mesh.points[vd];
+
+    if ( sortData->isOtherA )
+    {
+        vo += (int)sortData->meshAVertsNum;
+        vd += (int)sortData->meshAVertsNum;
+        if ( sortData->rigidB2A )
+        {
+            po = (*sortData->rigidB2A)( po );
+            pd = (*sortData->rigidB2A)( pd );
+        }
+    }
+
+    PreciseVertCoords o{ vo, sortData->converter( po ) };
+    PreciseVertCoords d{ vd, sortData->converter( pd ) };
+
+    return[o, d, sortData]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
     {
         const auto & il = l.interOnEdge;
         const auto & ir = r.interOnEdge;
 
         FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
         FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
-        EdgeId el = sortData->contours[il.contourId][il.intersectionId].edge;
-        EdgeId er = sortData->contours[ir.contourId][ir.intersectionId].edge;
-        assert( el.undirected() == baseEdgeOr.undirected() );
-        assert( er.undirected() == baseEdgeOr.undirected() );
 
-        // try sort by faces (topology)
-        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res == TrianglesSortRes::Left;
+        const auto& otherTopology = sortData->otherMesh.topology;
+        const auto& edgePerFaces = otherTopology.edgePerFace();
+        auto el = edgePerFaces[fl];
+        auto er = edgePerFaces[fr];
 
-        // try sort by next/prev intersections (topology)
-        res = sortPropagateContour( tp, *sortData, il, ir, baseEdgeOr );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res == TrianglesSortRes::Left;
-
-        // try sort by geometry
-        return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
+        std::array<PreciseVertCoords, 8> preciseVerts
+        {
+            o,
+            d,
+            preciseOtherVert( otherTopology.org( el ), *sortData ),
+            preciseOtherVert( otherTopology.dest( el ), *sortData ),
+            preciseOtherVert( otherTopology.dest( otherTopology.next( el ) ), *sortData ),
+            preciseOtherVert( otherTopology.org( er ), *sortData ),
+            preciseOtherVert( otherTopology.dest( er ), *sortData ),
+            preciseOtherVert( otherTopology.dest( otherTopology.next( er ) ), *sortData )
+        };
+        return segmentIntersectionOrder( preciseVerts );
     };
 }
 
@@ -844,7 +862,7 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
     for ( int i = 0; i < edgeData.size(); ++i )
         dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
 
-    std::sort( edgeData.begin(), edgeData.end(), getLessFunc( mesh.topology, dotProds, baseEdge, sortData ) );
+    std::sort( edgeData.begin(), edgeData.end(), getLessFunc( mesh, dotProds, baseEdge, sortData ) );
 
     // DEBUG Output
     //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );

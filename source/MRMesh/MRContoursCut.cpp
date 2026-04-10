@@ -499,20 +499,22 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
             FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
 
             const auto& otherTopology = sortData->otherMesh.topology;
-            const auto& edgePerFaces = otherTopology.edgePerFace();
-            auto el = edgePerFaces[fl];
-            auto er = edgePerFaces[fr];
+            auto vsl = otherTopology.getTriVerts( fl );
+            std::sort( vsl.begin(), vsl.end() );
+            auto vsr = otherTopology.getTriVerts( fr );
+            std::sort( vsr.begin(), vsr.end() );
+            assert( vsl != vsr );
 
             std::array<PreciseVertCoords, 8> preciseVerts
             {
                 o,
                 d,
-                preciseOtherVert( otherTopology.org( el ), *sortData ),
-                preciseOtherVert( otherTopology.dest( el ), *sortData ),
-                preciseOtherVert( otherTopology.dest( otherTopology.next( el ) ), *sortData ),
-                preciseOtherVert( otherTopology.org( er ), *sortData ),
-                preciseOtherVert( otherTopology.dest( er ), *sortData ),
-                preciseOtherVert( otherTopology.dest( otherTopology.next( er ) ), *sortData )
+                preciseOtherVert( vsl[0], *sortData ),
+                preciseOtherVert( vsl[1], *sortData ),
+                preciseOtherVert( vsl[2], *sortData ),
+                preciseOtherVert( vsr[0], *sortData ),
+                preciseOtherVert( vsr[1], *sortData ),
+                preciseOtherVert( vsr[2], *sortData )
             };
             return segmentIntersectionOrder( preciseVerts );
         };

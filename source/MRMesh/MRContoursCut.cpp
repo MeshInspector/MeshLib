@@ -475,6 +475,7 @@ public:
 
     // compare two triangles, returns Unknown only if both triangles share the same 3 vertices
     CompareResult compare( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
+    CompareResult compare( FaceId fl, FaceId fr ) const;
 
     // for the cases where simple compare returned Unknown, this goes along contours to resolve the ambiguity if possible
     CompareResult propagate( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
@@ -520,7 +521,12 @@ CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, cons
 
     FaceId fl = sortData_.contours[il.contourId][il.intersectionId].tri();
     FaceId fr = sortData_.contours[ir.contourId][ir.intersectionId].tri();
+    return compare( fl, fr );
+}
 
+CompareResult PreciseTriComparator::compare( FaceId fl, FaceId fr ) const
+{
+    assert( fl != fr );
     const auto& otherTopology = sortData_.otherMesh.topology;
     auto vsl = otherTopology.getTriVerts( fl );
     std::sort( vsl.begin(), vsl.end() );
@@ -642,11 +648,7 @@ CompareResult PreciseTriComparator::propagate( const EdgeIntersectionData& l, co
                 fl = lContour[startL].tri();
                 fr = rContour[rOtherRef].tri();
             }
-            assert( el.undirected() == intersectedEdge_.undirected() );
-            assert( er.undirected() == intersectedEdge_.undirected() );
-            const bool lReverted = lReturned ? ( el == intersectedEdge_ ) : ( el != intersectedEdge_ );
-            const bool rReverted = rReturned ? ( er == intersectedEdge_ ) : ( er != intersectedEdge_ );
-            return CompareResult::Unknown;//  sortTrianglesSymmetrical( sortData, fl, lReverted, fr, rReverted );
+            return compare( fl, fr );
         }
 
         if ( otherEL != otherER )
@@ -691,9 +693,7 @@ CompareResult PreciseTriComparator::propagate( const EdgeIntersectionData& l, co
         if ( fl == fr )
             return CompareResult::Unknown; // go next if we came to same intersection 
 
-        assert( el.undirected() == intersectedEdge_.undirected() );
-        assert( er.undirected() == intersectedEdge_.undirected() );
-        return CompareResult::Unknown; //sortTrianglesSymmetrical( sortData, fl, el != intersectedEdge_, fr, er != intersectedEdge_ );
+        return compare( fl, fr );
     };
     bool lPassedFullRing = false;
     bool rPassedFullRing = false;
@@ -734,7 +734,17 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
 
         auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
         {
-            return cmp.compare( l, r ) == CompareResult::Less;
+            auto res = cmp.compare( l, r );
+            if ( res != CompareResult::Unknown )
+                return res == CompareResult::Less;
+
+            res = cmp.propagate( l, r );
+            if ( res != CompareResult::Unknown )
+                return res == CompareResult::Less;
+
+            assert( mesh.points[l.newVert] == mesh.points[r.newVert] );
+            assert( !"cannot compare" );
+            return false;
         };
         std::sort( edgeData.begin(), edgeData.end(), pred );
     }

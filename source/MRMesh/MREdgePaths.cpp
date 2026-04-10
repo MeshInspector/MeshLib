@@ -696,12 +696,10 @@ Contour3f edgePathToContour3f( const Mesh& mesh, const EdgePath& line )
         assert( !"not supported for sparse paths" );
         return {};
     }
-    bool isClosed = mesh.topology.org( line.front() ) == mesh.topology.dest( line.back() );
-    Contour3f res( line.size() + ( isClosed ? 1 : 0 ) );
+    Contour3f res( line.size() + 1 );
     for ( int i = 0; i < line.size(); ++i )
         res[i] = mesh.orgPnt( line[i] );
-    if ( isClosed )
-        res.back() = res.front();
+    res.back() = mesh.destPnt( line.back() );
     return res;
 }
 

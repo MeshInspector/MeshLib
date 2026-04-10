@@ -467,7 +467,80 @@ enum class CompareResult
     Greater
 };
 
-CompareResult comparePropagateContour(
+/// compares intersection points of two triangles and one edge using precise predicates
+class PreciseTriComparator
+{
+public:
+    PreciseTriComparator( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData );
+
+    // compare two triangles, returns Unknown only if both triangles share the same 3 vertices
+    CompareResult compare(  const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
+
+private:
+    const EdgeId intersectedEdge_;
+    const Mesh& mesh_;  // mesh containing intersectedEdge_
+    PreciseVertCoords o_, d_; // of intersectedEdge_ origin and destination
+
+    const SortIntersectionsData& sortData_; // information about the other mesh with triangles
+};
+
+PreciseTriComparator::PreciseTriComparator( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData )
+    : intersectedEdge_( intersectedEdge )
+    , mesh_( mesh )
+    , sortData_( sortData )
+{
+    VertId vo = mesh.topology.org( intersectedEdge );
+    VertId vd = mesh.topology.dest( intersectedEdge );
+
+    auto po = mesh.points[vo];
+    auto pd = mesh.points[vd];
+
+    if ( sortData.isOtherA )
+    {
+        vo += (int)sortData.meshAVertsNum;
+        vd += (int)sortData.meshAVertsNum;
+        if ( sortData.rigidB2A )
+        {
+            po = (*sortData.rigidB2A)( po );
+            pd = (*sortData.rigidB2A)( pd );
+        }
+    }
+
+    o_ = PreciseVertCoords{ vo, sortData.converter( po ) };
+    d_ = PreciseVertCoords{ vd, sortData.converter( pd ) };
+}
+
+CompareResult PreciseTriComparator::compare( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const
+{
+    const auto & il = l.interOnEdge;
+    const auto & ir = r.interOnEdge;
+
+    FaceId fl = sortData_.contours[il.contourId][il.intersectionId].tri();
+    FaceId fr = sortData_.contours[ir.contourId][ir.intersectionId].tri();
+
+    const auto& otherTopology = sortData_.otherMesh.topology;
+    auto vsl = otherTopology.getTriVerts( fl );
+    std::sort( vsl.begin(), vsl.end() );
+    auto vsr = otherTopology.getTriVerts( fr );
+    std::sort( vsr.begin(), vsr.end() );
+    if ( vsl == vsr )
+        return CompareResult::Unknown;
+
+    std::array<PreciseVertCoords, 8> preciseVerts
+    {
+        o_,
+        d_,
+        preciseOtherVert( vsl[0], sortData_ ),
+        preciseOtherVert( vsl[1], sortData_ ),
+        preciseOtherVert( vsl[2], sortData_ ),
+        preciseOtherVert( vsr[0], sortData_ ),
+        preciseOtherVert( vsr[1], sortData_ ),
+        preciseOtherVert( vsr[2], sortData_ )
+    };
+    return segmentIntersectionOrder( preciseVerts ) ? CompareResult::Less : CompareResult::Greater;
+}
+
+/*CompareResult comparePropagateContour(
     const MeshTopology& tp,
     const SortIntersectionsData& sortData,
     const IntersectionData& il, const IntersectionData& ir,
@@ -644,7 +717,7 @@ CompareResult comparePropagateContour(
     }
 
     return res;
-}
+}*/
 
 void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
@@ -655,54 +728,11 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
 
     if ( sortData )
     {
-        // sort using precise predicates
-        VertId vo = mesh.topology.org( baseEdge );
-        VertId vd = mesh.topology.dest( baseEdge );
+        PreciseTriComparator cmp( baseEdge, mesh, *sortData );
 
-        auto po = mesh.points[vo];
-        auto pd = mesh.points[vd];
-
-        if ( sortData->isOtherA )
+        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
         {
-            vo += (int)sortData->meshAVertsNum;
-            vd += (int)sortData->meshAVertsNum;
-            if ( sortData->rigidB2A )
-            {
-                po = (*sortData->rigidB2A)( po );
-                pd = (*sortData->rigidB2A)( pd );
-            }
-        }
-
-        PreciseVertCoords o{ vo, sortData->converter( po ) };
-        PreciseVertCoords d{ vd, sortData->converter( pd ) };
-
-        auto pred = [o, d, sortData]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-        {
-            const auto & il = l.interOnEdge;
-            const auto & ir = r.interOnEdge;
-
-            FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
-            FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
-
-            const auto& otherTopology = sortData->otherMesh.topology;
-            auto vsl = otherTopology.getTriVerts( fl );
-            std::sort( vsl.begin(), vsl.end() );
-            auto vsr = otherTopology.getTriVerts( fr );
-            std::sort( vsr.begin(), vsr.end() );
-            assert( vsl != vsr );
-
-            std::array<PreciseVertCoords, 8> preciseVerts
-            {
-                o,
-                d,
-                preciseOtherVert( vsl[0], *sortData ),
-                preciseOtherVert( vsl[1], *sortData ),
-                preciseOtherVert( vsl[2], *sortData ),
-                preciseOtherVert( vsr[0], *sortData ),
-                preciseOtherVert( vsr[1], *sortData ),
-                preciseOtherVert( vsr[2], *sortData )
-            };
-            return segmentIntersectionOrder( preciseVerts );
+            return cmp.compare( l, r ) == CompareResult::Less;
         };
         std::sort( edgeData.begin(), edgeData.end(), pred );
     }

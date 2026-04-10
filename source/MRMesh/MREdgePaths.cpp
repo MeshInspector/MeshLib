@@ -8,6 +8,7 @@
 #include "MRCube.h"
 #include "MRUnionFind.h"
 #include "MRGTest.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -684,6 +685,34 @@ int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f
         }
     }
     return found;
+}
+
+Contour3f edgePathToContour3f( const Mesh& mesh, const EdgePath& line )
+{
+    if ( line.empty() )
+        return {};
+    if ( !isEdgePath( mesh.topology, line ) )
+    {
+        assert( !"not supported for sparse paths" );
+        return {};
+    }
+    bool isClosed = mesh.topology.org( line.front() ) == mesh.topology.dest( line.back() );
+    Contour3f res( line.size() + ( isClosed ? 1 : 0 ) );
+    for ( int i = 0; i < line.size(); ++i )
+        res[i] = mesh.orgPnt( line[i] );
+    if ( isClosed )
+        res.back() = res.front();
+    return res;
+}
+
+Contours3f edgePathsToContours3f( const Mesh& mesh, const std::vector<EdgePath>& lines )
+{
+    Contours3f res( lines.size() );
+    ParallelFor( lines, [&] ( size_t i )
+    {
+        res[i] = edgePathToContour3f( mesh, lines[i] );
+    } );
+    return res;
 }
 
 TEST(MRMesh, BuildShortestPath)

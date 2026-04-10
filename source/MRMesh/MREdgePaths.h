@@ -151,6 +151,10 @@ MRMESH_API int getContourPlaneIntersections( const Contour3f & path, const Plane
 MRMESH_API int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f & plane, float tolerance = 0.0f,
     std::vector<EdgeId> * outInPlaneEdges = nullptr );
 
+/// converts lines on mesh in 3D contours by computing coordinate of each point
+[[nodiscard]] MRMESH_API Contour3f edgePathToContour3f( const Mesh& mesh, const EdgePath& line );
+[[nodiscard]] MRMESH_API Contours3f edgePathsToContours3f( const Mesh& mesh, const std::vector<EdgePath>& lines );
+
 /// \}
 
 } // namespace MR

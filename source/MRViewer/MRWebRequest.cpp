@@ -527,9 +527,29 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     ctx->responseCallback = callback;
 
     if ( outputPath_.empty() )
+    {
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
+    }
+#ifndef __EMSCRIPTEN_PTHREADS__
+    else if ( !async )
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_sync_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
+#endif
     else
-        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), utf8string( outputPath_ ).c_str(), ctxId );
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
 #pragma clang diagnostic pop
 #endif
 }

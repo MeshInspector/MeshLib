@@ -460,6 +460,192 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
     }
 }
 
+enum class CompareResult
+{
+    Less,
+    Unknown,
+    Greater
+};
+
+CompareResult comparePropagateContour(
+    const MeshTopology& tp,
+    const SortIntersectionsData& sortData,
+    const IntersectionData& il, const IntersectionData& ir,
+    EdgeId baseEdgeOr )
+{
+    const auto& lContour = sortData.contours[il.contourId];
+    const auto& rContour = sortData.contours[ir.contourId];
+    const EdgeId el = lContour[il.intersectionId].edge;
+    const EdgeId er = rContour[ir.intersectionId].edge;
+
+    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
+    bool sameContour = il.contourId == ir.contourId;
+    int stepRight = el == er ? 1 : -1;
+
+    // finds next/prev intersection on edge in the contour
+    auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
+    {
+        const auto& contour = left ? lContour : rContour;
+        bool closed = isClosed( contour );
+        int step = left ? 1 : stepRight;
+        if ( !next )
+            step *= -1;
+        IntersectionId nextL = interData;
+        int size = int( contour.size() );
+        for ( ;;)
+        {
+            int nextIndex = nextL + step;
+            if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
+                return {}; // reached end of non closed contour
+            nextL = IntersectionId( ( nextIndex + size ) % size );
+            if ( closed && nextL + 1 == size )
+                continue;
+            if ( nextL == stopInter )
+                return {}; // reached stop intersection in the contour
+            if ( contour[nextL].isEdgeATriB() == edgeATriB )
+                return nextL; // return next/prev intersection (on edge)
+        }
+    };
+
+    bool tryNext = true;
+    bool tryPrev = true;
+
+    IntersectionId lNext = il.intersectionId;
+    IntersectionId rNext = ir.intersectionId;
+    IntersectionId lPrev = il.intersectionId;
+    IntersectionId rPrev = ir.intersectionId;
+    EdgeId lastCommonEdgeNext = baseEdgeOr;
+    EdgeId lastCommonEdgePrev = baseEdgeOr;
+    // check if next/prev intersection can determine sort
+    auto checkOther = [&] ( bool next )->CompareResult
+    {
+        auto& tryThis = next ? tryNext : tryPrev;
+        assert( tryThis );
+
+        const auto startL = next ? lNext : lPrev;
+        const auto startR = next ? rNext : rPrev;
+
+        auto& lOtherRef = next ? lNext : lPrev;
+        auto& rOtherRef = next ? rNext : rPrev;
+        auto& lastCommonEdgeRef = next ? lastCommonEdgeNext : lastCommonEdgePrev;
+        auto otherL = getNextPrev( lOtherRef, sameContour ? rOtherRef : lOtherRef, true, next );
+        if ( !otherL )
+        {
+            tryThis = false; // terminal (end of contour reached)
+            return CompareResult::Unknown;
+        }
+        auto otherR = getNextPrev( rOtherRef, sameContour ? lOtherRef : rOtherRef, false, next );
+        if ( !otherR )
+        {
+            tryThis = false; // terminal (end of contour reached)
+            return CompareResult::Unknown;
+        }
+        lOtherRef = otherL;
+        rOtherRef = otherR;
+        auto otherEL = lContour[lOtherRef].edge.undirected();
+        auto otherER = rContour[rOtherRef].edge.undirected();
+        bool lReturned = otherEL == lastCommonEdgeRef.undirected();
+        bool rReturned = otherER == lastCommonEdgeRef.undirected();
+        if ( lReturned || rReturned )
+        {
+            // if one of candidates return - terminal, but still can be determined
+            tryThis = false; // terminal
+            // if both of candidates return to base edge sort cannot be determined
+            if ( lReturned && rReturned )
+                return CompareResult::Unknown;
+
+            FaceId fl;
+            FaceId fr;
+            if ( lReturned )
+            {
+                fl = lContour[lOtherRef].tri();
+                fr = rContour[startR].tri();
+            }
+            else
+            {
+                assert( rReturned );
+                fl = lContour[startL].tri();
+                fr = rContour[rOtherRef].tri();
+            }
+            assert( el.undirected() == baseEdgeOr.undirected() );
+            assert( er.undirected() == baseEdgeOr.undirected() );
+            const bool lReverted = lReturned ? ( el == baseEdgeOr ) : ( el != baseEdgeOr );
+            const bool rReverted = rReturned ? ( er == baseEdgeOr ) : ( er != baseEdgeOr );
+            return CompareResult::Unknown;//  sortTrianglesSymmetrical( sortData, fl, lReverted, fr, rReverted );
+        }
+
+        if ( otherEL != otherER )
+        {
+            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
+            // keeping it for better understanding whats going on here, also might be useful for debugging two objects boolean failures
+
+            //assert(
+            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
+
+            // determined condition, intersections leave face in different edges (not returned)
+            if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+                return sortData.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
+            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
+                return sortData.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
+            else
+            {
+                // TODO: support this case
+                // we can be here only if doing self-boolean of non-closed contour passing through vertex
+                tryThis = false; // for now just terminate, for simplicity
+                return CompareResult::Unknown;
+            }
+        }
+
+        // undetermined condition, but not terminal (intersections leave face in same edge (not returned))
+        assert( otherEL == otherER && !lReturned && !rReturned );
+        if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
+        else
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
+
+        FaceId fl = lContour[lOtherRef].tri();
+        FaceId fr = rContour[rOtherRef].tri();
+
+        if ( fl == fr )
+            return CompareResult::Unknown; // go next if we came to same intersection 
+
+        assert( el.undirected() == baseEdgeOr.undirected() );
+        assert( er.undirected() == baseEdgeOr.undirected() );
+        return CompareResult::Unknown; //sortTrianglesSymmetrical( sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
+    };
+    bool lPassedFullRing = false;
+    bool rPassedFullRing = false;
+    CompareResult res = CompareResult::Unknown;
+    for ( ; tryNext || tryPrev; )
+    {
+        if ( tryNext )
+            res = checkOther( true );
+        if ( res != CompareResult::Unknown )
+            return res;
+        if ( tryPrev )
+            res = checkOther( false );
+        if ( res != CompareResult::Unknown )
+            return res;
+
+        if ( !lPassedFullRing && ( lNext == il.intersectionId || lPrev == il.intersectionId ) )
+            lPassedFullRing = true;
+        if ( !rPassedFullRing && ( rNext == ir.intersectionId || rPrev == ir.intersectionId ) )
+            rPassedFullRing = true;
+
+        if ( lPassedFullRing && rPassedFullRing )
+            return CompareResult::Unknown; // both contours passed a round, so break infinite loop
+    }
+
+    return res;
+}
+
 void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
 {

@@ -83,67 +83,6 @@ PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortD
     return { v + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[v] ) )};
 }
 
-// baseEdge - cutting edge representation with orientation of first intersection
-std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> getLessFunc(
-    const Mesh& mesh,
-    const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
-{
-    if ( !sortData )
-    {
-        return [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-        {
-            return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
-        };
-    }
-
-    VertId vo = mesh.topology.org( baseEdge );
-    VertId vd = mesh.topology.dest( baseEdge );
-
-    auto po = mesh.points[vo];
-    auto pd = mesh.points[vd];
-
-    if ( sortData->isOtherA )
-    {
-        vo += (int)sortData->meshAVertsNum;
-        vd += (int)sortData->meshAVertsNum;
-        if ( sortData->rigidB2A )
-        {
-            po = (*sortData->rigidB2A)( po );
-            pd = (*sortData->rigidB2A)( pd );
-        }
-    }
-
-    PreciseVertCoords o{ vo, sortData->converter( po ) };
-    PreciseVertCoords d{ vd, sortData->converter( pd ) };
-
-    return[o, d, sortData]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-    {
-        const auto & il = l.interOnEdge;
-        const auto & ir = r.interOnEdge;
-
-        FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
-        FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
-
-        const auto& otherTopology = sortData->otherMesh.topology;
-        const auto& edgePerFaces = otherTopology.edgePerFace();
-        auto el = edgePerFaces[fl];
-        auto er = edgePerFaces[fr];
-
-        std::array<PreciseVertCoords, 8> preciseVerts
-        {
-            o,
-            d,
-            preciseOtherVert( otherTopology.org( el ), *sortData ),
-            preciseOtherVert( otherTopology.dest( el ), *sortData ),
-            preciseOtherVert( otherTopology.dest( otherTopology.next( el ) ), *sortData ),
-            preciseOtherVert( otherTopology.org( er ), *sortData ),
-            preciseOtherVert( otherTopology.dest( er ), *sortData ),
-            preciseOtherVert( otherTopology.dest( otherTopology.next( er ) ), *sortData )
-        };
-        return segmentIntersectionOrder( preciseVerts );
-    };
-}
-
 // sets left face of given edge invalid and saves info about its old left ring
 void invalidateFace( MeshTopology& topology, FullRemovedFacesInfo& removedFaceInfo, int contId, int interId, EdgeId leftEdge, size_t oldEdgesSize )
 {
@@ -528,13 +467,72 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
     const auto& intInfo = edgeData.front().interOnEdge;
     EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
 
-    std::vector<double> dotProds( edgeData.size() );
-    Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
-    auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
-    for ( int i = 0; i < edgeData.size(); ++i )
-        dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
+    if ( sortData )
+    {
+        // sort using precise predicates
+        VertId vo = mesh.topology.org( baseEdge );
+        VertId vd = mesh.topology.dest( baseEdge );
 
-    std::sort( edgeData.begin(), edgeData.end(), getLessFunc( mesh, dotProds, baseEdge, sortData ) );
+        auto po = mesh.points[vo];
+        auto pd = mesh.points[vd];
+
+        if ( sortData->isOtherA )
+        {
+            vo += (int)sortData->meshAVertsNum;
+            vd += (int)sortData->meshAVertsNum;
+            if ( sortData->rigidB2A )
+            {
+                po = (*sortData->rigidB2A)( po );
+                pd = (*sortData->rigidB2A)( pd );
+            }
+        }
+
+        PreciseVertCoords o{ vo, sortData->converter( po ) };
+        PreciseVertCoords d{ vd, sortData->converter( pd ) };
+
+        auto pred = [o, d, sortData]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+        {
+            const auto & il = l.interOnEdge;
+            const auto & ir = r.interOnEdge;
+
+            FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
+            FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
+
+            const auto& otherTopology = sortData->otherMesh.topology;
+            const auto& edgePerFaces = otherTopology.edgePerFace();
+            auto el = edgePerFaces[fl];
+            auto er = edgePerFaces[fr];
+
+            std::array<PreciseVertCoords, 8> preciseVerts
+            {
+                o,
+                d,
+                preciseOtherVert( otherTopology.org( el ), *sortData ),
+                preciseOtherVert( otherTopology.dest( el ), *sortData ),
+                preciseOtherVert( otherTopology.dest( otherTopology.next( el ) ), *sortData ),
+                preciseOtherVert( otherTopology.org( er ), *sortData ),
+                preciseOtherVert( otherTopology.dest( er ), *sortData ),
+                preciseOtherVert( otherTopology.dest( otherTopology.next( er ) ), *sortData )
+            };
+            return segmentIntersectionOrder( preciseVerts );
+        };
+        std::sort( edgeData.begin(), edgeData.end(), pred );
+    }
+    else
+    {
+        // sort using floating-point coordinates of new vertices
+        std::vector<double> dotProds( edgeData.size() );
+        Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
+        auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
+        for ( int i = 0; i < edgeData.size(); ++i )
+            dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
+
+        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+        {
+            return dotProds[l.beforeSortIndex] < dotProds[r.beforeSortIndex];
+        };
+        std::sort( edgeData.begin(), edgeData.end(), pred );
+    }
 
     // DEBUG Output
     //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );

@@ -118,6 +118,9 @@ public:
     /// applies given transformation to all valid polyline vertices
     MRMESH_API void transform( const AffineXf<V> & xf );
 
+    /// applies given shift to all valid polyline vertices
+    MRMESH_API void transform( const V & shift );
+
     /// split given edge on two parts:
     /// dest(returned-edge) = org(e) - newly created vertex,
     /// org(returned-edge) = org(e-before-split),

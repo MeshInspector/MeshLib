@@ -64,6 +64,10 @@ struct PointCloud
     /// if region is nullptr, all valid points are modified
     MRMESH_API void transform( const AffineXf3f& xf, const VertBitSet* region = nullptr );
 
+    /// applies given shift to specified points (normals are not changed);
+    /// if region is nullptr, all valid points are modified
+    MRMESH_API void transform( const Vector3f& shift, const VertBitSet* region = nullptr );
+
     /// returns all valid point ids sorted lexicographically by their coordinates (optimal for uniform sampling)
     [[nodiscard]] MRMESH_API std::vector<VertId> getLexicographicalOrder() const;
 

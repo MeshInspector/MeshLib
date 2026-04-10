@@ -353,6 +353,10 @@ struct [[nodiscard]] Mesh
     /// \snippet cpp-examples/MeshModification.dox.cpp MeshTransform
     MRMESH_API void transform( const AffineXf3f& xf, const VertBitSet* region = nullptr );
 
+    /// applies given shift to specified vertices
+    /// if region is nullptr, all valid mesh vertices are used
+    MRMESH_API void transform( const Vector3f& shift, const VertBitSet* region = nullptr );
+
     /// creates new point and assigns given position to it
     MRMESH_API VertId addPoint( const Vector3f & pos );
 

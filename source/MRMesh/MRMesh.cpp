@@ -255,6 +255,17 @@ void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
     invalidateCaches();
 }
 
+void Mesh::transform( const Vector3f& shift, const VertBitSet* region )
+{
+    MR_TIMER;
+
+    BitSetParallelFor( topology.getVertIds( region ), [&] ( const VertId v )
+    {
+        points[v] += shift;
+    } );
+    invalidateCaches();
+}
+
 VertId Mesh::addPoint( const Vector3f & pos )
 {
     VertId v = topology.addVertId();

@@ -68,6 +68,17 @@ void PointCloud::transform( const AffineXf3f& xf, const VertBitSet* region )
     } );
 }
 
+void PointCloud::transform( const Vector3f& shift, const VertBitSet* region )
+{
+    MR_TIMER;
+    invalidateCaches();
+
+    BitSetParallelFor( getVertIds( region ), [&] ( const VertId v )
+    {
+        points[v] += shift;
+    } );
+}
+
 void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap, const VertNormals * extNormals )
 {
     MR_TIMER;

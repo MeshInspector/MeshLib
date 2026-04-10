@@ -330,6 +330,20 @@ void Polyline<V>::transform( const AffineXf<V> & xf )
 }
 
 template<typename V>
+void Polyline<V>::transform( const V & shift )
+{
+    MR_TIMER;
+    VertId lastValidVert = topology.lastValidVert();
+
+    ParallelFor( 0_v, lastValidVert + 1, [&] ( VertId v )
+    {
+        if ( topology.hasVert( v ) )
+            points[v] += shift;
+    } );
+    invalidateCaches();
+}
+
+template<typename V>
 EdgeId Polyline<V>::splitEdge( EdgeId e, const V & newVertPos )
 {
     EdgeId newe = topology.splitEdge( e );

@@ -551,7 +551,6 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
             ctxId
         );
     }
-#endif
 #pragma clang diagnostic pop
 #endif
 }

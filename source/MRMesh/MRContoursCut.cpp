@@ -467,27 +467,6 @@ enum class CompareResult
     Greater
 };
 
-/// compares intersection points of two triangles and one edge using precise predicates
-/*class PreciseTriComparator
-{
-public:
-    PreciseTriComparator( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData );
-
-    // compare two triangles, returns Unknown only if both triangles share the same 3 vertices
-    CompareResult compare( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
-    CompareResult compare( FaceId fl, FaceId fr ) const;
-
-    // for the cases where simple compare returned Unknown, this goes along contours to resolve the ambiguity if possible
-    CompareResult propagate( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const;
-
-private:
-    const EdgeId intersectedEdge_;
-    const Mesh& mesh_;  // mesh containing intersectedEdge_
-    PreciseVertCoords o_, d_; // of intersectedEdge_ origin and destination
-
-    const SortIntersectionsData& sortData_; // information about the other mesh with triangles
-};*/
-
 /// compare intersections of two triangles with one edge along that edge;
 /// returns Unknown only if both triangles share the same 3 vertices
 CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
@@ -534,26 +513,27 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
     return segmentIntersectionOrder( preciseVerts ) ? CompareResult::Less : CompareResult::Greater;
 }
 
-CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
+/// compare intersections of two triangles with one edge along that edge;
+/// if both triangles share the same 3 vertices then goes along the contours to other intersection in hope to resolve the ambiguity
+CompareResult comparePropagateEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
      const EdgeIntersectionData& l, const EdgeIntersectionData& r )
 {
     const auto & il = l.interOnEdge;
     const auto & ir = r.interOnEdge;
+    const auto& lContour = sortData.contours[il.contourId];
+    const auto& rContour = sortData.contours[ir.contourId];
 
-    FaceId fl = sortData.contours[il.contourId][il.intersectionId].tri();
-    FaceId fr = sortData.contours[ir.contourId][ir.intersectionId].tri();
-    return compareEdgeTrisIntersections( intersectedEdge, mesh, sortData, fl, fr );
-}
-
-/*CompareResult PreciseTriComparator::propagate( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) const
-{
-    const auto& tp = mesh_.topology;
-    const auto& il = l.interOnEdge;
-    const auto& ir = r.interOnEdge;
-    const auto& lContour = sortData_.contours[il.contourId];
-    const auto& rContour = sortData_.contours[ir.contourId];
+    FaceId fl = lContour[il.intersectionId].tri();
+    FaceId fr = rContour[ir.intersectionId].tri();
     const EdgeId el = lContour[il.intersectionId].edge;
     const EdgeId er = rContour[ir.intersectionId].edge;
+    assert( el.undirected() == intersectedEdge.undirected() );
+    assert( er.undirected() == intersectedEdge.undirected() );
+    auto res = compareEdgeTrisIntersections( intersectedEdge, mesh, sortData, fl, fr );
+    if ( res != CompareResult::Unknown )
+        return res;
+
+    const auto& tp = mesh.topology;
 
     bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
     bool sameContour = il.contourId == ir.contourId;
@@ -591,8 +571,8 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
     IntersectionId rNext = ir.intersectionId;
     IntersectionId lPrev = il.intersectionId;
     IntersectionId rPrev = ir.intersectionId;
-    EdgeId lastCommonEdgeNext = intersectedEdge_;
-    EdgeId lastCommonEdgePrev = intersectedEdge_;
+    EdgeId lastCommonEdgeNext = intersectedEdge;
+    EdgeId lastCommonEdgePrev = intersectedEdge;
     // check if next/prev intersection can determine sort
     auto checkOther = [&] ( bool next )->CompareResult
     {
@@ -644,7 +624,7 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
                 fl = lContour[startL].tri();
                 fr = rContour[rOtherRef].tri();
             }
-            return compare( fl, fr );
+            return compareEdgeTrisIntersections( lastCommonEdgeRef, mesh, sortData, fl, fr );
         }
 
         if ( otherEL != otherER )
@@ -660,9 +640,9 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
 
             // determined condition, intersections leave face in different edges (not returned)
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData_.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
+                return sortData.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
             else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData_.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
+                return sortData.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
             else
             {
                 // TODO: support this case
@@ -689,11 +669,12 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
         if ( fl == fr )
             return CompareResult::Unknown; // go next if we came to same intersection 
 
-        return compare( fl, fr );
+        return compareEdgeTrisIntersections( lastCommonEdgeRef, mesh, sortData, fl, fr );
+
     };
     bool lPassedFullRing = false;
     bool rPassedFullRing = false;
-    CompareResult res = CompareResult::Unknown;
+    res = CompareResult::Unknown;
     for ( ; tryNext || tryPrev; )
     {
         if ( tryNext )
@@ -715,7 +696,7 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
     }
 
     return res;
-}*/
+}
 
 void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
@@ -728,13 +709,9 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
     {
         auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
         {
-            auto res = compareEdgeTrisIntersections( baseEdge, mesh, *sortData, l, r );
+            auto res = comparePropagateEdgeTrisIntersections( baseEdge, mesh, *sortData, l, r );
             if ( res != CompareResult::Unknown )
                 return res == CompareResult::Less;
-
-//            res = cmp.propagate( l, r );
-//            if ( res != CompareResult::Unknown )
-//                return res == CompareResult::Less;
 
             assert( mesh.points[l.newVert] == mesh.points[r.newVert] );
             assert( !"cannot compare" );

@@ -74,6 +74,33 @@ EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, E
     }
 }
 
+EdgeId extractOppositePath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
+{
+    std::function<EdgeId( EdgeId )> prev;
+    if ( turn == Turn::Leftmost )
+        prev = [&] ( EdgeId e ) { return topology.next( e ); };
+    else
+        prev = [&] ( EdgeId e ) { return topology.prev( e ); };
+
+    for ( ;; )
+    {
+        // search for next edge in the path
+        for ( auto e1 = prev( e.sym() );; e1 = prev( e1 ) )
+        {
+            if ( e1 == e.sym() )
+                return e; // nothing found after full round
+
+            if ( edges.test_set( e1.sym(), false ) )
+            {
+                if ( outPath )
+                    outPath->push_back( e1 );
+                e = e1;
+                break;
+            }
+        }
+    }
+}
+
 std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, Turn turn )
 {
     MR_TIMER;
@@ -86,7 +113,7 @@ std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet 
         if ( !path.empty() && topology.org( path.front() ) == topology.dest( path.back() ) )
         {
             // a closed loop was extracted;
-            // do not move to keep allocated memory in path
+            // do not move to keep allocated memory in path, and res optimally packed
             res.push_back( path );
         }
         else
@@ -98,6 +125,35 @@ std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet 
         path.clear();
     }
     edges = std::move( pathEdges );
+    return res;
+}
+
+std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet & edges, Turn turn )
+{
+    MR_TIMER;
+    EdgePath path, backPath;
+    std::vector<EdgeLoop> res;
+    for ( auto e : edges )
+    {
+        extractPath( topology, e, edges, &path, turn );
+        assert( !path.empty() );
+        assert( isEdgePath( topology, path ) );
+        if ( topology.org( path.front() ) != topology.dest( path.back() ) )
+        {
+            // not closed path was extracted, track backward as well
+            extractOppositePath( topology, e.sym(), edges, &backPath, turn );
+            assert( isEdgePath( topology, backPath ) );
+            assert ( backPath.empty() || topology.org( path.front() ) == topology.org( backPath.front() ) );
+            reverse( backPath );
+            path.insert( path.begin(), backPath.begin(), backPath.end() );
+            assert( isEdgePath( topology, path ) );
+        }
+        // do not move to keep allocated memory in path, and res optimally packed
+        res.push_back( path );
+        path.clear();
+        backPath.clear();
+    }
+    assert( edges.none() );
     return res;
 }
 

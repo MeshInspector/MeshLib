@@ -22,18 +22,30 @@ namespace MR
 [[nodiscard]] MR_BIND_IGNORE inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0, Turn turn = Turn::Rightmost )
     { return trackRightBoundaryLoop( topology, e0, &region, turn ); }
 
-/// track the path of edges with set bits in (edges) starting from (e0);
+/// tracks the path of edges with set bits in (edges) starting from (e0);
 /// \return the last edge of the path or invalid edge if e0's bit in (edge) was reset;
 /// if at some reached vertex there are two or more edges originate with set bits in (edges),
 /// the path selects the leftmost or the rightmost option depending on \param turn;
 /// the bits in (edges) for tracked path edges are reset
 MRMESH_API EdgeId extractPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outPath, Turn turn );
 
-/// tracks are returns all closed loops of edges from the given bit set;
+/// tracks the path of edges, where each path's edge (e) had set for e.sym() in (edges), starting from (but not including) e0.sym();
+/// \return oppositely oriented the last edge of the backward path or e0 if backward path is empty;
+/// \param turn is treated as for forward paths, so the actual selection is reversed;
+/// the bits in (edges) for tracked path edges are reset
+MRMESH_API EdgeId extractBackPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outBackPath, Turn turn );
+
+/// tracks and returns all closed loops of edges from the given bit set;
 /// if at some reached vertex there are two or more edges originate with set bits in (edges),
 /// the path selects the leftmost or the rightmost option depending on \param turn;
 /// the bits corresponding to loops are reset in (edges), and to remaining not-closed paths are kept
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, Turn turn );
+
+/// tracks and returns all closed and not-closed paths of edges from the given bit set;
+/// if at some reached vertex there are two or more edges originate with set bits in (edges),
+/// the path selects the leftmost or the rightmost option depending on \param turn;
+/// on return all bits in (edges) are reset
+[[nodiscard]] MRMESH_API std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet & edges, Turn turn );
 
 /// returns all region boundary loops;
 /// every loop has region faces on the left, and not-region faces or holes on the right

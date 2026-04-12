@@ -29,11 +29,11 @@ namespace MR
 /// the bits in (edges) for tracked path edges are reset
 MRMESH_API EdgeId extractPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outPath, Turn turn );
 
-/// tracks the path of edges, where each path's edge (e) had set for e.sym() in (edges), starting from (but not including) e0.sym();
-/// \return oppositely oriented the last edge of the backward path or e0 if backward path is empty;
+/// tracks the path of oppositely oriented edges to the edges with set bits in (edges), starting from (but not including) e0;
+/// \return the last edge of the path or e0 if backward path is empty;
 /// \param turn is treated as for forward paths, so the actual selection is reversed;
-/// the bits in (edges) for tracked path edges are reset
-MRMESH_API EdgeId extractBackPath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outBackPath, Turn turn );
+/// the bits in (edges) for the opposites of tracked path edges are reset
+MRMESH_API EdgeId extractOppositePath( const MeshTopology& topology, EdgeId e0, EdgeBitSet& edges, EdgePath* outPath, Turn turn );
 
 /// tracks and returns all closed loops of edges from the given bit set;
 /// if at some reached vertex there are two or more edges originate with set bits in (edges),

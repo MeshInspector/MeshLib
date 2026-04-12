@@ -74,7 +74,7 @@ EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, E
     }
 }
 
-EdgeId extractBackPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outBackPath, Turn turn )
+EdgeId extractOppositePath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
 {
     std::function<EdgeId( EdgeId )> prev;
     if ( turn == Turn::Leftmost )
@@ -85,16 +85,16 @@ EdgeId extractBackPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edge
     for ( ;; )
     {
         // search for next edge in the path
-        for ( auto e1 = prev( e );; e1 = prev( e1 ) )
+        for ( auto e1 = prev( e.sym() );; e1 = prev( e1 ) )
         {
-            if ( e1 == e )
+            if ( e1 == e.sym() )
                 return e; // nothing found after full round
 
             if ( edges.test_set( e1.sym(), false ) )
             {
-                if ( outBackPath )
-                    outBackPath->push_back( e1 );
-                e = e1.sym();
+                if ( outPath )
+                    outPath->push_back( e1 );
+                e = e1;
                 break;
             }
         }
@@ -141,7 +141,7 @@ std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet 
         if ( topology.org( path.front() ) != topology.dest( path.back() ) )
         {
             // not closed path was extracted, track backward as well
-            extractBackPath( topology, e, edges, &backPath, turn );
+            extractOppositePath( topology, e.sym(), edges, &backPath, turn );
             assert( isEdgePath( topology, backPath ) );
             assert ( backPath.empty() || topology.org( path.front() ) == topology.org( backPath.front() ) );
             reverse( backPath );

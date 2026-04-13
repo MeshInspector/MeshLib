@@ -257,6 +257,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
                     break;
                 }
             assert( thirdPointB.id );
+            assert( thirdPointB.id != vs[2].id && thirdPointB.id != vs[3].id && thirdPointB.id != vs[4].id ); // the case when both triangles share all 3 points is not valid
             return orient3d( { vs[2], vs[3], vs[4], thirdPointB } )
                 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
         }

@@ -47,13 +47,6 @@ struct EdgeIntersectionData
     int beforeSortIndex{ 0 }; // useful for next sort
 };
 
-enum class TrianglesSortRes
-{
-    Undetermined, // triangles positions cannot be determined
-    Left,         // second triangle is from left side of oriented first triangle
-    Right         // second triangle is from right side of oriented first triangle
-};
-
 using EdgeData = std::vector<EdgeIntersectionData>;
 
 struct PathsEdgeIndex
@@ -88,370 +81,6 @@ PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortD
         return { v + int( sortData.meshAVertsNum ), sortData.converter( sortData.otherMesh.points[v] )};
 
     return { v + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[v] ) )};
-}
-
-TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData, EdgeId sharedEdge )
-{
-    const auto& topology = sortData.otherMesh.topology;
-
-    const auto v0 = topology.dest( topology.next( sharedEdge ) );
-    const auto v3 = topology.dest( topology.prev( sharedEdge ) );
-    if ( v0 == v3 )
-        return TrianglesSortRes::Undetermined;
-
-    const std::array<PreciseVertCoords, 4> preciseVerts
-    {
-        preciseOtherVert( v0, sortData ),
-        preciseOtherVert( topology.org( sharedEdge ), sortData ),
-        preciseOtherVert( topology.dest( sharedEdge ), sortData ),
-        preciseOtherVert( v3, sortData )
-    };
-
-    if ( orient3d( preciseVerts ) )
-        return TrianglesSortRes::Left;
-    else
-        return TrianglesSortRes::Right;
-}
-
-TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData, FaceId fl, EdgeId sharedVertOrg )
-{
-    const auto& topology = sortData.otherMesh.topology;
-    const auto& edgePerFaces = topology.edgePerFace();
-    auto el = edgePerFaces[fl];
-
-    std::array<VertId, 5> verts;
-    verts[0] = topology.org( el );
-    verts[1] = topology.dest( el );
-    verts[2] = topology.dest( topology.next( el ) );
-    verts[3] = topology.dest( sharedVertOrg );
-    verts[4] = topology.dest( topology.next( sharedVertOrg ) );
-
-    // check multiple case
-    bool multiple3 = verts[3] == verts[0] || verts[3] == verts[1] || verts[3] == verts[2];
-    bool multiple4 = verts[4] == verts[0] || verts[4] == verts[1] || verts[4] == verts[2];
-    if ( multiple3 && multiple4 )
-        return TrianglesSortRes::Undetermined;
-    if ( multiple3 )
-        std::swap( verts[3], verts[4] );
-
-    std::array<PreciseVertCoords, 5> preciseVerts
-    {
-        preciseOtherVert( verts[0], sortData ),
-        preciseOtherVert( verts[1], sortData ),
-        preciseOtherVert( verts[2], sortData ),
-        preciseOtherVert( verts[3], sortData ),
-        preciseOtherVert( verts[4], sortData )
-    };
-
-    if ( multiple3 || multiple4 )
-    {
-        if ( orient3d( preciseVerts.data() ) )
-            return TrianglesSortRes::Left;
-        else
-            return TrianglesSortRes::Right;
-    }
-
-    // common non-multiple case
-    bool oneRes = orient3d( preciseVerts.data() );
-    std::swap( preciseVerts[3], preciseVerts[4] );
-    bool otherRes = orient3d( preciseVerts.data() );
-
-    if ( oneRes != otherRes )
-        return TrianglesSortRes::Undetermined;
-    else if ( oneRes )
-        return TrianglesSortRes::Left;
-    else
-        return TrianglesSortRes::Right;
-}
-
-TrianglesSortRes sortTrianglesNoShared( const SortIntersectionsData& sortData, FaceId fl, FaceId fr )
-{
-    const auto& topology = sortData.otherMesh.topology;
-    const auto& edgePerFaces = topology.edgePerFace();
-    auto el = edgePerFaces[fl];
-    auto er = edgePerFaces[fr];
-
-    std::array<PreciseVertCoords, 6> preciseVerts
-    {
-        preciseOtherVert( topology.org( el ), sortData ),
-        preciseOtherVert( topology.dest( el ), sortData ),
-        preciseOtherVert( topology.dest( topology.next( el ) ), sortData ),
-        preciseOtherVert( topology.org( er ), sortData ),
-        preciseOtherVert( topology.dest( er ), sortData ),
-        preciseOtherVert( topology.dest( topology.next( er ) ), sortData )
-    };
-
-    bool arRes = orient3d( preciseVerts.data() );
-    std::swap( preciseVerts[3], preciseVerts[4] );
-    bool brRes = orient3d( preciseVerts.data() );
-    std::swap( preciseVerts[3], preciseVerts[5] );
-    bool crRes = orient3d( preciseVerts.data() );
-
-    if ( arRes != brRes || arRes != crRes )
-        return TrianglesSortRes::Undetermined;
-    else if ( arRes )
-        return TrianglesSortRes::Left;
-    else
-        return TrianglesSortRes::Right;
-}
-
-TrianglesSortRes sortTriangles( const SortIntersectionsData& sortData, FaceId fl, FaceId fr )
-{
-    const auto& topology = sortData.otherMesh.topology;
-    EdgeId sharedEdge = topology.sharedEdge( fl, fr );
-    if ( sharedEdge.valid() )
-        return sortTrianglesSharedEdge( sortData, sharedEdge );
-
-    sharedEdge = topology.sharedVertInOrg( fl, fr );
-    if ( sharedEdge.valid() )
-        return sortTrianglesSharedVert( sortData, fl, sharedEdge );
-
-    return sortTrianglesNoShared( sortData, fl, fr );
-}
-
-// Try sort left face by right, and right by left
-TrianglesSortRes sortTrianglesSymmetrical( const SortIntersectionsData& sortData,
-    FaceId fl, bool lReverted,   //  first triangle and whether its orientation must be reversed
-    FaceId fr, bool rReverted )  // second triangle and whether its orientation must be reversed
-{
-    // try sort right face by left
-    TrianglesSortRes res = sortTriangles( sortData, fl, fr );
-    if ( res != TrianglesSortRes::Undetermined )
-    {
-        return !lReverted == ( res == TrianglesSortRes::Left ) ?
-            TrianglesSortRes::Left : TrianglesSortRes::Right;
-    }
-    // try sort left face by right
-    res = sortTriangles( sortData, fr, fl );
-    if ( res != TrianglesSortRes::Undetermined )
-    {
-        return !rReverted == ( res == TrianglesSortRes::Right ) ?
-            TrianglesSortRes::Left : TrianglesSortRes::Right;
-    }
-    return TrianglesSortRes::Undetermined;
-}
-
-// try determine sort looking on next or prev intersection
-TrianglesSortRes sortPropagateContour(
-    const MeshTopology& tp,
-    const SortIntersectionsData& sortData,
-    const IntersectionData& il, const IntersectionData& ir,
-    EdgeId baseEdgeOr )
-{
-    const auto& lContour = sortData.contours[il.contourId];
-    const auto& rContour = sortData.contours[ir.contourId];
-    const EdgeId el = lContour[il.intersectionId].edge;
-    const EdgeId er = rContour[ir.intersectionId].edge;
-
-    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
-    bool sameContour = il.contourId == ir.contourId;
-    int stepRight = el == er ? 1 : -1;
-
-    // finds next/prev intersection on edge in the contour
-    auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
-    {
-        const auto& contour = left ? lContour : rContour;
-        bool closed = isClosed( contour );
-        int step = left ? 1 : stepRight;
-        if ( !next )
-            step *= -1;
-        IntersectionId nextL = interData;
-        int size = int( contour.size() );
-        for ( ;;)
-        {
-            int nextIndex = nextL + step;
-            if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
-                return {}; // reached end of non closed contour
-            nextL = IntersectionId( ( nextIndex + size ) % size );
-            if ( closed && nextL + 1 == size )
-                continue;
-            if ( nextL == stopInter )
-                return {}; // reached stop intersection in the contour
-            if ( contour[nextL].isEdgeATriB() == edgeATriB )
-                return nextL; // return next/prev intersection (on edge)
-        }
-    };
-
-    bool tryNext = true;
-    bool tryPrev = true;
-
-    IntersectionId lNext = il.intersectionId;
-    IntersectionId rNext = ir.intersectionId;
-    IntersectionId lPrev = il.intersectionId;
-    IntersectionId rPrev = ir.intersectionId;
-    EdgeId lastCommonEdgeNext = baseEdgeOr;
-    EdgeId lastCommonEdgePrev = baseEdgeOr;
-    // check if next/prev intersection can determine sort
-    auto checkOther = [&] ( bool next )->TrianglesSortRes
-    {
-        auto& tryThis = next ? tryNext : tryPrev;
-        assert( tryThis );
-
-        const auto startL = next ? lNext : lPrev;
-        const auto startR = next ? rNext : rPrev;
-
-        auto& lOtherRef = next ? lNext : lPrev;
-        auto& rOtherRef = next ? rNext : rPrev;
-        auto& lastCommonEdgeRef = next ? lastCommonEdgeNext : lastCommonEdgePrev;
-        auto otherL = getNextPrev( lOtherRef, sameContour ? rOtherRef : lOtherRef, true, next );
-        if ( !otherL )
-        {
-            tryThis = false; // terminal (end of contour reached)
-            return TrianglesSortRes::Undetermined;
-        }
-        auto otherR = getNextPrev( rOtherRef, sameContour ? lOtherRef : rOtherRef, false, next );
-        if ( !otherR )
-        {
-            tryThis = false; // terminal (end of contour reached
-            return TrianglesSortRes::Undetermined;
-        }
-        lOtherRef = otherL;
-        rOtherRef = otherR;
-        auto otherEL = lContour[lOtherRef].edge.undirected();
-        auto otherER = rContour[rOtherRef].edge.undirected();
-        bool lReturned = otherEL == lastCommonEdgeRef.undirected();
-        bool rReturned = otherER == lastCommonEdgeRef.undirected();
-        if ( lReturned || rReturned )
-        {
-            // if one of candidates return - terminal, but still can be determined
-            tryThis = false; // terminal
-            // if both of candidates return to base edge sort cannot be determined
-            if ( lReturned && rReturned )
-                return TrianglesSortRes::Undetermined;
-
-            FaceId fl;
-            FaceId fr;
-            if ( lReturned )
-            {
-                fl = lContour[lOtherRef].tri();
-                fr = rContour[startR].tri();
-            }
-            else
-            {
-                assert( rReturned );
-                fl = lContour[startL].tri();
-                fr = rContour[rOtherRef].tri();
-            }
-            assert( el.undirected() == baseEdgeOr.undirected() );
-            assert( er.undirected() == baseEdgeOr.undirected() );
-            const bool lReverted = lReturned ? ( el == baseEdgeOr ) : ( el != baseEdgeOr );
-            const bool rReverted = rReturned ? ( er == baseEdgeOr ) : ( er != baseEdgeOr );
-            return sortTrianglesSymmetrical( sortData, fl, lReverted, fr, rReverted );
-        }
-
-        if ( otherEL != otherER )
-        {
-            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
-            // keeping it for better understanding whats going on here, also might be useful for debugging two objects boolean failures
-
-            //assert(
-            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
-            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
-
-            // determined condition, intersections leave face in different edges (not returned)
-            if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData.isOtherA ? TrianglesSortRes::Right : TrianglesSortRes::Left; // terminal
-            else
-            {
-                // TODO: support this case
-                // we can be here only if doing self-boolean of non-closed contour passing through vertex
-                tryThis = false; // for now just terminate, for simplicity
-                return TrianglesSortRes::Undetermined;
-            }
-        }
-
-        // undetermined condition, but not terminal (intersections leave face in same edge (not returned))
-        assert( otherEL == otherER && !lReturned && !rReturned );
-        if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() )
-            lastCommonEdgeRef = tp.next( lastCommonEdgeRef );
-        else if ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef );
-        else if ( otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() )
-            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
-        else
-            lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
-
-        FaceId fl = lContour[lOtherRef].tri();
-        FaceId fr = rContour[rOtherRef].tri();
-
-        if ( fl == fr )
-            return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
-
-        assert( el.undirected() == baseEdgeOr.undirected() );
-        assert( er.undirected() == baseEdgeOr.undirected() );
-        return sortTrianglesSymmetrical( sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
-    };
-    bool lPassedFullRing = false;
-    bool rPassedFullRing = false;
-    TrianglesSortRes res = TrianglesSortRes::Undetermined;
-    for ( ; tryNext || tryPrev; )
-    {
-        if ( tryNext )
-            res = checkOther( true );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res;
-        if ( tryPrev )
-            res = checkOther( false );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res;
-
-        if ( !lPassedFullRing && ( lNext == il.intersectionId || lPrev == il.intersectionId ) )
-            lPassedFullRing = true;
-        if ( !rPassedFullRing && ( rNext == ir.intersectionId || rPrev == ir.intersectionId ) )
-            rPassedFullRing = true;
-
-        if ( lPassedFullRing && rPassedFullRing )
-            return TrianglesSortRes::Undetermined; // both contours passed a round, so break infinite loop
-    }
-
-    return res;
-}
-
-// baseEdge - cutting edge representation with orientation of first intersection
-std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> getLessFunc(
-    const MeshTopology& tp,
-    const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
-{
-    if ( !sortData )
-    {
-        return [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-        {
-            return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
-        };
-    }
-    // sym baseEdge if other is not A:
-    // if other is A intersection edge is going inside - out
-    // otherwise it is going outside - in
-    return[&tp, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]
-    ( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-    {
-        const auto & il = l.interOnEdge;
-        const auto & ir = r.interOnEdge;
-
-        FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
-        FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
-        EdgeId el = sortData->contours[il.contourId][il.intersectionId].edge;
-        EdgeId er = sortData->contours[ir.contourId][ir.intersectionId].edge;
-        assert( el.undirected() == baseEdgeOr.undirected() );
-        assert( er.undirected() == baseEdgeOr.undirected() );
-
-        // try sort by faces (topology)
-        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, fl, el != baseEdgeOr, fr, er != baseEdgeOr );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res == TrianglesSortRes::Left;
-
-        // try sort by next/prev intersections (topology)
-        res = sortPropagateContour( tp, *sortData, il, ir, baseEdgeOr );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res == TrianglesSortRes::Left;
-
-        // try sort by geometry
-        return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
-    };
 }
 
 // sets left face of given edge invalid and saves info about its old left ring
@@ -831,6 +460,244 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
     }
 }
 
+enum class CompareResult
+{
+    Less,
+    Unknown,
+    Greater
+};
+
+/// compare intersections of two triangles with one edge along that edge;
+/// returns Unknown only if both triangles share the same 3 vertices
+CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
+    FaceId fl, FaceId fr )
+{
+    assert( fl != fr );
+
+    const auto& otherTopology = sortData.otherMesh.topology;
+    auto vsl = otherTopology.getTriVerts( fl );
+    std::sort( vsl.begin(), vsl.end() );
+    auto vsr = otherTopology.getTriVerts( fr );
+    std::sort( vsr.begin(), vsr.end() );
+    if ( vsl == vsr )
+        return CompareResult::Unknown;
+
+    VertId vo = mesh.topology.org( intersectedEdge );
+    VertId vd = mesh.topology.dest( intersectedEdge );
+
+    auto po = mesh.points[vo];
+    auto pd = mesh.points[vd];
+
+    if ( sortData.isOtherA )
+    {
+        vo += (int)sortData.meshAVertsNum;
+        vd += (int)sortData.meshAVertsNum;
+        if ( sortData.rigidB2A )
+        {
+            po = (*sortData.rigidB2A)( po );
+            pd = (*sortData.rigidB2A)( pd );
+        }
+    }
+
+    std::array<PreciseVertCoords, 8> preciseVerts
+    {
+        PreciseVertCoords{ vo, sortData.converter( po ) },
+        PreciseVertCoords{ vd, sortData.converter( pd ) },
+        preciseOtherVert( vsl[0], sortData ),
+        preciseOtherVert( vsl[1], sortData ),
+        preciseOtherVert( vsl[2], sortData ),
+        preciseOtherVert( vsr[0], sortData ),
+        preciseOtherVert( vsr[1], sortData ),
+        preciseOtherVert( vsr[2], sortData )
+    };
+    return segmentIntersectionOrder( preciseVerts ) ? CompareResult::Less : CompareResult::Greater;
+}
+
+/// compare intersections of two triangles with one edge along that edge;
+/// if both triangles share the same 3 vertices then goes along the contours to other intersection in hope to resolve the ambiguity
+CompareResult comparePropagateEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
+     const EdgeIntersectionData& l, const EdgeIntersectionData& r )
+{
+    const auto & il = l.interOnEdge;
+    const auto & ir = r.interOnEdge;
+    const auto& lContour = sortData.contours[il.contourId];
+    const auto& rContour = sortData.contours[ir.contourId];
+
+    FaceId fl = lContour[il.intersectionId].tri();
+    FaceId fr = rContour[ir.intersectionId].tri();
+    const EdgeId el = lContour[il.intersectionId].edge;
+    const EdgeId er = rContour[ir.intersectionId].edge;
+    assert( el.undirected() == intersectedEdge.undirected() );
+    assert( er.undirected() == intersectedEdge.undirected() );
+    auto res = compareEdgeTrisIntersections( intersectedEdge, mesh, sortData, fl, fr );
+    if ( res != CompareResult::Unknown )
+        return res;
+
+    const auto& tp = mesh.topology;
+
+    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
+    bool sameContour = il.contourId == ir.contourId;
+    int stepRight = el == er ? 1 : -1;
+
+    // finds next/prev intersection on edge in the contour
+    auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
+    {
+        const auto& contour = left ? lContour : rContour;
+        bool closed = isClosed( contour );
+        int step = left ? 1 : stepRight;
+        if ( !next )
+            step *= -1;
+        IntersectionId nextL = interData;
+        int size = int( contour.size() );
+        for ( ;;)
+        {
+            int nextIndex = nextL + step;
+            if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
+                return {}; // reached end of non closed contour
+            nextL = IntersectionId( ( nextIndex + size ) % size );
+            if ( closed && nextL + 1 == size )
+                continue;
+            if ( nextL == stopInter )
+                return {}; // reached stop intersection in the contour
+            if ( contour[nextL].isEdgeATriB() == edgeATriB )
+                return nextL; // return next/prev intersection (on edge)
+        }
+    };
+
+    bool tryNext = true;
+    bool tryPrev = true;
+
+    IntersectionId lNext = il.intersectionId;
+    IntersectionId rNext = ir.intersectionId;
+    IntersectionId lPrev = il.intersectionId;
+    IntersectionId rPrev = ir.intersectionId;
+    EdgeId lastCommonEdgeNext = intersectedEdge;
+    EdgeId lastCommonEdgePrev = intersectedEdge;
+    // check if next/prev intersection can determine sort
+    auto checkOther = [&] ( bool next )->CompareResult
+    {
+        auto& tryThis = next ? tryNext : tryPrev;
+        assert( tryThis );
+
+        const auto startL = next ? lNext : lPrev;
+        const auto startR = next ? rNext : rPrev;
+
+        auto& lOtherRef = next ? lNext : lPrev;
+        auto& rOtherRef = next ? rNext : rPrev;
+        auto& lastCommonEdgeRef = next ? lastCommonEdgeNext : lastCommonEdgePrev;
+        auto otherL = getNextPrev( lOtherRef, sameContour ? rOtherRef : lOtherRef, true, next );
+        if ( !otherL )
+        {
+            tryThis = false; // terminal (end of contour reached)
+            return CompareResult::Unknown;
+        }
+        auto otherR = getNextPrev( rOtherRef, sameContour ? lOtherRef : rOtherRef, false, next );
+        if ( !otherR )
+        {
+            tryThis = false; // terminal (end of contour reached)
+            return CompareResult::Unknown;
+        }
+        lOtherRef = otherL;
+        rOtherRef = otherR;
+        auto otherEL = lContour[lOtherRef].edge.undirected();
+        auto otherER = rContour[rOtherRef].edge.undirected();
+        bool lReturned = otherEL == lastCommonEdgeRef.undirected();
+        bool rReturned = otherER == lastCommonEdgeRef.undirected();
+        if ( lReturned || rReturned )
+        {
+            // if one of candidates return - terminal, but still can be determined
+            tryThis = false; // terminal
+            // if both of candidates return to base edge sort cannot be determined
+            if ( lReturned && rReturned )
+                return CompareResult::Unknown;
+
+            FaceId fl;
+            FaceId fr;
+            if ( lReturned )
+            {
+                fl = lContour[lOtherRef].tri();
+                fr = rContour[startR].tri();
+            }
+            else
+            {
+                assert( rReturned );
+                fl = lContour[startL].tri();
+                fr = rContour[rOtherRef].tri();
+            }
+            return compareEdgeTrisIntersections( lastCommonEdgeRef, mesh, sortData, fl, fr );
+        }
+
+        if ( otherEL != otherER )
+        {
+            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
+            // keeping it for better understanding whats going on here, also might be useful for debugging two objects boolean failures
+
+            //assert(
+            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
+
+            // determined condition, intersections leave face in different edges (not returned)
+            if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+                return sortData.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
+            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
+                return sortData.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
+            else
+            {
+                // TODO: support this case
+                // we can be here only if doing self-boolean of non-closed contour passing through vertex
+                tryThis = false; // for now just terminate, for simplicity
+                return CompareResult::Unknown;
+            }
+        }
+
+        // undetermined condition, but not terminal (intersections leave face in same edge (not returned))
+        assert( otherEL == otherER && !lReturned && !rReturned );
+        if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
+        else
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
+
+        FaceId fl = lContour[lOtherRef].tri();
+        FaceId fr = rContour[rOtherRef].tri();
+
+        if ( fl == fr )
+            return CompareResult::Unknown; // go next if we came to same intersection 
+
+        return compareEdgeTrisIntersections( lastCommonEdgeRef, mesh, sortData, fl, fr );
+
+    };
+    bool lPassedFullRing = false;
+    bool rPassedFullRing = false;
+    res = CompareResult::Unknown;
+    for ( ; tryNext || tryPrev; )
+    {
+        if ( tryNext )
+            res = checkOther( true );
+        if ( res != CompareResult::Unknown )
+            return res;
+        if ( tryPrev )
+            res = checkOther( false );
+        if ( res != CompareResult::Unknown )
+            return res;
+
+        if ( !lPassedFullRing && ( lNext == il.intersectionId || lPrev == il.intersectionId ) )
+            lPassedFullRing = true;
+        if ( !rPassedFullRing && ( rNext == ir.intersectionId || rPrev == ir.intersectionId ) )
+            rPassedFullRing = true;
+
+        if ( lPassedFullRing && rPassedFullRing )
+            return CompareResult::Unknown; // both contours passed a round, so break infinite loop
+    }
+
+    return res;
+}
+
 void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
 {
@@ -838,13 +705,35 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
     const auto& intInfo = edgeData.front().interOnEdge;
     EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
 
-    std::vector<double> dotProds( edgeData.size() );
-    Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
-    auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
-    for ( int i = 0; i < edgeData.size(); ++i )
-        dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
+    if ( sortData )
+    {
+        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+        {
+            auto res = comparePropagateEdgeTrisIntersections( baseEdge, mesh, *sortData, l, r );
+            if ( res != CompareResult::Unknown )
+                return res == CompareResult::Less;
 
-    std::sort( edgeData.begin(), edgeData.end(), getLessFunc( mesh.topology, dotProds, baseEdge, sortData ) );
+            assert( mesh.points[l.newVert] == mesh.points[r.newVert] );
+            assert( !"cannot compare" );
+            return false;
+        };
+        std::sort( edgeData.begin(), edgeData.end(), pred );
+    }
+    else
+    {
+        // sort using floating-point coordinates of new vertices
+        std::vector<double> dotProds( edgeData.size() );
+        Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
+        auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
+        for ( int i = 0; i < edgeData.size(); ++i )
+            dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
+
+        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+        {
+            return dotProds[l.beforeSortIndex] < dotProds[r.beforeSortIndex];
+        };
+        std::sort( edgeData.begin(), edgeData.end(), pred );
+    }
 
     // DEBUG Output
     //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );

@@ -6,6 +6,7 @@
 #include "MRRingIterator.h"
 #include "MRVector2.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -52,24 +53,13 @@ std::optional<VertUVCoords> findVertexUVs( const MeshTopology& topology, const T
     VertUVCoords res;
     res.resizeNoInit( topology.vertSize() );
     tbb::task_group_context ctx;
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( topology.vertSize() ) ),
-        [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( 0_v, VertId( topology.vertSize() ), [&]( VertId v )
     {
-        for ( auto v = range.begin(); v < range.end(); ++v )
-        {
-            if ( ctx.is_group_execution_cancelled() )
-                break;
-            auto maybeUV = findVertexUV( topology, v, triCornerUvCoords );
-            if ( maybeUV )
-            {
-                res[v] = *maybeUV;
-            }
-            else
-            {
-                ctx.cancel_group_execution();
-                break;
-            }
-        }
+        auto maybeUV = findVertexUV( topology, v, triCornerUvCoords );
+        if ( maybeUV )
+            res[v] = *maybeUV;
+        else
+            ctx.cancel_group_execution();
     }, ctx );
 
     if ( ctx.is_group_execution_cancelled() )

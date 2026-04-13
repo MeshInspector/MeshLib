@@ -111,6 +111,25 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
+# Fastmcpp stuff.
+option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
+IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
+  # On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
+  IF(MESHLIB_USE_VCPKG)
+    add_subdirectory(../fastmcpp fastmcpp)
+  ENDIF()
+
+  target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
+
+  target_include_directories(${PROJECT_NAME} PRIVATE
+    ${MESHINSPECTOR_THIRDPARTY_DIR}/fastmcpp/include
+    ${MESHINSPECTOR_THIRDPARTY_DIR}/cpp-httplib
+    ${MESHINSPECTOR_THIRDPARTY_DIR}/nlohmann-json/include
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_ENABLE_MCP_SERVER=0)
+ENDIF()
+
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")

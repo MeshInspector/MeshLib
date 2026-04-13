@@ -122,9 +122,9 @@ IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
 
   target_include_directories(${PROJECT_NAME} PRIVATE
-    ${MESHINSPECTOR_THIRDPARTY_DIR}/fastmcpp/include
-    ${MESHINSPECTOR_THIRDPARTY_DIR}/cpp-httplib
-    ${MESHINSPECTOR_THIRDPARTY_DIR}/nlohmann-json/include
+    ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include
+    ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
+    ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
   )
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MR_ENABLE_MCP_SERVER=0)

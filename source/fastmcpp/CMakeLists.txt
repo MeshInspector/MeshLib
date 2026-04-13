@@ -17,4 +17,4 @@ set(FASTMCPP_BUILD_TESTS OFF CACHE BOOL "Build tests")
 set(FASTMCPP_BUILD_EXAMPLES OFF CACHE BOOL "Build examples")
 set(FASTMCPP_FETCH_CURL OFF CACHE BOOL "Fetch and build libcurl statically for POST streaming")
 
-add_subdirectory(${MESHINSPECTOR_THIRDPARTY_DIR}/fastmcpp fastmcpp)
+add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/fastmcpp fastmcpp)

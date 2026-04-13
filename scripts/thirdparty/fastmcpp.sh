@@ -5,6 +5,7 @@ SOURCE_DIR="$1"
 BUILD_DIR="${2:-./fastmcpp_build}"
 INSTALL_DIR="${3:-./fastmcpp_install}"
 
+# Sync those flags with `source/fastmcpp/CMakeLists.txt`.
 CMAKE_OPTIONS="${CMAKE_OPTIONS} \
   -D FASTMCPP_BUILD_TESTS=OFF \
   -D FASTMCPP_BUILD_EXAMPLES=OFF \

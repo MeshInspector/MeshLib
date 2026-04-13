@@ -1869,7 +1869,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                 // Temporarily roll back the xf to write to the history.
                 auto newXf = object->xf();
                 object->setXf( editedFeatureObjectOldXf_ );
-                AppendHistory<ChangeXfAction>( "Change Feature Transform", object );
+                AppendHistory<ChangeXfAction>( _t( "Change Feature Transform" ), object );
                 object->setXf( newXf );
             }
 
@@ -2125,7 +2125,7 @@ bool ImGuiMenu::drawRemoveButton( const std::vector<std::shared_ptr<Object>>& se
         someChanges |= true;
         if ( allowRemoval_ )
         {
-            SCOPED_HISTORY( "Remove Objects (context)" );
+            SCOPED_HISTORY( _t( "Remove Objects (context)" ) );
             for ( int i = ( int )selectedObjs.size() - 1; i >= 0; --i )
                 if ( selectedObjs[i] )
                 {
@@ -2826,7 +2826,7 @@ float ImGuiMenu::drawTransform_()
 
             if ( xf != data.xf() && !xfHistUpdated_ )
             {
-                AppendHistory<ChangeXfAction>( "Manual Change Transform", selected[0] );
+                AppendHistory<ChangeXfAction>( _t( "Manual Change Transform" ), selected[0] );
                 xfHistUpdated_ = true;
             }
             data.setXf( xf );

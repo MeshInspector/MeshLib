@@ -349,7 +349,7 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
         } ) )
     {
         ownMeshChangedSignal_ = true;
-        AppendHistory<PartialChangeMeshDataAction>( "Subdivide Ridges/Grooves", obj_, std::move( subdivData ) );
+        AppendHistory<PartialChangeMeshDataAction>( _t( "Subdivide Ridges/Grooves" ), obj_, std::move( subdivData ) );
         reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
         sameOriginalMeshTopology_ = false;
         setDeviationCalculationMethod( deviationCalculationMethod_ );
@@ -392,7 +392,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         const auto delFaces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
         if ( delFaces.any() )
         {
-            SCOPED_HISTORY( "Brush: Patch" );
+            SCOPED_HISTORY( _t( "Brush: Patch" ) );
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
             FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;

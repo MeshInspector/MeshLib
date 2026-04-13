@@ -17,4 +17,5 @@ cmake --build "${BUILD_DIR}" -j `nproc`
 
 # Fastmcpp doesn't install any files via CMake. We use the headers directly from the submodule, and just copy the library.
 mkdir -p "$INSTALL_DIR/lib"
+cp -R "$SOURCE_DIR/include/fastmcpp" "$INSTALL_DIR/include"
 cp "$BUILD_DIR/libfastmcpp_core.a" "$INSTALL_DIR/lib"

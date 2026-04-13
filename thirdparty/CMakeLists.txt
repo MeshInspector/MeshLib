@@ -168,3 +168,19 @@ add_subdirectory(./tinygltf)
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
+
+IF(NOT MR_EMSCRIPTEN)
+  # Nlohmann-json is a dependency of fastmcpp.
+  set(BUILD_TESTING OFF)
+  add_subdirectory(./nlohmann-json)
+
+  # Cpp-httplib is a dependency of fastmcpp.
+  set(HTTPLIB_TEST OFF)
+  add_subdirectory(./cpp-httplib)
+
+  set(FASTMCPP_BUILD_TESTS OFF)
+  set(FASTMCPP_BUILD_EXAMPLES OFF)
+  set(FASTMCPP_FETCH_CURL OFF)
+  # Need a custom subdirectory name here, because it conflicts with the executable named `fastmcpp`. I'm not sure why we install stuff to the build directory.
+  add_subdirectory(./fastmcpp ./fastmcpp_build)
+ENDIF()

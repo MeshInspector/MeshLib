@@ -199,7 +199,8 @@ Expected<GroupOrder> MeshSegmenter::run_( const ProgressCallback& progress )
     return res;
 }
 
-struct Palette
+/// all colors here are on cube's boundary intersected by a skew plane, which makes a hexagon
+struct HexPalette
 {
     /// different colors
     std::vector<Color> colors;
@@ -207,13 +208,13 @@ struct Palette
     /// recommended step from previous color to next color, to have big visual difference, and visit all colors in long run
     static constexpr int STEP = 17;
 
-    Palette();
+    HexPalette();
 };
 
-Palette::Palette()
+HexPalette::HexPalette()
 {
     static constexpr int CORNER_COLORS = 6;
-    static constexpr int SIDE_COLORS = 5; // num colors between two coner colors + 1
+    static constexpr int SIDE_COLORS = 5; // num colors between two corner colors + 1
     // for any color c: dot( c, [1,1,1] ) = 1
     static const Vector3f cornerColors[CORNER_COLORS + 1] =
     {
@@ -282,7 +283,7 @@ UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
     {
         outFaceColors->resizeNoInit( topology.faceSize() );
         HashMap<FaceId, Color> root2Color;
-        Palette palette;
+        HexPalette palette;
 
         // give colors to segments ignoring the contrast on their boundaries
         int nextColor = 0;
@@ -291,7 +292,7 @@ UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
             if ( roots[f] != f )
                 continue;
             root2Color[f] = palette.colors[nextColor];
-            nextColor = ( nextColor + Palette::STEP ) % palette.colors.size();
+            nextColor = ( nextColor + HexPalette::STEP ) % palette.colors.size();
         }
         BitSetParallelForAll( topology.getValidFaces(), [&]( FaceId& f )
         {

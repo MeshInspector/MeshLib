@@ -4,6 +4,8 @@
 #ifndef MRVIEWER_NO_LOCALE
 #include "exports.h"
 
+#include "MRMesh/MRMeshFwd.h"
+
 #include <boost/signals2/connection.hpp>
 
 #include <filesystem>
@@ -37,20 +39,20 @@ MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// The active locale is reloaded on every call.
 /// \note This overload is meant to be used with string literals for faster lookups.
 /// \returns The id of the added domain.
-MRVIEWER_API int addDomain( const char* domainName );
+MRVIEWER_API LocaleDomainId addDomain( const char* domainName );
 /// \brief Adds a new domain.
 /// The active locale is reloaded on every call.
 /// \returns The id of the added domain.
-MRVIEWER_API int addDomain( const std::string& domainName );
+MRVIEWER_API LocaleDomainId addDomain( const std::string& domainName );
 /// \brief Find an id for the given domain that can be passed to the `translate` functions.
-/// \returns The domain id if the domain is previously added and 0 (the default domain id) otherwise.
+/// \returns The domain id if the domain is previously added and invalid id otherwise.
 /// \note This overload is meant to be used with string literals for faster lookups.
 /// \ref translate
-MRVIEWER_API int findDomain( const char* domainName );
+MRVIEWER_API LocaleDomainId findDomain( const char* domainName );
 /// \brief Find an id for the given domain that can be passed to the `translate` functions.
-/// \returns The domain id if the domain is previously added and 0 (the default domain id) otherwise.
+/// \returns The domain id if the domain is previously added and invalid id otherwise.
 /// \ref translate
-MRVIEWER_API int findDomain( const std::string& domainName );
+MRVIEWER_API LocaleDomainId findDomain( const std::string& domainName );
 
 /// \brief Returns a display name for the given locale.
 /// \returns

@@ -2446,7 +2446,8 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 {
     const auto initWidth = ImGui::GetContentRegionAvail().x;
     const auto initCursorScreenPos = ImGui::GetCursorScreenPos();
-    const auto itemWidth = getSceneInfoItemWidth_();
+    // using std::max to avoid assert in `ImGui::InvisibleButton` in degenerete window size scenario
+    const auto itemWidth = std::max( 1.0f, getSceneInfoItemWidth_() );
 
     static const auto setIntersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
     {

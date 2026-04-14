@@ -6,6 +6,7 @@
 #include "MRRingIterator.h"
 #include "MRHeap.h"
 #include "MRUnionFind.h"
+#include "MRColor.h"
 #include "MRTimer.h"
 #include <cfloat>
 #include <optional>
@@ -198,6 +199,45 @@ Expected<GroupOrder> MeshSegmenter::run_( const ProgressCallback& progress )
     return res;
 }
 
+/// all colors here are on cube's boundary intersected by a skew plane, which makes a hexagon
+struct HexPalette
+{
+    /// different colors
+    std::vector<Color> colors;
+
+    /// recommended step from previous color to next color, to have big visual difference, and visit all colors in long run
+    static constexpr int STEP = 17;
+
+    HexPalette();
+};
+
+HexPalette::HexPalette()
+{
+    static constexpr int CORNER_COLORS = 6;
+    static constexpr int SIDE_COLORS = 5; // num colors between two corner colors + 1
+    // for any color c: dot( c, [1,1,1] ) = 1
+    static const Vector3f cornerColors[CORNER_COLORS + 1] =
+    {
+        { 1.0, 0.0, 0.0 },
+        { 0.5, 0.5, 0.0 },
+        { 0.0, 1.0, 0.0 },
+        { 0.0, 0.5, 0.5 },
+        { 0.0, 0.0, 1.0 },
+        { 0.5, 0.0, 0.5 },
+        { 1.0, 0.0, 0.0 }
+    };
+    colors.reserve( CORNER_COLORS * SIDE_COLORS );
+    for ( int corner = 0; corner < CORNER_COLORS; ++corner )
+    {
+        for ( int i = 0; i < SIDE_COLORS; ++i )
+        {
+            auto v = lerp( cornerColors[corner], cornerColors[corner+1], float(i) / SIDE_COLORS );
+            colors.emplace_back( v );
+        }
+    }
+    assert( colors.size() == CORNER_COLORS * SIDE_COLORS );
+}
+
 } //anonymous namespace
 
 Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric, const ProgressCallback& progress )
@@ -210,7 +250,7 @@ Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric
 }
 
 UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
-    const GroupOrder& groupOrder, int numSegments )
+    const GroupOrder& groupOrder, int numSegments, FaceColors* outFaceColors )
 {
     MR_TIMER;
     int numMerges = topology.numValidFaces() - numSegments;
@@ -238,6 +278,30 @@ UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
         if ( roots[l] != roots[r] )
             res.set( ue );
     } );
+
+    if ( outFaceColors )
+    {
+        outFaceColors->resizeNoInit( topology.faceSize() );
+        HashMap<FaceId, Color> root2Color;
+        HexPalette palette;
+
+        // give colors to segments ignoring the contrast on their boundaries
+        int nextColor = 0;
+        for ( auto f : topology.getValidFaces() )
+        {
+            if ( roots[f] != f )
+                continue;
+            root2Color[f] = palette.colors[nextColor];
+            nextColor = ( nextColor + HexPalette::STEP ) % palette.colors.size();
+        }
+        BitSetParallelForAll( topology.getValidFaces(), [&]( FaceId& f )
+        {
+            auto it = root2Color.find( roots[f] );
+            assert( it != root2Color.end() );
+            (*outFaceColors)[f] = it->second;
+        } );
+    }
+
     return res;
 }
 

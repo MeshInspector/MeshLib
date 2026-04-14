@@ -1,3 +1,13 @@
+#ifndef MR_ENABLE_MCP_SERVER
+#  ifdef __EMSCRIPTEN__
+#    define MR_ENABLE_MCP_SERVER 0
+#  else
+#    define MR_ENABLE_MCP_SERVER 1
+#  endif
+#endif
+
+#if MR_ENABLE_MCP_SERVER
+
 #undef _t // Our translation macro interefers with Fastmcpp.
 
 #if defined( __GNUC__ )
@@ -26,7 +36,6 @@
 
 #include "MRMcp.h"
 
-#if MR_ENABLE_MCP_SERVER
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRCommandLoop.h"

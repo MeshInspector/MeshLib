@@ -2,17 +2,7 @@
 
 #include "exports.h"
 
-#include "MRViewer/MRRibbonMenuItem.h"
-
 #include <memory>
-
-#ifndef MR_ENABLE_MCP_SERVER
-#  ifdef __EMSCRIPTEN__
-#    define MR_ENABLE_MCP_SERVER 0
-#  else
-#    define MR_ENABLE_MCP_SERVER 1
-#  endif
-#endif
 
 namespace MR
 {

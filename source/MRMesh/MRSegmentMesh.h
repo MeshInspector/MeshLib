@@ -24,6 +24,7 @@ MRMESH_API Expected<GroupOrder> segmentMesh( const Mesh& mesh,
 /// executes grouping of segments till desired number of segments is reached,
 /// then returns the boundary edges in between the segments
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
-    const GroupOrder& groupOrder, int numSegments );
+    const GroupOrder& groupOrder, int numSegments,
+    FaceColors* outFaceColors = nullptr ); ///< optional output face coloring where all faces of one segment share the same color
 
 } //namespace MR

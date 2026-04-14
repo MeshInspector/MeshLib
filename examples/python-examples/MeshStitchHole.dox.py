@@ -13,7 +13,7 @@ edges = mesh.topology.findHoleRepresentiveEdges()
 # Connect two holes
 params = mrmeshpy.StitchHolesParams()
 params.metric = mrmeshpy.getUniversalMetric(mesh)
-mrmeshpy.buildCylinderBetweenTwoHoles(mesh, edges[0], edges[1], params)
+mrmeshpy.stitchHoles(mesh, edges[0], edges[1], params)
 
 # Save result
 mrmeshpy.saveMesh(mesh, "stitchedMesh.stl")

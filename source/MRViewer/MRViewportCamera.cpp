@@ -616,6 +616,23 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             continue;
         }
 
+#ifndef MRVIEWER_NO_VOXELS
+        if ( auto* objVox = obj->asType<ObjectVoxels>(); objVox && objVox->isVolumeRenderingEnabled() )
+        {
+            if ( !objVox->grid() )
+                continue;
+
+            const auto& vdbVolume = objVox->vdbVolume();
+            Box3f voxBox;
+            voxBox.include( Vector3f() );
+            voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+
+            for ( auto p : getCorners( voxBox ) )
+                if ( obj2cam( p ) )
+                    box.include( p );
+        }
+        else
+#endif
         if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
         {
             if ( !objMesh->mesh() )
@@ -640,22 +657,6 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             const auto& pointCloud = *objPoints->pointCloud();
             expandBox( pointCloud.points, pointCloud.validPoints, obj2cam );
         }
-#ifndef MRVIEWER_NO_VOXELS
-        else if ( auto* objVox = obj->asType<ObjectVoxels>(); objVox && objVox->isVolumeRenderingEnabled() )
-        {
-            if ( !objVox->grid() )
-                continue;
-
-            const auto& vdbVolume = objVox->vdbVolume();
-            Box3f voxBox;
-            voxBox.include( Vector3f() );
-            voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
-
-            for ( auto p : getCorners( voxBox ) )
-                if ( obj2cam( p ) )
-                    box.include( p );
-        }
-#endif
         else if ( const auto objBox = obj->getBoundingBox(); objBox.valid() )
         {
             for ( auto p : getCorners( objBox ) )

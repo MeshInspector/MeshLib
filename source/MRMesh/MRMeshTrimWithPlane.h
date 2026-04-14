@@ -43,7 +43,7 @@ MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, Fa
 // stores basic params for trimWithPlane function
 struct TrimWithPlaneParams
 {
-    //Input plane to cut mesh with
+    // Input plane to cut mesh with
     Plane3f plane;
     // if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
     float eps = 0;

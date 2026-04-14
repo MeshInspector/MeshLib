@@ -12,9 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiHelpers.cpp" />
+    <ClCompile Include="MRImGuiMultiViewport.cpp" />
     <ClCompile Include="MRAncillaryLabels.cpp" />
     <ClCompile Include="MRAncillaryLines.cpp" />
     <ClCompile Include="MRAncillaryMesh.cpp" />
+    <ClCompile Include="MRAncillaryPlane.cpp" />
     <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
@@ -26,6 +28,7 @@
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
+    <ClCompile Include="MRDepthPeelingGL.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
@@ -33,6 +36,8 @@
     <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRLocale.cpp" />
+    <ClCompile Include="MRRibbonFontHolder.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -44,12 +49,14 @@
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
-    <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonLayoutConfig.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonRegisterItem.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
+    <ClCompile Include="MRSceneControlMenuItems.cpp" />
+    <ClCompile Include="MRSpaceMouseDevice.cpp" />
+    <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
@@ -149,17 +156,25 @@
     <ClCompile Include="MRRenderClickableRect.cpp" />
     <ClCompile Include="MRUIQualityControl.cpp" />
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
+    <ClCompile Include="MRFileDialogPortal.cpp" />
+    <ClCompile Include="MRWin32MessageHandler.cpp" />
+    <ClCompile Include="MRI18n.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRFileDialogCocoa.h" />
+    <ClInclude Include="MRImGuiMultiViewport.h" />
     <ClInclude Include="MRAlphaSortGL.h" />
     <ClInclude Include="MRAncillaryLabels.h" />
     <ClInclude Include="MRAncillaryLines.h" />
     <ClInclude Include="MRAncillaryMesh.h" />
+    <ClInclude Include="MRAncillaryPlane.h" />
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRDepthPeelingGL.h" />
     <ClInclude Include="MRDragDropHandler.h" />
     <ClInclude Include="MRDragDropWin32Handler.h" />
+    <ClInclude Include="MRFileLoadOptions.h" />
     <ClInclude Include="MRImGui.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
@@ -175,6 +190,8 @@
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />
     <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRLocale.h" />
+    <ClInclude Include="MRRibbonFontHolder.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
     <ClInclude Include="MRMacOSOpenDocumentsHandler.h">
@@ -190,12 +207,14 @@
     <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
-    <ClInclude Include="MRProjectMeshAttributes.h" />
     <ClInclude Include="MRRibbonLayoutConfig.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonRegisterItem.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
     <ClInclude Include="MRMruFormatParameters.h" />
+    <ClInclude Include="MRSceneControlMenuItems.h" />
+    <ClInclude Include="MRSpaceMouseDevice.h" />
+    <ClInclude Include="MRSpaceMouseHandlerWinEvents.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />
@@ -261,11 +280,13 @@
     <ClInclude Include="MRTouchpadWin32Handler.h" />
     <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
+    <ClInclude Include="MRViewerConfigConstants.h" />
     <ClInclude Include="MRViewerEventQueue.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRSaveObjects.h" />
     <ClInclude Include="MRViewerSettingsPlugin.h" />
+    <ClInclude Include="MRViewerSignals.h" />
     <ClInclude Include="MRViewerTitle.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
@@ -314,6 +335,10 @@
     <ClInclude Include="MRUIQualityControl.h" />
     <ClInclude Include="MRItemEnabledPerViewport.h" />
     <ClInclude Include="MRWebResponseCallback.h" />
+    <ClInclude Include="MRFileDialogPortal.h" />
+    <ClInclude Include="MRWin32MessageHandler.h" />
+    <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRLocaleMacos.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -326,6 +351,12 @@
     <CopyFileToFolders Include="MRLightTheme.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <None Include="MRFileDialogCocoa.mm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="MRLocaleMacos.mm" />
+    <None Include="MRLocaleNames.inl" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -487,7 +518,6 @@
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
@@ -515,7 +545,6 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
@@ -523,6 +552,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>

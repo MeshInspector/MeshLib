@@ -42,19 +42,19 @@ int main( void )
     MR_MeshPart_Destroy( inputMeshPart );
     MR_OffsetParameters_Destroy( params );
 
-    MR_Mesh* outputMesh = MR_expected_MR_Mesh_std_string_GetMutableValue( outputMeshEx );
+    MR_Mesh* outputMesh = MR_expected_MR_Mesh_std_string_value_mut( outputMeshEx );
 
     if ( !outputMesh )
     {
-        fprintf( stderr, "Failed to perform offset: %s", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( outputMeshEx ) ) );
+        fprintf( stderr, "Failed to perform offset: %s", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( outputMeshEx ) ) );
         goto fail_offset;
     }
 
     // Save result
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( outputMesh, "mesh_offset.stl", NULL, NULL);
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save;
     }
 

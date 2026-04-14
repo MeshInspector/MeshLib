@@ -31,7 +31,21 @@ void EnumNeihbourVertices::run( const MeshTopology& topology, const VertBitSet& 
     visited_ |= start;
 
     run_( topology, pred );
+}
 
+void EnumNeihbourVertices::run( const MeshTopology& topology, const std::vector<MeshTriPoint>& start, const VertPredicate& pred )
+{
+    assert( !start.empty() );
+    assert( visited_.none() );
+    assert( bd_.empty() );
+    bd_.reserve( start.size() * 3 );
+    visited_.resize( topology.vertSize() );
+    for ( auto s : start )
+        for ( const auto& v : s.getWeightedVerts( topology ) )
+            if ( v.weight > 0 && !visited_.test_set( v.v ) )
+                bd_.push_back( v.v );
+
+    run_( topology, pred );
 }
 
 void EnumNeihbourVertices::run_( const MeshTopology& topology, const VertPredicate& pred )

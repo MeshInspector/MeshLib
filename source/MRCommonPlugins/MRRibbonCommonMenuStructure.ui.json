@@ -216,6 +216,12 @@
 		},
 		{
 			"Name": "Save object"
+		},
+		{
+			"Name": "Undo"
+		},
+		{
+			"Name": "Redo"
 		}
 	],
 	"Scene Buttons": [

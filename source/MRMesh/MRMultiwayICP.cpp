@@ -280,31 +280,20 @@ MultiwayICP::MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingPa
     resamplePoints( samplingParams );
 }
 
-Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallback cb )
+void MultiwayICP::calcGen_( bool p2pl, const ProgressCallback& cb )
 {
-    MR_TIMER;
-    float minDist = std::numeric_limits<float>::max();
+    updateAllPointPairs();
+    float minDist = p2pl ? getMeanSqDistToPlane() : getMeanSqDistToPoint();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
 
-    Vector<AffineXf3f, ObjId> resXfs;
-    resXfs.resize( objs_.size() );
+    Vector<AffineXf3f, ObjId> resXfs( objs_.size() );
     for ( int i = 0; i < objs_.size(); ++i )
         resXfs[ObjId( i )] = objs_[ObjId( i )].xf;
 
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
-            || prop_.method == ICPMethod::PointToPoint;
-
-        if ( iter_ == 1 )
-        {
-            // update metric before first iteration
-            updateAllPointPairs();
-            minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-        }
-
-        bool res = doIteration_( !pt2pt, iter_ != 1 );
+        bool res = doIteration_( p2pl );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -315,7 +304,10 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
             break;
         }
 
-        const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        // without this call, getMeanSqDistToPoint()/getMeanSqDistToPlane() will ignore xf changed in doIteration_()
+        if ( pairsGridPerLayer_.size() <= 1 ) // in cascade mode the pairs are updated inside doIteration_()
+            updateAllPointPairs();
+        const float curDist = p2pl ? getMeanSqDistToPlane() : getMeanSqDistToPoint();
 
         // exit if several(3) iterations didn't decrease minimization parameter
         if ( curDist < minDist )
@@ -341,15 +333,68 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
             badIterCount++;
         }
         if ( !reportProgress( cb, float( iter_ ) / float( prop_.iterLimit ) ) )
-            return {};
+            return;
     }
 
     for ( int i = 0; i < objs_.size(); ++i )
         objs_[ObjId( i )].xf = resXfs[ObjId( i )];
+}
+
+void MultiwayICP::calcP2Pt_( const ProgressCallback& cb )
+{
+    MR_TIMER;
+    calcGen_( false, cb );
+}
+
+void MultiwayICP::calcP2Pl_( const ProgressCallback& cb )
+{
+    MR_TIMER;
+    calcGen_( true, cb );
+}
+
+void MultiwayICP::calcCombined_( const ProgressCallback& cb )
+{
+    MR_TIMER;
+    assert( prop_.iterLimit > 2 );
+    if ( prop_.iterLimit <= 0 )
+        return;
+    const auto safeLimit = prop_.iterLimit;
+
+    prop_.iterLimit = 2;
+    calcP2Pt_( subprogress( cb, 0.0f, 2.0f / prop_.iterLimit ) );
+    auto p2pItersDone = iter_;
+
+    prop_.iterLimit = safeLimit - 2;
+    calcP2Pl_( subprogress( cb, 2.0f / prop_.iterLimit, 1.0f ) );
+    iter_ += p2pItersDone;
+
+    prop_.iterLimit = safeLimit;
+}
+
+Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( const ProgressCallback& cb )
+{
+    switch ( prop_.method )
+    {
+    case ICPMethod::Combined:
+        calcCombined_( cb );
+        break;
+    case ICPMethod::PointToPoint:
+        calcP2Pt_( cb );
+        break;
+    case ICPMethod::PointToPlane:
+        calcP2Pl_( cb );
+        break;
+    default:
+        assert( false );
+        break;
+    }
+    Vector<AffineXf3f, ObjId> resXfs( objs_.size() );
+    for ( int i = 0; i < objs_.size(); ++i )
+        resXfs[ObjId( i )] = objs_[ObjId( i )].xf;
     return resXfs;
 }
 
-Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( ProgressCallback cb )
+Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( const ProgressCallback& cb )
 {
     Vector<AffineXf3f, ObjId> res;
     if ( objs_.empty() )
@@ -361,12 +406,12 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( Progres
     /// apply the same (updateXf) to all objects to restore transformation of first object,
     /// and make relative position of others the same
     assert( res[ObjId( 0 )] == objs_[ObjId( 0 )].xf );
-    const auto updateXf = xf0 * res[ObjId( 0 )].inverse();
+    const auto updateXf = AffineXf3d( xf0 ) * AffineXf3d( res[ObjId( 0 )].inverse() );
     res[ObjId( 0 )] = objs_[ObjId( 0 )].xf = xf0;
     for ( int i = 1; i < objs_.size(); ++i )
     {
         assert( res[ObjId( i )] == objs_[ObjId( i )].xf );
-        res[ObjId( i )] = objs_[ObjId( i )].xf = updateXf * res[ObjId( i )];
+        res[ObjId( i )] = objs_[ObjId( i )].xf = AffineXf3f( updateXf * AffineXf3d( res[ObjId( i )] ) );
     }
 
     return res;
@@ -508,7 +553,7 @@ std::string MultiwayICP::getStatusInfo() const
     return getICPStatusInfo( iter_, resultType_ );
 }
 
-bool MultiwayICP::updateAllPointPairs( ProgressCallback cb )
+bool MultiwayICP::updateAllPointPairs( const ProgressCallback& cb )
 {
     MR_TIMER;
     for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
@@ -536,7 +581,7 @@ void MultiwayICP::setupLayers_( MultiwayICPSamplingParameters::CascadeMode mode 
     pairsGridPerLayer_.resize( cascadeIndexer_->getNumLayers() );
 }
 
-bool MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj, ProgressCallback cb )
+bool MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj, const ProgressCallback& cb )
 {
     bool cascadeMode = pairsGridPerLayer_.size() > 1;
 
@@ -577,7 +622,7 @@ bool MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj
     return true;
 }
 
-std::optional<MultiwayICP::LayerSamples> MultiwayICP::resampleUpperLayers_( ProgressCallback cb )
+std::optional<MultiwayICP::LayerSamples> MultiwayICP::resampleUpperLayers_( const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( pairsGridPerLayer_.size() < 2 )
@@ -607,7 +652,7 @@ std::optional<MultiwayICP::LayerSamples> MultiwayICP::resampleUpperLayers_( Prog
     return samples;
 }
 
-bool MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples, ProgressCallback cb )
+bool MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( samples.empty() )
@@ -649,7 +694,7 @@ bool MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples, ProgressCallb
     return true;
 }
 
-bool MultiwayICP::updateLayerPairs_( ICPLayer l, ProgressCallback cb )
+bool MultiwayICP::updateLayerPairs_( ICPLayer l, const ProgressCallback& cb )
 {
     MR_TIMER;
     auto numGroups = pairsGridPerLayer_[l].size();
@@ -782,13 +827,10 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
     }
 }
 
-bool MultiwayICP::doIteration_( bool p2pl, bool updateAllParis )
+bool MultiwayICP::doIteration_( bool p2pl )
 {
     if ( pairsGridPerLayer_.size() > 1 )
         return cascadeIter_( p2pl );
-
-    if ( updateAllParis )
-        updateAllPointPairs();
 
     if ( maxGroupSize_ == 1 )
         return p2pl ? p2plIter_() : p2ptIter_();
@@ -799,8 +841,7 @@ bool MultiwayICP::doIteration_( bool p2pl, bool updateAllParis )
 bool MultiwayICP::p2ptIter_()
 {
     MR_TIMER;
-    using FullSizeBool = uint8_t;
-    Vector<FullSizeBool, ObjId> valid( objs_.size() );
+    Vector<std::optional<AffineXf3d>, ObjId> updXf( objs_.size() );
     ParallelFor( objs_, [&] ( ObjId objId )
     {
         ICPElementId id( objId.get() );
@@ -822,45 +863,45 @@ bool MultiwayICP::p2ptIter_()
             }
         }
 
-        AffineXf3f res;
+        AffineXf3d res;
         switch ( prop_.icpMode )
         {
         default:
             assert( false );
             [[fallthrough]];
         case ICPMode::RigidScale:
-            res = AffineXf3f( p2pt.findBestRigidScaleXf() );
+            res = p2pt.findBestRigidScaleXf();
             break;
         case ICPMode::AnyRigidXf:
-            res = AffineXf3f( p2pt.findBestRigidXf() );
+            res = p2pt.findBestRigidXf();
             break;
         case ICPMode::OrthogonalAxis:
-            res = AffineXf3f( p2pt.findBestRigidXfOrthogonalRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
+            res = p2pt.findBestRigidXfOrthogonalRotationAxis( Vector3d{ prop_.fixedRotationAxis } );
             break;
         case ICPMode::FixedAxis:
-            res = AffineXf3f( p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } ) );
+            res = p2pt.findBestRigidXfFixedRotationAxis( Vector3d{ prop_.fixedRotationAxis } );
             break;
         case ICPMode::TranslationOnly:
-            res = AffineXf3f( Matrix3f(), Vector3f( p2pt.findBestTranslation() ) );
+            res = AffineXf3d( Matrix3d(), p2pt.findBestTranslation() );
             break;
         }
         if ( std::isnan( res.b.x ) ) //nan check
-        {
-            valid[objId] = FullSizeBool( false );
             return;
-        }
-        objs_[objId].xf = res * objs_[objId].xf;
-        valid[objId] = FullSizeBool( true );
+        updXf[objId] = res;
     } );
-
-    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
+    if ( !std::all_of( updXf.vec_.begin(), updXf.vec_.end(), [] ( const auto& v ) { return v.has_value(); } ) )
+        return false;
+    // fix position of last object, and move all others relative to it
+    const auto fixLastXf = updXf.back()->inverse();
+    for ( ObjId objId( 0 ); objId + 1 < objs_.size(); ++objId )
+        objs_[objId].xf = AffineXf3f( fixLastXf * *updXf[objId] * AffineXf3d( objs_[objId].xf ) );
+    return true;
 }
 
 bool MultiwayICP::p2plIter_()
 {
     MR_TIMER;
-    using FullSizeBool = uint8_t;
-    Vector<FullSizeBool, ObjId> valid( objs_.size() );
+    Vector<std::optional<AffineXf3d>, ObjId> updXf( objs_.size() );
     ParallelFor( objs_, [&] ( ObjId objId )
     {
         ICPElementId id( objId.get() );
@@ -887,12 +928,8 @@ bool MultiwayICP::p2plIter_()
             }
         }
         if ( activeCount <= 0 )
-        {
-            valid[objId] = FullSizeBool( false );
             return;
-        }
         centroidRef /= float( activeCount * 2 );
-        AffineXf3f centroidRefXf = AffineXf3f( Matrix3f(), centroidRef );
 
         PointToPlaneAligningTransform p2pl;
         for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
@@ -912,16 +949,20 @@ bool MultiwayICP::p2plIter_()
         }
         p2pl.prepare();
 
-        AffineXf3f res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
+        AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check
-        {
-            valid[objId] = FullSizeBool( false );
             return;
-        }
-        objs_[objId].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[objId].xf;
-        valid[objId] = FullSizeBool( true );
+        const AffineXf3d subCentroid{ Matrix3d(), Vector3d( -centroidRef ) };
+        const AffineXf3d addCentroid{ Matrix3d(), Vector3d(  centroidRef ) };
+        updXf[objId] = addCentroid * res * subCentroid;
     } );
-    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
+    if ( !std::all_of( updXf.vec_.begin(), updXf.vec_.end(), [] ( const auto& v ) { return v.has_value(); } ) )
+        return false;
+    // fix position of last object, and move all others relative to it
+    const auto fixLastXf = updXf.back()->inverse();
+    for ( ObjId objId( 0 ); objId + 1 < objs_.size(); ++objId )
+        objs_[objId].xf = AffineXf3f( fixLastXf * *updXf[objId] * AffineXf3d( objs_[objId].xf ) );
+    return true;
 }
 
 bool MultiwayICP::multiwayIter_( bool p2pl )
@@ -942,7 +983,7 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
             {
                 const auto& data = pairs[i][j].vec[idx];
                 if ( p2pl )
-                    mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
+                    mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.tgtNorm, data.weight );
                 else
                     mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.weight );
             }
@@ -1005,7 +1046,7 @@ bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
                     {
                         const auto& data = pairs.vec[idx];
                         if ( p2pl )
-                            mat.add( indI, data.srcPoint, indJ, data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
+                            mat.add( indI, data.srcPoint, indJ, data.tgtPoint, data.tgtNorm, data.weight );
                         else
                             mat.add( indI, data.srcPoint, indJ, data.tgtPoint, data.weight );
                     }

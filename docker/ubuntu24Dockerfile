@@ -6,6 +6,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
         tzdata git sudo time ninja-build \
@@ -28,7 +29,15 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
-FROM nvidia/cuda:12.6.0-devel-ubuntu24.04 AS production
+# no CUDA packages for Ubuntu 24.04 ARM64 for some reason, have to copy them from a Docker image
+FROM nvidia/cuda:12.6.0-devel-ubuntu24.04 AS cuda
+WORKDIR /usr/local/cuda-12.6/targets/x86_64-linux/lib
+COPY scripts/ubuntu_cuda_libs.txt ubuntu_cuda_libs.txt
+# remove excess libraries
+RUN find -type f,l ! -path "./cmake/*" $(printf "! -path ./%s " $(cat ubuntu_cuda_libs.txt)) -delete
+
+
+FROM ubuntu:24.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
@@ -37,13 +46,13 @@ COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
-COPY scripts/patches scripts/patches
 COPY requirements requirements
 COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
 COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
 
 COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=cuda /usr/local/cuda-12.6 /usr/local/cuda-12.6
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -52,9 +61,10 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
  && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh \

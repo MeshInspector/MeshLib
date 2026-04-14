@@ -33,7 +33,7 @@ MR_SUPPRESS_WARNING_PUSH
 #if __GNUC__ >= 15
 #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
-#if __clang_major__ == 20
+#if __clang_major__ >= 20
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
 
@@ -152,11 +152,9 @@ Expected<int> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Mod
     }
     else
     {
-        const auto startSpan = vertexCoordinates.vec_.begin() + size_t( start );
-        ParallelFor( startSpan, vertexCoordinates.vec_.end(), [&] ( auto it )
+        ParallelFor( start, vertexCoordinates.endId(), [&] ( VertId v )
         {
-            const size_t i = std::distance( startSpan, it );
-            *it = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + i * bufferView.byteStride] );
+            vertexCoordinates[v] = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + (size_t)v.get() * bufferView.byteStride] );
         } );
     }
 
@@ -559,7 +557,7 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::file
     return scene;
 }
 
-Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback )
+Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const SceneSave::Settings& settings )
 {
     tinygltf::Model model;
     model.asset.generator = "MeshLib";
@@ -597,8 +595,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
     std::stack<std::shared_ptr<const Object>> objectStack;
     std::stack<size_t> indexStack;
 
-    if ( callback && !callback( 0.1f ) )
-        return unexpected( "Operation was cancelled" );
+    if ( !reportProgress( settings.progress, 0.1f ) )
+        return unexpectedOperationCanceled();
 
     for ( size_t childIndex = 0; childIndex < root.children().size(); ++childIndex )
     {
@@ -734,8 +732,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
             }
         }
 
-        if ( callback && !callback( 0.1f + 0.7f * childIndex / root.children().size() ) )
-            return unexpected( "Operation was cancelled" );
+        if ( !reportProgress( settings.progress, 0.1f + 0.7f * childIndex / root.children().size() ) )
+            return unexpectedOperationCanceled();
     }
 
     model.materials.resize( materials.size() );
@@ -774,8 +772,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
         model.textures[textureIt.second].sampler = 0;
     }
 
-    if ( callback && !callback( 0.9f ) )
-        return unexpected( "Operation was cancelled" );
+    if ( !reportProgress( settings.progress, 0.9f ) )
+        return unexpectedOperationCanceled();
 
     tinygltf::TinyGLTF writer;
     tinygltf::FsCallbacks fsCallbacks{ .FileExists = tinygltf::FileExists, .ExpandFilePath = tinygltf::ExpandFilePath, .ReadWholeFile = tinygltf::ReadWholeFile, .WriteWholeFile = tinygltf::WriteWholeFile };
@@ -786,8 +784,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
     if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ), isBinary, isBinary, true, isBinary ) )
         return unexpected( "File writing error" );
 
-    if ( callback && !callback( 1.0f ) )
-        return unexpected( "Operation was cancelled" );
+    if ( !reportProgress( settings.progress, 1.0f ) )
+        return unexpectedOperationCanceled();
 
     return {};
 }

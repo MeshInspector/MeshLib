@@ -14,6 +14,7 @@
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
     <tab type="usergroup" url="__BEGIN_URL__Tutorials__END_URL__" title="Tutorials">
       <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
+      <tab type="user" url="__BEGIN_URL__SupportGeneratorTutorial__END_URL__" title="Support Generator Tool using C++"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__" title="Examples">
       <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#CppApplication" title="C++ Application Based on MeshLib">
@@ -71,11 +72,13 @@
       <tab type="user" url="__BEGIN_URL__ExamplePluginOverview__END_URL__" title="How to use С++ Example Plugin"/>
       <tab type="user" url="__BEGIN_URL__StatePluginsHelp__END_URL__" title="State Plugins Overview"/>
       <tab type="user" url="__BEGIN_URL__HowtoAddPluginOverview__END_URL__" title="How to Add Plugin"/>
+      <tab type="user" url="__BEGIN_URL__I18nGuide__END_URL__" title="Internationalization Guide"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__APIPage__END_URL__" title="API">
       <!-- API_CPP_PAGE -->
       <!-- API_PY_PAGE -->
       <!-- API_C_PAGE -->
+      <!-- API_CSHARP_PAGE -->
     </tab>
     <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>

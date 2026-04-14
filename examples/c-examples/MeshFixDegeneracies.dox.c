@@ -24,12 +24,12 @@ int main( int argc, char* argv[] )
 
     // Load mesh.
     MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( input, NULL, NULL );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( meshEx );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh.
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshEx ) ) );
         goto fail_mesh_loading;
     }
 
@@ -44,17 +44,17 @@ int main( int argc, char* argv[] )
     MR_expected_void_std_string* degeneraciesEx = MR_fixMeshDegeneracies( mesh, params );
     MR_FixMeshDegeneraciesParams_Destroy( params );
 
-    if ( MR_expected_void_std_string_GetError( degeneraciesEx ) )
+    if ( MR_expected_void_std_string_error( degeneraciesEx ) )
     {
-        fprintf( stderr, "Failed to fix mesh degeneracies: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( degeneraciesEx ) ) );
+        fprintf( stderr, "Failed to fix mesh degeneracies: %s\n", MR_std_string_data( MR_expected_void_std_string_error( degeneraciesEx ) ) );
         goto fail_fix_degen;
     }
 
     // Save result
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, output, NULL, NULL);
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save;
     }
 

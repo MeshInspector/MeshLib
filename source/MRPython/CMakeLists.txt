@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRPython CXX)
 
 file(GLOB SOURCES "*.cpp")
@@ -11,23 +7,22 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
-IF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include>
+)
+
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
     MRMesh
-    spdlog
     pybind11nonlimitedapi_stubs
+  PRIVATE
     ${CMAKE_DL_LIBS}
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog::spdlog
-    pybind11nonlimitedapi_stubs
-    ${CMAKE_DL_LIBS}
-  )
-ENDIF()
+)
 
 IF(APPLE)
+  find_package(pybind11 REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::module)
   target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
 ENDIF()
 
@@ -35,13 +30,11 @@ ENDIF()
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${Python_INCLUDE_DIRS}>)
 
 # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
 IF(NOT WIN32)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC
-    _GNU_SOURCE
-  )
+  target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
 ENDIF()
 
 IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
@@ -70,7 +63,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

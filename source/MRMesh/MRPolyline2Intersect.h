@@ -18,8 +18,6 @@ namespace MR
  */
 [[nodiscard]] MRMESH_API bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point );
 
-/// \}
-
 struct [[nodiscard]] PolylineIntersectionResult2
 {
     /// intersection point in polyline
@@ -61,5 +59,7 @@ MRMESH_API void rayPolylineIntersectAll( const Polyline2& polyline, const Line2f
 /// Reports all intersections via given callback with the tendency to do it from ray start to ray end, but without guarantee of exact order.
 MRMESH_API void rayPolylineIntersectAll( const Polyline2& polyline, const Line2d& line, const PolylineIntersectionCallback2d& callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes2<double>* prec = nullptr );
+
+/// \}
 
 } //namespace MR

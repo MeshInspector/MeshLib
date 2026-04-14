@@ -35,8 +35,10 @@ RenderLinesObject::~RenderLinesObject()
 
 bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
+    bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
-        !objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
@@ -48,6 +50,8 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         return false;
     }
 
+    objectPreRenderSetup( renderParams.transparencyMode,desiredPass, depthTest );
+
     needUpdateScreenLengths_ = needAccumLengthDirtyUpdate_( renderParams );
 
     update_();
@@ -56,28 +60,20 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
 
-    if ( objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-
-    render_( renderParams, false );
+    render_( renderParams, false, desiredPass );
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
-        render_( renderParams, true );
+        render_( renderParams, true, desiredPass );
+
+    objectPostRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
     return true;
 }
 
 void RenderLinesObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
@@ -115,11 +111,20 @@ void RenderLinesObject::forceBindAll()
     bindLines_( GLStaticHolder::LinesJoint );
 }
 
-void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points )
+void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points, RenderModelPassMask desiredPass )
 {
-    auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
+    auto shaderType = GLStaticHolder::LinesJoint;
+    if ( !points )
+    {
+        shaderType = GLStaticHolder::Lines;
+        if ( desiredPass == RenderModelPassMask::Transparent )
+            shaderType = GLStaticHolder::getTransparentLinesShader( renderParams.transparencyMode );
+    }
     bindLines_( shaderType );
+
     auto shader = GLStaticHolder::getShaderId( shaderType );
+    if ( shaderType == GLStaticHolder::DepthPeelLines )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE4 );
 
 
     calcAndBindLength_( renderParams, shader );
@@ -255,22 +260,19 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
             // important to be last edge org for points picker,
             // real last point will overlap invalid points so picker will return correct id
             auto lastValidEdgeOrg = lastValid.valid() ? topology.org( lastValid ) : VertId();
-            tbb::parallel_for( tbb::blocked_range<int>( 0, lineIndicesSize_ ), [&] ( const tbb::blocked_range<int>& range )
+            ParallelFor( 0, lineIndicesSize_, [&] ( int ue )
             {
-                for ( int ue = range.begin(); ue < range.end(); ++ue )
+                auto o = topology.org( UndirectedEdgeId( ue ) );
+                auto d = topology.dest( UndirectedEdgeId( ue ) );
+                if ( !o || !d )
                 {
-                    auto o = topology.org( UndirectedEdgeId( ue ) );
-                    auto d = topology.dest( UndirectedEdgeId( ue ) );
-                    if ( !o || !d )
-                    {
-                        positions[2 * ue] = polyline->points[lastValidEdgeOrg];
-                        positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
-                    }
-                    else
-                    {
-                        positions[2 * ue] = polyline->points[o];
-                        positions[2 * ue + 1] = polyline->points[d];
-                    }
+                    positions[2 * ue] = polyline->points[lastValidEdgeOrg];
+                    positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
+                }
+                else
+                {
+                    positions[2 * ue] = polyline->points[o];
+                    positions[2 * ue + 1] = polyline->points[d];
                 }
             } );
         }
@@ -414,6 +416,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
 
 void RenderLinesObject::bindLinesPicker_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
@@ -444,7 +447,11 @@ void RenderLinesObject::freeBuffers_()
 
 void RenderLinesObject::update_()
 {
-    dirty_ |= objLines_->getDirtyFlags();
+    auto objDirty = objLines_->getDirtyFlags();
+    // DIRTY_POSITION because we use corner rendering and need to update render verts
+    if ( objDirty & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
+        objDirty |= DIRTY_POSITION | DIRTY_VERTS_COLORMAP;
+    dirty_ |= objDirty;
     objLines_->resetDirty();
 }
 

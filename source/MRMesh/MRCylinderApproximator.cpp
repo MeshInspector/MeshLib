@@ -1,10 +1,10 @@
 #include "MRCylinderApproximator.h"
 #include "MRConstants.h"
 #include "MRCylinder3.h"
+#include "MRParallelFor.h"
 #include "MRToFromEigen.h"
 #include "MRVector.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -278,37 +278,31 @@ T Cylinder3Approximation<T>::fitCylindeHemisphereMultiThreaded( Eigen::Vector<T,
     std::vector<BestHemisphereStoredData> storedData;
     storedData.resize( phiResolution_ + 1 ); //  [0 .. pi/2] +1 for include upper bound
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), phiResolution_ + 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), phiResolution_ + 1, [&] ( size_t j )
+    {
+        T phi = phiStep * j; // [0 .. pi/2]
+        T cosPhi = std::cos( phi );
+        T sinPhi = std::sin( phi );
+        for ( size_t i = 0; i < thetaResolution_; ++i )
         {
-            for ( size_t j = range.begin(); j < range.end(); ++j )
+
+            T theta = theraStep * i; // [0 .. 2*pi)
+            T cosTheta = std::cos( theta );
+            T sinTheta = std::sin( theta );
+            Eigen::Vector<T, 3> currW{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
+            Eigen::Vector<T, 3> currPC{};
+            T rsqr;
+            T error = G( currW, currPC, rsqr );
+
+            if ( error < storedData[j].error )
             {
-
-                T phi = phiStep * j; // [0 .. pi/2]
-                T cosPhi = std::cos( phi );
-                T sinPhi = std::sin( phi );
-                for ( size_t i = 0; i < thetaResolution_; ++i )
-                {
-
-                    T theta = theraStep * i; // [0 .. 2*pi)
-                    T cosTheta = std::cos( theta );
-                    T sinTheta = std::sin( theta );
-                    Eigen::Vector<T, 3> currW{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
-                    Eigen::Vector<T, 3> currPC{};
-                    T rsqr;
-                    T error = G( currW, currPC, rsqr );
-
-                    if ( error < storedData[j].error )
-                    {
-                        storedData[j].error = error;
-                        storedData[j].rootSquare = rsqr;
-                        storedData[j].W = currW;
-                        storedData[j].PC = currPC;
-                    }
-                }
+                storedData[j].error = error;
+                storedData[j].rootSquare = rsqr;
+                storedData[j].W = currW;
+                storedData[j].PC = currPC;
             }
         }
-    );
+    } );
 
     for ( size_t i = 0; i <= phiResolution_; ++i )
     {

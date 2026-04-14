@@ -18,6 +18,13 @@ template<typename T>
 class MR_BIND_IGNORE SharedThreadSafeOwner
 {
 public:
+    MRMESH_API SharedThreadSafeOwner();
+    MRMESH_API SharedThreadSafeOwner( const SharedThreadSafeOwner& );
+    MRMESH_API SharedThreadSafeOwner& operator =( const SharedThreadSafeOwner& );
+    MRMESH_API SharedThreadSafeOwner( SharedThreadSafeOwner&& b ) noexcept;
+    MRMESH_API SharedThreadSafeOwner& operator =( SharedThreadSafeOwner&& b ) noexcept;
+    MRMESH_API ~SharedThreadSafeOwner();
+
     /// stops owning T-instance
     MRMESH_API void reset();
 
@@ -33,7 +40,7 @@ public:
     MRMESH_API const T & getOrCreate( const std::function<T()> & creator );
 
     /// if the object owns some T-instance, then updater function is applied to it;
-    /// get() and getPtr() return nullptr foe other threads during update()
+    /// get() and getPtr() return nullptr for other threads during update()
     MRMESH_API void update( const std::function<void(T&)> & updater );
 
     /// returns the amount of memory this object occupies on heap

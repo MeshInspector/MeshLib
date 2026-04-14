@@ -6,7 +6,7 @@
 #include "MRBestFit.h"
 #include "MRPlane3.h"
 #include "MRTriMath.h"
-#include "MRGeodesicPath.h"
+#include "MRReducePath.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRLocalTriangulations.h"

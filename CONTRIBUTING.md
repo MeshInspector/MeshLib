@@ -55,9 +55,9 @@ Each project (`source/MRFoo/`) normally has its own `exports.h` that declares fo
 
 CMake automatically defines `MRFoo_EXPORTS` when building each project, this is used in `exports.h`.
 
-## Python bindings
+## Generated language bindings
 
-We parse our headers to automatically generate Python bindings, so you need to follow some additional rules when writing the headers. Consult [the bindings manual](./scripts/mrbind/README-coding.md) for that.
+We parse our headers to automatically generate Python/C/C# bindings, so you need to follow some additional rules when writing the headers. Consult [the bindings manual](./scripts/mrbind/README-coding.md) for that.
 
 ## Misc
 

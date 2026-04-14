@@ -9,6 +9,7 @@
 #include <MRCMisc/std_pair_MR_FaceBitSet_MR_FaceBitSet.h>
 #include <MRCMisc/std_string.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,11 +29,11 @@ int main( void )
 
     MR_std_vector_MR_FaceFace* collidingFacePairs = MR_findCollidingTriangles( mpA, mpB, NULL, NULL ); // find each pair of colliding faces
 
-    for ( MR_uint64_t i = 0; i < MR_std_vector_MR_FaceFace_Size( collidingFacePairs ); ++i )
+    for ( MR_uint64_t i = 0; i < MR_std_vector_MR_FaceFace_size( collidingFacePairs ); ++i )
     {
         // print each pair of colliding faces
-        MR_FaceFace* ff = MR_std_vector_MR_FaceFace_At( collidingFacePairs, i );
-        fprintf( stdout, "%d %d\n", *MR_FaceId_get( MR_FaceFace_Get_aFace( ff ) ), *MR_FaceId_get( MR_FaceFace_Get_bFace( ff ) ) );
+        const MR_FaceFace* ff = MR_std_vector_MR_FaceFace_at( collidingFacePairs, i );
+        fprintf( stdout, "%d %d\n", MR_FaceFace_Get_aFace( ff )->id_, MR_FaceFace_Get_bFace( ff )->id_ );
     }
 
     // find bitsets of colliding faces
@@ -40,18 +41,18 @@ int main( void )
 
     MR_uint64_t numColA = MR_BitSet_count(
         MR_FaceBitSet_UpcastTo_MR_BitSet(
-            MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_First( collidingBitSets ) ) );
+            MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_first( collidingBitSets ) ) );
     MR_uint64_t numColB = MR_BitSet_count(
         MR_FaceBitSet_UpcastTo_MR_BitSet(
-            MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_Second( collidingBitSets ) ) );
-    fprintf( stdout, "%d\n", numColA ); // print number of colliding faces from mesh A
-    fprintf( stdout, "%d\n", numColB ); // print number of colliding faces from mesh B
+            MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_second( collidingBitSets ) ) );
+    fprintf( stdout, "%" PRIu64 "\n", numColA ); // print number of colliding faces from mesh A
+    fprintf( stdout, "%" PRIu64 "\n", numColB ); // print number of colliding faces from mesh B
 
 
     // fast check if mesh A and mesh B collide
     bool firstIntersectionsOnly = true;
     MR_std_vector_MR_FaceFace* fastCheck = MR_findCollidingTriangles( mpA, mpB, NULL, &firstIntersectionsOnly );
-    bool isColliding = !MR_std_vector_MR_FaceFace_IsEmpty( fastCheck );
+    bool isColliding = !MR_std_vector_MR_FaceFace_empty( fastCheck );
     if ( isColliding )
         fprintf( stdout, "true\n" );
     else

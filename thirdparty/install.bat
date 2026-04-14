@@ -8,13 +8,15 @@ REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 
 REM Check if AWS CLI is installed
-aws --version >nul 2>&1
+set "aws_cli_available=false"
+aws.exe --version >nul 2>&1
 if errorlevel 1 (
     echo AWS CLI v2: not found
     echo "Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source"
 ) else (
     echo AWS CLI v2: found
     echo "Vcpkg binary cache (if available) will be downloaded from S3"
+    set "aws_cli_available=true"
 )
 
 REM Detect vcpkg path
@@ -37,14 +39,23 @@ for %%i in (%*) do (
         set "write_s3_option=true"
     )
 )
+if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
+    echo "Error: --write-s3 requires AWS CLI to be installed."
+    exit /b 1
+)
 
-REM Configure VCPKG_BINARY_SOURCES
-if "!write_s3_option!"=="true" (
-    echo Mode: pull-push vcpkg binary cache. AWS credentials are required.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
+if "!aws_cli_available!"=="true" (
+    if "!write_s3_option!"=="true" (
+        echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
+        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    ) else (
+        echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    )
 ) else (
-    echo Mode: pull vcpkg binary cache. No AWS credentials are required.
-    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
+    echo "Mode: build from source (no S3 binary cache)."
+    set "VCPKG_BINARY_SOURCES=clear"
 )
 
 REM Ensure vcpkg downloads folder exists

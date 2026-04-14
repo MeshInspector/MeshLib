@@ -25,8 +25,8 @@ public:
     ObjectPointsHolder( ObjectPointsHolder&& ) noexcept = default;
     ObjectPointsHolder& operator = ( ObjectPointsHolder&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "PointsHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "PointsHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
@@ -67,6 +67,9 @@ public:
 
     MRMESH_API const ViewportProperty<Color>& getSelectedVerticesColorsForAllViewports() const;
     MRMESH_API virtual void setSelectedVerticesColorsForAllViewports( ViewportProperty<Color> val );
+
+    /// set all object solid colors (front/back/etc.) from other object for all viewports
+    MRMESH_API void copyAllSolidColors( const ObjectPointsHolder& other );
 
     [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
 
@@ -151,6 +154,11 @@ public:
 
     /// signal about render discretization changing, triggered in setRenderDiscretization
     Signal<void()> renderDiscretizationChangedSignal;
+
+    /// signal about points or normals changing, triggered in setDirtyFlag
+    using ChangedSignal = Signal<void( uint32_t mask )>;
+    ChangedSignal pointsChangedSignal;
+    ChangedSignal normalsChangedSignal;
 
 protected:
     VertBitSet selectedPoints_;

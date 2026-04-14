@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(DefaultOptions)
 include(ConfigureVcpkg)
 
@@ -50,7 +50,6 @@ option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library" ON)
 option(MESHLIB_BUILD_MESHVIEWER "Build MeshViewer application" ON)
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
-option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" ON)
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
@@ -73,7 +72,6 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
-  set(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING OFF)
 ENDIF()
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
@@ -147,45 +145,11 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   IF(APPLE)
     # TODO: revise
     link_directories(${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MESHLIB_PYTHON_VERSION}/lib/)
-    find_package(pybind11 REQUIRED)
   ENDIF()
 ENDIF()
 
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
-
-IF(NOT MR_EMSCRIPTEN)
-  IF(NOT TARGET JsonCpp::JsonCpp)
-    IF(MSVC)
-      find_package(JsonCpp REQUIRED)
-    ELSE()
-      # fix compatibility with Ubuntu 22.04
-      if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
-        set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-      endif()
-      find_package(jsoncpp)
-      IF(NOT JsonCpp_FOUND)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
-        IF(CMAKE_VERSION VERSION_LESS 3.18)
-          set_target_properties(PkgConfig::jsoncpp PROPERTIES IMPORTED_GLOBAL TRUE)
-        ENDIF()
-        add_library(JsonCpp::JsonCpp ALIAS PkgConfig::jsoncpp)
-      ENDIF()
-    ENDIF()
-  ENDIF()
-
-  find_package(fmt)
-  find_package(spdlog REQUIRED)
-  find_package(TBB REQUIRED)
-  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
-    add_compile_definitions(SPDLOG_FMT_EXTERNAL)
-  ENDIF()
-  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
-ENDIF() # NOT MR_EMSCRIPTEN
-
-include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)
-include_directories(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include)
 
 IF(NOT $ENV{MR_VERSION} STREQUAL "")
   set(MESHLIB_VERSION $ENV{MR_VERSION})
@@ -252,6 +216,9 @@ IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
   option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
+
+  # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
 ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)
@@ -263,10 +230,6 @@ IF(MESHLIB_BUILD_VOXELS)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)
-  IF(NOT MR_EMSCRIPTEN)
-    find_package(glfw3 CONFIG REQUIRED)
-  ENDIF()
-
   IF(MR_EMSCRIPTEN)
     include(EmscriptenHelpers)
     mr_emscripten_pack_directory("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets" "/")
@@ -330,25 +293,18 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE)
   ENDIF()
 ENDIF()
 
-IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMeshC ./MRMeshC)
-ENDIF()
-
 IF(BUILD_TESTING)
   enable_testing()
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
   IF(MESHLIB_BUILD_MRCUDA)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestCuda ./MRTestCuda)
   ENDIF()
-  IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC ./MRTestC)
-  ENDIF()
 ENDIF()
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR MR_RESOURCES_DIR
 )
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
@@ -363,9 +319,10 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-IF(EMSCRIPTEN)
-  install(FILES cmake/Modules/EmscriptenHelpers.cmake DESTINATION ${MR_CONFIG_DIR})
-ENDIF()
+install(
+  DIRECTORY cmake/Modules
+  DESTINATION ${MR_CONFIG_DIR}
+)
 
 IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_GENERATOR "DRAGNDROP")

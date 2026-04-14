@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-
 # This file exists so we can disable some warnings in Lazperf.
 # If we were to `add_subdirectory` it directly from `MeshLib/CMakeLists.txt`, we would have to modify the global CXX flags, which is uncool.
 

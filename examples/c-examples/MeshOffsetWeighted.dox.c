@@ -32,8 +32,8 @@ int main( void )
     for ( MR_uint64_t i = 0; i < vertSize; ++i )
     {
         const MR_std_vector_MR_Vector3f* points = MR_VertCoords_Get_vec_( MR_Mesh_Get_points( mesh ) );
-        float weight = abs( MR_std_vector_MR_Vector3f_At( points, i )->x / 5.0f );
-        MR_VertScalars_data( scalars )[i] = weight;
+        float weight = abs( MR_std_vector_MR_Vector3f_at( points, i )->x / 5.0f );
+        MR_VertScalars_data_mut( scalars )[i] = weight;
         if ( weight > maxWeight )
         {
             maxWeight = weight;
@@ -52,17 +52,17 @@ int main( void )
     MR_DistanceFromWeightedPointsParams_Set_maxWeight( dist, maxWeight );
 
     MR_expected_MR_Mesh_std_string* res = MR_WeightedShell_meshShell_3_MR_VertScalars( mesh, scalars, params );
-    MR_Mesh* resMesh = MR_expected_MR_Mesh_std_string_GetMutableValue( res );
+    MR_Mesh* resMesh = MR_expected_MR_Mesh_std_string_value_mut( res );
     if ( !resMesh )
     {
-        fprintf( stderr, "Failed to create shell: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( res ) ) );
+        fprintf( stderr, "Failed to create shell: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( res ) ) );
         goto fail_shell;
     }
 
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( resMesh, "offset_weighted.ctm", NULL, NULL );
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save; // error while saving file
     }
 

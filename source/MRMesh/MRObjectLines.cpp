@@ -45,19 +45,6 @@ std::shared_ptr< Polyline3 > ObjectLines::updatePolyline( std::shared_ptr< Polyl
     return polyline;
 }
 
-void ObjectLines::setDirtyFlags( uint32_t mask, bool invalidateCaches )
-{
-    ObjectLinesHolder::setDirtyFlags( mask, invalidateCaches );
-
-    if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
-    {
-        if ( polyline_ )
-        {
-            linesChangedSignal( mask );
-        }
-    }
-}
-
 void ObjectLines::swapBase_( Object& other )
 {
     if ( auto otherLines = other.asType<ObjectLines>() )
@@ -66,19 +53,10 @@ void ObjectLines::swapBase_( Object& other )
         assert( false );
 }
 
-void ObjectLines::swapSignals_( Object& other )
-{
-    ObjectLinesHolder::swapSignals_( other );
-    if ( auto otherLines = other.asType<ObjectLines>() )
-        std::swap( linesChangedSignal, otherLines->linesChangedSignal );
-    else
-        assert( false );
-}
-
 void ObjectLines::serializeFields_( Json::Value& root ) const
 {
     ObjectLinesHolder::serializeFields_( root );
-    root["Type"].append( ObjectLines::TypeName() );
+    root["Type"].append( ObjectLines::StaticTypeName() );
 }
 
 std::vector<std::string> ObjectLines::getInfoLines() const

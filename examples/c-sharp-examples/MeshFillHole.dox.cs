@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using static MR.DotNet;
 
 public static class MeshFillHoleExample
 {
@@ -16,17 +15,21 @@ public static class MeshFillHoleExample
             string inputFile = args[1];
             string outputFile = args.Length == 3 ? args[2] : inputFile;
 
-            var mesh = MeshLoad.FromAnySupportedFormat(inputFile);
-            var holes = mesh.HoleRepresentiveEdges;
+            var mesh = MR.MeshLoad.fromAnySupportedFormat(inputFile);
 
-            var fillHoleParams = new FillHoleParams();
-            fillHoleParams.Metric = FillHoleMetric.GetUniversalMetric( mesh );
-            fillHoleParams.OutNewFaces = new FaceBitSet();
-            
-            FillHoles(ref mesh, holes.ToList(), fillHoleParams);
-            Console.WriteLine("Number of new faces: {0}", fillHoleParams.OutNewFaces.Count());
+            MR.Std.Vector_MREdgeId holes = mesh.topology.findHoleRepresentiveEdges();
 
-            MeshSave.ToAnySupportedFormat(mesh, outputFile);
+            MR.FillHoleParams fillHoleParams = new();
+            fillHoleParams.metric.assign(MR.getUniversalMetric(mesh));
+            MR.FaceBitSet outfaces = new();
+            // TODO
+            // fillHoleParams.OutNewFaces = ...
+
+            MR.fillHoles(mesh, holes, fillHoleParams);
+            // TODO
+            // Console.WriteLine("Number of new faces: {0}", fillHoleParams.OutNewFaces.Count());
+
+            MR.MeshSave.toAnySupportedFormat(mesh, outputFile);
         }
         catch (Exception e)
         {

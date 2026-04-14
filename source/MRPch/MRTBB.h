@@ -24,6 +24,9 @@
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+#if _MSC_VER >= 1950 // Visual Studio 2026 version 18.0
+#pragma warning(disable: 5259) //explicit specialization requires 'template <>' (VS2026 v18.0.0)
+#endif
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>

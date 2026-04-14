@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <iosfwd>
 #include <utility>
 #if MR_HAS_REQUIRES
 #include <concepts>
@@ -34,7 +35,7 @@ struct Vector3
 
     T x, y, z;
 
-    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) 
+    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 )
     {
         static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
         static_assert( elements == 3, "Invalid number of elements" );
@@ -135,6 +136,25 @@ struct Vector3
         else
             return a *= ( 1 / b );
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector3& vec )
+    {
+        return s << vec.x << ' ' << vec.y << ' ' << vec.z;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector3& vec )
+    {
+        return s >> vec.x >> vec.y >> vec.z;
+    }
+
+
+    // We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
+    // Those don't bind correctly in C#, because there we can't overload functions based on mutable struct ref vs const struct ref parameters.
+
+    MR_BIND_IGNORE friend auto begin( const Vector3& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto begin( Vector3& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto end( const Vector3& v ) { return &v[3]; }
+    MR_BIND_IGNORE friend auto end( Vector3& v ) { return &v[3]; }
 };
 
 /// \related Vector3
@@ -245,19 +265,6 @@ Vector3<T> unitVector3( T azimuth, T altitude )
         std::cos( zenithAngle )
     };
 }
-
-
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
-
-template <typename T>
-MR_BIND_IGNORE inline auto begin( const Vector3<T> & v ) { return &v[0]; }
-template <typename T>
-MR_BIND_IGNORE inline auto begin( Vector3<T> & v ) { return &v[0]; }
-
-template <typename T>
-MR_BIND_IGNORE inline auto end( const Vector3<T> & v ) { return &v[3]; }
-template <typename T>
-MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 
 /// \}
 

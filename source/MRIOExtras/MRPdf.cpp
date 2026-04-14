@@ -239,7 +239,7 @@ std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
         if constexpr ( std::is_same_v<T, Empty> )
             return "";
         else
-            return fmt::format( runtimeFmt( fmtStr ), val );
+            return fmt::format( fmt::runtime( fmtStr ), val );
     }, data );
 }
 
@@ -462,7 +462,7 @@ void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats
     cellParams.textParams.alignment = AlignmentHorizontal::Right;
     for ( int i = 0; i < paletteStats.size(); ++i )
     {
-        drawRect_( { { bordersX[0], cursorY_ - cellHeight }, { bordersX[1], cursorY_ } }, paletteStats[i].color, Color::black() );
+        drawRect( { { bordersX[0], cursorY_ - cellHeight }, { bordersX[1], cursorY_ } }, paletteStats[i].color, Color::black() );
         
         cellParams.rect = { { bordersX[1], cursorY_ - cellHeight }, { bordersX[2], cursorY_ } };
         drawTextCell( paletteStats[i].rangeMin + " ", cellParams);
@@ -782,7 +782,7 @@ void Pdf::drawTextInRect( const std::string& text, const Box2f& rect, const Text
     }
 }
 
-void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor )
+void Pdf::drawRect( const Box2f& rect, const Color& fillColor, const Color& strokeColor )
 {
     if ( !checkDocument_( "draw rect" ) )
         return;
@@ -806,7 +806,7 @@ void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& str
 
 void Pdf::drawTextCell( const std::string& text, const TextCellParams& params )
 {
-    drawRect_( params.rect, params.colorBackground, params.colorBorder );
+    drawRect( params.rect, params.colorBackground, params.colorBorder );
     drawTextInRect( text, params.rect, params.textParams );
 }
 

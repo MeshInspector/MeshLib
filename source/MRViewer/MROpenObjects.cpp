@@ -33,18 +33,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::filesystem::path path;
         std::vector<FilePathNode> subfolders;
         std::vector<FilePathNode> files;
+        bool dicomFolder = false;
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-            bool dicomFolder = false;
             VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
         #endif
 
         bool empty() const
         {
-            return files.empty() && subfolders.empty()
-            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                && !dicomFolder
-            #endif
-                ;
+            return files.empty() && subfolders.empty() && !dicomFolder;
         }
     };
 
@@ -148,8 +144,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     std::atomic<int> completed{ 0 };
     std::atomic<bool> loadingCanceled{ false };
     float dicomScaleFactor = 1.f;
-    if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
-        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *maybeUserScale ).conversionFactor;
+    // consider that all data inside DICOM is in meters, convert them in our internal units
+    if ( auto unit = UnitSettings::getActualModelLengthUnit(); unit && *unit != LengthUnit::meters )
+        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *unit ).conversionFactor;
 
     for ( auto& nodeAndRes : nodes )
     {
@@ -235,7 +232,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             else
             {
                 std::error_code ec;
-                allErrors[taskRes.error()] = { 1, utf8string( std::filesystem::relative( node.path, folder, ec ) ) };
+                allErrors[taskRes.error()] = { 1, std::filesystem::relative( node.path, folder, ec ) };
                 if ( ec )
                     spdlog::warn( "Filesystem error when trying to obtain {} relative to {}: {}", utf8string( node.path ), utf8string( folder ), ec.message() );
             }

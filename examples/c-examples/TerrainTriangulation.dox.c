@@ -25,10 +25,10 @@ int main( void )
     MR_PointsLoadSettings* pls = MR_PointsLoadSettings_DefaultConstruct();
     MR_PointsLoadSettings_Set_colors( pls, colors );
     MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "TerrainPoints.ply", NULL, pls );
-    MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_GetMutableValue( loadRes );
+    MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_value_mut( loadRes );
     if ( !pc )
     {
-        fprintf( stderr, "Failed to load points: %s\n", MR_std_string_Data( MR_expected_MR_PointCloud_std_string_GetError( loadRes ) ) );
+        fprintf( stderr, "Failed to load points: %s\n", MR_std_string_data( MR_expected_MR_PointCloud_std_string_error( loadRes ) ) );
         goto fail_load; // error while loading file
     }
 
@@ -36,25 +36,25 @@ int main( void )
         MR_PassBy_Copy,
         MR_VertCoords_GetMutable_vec_( MR_PointCloud_GetMutable_points( pc ) ),
         MR_PassBy_DefaultArgument, NULL );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( triangulationRes );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( triangulationRes );
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to triangulate points: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( triangulationRes ) ) );
+        fprintf( stderr, "Failed to triangulate points: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( triangulationRes ) ) );
         goto fail_triangulation; // error while triangulating
     }
 
     MR_SaveSettings* ss = MR_SaveSettings_DefaultConstruct();
-    if ( MR_std_vector_MR_Color_Size( MR_VertColors_Get_vec_( colors ) ) ==
-         MR_std_vector_MR_Vector3f_Size( MR_VertCoords_Get_vec_( MR_PointCloud_Get_points( pc ) ) )
+    if ( MR_std_vector_MR_Color_size( MR_VertColors_Get_vec_( colors ) ) ==
+         MR_std_vector_MR_Vector3f_size( MR_VertCoords_Get_vec_( MR_PointCloud_Get_points( pc ) ) )
          )
     {
         MR_SaveSettings_Set_colors( ss, colors );
     }
 
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "TerrainMesh.ctm", NULL, ss );
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save; // error while saving file
     }
 

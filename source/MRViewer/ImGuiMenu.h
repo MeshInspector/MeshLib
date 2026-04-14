@@ -1,12 +1,4 @@
 #pragma  once
-// This file is part of libigl, a simple c++ geometry processing library.
-//
-// Copyright (C) 2018 Jérémie Dumas <jeremie.dumas@ens-lyon.org>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public License
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can
-// obtain one at http://mozilla.org/MPL/2.0/.
-
 #include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRNotificationType.h"
@@ -54,7 +46,7 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
     TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
     TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
-    PostResizeListener, PostRescaleListener>
+    PostResizeListener, PostRescaleListener, PostFocusListener>
 {
     using ImGuiMenuMultiListener = MultiListener<
         MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener,
@@ -63,14 +55,14 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         TouchpadRotateGestureBeginListener, TouchpadRotateGestureUpdateListener, TouchpadRotateGestureEndListener,
         TouchpadSwipeGestureBeginListener, TouchpadSwipeGestureUpdateListener, TouchpadSwipeGestureEndListener,
         TouchpadZoomGestureBeginListener, TouchpadZoomGestureUpdateListener, TouchpadZoomGestureEndListener,
-        PostResizeListener, PostRescaleListener>;
+        PostResizeListener, PostRescaleListener, PostFocusListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
-  float hidpi_scaling_;
+  float hidpiScale_;
 
-  // Ratio between the framebuffer size and the window size.
+  // The ratio of the framebuffer size to the window size.
   // May be different from the hipdi scaling!
-  float pixel_ratio_;
+  float pixelRatio_;
 
   // user defined additional scaling modifier
   float userScaling_ = 1.0f;
@@ -105,8 +97,13 @@ protected:
   bool savedDialogPositionEnabled_{ false };
 
   std::weak_ptr<Object> lastRenameObj_;
-  Box3f selectionBbox_; // updated in drawSelectionInformation_
+  Box3f selectionLocalBox_; // updated in drawSelectionInformation_
   Box3f selectionWorldBox_;
+  enum class CoordType : int
+  {
+      Local,
+      World,
+  } coordType_{ CoordType::Local };
 
   struct LabelParams
   {
@@ -174,8 +171,11 @@ public:
   // call this to draw valid imgui context at the end of the frame
   MRVIEWER_API virtual void finishFrame();
 
-  MRVIEWER_API virtual void load_font(int font_size = 13);
-  MRVIEWER_API virtual void reload_font(int font_size = 13);
+  MRVIEWER_API virtual void loadFonts( int fontSize = 13 );
+  [[deprecated]] virtual void load_font( int fontSize = 13 ) { loadFonts( fontSize ); }
+
+  MRVIEWER_API virtual void reloadFonts( int fontSize = 13 );
+  [[deprecated]] virtual void reload_font( int fontSize = 13 ) { reloadFonts( fontSize ); }
 
   MRVIEWER_API virtual void shutdown() override;
 
@@ -184,20 +184,18 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
-  // Can be overwritten by `callback_draw_viewer_window`
-  MRVIEWER_API virtual void draw_viewer_window();
+  /// override this instead using callback_draw_viewer_window
+  MRVIEWER_API virtual void drawViewerWindow();
+  [[deprecated]] virtual void draw_viewer_window() { drawViewerWindow(); }
 
-  // Can be overwritten by `callback_draw_custom_window`
-  virtual void draw_custom_window() {}
+  /// override this instead using callback_draw_viewer_menu
+  virtual void drawViewerWindowContent() {}
 
-  // Easy-to-customize callbacks
-  std::function<void(void)> callback_draw_viewer_window;
-  std::function<void(void)> callback_draw_viewer_menu;
-  std::function<void(void)> callback_draw_custom_window;
+  /// override this instead using callback_draw_custom_window
+  virtual void drawAdditionalWindows() {}
+  [[deprecated]] virtual void draw_custom_window() { drawAdditionalWindows(); }
 
-  void draw_labels_window();
-
-  MRVIEWER_API void draw_text(
+  [[deprecated]] MRVIEWER_API void draw_text(
       const Viewport& viewport,
       const Vector3f& pos,
       const Vector3f& normal,
@@ -205,11 +203,21 @@ public:
       const Color& color,
       bool clipByViewport );
 
-  MRVIEWER_API float pixel_ratio();
+  void drawLabelsWindow();
+  [[deprecated]] void draw_labels_window() { drawLabelsWindow(); }
 
-  MRVIEWER_API float hidpi_scaling();
+  // Computes pixel ratio for hidpi devices
+  MRVIEWER_API float pixelRatio();
+  [[deprecated]] float pixel_ratio() { return pixelRatio(); }
 
-  MRVIEWER_API float menu_scaling() const;
+  // Computes scaling factor for hidpi devices
+  MRVIEWER_API float hidpiScaling();
+  [[deprecated]] float hidpi_scaling() { return hidpiScaling(); }
+
+  MRVIEWER_API void updateScaling();
+
+  MRVIEWER_API float menuScaling() const;
+  [[deprecated]] MRVIEWER_API float menu_scaling() const;
 
   // returns UI scaling modifier specified by user
   float getUserScaling() const { return userScaling_; }
@@ -281,6 +289,9 @@ public:
   MRVIEWER_API void tryRenameSelectedObject();
 
   MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
+
+  /// expands all `obj`s parents in tree and scroll scene tree window so selection becomes visible
+  MRVIEWER_API void expandObjectTreeAndScroll( const Object* obj );
 
   //set show shortcuts state (enable / disable)
   MRVIEWER_API void setShowShortcuts( bool val );
@@ -378,12 +389,12 @@ protected:
     MRVIEWER_API virtual bool touchpadZoomGestureBegin_() override;
     MRVIEWER_API virtual bool touchpadZoomGestureUpdate_( float scale, bool kinetic ) override;
     MRVIEWER_API virtual bool touchpadZoomGestureEnd_() override;
+    // Other events
+    MRVIEWER_API virtual void postFocus_( bool focused ) override;
 
-    // This function reset ImGui style to current theme and scale it by menu_scaling
+    // This function reset ImGui style to current theme and scale it by menuScaling
     // called in ImGuiMenu::postRescale_()
     MRVIEWER_API virtual void rescaleStyle_();
-
-    MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );

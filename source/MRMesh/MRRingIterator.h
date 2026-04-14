@@ -29,18 +29,13 @@ public:
     EdgeId operator *( ) const { return edge_; }
     bool first() const { return first_; }
 
+    friend bool operator ==( const RingIterator & a, const RingIterator & b ) { return *a == *b && a.first() == b.first(); }
+    friend bool operator !=( const RingIterator & a, const RingIterator & b ) { return *a != *b || a.first() != b.first(); }
+
 private:
     EdgeId edge_;
     bool first_ = false;
 };
-
-template <typename N>
-inline bool operator ==( const RingIterator<N> & a, const RingIterator<N> & b )
-    { return *a == *b && a.first() == b.first(); }
-
-template <typename N>
-inline bool operator !=( const RingIterator<N> & a, const RingIterator<N> & b )
-    { return *a != *b || a.first() != b.first(); }
 
 class NextEdgeSameOrigin
 {

@@ -172,6 +172,8 @@ Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::files
 Expected<void> gridToRawAutoname( const FloatGrid& grid, const Vector3i& dims, const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
+    if ( !grid )
+        return unexpected( "grid is null" );
 
     return openRawAutonameStream( dims, Vector3f::diagonal( 1.0f ), grid->getGridClass() == openvdb::GRID_LEVEL_SET, file ).and_then(
         [&] ( NamedOutFileStream&& s )
@@ -312,19 +314,19 @@ Expected<void> gridToAnySupportedFormat( const FloatGrid& grid, const Vector3i& 
 }
 
 template <VoxelsSaver voxelsSaver>
-Expected<void> toVoxels( const Object& object, const std::filesystem::path& path, const ProgressCallback& callback )
+Expected<void> toVoxels( const Object& object, const std::filesystem::path& path, const ObjectSave::Settings& settings )
 {
     const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
     if ( objVoxels.empty() )
-        return voxelsSaver( {}, path, callback );
+        return unexpected( "no ObjectVoxels found" );
     else if ( objVoxels.size() > 1 )
-        return unexpected( "Multiple voxel grids in the given object" );
+        return unexpected( "more than one ObjectVoxels found" );
 
     const auto& objVoxel = objVoxels.front();
     if ( !objVoxel )
-        return voxelsSaver( {}, path, callback );
+        return unexpected( "null ObjectVoxels found" );
 
-    return voxelsSaver( objVoxel->vdbVolume(), path, callback );
+    return voxelsSaver( objVoxel->vdbVolume(), path, settings.progress );
 }
 
 #define MR_ADD_VOXELS_SAVER( filter, saver )                   \
@@ -420,7 +422,7 @@ Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSet
     const size_t maxNumChars = std::to_string( numSlices ).size();
     for ( int i = 0; i < numSlices; ++i )
     {
-        const auto res = saveSliceToImage( settings.path / fmt::format( runtimeFmt( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
+        const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
         if ( !res )
             return res;
 
@@ -435,9 +437,9 @@ Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSet
 
 } // namespace VoxelsSave
 
-Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path, const ProgressCallback& callback )
+Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path, const ObjectSave::Settings& settings )
 {
-    return VoxelsSave::toVoxels<VoxelsSave::toAnySupportedFormat>( object, path, callback );
+    return VoxelsSave::toVoxels<VoxelsSave::toAnySupportedFormat>( object, path, settings );
 }
 
 } // namespace MR

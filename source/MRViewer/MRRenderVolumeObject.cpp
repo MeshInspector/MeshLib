@@ -1,15 +1,16 @@
 #include "MRRenderVolumeObject.h"
 #ifndef MRVIEWER_NO_VOXELS
-#include "MRVoxels/MRObjectVoxels.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
+#include "MRVoxels/MRObjectVoxels.h"
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
-#include "MRPch/MRTBB.h"
+#include "MRMesh/MRTimer.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
@@ -30,10 +31,10 @@ RenderVolumeObject::~RenderVolumeObject()
 
 bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     RenderModelPassMask desiredPass =
         !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || objVoxels_->getFrontColor( objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
-        RenderModelPassMask::Opaque;
+        RenderModelPassMask::VolumeRendering;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 
@@ -44,6 +45,7 @@ bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 
 void RenderVolumeObject::renderPicker( const ModelBaseRenderParams& renderParams, unsigned geomId )
 {
+    MR_TIMER;
     render_( renderParams, nullptr, geomId );
 }
 
@@ -70,7 +72,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     if ( !( dirty_ & DIRTY_SELECTION ) || !objVoxels_->vdbVolume().data )
         return glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y, false );
 
-    const auto& dims = objVoxels_->vdbVolume().dims;
+    const auto& dims = objVoxels_->getActiveBounds().size();
     auto numV = size_t( dims.x ) * dims.y * dims.z;
 
     auto size = numV / 32 + 1;
@@ -81,19 +83,17 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
 
     if ( objVoxels_->getVolumeRenderActiveVoxels().empty() )
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( (size_t)0, buffer.size(), [&] ( size_t r )
         {
-            for ( int r = range.begin(); r < range.end(); ++r )
-                buffer[r] = 0xFFFFFFFF;
+            buffer[r] = 0xFFFFFFFF;
         } );
         return buffer;
     }
     const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().bits();
     const unsigned* activeVoxelsData = ( unsigned* )activeVoxels.data();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( (size_t)0, buffer.size(), [&] ( size_t r )
     {
-        for ( int r = range.begin(); r < range.end(); ++r )
-            buffer[r] = activeVoxelsData[r];
+        buffer[r] = activeVoxelsData[r];
     } );
 
     return buffer;
@@ -234,6 +234,7 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
 
 void RenderVolumeObject::bindVolume_( bool picker )
 {
+    MR_TIMER;
     auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Volume );
 

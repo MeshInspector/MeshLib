@@ -18,27 +18,24 @@ void sortScansByOrder( std::vector<std::filesystem::path>& scans, std::vector<Sl
 void putScanFileNameInZ( const std::vector<std::filesystem::path>& scans, std::vector<SliceInfo>& zOrder )
 {
     assert( zOrder.size() == scans.size() );
-    tbb::parallel_for( tbb::blocked_range( 0, int( scans.size() ) ), [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( scans, [&] ( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        std::string name = utf8string( scans[i].stem() );
+        auto pos = name.find_last_of( "-0123456789" );
+        double res = 0.0;
+        if ( pos != std::string::npos )
         {
-            std::string name = utf8string( scans[i].stem() );
-            auto pos = name.find_last_of( "-0123456789" );
-            double res = 0.0;
-            if ( pos != std::string::npos )
+            // find the start of last number in file name
+            for ( ; pos > 0; --pos )
             {
-                // find the start of last number in file name
-                for ( ; pos > 0; --pos )
-                {
-                    auto c = name[pos-1];
-                    if ( c != '-' && c != '.' && ( c < '0' || c > '9' ) )
-                        break;
-                }
-                res = std::atof( name.c_str() + pos );
+                auto c = name[pos-1];
+                if ( c != '-' && c != '.' && ( c < '0' || c > '9' ) )
+                    break;
             }
-            assert( zOrder[i].fileNum == i );
-            zOrder[i].z = res;
+            res = std::atof( name.c_str() + pos );
         }
+        assert( zOrder[i].fileNum == i );
+        zOrder[i].z = res;
     } );
 }
 

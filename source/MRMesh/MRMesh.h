@@ -52,7 +52,7 @@ struct [[nodiscard]] Mesh
 
     /// construct mesh from point triples;
     /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;
-    /// \param duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates
+    ///        duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates
     [[nodiscard]] MRMESH_API static Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices );
 
     /// compare that two meshes are exactly the same
@@ -163,19 +163,22 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float area( FaceId f ) const { return MR::area( topology, points, f ); }
 
     /// computes the area of given face-region
-    [[nodiscard]] double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
 
     /// computes the area of given face-region (or whole mesh)
     [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return MR::area( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region
-    [[nodiscard]] Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region (or whole mesh)
     [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region as visible if look from given direction
-    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
     [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return MR::projArea( topology, points, dir, fs ); }
@@ -185,7 +188,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] double volume( const FaceBitSet* region = nullptr ) const { return MR::volume( topology, points, region ); }
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-    [[nodiscard]] double holePerimiter( EdgeId e ) const { return MR::holePerimiter( topology, points, e ); }
+    [[nodiscard]] double holePerimeter( EdgeId e ) const { return MR::holePerimeter( topology, points, e ); }
 
     /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
@@ -426,7 +429,7 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
-    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepFaces
+    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
     MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;

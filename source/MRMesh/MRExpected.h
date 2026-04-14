@@ -62,6 +62,18 @@ MR_BIND_IGNORE inline auto unexpectedUnsupportedFileExtension()
     return MR::unexpected( stringUnsupportedFileExtension() );
 }
 
+/// common message prefix about unsupported file format
+MR_BIND_IGNORE inline std::string stringUnsupportedFileFormat()
+{
+    return "Unsupported file format";
+}
+
+/// returns Expected error with `stringUnsupportedFileFormat()`
+MR_BIND_IGNORE inline auto unexpectedUnsupportedFileFormat()
+{
+    return MR::unexpected( stringUnsupportedFileFormat() );
+}
+
 /// Exits the current function with an error if the given expression contains an error.
 #define MR_RETURN_IF_UNEXPECTED( expr ) \
     if ( auto&& res = ( expr ); !res ) \

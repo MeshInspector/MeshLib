@@ -11,6 +11,7 @@ struct PointsLoadSettings
     VertColors* colors = nullptr; ///< points where to load point color map
     AffineXf3f* outXf = nullptr; ///< transform for the loaded point cloud
     ProgressCallback callback; ///< callback for set progress and stop process
+    bool telemetrySignal = true; ///< permit telemetry signal about loading
 };
 
 } // namespace MR

@@ -36,8 +36,8 @@ public:
     ObjectMeshHolder( ObjectMeshHolder&& ) noexcept = default;
     ObjectMeshHolder& operator = ( ObjectMeshHolder&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "MeshHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
@@ -64,6 +64,14 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
+    /// this is a faster version of setDirtyFlags(), which does not invalidate metrics cache (area, volume, ...);
+    /// the user is responsible for calling invalidateMetricsCache( mask ) or setDirtyFlags( mask ) at the end of mesh editing;
+    /// DANGER: all cached values returned until then can be outdated
+    MRMESH_API virtual void setDirtyFlagsFast( uint32_t mask );
+
+    /// invalidates same caches with mesh metrics (area, volume, ...) as by setDirtyFlags( mask )
+    MRMESH_API virtual void invalidateMetricsCache( uint32_t mask );
+
     const FaceBitSet& getSelectedFaces() const { return data_.selectedFaces; }
     MRMESH_API virtual void selectFaces( FaceBitSet newSelection );
     /// returns colors of selected triangles
@@ -87,8 +95,14 @@ public:
     MRMESH_API const ViewportProperty<Color>& getEdgesColorsForAllViewports() const;
     MRMESH_API virtual void setEdgesColorsForAllViewports( ViewportProperty<Color> val );
 
+    MRMESH_API const ViewportProperty<Color>& getPointsColorsForAllViewports() const;
+    MRMESH_API virtual void setPointsColorsForAllViewports( ViewportProperty<Color> val );
+
     MRMESH_API const ViewportProperty<Color>& getBordersColorsForAllViewports() const;
     MRMESH_API virtual void setBordersColorsForAllViewports( ViewportProperty<Color> val );
+
+    /// set all object solid colors (front/back/etc.) from other object for all viewports
+    MRMESH_API void copyAllSolidColors( const ObjectMeshHolder& other );
 
     /// Edges on mesh, that will have sharp visualization even with smooth shading
     const UndirectedEdgeBitSet& creases() const { return data_.creases; }
@@ -187,9 +201,6 @@ public:
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
 
-    /// returns dirty flag of currently using normal type if they are dirty in render representation
-    MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
-
     MRMESH_API virtual bool getRedrawFlag( ViewportMask viewportMask ) const override;
 
     /// returns cached information whether the mesh is closed
@@ -258,6 +269,10 @@ public:
     SelectionChangedSignal faceSelectionChangedSignal;
     SelectionChangedSignal edgeSelectionChangedSignal;
     SelectionChangedSignal creasesChangedSignal;
+
+    /// signal about mesh changing, triggered in setDirtyFlag
+    using MeshChangedSignal = Signal<void( uint32_t mask )>;
+    MeshChangedSignal meshChangedSignal;
 
 protected:
     ObjectMeshData data_;

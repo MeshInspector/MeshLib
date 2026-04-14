@@ -19,8 +19,12 @@ struct SymMatrix3
     T xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
 
     constexpr SymMatrix3() noexcept = default;
-    template <typename U>
+
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit SymMatrix3( const SymMatrix3<U> & m ) : xx( T( m.xx ) ), xy( T( m.xy ) ), xz( T( m.xz ) ), yy( T( m.yy ) ), yz( T( m.yz ) ), zz( T( m.zz ) ) { }
+
     static constexpr SymMatrix3 identity() noexcept { SymMatrix3 res; res.xx = res.yy = res.zz = 1; return res; }
     static constexpr SymMatrix3 diagonal( T diagVal ) noexcept { SymMatrix3 res; res.xx = res.yy = res.zz = diagVal; return res; }
 

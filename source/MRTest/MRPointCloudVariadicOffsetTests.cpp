@@ -5,8 +5,11 @@
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMeshDecimate.h>
 #include <MRVoxels/MRWeightedPointsShell.h>
+#include <MRVoxels/MROffset.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRParallelFor.h>
+#include <MRMesh/MRTorus.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 
 namespace MR
 {
@@ -111,6 +114,65 @@ TEST( MRMesh, weightedMeshShell )
     ASSERT_TRUE( offCube );
     EXPECT_EQ( MeshComponents::getNumComponents( *offCube ), 1 );
     EXPECT_EQ( offCube->topology.findNumHoles(), 0 );
+}
+
+TEST( MRMesh, negWeightedMeshShell1 )
+{
+    // Create some mesh
+    auto mesh = makeTorus();
+ 
+    // Create VertScalars obj with weights for every vertex
+    auto vertSize = mesh.topology.vertSize();
+    VertScalars scalars( vertSize );
+    ParallelFor( scalars, [&] ( VertId v )
+    {
+        scalars[v] = mesh.points[v].x / 5.0f; // Individual extra offset sizes for points
+    } );
+ 
+    auto params = WeightedShell::ParametersMetric();
+    // Algorithm is voxel based, voxel size affects performance and form of result mesh
+    params.voxelSize = suggestVoxelSize( mesh, 1000 );
+    // common basic offset applied for all point
+    // Vertex-specific weighted offsets applied after the basic one
+    params.offset = 0.2f;
+    params.dist.minWeight = *std::min_element( begin( scalars ), end( scalars ) );
+    params.dist.maxWeight = *std::max_element( begin( scalars ), end( scalars ) ); // should always have maximum between weights provided
+    params.dist.bidirectionalMode = false;
+ 
+    auto res = WeightedShell::meshShell( mesh, scalars, params );
+    EXPECT_TRUE( res.has_value() );
+    EXPECT_EQ( MeshComponents::getNumComponents( *res ), 1 );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+}
+
+TEST( MRMesh, negWeightedMeshShell2 )
+{
+    // Create some mesh
+    auto mesh = makeUVSphere(1,16,16);
+
+    // Create VertScalars obj with weights for every vertex
+    auto vertSize = mesh.topology.vertSize();
+    VertScalars scalars(vertSize);
+    ParallelFor(scalars, [&](VertId v)
+        {
+            scalars[v] = mesh.points[v].x / 5.0f; // Individual extra offset sizes for points
+        });
+
+    auto params = WeightedShell::ParametersMetric();
+    // Algorithm is voxel based, voxel size affects performance and form of result mesh
+    params.voxelSize = suggestVoxelSize(mesh, 1000);
+    // common basic offset applied for all point
+    // Vertex-specific weighted offsets applied after the basic one
+    auto minmax = std::minmax_element(begin(scalars), end(scalars));
+    params.dist.minWeight = *minmax.first;
+    params.dist.maxWeight = *minmax.second;
+    params.offset = 0.1f;
+    params.dist.bidirectionalMode = false;
+
+    auto res = WeightedShell::meshShell(mesh, scalars, params);
+    EXPECT_TRUE( res.has_value() );
+    EXPECT_EQ( MeshComponents::getNumComponents( *res ), 1 );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
 }
 
 static void testClosestWeightedMeshPointContinuity( bool bidir )

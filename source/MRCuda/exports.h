@@ -1,4 +1,6 @@
 #pragma once
+
+// see explanation in MRMesh/MRMeshFwd.h
 #ifdef _WIN32
 #   ifdef MRCuda_EXPORTS
 #       define MRCUDA_API __declspec(dllexport)
@@ -7,7 +9,10 @@
 #   endif
 #   define MRCUDA_CLASS
 #else
-#   define MRCUDA_CLASS   __attribute__((visibility("default")))
-// to fix undefined reference to `typeinfo/vtable
-#   define MRCUDA_API __attribute__((visibility("default")))
+#   define MRCUDA_API   __attribute__((visibility("default")))
+#   ifdef __clang__
+#       define MRCUDA_CLASS __attribute__((type_visibility("default")))
+#   else
+#       define MRCUDA_CLASS __attribute__((visibility("default")))
+#   endif
 #endif

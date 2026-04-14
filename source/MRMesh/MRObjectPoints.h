@@ -15,14 +15,14 @@ public:
     ObjectPoints& operator = ( ObjectPoints&& ) = default;
     ObjectPoints( ObjectPoints&& ) = default;
 
-    constexpr static const char* TypeName() noexcept { return "ObjectPoints"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ObjectPoints"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Point Cloud"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Point Cloud"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Point Clouds"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Point Clouds"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// returns variable point cloud, if const point cloud is needed use `pointCloud()` instead
     virtual const std::shared_ptr<PointCloud>& varPointCloud() { return points_; }
@@ -40,21 +40,11 @@ public:
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
-
-    /// signal about points or normals changing, triggered in setDirtyFlag
-    using ChangedSignal = Signal<void( uint32_t mask )>;
-    ChangedSignal pointsChangedSignal;
-    ChangedSignal normalsChangedSignal;
-
 protected:
     ObjectPoints( const ObjectPoints& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
-    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
-    /// pls call Parent::swapSignals_ first when overriding this function
-    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };

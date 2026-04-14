@@ -16,6 +16,8 @@
     <ClInclude Include="MRBindingMacros.h" />
     <ClInclude Include="MRWinapi.h" />
     <ClInclude Include="MRExpected.h" />
+    <ClInclude Include="MREigenSparseCore.h" />
+    <ClInclude Include="MRHashMap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

@@ -1,8 +1,7 @@
 #include "MRUnits.h"
-
-#include "MRMesh/MRConstants.h"
 #include "MRMesh/MRString.h"
 #include "MRPch/MRFmt.h"
+#include "MRI18n.h"
 #include <algorithm>
 
 namespace MR
@@ -34,7 +33,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<LengthUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = LengthUnit::mm,
+            .targetUnit = LengthUnit::millimeters,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -124,7 +123,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<MovementSpeedUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = MovementSpeedUnit::mmPerSecond,
+            .targetUnit = MovementSpeedUnit::millimetersPerSecond,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -142,7 +141,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<AreaUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = AreaUnit::mm2,
+            .targetUnit = AreaUnit::millimeters2,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -160,7 +159,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<VolumeUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = VolumeUnit::mm3,
+            .targetUnit = VolumeUnit::millimeters3,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -178,7 +177,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     {
         return UnitToStringParams<InvLengthUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = InvLengthUnit::inv_mm,
+            .targetUnit = InvLengthUnit::inv_millimeters,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -197,112 +196,6 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
         static_assert( dependent_false<E>, "Unknown measurement unit type." );
     }
 }();
-
-template <>
-const UnitInfo& getUnitInfo( NoUnit noUnit )
-{
-    assert( false );
-    (void)noUnit;
-    static const UnitInfo ret{};
-    return ret;
-}
-template <>
-const UnitInfo& getUnitInfo( LengthUnit length )
-{
-    static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm" },
-        { .conversionFactor = 1000, .prettyName = "Meters", .unitSuffix = " m" },
-        { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );
-    return ret[int( length )];
-}
-template <>
-const UnitInfo& getUnitInfo( AngleUnit angle )
-{
-    static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Radians", .unitSuffix = " radians" },
-        { .conversionFactor = PI_F/180.f, .prettyName = "Degrees", .unitSuffix = "\xC2\xB0" }, // U+00B0 DEGREE SIGN
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( AngleUnit::_count ) );
-    return ret[int( angle )];
-}
-template <>
-const UnitInfo& getUnitInfo( PixelSizeUnit screenSize )
-{
-    static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Pixels", .unitSuffix = " px" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( PixelSizeUnit::_count ) );
-    return ret[int( screenSize )];
-}
-template <>
-const UnitInfo& getUnitInfo( RatioUnit ratio )
-{
-    static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Factor", .unitSuffix = " x" },
-        { .conversionFactor = 0.01f, .prettyName = "Percents", .unitSuffix = " %" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( RatioUnit::_count ) );
-    return ret[int( ratio )];
-}
-template <>
-const UnitInfo& getUnitInfo( TimeUnit time )
-{
-    static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Seconds", .unitSuffix = " s" },
-        { .conversionFactor = 0.001f, .prettyName = "Milliseconds", .unitSuffix = " ms" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( TimeUnit::_count ) );
-    return ret[int( time )];
-}
-template <>
-const UnitInfo& getUnitInfo( MovementSpeedUnit speed )
-{
-    static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Millimeters per second", .unitSuffix = " mm/s" },
-        { .conversionFactor = 1000, .prettyName = "Meters per second", .unitSuffix = " m/s" },
-        { .conversionFactor = 25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( MovementSpeedUnit::_count ) );
-    return ret[int( speed )];
-}
-template <>
-const UnitInfo& getUnitInfo( AreaUnit area )
-{
-    static const UnitInfo ret[] = {
-        // U+00B2 SUPERSCRIPT TWO
-        { .conversionFactor = 1, .prettyName = "Millimeters\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
-        { .conversionFactor = 1000*1000, .prettyName = "Meters\xc2\xb2", .unitSuffix = " m\xc2\xb2" },
-        { .conversionFactor = 25.4f*25.4f, .prettyName = "Inches\xc2\xb2", .unitSuffix = " in\xc2\xb2" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( AreaUnit::_count ) );
-    return ret[int( area )];
-}
-template <>
-const UnitInfo& getUnitInfo( VolumeUnit volume )
-{
-    static const UnitInfo ret[] = {
-        // U+00B3 SUPERSCRIPT THREE
-        { .conversionFactor = 1, .prettyName = "Millimeters\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
-        { .conversionFactor = 1000*1000*1000, .prettyName = "Meters\xc2\xb3", .unitSuffix = " m\xc2\xb3" },
-        { .conversionFactor = 25.4f*25.4f*25.4f, .prettyName = "Inches\xc2\xb3", .unitSuffix = " in\xc2\xb3" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( VolumeUnit::_count ) );
-    return ret[int( volume )];
-}
-template <>
-const UnitInfo& getUnitInfo( InvLengthUnit length )
-{
-    static const UnitInfo ret[] = {
-        // U+207B SUPERSCRIPT MINUS, U+00B9 SUPERSCRIPT ONE
-        { .conversionFactor = 1, .prettyName = "Millimeters\u207B\u00B9", .unitSuffix = " mm\u207B\u00B9" },
-        { .conversionFactor = 1/1000.f, .prettyName = "Meters\u207B\u00B9", .unitSuffix = " m\u207B\u00B9" },
-        { .conversionFactor = 1/25.4f, .prettyName = "Inches\u207B\u00B9", .unitSuffix = " in\u207B\u00B9" },
-    };
-    static_assert( std::extent_v<decltype( ret )> == int( InvLengthUnit::_count ) );
-    return ret[int( length )];
-}
 
 template <UnitEnum E>
 const UnitToStringParams<E>& getDefaultUnitParams()
@@ -329,11 +222,11 @@ std::string_view toString( DegreesMode mode )
     switch ( mode )
     {
     case DegreesMode::degrees:
-        return "Degrees";
+        return _t( "Degrees" );
     case DegreesMode::degreesMinutes:
-        return "Degrees, minutes";
+        return _t( "Degrees, minutes" );
     case DegreesMode::degreesMinutesSeconds:
-        return "Degrees, minutes, seconds";
+        return _t( "Degrees, minutes, seconds" );
     case DegreesMode::_count:
         break; // Nothing.
     }
@@ -392,9 +285,14 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
             str = '0' + std::move( str );
     };
 
-    std::string_view unitSuffix;
+    std::string unitSuffix;
     if ( params.unitSuffix )
-        unitSuffix = params.targetUnit ? getUnitInfo( *params.targetUnit ).unitSuffix : params.sourceUnit ? getUnitInfo( *params.sourceUnit ).unitSuffix : "";
+    {
+        if ( params.targetUnit )
+            unitSuffix = s_tr( getUnitInfo( *params.targetUnit ).unitSuffix );
+        else if ( params.sourceUnit )
+            unitSuffix = s_tr( getUnitInfo( *params.sourceUnit ).unitSuffix );
+    }
     std::string ret;
 
     // Handle arcseconds/arcminutes.
@@ -419,7 +317,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                 if ( negative )
                     wholeDegrees = -wholeDegrees;
 
-                ret = fmt::format( "{:.0f}{}", wholeDegrees, getUnitInfo( AngleUnit::degrees ).unitSuffix );
+                ret = fmt::format( "{:.0f}{}", wholeDegrees, _tr( getUnitInfo( AngleUnit::degrees ).unitSuffix.data() ) );
                 adjustMinusSign( ret );
 
                 if ( params.degreesMode == DegreesMode::degreesMinutesSeconds )
@@ -569,7 +467,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     ret += unitSuffix;
 
     if ( params.decorationFormatString != "{}" )
-        return fmt::format( runtimeFmt( params.decorationFormatString ), ret );
+        return fmt::format( fmt::runtime( params.decorationFormatString ), ret );
     else
         return ret;
 }

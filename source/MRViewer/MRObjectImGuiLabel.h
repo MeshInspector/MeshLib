@@ -17,13 +17,13 @@ public:
     ObjectImGuiLabel( ObjectImGuiLabel&& ) noexcept = default;
     ObjectImGuiLabel& operator = ( ObjectImGuiLabel&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept
+    constexpr static const char* StaticTypeName() noexcept
     {
         return "ObjectImGuiLabel";
     }
     const char* typeName() const override
     {
-        return TypeName();
+        return StaticTypeName();
     }
 
     bool hasVisualRepresentation() const override { return true; }

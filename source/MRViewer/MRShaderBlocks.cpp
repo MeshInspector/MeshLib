@@ -39,12 +39,12 @@ std::string getPickerFragmentShader( bool points, bool cornerMode )
 
     return
         head +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         ( points ? getFragmentShaderPointSizeBlock() : R"()" ) +
         getFragmentShaderClippingBlock() +
         primId +
         tail +
-        getFragmentShaderEndBlock( false );
+        getFragmentShaderEndBlock( ShaderTransparencyMode::None );
 }
 
 std::string getFragmentShaderClippingBlock()
@@ -113,13 +113,9 @@ std::string getFragmentShaderHeaderBlock( bool gl4, bool alphaSort )
 )";
 }
 
-std::string getFragmentShaderEndBlock( bool alphaSort )
+std::string getFragmentShaderEndBlock( ShaderTransparencyMode transparencyMode )
 {
-    if ( !alphaSort )
-        return R"(
-  }
-)";
-    else
+    if ( transparencyMode == ShaderTransparencyMode::AlphaSort )
         return R"(
     uint nodeIndex = atomicCounterIncrement ( numNodes );
     
@@ -134,11 +130,54 @@ std::string getFragmentShaderEndBlock( bool alphaSort )
     discard;
   }
 )";
+    else if ( transparencyMode == ShaderTransparencyMode::DepthPeel )
+        return R"(
+
+    ivec2 dpTexSize = textureSize( dp_bg_depths, 0 );
+    ivec2 dpTexCoord = clamp( ivec2(gl_FragCoord.xy), ivec2(0,0), dpTexSize-ivec2(1,1));
+    
+    float dpBGDepth = texture( dp_bg_depths, gl_FragCoord.xy/vec2(dpTexSize) ).r;
+    float dpFGDepth = texelFetch( dp_fg_depths, dpTexCoord,0 ).r;
+    vec4 dpColor = texelFetch( dp_fg_colors, dpTexCoord,0 );
+
+    if ( gl_FragCoord.z > dpBGDepth )
+    {
+        discard;
+    }
+    else if ( gl_FragCoord.z <= dpFGDepth )
+    {
+        outColor = dpColor;
+        gl_FragDepth = dpBGDepth;
+    }
+    else 
+    {
+        // blend
+        float alpha = dpColor.a + outColor.a * ( 1.0 - dpColor.a );
+        outColor.rgb = mix( outColor.a * outColor.rgb, dpColor.rgb, dpColor.a ) / alpha;
+        outColor.a = alpha;
+        gl_FragDepth = gl_FragCoord.z;
+    }
+  }
+)";
+    else
+        return R"(
+  }
+)";
 }
 
-std::string getShaderMainBeginBlock()
+std::string getShaderMainBeginBlock( bool addDepthPeelSamplers )
 {
-    return R"(
+    if (!addDepthPeelSamplers )
+        return R"(
+  void main()
+  {
+)";
+    else
+        return R"(
+  uniform sampler2D dp_bg_depths;
+  uniform sampler2D dp_fg_colors;
+  uniform sampler2D dp_fg_depths;
+
   void main()
   {
 )";

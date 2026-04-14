@@ -52,11 +52,7 @@ ObjectLabel::ObjectLabel()
     setDefaultSceneProperties_();
 
     // set default path to font if available
-#ifndef __EMSCRIPTEN__
     pathToFont_ = SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf";
-#else
-    pathToFont_ = SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf";
-#endif
     std::error_code ec;
     if ( !std::filesystem::is_regular_file( pathToFont_, ec ) )
         pathToFont_.clear();
@@ -93,7 +89,7 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["LeaderLine"] = leaderLine_.value();
 
     // append base type
-    root["Type"].append( ObjectLabel::TypeName() );
+    root["Type"].append( ObjectLabel::StaticTypeName() );
 
     root["SourcePointSize"] = sourcePointSize_;
     root["LeaderLineWidth"] = leaderLineWidth_;
@@ -116,7 +112,7 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     if ( root["Text"].isString() )
         label_.text = root["Text"].asString();
     if ( root["PathToFontFile"].isString() )
-        pathToFont_ = root["PathToFontFile"].asString();
+        pathToFont_ = pathFromUtf8( root["PathToFontFile"].asString() );
 
     if ( root["SourcePoint"].isUInt() )
         sourcePoint_ = ViewportMask( root["SourcePoint"].asUInt() );

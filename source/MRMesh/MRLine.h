@@ -1,10 +1,11 @@
 #pragma once
 
 #include "MRAffineXf.h"
+#include <iosfwd>
 
 namespace MR
 {
- 
+
 /// 2- or 3-dimensional line: cross( x - p, d ) = 0
 /// \ingroup MathGroup
 template <typename V>
@@ -23,7 +24,7 @@ struct Line
     [[nodiscard]] V operator()( T param ) const { return p + param * d; }
 
     /// returns squared distance from given point to this line
-    [[nodiscard]] T distanceSq( const V & x ) const 
+    [[nodiscard]] T distanceSq( const V & x ) const
         { return ( x - project( x ) ).lengthSq(); }
 
     /// returns same line represented with flipped direction of d-vector
@@ -35,6 +36,16 @@ struct Line
 
     /// finds the closest point on line
     [[nodiscard]] V project( const V & x ) const { return p + dot( d, x - p ) / d.lengthSq() * d; }
+
+    friend std::ostream& operator<<( std::ostream& s, const Line& l )
+    {
+        return s << l.p << '\n' << l.d;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Line& l )
+    {
+        return s >> l.p >> l.d;
+    }
 };
 
 /// \related Line

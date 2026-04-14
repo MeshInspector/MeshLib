@@ -29,6 +29,9 @@ struct MRVIEWER_CLASS AncillaryLines
     MRVIEWER_API void make( Object& parent, const Contour3f& contour );
     MRVIEWER_API void make( Object& parent, const Contours3f& contours );
 
+    /// Assign an axis' color from the color theme to each line collinear with the axis
+    MRVIEWER_API void colorizeAxes();
+
     /// detach owned object from parent, stops owning it
     MRVIEWER_API void reset();
 

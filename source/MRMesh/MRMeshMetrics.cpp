@@ -190,6 +190,20 @@ FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir 
     return metric;
 }
 
+FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, const Vector3f& upDir )
+{
+    MR::FillHoleMetric metric;
+    metric.edgeMetric = [&mesh, up = Vector3d( upDir ).normalized()] ( MR::VertId a, MR::VertId b, MR::VertId, MR::VertId )
+    {
+        const Vector3d ap( mesh.points[a] );
+        const Vector3d bp( mesh.points[b] );
+        const auto ab = bp - ap;
+        // larger orthogonal component of AB - larger penalty
+        return ( ab - dot( ab, up ) * up ).lengthSq();
+    };
+    return metric;
+}
+
 FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e0 )
 {
     float maxEdgeLengthSq = 0.0f;
@@ -328,6 +342,73 @@ FillHoleMetric getMinAreaMetric( const Mesh& mesh )
         return dblArea( aP, bP, cP );
     };
     return metric;
+}
+
+FillHoleMetric getCloseSurfaceFillMetric( const Mesh& mesh, const Mesh& closeSurface )
+{
+    FillHoleMetric metric;
+    metric.triangleMetric = [&mesh, &closeSurface] ( VertId a, VertId b, VertId c )
+    {
+        Vector3f center = ( mesh.points[a] + mesh.points[b] + mesh.points[c] ) / 3.0f;
+        return findProjection( center, closeSurface ).distSq;
+    };
+    return metric;
+}
+
+FillHoleMetric mixMetrics( const FillHoleMetric& f, const FillHoleMetric& g, const FillCombineMetric& mix /*= {} */ )
+{
+    FillHoleMetric res;
+    // using [=] copy capture to ensure f,g,op lifetime during filling
+    if ( f.triangleMetric || g.triangleMetric )
+    {
+        res.triangleMetric = [=] ( VertId a, VertId b, VertId c )->double
+        {
+            auto fRes = f.triangleMetric ? f.triangleMetric( a, b, c ) : 0.0;
+            auto gRes = g.triangleMetric ? g.triangleMetric( a, b, c ) : 0.0;
+            if ( f.triangleMetric && g.triangleMetric )
+            {
+                return mix ? mix( fRes, gRes ) : fRes + gRes;
+            }
+            else if ( f.triangleMetric )
+                return fRes;
+            else
+                return gRes;
+        };
+    }
+    if ( f.edgeMetric || g.edgeMetric )
+    {
+        res.edgeMetric = [=] ( VertId a, VertId b, VertId l, VertId r )->double
+        {
+            auto fRes = f.edgeMetric ? f.edgeMetric( a, b, l, r ) : 0.0;
+            auto gRes = g.edgeMetric ? g.edgeMetric( a, b, l, r ) : 0.0;
+            if ( f.edgeMetric && g.edgeMetric )
+            {
+                return mix ? mix( fRes, gRes ) : fRes + gRes;
+            }
+            else if ( f.edgeMetric )
+                return fRes;
+            else
+                return gRes;
+        };
+    }
+    if ( f.combineMetric || g.combineMetric )
+    {
+        res.combineMetric = [=] ( double a, double b )->double
+        {
+            auto fRes = f.combineMetric ? f.combineMetric( a, b ) : 0.0;
+            auto gRes = g.combineMetric ? g.combineMetric( a, b ) : 0.0;
+            if ( f.combineMetric && g.combineMetric )
+            {
+                return mix ? mix( fRes, gRes ) : fRes + gRes;
+            }
+            else if ( f.combineMetric )
+                return fRes;
+            else
+                return gRes;
+        };
+    }
+
+    return res;
 }
 
 }

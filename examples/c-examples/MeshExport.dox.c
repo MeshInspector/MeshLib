@@ -17,7 +17,7 @@ int main( void )
     MR_Mesh* mesh = MR_makeCube( &size, &base );
 
     // extract vertices
-    const MR_Vector3f* vertices = MR_VertCoords_data_const( MR_Mesh_Get_points( mesh ) );
+    const MR_Vector3f* vertices = MR_VertCoords_data( MR_Mesh_Get_points( mesh ) );
     size_t verticesNum = MR_VertCoords_size( MR_Mesh_Get_points( mesh ) );
     // you can access coordinates via struct fields...
     printf( "Vertex coordinates:\n" );
@@ -29,7 +29,7 @@ int main( void )
 
     // extract faces
     MR_Triangulation* t = MR_MeshTopology_getTriangulation( MR_Mesh_Get_topology( mesh ) );
-    const MR_std_array_MR_VertId_3 *faces = MR_Triangulation_data_const( t );
+    const MR_std_array_MR_VertId_3 *faces = MR_Triangulation_data( t );
     size_t facesNum = MR_Triangulation_size( t );
     // faces are stored as vertex id triples...
     printf( "Face vertex IDs:\n" );

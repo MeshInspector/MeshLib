@@ -1,5 +1,6 @@
 #ifdef __EMSCRIPTEN__
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSpdlog.h"
 
@@ -11,7 +12,7 @@ EMSCRIPTEN_KEEPALIVE void emsDragEnter()
     auto& v = MR::getViewerInstance();
     v.emplaceEvent( "Drag enter", [&v] ()
     {
-        v.dragEntranceSignal( true );
+        v.signals().dragEntranceSignal( true );
     } );
 }
 
@@ -20,7 +21,7 @@ EMSCRIPTEN_KEEPALIVE void emsDragLeave()
     auto& v = MR::getViewerInstance();
     v.emplaceEvent( "Drag leave", [&v] ()
     {
-        v.dragEntranceSignal( false );
+        v.signals().dragEntranceSignal( false );
     } );
 }
 
@@ -30,7 +31,7 @@ EMSCRIPTEN_KEEPALIVE void emsDragOver(int x, int y)
     auto& v = MR::getViewerInstance();
     v.emplaceEvent( "Drag over", [&v,x,y] () mutable
     {
-        v.dragOverSignal( int( std::round( x * v.pixelRatio ) ), int( std::round( y * v.pixelRatio ) ) );
+        v.signals().dragOverSignal( int( std::round( x * v.pixelRatio ) ), int( std::round( y * v.pixelRatio ) ) );
     }, true );
 }
 
@@ -38,4 +39,4 @@ EMSCRIPTEN_KEEPALIVE void emsDragOver(int x, int y)
 
 }
 
-#endif
+#endif //__EMSCRIPTEN__

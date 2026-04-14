@@ -83,6 +83,9 @@
     <Filter Include="UserInputs">
       <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Localization">
+      <UniqueIdentifier>{29097c41-4b59-45fe-9b71-20f6095be069}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -436,9 +439,6 @@
     <ClCompile Include="MRSceneReorder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRProjectMeshAttributes.cpp">
-      <Filter>Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="MRViewerTitle.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
@@ -489,6 +489,39 @@
     </ClCompile>
     <ClCompile Include="MRItemEnabledPerViewport.cpp">
       <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonFontHolder.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryPlane.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDepthPeelingGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImGuiMultiViewport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneControlMenuItems.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFileDialogPortal.cpp">
+      <Filter>CustomOpenDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="MRWin32MessageHandler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpaceMouseDevice.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLocale.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
+    <ClCompile Include="MRI18n.cpp">
+      <Filter>Localization</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -909,9 +942,6 @@
     <ClInclude Include="MRSceneReorder.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="MRProjectMeshAttributes.h">
-      <Filter>Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="MROpenObjects.h">
       <Filter>IO</Filter>
     </ClInclude>
@@ -960,11 +990,68 @@
     <ClInclude Include="MRWebResponseCallback.h">
       <Filter>Requests</Filter>
     </ClInclude>
+    <ClInclude Include="MRViewerSignals.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileLoadOptions.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonFontHolder.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryPlane.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDepthPeelingGL.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGuiMultiViewport.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerConfigConstants.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneControlMenuItems.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogPortal.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogCocoa.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWin32MessageHandler.h">
+      <Filter>UserInputs</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseDevice.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandlerWinEvents.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRI18n.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLocale.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLocaleMacos.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <Filter>Viewer</Filter>
+    </None>
+    <None Include="MRFileDialogCocoa.mm">
+      <Filter>CustomOpenDialog</Filter>
+    </None>
+    <None Include="MRLocaleNames.inl">
+      <Filter>Localization</Filter>
+    </None>
+    <None Include="MRLocaleMacos.mm">
+      <Filter>Localization</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

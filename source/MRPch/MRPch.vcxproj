@@ -18,9 +18,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MREigenCore.h" />
+    <ClInclude Include="MREigenSparseCore.h" />
     <ClInclude Include="MRExpected.h" />
     <ClInclude Include="MRFilesystem.h" />
     <ClInclude Include="MRFmt.h" />
+    <ClInclude Include="MRHashMap.h" />
     <ClInclude Include="MRWasm.h" />
     <ClInclude Include="MRAsyncLaunchType.h" />
     <ClInclude Include="MREigen.h" />
@@ -77,7 +79,6 @@
       <PrecompiledHeaderFile>MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>MRPch.h</ForcedIncludeFiles>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -105,7 +106,6 @@
       <PrecompiledHeaderFile>MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>MRPch.h</ForcedIncludeFiles>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

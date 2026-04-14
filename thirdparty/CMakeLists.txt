@@ -1,5 +1,5 @@
 # to force update thirdparty touch this line
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -7,7 +7,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
   set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
 
 IF(MR_EMSCRIPTEN_WASM64)
@@ -38,8 +38,11 @@ IF(MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
-IF(APPLE)
-  set(INSTALL_GTEST ON)
+set(INSTALL_GTEST ON)
+IF(EMSCRIPTEN)
+  add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
+  add_subdirectory(./googletest ./googletest)
+ELSE()
   # https://stackoverflow.com/a/42643260/7325599
   set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
   set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCED)
@@ -47,17 +50,8 @@ IF(APPLE)
   set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE BOOL "" FORCED)
 ENDIF()
 
-IF(APPLE OR MR_EMSCRIPTEN)
-  add_subdirectory(./expected ./expected)
-ELSE()
-  # TODO: correct OpenVDB module search
-  list(APPEND CMAKE_MODULE_PATH
-    "/usr/lib/cmake/OpenVDB/"
-    "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
-    "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
-    "/usr/lib64/cmake/OpenVDB/"
-  )
-  find_package(OpenVDB 9 COMPONENTS openvdb)
+IF(NOT APPLE AND NOT MR_EMSCRIPTEN)
+  find_package(OpenVDB 10 COMPONENTS openvdb)
   IF(NOT OpenVDB_FOUND)
     set(OPENVDB_ENABLE_UNINSTALL OFF)
     set(OPENVDB_ENABLE_INSTALL OFF)
@@ -66,15 +60,7 @@ ELSE()
     set(OPENVDB_BUILD_BINARIES OFF)
     set(OPENVDB_BUILD_VDB_PRINT OFF)
     set(USE_EXPLICIT_INSTANTIATION OFF)
-
-    # Ubuntu 20.04 compatibility
-    find_package(Boost REQUIRED)
-    find_package(TBB REQUIRED)
-    IF(Boost_VERSION VERSION_LESS 1.73 OR TBB_VERSION VERSION_LESS 2020.2)
-      add_subdirectory(./openvdb/v9/openvdb)
-    ELSE()
-      add_subdirectory(./openvdb/v10/openvdb)
-    ENDIF()
+    add_subdirectory(./openvdb/v10/openvdb)
   ENDIF()
 
   find_package(cpr)
@@ -84,7 +70,16 @@ ELSE()
     set(CPR_USE_SYSTEM_GTEST "ON")
     set(CPR_BUILD_TESTS "OFF")
     set(CPR_BUILD_TESTS_SSL "OFF")
+    set(CPR_FORCE_USE_SYSTEM_CURL ON)
     add_subdirectory(./cpr)
+  ENDIF()
+
+  find_package(PkgConfig)
+  IF(PkgConfig_FOUND)
+    pkg_check_modules(tinyxml2 QUIET tinyxml2)
+  ENDIF()
+  IF(NOT tinyxml2_FOUND OR tinyxml2_VERSION VERSION_LESS 10)
+    add_subdirectory(./tinyxml2)
   ENDIF()
 ENDIF()
 
@@ -93,24 +88,14 @@ add_subdirectory(./OpenCTM-git ./OpenCTM)
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
+  add_subdirectory(./expected ./expected)
+
   set(GDCM_BUILD_APPLICATIONS OFF)
   set(GDCM_BUILD_SHARED_LIBS OFF)
   set(GDCM_BUILD_TESTING OFF)
   set(GDCM_BUILD_DOCBOOK_MANPAGES OFF)
   add_subdirectory(./GDCM)
-
-  add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
-  set(INSTALL_GTEST ON)
-  add_subdirectory(./googletest)
-
-  set(ENABLE_PROGRAMS OFF CACHE BOOL "")
-  set(ENABLE_TESTING OFF CACHE BOOL "")
-  add_subdirectory(./mbedtls)
-  install(DIRECTORY mbedtls/include/mbedtls DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-
-  # Use custom FindMbedTLS.cmake to override the one included in ziplib, that does not work
-  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
   set(BUILD_TOOLS OFF CACHE BOOL "")
   set(BUILD_REGRESS OFF CACHE BOOL "")
@@ -150,12 +135,7 @@ IF(MR_EMSCRIPTEN)
   set(BLOSC_INSTALL ON)
   add_subdirectory(./c-blosc)
 ELSE() # not MR_EMSCRIPTEN
-  set(CLIP_EXAMPLES OFF)
-  set(CLIP_TESTS OFF)
-  set(CLIP_X11_WITH_PNG OFF)
   set(BUILD_SHARED_LIBS ON)
-  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
-  add_subdirectory(./clip)
 
   set(E57_GIT_SUBMODULE_UPDATE OFF)
   set(E57_XML_PARSER TinyXML2 CACHE STRING "")
@@ -188,6 +168,3 @@ add_subdirectory(./tinygltf)
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
-
-install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})

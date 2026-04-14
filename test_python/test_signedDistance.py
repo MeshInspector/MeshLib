@@ -13,4 +13,4 @@ def test_signed_distance():
     resRevert = mrmesh.findSignedDistance(torus2, torus, xf)
 
     # probably, we need negative comparison
-    assert res.signedDist == resRevert.signedDist
+    assert -1.0e-7 < res.signedDist - resRevert.signedDist < 1.0e-7

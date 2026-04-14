@@ -1,6 +1,7 @@
 #include "MRBitSet.h"
 #include "MRGTest.h"
 #include <bit>
+#include <iostream>
 
 namespace MR
 {
@@ -215,12 +216,40 @@ bool operator == ( const BitSet & a, const BitSet & b )
 
 BitSet::IndexType BitSet::find_last() const
 {
-    if ( !any() )
+    if ( blocks_.empty() )
         return npos;
-    for ( IndexType i = size(); i-- >= 1; )
+
+    auto lastBit = bitIndex_( numBits_ );
+    auto block = blocks_.back();
+    if ( lastBit != 0 )
+        block &= ( ( block_type( 1 ) << lastBit ) - 1 );
+    if ( block != block_type( 0 ) )
+        return blocks_.size() * bits_per_block - std::countl_zero( block ) - 1;
+    for ( int i = int( blocks_.size() ) - 2; i >= 0; --i )
     {
-        if ( test( i ) )
-            return i;
+        if ( blocks_[i] == block_type( 0 ) )
+            continue;
+        return ( i + 1 ) * bits_per_block - std::countl_zero( blocks_[i] ) - 1;
+    }
+    return npos;
+}
+
+BitSet::IndexType BitSet::find_last_not_set() const
+{
+    if ( blocks_.empty() )
+        return npos;
+
+    auto lastBit = bitIndex_( numBits_ );
+    auto block = blocks_.back();
+    if ( lastBit != 0 )
+        block |= ~( ( block_type( 1 ) << lastBit ) - 1 );
+    if ( block != ~block_type( 0 ) )
+        return blocks_.size() * bits_per_block - std::countl_one( block ) - 1;
+    for ( int i = int( blocks_.size() ) - 2; i >= 0; --i )
+    {
+        if ( blocks_[i] == ~block_type( 0 ) )
+            continue;
+        return ( i + 1 ) * bits_per_block - std::countl_one( blocks_[i] ) - 1;
     }
     return npos;
 }
@@ -270,6 +299,49 @@ auto BitSet::findSetBitAfter_( IndexType n ) const -> IndexType
         if ( auto c = std::countr_zero( blocks_[blockId] ); c < bits_per_block )
             return blockId * bits_per_block + c;
     return npos;
+}
+
+auto BitSet::findNonSetBitAfter_( IndexType n ) const -> IndexType
+{
+    if ( n >= size() )
+        return npos;
+
+    auto blockId = blockIndex_( n );
+    const auto firstBit = bitIndex_( n );
+    auto block0 = blocks_[blockId];
+    block0 |= ( ( block_type( 1 ) << firstBit ) - 1 ); // one bits before firstBit
+    if ( auto c = std::countr_one( block0 ); c < bits_per_block )
+        return blockId * bits_per_block + c;
+    for ( ++blockId; blockId < blocks_.size(); ++blockId )
+        if ( auto c = std::countr_one( blocks_[blockId] ); c < bits_per_block )
+            return blockId * bits_per_block + c;
+    return npos;
+}
+
+std::ostream& operator<<( std::ostream& s, const BitSet & bs )
+{
+    auto i = bs.size();
+    while ( i > 0 )
+    {
+        --i;
+        s.put( bs.test( i ) ? '1' : '0' );
+    }
+    return s;
+}
+
+std::istream& operator>>( std::istream& s, BitSet & bs )
+{
+    bs.clear();
+    while ( true )
+    {
+        auto c = s.peek();
+        if ( c != '0' && c != '1' )
+            break;
+        (void)s.get();
+        bs.push_back( c == '1' );
+    }
+    bs.reverse();
+    return s;
 }
 
 } //namespace MR

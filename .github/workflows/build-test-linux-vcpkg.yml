@@ -30,6 +30,10 @@ on:
         default: true
         required: false
         type: boolean
+      nuget_build_patch:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   linux-vcpkg-build-test:
@@ -43,22 +47,22 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 14]
+        compiler: [Clang 20, GCC 14]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
-          # Do not run Debug Clang 19 build on every commit (but only once a day)
+          # Do not run Debug Clang 20 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 19
+            compiler: Clang 20
             config: Debug
           # Do not run Release GCC 14 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 14
             config: Release
         include:
-          - compiler: Clang 19
-            cxx-compiler: /usr/bin/clang++-19
-            c-compiler: /usr/bin/clang-19
+          - compiler: Clang 20
+            cxx-compiler: /usr/bin/clang++-20
+            c-compiler: /usr/bin/clang-20
             cxx-standard: 23
           - compiler: GCC 14
             cxx-compiler: /usr/bin/g++-14
@@ -68,9 +72,6 @@ jobs:
             os: ubuntu-latest
           - arch: arm64
             os: ubuntu-24.04-arm
-          - arch: arm64
-            compiler: GCC 14
-            skip_mrbind: true # GCC + ARM64 build has unresolved problems
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -83,13 +84,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-  
+        uses: actions/checkout@v6
+
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -108,7 +110,7 @@ jobs:
           git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/mrbind-pybind11 thirdparty/mrbind
 
       - name: Install MRBind
-        if: ${{ (inputs.mrbind || inputs.mrbind_c) && !matrix.skip_mrbind }}
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
@@ -123,7 +125,7 @@ jobs:
         run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Generate C bindings
-        if: ${{ inputs.mrbind_c && !matrix.skip_mrbind }}
+        if: ${{ inputs.mrbind_c }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
@@ -137,13 +139,19 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
+            -DMR_PLATFORM=Linux_vcpkg
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c && !matrix.skip_mrbind] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMRVIEWER_NO_GTK=ON
+            -DMRVIEWER_WITH_BUNDLED_CURL=ON
+
+      - name: MRMesh Exported Symbols
+        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
       - name: Generate and build Python bindings
-        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
+        if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
@@ -153,57 +161,61 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Timing_Logs_linux-vcpkg-${{ matrix.arch }}_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest ${{ matrix.skip_mrbind && '--no-python-tests' || '' }}
-
-      - name: C Unit Tests (old bindings)
-        run: ./build/${{ matrix.config }}/bin/MRTestC
+        env:
+          GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+        run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests
-        if: ${{ inputs.mrbind_c && !matrix.skip_mrbind }}
+        if: ${{ inputs.mrbind_c }}
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
-        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
+        if: ${{ inputs.mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
-        if: ${{ inputs.internal_build && inputs.mrbind && !matrix.skip_mrbind }}
+        if: ${{ inputs.internal_build && inputs.mrbind }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
-          mrbind: ${{ inputs.mrbind && !matrix.skip_mrbind }}
-          pytest_args: "--run-cuda=negative"
+          mrbind: ${{ inputs.mrbind }}
+          pytest_args: "--run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: linux-vcpkg-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}
-          ubuntu20_arm_workaround: ${{ inputs.mrbind && matrix.arch == 'arm64' }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
+      - name: Generate Test Performance Report
+        continue-on-error: true
+        run: |
+          scripts/junit_to_csv.py unit_tests_report.csv unit_tests_report_*.xml
+          cat unit_tests_report.csv
+
       - name: Create Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         run: |
           ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
           mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
       - name: Extract Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         run: |
           mkdir meshlib_install
           tar -xf meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz -C meshlib_install
 
       - name: Build C++ examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -215,7 +227,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 20'}}
         run: |
           cmake \
             -S examples/c-examples \
@@ -227,9 +239,35 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload vcpkg Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
-        uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 20' }}
+        uses: actions/upload-artifact@v7
         with:
           name: Distributives_linux-vcpkg-${{ matrix.arch }}
           path: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          retention-days: 1
+
+      - name: Collect artifact stats
+        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-artifact-stats
+        with:
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+      - name: Create and fix fake Wheel for NuGet
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          python3 -m venv ./wheel_venv
+          source ./wheel_venv/bin/activate
+          python3 -m pip install auditwheel patchelf
+          python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.so
+
+      - name: Upload NuGet files to Artifacts
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 20' && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DotNetPatchArchiveLinux-${{ matrix.arch }}
+          path: ./patched_content/*
           retention-days: 1

@@ -14,13 +14,14 @@ namespace MR
 /**
  * \defgroup DecimateGroup Decimate overview
  * \brief This chapter represents documentation about mesh decimation
+ * \{
  */
 
 /// Defines the order of edge collapses inside Decimate algorithm
 enum DecimateStrategy
 {
-    MinimizeError,    // the next edge to collapse will be the one that introduced minimal error to the surface
-    ShortestEdgeFirst // the next edge to collapse will be the shortest one
+    MinimizeError,    ///< the next edge to collapse will be the one that introduced minimal error to the surface
+    ShortestEdgeFirst ///< the next edge to collapse will be the shortest one
 };
 
 /**
@@ -306,7 +307,9 @@ struct RemeshSettings
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback;
 };
-// Splits too long and eliminates too short edges from the mesh
+/// Splits too long and eliminates too short edges from the mesh
 MRMESH_API bool remesh( Mesh& mesh, const RemeshSettings & settings );
 
-} //namespace MR
+/// \}
+
+} // end namespace MR

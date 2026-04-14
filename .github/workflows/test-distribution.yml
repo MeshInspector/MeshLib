@@ -6,12 +6,25 @@ on:
       release_tag:
         required: true
         type: string
+      test_ubuntu_x64:
+        required: true
+        type: boolean
+      test_ubuntu_arm64:
+        required: true
+        type: boolean
+      test_macos:
+        required: true
+        type: boolean
+      test_windows:
+        required: true
+        type: boolean
     secrets:
       GH_TOKEN:
         required: true
 
 jobs:
   linux-x64-test:
+    if: ${{ inputs.test_ubuntu_x64 }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     container:
@@ -19,13 +32,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
         include:
-          - os: "ubuntu:20.04"
-            name: "ubuntu20"
-            compiler: clang-11
-            c-compiler: /usr/bin/clang-11
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
@@ -39,7 +47,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -118,20 +126,16 @@ jobs:
         run: python3 -m pytest -s -v
 
   linux-arm64-test:
+    if: ${{ inputs.test_ubuntu_arm64 }}
     timeout-minutes: 30
-    runs-on: [self-hosted, linux-arm64, spot, meshinspector]
+    runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
         include:
-          - os: "ubuntu:20.04"
-            name: "ubuntu20"
-            compiler: clang-11
-            c-compiler: /usr/bin/clang-11
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
@@ -145,12 +149,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Install GitHub CLI
         run: |
+          # official Ubuntu ARM repo might be very slow
+          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources || true
+          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list || true
           apt-get update && apt-get install -y curl sudo
           curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
           chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -217,11 +224,12 @@ jobs:
         run: python3 -m pytest -s -v
 
   macos-test:
-    runs-on: macos-13
+    if: ${{ inputs.test_macos }}
+    runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -260,3 +268,62 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+  
+  windows-test:
+    if: ${{ inputs.test_windows }}
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Download Distributive
+        continue-on-error: true
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "MeshLibDist*.zip" --repo ${{ github.repository }}
+
+      - name: Unpack Distributive
+        id: unpack-dist
+        run: |
+          if (Test-Path MeshLibDist*.zip) {
+            Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
+            Write-Output "C:\\meshlib-built\\install\\app\\Release" >> $env:GITHUB_PATH
+            Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Run MeshViewer
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
+
+      - name: Show meshconv help
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        run: meshconv.exe --help
+
+      - name: Build C++ examples
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        working-directory: examples/cpp-examples
+        env:
+          DIST_DIR: C:\meshlib-built
+        run: |
+          cmake -S . -B build `
+            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
+          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\Release\MeshModification.exe
+
+      - name: Build C examples
+        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        working-directory: examples/c-examples
+        env:
+          DIST_DIR: C:\meshlib-built
+        run: |
+          cmake -S . -B build `
+            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
+          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\Release\MeshModification.exe

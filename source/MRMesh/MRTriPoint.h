@@ -2,6 +2,8 @@
 
 #include "MRVector3.h"
 #include "MRSegmPoint.h"
+#include "MRMesh/MRMacros.h"
+#include <iosfwd>
 
 namespace MR
 {
@@ -22,7 +24,7 @@ struct TriPoint
     constexpr TriPoint() noexcept : a( 0 ), b( 0 ) { }
     explicit TriPoint( NoInit ) noexcept { }
     constexpr TriPoint( T a, T b ) noexcept : a( a ), b( b ) { }
-    template <typename U>
+    template <typename U> MR_REQUIRES_IF_SUPPORTED(!std::is_same_v<T, U>) // The condition is needed for the bindings to not duplicate this ctor against the copy ctor.
     constexpr TriPoint( const TriPoint<U> & s ) : a( T( s.a ) ), b( T( s.b ) ) { }
 
     /// given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point
@@ -50,6 +52,17 @@ struct TriPoint
 
     /// returns true if two points have equal (a,b) representation
     [[nodiscard]] constexpr bool operator==( const TriPoint& rhs ) const = default;
+
+    friend std::ostream& operator<<( std::ostream& s, const TriPoint& tp )
+    {
+        return s << tp.a << ' ' << tp.b;
+    }
+
+    friend std::istream& operator>>( std::istream& s, TriPoint& tp )
+    {
+        s >> tp.a >> tp.b;
+        return s;
+    }
 };
 
 /// \related TriPoint

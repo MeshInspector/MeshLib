@@ -51,7 +51,7 @@ struct ModelRenderParams : ModelBaseRenderParams
 {
     const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, only necessary for triangles rendering
     Vector3f lightPos;            // position of light source
-    bool allowAlphaSort{ false }; // if true, the object can use the alpha sorting shader if it wants to
+    TransparencyMode transparencyMode; // determines how to handle transparent models
 
     RenderModelPassMask passMask = RenderModelPassMask::All; // Only perform rendering if `bool( passMask & desiredPass )` is true.
 };

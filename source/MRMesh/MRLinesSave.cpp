@@ -4,7 +4,6 @@
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"
-#include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include "MRPch/MRFmt.h"
 #include <fstream>
@@ -170,7 +169,7 @@ Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveS
     const VertRenumber vertRenumber( polyline.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = polyline.topology.lastValidVert();
-    const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
+    bool saveColors = settings.colors && !settings.colors->empty();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
@@ -198,9 +197,9 @@ Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveS
             continue;
         const Vector3f p = applyFloat( settings.xf, polyline.points[i] );
         out.write( ( const char* )&p, 12 );
-        if ( settings.colors )
+        if ( saveColors )
         {
-            const auto c = ( *settings.colors )[i];
+            const auto c = getAt( *settings.colors, i );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }

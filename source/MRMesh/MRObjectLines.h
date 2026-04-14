@@ -14,14 +14,14 @@ public:
     ObjectLines( ObjectLines&& ) = default;
     ObjectLines& operator=( ObjectLines&& ) = default;
 
-    constexpr static const char* TypeName() noexcept { return "ObjectLines"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ObjectLines"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Polyline"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Polyline"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Polylines"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Polylines"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -32,25 +32,16 @@ public:
 
     virtual const std::shared_ptr<Polyline3>& varPolyline() { return polyline_; }
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
-
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
-    /// signal about lines changing, triggered in setDirtyFlag
-    using LinesChangedSignal = Signal<void( uint32_t mask )>;
-    LinesChangedSignal linesChangedSignal;
 
 protected:
     ObjectLines( const ObjectLines& other ) = default;
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
-    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
-    /// pls call Parent::swapSignals_ first when overriding this function
-    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };

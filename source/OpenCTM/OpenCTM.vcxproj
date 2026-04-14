@@ -76,7 +76,6 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>$(MeshLibDir)thirdparty\OpenCTM-git\lib\;$(MeshLibDir)thirdparty\OpenCTM-git\lib\liblzma\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -101,7 +100,6 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(MeshLibDir)thirdparty\OpenCTM-git\lib\;$(MeshLibDir)thirdparty\OpenCTM-git\lib\liblzma\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRHistoryAction.h"
+#include "MRCombinedHistoryAction.h"
 #include "MRObjectMesh.h"
 
 namespace MR
@@ -73,6 +73,39 @@ private:
     ObjectMeshData data_;
 
     std::string name_;
+};
+
+/// Undo action for ObjectMeshData change partially
+class MRMESH_CLASS PartialChangeMeshDataAction : public HistoryAction
+{
+public:
+    /// use this constructor to remember object's data and immediately set new data
+    MRMESH_API PartialChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, ObjectMeshData&& newData );
+
+    virtual std::string name() const override
+    {
+        if ( combinedAction_ )
+            return combinedAction_->name();
+        assert( false );
+        return "##empty_PartialChangeMeshDataAction";
+    }
+
+    virtual void action( HistoryAction::Type type) override
+    {
+        if ( combinedAction_ )
+            combinedAction_->action( type );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        if ( combinedAction_ )
+            return combinedAction_->heapBytes() + sizeof( CombinedHistoryAction );
+        else
+            return 0;
+    }
+
+private:
+    std::unique_ptr<CombinedHistoryAction> combinedAction_;
 };
 
 /// \}

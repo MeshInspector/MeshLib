@@ -48,6 +48,10 @@ public:
     MRVIEWER_API static void setCudaComputeToolDistanceConstructor( CudaComputeToolDistanceConstructor ctdCtor );
 #endif
 
+    // Returns true if this platform supports CUDA (true for Windows and Linux, false for macOS and WebAssembly)
+    // \note that `isCudaAvailable()` should still be checked on supported platforms
+    [[nodiscard]] MRVIEWER_API static bool isCudaSupportedByPlarform();
+
     // Returns true if CUDA is available on this computer
     [[nodiscard]] MRVIEWER_API static bool isCudaAvailable();
 

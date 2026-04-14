@@ -2,14 +2,16 @@
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSceneColors.h"
-#include "MRPch/MRFmt.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRImGuiImage.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerSignals.h"
 #include "MRViewer/MRViewport.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRPch/MRFmt.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -36,7 +38,7 @@ ProvidesViewportWidget::ProvidesViewportWidget()
 DrawViewportWidgetsItem::DrawViewportWidgetsItem()
     : RibbonMenuItem( "Draw Viewport Widgets" )
 {
-    preDrawConnection_ = getViewerInstance().preDrawSignal.connect( [this]
+    preDrawConnection_ = getViewerInstance().signals().preDrawSignal.connect( [this]
     {
         for ( Viewport& viewport : getViewerInstance().viewport_list )
             handleViewport( viewport );
@@ -100,6 +102,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
     const float buttonShrink = std::round( 1 * UI::scale() ); // Need this to avoid button borders being clipped.
 
     ImVec2 curPos = rect.max - spacingToCorner - buttonSize;
+    const ImVec2 mainViewportShift = ImGuiMV::GetMainViewportShift();
 
     for ( const Entry& e : impl.entries )
     {
@@ -111,7 +114,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0 ); // The button does the rounding for itself.
         MR_FINALLY{ ImGui::PopStyleVar(); };
 
-        ImGui::SetNextWindowPos( curPos );
+        ImGuiMV::SetNextWindowPosMainViewport( curPos );
         ImGui::SetNextWindowSize( buttonSize );
 
         ImGui::Begin( fmt::format( "##cornerButtonWindow.{}.{}", viewport.id.value(), e.name ).c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground );
@@ -127,7 +130,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         ImGui::PushStyleColor( ImGuiCol_Button, e.active ? ImGui::GetStyleColorVec4( ImGuiCol_SliderGrab ) : ImVec4( 0, 0, 0, 0 ) );
         MR_FINALLY{ ImGui::PopStyleColor(); };
 
-        ImGui::SetCursorScreenPos( curPos + buttonShrink );
+        ImGui::SetCursorScreenPos( curPos + buttonShrink + mainViewportShift );
 
         if ( e.active )
         {
@@ -157,7 +160,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         if ( icon )
         {
             ImDrawList& list = *ImGui::GetWindowDrawList();
-            ImVec2 imagePos = round( curPos + ( buttonSize - imageSize ) / 2 );
+            ImVec2 imagePos = round( curPos + ( buttonSize - imageSize ) / 2 ) + mainViewportShift;
             list.AddImage( icon->getImTextureId(), imagePos, imagePos + imageSize, ImVec2( 0, 1 ), ImVec2( 1, 0 ), ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) ) );
         }
 

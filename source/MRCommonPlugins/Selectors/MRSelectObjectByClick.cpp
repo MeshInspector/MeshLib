@@ -9,6 +9,8 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRViewer/ImGuiMenu.h"
 
 namespace MR
 {
@@ -28,7 +30,8 @@ void SelectObjectByClick::drawDialog( ImGuiContext* )
     Box2i rect;
     rect.include( downPos );
     rect.include( currPos );
-    drawList->AddRect( ImVec2( float( rect.min.x ), float( rect.min.y ) ), ImVec2( float( rect.max.x ), float( rect.max.y ) ),
+    drawList->AddRect( ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( float( rect.min.x ), float( rect.min.y ) ) ),
+                       ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( float( rect.max.x ), float( rect.max.y ) ) ),
                        Color::white().getUInt32() );
 }
 
@@ -84,10 +87,17 @@ void SelectObjectByClick::select_( bool up )
         newSelection = getViewerInstance().viewport().findObjectsInRect( rect );
     }
 
+    std::shared_ptr<Object> highlightInTreeObj;
     if ( up && smallPick && ctrl_ )
     {
+
         for ( auto obj : newSelection )
-            obj->select( !obj->isSelected() );
+        {
+            bool newSelectionState = !obj->isSelected();
+            obj->select( newSelectionState );
+            if ( !highlightInTreeObj && newSelectionState )
+                highlightInTreeObj = obj;
+        }
     }
     else
     {
@@ -96,7 +106,16 @@ void SelectObjectByClick::select_( bool up )
             object->select( false );
 
         for ( auto obj : newSelection )
+        {
+            if ( !highlightInTreeObj )
+                highlightInTreeObj = obj;
             obj->select( true );
+        }
+    }
+    if ( highlightInTreeObj )
+    {
+        if ( auto menu = getViewerInstance().getMenuPlugin() )
+            menu->expandObjectTreeAndScroll( highlightInTreeObj.get() );
     }
 }
 

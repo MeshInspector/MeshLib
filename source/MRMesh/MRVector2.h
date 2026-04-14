@@ -4,9 +4,10 @@
 #include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRPch/MRBindingMacros.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <iosfwd>
 #include <utility>
 
 namespace MR
@@ -33,7 +34,7 @@ struct Vector2
 
     T x, y;
 
-    constexpr Vector2() noexcept : x( 0 ), y( 0 ) 
+    constexpr Vector2() noexcept : x( 0 ), y( 0 )
     {
         static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
         static_assert( elements == 2, "Invalid number of elements" );
@@ -116,6 +117,25 @@ struct Vector2
         else
             return a *= ( 1 / b );
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector2& vec )
+    {
+        return s << vec.x << ' ' << vec.y;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector2& vec )
+    {
+        return s >> vec.x >> vec.y;
+    }
+
+
+    // We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
+    // Those don't bind correctly in C#, because there we can't overload functions based on mutable struct ref vs const struct ref parameters.
+
+    MR_BIND_IGNORE friend auto begin( const Vector2& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto begin( Vector2& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto end( const Vector2& v ) { return &v[2]; }
+    MR_BIND_IGNORE friend auto end( Vector2& v ) { return &v[2]; }
 };
 
 /// \related Vector2
@@ -189,19 +209,6 @@ inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORT
     else
         return Vector2( 0, 1 );
 }
-
-
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
-
-template <typename T>
-MR_BIND_IGNORE inline auto begin( const Vector2<T> & v ) { return &v[0]; }
-template <typename T>
-MR_BIND_IGNORE inline auto begin( Vector2<T> & v ) { return &v[0]; }
-
-template <typename T>
-MR_BIND_IGNORE inline auto end( const Vector2<T> & v ) { return &v[2]; }
-template <typename T>
-MR_BIND_IGNORE inline auto end( Vector2<T> & v ) { return &v[2]; }
 
 /// \}
 

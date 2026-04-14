@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Configuration">
+    <!-- v142 = Visual Studio 2019 compiler -->
+    <!-- v143 = Visual Studio 2022 compiler -->
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+    <MRCudaVersion Condition="'$(PlatformToolset)' == 'v142'">11.4</MRCudaVersion>
+    <MRCudaVersion Condition="'$(PlatformToolset)' == 'v143'">12.0</MRCudaVersion>
+    <PreferredToolArchitecture>x86</PreferredToolArchitecture> <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->
+  </PropertyGroup>
+</Project>

@@ -285,11 +285,12 @@ Contour2f makeConvexHull( Contour2f points )
     if ( points.size() < 2 )
         return points;
 
-    auto minPointIt = std::min_element( points.begin(), points.end(), [] ( auto&& a, auto&& b )
+    // sort points by coordinates to find a start point and to remove duplicates
+    std::sort( points.begin(), points.end(), [] ( auto&& a, auto&& b )
     {
         return std::tie( a.y, a.x ) < std::tie( b.y, b.x );
     } );
-    std::swap( *points.begin(), *minPointIt );
+    points.erase( std::unique( points.begin(), points.end() ), points.end() );
     const auto& minPoint = points.front();
 
     // sort points by polar angle and distance to the start point

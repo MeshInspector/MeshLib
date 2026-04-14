@@ -22,17 +22,17 @@ int main( int argc, char** argv )
     MR_SymbolMeshParams_Set_pathToFontFile( params, argv[1], NULL );
 
     MR_expected_MR_Mesh_std_string* convRes = MR_createSymbolsMesh( params );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( convRes );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( convRes );
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to convert text to mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( convRes ) ) );
+        fprintf( stderr, "Failed to convert text to mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( convRes ) ) );
         goto fail_conv;
     }
 
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "mesh.ply", NULL, NULL );
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save; // error while saving file
     }
 

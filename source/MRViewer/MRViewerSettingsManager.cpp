@@ -4,10 +4,11 @@
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
+#include "MRLocale.h"
 #include "MRRibbonMenu.h"
 #include "MRToolbar.h"
 #include "MRSpaceMouseHandlerHidapi.h"
-#include "MRSpaceMouseParameters.h"
+#include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
 #include "MRViewportGlobalBasis.h"
@@ -23,11 +24,14 @@
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
+#ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace
 {
 const std::string cOrthographicParamKey = "orthographic";
+const std::string cShowRotationPivotParamKey = "showRotationPivot";
 const std::string cFlatShadingParamKey = "flatShading"; // Legacy
 const std::string cShadingModeParamKey = "defaultMeshShading";
 const MR::Config::Enum cShadingModeEnum = { "AutoDetect", "Smooth", "Flat" }; // SceneSettings::ShadingMode
@@ -74,6 +78,7 @@ const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
 const std::string cVisualObjectTags = "visualObjectTags";
+const std::string cLanguage = "language";
 }
 
 namespace Defaults
@@ -199,7 +204,9 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 
     setDefaultSerializeMeshFormat( ".ply" );
     setDefaultSerializePointsFormat( ".ply" );
+#ifndef MRVIEWER_NO_VOXELS
     setDefaultSerializeVoxelsFormat( ".vdb" );
+#endif
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -225,6 +232,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             bool gridVisible = visible;
             if ( val[cGlobalBasisGridVisibleKey].isBool() )
                 gridVisible = val[cGlobalBasisGridVisibleKey].asBool();
+
+            gridVisible &= visible; // do not allow showing grid without basis because it is disabled by `viewer.globalBasis`
             viewer.globalBasis->setGridVisible( gridVisible );
             if ( visible )
                 CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
@@ -237,6 +246,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             viewer.globalBasis->setAxesProps( val[cGlobalBasisScaleKey].asFloat(), viewer.globalBasis->getAxesWidth() );
         }
     }
+
+    if ( cfg.hasBool( cShowRotationPivotParamKey ) && viewer.rotationSphere )
+    {
+        viewer.rotationSphere->setVisible( cfg.getBool( cShowRotationPivotParamKey ) );
+    }
+
     viewport.setParameters( params );
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
@@ -423,27 +438,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
-        SpaceMouseParameters spaceMouseParams;
+        SpaceMouse::Parameters spaceMouseParams;
         if ( paramsJson.isMember( "translateScale" ) )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
-        viewer.setSpaceMouseParameters( spaceMouseParams );
-
-#ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
-        {
-            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
-            {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-                if ( hidapiHandler )
-                {
-                    const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
-                    hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom );
-                }
-            }
-        }
-#endif
+            spaceMouseParams.suppressMouseScrollZoom = !paramsJson["activeMouseScrollZoom"].asBool();
+        viewer.spaceMouseController().setParameters( spaceMouseParams );
     }
 
     if ( cfg.hasJsonValue( cTouchpadSettings ) )
@@ -466,7 +468,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             else
                 spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
         }
-        viewer.setTouchpadParameters( parameters );
+        viewer.touchpadController().setParameters( parameters );
     }
 
     if ( cfg.hasJsonValue( cAmbientCoefSelectedObj ) )
@@ -490,9 +492,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 return ret;
             }();
             auto targetIt = map.find( loadString( cUnitsLenUnit, "" ) );
-            UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::mm : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
+            UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::millimeters : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
             auto sourceIt = map.find( loadString( cUnitsModelLenUnit, "" ) );
-            UnitSettings::setModelLengthUnit( ( sourceIt == map.end() || targetIt->second == LengthUnit::_count ) ? std::nullopt : std::optional( targetIt->second ) );
+            UnitSettings::setModelLengthUnit( ( sourceIt == map.end() || sourceIt->second == LengthUnit::_count ) ? std::nullopt : std::optional( sourceIt->second ) );
         }
 
         { // Thousands separator.
@@ -530,14 +532,22 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         setDefaultSerializeMeshFormat( format );
         format = loadString( cMruInnerPointsFormat, ".ply" );
         setDefaultSerializePointsFormat( format );
+        #ifndef MRVIEWER_NO_VOXELS
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
+        #endif
     }
 
     if ( cfg.hasJsonValue( cVisualObjectTags ) )
     {
         auto& manager = VisualObjectTagManager::instance();
         deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
+    }
+
+    if ( cfg.hasJsonValue( cLanguage ) )
+    {
+        const auto lang = cfg.getJsonValue( cLanguage ).asString();
+        Locale::set( lang );
     }
 }
 
@@ -560,6 +570,11 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         else
             globalBasis[cGlobalBasisScaleKey] = viewer.globalBasis->getAxesLength( viewport.id );
         cfg.setJsonValue( cGlobalBasisKey, globalBasis );
+    }
+
+    if ( viewer.rotationSphere )
+    {
+        cfg.setBool( cShowRotationPivotParamKey, viewer.rotationSphere->isVisible( viewport.id ) );
     }
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
@@ -646,23 +661,14 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cShowExperimentalFeatures, viewer.experimentalFeatures );
 
     Json::Value spaceMouseParamsJson;
-    SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();
+    SpaceMouse::Parameters spaceMouseParams = viewer.spaceMouseController().getParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
-#ifdef _WIN32
-    if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
-    {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-        if ( hidapinHandler )
-        {
-            spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();
-        }
-    }
-#endif
+    spaceMouseParamsJson["activeMouseScrollZoom"] = !spaceMouseParams.suppressMouseScrollZoom;
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 
     Json::Value touchpadParametersJson;
-    const auto& touchpadParameters = viewer.getTouchpadParameters();
+    const auto& touchpadParameters = viewer.touchpadController().getParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;
@@ -686,7 +692,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
         saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
+#ifndef MRVIEWER_NO_VOXELS
         saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
+#endif
     }
 
     {
@@ -695,6 +703,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         serializeToJson( manager, visualObjectTagsJson );
         cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
+
+    cfg.setJsonValue( cLanguage, Locale::getName() );
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

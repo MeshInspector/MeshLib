@@ -1,5 +1,6 @@
 #include "MRCreateShader.h"
 #include "MRGLMacro.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRSpdlog.h"
 #include <sstream>
 #include <string>
@@ -36,20 +37,20 @@ GLuint compileShader( const std::string& vertSource, const std::string& fragSour
         GL_EXEC( glCompileShader( s ) );
         GL_EXEC( glAttachShader( id, s ) );
 
-		GLint infologLength = 0;
-		GLint charsWritten = 0;
-		char* infoLog;
-		// Get shader info log from opengl
-		GL_EXEC( glGetShaderiv( s, GL_INFO_LOG_LENGTH, &infologLength ) );
-		// Only print if there is something in the log
-		if (infologLength > 1)
-		{
-			infoLog = (char*)malloc(infologLength);
-			GL_EXEC( glGetShaderInfoLog( s, infologLength, &charsWritten, infoLog ) );
-			std::string compileLog = std::string( infoLog );
-			free(infoLog);
-			spdlog::critical( compileLog );
-		}
+        GLint infologLength = 0;
+        GLint charsWritten = 0;
+        char* infoLog;
+        // Get shader info log from opengl
+        GL_EXEC( glGetShaderiv( s, GL_INFO_LOG_LENGTH, &infologLength ) );
+        // Only print if there is something in the log
+        if (infologLength > 1)
+        {
+            infoLog = (char*)malloc(infologLength);
+            GL_EXEC( glGetShaderInfoLog( s, infologLength, &charsWritten, infoLog ) );
+            std::string compileLog = std::string( infoLog );
+            free(infoLog);
+            spdlog::critical( compileLog );
+        }
 
         return true;
     };
@@ -97,7 +98,7 @@ GLuint compileShader( const std::string& vertSource, const std::string& fragSour
 namespace MR
 {
 
-void createShader( [[maybe_unused]]const std::string& shader_name,
+void createShader( const std::string& shader_name,
     const std::string& vert_source,
     const std::string& frag_source,
     GLuint& prog_id,
@@ -106,6 +107,7 @@ void createShader( [[maybe_unused]]const std::string& shader_name,
 #ifdef LOG_SHADERS
     spdlog::info( "Creating shader: {}", shader_name );
 #endif
+    TelemetrySignal( "Creating shader: " + shader_name );
     std::string shaderLog;
     prog_id = compileShader( vert_source, frag_source, shaderLog );
     if ( shaderLog.empty() )

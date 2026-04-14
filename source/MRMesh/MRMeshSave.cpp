@@ -118,16 +118,16 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 #ifndef __EMSCRIPTEN__
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
-    if ( settings.uvMap )
+    if ( settings.uvMap && settings.texture && !settings.texture->pixels.empty() )
     {
         if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
         {
-            auto mtlPath = file.parent_path() / ( settings.materialName + ".mtl" );
+            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
             std::ofstream ofMtl( mtlPath, std::ofstream::binary );
             if ( ofMtl )
             {
                 ofMtl << "newmtl Texture\n";
-                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / ( settings.materialName + ".png" ) ).has_value() )
+                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
                     ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
             }
         }
@@ -139,13 +139,16 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
 {
     MR_TIMER;
+    const VertId lastVertId = mesh.topology.lastValidVert();
     out << "# MeshInspector.com\n";
-    if ( settings.uvMap )
+    bool saveUV = settings.uvMap && !settings.uvMap->empty();
+    bool saveColors = settings.colors && !settings.colors->empty();
+
+    if ( saveUV )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
 
     int numSaved = 0;
     auto sb = subprogress( settings.progress, 0.0f, settings.uvMap ? 0.35f : 0.5f );
@@ -156,9 +159,9 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
 
         auto saveVertex = [&]( auto && p )
         {
-            if ( settings.colors )
+            if ( saveColors )
             {
-                const auto c = (Vector4f)( *settings.colors )[i];
+                const auto c = ( Vector4f )getAt( *settings.colors, i );
                 out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
             }
             else
@@ -175,7 +178,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             return unexpectedOperationCanceled();
     }
 
-    if ( settings.uvMap )
+    if ( saveUV )
     {
         numSaved = 0;
         sb = subprogress( settings.progress, 0.35f, 0.7f );
@@ -183,7 +186,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         {
             if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
                 continue;
-            const auto& uv = ( *settings.uvMap )[i];
+            const auto uv = getAt( *settings.uvMap, i );
             out << fmt::format( "vt {} {}\n", uv.x, uv.y );
             ++numSaved;
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
@@ -192,7 +195,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         out << "usemtl Texture\n";
     }
 
-    sb = subprogress( settings.progress, settings.uvMap ? 0.7f : 0.5f, 1.0f );
+    sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
     const float facesNum = float( mesh.topology.edgePerFace().size() );
     size_t faceIndex = 0;
     for ( const auto& e : mesh.topology.edgePerFace() )
@@ -206,7 +209,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         Vector3i values( vertRenumber( a ) + firstVertId, vertRenumber( b ) + firstVertId, vertRenumber( c ) + firstVertId );
-        if ( settings.uvMap )
+        if ( saveUV )
             out << fmt::format( "f {}/{} {}/{} {}/{}\n",
                 values.x, values.x,
                 values.y, values.y,
@@ -265,46 +268,76 @@ Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSet
 {
     MR_TIMER;
 
-    char header[80] = "MeshInspector.com";
-    out.write( header, 80 );
-
     auto notDegenTris = getNotDegenTris( mesh );
     auto numTris = (std::uint32_t)notDegenTris.count();
-    out.write( ( const char* )&numTris, 4 );
+    BinaryStlSaver saver( out, settings, numTris );
 
-    const float trisNum = float( notDegenTris.count() );
+    const float trisNum = float( numTris );
     int trisIndex = 0;
     for ( auto f : notDegenTris )
     {
-        VertId a, b, c;
-        mesh.topology.getTriVerts( f, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-
-        // perform normal computation in double-precision to get exactly the same single-precision result on all platforms
-        const Vector3d ad = applyDouble( settings.xf, mesh.points[a] );
-        const Vector3d bd = applyDouble( settings.xf, mesh.points[b] );
-        const Vector3d cd = applyDouble( settings.xf, mesh.points[c] );
-        const Vector3f normal( cross( bd - ad, cd - ad ).normalized() );
-        const Vector3f ap( ad );
-        const Vector3f bp( bd );
-        const Vector3f cp( cd );
-
-        out.write( (const char*)&normal, 12 );
-        out.write( (const char*)&ap, 12 );
-        out.write( (const char*)&bp, 12 );
-        out.write( (const char*)&cp, 12 );
-        std::uint16_t attr{ 0 };
-        out.write( ( const char* )&attr, 2 );
+        saver.writeTri( mesh.getTriPoints( f ) );
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
             return unexpectedOperationCanceled();
         ++trisIndex;
     }
 
-    if ( !out )
+    if ( !saver.updateHeadCounter() )
         return unexpected( std::string( "Error saving in binary STL-format" ) );
 
     reportProgress( settings.progress, 1.f );
     return {};
+}
+
+BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & settings, std::uint32_t expectedNumTris )
+    : out_( out )
+    , settings_( settings )
+{
+    char header[80] = "MeshInspector.com";
+    out.write( header, 80 );
+
+    numTrisPos_ = out.tellp();
+    out.write( ( const char* )&expectedNumTris, 4 );
+    headNumTris_ = expectedNumTris;
+}
+
+bool BinaryStlSaver::writeTri( const Triangle3f& tri )
+{
+    // perform normal computation in double-precision to get exactly the same single-precision result on all platforms
+    const Vector3d ad = applyDouble( settings_.xf, tri[0] );
+    const Vector3d bd = applyDouble( settings_.xf, tri[1] );
+    const Vector3d cd = applyDouble( settings_.xf, tri[2] );
+    const Vector3f normal( cross( bd - ad, cd - ad ).normalized() );
+    const Vector3f ap( ad );
+    const Vector3f bp( bd );
+    const Vector3f cp( cd );
+
+    out_.write( (const char*)&normal, 12 );
+    out_.write( (const char*)&ap, 12 );
+    out_.write( (const char*)&bp, 12 );
+    out_.write( (const char*)&cp, 12 );
+    std::uint16_t attr{ 0 };
+    out_.write( ( const char* )&attr, 2 );
+    ++savedNumTris_;
+    return (bool)out_;
+}
+
+bool BinaryStlSaver::updateHeadCounter()
+{
+    if ( savedNumTris_ != headNumTris_ )
+    {
+        const auto curr = out_.tellp();
+        out_.seekp( numTrisPos_ );
+        out_.write( ( const char* )&savedNumTris_, 4 );
+        headNumTris_ = savedNumTris_;
+        out_.seekp( curr );
+    }
+    return (bool)out_;
+}
+
+BinaryStlSaver::~BinaryStlSaver()
+{
+    updateHeadCounter();
 }
 
 Expected<void> toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
@@ -365,6 +398,15 @@ Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, con
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
+#ifndef __EMSCRIPTEN__
+    // it is hard to handle several files output for browser, so for now it is under ifdef,
+    // anyway later it may be reworked to save simple zip and taken out of ifdef
+    if ( settings.texture && !settings.texture->pixels.empty() )
+    {
+        if ( auto texSaver = ImageSave::getImageSaver( "*.jpg" ) ) // MeshLab cannot open textures from .PNG
+            (void)texSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".jpg" ) );
+    }
+#endif
     return toPly( mesh, out, settings );
 }
 
@@ -375,24 +417,36 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
-    const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
 
-    out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
-        "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
+    bool saveTexture = settings.texture && !settings.texture->pixels.empty();
+    bool saveUV = settings.uvMap && !settings.uvMap->empty();
+    bool saveColors = settings.colors && !settings.colors->empty();
+    bool saveFaceColors = settings.primitiveColors && !settings.primitiveColors->empty();
+
+    out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n";
+    if ( saveUV && saveTexture )
+        out << "comment TextureFile " <<  settings.materialName << ".jpg\n";
+    out << "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
+    if ( saveUV && !settings.saveTriCornerUVCoords )
+        out << "property float texture_u\nproperty float texture_v\n";
 
     const auto fLast = mesh.topology.lastValidFace();
     const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
-    out <<  "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\nend_header\n";
+    out << "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\n";
+    if ( saveFaceColors )
+        out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
+    if ( saveUV && settings.saveTriCornerUVCoords )
+        out << "property list uchar float texcoord\n";
+    out << "end_header\n";
 
+    static_assert( sizeof( UVCoord ) == 8, "wrong size of UVCoord" );
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
-#pragma pack(push, 1)
     struct PlyColor
     {
         unsigned char r = 0, g = 0, b = 0;
     };
-#pragma pack(pop)
     static_assert( sizeof( PlyColor ) == 3, "check your padding" );
 
     // write vertices
@@ -403,11 +457,16 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             continue;
         const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
         out.write( ( const char* )&p, 12 );
-        if ( settings.colors )
+        if ( saveColors )
         {
-            const auto c = ( *settings.colors )[i];
+            const auto c = getAt( *settings.colors, i );
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
+        }
+        if ( saveUV && !settings.saveTriCornerUVCoords )
+        {
+            const auto uv = getAt( *settings.uvMap, i );
+            out.write( ( const char* )&uv, sizeof( UVCoord ) );
         }
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
@@ -415,31 +474,39 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     }
 
     // write triangles
-    #pragma pack(push, 1)
-    struct PlyTriangle
-    {
-        char cnt = 3;
-        int v[3];
-    };
-    #pragma pack(pop)
-    static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
-
-    PlyTriangle tri;
+    Vector3i tri;
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
+        VertId vs[3];
         if ( mesh.topology.hasFace( f ) )
         {
-            VertId vs[3];
             mesh.topology.getTriVerts( f, vs );
             for ( int i = 0; i < 3; ++i )
-                tri.v[i] = vertRenumber( vs[i] );
+                tri[i] = vertRenumber( vs[i] );
         }
         else if ( !settings.packPrimitives )
-            tri.v[0] = tri.v[1] = tri.v[2] = 0;
+            tri[0] = tri[1] = tri[2] = 0;
         else
             continue;
-        out.write( (const char *)&tri, sizeof( PlyTriangle ) );
+        out.put( char( 3 ) );
+        static_assert( sizeof( Vector3i ) == 12 );
+        out.write( (const char *)&tri, sizeof( Vector3i ) );
+        if ( saveFaceColors )
+        {
+            const auto c = getAt( *settings.primitiveColors, f );
+            PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
+            out.write( ( const char* )&pc, 3 );
+        }
+        if ( saveUV && settings.saveTriCornerUVCoords )
+        {
+            UVCoord uvs[3];
+            for ( int i = 0; i < 3; ++i )
+                uvs[i] = getAt( *settings.uvMap, vs[i] );
+            out.put( char( 6 ) );
+            static_assert( sizeof( uvs ) == 3 * 2 * 4 );
+            out.write( (const char *)uvs, sizeof( uvs ) );
+        }
         ++savedFaces;
         if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )
             return unexpectedOperationCanceled();

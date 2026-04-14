@@ -72,8 +72,6 @@ std::string utf8string( const std::string & ) = delete;
 /// and containing at most \p count unicode symbols (but res.size() can be more than \p count since a unicode symbol can be represented by more than 1 byte)
 [[nodiscard]] MRMESH_API std::string utf8substr( const char * s, size_t pos, size_t count );
 
-/// \}
-
 /// converts given size in string:
 /// [0,1024) -> nnn bytes
 /// [1024,1024*1024) -> nnn.nn Kb
@@ -81,10 +79,15 @@ std::string utf8string( const std::string & ) = delete;
 /// ...
 [[nodiscard]] MRMESH_API std::string bytesString( size_t size );
 
-/// returns true if line contains any of OS prohibited chars ('?', '*', '/', '\', '"', '<', '>')
+/// returns true if the given character is any of prohibited in filenames in any of OSes
+/// https://stackoverflow.com/q/1976007/7325599
+[[nodiscard]] inline bool isProhibitedChar( char c )
+    { return c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' || c == ':' || c == '|' || (unsigned)c < 32; }
+
+/// returns true if line contains at least one character (c) for which isProhibitedChar(c)==true
 [[nodiscard]] MRMESH_API bool hasProhibitedChars( const std::string& line );
 
-/// replace OS prohibited chars ('?', '*', '/', '\', '"', '<', '>') with `replacement` char
+/// replace all characters (c), where isProhibitedChar(c)==true, with `replacement` char
 [[nodiscard]] MRMESH_API std::string replaceProhibitedChars( const std::string& line, char replacement = '_' );
 
 /// if (v) contains an error, then appends given file name to that error
@@ -125,5 +128,7 @@ MRMESH_API MR_BIND_IGNORE char * formatNoTrailingZeros( char * fmt, double v, in
 
 /// return a copy of the string with all alphabetic ASCII characters replaced with upper-case variants
 [[nodiscard]] MRMESH_API std::string toLower( std::string str );
+
+/// \}
 
 } //namespace MR

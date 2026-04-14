@@ -50,7 +50,7 @@ void testShortEdges( void )
     MR_MeshPart *mp = MR_MeshPart_Construct( mesh, NULL );
 
     MR_expected_MR_UndirectedEdgeBitSet_std_string* shortEdgesEx = MR_findShortEdges( mp, 0.1f, MR_PassBy_DefaultArgument, NULL );
-    MR_UndirectedEdgeBitSet* shortEdges = MR_expected_MR_UndirectedEdgeBitSet_std_string_GetMutableValue( shortEdgesEx );
+    MR_UndirectedEdgeBitSet* shortEdges = MR_expected_MR_UndirectedEdgeBitSet_std_string_value_mut( shortEdgesEx );
     TEST_ASSERT( shortEdges );
     MR_MeshPart_Destroy( mp );
 

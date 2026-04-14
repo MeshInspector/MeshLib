@@ -21,7 +21,7 @@ void fillFramebuffer( const Color& color )
 namespace MR
 {
 
-Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void()>& drawFunc )
+Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void( FramebufferData* framebuffer )>& drawFunc )
 {
     auto& viewer = Viewer::instanceRef();
     if ( !viewer.isGLInitialized() )
@@ -30,16 +30,16 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
 
     FramebufferData fd;
-    fd.gen( resolution, getMSAAPow( viewer.getRequestedMSAA() ) );
+    fd.gen( resolution, getViewerInstance().isDepthPeelingEnabled(), getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
 
     if ( backgroundColor )
         fillFramebuffer( *backgroundColor );
 
-    drawFunc();
+    drawFunc( &fd );
 
     fd.copyTextureBindDef();
-    fd.bindTexture();
+    fd.bindTexture( true, false ); // only bind color
 
     Image result;
     result.resolution = resolution;
@@ -50,7 +50,7 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     GLuint fbo;
     GL_EXEC( glGenFramebuffers( 1, &fbo ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, fbo ) );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0 ) );
+    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getColorTexture(), 0 ) );
 
     GL_EXEC( glReadPixels( 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, (void*)result.pixels.data() ) );
 

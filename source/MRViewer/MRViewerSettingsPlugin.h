@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRViewerFwd.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRShadowsGL.h"
 #include "MRViewer/MRSpaceMouseParameters.h"
@@ -75,6 +76,7 @@ private:
     void drawMeasurementUnitsTab_();
     void drawFeaturesTab_();
 
+    void drawLanguageSelector_();
     void drawThemeSelector_();
     void drawResetDialog_( bool activated );
     void drawShadingModeCombo_( bool inGroup, float toolWidth );
@@ -104,12 +106,14 @@ private:
 
     Vector4f backgroundColor_;
 
+    int selectedLanguage_{ -1 };
+
     int selectedUserPreset_{ 0 };
     std::vector<std::string> userThemesPresets_;
 
     std::unique_ptr<ShadowsGL> shadowGl_;
 
-    SpaceMouseParameters spaceMouseParams_;
+    SpaceMouse::Parameters spaceMouseParams_;
 #if defined(_WIN32) || defined(__APPLE__)
     bool activeMouseScrollZoom_{ false };
 #endif

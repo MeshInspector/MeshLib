@@ -18,6 +18,8 @@
 #include "imgui.h"
 #include <stack>
 #include <iterator>
+#include "MRCommandLoop.h"
+#include "MRI18n.h"
 
 namespace MR
 {
@@ -84,7 +86,7 @@ void SceneObjectsListDrawer::draw( float height )
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
-    ImGui::BeginChild( "EmptySpace" );
+    ImGui::BeginChild( "EmptySpace", ImGui::GetContentRegionAvail() );
     if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
     {
         for ( const auto& s : selected )
@@ -233,9 +235,31 @@ void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
         sceneOpenCommands_[obj] = open;
 }
 
+void SceneObjectsListDrawer::expandObjectTreeAndScroll( const Object* obj )
+{
+    if ( !obj )
+        return;
+    auto parent = obj->parent();
+    while ( parent && parent != &SceneRoot::get() )
+    {
+        setObjectTreeState( parent, true );
+        parent = parent->parent();
+    }
+
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto itAll = std::find( all.begin(), all.end(), obj->getSharedPtr() );
+    nextVisible_.index = int( std::distance( all.begin(), itAll ) );
+    setNextFrameFixScroll( 2 );
+}
+
 void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 {
     allowSceneReorder_ = allow;
+}
+
+void SceneObjectsListDrawer::setNextFrameFixScroll( int skipFrames /*= 1 */ )
+{
+    framesTillFixScroll_ = std::max( framesTillFixScroll_, skipFrames );
 }
 
 void SceneObjectsListDrawer::drawObjectsList_()
@@ -406,8 +430,24 @@ bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uni
 bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int )
 {
     const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
-    return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
+    auto openCommandIt = sceneOpenCommands_.find( &object );
+    bool resetOpenFlag = false;
+    if ( openCommandIt != sceneOpenCommands_.end() )
+    {
+        resetOpenFlag = true;
+        ImGui::SetNextItemOpen( openCommandIt->second );
+    }
+    auto res = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
                     ( hasRealChildren ? sDefaultGroupState : 0 ) );
+    if ( resetOpenFlag )
+    {
+        // as far as `TreeNodeUpdateNextOpen` uses `SetNextItemOpen` but does not clear it, we clear it manually
+        auto ctx = ImGui::GetCurrentContext();
+        ctx->NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasOpen;
+        ctx->NextItemData.OpenVal = sDefaultGroupState;
+        ctx->NextItemData.OpenCond = ImGuiCond_None;
+    }
+    return res;
 }
 
 void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr )
@@ -572,7 +612,7 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     if ( !sceneReorderWithUndo( sceneReorderCommand_ ) )
     {
         if ( !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to )
-            showModal( "Cannot perform such reorder", NotificationType::Error );
+            showModal( _tr( "Cannot perform such reorder" ), NotificationType::Error );
         else
         {
             sceneReorderCommand_ = {};
@@ -613,21 +653,24 @@ void SceneObjectsListDrawer::updateSceneWindowScrollIfNeeded_()
             getViewerInstance().incrementForceRedrawFrames();
         }
     }
-    else if ( nextFrameFixScroll_ )
+    else if ( framesTillFixScroll_ > 0 )
     {
-        nextFrameFixScroll_ = false;
-        float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;
-        float addScroll = 0.0f;
-        if ( absPos < 15 * UI::scale() )
-            addScroll = absPos - 15 * UI::scale();
-        else if ( absPos > window->Size.y - 15 * UI::scale() )
-            addScroll = absPos - ( window->Size.y - 15 * UI::scale() );
-        auto newScroll = std::clamp( window->Scroll.y + addScroll, 0.0f, window->ScrollMax.y );
-        if ( newScroll != window->Scroll.y )
+        --framesTillFixScroll_;
+        if ( framesTillFixScroll_ == 0 )
         {
-            window->Scroll.y = newScroll;
-            getViewerInstance().incrementForceRedrawFrames();
+            float absPos = prevScrollInfo_.absLinePosRatio * window->ContentSize.y - window->Scroll.y;
+            float addScroll = 0.0f;
+            if ( absPos < 15 * UI::scale() )
+                addScroll = absPos - 15 * UI::scale();
+            else if ( absPos > window->Size.y - 15 * UI::scale() )
+                addScroll = absPos - ( window->Size.y - 15 * UI::scale() );
+            auto newScroll = std::clamp( window->Scroll.y + addScroll, 0.0f, window->ScrollMax.y );
+            if ( newScroll != window->Scroll.y )
+            {
+                window->Scroll.y = newScroll;
+            }
         }
+        getViewerInstance().incrementForceRedrawFrames();
     }
 
     const ImGuiPayload* payloadCheck = ImGui::GetDragDropPayload();
@@ -668,19 +711,37 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
 
     size_t start{ 0 };
     std::vector<Object*> res;
+    size_t count = 0;
     if ( firstIt < clickedIt )
     {
         start = std::distance( all_objects.begin(), firstIt );
-        res.resize( std::distance( firstIt, clickedIt + 1 ) );
+        count = std::distance( firstIt, clickedIt + 1 );
     }
     else
     {
         start = std::distance( all_objects.begin(), clickedIt );
-        res.resize( std::distance( clickedIt, firstIt + 1 ) );
+        count = std::distance( clickedIt, firstIt + 1 );
     }
-    for ( int i = 0; i < res.size(); ++i )
+
+    auto checkVisibleInList = [&] ( size_t i )
     {
-        res[i] = all_objects[start + i].get();
+        Object* obj = all_objects[i]->parent();
+        while ( obj && obj != SceneRoot::getSharedPtr().get() )
+        {
+            const std::string uniqueStr = std::to_string( intptr_t( obj ) );
+            spdlog::info( "{}, {}", i, ImGui::GetCurrentWindow()->GetID(objectLineStrId_(*obj, uniqueStr).c_str()));
+            bool isOpen = ImGui::TreeNodeGetOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ) );
+            if ( !isOpen )
+                return false;
+            obj = obj->parent();
+        }
+        return true;
+    };
+    for ( size_t i = 0; i < count; ++i )
+    {
+        if ( !checkVisibleInList( start + i ) )
+            continue;
+        res.push_back( all_objects[start + i].get() );
     }
     return res;
 }

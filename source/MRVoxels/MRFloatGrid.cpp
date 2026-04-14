@@ -30,6 +30,13 @@ void FloatGrid::swap( FloatGrid& other ) noexcept
     ptr_.swap( other.ptr_ );
 }
 
+FloatGrid FloatGrid::deepCopy( const FloatGrid& other ) noexcept
+{
+    if ( other )
+        return MakeFloatGrid( other->deepCopy() );
+    return other;
+}
+
 OpenVdbFloatGrid* FloatGrid::get() const noexcept
 {
     return ptr_.get();
@@ -151,6 +158,44 @@ FloatGrid cropped( const FloatGrid& grid, const Box3i& box, ProgressCallback cb 
     return MakeFloatGrid( std::move( dest ) );
 }
 
+size_t countVoxelsWithValuePred( const FloatGrid& grid, const std::function<bool( float )>& pred )
+{
+    MR_TIMER;
+    if ( !pred || !grid )
+    {
+        assert( false );
+        return 0;
+    }
+    tbb::enumerable_thread_specific<size_t> tls( 0 );
+    openvdb::tools::foreach( grid->cbeginValueAll(), [&] ( const openvdb::FloatGrid::ValueAllCIter& it )
+    {
+        if ( !pred( it.getValue() ) )
+            return;
+        auto& local = tls.local();
+        local += it.getBoundingBox().volume();
+    } );
+    size_t res = 0;
+    for ( const auto& t : tls )
+        res += t;
+    return res;
+}
+
+size_t countVoxelsWithValueLess( const FloatGrid& grid, float value )
+{
+    return countVoxelsWithValuePred( grid, [value] ( float v )
+    {
+        return v < value;
+    } );
+}
+
+size_t countVoxelsWithValueGreater( const FloatGrid& grid, float value )
+{
+    return countVoxelsWithValuePred( grid, [value] ( float v )
+    {
+        return v > value;
+    } );
+}
+
 void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb /*= {} */ )
 {
     if ( !grid )
@@ -186,27 +231,61 @@ float getValue( const FloatGrid & grid, const Vector3i & p )
     return grid ? grid->getConstAccessor().getValue( openvdb::Coord{ p.x, p.y, p.z } ) : 0;
 }
 
+void setValue( FloatGrid& grid, const Vector3i& p, float value )
+{
+    if ( grid )
+        grid->getAccessor().setValue( openvdb::Coord{ p.x,p.y,p.z }, value );
+}
+
+Box3i findActiveBounds( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return Box3i();
+    }
+    return fromVdbBox( grid->evalActiveVoxelBoundingBox() );
+}
+
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
 {
     if ( !grid )
         return;
     MR_TIMER;
-    auto bbox = grid->evalActiveVoxelBoundingBox();
-    Vector3i dims = { bbox.dim().x(),bbox.dim().y(),bbox.dim().z() };
+    auto bbox = findActiveBounds( grid );
+    Vector3i dims = bbox.size();
     VolumeIndexer indexer = VolumeIndexer( dims );
-    auto minVox = bbox.min();
+    auto minVox = bbox.min;
     auto accessor = grid->getAccessor();
     for ( auto voxid : region )
     {
         auto pos = indexer.toPos( voxid );
-        auto coord = minVox + openvdb::Coord{ pos.x,pos.y,pos.z };
-        accessor.setValue( coord, value );
+        accessor.setValue( toVdb( minVox + pos ), value );
     }
 }
-void setValue( FloatGrid& grid, const Vector3i& p, float value )
+
+void setValues( FloatGrid& grid, const VoxelBitSet& region, const std::vector<float>& values )
 {
-    if ( grid )
-        grid->getAccessor().setValue( openvdb::Coord{ p.x,p.y,p.z }, value );
+    if ( !grid )
+        return;
+    MR_TIMER;
+    auto bbox = findActiveBounds( grid );
+    Vector3i dims = bbox.size();
+    VolumeIndexer indexer = VolumeIndexer( dims );
+    auto minVox = bbox.min;
+    auto accessor = grid->getAccessor();
+    size_t i = 0;
+    for ( auto voxid : region )
+    {
+        if ( i >= values.size() )
+        {
+            assert( false );
+            return;
+        }
+        auto pos = indexer.toPos( voxid );
+        accessor.setValue( toVdb( minVox + pos ), values[i] );
+        ++i;
+    }
 }
 
 void setLevelSetType( FloatGrid & grid )
@@ -215,25 +294,43 @@ void setLevelSetType( FloatGrid & grid )
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
 }
 
-FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )
+FloatGrid operator += ( FloatGrid & a, FloatGrid&& b )
 {
     MR_TIMER;
     openvdb::tools::csgUnion( ovdb( *a ), ovdb( *b ) );
     return a;
 }
 
-FloatGrid operator -= ( FloatGrid & a, const FloatGrid & b )
+FloatGrid operator+( const FloatGrid& a, const FloatGrid& b )
+{
+    MR_TIMER;
+    return MakeFloatGrid( openvdb::tools::csgUnionCopy( ovdb( *a ), ovdb( *b ) ) );
+}
+
+FloatGrid operator -= ( FloatGrid & a, FloatGrid&& b )
 {
     MR_TIMER;
     openvdb::tools::csgDifference( ovdb( *a ), ovdb( *b ) );
     return a;
 }
 
-FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
+FloatGrid operator-( const FloatGrid& a, const FloatGrid& b )
+{
+    MR_TIMER;
+    return MakeFloatGrid( openvdb::tools::csgDifferenceCopy( ovdb( *a ), ovdb( *b ) ) );
+}
+
+FloatGrid operator *= ( FloatGrid & a, FloatGrid&& b )
 {
     MR_TIMER;
     openvdb::tools::csgIntersection( ovdb( *a ), ovdb( *b ) );
     return a;
+}
+
+FloatGrid operator*( const FloatGrid& a, const FloatGrid& b )
+{
+    MR_TIMER;
+    return MakeFloatGrid( openvdb::tools::csgIntersectionCopy( ovdb( *a ), ovdb( *b ) ) );
 }
 
 } //namespace MR

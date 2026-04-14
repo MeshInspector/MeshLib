@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en-us>
+
+    <head>
+        <meta charset=utf-8>
+        <meta content="text/html; charset=utf-8" http-equiv=Content-Type>
+        <meta name="viewport" content="width=device-width, height=device-height, initial-scale=0.7" />
+        <title>ViewerApp</title>
+        <link rel="stylesheet" href="styles.css">
+        <link rel="preload" href="tool_not_supp.svg">
+    </head>
+
+    <body class="dark-theme adaptive-theme">
+        <div class=spinner id=spinner></div>
+        <div class="logo" id="logo"></div>
+        <div class=emscripten id=status>Downloading...</div>
+        <div class="progress-bg dark-progress adaptive-progress" id="progress-holder">
+            <div class="progress" id="progress">
+            </div>
+        </div>
+        <canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
+        <script src="ios_detect.js"></script>
+        <script src="color_theme.js"></script>
+        <script src="reset_events.js"></script>
+        <script src="popups.js"></script>
+        <script src="io_files.js"></script>
+        <script src="open_link.js"></script>
+        <script src="resize.js"></script>
+        <script src="setter_cursor_type.js"></script>
+        <script src="web_request.js"></script>
+        <script src="version.js"></script>
+        <script src="post_load.js"></script>
+        <script src="wasm_loader.js"></script>
+        <script src="config.js"></script>
+        <script src="error.js"></script>
+        <script src="download_desktop_window.js"></script>
+        <script async src=ViewerApp.js></script>
+    </body>
+
+</html>

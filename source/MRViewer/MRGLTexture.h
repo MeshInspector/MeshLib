@@ -5,6 +5,7 @@
 
 #include "MRGladGlfw.h"
 #include "MRMesh/MRVector3.h"
+#include "MRMesh/MREnums.h"
 
 namespace MR
 {

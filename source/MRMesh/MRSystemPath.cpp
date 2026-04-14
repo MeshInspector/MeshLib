@@ -25,21 +25,6 @@ namespace MR
 namespace
 {
 
-#if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-// If true, the resources should be loaded from the MRMesh.so/dylib directory, rather than from the system directories.
-[[nodiscard]] bool resourcesAreNearLib()
-{
-    static const bool res = []
-    {
-        auto opt = std::getenv( "MR_LOCAL_RESOURCES" );
-        bool res = opt && std::string_view( opt ) == "1";
-        spdlog::info( "MR_LOCAL_RESOURCES={}", res ? "1" : "0" );
-        return res;
-    }();
-    return res;
-}
-#endif
-
 std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 {
 #if defined( __EMSCRIPTEN__ )
@@ -49,11 +34,16 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     (void)dir;
     return SystemPath::getExecutableDirectory().value_or( "\\" );
 #elif defined( __APPLE__ )
-    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
-    if ( resourcesAreNearLib() )
-    {
+    auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    // detecting a developer build (all files are located in the same directory)
+    const auto execDir = SystemPath::getExecutableDirectory().value_or( "/" );
+    if ( libDir == execDir )
         return libDir;
-    }
+    // detecting developer build's bundle (<AppName>.app/Contents/MacOS/<AppName>)
+    if ( execDir.filename() == "MacOS"
+        && execDir.parent_path().filename() == "Contents"
+        && execDir.parent_path().parent_path().parent_path() == libDir )
+        return libDir;
 
     using Directory = SystemPath::Directory;
     switch ( dir )
@@ -72,7 +62,9 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     MR_UNREACHABLE
 #else
     auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
-    if ( resourcesAreNearLib() )
+    // detecting a developer build (all files are located in the same directory)
+    const auto execDir = SystemPath::getExecutableDirectory().value_or( "/" );
+    if ( libDir == execDir )
         return libDir;
 
     static const auto findResourceDir = [] ( std::filesystem::path libDir ) -> std::filesystem::path
@@ -175,6 +167,7 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
         if ( maybeRes )
         {
             spdlog::info( "Executable path: {}", utf8string( *maybeRes ) );
+#ifndef __EMSCRIPTEN__ // in Wasm the path is not a file name, but starts with https://
             std::error_code ec;
             auto canonicalPath = canonical( *maybeRes, ec );
             if ( ec )
@@ -184,6 +177,7 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
                 *maybeRes = canonicalPath;
                 spdlog::info( "Executable path in canonical form: {}", utf8string( *maybeRes ) );
             }
+#endif
         }
         return maybeRes;
     }();
@@ -316,7 +310,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
             }
 
             if( isFont )
-                allSystemFonts.push_back( { font, font.filename().string() } );
+                allSystemFonts.push_back( { font, utf8string( font.filename() ) } );
         }
     }
 
@@ -364,7 +358,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         {
             for ( const auto& suffix : suffixes )
             {
-                auto curFontName = font.stem().string();
+                auto curFontName = utf8string( font.stem() );
                 for ( auto& format : supportFormat )
                 {
                     auto posEndName = curName.find( "-" + suffix + format );
@@ -410,7 +404,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 
         if ( suffixName.empty() )
         {
-            firstFontName = font.stem().string();
+            firstFontName = utf8string( font.stem() );
         }
 
         numFont = fonts.size() - 1;

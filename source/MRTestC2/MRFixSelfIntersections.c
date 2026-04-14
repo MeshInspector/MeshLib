@@ -21,7 +21,7 @@ void testFixSelfIntersections( void )
     TEST_ASSERT( validFacesCount == 1024 );
 
     MR_expected_MR_FaceBitSet_std_string* intersections_ex = MR_SelfIntersections_getFaces( mesh, false, MR_PassBy_DefaultArgument, NULL );
-    MR_FaceBitSet* intersections = MR_expected_MR_FaceBitSet_std_string_GetMutableValue( intersections_ex );
+    MR_FaceBitSet* intersections = MR_expected_MR_FaceBitSet_std_string_value_mut( intersections_ex );
     TEST_ASSERT( intersections );
     size_t intersectionsCount = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( intersections ) );
     TEST_ASSERT( intersectionsCount == 128 );
@@ -37,7 +37,7 @@ void testFixSelfIntersections( void )
     TEST_ASSERT( validFacesCount == 1194 );
 
     intersections_ex = MR_SelfIntersections_getFaces( mesh, false, MR_PassBy_DefaultArgument, NULL );
-    intersections = MR_expected_MR_FaceBitSet_std_string_GetMutableValue( intersections_ex );
+    intersections = MR_expected_MR_FaceBitSet_std_string_value_mut( intersections_ex );
     TEST_ASSERT( intersections );
     intersectionsCount = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( intersections ) );
     TEST_ASSERT( intersectionsCount == 0 );

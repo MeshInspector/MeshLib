@@ -1,5 +1,0 @@
-<Project>    
-	<PropertyGroup>
-        	<BaseIntermediateOutputPath>..\..\source\TempOutput\MRDotNetTest\</BaseIntermediateOutputPath>
-    </PropertyGroup>
-</Project>

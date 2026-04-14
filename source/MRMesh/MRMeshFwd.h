@@ -75,13 +75,17 @@
 #   else
 #       define MRMESH_API __declspec(dllimport)
 #   endif
-#   define MRMESH_CLASS
+#   define MRMESH_CLASS // VS implicitly exports typeinfo/vtable
 #else
 #   define MRMESH_API   __attribute__((visibility("default")))
 // to fix undefined reference to `typeinfo/vtable`
 // Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
 //   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
-#   define MRMESH_CLASS __attribute__((visibility("default")))
+#   ifdef __clang__ // https://stackoverflow.com/q/29717029/7325599
+#       define MRMESH_CLASS __attribute__((type_visibility("default"))) //unlike `visibility`, `type_visibility` does not make all (including private) member functions visible
+#   else
+#       define MRMESH_CLASS __attribute__((visibility("default")))
+#   endif
 #endif
 
 namespace MR
@@ -478,6 +482,7 @@ using IsoLines = SurfacePaths;
 using PlaneSection = SurfacePath;
 using PlaneSections = SurfacePaths;
 struct EdgePointPair;
+struct GeodesicPath;
 class Laplacian;
 
 using VertPair = std::pair<VertId, VertId>;
@@ -490,6 +495,8 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), TriPoint,
     ( TriPointd, TriPoint<double> )
 )
 
+struct FaceFace;
+struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
 struct MeshTriPoint;
@@ -510,6 +517,9 @@ using TwoVertIds = std::array<VertId, 2>;
 /// three vertex ids describing a triangle with the corners in vertices given by their ids
 using ThreeVertIds = std::array<VertId, 3>;
 
+/// three UV-coordinates describing texturing of a triangle
+using ThreeUVCoords = std::array<UVCoord, 3>;
+
 struct MRMESH_CLASS Dipole;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
@@ -518,6 +528,9 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), V
 
     /// mapping from FaceId to a triple of vertex indices
     ( Triangulation,  Vector<ThreeVertIds, FaceId> )
+
+    /// mapping from FaceId to a triple of UV-coordinates
+    ( TriCornerUVCoords, Vector<ThreeUVCoords, FaceId> )
 
     ( Dipoles,  Vector<Dipole, NodeId> )
 
@@ -627,6 +640,8 @@ struct MRMESH_CLASS PartMapping;
 struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
+struct FillHoleParams;
+struct FillHoleNicelySettings;
 struct TriMesh;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,
@@ -674,6 +689,7 @@ class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
 struct ObjectMeshData;
+struct LoadedMeshData;
 class ObjectPointsHolder;
 class ObjectPoints;
 class ObjectLinesHolder;
@@ -705,6 +721,10 @@ class ChangeMeshAction;
 class ChangeMeshDataAction;
 class ChangeMeshPointsAction;
 class ChangeMeshTopologyAction;
+class PartialChangeMeshAction;
+class PartialChangeMeshPointsAction;
+class PartialChangeMeshTopologyAction;
+class VersatileChangeMeshPointsAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;
@@ -723,31 +743,20 @@ class WatershedGraph;
 
 struct TbbTaskArenaAndGroup;
 
+struct SaveSettings;
+namespace SceneSave  { struct Settings; }
+namespace ObjectSave { struct Settings; }
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-enum class FilterType : char
-{
-    Linear,
-    Discrete
-};
+enum class FilterType : char;
+enum class WrapType : char;
+enum class Reorder : char;
 
-enum class WrapType : char
-{
-    Repeat,
-    Mirror,
-    Clamp
-};
-
-/// determines how points to be ordered
-enum class Reorder : char
-{
-    None,              ///< the order is not changed
-    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
-    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
-};
+struct TransparencyMode;
 
 /// squared value
 template <typename T>
@@ -792,6 +801,17 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
+namespace Locale
+{
+
+/// special no-op inline functions to mark string literal as translatable
+constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
+constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
+constexpr inline auto translate_noop( const char* single, const char* plural, Int64 n ) noexcept { return n == 1 ? single : plural; }
+constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, Int64 n ) noexcept { (void)ctx; return n == 1 ? single : plural; }
+
+} // namespace Locale
+
 } //namespace MR
 
 #ifdef __cpp_lib_unreachable
@@ -807,3 +827,7 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+#ifndef MR_NO_I18N_MACROS
+#define _t( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+#endif // MR_NO_I18N_MACROS

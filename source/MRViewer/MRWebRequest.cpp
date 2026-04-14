@@ -5,6 +5,8 @@
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -233,10 +235,10 @@ void WebRequest::clear()
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
-    inputPath_ = {};
+    inputPath_ = std::filesystem::path{};
     formData_ = {};
     body_ = {};
-    outputPath_ = {};
+    outputPath_ = std::filesystem::path{};
     uploadCallback_ = {};
     downloadCallback_ = {};
 }
@@ -261,7 +263,7 @@ void WebRequest::setHeaders( std::unordered_map<std::string, std::string> header
     headers_ = std::move( headers );
 }
 
-void WebRequest::setInputPath( std::string inputPath )
+void WebRequest::setInputPath( std::filesystem::path inputPath )
 {
     inputPath_ = std::move( inputPath );
 }
@@ -281,7 +283,7 @@ void WebRequest::setBody( std::string body )
     body_ = std::move( body );
 }
 
-void WebRequest::setOutputPath( std::string outputPath )
+void WebRequest::setOutputPath( std::filesystem::path outputPath )
 {
     outputPath_ = std::move( outputPath );
 }
@@ -360,18 +362,22 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
-
-#ifdef MRVIEWER_WITH_BUNDLED_CURL
+#if defined _WIN32 || defined MRVIEWER_WITH_BUNDLED_CURL
         if ( url.starts_with( "https" ) )
         {
+            cpr::SslOptions sslOpts;
+#ifdef _WIN32
+            sslOpts.SetOption( cpr::ssl::NoRevoke{ true } ); // needed to avoid some firewall issues "next InitializeSecurityContext failed: CRYPT_E_NO_REVOCATION_CHECK (0x80092012)"
+#endif
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
             // set the certificate info manually; see getCaInfo for more info
             static const auto cCaInfo = getCaInfo( session );
             if ( !cCaInfo.empty() )
             {
-                session.SetSslOptions( cpr::Ssl(
-                    cpr::ssl::CaInfo{ std::string{ cCaInfo } }
-                ) );
+                sslOpts.SetOption( cpr::ssl::CaInfo{ std::string{ cCaInfo } } );
             }
+#endif
+            session.SetSslOptions( sslOpts );
         }
 #endif
 
@@ -445,7 +451,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback, logName, url = urlP] ()
+        std::thread requestThread = std::thread( protectedFunc( [sendLambda, callback, logName, url = urlP] ()
         {
             spdlog::info( "WebRequest  {}: {}", logName.c_str(), url.c_str() );
             auto res = sendLambda();
@@ -472,7 +478,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
             {
                 callback( resJson );
             }, CommandLoop::StartPosition::AfterPluginInit );
-        } );
+        } ) );
         putIntoWaitingMap_( std::move( requestThread ) );
     }
 #else
@@ -491,7 +497,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     },
         timeout_,
         body_.c_str(),
-        inputPath_.c_str(),
+        utf8string( inputPath_ ).c_str(),
         method.c_str(),
         (bool)uploadCallback_,
         (bool)downloadCallback_,
@@ -522,9 +528,29 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     ctx->responseCallback = callback;
 
     if ( outputPath_.empty() )
+    {
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
+    }
+#ifndef __EMSCRIPTEN_PTHREADS__
+    else if ( !async )
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_sync_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
+#endif
     else
-        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), outputPath_.c_str(), ctxId );
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
 #pragma clang diagnostic pop
 #endif
 }

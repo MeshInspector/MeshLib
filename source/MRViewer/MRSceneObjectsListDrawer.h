@@ -39,20 +39,23 @@ public:
     /// isDown - true if pressed F4, false - F3
     MRVIEWER_API void changeVisible( bool isDown );
 
-    // select all selectable objects
+    /// select all selectable objects
     MRVIEWER_API void selectAllObjects();
 
-    // stt visible flag all selectable objects
+    /// set visible flag all selectable objects
     MRVIEWER_API void setLeavesVisibility( bool visible );
 
     /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+    /// expands all `obj`s parents in tree and scroll scene tree window so selection becomes visible
+    MRVIEWER_API void expandObjectTreeAndScroll( const Object* obj );
+
     /// set possibility change object order
     MRVIEWER_API void allowSceneReorder( bool allow );
 
     /// helper method for fix scroll position after change available height
-    MRVIEWER_API void setNextFrameFixScroll() { nextFrameFixScroll_ = true; }
+    MRVIEWER_API void setNextFrameFixScroll( int skipFrames = 1 );
 protected:
     /// override this to customize prefix for objects in scene
     /// \detail height should be less or equal ImGui::GetFrameHeight()
@@ -140,7 +143,7 @@ private:
         float absLinePosRatio{ 0.0f };
     } prevScrollInfo_;
     // true to fix scroll position in next frame
-    bool nextFrameFixScroll_{ false };
+    int framesTillFixScroll_ = 0;
     // flag to know if we are dragging objects now or not
     bool dragObjectsMode_{ false };
     // dragging either just started, or just stopped

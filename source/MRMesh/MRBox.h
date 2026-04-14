@@ -6,6 +6,7 @@
 #include "MRVectorTraits.h"
 #include <algorithm>
 #include <cassert>
+#include <iosfwd>
 #include <limits>
 #include <type_traits>
 
@@ -54,7 +55,9 @@ public:
     explicit Box( NoInit ) { }
     #endif
 
-    template <typename U>
+    // Here `V == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<V, U> )
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
 
     static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min, V( min + size ) }; }
@@ -270,6 +273,16 @@ public:
         { return min == a.min && max == a.max;  }
     bool operator != ( const Box & a ) const
         { return !( *this == a ); }
+
+    friend std::ostream& operator<<( std::ostream& s, const Box<V>& box )
+    {
+        return s << box.min << '\n' << box.max;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Box<V>& box )
+    {
+        return s >> box.min >> box.max;
+    }
 };
 
 template <typename T>

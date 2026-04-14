@@ -68,16 +68,16 @@ AffineXf3f ICP::autoSelectFloatXf()
 
     PointAccumulator refAcc;
     ref_.obj.accumulate( refAcc );
-    const auto refBasisXfs = refAcc.get4BasicXfs3f();
+    const auto refBasisXfs = refAcc.get4BasicXfs();
 
     PointAccumulator floatAcc;
     flt_.obj.accumulate( floatAcc );
-    const auto floatBasisXf = floatAcc.getBasicXf3f();
+    const auto floatBasisXf = floatAcc.getBasicXf();
 
     // TODO: perform computations in parallel by calling free functions to measure the distance
     for ( const auto & refBasisXf : refBasisXfs )
     {
-        auto fltXf = ref_.xf * refBasisXf * floatBasisXf.inverse();
+        AffineXf3f fltXf( AffineXf3d( ref_.xf ) * refBasisXf * floatBasisXf.inverse() );
         setFloatXf( fltXf );
         updatePointPairs();
         const float dist = getMeanSqDistToPoint();
@@ -121,7 +121,7 @@ void ICP::updatePointPairs()
 
 std::string getICPStatusInfo( int iterations, ICPExitType exitType )
 {
-    std::string result = "Performed " + std::to_string( iterations - 1 ) + " iterations.\n";
+    std::string result = "Performed " + std::to_string( iterations ) + " iterations.\n";
     switch ( exitType )
     {
     case MR::ICPExitType::NotFoundSolution:
@@ -149,8 +149,8 @@ void updatePointPairs( PointPairs & pairs,
     float cosThreshold, float distThresholdSq, bool mutualClosest )
 {
     MR_TIMER;
-    const auto src2tgtXf = tgt.xf.inverse() * src.xf;
-    const auto tgt2srcXf = src.xf.inverse() * tgt.xf;
+    const AffineXf3f src2tgtXf( AffineXf3d( tgt.xf ).inverse() * AffineXf3d( src.xf ) );
+    const AffineXf3f tgt2srcXf( AffineXf3d( src.xf ).inverse() * AffineXf3d( tgt.xf ) );
 
     const VertCoords& srcPoints = src.obj.points();
     const VertCoords& tgtPoints = tgt.obj.points();
@@ -284,13 +284,13 @@ bool ICP::p2ptIter_()
     return true;
 }
 
-AffineXf3f getAligningXf( const PointToPlaneAligningTransform & p2pl,
+AffineXf3d getAligningXf( const PointToPlaneAligningTransform & p2pl,
     ICPMode mode, float angleLimit, float scaleLimit, const Vector3f & fixedRotationAxis )
 {
-    AffineXf3f res;
+    AffineXf3d res;
     if( mode == ICPMode::TranslationOnly )
     {
-        res = AffineXf3f( Matrix3f(), Vector3f( p2pl.findBestTranslation() ) );
+        res = AffineXf3d( Matrix3d(), p2pl.findBestTranslation() );
     }
     else
     {
@@ -327,7 +327,7 @@ AffineXf3f getAligningXf( const PointToPlaneAligningTransform & p2pl,
             // recompute translation part
             am.b = p2pl.findBestTranslation( am.a, am.s );
         }
-        res = AffineXf3f( am.rigidScaleXf() );
+        res = am.rigidScaleXf();
     }
     return res;
 }
@@ -354,7 +354,6 @@ bool ICP::p2plIter_()
     if ( activeCount <= 0 )
         return false;
     centroidRef /= float(activeCount * 2);
-    AffineXf3f centroidRefXf = AffineXf3f(Matrix3f(), centroidRef);
 
     PointToPlaneAligningTransform p2pl;
     for ( size_t idx : flt2refPairs_.active )
@@ -369,38 +368,38 @@ bool ICP::p2plIter_()
     }
     p2pl.prepare();
 
-    AffineXf3f res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
+    const AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
     if (std::isnan(res.b.x)) //nan check
         return false;
-    setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * flt_.xf );
+
+    const AffineXf3d subCentroid{ Matrix3d(), Vector3d( -centroidRef ) };
+    const AffineXf3d addCentroid{ Matrix3d(), Vector3d(  centroidRef ) };
+    setFloatXf( AffineXf3f( addCentroid * res * subCentroid * AffineXf3d( flt_.xf ) ) );
     return true;
 }
 
-AffineXf3f ICP::calculateTransformation()
+void ICP::calcGen_( float (ICP::*dist)() const, bool (ICP::*iter)() )
 {
-    float minDist = std::numeric_limits<float>::max();
+    updatePointPairs();
+    float minDist = (this->*dist)();
+
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
     AffineXf3f resXf = flt_.xf;
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        updatePointPairs();
-        const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
-            || prop_.method == ICPMethod::PointToPoint;
-
-        if ( iter_ == 1 )
-            minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane(); // update initial metric before doing iteration
-
-        if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
+        if ( !(this->*iter)() )
         {
             resultType_ = ICPExitType::NotFoundSolution;
             break;
         }
+        // without this call, getMeanSqDistToPoint()/getMeanSqDistToPlane() will ignore xf changed in p2ptIter_()/p2plIter_()
+        updatePointPairs();
 
-        const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        const float curDist = (this->*dist)();
 
         // exit if several(3) iterations didn't decrease minimization parameter
-        if (curDist < minDist)
+        if ( curDist < minDist )
         {
             resXf = flt_.xf;
             minDist = curDist;
@@ -423,7 +422,55 @@ AffineXf3f ICP::calculateTransformation()
         }
     }
     flt_.xf = resXf;
-    return resXf;
+}
+
+void ICP::calcP2Pt_()
+{
+    MR_TIMER;
+    calcGen_( &ICP::getMeanSqDistToPoint, &ICP::p2ptIter_ );
+}
+
+void ICP::calcP2Pl_()
+{
+    MR_TIMER;
+    calcGen_( &ICP::getMeanSqDistToPlane, &ICP::p2plIter_ );
+}
+
+void ICP::calcCombined_()
+{
+    MR_TIMER;
+    assert( prop_.iterLimit > 2 );
+    const auto safeLimit = prop_.iterLimit;
+
+    prop_.iterLimit = 2;
+    calcP2Pt_();
+    auto p2pItersDone = iter_;
+
+    prop_.iterLimit = safeLimit - 2;
+    calcP2Pl_();
+    iter_ += p2pItersDone;
+
+    prop_.iterLimit = safeLimit;
+}
+
+AffineXf3f ICP::calculateTransformation()
+{
+    switch ( prop_.method )
+    {
+    case ICPMethod::Combined:
+        calcCombined_();
+        break;
+    case ICPMethod::PointToPoint:
+        calcP2Pt_();
+        break;
+    case ICPMethod::PointToPlane:
+        calcP2Pl_();
+        break;
+    default:
+        assert( false );
+        break;
+    }
+    return flt_.xf;
 }
 
 size_t getNumActivePairs( const IPointPairs& pairs )

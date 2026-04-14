@@ -5,6 +5,27 @@
 namespace MR
 {
 
+enum class FilterType : char
+{
+    Linear,
+    Discrete
+};
+
+enum class WrapType : char
+{
+    Repeat,
+    Mirror,
+    Clamp
+};
+
+/// determines how points to be ordered
+enum class Reorder : char
+{
+    None,              ///< the order is not changed
+    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
+    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
+};
+
 /// determines the weight or mass of each vertex in applications like Laplacian
 enum class VertexMass
 {
@@ -26,6 +47,12 @@ enum class EdgeWeights
 
     /// cotangent edge weights and equation weights inversely proportional to square root of local area
     // CotanWithAreaEqWeight => use EdgeWeights::Cotan and VertexMass::NeiArea instead
+};
+
+enum class RememberShape
+{
+    Yes,  ///< true Laplacian mode when initial mesh shape is remembered and copied in apply
+    No    ///< ignore initial mesh shape in the region and just position vertices smoothly in the region
 };
 
 /// typically returned from callbacks to control the behavior of main algorithm
@@ -80,6 +107,13 @@ enum class GeodesicPathApprox : char
     DijkstraAStar,
     /// use Fast Marching algorithm
     FastMarching
+};
+
+/// what way a path can follow in case of several alternatives
+enum class Turn : bool
+{
+    Leftmost,
+    Rightmost
 };
 
 } //namespace MR

@@ -15,9 +15,12 @@ function checkPackage {
 }
 
 BASEDIR=$(dirname $(realpath "$0"))
-REQUIREMENTS_FILE="$BASEDIR"/../requirements/ubuntu.txt
+MESHLIB_APT_REQUIREMENTS=$(cat "$BASEDIR"/../requirements/ubuntu.txt)
+if [ -n "$MESHLIB_EXTRA_APT_REQUIREMENTS" ] ; then
+  MESHLIB_APT_REQUIREMENTS=$MESHLIB_APT_REQUIREMENTS$'\n'$MESHLIB_EXTRA_APT_REQUIREMENTS
+fi
 
-for req in `cat $REQUIREMENTS_FILE`; do
+for req in "$MESHLIB_APT_REQUIREMENTS"; do
   checkPackage "${req}"
 done
 
@@ -48,14 +51,6 @@ python3 -m pip install --upgrade pip
 
 # install requirements for python libs
 python3 -m pip install -r requirements/python.txt
-
-# fix boost signal2 C++20 error in default version 1.71.0 from `apt`
-# NOTE: 1.75+ version already has this fix
-# https://github.com/boostorg/signals2/commit/15fcf213563718d2378b6b83a1614680a4fa8cec
-if ! grep -q BOOST_NO_CXX11_ALLOCATOR /usr/include/boost/signals2/detail/auto_buffer.hpp ; then
-  BOOST_PATCH_FILE="$BASEDIR/patches/boost_fix_using_signals2_with_gcc_10_and_std_gnu_20.patch"
-  sudo patch --forward --directory=/usr/ --strip=1 --input="$BOOST_PATCH_FILE"
-fi
 
 # invalidate sudo credentials
 if [ "${RUN_AS_ROOT}" = "NO" ]; then

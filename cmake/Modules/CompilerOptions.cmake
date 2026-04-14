@@ -2,12 +2,10 @@
 
 set(MR_PCH_DEFAULT OFF)
 # for macOS, GCC, and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
+IF((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
   set(MR_PCH_DEFAULT ON)
 ELSEIF(MSVC)
   set(MR_PCH_DEFAULT ON)
-#ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-#  set(MR_PCH_DEFAULT ON)
 ENDIF()
 set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
 IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
@@ -66,6 +64,8 @@ IF(MSVC)
   #   warning C4710: function not inlined
   #   warning C4711: function selected for automatic inline expansion
   #   warning C4820: N bytes padding added after data member
+  #   warning C4865: the underlying type will change from 'int' to '__int64' when '/Zc:enumTypes' is specified on the command line (VS2026 v18.0.0, https://developercommunity.visualstudio.com/t/VS2026-MSVC-Warning-C4865-lies-about-und/10966873)
+  #   warning C4866: compiler may not enforce left-to-right evaluation order for call to
   #   warning C4868: compiler may not enforce left-to-right evaluation order in braced initializer list
   #   warning C5026: move constructor was implicitly defined as deleted
   #   warning C5027: move assignment operator was implicitly defined as deleted
@@ -81,12 +81,19 @@ IF(MSVC)
   #   warning C5264: 'const' variable is not used
   #   warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
   # !! NOTE: Sync this list with `common.props` !!
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4865 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
 ELSE()
   set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+  # command line option '-fvisibility-inlines-hidden' is valid for C++/ObjC++ but not for C, so we cannot put it in MESHLIB_COMMON_C_CXX_FLAGS
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
 
   IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-newline-eof")
+
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 22)
+      # required for __COUNTER__
+      set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-c2y-extensions")
+    endif()
   ENDIF()
 ENDIF()
 
@@ -179,8 +186,7 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VE
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++23-attribute-extensions")
 ENDIF()
 
-
-IF(WIN32)
+IF(MSVC)
   # Disable incremental linking in debug modes, to avoid generating the large `.ilk` files.
   # It already defaults to off in other configurations.
   string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
@@ -189,4 +195,11 @@ IF(WIN32)
   string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO}")
   string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
   string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO}")
+
+  # to overcome https://stackoverflow.com/q/68334645/7325599
+  # CMAKE_MSVC_DEBUG_INFORMATION_FORMAT doesn't seem to work properly
+  string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+  string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+  string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 ENDIF()

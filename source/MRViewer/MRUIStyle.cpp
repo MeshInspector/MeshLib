@@ -7,10 +7,13 @@
 #include "MRRibbonFontManager.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
+#include "MRModalDialog.h"
 #include "MRViewer/MRViewer.h"
-#include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRRibbonFontHolder.h"
+#include "MRMesh/MRVector4.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
 
 #include <imgui_internal.h>
 
@@ -231,13 +234,21 @@ void init()
 
 ImGuiKey getImGuiModPrimaryCtrl()
 {
-    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL || 
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL ||
         ( getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER && ImGui::GetIO().ConfigMacOSXBehaviors ) ) // In new version of ImGui ImGuiMod_Ctrl is already swapped with ImGuiMod_Super internally, so we don't swap it on our end
     {
         return ImGuiMod_Ctrl;
     }
     else
         return ImGuiMod_Super;
+}
+
+const char* getImGuiPrimaryCtrlName()
+{
+    if ( ImGui::GetIO().ConfigMacOSXBehaviors )
+        return getSuperModName();
+    else
+        return "Ctrl";
 }
 
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
@@ -344,7 +355,6 @@ bool buttonEx( const char* label, bool active, const Vector2f& size /*= Vector2f
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-    const auto menu = ImGuiMenu::instance();
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * UI::scale() ) );
 
@@ -360,8 +370,6 @@ bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
 {
-    const auto menu = ImGuiMenu::instance();
-
     Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
@@ -696,7 +704,6 @@ bool toggle( const char* label, bool* value )
         return false;
     const ImGuiStyle& style = ImGui::GetStyle();
 
-    const auto menu = ImGuiMenu::instance();
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
     sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
@@ -750,8 +757,6 @@ bool toggle( const char* label, bool* value )
 static bool checkboxWithoutTestEngine( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-
-    const auto menu = ImGuiMenu::instance();
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
@@ -935,7 +940,7 @@ static std::string modifiersToString( int modifiers )
 {
     std::string modsText;
     for ( const auto& [bit, name] : {
-        std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+        std::pair( ImGuiMod_Ctrl, getImGuiPrimaryCtrlName() ),
         std::pair( ImGuiMod_Super, getSuperModName() ),
         std::pair( ImGuiMod_Shift, "Shift" ),
         std::pair( ImGuiMod_Alt, getAltModName() ),
@@ -993,9 +998,11 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
 
 bool radioButton( const char* label, int* value, int valButton )
 {
-    const ImGuiStyle& style = ImGui::GetStyle();
+    const bool simulateClick = TestEngine::createButton( label );
+    if ( simulateClick )
+        *value = valButton;
 
-    const auto menu = ImGuiMenu::instance();
+    const ImGuiStyle& style = ImGui::GetStyle();
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
@@ -1039,7 +1046,6 @@ bool radioButton( const char* label, int* value, int valButton )
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
-        const auto menu = ImGuiMenu::instance();
         const ImVec2 pos = window->DC.CursorPos;
         const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
         const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
@@ -1086,9 +1092,7 @@ bool radioButton( const char* label, int* value, int valButton )
         return pressed;
     };
 
-    auto res = drawCustomRadioButton( label, value, valButton );
-
-    return res;
+    return drawCustomRadioButton( label, value, valButton ) || simulateClick;
 }
 
 bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std::optional<int> valueOverride )
@@ -1507,6 +1511,8 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     for ( int i = 0; i < int( options.size() ); ++i )
     {
         ImGui::PushID( ( label + std::to_string( i ) ).c_str() );
+
+        // Not using `comboElem()`, because that would add Test Engine integration, and we already have our own here.
         if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
         {
             selected = true;
@@ -1525,7 +1531,29 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     return selected || valueOverridden;
 }
 
-bool beginCombo( const char* label, const std::string& text /*= "Not selected" */, bool showPreview /*= true*/ )
+
+namespace
+{
+    struct ActiveCombo
+    {
+        std::string label;
+        std::string value;
+
+        std::optional<std::string> simulateClickForElem;
+
+        // Don't render the UI, but collect the calls to `comboElem()`, and possibly override their return values.
+        bool uiIsHidden = false;
+
+        bool testEngineEnabled = false;
+
+        // This could eventually be made a set. Then you'd need to change `allowedValue` in the test engine to a set too.
+        std::vector<std::string> collectedElems;
+    };
+
+    thread_local std::vector<ActiveCombo> activeCombos;
+}
+
+bool beginCombo( const char* label, const std::string& text, bool enableTestEngine /*= true*/ )
 {
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, StyleConsts::CustomCombo::framePadding );
@@ -1535,18 +1563,13 @@ bool beginCombo( const char* label, const std::string& text /*= "Not selected" *
     const auto& style = ImGui::GetStyle();
     const ImVec2 pos = window->DC.CursorPos;
     const float arrowSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight();
-    if ( !showPreview )
-        ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
     float itemWidth = ( context->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
     auto res = ImGui::BeginCombo( label, nullptr, ImGuiComboFlags_NoArrowButton );
-    if ( showPreview )
-    {
-        ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, text.c_str(), nullptr, nullptr );
-    }
+    ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, text.c_str(), nullptr, nullptr );
 
     const float halfHeight = arrowBox.GetHeight() * 0.5f;
     const float arrowHeight = arrowBox.GetHeight() * 5.0f / 42.0f;
@@ -1561,15 +1584,70 @@ bool beginCombo( const char* label, const std::string& text /*= "Not selected" *
 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 
+    { // Test engine integration.
+        ActiveCombo &activeCombo = activeCombos.emplace_back();
+        activeCombo.label = label;
+        activeCombo.value = text;
+
+        if ( enableTestEngine )
+        {
+            activeCombo.simulateClickForElem = TestEngine::createValueTentative<std::string>( label );
+            activeCombo.uiIsHidden = !res;
+            activeCombo.testEngineEnabled = true;
+
+            // Force return true to discover the contents.
+            res = true;
+        }
+    }
+
     return res;
 }
 
-void endCombo( bool showPreview /*= true*/ )
+void endCombo()
 {
-    ImGui::EndCombo();
-    if ( !showPreview )
-        ImGui::PopItemWidth();
+    bool callEndCombo = true;
+
+    { // Test engine integration.
+        assert( !activeCombos.empty() );
+        ActiveCombo& active = activeCombos.back();
+
+        // This assert shouldn't happen often, since we also collect the list of known elements and give them to the test engine.
+        // I think this can only trigger if the offending element disappears from the list on the same frame as it's clicked through the test engine.
+        assert( !active.simulateClickForElem && "A non-existing element was clicked through the test engine." );
+
+        if ( active.testEngineEnabled )
+            (void)TestEngine::createValue( active.label, active.value, true, active.collectedElems );
+
+        callEndCombo = !active.uiIsHidden;
+
+        active.collectedElems.pop_back();
+    }
+
+    if ( callEndCombo )
+        ImGui::EndCombo();
 }
+
+bool comboElem( const char* label, bool selected )
+{
+    assert( !activeCombos.empty() );
+
+    ActiveCombo& active = activeCombos.back();
+    if ( active.testEngineEnabled )
+        active.collectedElems.push_back( label );
+
+    bool ret = false;
+    if ( active.simulateClickForElem && *active.simulateClickForElem == label )
+    {
+        ret = true;
+        active.simulateClickForElem = {};
+    }
+
+    if ( !active.uiIsHidden && ImGui::Selectable( label, selected ) )
+        ret = true;
+
+    return ret;
+}
+
 
 // copied from ImGui::SliderScalar with some visual changes
 bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags )
@@ -1688,8 +1766,7 @@ static void drawDragCursor()
     auto mousePos = ImGui::GetMousePos();
     mousePos.x += 5.f;
 
-    const auto menuPlugin = MR::ImGuiMenu::instance();
-    const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
+    const float scale = UI::scale();
 
     const float spaceX = 10 * scale;
     const float sizeX = 12 * scale;
@@ -1996,23 +2073,14 @@ void notificationFrame( NotificationType type, const std::string& str )
     ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * UI::scale() );
     transparentTextWrapped( "%s", str.c_str() );
 
-    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 0.7f;
-        ImGui::PushFont( iconsFont );
-    }
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, 0.7f );
 
     ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * UI::scale(), StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
     ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
     ImGui::Text( "%s", UI::notificationChar( type ).first );
     ImGui::PopStyleColor();
 
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 1.0f;
-        ImGui::PopFont();
-    }
+    iconsFont.popFont();
 
     ImGui::SetCursorPos( pos );
     ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * UI::scale() ) );
@@ -2091,6 +2159,11 @@ void separator( const SeparatorParams& params )
         const int elementsCount = 1 + ( params.icon ? 1 : 0 ) + ( ( !params.label.empty() || !params.suffix.empty() ) ? 1 : 0 );
         if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + params.label ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
         {
+            if ( params.icon )
+                ImGui::TableSetupColumn( "##icon" );
+            if ( !params.label.empty() || !params.suffix.empty() )
+                ImGui::TableSetupColumn( "##text" );
+            ImGui::TableSetupColumn( "##separator", ImGuiTableColumnFlags_WidthStretch );
             // icon
             if ( params.icon )
             {
@@ -2102,7 +2175,7 @@ void separator( const SeparatorParams& params )
             if ( !params.label.empty() || !params.suffix.empty() )
             {
                 ImGui::TableNextColumn();
-                ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+                RibbonFontHolder sbFont( MR::RibbonFontManager::FontType::SemiBold );
                 if ( !params.label.empty() )
                     ImGui::Text( "%s", params.label.c_str() );
                 ImGui::SameLine();
@@ -2116,13 +2189,12 @@ void separator( const SeparatorParams& params )
                     if ( params.suffixFrameColor )
                         ImGui::PopStyleColor();
                 }
-                ImGui::PopFont();
+                sbFont.popFont();
             }
 
             // separator
             ImGui::TableNextColumn();
-            auto width = ImGui::GetWindowWidth();
-            ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) );
             ImGui::Separator();
 
             ImGui::EndTable();
@@ -2308,6 +2380,132 @@ void highlightWindowArea( const ImVec2& min, const ImVec2& max )
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * UI::scale() );
     ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, Color( ImGui::GetStyleColorVec4( ImGuiCol_Header ) ).getUInt32() );
+}
+
+std::string CustomConfigModalSettings::popupName() const
+{
+    return "Save " + configName + "##Config" + imGuiIdKey;
+}
+
+void saveCustomConfigModal( const CustomConfigModalSettings& settings )
+{
+    const auto& style = ImGui::GetStyle();
+
+    static std::string currentConfigName;
+
+    auto existingPopupName = settings.configName + " already exists##" + settings.configName + "Helper";
+    auto overrideExistingModal = [&] ()->bool
+    {
+        ModalDialog warningPopup( existingPopupName, {
+            .text = settings.configName + " preset with this name already exists, override?",
+        } );
+        if ( !warningPopup.beginPopup() )
+            return false;
+        auto w = ImGui::GetContentRegionAvail().x;
+        auto p = style.FramePadding.x;
+        bool saved = false;
+        if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
+        {
+            assert( settings.onSave );
+            saved = settings.onSave && settings.onSave( currentConfigName );
+            if ( saved )
+                ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine( 0, p );
+        if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Escape ) )
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        warningPopup.endPopup();
+        return saved;
+    };
+
+    if ( settings.inputNameDialog || !settings.inputName )
+    {
+        auto popupName = settings.popupName();
+
+        if ( settings.triggerSave )
+        {
+            ImGui::OpenPopup( popupName.c_str() );
+        }
+
+        ModalDialog saveDialog( popupName.c_str(), {
+            .headline = "Save " + settings.configName,
+        } );
+        if ( !saveDialog.beginPopup() )
+            return;
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * UI::scale() } );
+
+        ImGui::SetNextItemWidth( saveDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+        if ( settings.inputName )
+        {
+            UI::inputText( "Name", *settings.inputName );
+            currentConfigName = *settings.inputName;
+        }
+        else
+            UI::inputText( "Name", currentConfigName );
+        ImGui::PopStyleVar();
+
+        const float btnWidth = cModalButtonWidth * UI::scale();
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+        bool valid = !currentConfigName.empty() && !hasProhibitedChars( currentConfigName );
+        if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
+        {
+            std::error_code ec;
+            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / asU8String( currentConfigName + ".json" ), ec ) )
+            {
+                ImGui::OpenPopup( existingPopupName.c_str() );
+            }
+            else
+            {
+                assert( settings.onSave );
+                if ( settings.onSave && settings.onSave( currentConfigName ) )
+                    ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::PopStyleVar();
+        if ( !valid )
+        {
+            UI::setTooltipIfHovered( currentConfigName.empty() ?
+                "Cannot save " + settings.configName + " with empty name" :
+                "Please do not use any of these symbols: \? * / \\ \" < >" );
+        }
+
+        if ( overrideExistingModal() )
+            ImGui::CloseCurrentPopup();
+
+        ImGui::SameLine();
+
+        ImGui::SetCursorPosX( saveDialog.windowWidth() - btnWidth - style.WindowPadding.x );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+        if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
+            ImGui::CloseCurrentPopup();
+        ImGui::PopStyleVar();
+
+        saveDialog.endPopup();
+    }
+    else
+    {
+        if ( settings.triggerSave )
+        {
+            currentConfigName = replaceProhibitedChars( *settings.inputName );
+
+            std::error_code ec;
+            if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / asU8String( currentConfigName + ".json" ), ec ) )
+            {
+                ImGui::OpenPopup( existingPopupName.c_str() );
+            }
+            else
+            {
+                assert( settings.onSave );
+                if ( settings.onSave )
+                    settings.onSave( currentConfigName );
+            }
+        }
+        overrideExistingModal();
+    }
 }
 
 } // namespace UI

@@ -23,13 +23,9 @@ void ObjectLinesHolder::applyScale( float scaleFactor )
 
     auto& points = polyline_->points;
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( points, [&] ( VertId i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            points[VertId( i )] *= scaleFactor;
-        }
+        points[i] *= scaleFactor;
     } );
     setDirtyFlags( DIRTY_POSITION );
 }
@@ -74,6 +70,14 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         if ( invalidateCaches && polyline_ )
             polyline_->invalidateCaches();
     }
+
+    if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
+    {
+        if ( polyline_ )
+        {
+            linesChangedSignal( mask );
+        }
+    }
 }
 
 void ObjectLinesHolder::setDashPattern( const DashPattern& pattern, ViewportId id /*= {} */ )
@@ -108,6 +112,15 @@ void ObjectLinesHolder::swapBase_( Object& other )
         assert( false );
 }
 
+void ObjectLinesHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherLines = other.asType<ObjectLinesHolder>() )
+        std::swap( linesChangedSignal, otherLines->linesChangedSignal );
+    else
+        assert( false );
+}
+
 Box3f ObjectLinesHolder::getWorldBox( ViewportId id ) const
 {
     if ( !polyline_ )
@@ -119,7 +132,7 @@ Box3f ObjectLinesHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = polyline_->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : polyline_->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }
@@ -287,7 +300,7 @@ void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
     }
 
     // Type
-    root["Type"].append( ObjectLinesHolder::TypeName() ); // will be appended in derived calls
+    root["Type"].append( ObjectLinesHolder::StaticTypeName() ); // will be appended in derived calls
 }
 
 Expected<void> ObjectLinesHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -302,7 +315,7 @@ Expected<void> ObjectLinesHolder::deserializeModel_( const std::filesystem::path
     if ( modelPath.empty() )
         return {};
 
-    auto res = LinesLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
+    auto res = LinesLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb, .telemetrySignal = false } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 

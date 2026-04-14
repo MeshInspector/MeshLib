@@ -74,16 +74,16 @@ struct FillHoleParams
 };
 
 /** \struct MR::StitchHolesParams
-  * \brief Parameters structure for MR::buildCylinderBetweenTwoHoles\n
-  * Structure has some options to control MR::buildCylinderBetweenTwoHoles
+  * \brief Parameters structure for MR::stitchHoles\n
+  * Structure has some options to control MR::stitchHoles
   *
-  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref stitchHoles
   * \sa \ref FillHoleMetric
   */
 struct StitchHolesParams
 {
     /** Specifies triangulation metric\n
-      * default for MR::buildCylinderBetweenTwoHoles: getComplexStitchMetric
+      * default for MR::stitchHoles: getComplexStitchMetric
       * \sa \ref FillHoleMetric
       */
     FillHoleMetric metric;
@@ -114,9 +114,13 @@ struct StitchHolesParams
   * \sa \ref fillHole
   * \sa \ref StitchHolesParams
   */
+MRMESH_API void stitchHoles( Mesh& mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
+[[deprecated( "Use stitchHoles( mesh, a, b, params )" )]]
 MRMESH_API void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
 
 /// this version finds holes in the mesh by itself and returns false if they are not found
+MRMESH_API bool stitchHoles( Mesh& mesh, const StitchHolesParams& params = {} );
+[[deprecated( "Use stitchHoles( mesh, params )" )]]
 MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params = {} );
 
 
@@ -138,7 +142,7 @@ MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesPara
   * \param a EdgeId which represents hole (should not have valid left FaceId)
   * \param params parameters of hole filling
   * 
-  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref stitchHoles
   * \sa \ref fillHoleTrivially
   * \sa \ref FillHoleParams
   */
@@ -169,22 +173,27 @@ struct HoleFillPlan
 
 /// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),
 /// several getHoleFillPlan can work in parallel
-MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
+[[nodiscard]] MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
 
 /// prepares the plans how to triangulate the faces or holes, each given by a boundary edge (with filling target to the left),
 /// the plans are prepared in parallel with minimal memory allocation compared to manual calling of several getHoleFillPlan(), but it can inefficient when some holes are very complex
-MRMESH_API std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params = {} );
+[[nodiscard]] MRMESH_API std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params = {} );
 
 /// prepares the plan how to triangulate the planar face or planar hole to the left of (e) (not filling it immediately),
 /// several getPlanarHoleFillPlan can work in parallel
-MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e );
+[[nodiscard]] MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e );
 
 /// prepares the plans how to triangulate the planar faces or holes, each given by a boundary edge (with filling target to the left),
 /// the plans are prepared in parallel with minimal memory allocation compared to manual calling of several getPlanarHoleFillPlan(), but it can inefficient when some holes are very complex
-MRMESH_API std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+[[nodiscard]] MRMESH_API std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
 /// quickly triangulates the face or hole to the left of (e) given the plan (quickly compared to fillHole function)
 MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces = nullptr );
+
+/// returns true if executeHoleFillPlan() with the same topology and plan
+/// does not introduce any edge with the same end-vertices as any existed edge in the mesh;
+/// note: this function can be used for checking a fill plan that was generated before filling other holes
+[[nodiscard]] MRMESH_API bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan );
 
 /** \brief Triangulates face of hole in mesh trivially\n
   * \ingroup FillHoleGroup

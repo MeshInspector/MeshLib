@@ -35,4 +35,7 @@ struct ObjectMeshData
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 };
 
+/// return all edges separating faces with different colors
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet edgesBetweenDifferentColors( const MeshTopology & topology, const FaceColors & colors );
+
 } //namespace MR

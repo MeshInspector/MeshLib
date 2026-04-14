@@ -5,6 +5,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -22,28 +23,28 @@ void CameraOrientation::drawDialog( ImGuiContext* )
         return;
 
     if ( viewer->viewport_list.size() > 1 )
-        ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
+        ImGui::Text( "%s: %d", _tr( "Current viewport" ), viewer->viewport().id.value() );
 
-    UI::drag<LengthUnit>( "Position", position_ );
-    UI::setTooltipIfHovered( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated." );
+    UI::drag<LengthUnit>( _tr( "Position" ), position_ );
+    UI::setTooltipIfHovered( _tr( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated." ) );
 
-    UI::drag<NoUnit>( "Direction", direction_ );
-    UI::setTooltipIfHovered( "Forward direction of the camera in world space." );
+    UI::drag<NoUnit>( _tr( "Direction" ), direction_ );
+    UI::setTooltipIfHovered( _tr( "Forward direction of the camera in world space." ) );
 
-    UI::drag<NoUnit>( "Up", upDir_ );
-    UI::setTooltipIfHovered( "Up direction of the camera in world space." );
+    UI::drag<NoUnit>( _tr( "Up" ), upDir_ );
+    UI::setTooltipIfHovered( _tr( "Up direction of the camera in world space." ) );
 
-    if ( UI::button( "Orthonormalize", Vector2f( -1, 0 ) ) )
+    if ( UI::button( _tr( "Orthonormalize" ), Vector2f( -1, 0 ) ) )
         upDir_ = cross( cross( direction_, upDir_ ), direction_ ).normalized();
-    UI::setTooltipIfHovered( "Recalculate vector to orthonormal\n"
-                                "saving plane (direction, up)" );
+    UI::setTooltipIfHovered( _tr( "Recalculate vector to orthonormal\n"
+                                "saving plane (direction, up)" ) );
 
     float w = ImGui::GetContentRegionAvail().x;
     float p = ImGui::GetStyle().FramePadding.x;
-    if ( UI::button( "Get camera", Vector2f( ( w - p ) / 2.f, 0 ) ) )
+    if ( UI::button( _tr( "Get camera" ), Vector2f( ( w - p ) / 2.f, 0 ) ) )
         getCamera_();
     ImGui::SameLine( 0.f, p );
-    if ( UI::button( "Set camera", Vector2f( ( w - p ) / 2.f, 0 ) ) )
+    if ( UI::button( _tr( "Set camera" ), Vector2f( ( w - p ) / 2.f, 0 ) ) )
     {
         if ( cross( direction_, upDir_ ).length() > std::numeric_limits<float>::min() * 10.f )
         {
@@ -54,19 +55,19 @@ void CameraOrientation::drawDialog( ImGuiContext* )
         }
     }
 
-    if ( UI::checkbox( "Autofit", &isAutofit_ ) )
+    if ( UI::checkbox( _tr( "Autofit" ), &isAutofit_ ) )
         autofit_();
-    UI::setTooltipIfHovered( "If enabled, it automatically selects best camera location to see whole scene in the viewport." );
+    UI::setTooltipIfHovered( _tr( "If enabled, it automatically selects best camera location to see whole scene in the viewport." ) );
 
     ImGui::PushItemWidth( 80 * UI::scale() );
     auto params = viewer->viewport().getParameters();
     auto fov = params.cameraViewAngle;
-    UI::drag<AngleUnit>( "Camera FOV", fov, 0.1f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } ); // `fov` is stored in degrees?!
+    UI::drag<AngleUnit>( _tr( "Camera FOV" ), fov, 0.1f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } ); // `fov` is stored in degrees?!
     viewer->viewport().setCameraViewAngle( fov );
 
     // Orthographic view
     bool orth = params.orthographic;
-    UI::checkbox( "Orthographic view", &orth );
+    UI::checkbox( _tr( "Orthographic view" ), &orth );
     viewer->viewport().setOrthographic( orth );
     ImGui::PopItemWidth();
 
@@ -91,7 +92,7 @@ bool CameraOrientation::onEnable_()
 
 void CameraOrientation::drawCameraPresets_()
 {
-    if ( !RibbonButtonDrawer::CustomCollapsingHeader( "Camera Presets" ) )
+    if ( !RibbonButtonDrawer::CustomCollapsingHeader( _tr( "Camera Presets" ) ) )
         return;
 
     const Vector2f buttonSize( 60.f * UI::scale(), 0.f );
@@ -106,28 +107,28 @@ void CameraOrientation::drawCameraPresets_()
     };
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + centerButtonShift );
-    if ( UI::button( "Top", buttonSize ) )
+    if ( UI::button( _tr( "Top" ), buttonSize ) )
         applyQuaternion( Quaternionf() );
 
-    if ( UI::button( "Left", buttonSize ) )
+    if ( UI::button( _tr( "Left" ), buttonSize ) )
         applyQuaternion( Quaternionf( Vector3f(-1, 1, 1 ), 2 * PI_F / 3 ) );
     ImGui::SameLine();
-    if ( UI::button( "Front", buttonSize ) )
+    if ( UI::button( _tr( "Front" ), buttonSize ) )
         applyQuaternion( Quaternionf( Vector3f::plusX(),  -PI2_F ) );
     ImGui::SameLine();
-    if ( UI::button( "Right", buttonSize ) )
+    if ( UI::button( _tr( "Right" ), buttonSize ) )
         applyQuaternion( Quaternionf( Vector3f(-1,-1,-1 ), 2 * PI_F / 3 ) );
     ImGui::SameLine( backPosition );
-    if ( UI::button( "Back", buttonSize ) )
+    if ( UI::button( _tr( "Back" ), buttonSize ) )
         applyQuaternion( Quaternionf( Vector3f( 0, 1, 1 ), PI_F ) );
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + centerButtonShift );
-    if ( UI::button( "Bottom", buttonSize ) )
+    if ( UI::button( _tr( "Bottom" ), buttonSize ) )
         applyQuaternion( Quaternionf( Vector3f::plusX(),   PI_F ) );
 
     const float isometricPos = width - ( buttonSize.x + 20.f * UI::scale() );
     ImGui::SameLine( isometricPos );
-    if ( UI::button( "Isometric", Vector2f( buttonSize.x + 20.f * UI::scale(), buttonSize.y ) ) )
+    if ( UI::button( _tr( "Isometric" ), Vector2f( buttonSize.x + 20.f * UI::scale(), buttonSize.y ) ) )
     {
         Viewer::instanceRef().viewport().cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
         autofit_();

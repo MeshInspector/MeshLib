@@ -7,6 +7,8 @@
 #include "MRLinesShader.h"
 #include "MRShaderBlocks.h"
 #include "MRPointsShader.h"
+#include "MRMesh/MRRenderModelParameters.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -19,9 +21,11 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Picker shader",
         "Mesh desktop picker shader",
         "Alpha-sort mesh shader",
+        "Depth-peel mesh shader",
 
         "Points shader",
-        "Alpha-sort Points shader",
+        "Alpha-sort points shader",
+        "Depth-peel points shader",
 
         "Lines shader",
         "Lines joint shader",
@@ -29,6 +33,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Lines joint picker shader",
 
         "Alpha-sort lines shader",
+        "Depth-peel lines shader",
 
         "Labels shader",
 
@@ -40,6 +45,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
         "Simple overlay shader",
+        "Depth overlay shader",
 
         "Volume shader",
         "Volume picker shader"
@@ -111,7 +117,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         else
             fragmentShader = getVolumePickerFragmentShader();
     }
-    else if ( type == Mesh || type == TransparentMesh )
+    else if ( type == Mesh || type == AlphaSortMesh || type == DepthPeelMesh )
     {
         vertexShader = getMeshVerticesShader();
 
@@ -121,19 +127,29 @@ void GLStaticHolder::createShader_( ShaderType type )
         minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
 
         bool gl4 = major >= 4 && ( major != 4 || minor >= 3 );
-        bool alphaSort = type == TransparentMesh;
+        ShaderTransparencyMode tMode = ShaderTransparencyMode::None;
+        if ( type == AlphaSortMesh )
+            tMode = ShaderTransparencyMode::AlphaSort;
+        else if ( type == DepthPeelMesh )
+            tMode = ShaderTransparencyMode::DepthPeel;
         
         int curSamples = 0;
         GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
         
-        fragmentShader = getMeshFragmentShader( gl4, alphaSort, curSamples > 1 && !alphaSort );
+        fragmentShader = getMeshFragmentShader( gl4, tMode, curSamples > 1 && tMode != ShaderTransparencyMode::AlphaSort );
     }
-    else if ( type == Lines || type == LinesJoint || type == TransparentLines )
+    else if ( type == Lines || type == LinesJoint || type == AlphaSortLines || type == DepthPeelLines )
     {
-        if ( type == Lines || type == TransparentLines )
+        if ( type == Lines || type == AlphaSortLines || type == DepthPeelLines )
         {
+            ShaderTransparencyMode tMode = ShaderTransparencyMode::None;
+            if ( type == AlphaSortLines )
+                tMode = ShaderTransparencyMode::AlphaSort;
+            else if ( type == DepthPeelLines )
+                tMode = ShaderTransparencyMode::DepthPeel;
+
             vertexShader = getLinesVertexShader();
-            fragmentShader = getLinesFragmentShader( type == TransparentLines );
+            fragmentShader = getLinesFragmentShader( tMode );
         }
         else
         {
@@ -180,10 +196,16 @@ void GLStaticHolder::createShader_( ShaderType type )
 
         fragmentShader = getPickerFragmentShader( false, type == Picker );
     }
-    else if ( type == Points || type == TransparentPoints )
+    else if ( type == Points || type == AlphaSortPoints || type == DepthPeelPoints )
     {
+        ShaderTransparencyMode tMode = ShaderTransparencyMode::None;
+        if ( type == AlphaSortPoints )
+            tMode = ShaderTransparencyMode::AlphaSort;
+        else if ( type == DepthPeelPoints )
+            tMode = ShaderTransparencyMode::DepthPeel;
+
         vertexShader = getPointsVertexShader();
-        fragmentShader = getPointsFragmentShader( type == TransparentPoints );
+        fragmentShader = getPointsFragmentShader( tMode );
     }
     else if ( type == Labels )
     {
@@ -401,7 +423,7 @@ void GLStaticHolder::createShader_( ShaderType type )
   }
 )";
         }
-        else if ( type == TransparencyOverlayQuad )
+        else if ( type == AlphaSortOverlayQuad )
         {
             fragmentShader =
                 R"(
@@ -580,10 +602,36 @@ void main(void)
   }
 )";
         }
+        else if ( type == DepthOverlayQuad )
+        {
+            fragmentShader =
+                MR_GLSL_VERSION_LINE R"(
+  precision highp float;
+  precision highp int;
+  uniform sampler2D pixels;
+  uniform sampler2D depths;
+  uniform vec2 viewportSize;
+  out vec4 outColor;                 // (out to render) fragment color
+
+  void main()
+  {
+    vec2 pos = gl_FragCoord.xy;
+    pos = vec2( pos.x/float(viewportSize.x),pos.y/float(viewportSize.y) );
+    outColor = texture(pixels, pos );
+    if ( outColor.a == 0.0 )
+      discard;
+    float depth = texture(depths, pos ).r;
+    if ( depth > 0.999 ) // antialiased pixels might have _depth == 1.0
+      gl_FragDepth = 0.999;
+    else 
+      gl_FragDepth = depth;
+  }
+)";
+        }
     }
 
     DisabledWarnings warns = {};
-    if ( type == TransparencyOverlayQuad )
+    if ( type == AlphaSortOverlayQuad )
         warns.push_back( { 7050,"used uninitialized" } );
 
     createShader( getShaderName( type ), vertexShader, fragmentShader, shadersIds_[type], warns );
@@ -594,4 +642,46 @@ RenderObjectBuffer &GLStaticHolder::getStaticGLBuffer()
     return instance_().glBuffer_;
 }
 
+GLStaticHolder::ShaderType GLStaticHolder::getTransparentPointsShader( TransparencyMode m )
+{
+    if ( m.isAlphaSortEnabled() )
+        return AlphaSortPoints;
+    if ( m.isDepthPeelingEnabled() )
+        return DepthPeelPoints;
+    [[maybe_unused]] static bool b = []
+    {
+        TelemetrySignal( "Naive rendering of transparent points" );
+        return true;
+    }();
+    return Points;
 }
+
+GLStaticHolder::ShaderType GLStaticHolder::getTransparentLinesShader( TransparencyMode m )
+{
+    if ( m.isAlphaSortEnabled() )
+        return AlphaSortLines;
+    if ( m.isDepthPeelingEnabled() )
+        return DepthPeelLines;
+    [[maybe_unused]] static bool b = []
+    {
+        TelemetrySignal( "Naive rendering of transparent lines" );
+        return true;
+    }();
+    return Lines;
+}
+
+GLStaticHolder::ShaderType GLStaticHolder::getTransparentMeshShader( TransparencyMode m )
+{
+    if ( m.isAlphaSortEnabled() )
+        return AlphaSortMesh;
+    if ( m.isDepthPeelingEnabled() )
+        return DepthPeelMesh;
+    [[maybe_unused]] static bool b = []
+    {
+        TelemetrySignal( "Naive rendering of transparent mesh" );
+        return true;
+    }();
+    return Mesh;
+}
+
+} //namespace MR

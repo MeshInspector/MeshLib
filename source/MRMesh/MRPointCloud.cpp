@@ -1,5 +1,6 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
+#include "MREnums.h"
 #include "MRComputeBoundingBox.h"
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"

@@ -10,33 +10,51 @@
 namespace MR
 {
 
-bool Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
+void Viewport::recursiveDraw( const Object& obj, DepthFunction depthFunc, const AffineXf3f& rootXf, RenderModelPassMask renderType, const TransparencyMode& transparentMode, int* numDraws ) const
 {
-    return draw( obj, obj.worldXf( id ), projM_, depthFunc, pass, allowAlphaSort );
+    if ( !obj.isVisible( id ) )
+        return;
+    auto xfCopy = rootXf * obj.xf( id );
+    auto visObj = obj.asType<VisualObject>();
+    if ( visObj )
+    {
+        if ( draw( *visObj, xfCopy, DepthFunction::Default, renderType, transparentMode ) )
+        {
+            if ( numDraws )
+                ++( *numDraws );
+        }
+    }
+    for ( const auto& child : obj.children() )
+        recursiveDraw( *child, depthFunc, xfCopy, renderType, transparentMode, numDraws );
+}
+
+bool Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, RenderModelPassMask pass, const TransparencyMode& transparentMode ) const
+{
+    return draw( obj, obj.worldXf( id ), projM_, depthFunc, pass, transparentMode );
 }
 
 bool Viewport::draw(const VisualObject& obj, const AffineXf3f& xf,
-     DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
+     DepthFunction depthFunc, RenderModelPassMask pass, const TransparencyMode& transparentMode ) const
 {
-    return draw( obj, xf, projM_, depthFunc, pass, allowAlphaSort );
+    return draw( obj, xf, projM_, depthFunc, pass, transparentMode );
 }
 
 bool Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
-     DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
+     DepthFunction depthFunc, RenderModelPassMask pass, const TransparencyMode& transparentMode ) const
 {
     Matrix4f normM;
-    return obj.render( getModelRenderParams( xf, getBaseRenderParams( projM ), &normM, depthFunc, pass, allowAlphaSort ) );
+    return obj.render( getModelRenderParams( xf, getBaseRenderParams( projM ), &normM, depthFunc, pass, transparentMode ) );
 }
 
 bool Viewport::drawOrthoFixedPos( const VisualObject& obj, const AffineXf3f& xf, 
-    DepthFunction depthFunc /*= DepthFunction::Default*/, RenderModelPassMask pass /*= RenderModelPassMask::All*/, bool allowAlphaSort /*= false */ ) const
+    DepthFunction depthFunc /*= DepthFunction::Default*/, RenderModelPassMask pass /*= RenderModelPassMask::All*/, const TransparencyMode& transparentMode /*= {} */ ) const
 {
     Matrix4f normM;
-    return obj.render( getModelRenderParamsOrthoFixedPos( xf, &normM, depthFunc, pass, allowAlphaSort ) );
+    return obj.render( getModelRenderParamsOrthoFixedPos( xf, &normM, depthFunc, pass, transparentMode ) );
 }
 
 ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const BaseRenderParams& baseParams,
-    Matrix4f * normM, DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
+    Matrix4f * normM, DepthFunction depthFunc, RenderModelPassMask pass, const TransparencyMode& transparentMode ) const
 {
     if ( normM )
     {
@@ -61,7 +79,7 @@ ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const
         },
         normM,
         params_.lightPosition,
-        allowAlphaSort,
+        transparentMode,
         pass
     };
 }

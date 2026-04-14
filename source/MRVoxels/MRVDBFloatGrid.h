@@ -49,6 +49,11 @@ MR_BIND_IGNORE inline openvdb::Coord toVdb( const Vector3i & v )
     return openvdb::Coord( v.x, v.y, v.z );
 }
 
+MR_BIND_IGNORE inline Box3i fromVdbBox( const openvdb::CoordBBox& box )
+{
+    return Box3i( fromVdb( box.min() ), fromVdb( box.max() ) + Vector3i::diagonal( 1 ) );
+}
+
 MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Box3i& box )
 {
     return openvdb::CoordBBox( toVdb( box.min ), toVdb( box.max ) );

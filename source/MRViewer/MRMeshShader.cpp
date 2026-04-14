@@ -1,5 +1,4 @@
 #include "MRMeshShader.h"
-#include "MRShaderBlocks.h"
 #include "MRGladGlfw.h"
 
 namespace MR
@@ -44,16 +43,16 @@ std::string getMeshVerticesShader()
 )";
 }
 
-std::string getMeshFragmentShader( bool gl4, bool alphaSort, bool msaaEnabled )
+std::string getMeshFragmentShader( bool gl4, ShaderTransparencyMode mode, bool msaaEnabled )
 {
     return
-        getFragmentShaderHeaderBlock( gl4, alphaSort ) +
+        getFragmentShaderHeaderBlock( gl4, mode == ShaderTransparencyMode::AlphaSort ) +
         getMeshFragmentShaderArgumetsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( mode == ShaderTransparencyMode::DepthPeel ) +
         getFragmentShaderClippingBlock() +
         getFragmentShaderOnlyOddBlock( gl4 && msaaEnabled ) + // alphaSort disable MSAA without changing current number of samples
         getMeshFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( alphaSort );
+        getFragmentShaderEndBlock( mode );
 }
 
 std::string getMeshFragmentShaderArgumetsBlock()
@@ -81,7 +80,6 @@ std::string getMeshFragmentShaderArgumetsBlock()
   uniform vec4 selBackColor;   // (in from base) selection back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform bool invertNormals;        // (in from base) invert normals if true
   uniform bool mirrored;
   uniform highp sampler2DArray tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
@@ -138,13 +136,10 @@ std::string getMeshFragmentShaderColoringBlock()
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
 
-    bool invNorms = invertNormals;
     if ( mirrored )
-    {
         dot_prod = -dot_prod;
-        invNorms = !invNorms;
-    }
-    if ( gl_FrontFacing == invNorms )
+
+    if ( gl_FrontFacing == mirrored )
         if ( !selected )
             colorCpy = backColor;
         else

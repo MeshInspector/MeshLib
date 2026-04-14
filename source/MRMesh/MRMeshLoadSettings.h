@@ -11,6 +11,7 @@ struct MeshLoadSettings
 {
     std::optional<Edges>* edges = nullptr; ///< optional load artifact: polyline edges
     VertColors* colors = nullptr;    ///< optional load artifact: per-vertex color map
+    FaceColors* faceColors = nullptr;///< optional load artifact: per-face color map
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals
     MeshTexture* texture = nullptr;  ///< optional load artifact: texture image
@@ -18,6 +19,7 @@ struct MeshLoadSettings
     int* duplicatedVertexCount = nullptr; ///< optional output: counter of duplicated vertices (that created for resolve non-manifold geometry)
     AffineXf3f* xf = nullptr;        ///< optional output: transform for the loaded mesh to improve precision of vertex coordinates
     ProgressCallback callback;       ///< callback for set progress and stop process
+    bool telemetrySignal = true;     ///< permit telemetry signal about loading
 };
 
 } //namespace MR

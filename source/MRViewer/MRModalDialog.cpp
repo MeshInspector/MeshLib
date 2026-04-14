@@ -5,6 +5,9 @@
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include "MRRibbonFontHolder.h"
+#include "MRImGuiMultiViewport.h"
+#include "MRI18n.h"
 #include <imgui_internal.h>
 
 namespace MR
@@ -21,7 +24,7 @@ bool ModalDialog::beginPopup()
     const auto windowWidth = settings_.windowWidth > 0.f ? settings_.windowWidth : cModalWindowWidth * UI::scale();
     const ImVec2 windowSize { windowWidth, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::SetNextWindowPos( Vector2f( getViewerInstance().framebufferSize ) * 0.5f, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
+    ImGuiMV::SetNextWindowPosMainViewport( Vector2f( getViewerInstance().framebufferSize ) * 0.5f, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
 
     setStyle_();
 
@@ -34,16 +37,13 @@ bool ModalDialog::beginPopup()
 
     if ( const auto& headline = settings_.headline; !headline.empty() )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
+        RibbonFontHolder headerFont( RibbonFontManager::FontType::Headline );
 
         const auto headlineWidth = ImGui::CalcTextSize( headline.c_str() ).x;
         ImGui::SetCursorPosX( ( windowSize.x - headlineWidth ) * 0.5f );
         ImGui::Text( "%s", headline.c_str() );
 
-        if ( headerFont )
-            ImGui::PopFont();
+        headerFont.popFont();
     }
 
     if ( settings_.closeButton )
@@ -74,13 +74,13 @@ bool ModalDialog::beginPopup()
 
     if ( auto* dontShowAgain = settings_.dontShowAgain )
     {
-        constexpr const auto* cDontShowAgainText = "Do not show this message again";
-        const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( cDontShowAgainText ).x;
+        const auto dontShowAgainText = s_tr( "Do not show this message again" );
+        const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( dontShowAgainText.c_str() ).x;
         ImGui::SetCursorPosX( ( windowWidth - checkboxWidth ) * 0.5f );
         auto color = ImGui::GetStyleColorVec4( ImGuiCol_Text );
         color.w = 0.5f;
         ImGui::PushStyleColor( ImGuiCol_Text, color );
-        UI::checkbox( cDontShowAgainText, dontShowAgain );
+        UI::checkbox( dontShowAgainText.c_str(), dontShowAgain );
         ImGui::PopStyleColor();
     }
 

@@ -1,4 +1,6 @@
 #pragma once
+
+// see explanation in MRMesh/MRMeshFwd.h
 #ifdef _WIN32
 #   ifdef MRViewer_EXPORTS
 #       define MRVIEWER_API __declspec(dllexport)
@@ -8,8 +10,11 @@
 #   define MRVIEWER_CLASS
 #else
 #   define MRVIEWER_API   __attribute__((visibility("default")))
-// to fix undefined reference to `typeinfo/vtable
-#   define MRVIEWER_CLASS __attribute__((visibility("default")))
+#   ifdef __clang__
+#       define MRVIEWER_CLASS __attribute__((type_visibility("default")))
+#   else
+#       define MRVIEWER_CLASS __attribute__((visibility("default")))
+#   endif
 #endif
 
 // Note! This macro should be used in source files only!

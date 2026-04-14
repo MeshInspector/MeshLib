@@ -36,7 +36,7 @@ private:
     GlTexture2 vertColorsTex_;
     GlTexture2 lineColorsTex_;
 
-    void render_( const ModelRenderParams& params, bool points );
+    void render_( const ModelRenderParams& params, bool points, RenderModelPassMask desiredPass );
     void renderPicker_( const ModelBaseRenderParams& params, unsigned geomId, bool points );
 
     void bindPositions_( GLuint shaderId );

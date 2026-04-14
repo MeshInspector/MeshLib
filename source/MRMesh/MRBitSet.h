@@ -5,8 +5,9 @@
 #include "MRphmap.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
-#include <iterator>
 #include <functional>
+#include <iosfwd>
+#include <iterator>
 
 namespace MR
 {
@@ -16,6 +17,51 @@ namespace MR
  * \brief This chapter represents documentation about basic elements
  * \{
  */
+
+/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
+template <typename T>
+class MR_BIND_IGNORE_PY SetBitIteratorT
+{
+public:
+    using IndexType = typename T::IndexType;
+
+    using iterator_category = std::forward_iterator_tag;
+    using value_type        = IndexType;
+    using difference_type   = std::ptrdiff_t;
+    using reference         = IndexType; ///< intentionally not a reference
+    using pointer           = const IndexType *;
+
+    /// constructs end iterator
+    SetBitIteratorT() = default;
+
+    /// constructs begin iterator
+    SetBitIteratorT( const T & bitset )
+        : bitset_( &bitset ), index_( bitset.find_first() )
+    {
+    }
+
+    SetBitIteratorT & operator++()
+    {
+        index_ = bitset_->find_next( index_ );
+        return * this;
+    }
+
+    [[nodiscard]] SetBitIteratorT operator++( int )
+    {
+        SetBitIteratorT ret = *this;
+        operator++();
+        return ret;
+    }
+
+    [[nodiscard]] const T * bitset() const { return bitset_; }
+    [[nodiscard]] reference operator *() const { return index_; }
+
+    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
+
+private:
+    const T * bitset_ = nullptr;
+    IndexType index_ = IndexType( ~size_t( 0 ) );
+};
 
 /// std::vector<bool> like container (random-access, size_t - index type, bool - value type)
 /// with all bits after size() considered off during testing
@@ -58,7 +104,7 @@ public:
     [[nodiscard]] bool uncheckedTestSet( IndexType n, bool val = true ) { assert( n < size() ); bool b = uncheckedTest( n ); if ( b != val ) set( n, val ); return b; }
 
     // all bits after size() we silently consider as not-set
-    [[nodiscard]] bool test( IndexType n ) const { return n < size() && uncheckedTest( n ); }
+    [[nodiscard]] bool test( IndexType n ) const { return n < size() ? uncheckedTest( n ) : false; } // return n < size() && uncheckedTest( n ); was compiled with extra conditional jump inside uncheckedTest() by MSVC
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
     MRMESH_API BitSet & set( IndexType n, size_type len, bool val );
@@ -114,6 +160,15 @@ public:
 
     /// return the highest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
+
+    /// return the smallest index i such that bit i is NOT set, or npos if *this has no off bits.
+    [[nodiscard]] IndexType find_first_not_set() const { return findNonSetBitAfter_( 0 ); }
+
+    /// return the smallest index i>n such that bit i is NOT set, or npos if *this has no off bits.
+    [[nodiscard]] IndexType find_next_not_set( IndexType n ) const { return findNonSetBitAfter_( n + 1 ); }
+
+    /// return the highest index i such that bit i is NOT set, or npos if *this has no off bits.
+    [[nodiscard]] MRMESH_API IndexType find_last_not_set() const;
 
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
     [[nodiscard]] MRMESH_API size_t nthSetBit( size_t n ) const;
@@ -201,6 +256,15 @@ private:
     /// return the smallest index i>=n such that bit i is set, or npos if *this has no on bits.
     MRMESH_API IndexType findSetBitAfter_( IndexType n ) const;
 
+    /// return the smallest index i>=n such that bit i is not set, or npos if *this has no off bits.
+    MRMESH_API IndexType findNonSetBitAfter_( IndexType n ) const;
+
+    MRMESH_API friend std::ostream& operator<<( std::ostream& s, const BitSet & bs );
+    MRMESH_API friend std::istream& operator>>( std::istream& s, BitSet & bs );
+
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const BitSet & a ) { return SetBitIteratorT<BitSet>(a); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const BitSet & ) { return SetBitIteratorT<BitSet>(); }
+
 private:
     std::vector<block_type> blocks_;
     size_type numBits_ = 0;
@@ -238,6 +302,9 @@ public:
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }
     [[nodiscard]] IndexType find_next( IndexType pos ) const { return IndexType( base::find_next( pos ) ); }
     [[nodiscard]] IndexType find_last() const { return IndexType( base::find_last() ); }
+    [[nodiscard]] IndexType find_first_not_set() const { return IndexType( base::find_first_not_set() ); }
+    [[nodiscard]] IndexType find_next_not_set( IndexType pos ) const { return IndexType( base::find_next_not_set( pos ) ); }
+    [[nodiscard]] IndexType find_last_not_set() const { return IndexType( base::find_last_not_set() ); }
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or IndexType(npos) if there are less bit set
     [[nodiscard]] IndexType nthSetBit( size_t n ) const { return IndexType( base::nthSetBit( n ) ); }
 
@@ -287,6 +354,9 @@ public:
     /// [beginId(), endId()) is the range of all bits in the set
     [[nodiscard]] static IndexType beginId() { return IndexType{ size_t( 0 ) }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
+
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const TypedBitSet & a ) { return SetBitIteratorT<TypedBitSet>(a); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const TypedBitSet & ) { return SetBitIteratorT<TypedBitSet>(); }
 };
 
 
@@ -330,69 +400,22 @@ template <typename I>
     return id.valid() && bitset.test( id );
 }
 
-/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
-template <typename T>
-class MR_BIND_IGNORE SetBitIteratorT
+
+/// for each set bit of input bitset, writes its sequential number starting from 0 in the given vector that shall have appropriate size
+template <typename I>
+void fillVectorWithSeqNums( const TypedBitSet<I> & bs, Vector<int, I> & vec )
 {
-public:
-    using IndexType = typename T::IndexType;
-
-    using iterator_category = std::forward_iterator_tag;
-    using value_type        = IndexType;
-    using difference_type   = std::ptrdiff_t;
-    using reference         = const IndexType; ///< intentionally not a reference
-    using pointer           = const IndexType *;
-
-    /// constructs end iterator
-    SetBitIteratorT() = default;
-    /// constructs begin iterator
-    SetBitIteratorT( const T & bitset )
-        : bitset_( &bitset ), index_( bitset.find_first() )
-    {
-    }
-    SetBitIteratorT & operator++( )
-    {
-        index_ = bitset_->find_next( index_ );
-        return * this;
-    }
-    [[nodiscard]] SetBitIteratorT operator++( int )
-    {
-        SetBitIteratorT ret = *this;
-        operator++();
-        return ret;
-    }
-
-    [[nodiscard]] const T * bitset() const { return bitset_; }
-    [[nodiscard]] reference operator *() const { return index_; }
-
-    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
-
-private:
-    const T * bitset_ = nullptr;
-    IndexType index_ = IndexType( ~size_t( 0 ) );
-};
-
-
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )
-    { return SetBitIteratorT<BitSet>(a); }
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const BitSet & )
-    { return SetBitIteratorT<BitSet>(); }
-
-template <typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const TypedBitSet<I> & a )
-    { return SetBitIteratorT<TypedBitSet<I>>(a); }
-template <typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const TypedBitSet<I> & )
-    { return SetBitIteratorT<TypedBitSet<I>>(); }
+    int n = 0;
+    for ( auto v : bs )
+        vec[v] = n++;
+}
 
 /// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits
 template <typename I>
 [[nodiscard]] Vector<int, I> makeVectorWithSeqNums( const TypedBitSet<I> & bs )
 {
     Vector<int, I> res( bs.size(), -1 );
-    int n = 0;
-    for ( auto v : bs )
-        res[v] = n++;
+    fillVectorWithSeqNums( bs, res );
     return res;
 }
 

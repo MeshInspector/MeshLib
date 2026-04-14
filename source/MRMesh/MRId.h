@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRMacros.h"
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
@@ -25,7 +26,15 @@ public:
     // We could also achieve that using `template <typename U> Id(Id<U>) = delete;`, but it turns out that that causes issues
     //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `UndirectedEdgeId x = EdgeId{};` compiles with this approach,
     //   but `UndirectedEdgeId x(EdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
-    template <typename U, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
+    // The `= int` is there only to make the bindings emit this constructor, I don't think it affects anything else.
+    template <typename U = int
+    // The condition is there for the binding generator. Firstly, removing the second template argument produces better function names in C,
+    //   and secondly `--buggy-substitute-default-template-args` seems to duplicate this constructor when `enable_if_t` is present.
+    #if MR_HAS_REQUIRES
+    > requires std::is_integral_v<U>
+    #else
+    , std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
+    #endif
     explicit constexpr Id( U i ) noexcept : id_( ValueType( i ) ) { }
 
     constexpr operator ValueType() const { return id_; }

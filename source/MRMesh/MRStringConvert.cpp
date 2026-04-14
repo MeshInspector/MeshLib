@@ -111,7 +111,7 @@ std::string bytesString( size_t size )
 bool hasProhibitedChars( const std::string& line )
 {
     for ( const auto& c : line )
-        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+        if ( isProhibitedChar( c ) )
             return true;
     return false;
 }
@@ -120,7 +120,7 @@ std::string replaceProhibitedChars( const std::string& line, char replacement /*
 {
     auto res = line;
     for ( auto& c : res )
-        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+        if ( isProhibitedChar( c ) )
             c = replacement;
     return res;
 }
@@ -129,6 +129,11 @@ std::string commonFilesName( const std::vector<std::filesystem::path> & files )
 {
     if ( files.empty() )
         return "Empty";
+
+    if ( std::all_of( files.begin(), files.end(), [&] ( auto&& path ) { std::error_code ec; return is_directory( path, ec ); } ) )
+    {
+        return files.size() == 1 ? "Directory" : "Directories";
+    }
 
     auto getUpperExt = []( const std::filesystem::path & file )
     {

@@ -11,18 +11,27 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRAABBTreeTests.cpp" />
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
+    <ClCompile Include="MRBase64Tests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />
     <ClCompile Include="MRBoxTests.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
     <ClCompile Include="MRContoursCutTests.cpp" />
+    <ClCompile Include="MRContourTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRDeloneTests.cpp" />
+    <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFeaturesTests.cpp" />
+    <ClCompile Include="MRFillHoleTests.cpp" />
+    <ClCompile Include="MRMeshCollideTests.cpp" />
+    <ClCompile Include="MRGridSamplingTests.cpp" />
+    <ClCompile Include="MRICPTests.cpp" />
     <ClCompile Include="MRLaplacianTests.cpp" />
     <ClCompile Include="MRMarchingCubesTests.cpp" />
     <ClCompile Include="MRMeshComponentsTests.cpp" />
@@ -32,6 +41,7 @@
     <ClCompile Include="MRMeshMeshDistanceTests.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRMeshTopologyTests.cpp" />
+    <ClCompile Include="MRMultiwayICPTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRObjectTests.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
@@ -40,13 +50,14 @@
     <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
+    <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
-    <ClCompile Include="MRTriangleIntersection.cpp" />
+    <ClCompile Include="MRTriangleIntersectionTests.cpp" />
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
     <ClCompile Include="MRTriMathTests.cpp" />
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
@@ -56,6 +67,9 @@
     <ClCompile Include="MRCylinderApproximation.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRFillingSurface.cpp" />
+    <ClCompile Include="MRBendTextAlongCurveTests.cpp" />
+    <ClCompile Include="MRFormatTests.cpp" />
+    <ClCompile Include="MRMeshMeshDistanceTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
@@ -75,6 +89,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRPython\MRPython.vcxproj">
       <Project>{90bc6971-76ca-4ecd-92e0-585fe3bd6672}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
+      <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRViewer\MRViewer.vcxproj">
       <Project>{cecb9185-ff38-461f-ba20-654399edc67e}</Project>
@@ -128,7 +145,6 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
@@ -150,7 +166,6 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>

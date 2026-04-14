@@ -10,21 +10,8 @@
 // unknown pragmas
 #pragma warning(disable:4068)
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
+#include <MRPch/MREigenCore.h>
 #include <Eigen/Eigenvalues>
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
 
 namespace
 {

@@ -70,6 +70,13 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
     return res;
 }
 
+void VisualObject::copyAllSolidColors( const VisualObject& other )
+{
+    setFrontColorsForAllViewports( other.getFrontColorsForAllViewports( true ), true );
+    setFrontColorsForAllViewports( other.getFrontColorsForAllViewports( false ), false );
+    setBackColorsForAllViewports( other.getBackColorsForAllViewports() );
+}
+
 ViewportMask VisualObject::globalClippedByPlaneMask() const
 {
     // do not access clipByPlane_ directly, to allow subclasses to override the behavior
@@ -179,38 +186,37 @@ void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val 
 
 void VisualObject::setDirtyFlags( uint32_t mask, bool )
 {
-    if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
-        mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
-    if ( mask & DIRTY_POSITION )
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
-    // DIRTY_POSITION because we use corner rendering and need to update render verts
-    // DIRTY_UV because we need to update UV coordinates
+    invalidateMetricsCache_( mask );
+    setDirtyFlagsFast_( mask );
+}
 
+void VisualObject::setDirtyFlagsFast_( uint32_t mask )
+{
     dirty_ |= mask;
-
     needRedraw_ = true; // this is needed to differ dirty render object and dirty scene
+}
+
+void VisualObject::invalidateMetricsCache_( uint32_t mask )
+{
+    if ( mask & ( DIRTY_POSITION | DIRTY_FACE ) )
+        boundingBoxCache_.reset();
 }
 
 void VisualObject::resetDirty() const
 {
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= DIRTY_CACHES;
+    dirty_ = 0;
 }
 
 void VisualObject::resetDirtyExceptMask( uint32_t mask ) const
 {
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= ( DIRTY_CACHES | mask );
+    dirty_ &= mask;
 }
 
 Box3f VisualObject::getBoundingBox() const
 {
-    if ( dirty_ & DIRTY_BOUNDING_BOX )
-    {
+    if ( !boundingBoxCache_ )
         boundingBoxCache_ = computeBoundingBox_();
-        dirty_ &= ~DIRTY_BOUNDING_BOX;
-    }
-    return boundingBoxCache_;
+    return *boundingBoxCache_;
 }
 
 void VisualObject::setPickable( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
@@ -256,13 +262,17 @@ bool VisualObject::render( const ModelRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
+    {
+        resetDirty();
         return false;
+    }
 
     return renderObj_->render( params );
 }
 
 void VisualObject::renderForPicker( const ModelBaseRenderParams& params, unsigned id ) const
 {
+    MR_TIMER;
     setupRenderObject_();
     if ( !renderObj_ )
         return;
@@ -301,8 +311,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
         case VisualizeMaskType::Visibility:
             (void)visibilityMask(); // Call this for the side effects, in case it's overridden. Can't return it directly, as it returns by value.
             return visibilityMask_;
-        case VisualizeMaskType::InvertedNormals:
-            return invertNormals_;
         case VisualizeMaskType::ClippedByPlane:
             return clipByPlane_;
         case VisualizeMaskType::Name:
@@ -324,7 +332,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
 void VisualObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
-    root["InvertNormals"] = !invertNormals_.empty();
 
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
@@ -341,7 +348,7 @@ void VisualObject::serializeFields_( Json::Value& root ) const
     root["ShowName"] = showName_.value();
 
     // append base type
-    root["Type"].append( VisualObject::TypeName() );
+    root["Type"].append( VisualObject::StaticTypeName() );
 
     root["UseDefaultSceneProperties"] = useDefaultScenePropertiesOnDeserialization_;
 }
@@ -349,9 +356,6 @@ void VisualObject::serializeFields_( Json::Value& root ) const
 void VisualObject::deserializeFields_( const Json::Value& root )
 {
     Object::deserializeFields_( root );
-
-    if ( root["InvertNormals"].isBool() ) // Support old versions
-        invertNormals_ = root["InvertNormals"].asBool() ? ViewportMask::all() : ViewportMask{};
 
     auto readColors = [&root]( const char* fieldName, Color& res )
     {

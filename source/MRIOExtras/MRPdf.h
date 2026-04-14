@@ -231,9 +231,9 @@ public:
     };
     MRIOEXTRAS_API void drawTextCell( const std::string& text, const TextCellParams& params );
 
-private:
     // draw rect (filled with border)
-    MRIOEXTRAS_API void drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor );
+    MRIOEXTRAS_API void drawRect( const Box2f& rect, const Color& fillColor, const Color& strokeColor );
+private:
 
     // close pdf document without saving. After this impossible add anything in document.
     void reset_();

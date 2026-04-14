@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRId.h"
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
@@ -48,7 +49,7 @@ std::unordered_map<std::string, std::string> gKnownLocales = {
 #include "MRLocaleNames.inl"
 };
 
-std::map<const char*, int> gDomainCache = {};
+std::map<const char*, LocaleDomainId> gDomainCache = {};
 
 } // namespace
 
@@ -104,7 +105,7 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
     gLocale = gLocaleGen.generate( gLocaleName );
 }
 
-int Locale::addDomain( const char* domainName )
+LocaleDomainId Locale::addDomain( const char* domainName )
 {
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
@@ -112,12 +113,10 @@ int Locale::addDomain( const char* domainName )
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
 
-    using facet_type = boost::locale::message_format<char>;
-    assert( std::has_facet<facet_type>( gLocale ) );
-    return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
 }
 
-int Locale::addDomain( const std::string& domainName )
+LocaleDomainId Locale::addDomain( const std::string& domainName )
 {
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
@@ -125,21 +124,20 @@ int Locale::addDomain( const std::string& domainName )
     return findDomain( domainName );
 }
 
-int Locale::findDomain( const char* domainName )
+LocaleDomainId Locale::findDomain( const char* domainName )
 {
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
 
-    using facet_type = boost::locale::message_format<char>;
-    assert( std::has_facet<facet_type>( gLocale ) );
-    return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
 }
 
-int Locale::findDomain( const std::string& domainName )
+LocaleDomainId Locale::findDomain( const std::string& domainName )
 {
     using facet_type = boost::locale::message_format<char>;
     assert( std::has_facet<facet_type>( gLocale ) );
-    return std::use_facet<facet_type>( gLocale ).domain( domainName );
+    const auto id = std::use_facet<facet_type>( gLocale ).domain( domainName );
+    return id != 0 ? LocaleDomainId{ id } : LocaleDomainId{};
 }
 
 std::string Locale::getDisplayName( const std::string& localeName )

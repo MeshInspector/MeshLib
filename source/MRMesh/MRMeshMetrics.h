@@ -51,15 +51,18 @@ MRMESH_API double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & 
 
 /// This metric minimizes the sum of circumcircle radii for all triangles in the triangulation.
 /// It is rather fast to calculate, and it results in typically good triangulations.
+/// It is measured in length units.
 MRMESH_API FillHoleMetric getCircumscribedMetric( const Mesh& mesh );
 
 /// Same as getCircumscribedFillMetric, but with extra penalty for the triangles having
 /// normals looking in the opposite side of plane containing left of (e).
+/// It is measured in length units.
 MRMESH_API FillHoleMetric getPlaneFillMetric( const Mesh& mesh, EdgeId e );
 
 /// Similar to getPlaneFillMetric with extra penalty for the triangles having
 /// normals looking in the opposite side of plane containing left of (e),
 /// but the metric minimizes the sum of circumcircle radius times aspect ratio for all triangles in the triangulation.
+/// It is measured in length units.
 MRMESH_API FillHoleMetric getPlaneNormalizedFillMetric( const Mesh& mesh, EdgeId e );
 
 /// This metric minimizes the sum of triangleMetric for all triangles in the triangulation
@@ -67,23 +70,28 @@ MRMESH_API FillHoleMetric getPlaneNormalizedFillMetric( const Mesh& mesh, EdgeId
 /// Where\n
 /// triangleMetric is proportional to triangle aspect ratio\n
 /// edgeMetric is proportional to ( 1 - dihedralAngleCos )
+/// It is unitless.
 MRMESH_API FillHoleMetric getComplexStitchMetric( const Mesh& mesh );
 
 /// Simple metric minimizing the sum of all edge lengths
+/// It is measured in length units.
 MRMESH_API FillHoleMetric getEdgeLengthFillMetric( const Mesh& mesh );
 
 /// Forbids connecting vertices from the same hole \n
 /// Simple metric minimizing edge length
+/// It is measured in length units.
 MRMESH_API FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh );
 
 /// Forbids connecting vertices from the same hole \n
 /// penalize for large area and face normal deviation from upDir \n
 /// All new faces should be parallel to given direction
+/// It is measured in power 4 length units (e.g. meters^4).
 MRMESH_API FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir );
 
 /// Forbids connecting vertices from the same hole \n
 /// penalize for long edges and its deviation from upDir \n
 /// All new faces should be parallel to given direction
+/// It is measured in squared length units.
 MRMESH_API FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, const Vector3f& upDir );
 
 /// This metric minimizes the sum of triangleMetric for all triangles in the triangulation
@@ -91,13 +99,16 @@ MRMESH_API FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, co
 /// Where\n
 /// triangleMetric is proportional to weighted triangle area and triangle aspect ratio\n
 /// edgeMetric grows with angle between triangles as ( ( 1 - cos( x ) ) / ( 1 + cos( x ) ) ) ^ 4.
+/// It is unitless.
 MRMESH_API FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e );
 
 /// This metric minimizes summary projection of new edges to plane normal, (try do produce edges parallel to plane)
+/// It is measured in length units.
 MRMESH_API FillHoleMetric getParallelPlaneFillMetric( const Mesh& mesh, EdgeId e, const Plane3f* plane = nullptr );
 
 /// This metric minimizes the maximal dihedral angle between the faces in the triangulation
 /// and on its boundary
+/// It is measured in angle units.
 MRMESH_API FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh );
 
 /// This metric consists of two parts
@@ -106,6 +117,7 @@ MRMESH_API FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh );
 /// 2) for each edge: square root of double total area of triangles to its left and right
 ///    times the factor depending extensionally on absolute dihedral angle between left and right triangles,
 ///    this makes visually triangulated surface as smooth as possible.
+/// It is measured in length units.
 /// For planar holes it is the same as getCircumscribedMetric.
 MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
 
@@ -113,8 +125,20 @@ MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
 MRMESH_API FillHoleMetric getMinTriAngleMetric( const Mesh& mesh );
 
 /// This metric is for triangulation construction with minimal summed area of triangles.
+/// It is measured in squared length units.
 /// Warning: this metric can produce degenerated triangles
 MRMESH_API FillHoleMetric getMinAreaMetric( const Mesh& mesh );
+
+/// This metric penalizes new triangles for getting far from `closeSurface` by projecting candidate face center on `closeSurfce`.
+/// While slower - it can produce better quality results for patching
+/// It is measured in squared length units.
+MRMESH_API FillHoleMetric getCloseSurfaceFillMetric( const Mesh& mesh, const Mesh& closeSurface );
+
+/// Compose two metrics together:
+/// return metrics are `mix(f.metric,g.metric)`.
+/// Default `mix` is sum
+/// \note It is recommended to both metrics to be in same measure e.g. both meters or both meters^2 etc. So scaling input meshes won't lead to different results.
+MRMESH_API FillHoleMetric mixMetrics( const FillHoleMetric& f, const FillHoleMetric& g, const FillCombineMetric& mix = {} );
 
 /// \}
 

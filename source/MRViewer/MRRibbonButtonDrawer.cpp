@@ -95,7 +95,7 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / UI::scale(),
                                            .rootType = DrawButtonParams::RootType::Toolbar } );
     ImGui::SameLine( 0.f, spacing );
-    const auto caption = Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
+    const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
     ImGui::Text( "%s", caption.c_str() );
     return res;
 }
@@ -358,7 +358,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         else
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * UI::scale() );
 
-        const auto caption = Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
         size_t pos = 0;
         for ( const auto& i : item.captionSize.splitInfo )
         {
@@ -371,7 +371,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     {
         ImGui::SameLine();
         ImGui::SetCursorPosY( ( params.itemSize.y - ImGui::GetTextLineHeight() ) * 0.5f );
-        const auto caption = Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
         ImGui::Text( "%s", caption.c_str() );
     }
 
@@ -631,9 +631,9 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * UI::scale(), cRibbonButtonWindowPaddingY * UI::scale() ) );
     std::string tooltip = item.item->getDynamicTooltip();
     if ( tooltip.empty() )
-        tooltip = Locale::translate( item.tooltip.c_str(), Locale::Domain{ item.localeDomainId } );
+        tooltip = Locale::translate( item.tooltip.c_str(), item.localeDomainId );
 
-    std::string caption = Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
+    std::string caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
 
     std::string fullText;
     fullText = caption;

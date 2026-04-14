@@ -909,9 +909,6 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
 
 void ViewerSettingsPlugin::drawLanguageSelector_()
 {
-    if ( !viewer->experimentalFeatures )
-        return;
-
     static const auto sLanguages = Locale::getAvailableLocales();
     static const auto sLanguageNames = [] ( const auto& languages )
     {
@@ -983,7 +980,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
         {
             item->second.item->action();
         }
-        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), Locale::Domain{ item->second.localeDomainId } ) );
+        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), item->second.localeDomainId ) );
     }
 }
 

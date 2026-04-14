@@ -65,8 +65,8 @@ jobs:
             c-compiler: /usr/bin/clang-20
             cxx-standard: 23
           - compiler: GCC 14
-            cxx-compiler: /usr/bin/g++-14
-            c-compiler: /usr/bin/gcc-14
+            cxx-compiler: /opt/rh/gcc-toolset-14/root/usr/bin/g++-14
+            c-compiler: /opt/rh/gcc-toolset-14/root/usr/bin/gcc-14
             cxx-standard: 23
           - arch: x64
             os: ubuntu-latest
@@ -83,6 +83,14 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
+      - name: Enable GCC 14 toolset
+        run: |
+          source /opt/rh/gcc-toolset-14/enable
+          for VAR in PATH ; do
+            echo "${VAR}=${!VAR}" >> $GITHUB_ENV
+            echo "${VAR}=${!VAR}"
+          done
+
       - name: Checkout
         uses: actions/checkout@v6
 

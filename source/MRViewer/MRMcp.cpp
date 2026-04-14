@@ -1,12 +1,3 @@
-#include "MRMcp.h"
-
-#if MR_ENABLE_MCP_SERVER
-#include "MRMesh/MRSystem.h"
-#include "MRPch/MRSpdlog.h"
-#include "MRViewer/MRCommandLoop.h"
-#include "MRViewer/MRUITestEngineControl.h"
-#include "MRViewer/MRViewer.h"
-
 #undef _t // Our translation macro interefers with Fastmcpp.
 
 #if defined( __GNUC__ )
@@ -18,6 +9,8 @@
 #pragma warning( disable: 4355 ) // 'this': used in base member initializer list
 #endif
 
+// This must be included before any standard library headers, because of the macro shenanigans we added to that header.
+// Those are duplicated into our PCH, so that shouldn't interfere.
 #include <fastmcpp.hpp>
 #include <fastmcpp/server/sse_server.hpp>
 
@@ -29,6 +22,17 @@
 
 #include <type_traits>
 #endif
+
+
+#include "MRMcp.h"
+
+#if MR_ENABLE_MCP_SERVER
+#include "MRMesh/MRSystem.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRUITestEngineControl.h"
+#include "MRViewer/MRViewer.h"
+
 
 
 /* HOW TO TEST MCP:

@@ -27,13 +27,6 @@ ELSE() # if APPLE
   IF( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17 ) # ethier AppleClang or Clang
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
   ENDIF()
-
-  # This somehow works around `Undefined symbols for architecture arm64: "std::exception_ptr::__from_native_exception_pointer(void*)"`.
-  # See: https://github.com/llvm/llvm-project/issues/86077
-  IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_CXX_FLAGS} -lc++abi")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_CXX_FLAGS} -lc++abi")
-  ENDIF()
 ENDIF()
 
 # Warnings and misc compiler settings.

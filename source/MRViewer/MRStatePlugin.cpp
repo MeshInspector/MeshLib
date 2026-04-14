@@ -33,7 +33,7 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     CommandLoop::appendCommand( [this] ()
     {
         std::string name = this->name();
-        int localeDomainId = -1;
+        LocaleDomainId localeDomainId;
         auto item = RibbonSchemaHolder::schema().items.find( name );
         if ( item != RibbonSchemaHolder::schema().items.end() )
         {
@@ -41,7 +41,7 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
                 name = item->second.caption;
             localeDomainId = item->second.localeDomainId;
         }
-        plugin_name = Locale::translate( name.c_str(), Locale::Domain{ localeDomainId } );
+        plugin_name = Locale::translate( name.c_str(), localeDomainId );
         plugin_name += UINameSuffix();
     }, CommandLoop::StartPosition::AfterPluginInit );
     tab_ = tab;

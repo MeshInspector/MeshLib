@@ -56,7 +56,7 @@ void RibbonSchema::updateCaptions()
         auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( item.item );
         if ( !statePlugin )
             continue;
-        statePlugin->setUIName( Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } ) );
+        statePlugin->setUIName( Locale::translate( item.getCaption().c_str(), item.localeDomainId ) );
     }
 }
 
@@ -517,7 +517,7 @@ void RibbonSchemaLoader::recalcItemSizes()
 
         auto& sizes = item.captionSize;
 
-        const auto caption = Locale::translate( item.getCaption().c_str(), Locale::Domain{ item.localeDomainId } );
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
         sizes.baseSize = sCalcSize( font, fontSize, caption.data(), caption.data() + caption.size() );
         sizes.splitInfo = sAutoSplit( caption, fontSize, cMaxTextWidth, font, sizes.baseSize );
     }
@@ -580,7 +580,7 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
 
 void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const std::string& schemaName ) const
 {
-    const auto domainId = !schemaName.empty() ? Locale::addDomain( schemaName ) : -1;
+    const auto domainId = !schemaName.empty() ? Locale::addDomain( schemaName ) : LocaleDomainId{};
 
     auto items = itemsStruct["Items"];
     if ( !items.isArray() )
@@ -674,7 +674,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
     readUIJson_( *itemsStructRes, domainId );
 }
 
-void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, int domainId ) const
+void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleDomainId domainId ) const
 {
     auto tabs = itemsStructure["Tabs"];
     if ( !tabs.isArray() )

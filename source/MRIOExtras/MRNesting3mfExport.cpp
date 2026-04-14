@@ -269,29 +269,14 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
 
     // 2D
     {
-        auto sb = subprogress( params.cb, 0.15f, 0.4f );
-        tbb::task_group tg;
-
-        Slices2D slicesSave, slicesBuffer;
-        if ( !params.meshes.empty() )
-            slicesBuffer = prepareSlices( params.meshes[ObjId( 0 )], worldBoxes[ObjId( 0 )], params.zStep, params.decimateSlices );
-        for ( ObjId i( 0 ); i < params.meshes.size(); ++i )
+        keepGoing = ParallelFor( params.meshes, [&] ( ObjId i )
         {
-            tg.wait();
-            std::swap( slicesSave, slicesBuffer ); // get prepared slices buffer
-            if ( i + 1 < params.meshes.size() )
-            {
-                // prepare next object slices in parallel while saving this object slices
-                tg.run( [&] ()
-                {
-                    slicesBuffer = prepareSlices( params.meshes[i + 1], worldBoxes[i + 1], params.zStep, params.decimateSlices );
-                } );
-            }
+            auto slices = prepareSlices( params.meshes[i], worldBoxes[i], params.zStep, params.decimateSlices );
             auto slPath = utf8string( dir / "2D" / ( uuids[i] + ".model" ) );
-            save2dModelFile( slPath, slicesSave );
-            if ( !reportProgress( sb, float( i + 1 ) / float( params.meshes.size() ) ) )
-                return unexpectedOperationCanceled();
-        }
+            save2dModelFile( slPath, slices );
+        }, subprogress( params.cb, 0.15f, 0.4f ) );
+        if ( !keepGoing )
+            return unexpectedOperationCanceled();
     }
 
     std::string tempStr;

@@ -16,6 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
 #: source/MRCommonPlugins/Basic/MRCameraOrientationPlugin.cpp:26
 #: source/MRViewer/MRViewerSettingsPlugin.cpp:467
@@ -975,10 +976,6 @@ msgid "Plane XY"
 msgstr ""
 
 #: source/MRViewer/ImGuiHelpers.cpp:1463
-msgid "Plane Import"
-msgstr ""
-
-#: source/MRViewer/ImGuiHelpers.cpp:1463
 msgid "Import Plane"
 msgstr ""
 
@@ -1559,7 +1556,14 @@ msgstr ""
 msgid "Opacity"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2512
+#: source/MRViewer/ImGuiMenu.cpp:2492
+#, c++-format
+msgid "{} uncommon tag"
+msgid_plural "{} uncommon tags"
+msgstr[0] ""
+msgstr[1] ""
+
+#: source/MRViewer/ImGuiMenu.cpp:2514
 msgid "Tags"
 msgstr ""
 
@@ -1599,14 +1603,6 @@ msgstr ""
 msgid "Hot Key List"
 msgstr ""
 
-#: source/MRViewer/MRDemoPlugin.cpp:36
-msgid "DEMO"
-msgstr ""
-
-#: source/MRViewer/MRDemoPlugin.cpp:45
-msgid "Are you sure?"
-msgstr ""
-
 #: source/MRViewer/MRModalDialog.cpp:77
 msgid "Do not show this message again"
 msgstr ""
@@ -1636,15 +1632,7 @@ msgstr ""
 msgid "MMB"
 msgstr ""
 
-#: source/MRViewer/MRProgressBar.cpp:168
-msgid "Not enough memory for the requested operation."
-msgstr ""
-
-#: source/MRViewer/MRProgressBar.cpp:199
-msgid "Unknown exception occurred"
-msgstr ""
-
-#: source/MRViewer/MRProgressBar.cpp:282
+#: source/MRViewer/MRProgressBar.cpp:237
 msgid "Canceling..."
 msgstr ""
 

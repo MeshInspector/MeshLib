@@ -107,6 +107,7 @@ class MRMESH_CLASS ObjTag;
 class MRMESH_CLASS TextureTag;
 class MRMESH_CLASS GraphVertTag;
 class MRMESH_CLASS GraphEdgeTag;
+class MRMESH_CLASS LocaleDomainTag;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( EdgeId,           Id<EdgeTag>           )
@@ -121,6 +122,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( TextureId,        Id<TextureTag>        )
     ( GraphVertId,      Id<GraphVertTag>      )
     ( GraphEdgeId,      Id<GraphEdgeTag>      )
+    ( LocaleDomainId,   Id<LocaleDomainTag>   )
 )
 // Those are full specializations in `MRId.h`, so `MR_CANONICAL_TYPEDEFS` doesn't work on them.
 // Have to add this too.
@@ -495,6 +497,8 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), TriPoint,
     ( TriPointd, TriPoint<double> )
 )
 
+struct FaceFace;
+struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
 struct MeshTriPoint;

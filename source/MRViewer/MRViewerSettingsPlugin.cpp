@@ -77,7 +77,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
             gpuOverridesMSAA_ = storedSamples_ != viewer.getRequestedMSAA(); // if it fails on application start - gpu overrides settings
 #ifdef __EMSCRIPTEN__
             if ( !viewer.isSceneTextureEnabled() )
-                maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more then x4 msaa for main framebuffer
+                maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more than x4 msaa for main framebuffer
 #endif
         }
     }, CommandLoop::StartPosition::AfterWindowAppear );
@@ -909,9 +909,6 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
 
 void ViewerSettingsPlugin::drawLanguageSelector_()
 {
-    if ( !viewer->experimentalFeatures )
-        return;
-
     static const auto sLanguages = Locale::getAvailableLocales();
     static const auto sLanguageNames = [] ( const auto& languages )
     {
@@ -983,7 +980,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
         {
             item->second.item->action();
         }
-        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), Locale::Domain{ item->second.localeDomainId } ) );
+        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), item->second.localeDomainId ) );
     }
 }
 

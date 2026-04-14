@@ -42,13 +42,20 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b, const UnitePairOfMehsesPar
     params.rigidB2A = unitePairParams.shift ? &xf : nullptr;
     params.mapper = unitePairParams.commonParams.fixDegeneracies || unitePairParams.mapper ? &mapper_ : nullptr;
     params.mergeAllNonIntersectingComponents = unitePairParams.commonParams.mergeMode;
-    params.forceCut = unitePairParams.commonParams.forceCut;
-    auto res = MR::boolean(
-        std::move( a ),
-        std::move( b ),
-        BooleanOperation::Union,
-        params
-    );
+    BooleanResult res;
+    if ( !unitePairParams.commonParams.forceCut )
+    {
+        res = MR::boolean(
+            std::move( a ),
+            std::move( b ),
+            BooleanOperation::Union,
+            params
+        );
+    }
+    else
+    {
+        res = MR::forceBoolean( a, b, BooleanOperation::Union, params );
+    }
     if ( !res.valid() )
         return unexpected( res.errorString );
 

@@ -1413,6 +1413,9 @@
     <ClInclude Include="MRMeshTotalAngle.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRSegmentMesh.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2320,6 +2323,12 @@
     </ClCompile>
     <ClCompile Include="MRMeshTotalAngle.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSegmentMesh.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgePathsBuilder.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -54,6 +54,7 @@ public:
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool laplacianBasedAddRemove = false; ///< if true in Add/Remove modes, the modification will be done using Laplacian solver, where the closest vertices will be attracted toward mouse cursor to form ideal ridges or grooves
         bool subdivideGrooves = false; ///< if true in Add/Remove modes, changed parts of mesh will be subdivided on mouse up
+        bool mimicPatch = false; /// if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing
     };
 
     /// initialize widget according ObjectMesh

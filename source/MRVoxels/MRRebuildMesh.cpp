@@ -63,31 +63,19 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
         progress = subprogress( progress, 0.1f, 1.0f );
     }
 
-    ProgressCallback preDecimateProgress, decimateProgress;
-    if ( settings.decimate )
-    {
-        preDecimateProgress = subprogress( progress, 0.0f, 0.7f );
-        decimateProgress = subprogress( progress, 0.7f, 1.0f );
-    }
-    else
-        preDecimateProgress = progress;
-
-    ProgressCallback preDecimateReduceAngleProgress, postDecimateReduceAngleProgress;
-    if ( settings.reduceAngleNumIters > 0 )
-    {
-        preDecimateReduceAngleProgress = subprogress( preDecimateProgress, 0.9f, 1.0f );
-        preDecimateProgress = subprogress( preDecimateProgress, 0.0f, 0.9f );
-        postDecimateReduceAngleProgress = subprogress( decimateProgress, 0.9f, 1.0f );
-        decimateProgress = subprogress( decimateProgress, 0.0f, 0.9f );
-    }
-
+    const float postprocessDuration =
+        ( settings.decimate ? 0.3f : 0.0f ) +
+        ( settings.reduceAngleNumIters > 0 ? 0.1f : 0.0f );
+    const auto offsetProgress = subprogress( progress, 0.0f, 1 - postprocessDuration );
+    const auto postprocessProgress = subprogress( progress, 1 - postprocessDuration, 1.0f );
+        
     genOffsetParams.closeHolesInHoleWindingNumber = settings.closeHolesInHoleWindingNumber;
     genOffsetParams.voxelSize = settings.voxelSize;
     genOffsetParams.mode = settings.offsetMode;
     genOffsetParams.windingNumberThreshold = settings.windingNumberThreshold;
     genOffsetParams.windingNumberBeta = settings.windingNumberBeta;
     genOffsetParams.fwn = settings.fwn;
-    genOffsetParams.callBack = preDecimateProgress;
+    genOffsetParams.callBack = offsetProgress;
 
     UndirectedEdgeBitSet sharpEdges;
     genOffsetParams.outSharpEdges = &sharpEdges;
@@ -96,50 +84,78 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     if ( !resMesh.has_value() )
         return resMesh;
 
-    ReduceTotalAngleParams reduceTotalAngleParams
-    {
-        .notFlippable = sharpEdges.any() ? &sharpEdges : nullptr
-    };
-    if ( settings.reduceAngleNumIters > 0 )
-    {
-        reduceTotalAngleInMesh( *resMesh, settings.reduceAngleNumIters, reduceTotalAngleParams, preDecimateReduceAngleProgress );
-        if ( !reportProgress( preDecimateReduceAngleProgress, 1.0f ) )
-            return unexpectedOperationCanceled();
-    }
-
-    if ( settings.decimate && resMesh->topology.numValidFaces() > 0 )
-    {
-        const auto map = resMesh->packOptimally( false );
-        if ( !reportProgress( decimateProgress, 0.1f ) )
-            return unexpectedOperationCanceled();
-
-        sharpEdges = mapEdges( map.e, sharpEdges );
-
-        DecimateSettings decimSettings
+    auto maybeOk = postprocessMeshFromVoxels( *resMesh, MeshFromVoxelsPostProcessingParams
         {
-            .maxError = 0.25f * genOffsetParams.voxelSize,
+            .voxelSize = genOffsetParams.voxelSize,
+            .reduceAngleNumIters = settings.reduceAngleNumIters,
+            .decimate = settings.decimate,
             .tinyEdgeLength = settings.tinyEdgeLength,
-            .stabilizer = 1e-5f, // 1e-6 here resulted in a bit worse mesh
-            .notFlippable = sharpEdges.any() ? &sharpEdges : nullptr,
-            .packMesh = true,
-            .progressCallback = subprogress( decimateProgress, 0.1f, 1.0f ),
-            .subdivideParts = 64
-        };
-        if ( decimateMesh( *resMesh, decimSettings ).cancelled )
-            return unexpectedOperationCanceled();
-
-        if ( settings.reduceAngleNumIters > 0 )
-        {
-            reduceTotalAngleInMesh( *resMesh, settings.reduceAngleNumIters, reduceTotalAngleParams, postDecimateReduceAngleProgress );
-            if ( !reportProgress( postDecimateReduceAngleProgress, 1.0f ) )
-                return unexpectedOperationCanceled();
-        }
-    }
+            .sharpEdges = sharpEdges.any() ? &sharpEdges : nullptr
+        }, postprocessProgress );
+    if ( !maybeOk )
+        return unexpected( std::move( maybeOk.error() ) );
 
     if ( settings.outSharpEdges )
         *settings.outSharpEdges = std::move( sharpEdges );
 
     return resMesh;
+}
+
+Expected<void> postprocessMeshFromVoxels( Mesh& mesh, const MeshFromVoxelsPostProcessingParams& params, const ProgressCallback& progress )
+{
+    MR_TIMER;
+    assert( params.voxelSize > 0 );
+    if ( params.voxelSize <= 0 )
+        return unexpected( "voxelize is not set" );
+
+    ProgressCallback decimateProgress, postDecimateReduceAngleProgress;
+    const auto notFlippable = params.sharpEdges && params.sharpEdges->any() ? params.sharpEdges : nullptr;
+    ReduceTotalAngleParams reduceTotalAngleParams
+    {
+        .notFlippable = notFlippable
+    };
+    if ( params.reduceAngleNumIters > 0 )
+    {
+        reduceTotalAngleInMesh( mesh, params.reduceAngleNumIters, reduceTotalAngleParams, subprogress( progress, 0.0f, 0.1f ) );
+        if ( !reportProgress( progress, 0.1f ) )
+            return unexpectedOperationCanceled();
+        decimateProgress = subprogress( progress, 0.1f, 0.95f );
+        postDecimateReduceAngleProgress = subprogress( progress, 0.95f, 1.0f );
+    }
+    else
+        decimateProgress = progress;
+
+    if ( params.decimate && mesh.topology.numValidFaces() > 0 )
+    {
+        const auto map = mesh.packOptimally( false );
+        if ( !reportProgress( decimateProgress, 0.1f ) )
+            return unexpectedOperationCanceled();
+
+        if ( params.sharpEdges )
+            *params.sharpEdges = mapEdges( map.e, *params.sharpEdges );
+
+        DecimateSettings decimSettings
+        {
+            .maxError = 0.25f * params.voxelSize,
+            .tinyEdgeLength = params.tinyEdgeLength,
+            .stabilizer = 1e-5f, // 1e-6 here resulted in a bit worse mesh
+            .notFlippable = notFlippable,
+            .packMesh = true,
+            .progressCallback = subprogress( decimateProgress, 0.1f, 1.0f ),
+            .subdivideParts = 64
+        };
+        if ( decimateMesh( mesh, decimSettings ).cancelled )
+            return unexpectedOperationCanceled();
+
+        if ( params.reduceAngleNumIters > 0 )
+        {
+            reduceTotalAngleInMesh( mesh, params.reduceAngleNumIters, reduceTotalAngleParams, postDecimateReduceAngleProgress );
+            if ( !reportProgress( postDecimateReduceAngleProgress, 1.0f ) )
+                return unexpectedOperationCanceled();
+        }
+    }
+
+    return {};
 }
 
 } //namespace MR

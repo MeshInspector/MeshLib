@@ -44,6 +44,19 @@ namespace MR
 [[nodiscard]] MRMESH_API EdgeMetric edgeAbsCurvMetric( const Mesh & mesh, float angleSinFactor = 2, float angleSinForBoundary = 0 );
 [[nodiscard]] MRMESH_API EdgeMetric edgeAbsCurvMetric( const MeshTopology& topology, const VertCoords& points, float angleSinFactor = 2, float angleSinForBoundary = 0 );
 
+struct DihedralAngleProcessParams
+{
+    float convexFactor = 1;     ///< positive convex dihedral angles are returned multiplied on this factor
+    float concaveFactor = 1;    ///< negative concave dihedral angles are returned multiplied on this factor
+    float boundaryValue = 0;    ///< this value will be returned as dihedral angle for boundary edges
+};
+
+/// this metric returns edge's dihedral angle computed by MR::dihedralAngle and post-processed based on the given parameters;
+/// returned value is NOT multiplied on edge's length as in other metrics;
+/// this metric is symmetric: m(e) == m(e.sym())
+[[nodiscard]] MRMESH_API EdgeMetric edgeDihedralAngleMetric( const Mesh& mesh, const DihedralAngleProcessParams& params = {} );
+[[nodiscard]] MRMESH_API EdgeMetric edgeDihedralAngleMetric( const MeshTopology& topology, const VertCoords& points, const DihedralAngleProcessParams& params = {} );
+
 /// pre-computes the metric for all mesh edges to quickly return it later for any edge;
 /// input metric must be symmetric: metric(e) == metric(e.sym())
 [[nodiscard]] MRMESH_API EdgeMetric edgeTableSymMetric( const MeshTopology & topology, const EdgeMetric & metric );

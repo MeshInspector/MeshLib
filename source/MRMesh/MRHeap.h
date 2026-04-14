@@ -28,31 +28,43 @@ public:
         T val;
     };
 
+    /// constructs an empty heap
+    Heap( P pred = {} ) : pred_( pred ) {}
+
     /// constructs heap for given number of elements, assigning given default value to each element
     explicit Heap( size_t size, T def MR_LIFETIMEBOUND_NESTED = {}, P pred = {} );
+
     /// constructs heap from given elements (id's shall not repeat and have spaces, but can be arbitrary shuffled)
     explicit Heap( std::vector<Element> elms MR_LIFETIMEBOUND_NESTED, P pred = {} );
+
     /// returns the size of the heap
     size_t size() const { return heap_.size(); }
+
     /// increases the size of the heap by adding elements at the end
     void resize( size_t size, T def MR_LIFETIME_CAPTURE_BY_NESTED(this) = {} );
+
     /// returns the value associated with given element
     const T & value( I elemId ) const MR_LIFETIMEBOUND { return heap_[ id2PosInHeap_[ elemId ] ].val; }
+
     /// returns the element with the largest value
     const Element & top() const MR_LIFETIMEBOUND { return heap_[0]; }
+
     /// sets new value to given element
     void setValue( I elemId, const T & newVal MR_LIFETIME_CAPTURE_BY_NESTED(this) );
+
     /// sets new value to given element, which shall be larger/smaller than the current value
     void setLargerValue( I elemId, const T & newVal MR_LIFETIME_CAPTURE_BY_NESTED(this) );
     void setSmallerValue( I elemId, const T & newVal MR_LIFETIME_CAPTURE_BY_NESTED(this) );
     template<typename U>
     void increaseValue( I elemId, const U & inc ) { setLargerValue( elemId, value( elemId ) + inc ); }
+
     /// sets new value to the current top element, returning its previous value
     Element setTopValue( const T & newVal MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { Element res = top(); setValue( res.id, newVal ); return res; }
 
 private:
     /// tests whether heap element at posA is less than posB
     bool less_( size_t posA, size_t posB ) const;
+
     /// lifts the element in the queue according to its value
     void lift_( size_t pos, I elemId );
 

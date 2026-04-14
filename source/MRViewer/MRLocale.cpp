@@ -2,9 +2,12 @@
 
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRId.h"
 #include "MRMesh/MROnInit.h"
+#include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRPch/MRWasm.h"
 
 #pragma warning( push )
 #pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
@@ -13,6 +16,14 @@
 #pragma warning( pop )
 #include <boost/signals2/signal.hpp>
 #include <boost/version.hpp>
+
+#ifdef _WIN32
+#include <WinNls.h>
+#endif
+
+#ifdef __APPLE__
+#include "MRLocaleMacos.h"
+#endif
 
 #include <cassert>
 #include <map>
@@ -38,7 +49,7 @@ std::unordered_map<std::string, std::string> gKnownLocales = {
 #include "MRLocaleNames.inl"
 };
 
-std::map<const char*, int> gDomainCache = {};
+std::map<const char*, LocaleDomainId> gDomainCache = {};
 
 } // namespace
 
@@ -81,6 +92,7 @@ std::vector<std::string> Locale::getAvailableLocales()
             if ( entry.is_directory( ec ) )
                 results.emplace_back( utf8string( entry.path().filename() ) );
     std::sort( results.begin(), results.end() );
+    results.erase( std::unique( results.begin(), results.end() ), results.end() );
     return results;
 }
 
@@ -93,7 +105,7 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
     gLocale = gLocaleGen.generate( gLocaleName );
 }
 
-int Locale::addDomain( const char* domainName )
+LocaleDomainId Locale::addDomain( const char* domainName )
 {
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
@@ -101,12 +113,10 @@ int Locale::addDomain( const char* domainName )
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
 
-    using facet_type = boost::locale::message_format<char>;
-    assert( std::has_facet<facet_type>( gLocale ) );
-    return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
 }
 
-int Locale::addDomain( const std::string& domainName )
+LocaleDomainId Locale::addDomain( const std::string& domainName )
 {
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleName );
@@ -114,21 +124,20 @@ int Locale::addDomain( const std::string& domainName )
     return findDomain( domainName );
 }
 
-int Locale::findDomain( const char* domainName )
+LocaleDomainId Locale::findDomain( const char* domainName )
 {
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
 
-    using facet_type = boost::locale::message_format<char>;
-    assert( std::has_facet<facet_type>( gLocale ) );
-    return ( gDomainCache[domainName] = std::use_facet<facet_type>( gLocale ).domain( domainName ) );
+    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
 }
 
-int Locale::findDomain( const std::string& domainName )
+LocaleDomainId Locale::findDomain( const std::string& domainName )
 {
     using facet_type = boost::locale::message_format<char>;
     assert( std::has_facet<facet_type>( gLocale ) );
-    return std::use_facet<facet_type>( gLocale ).domain( domainName );
+    const auto id = std::use_facet<facet_type>( gLocale ).domain( domainName );
+    return id != 0 ? LocaleDomainId{ id } : LocaleDomainId{};
 }
 
 std::string Locale::getDisplayName( const std::string& localeName )
@@ -142,6 +151,97 @@ std::string Locale::getDisplayName( const std::string& localeName )
 void Locale::setDisplayName( const std::string& localeName, const std::string& displayName )
 {
     gKnownLocales[localeName] = displayName;
+}
+
+std::vector<std::string> Locale::getSystemLocales()
+{
+    [[maybe_unused]] constexpr auto fromBcp47 = [] ( std::string langName )
+    {
+        std::replace( langName.begin(), langName.end(), '-', '_' );
+        // see also: https://learn.microsoft.com/en-us/windows/win32/intl/locale-names
+        return langName;
+    };
+    [[maybe_unused]] constexpr auto fromPosix = [] ( std::string langName )
+    {
+        // strip encoding
+        if ( auto pos = langName.find( '.' ); pos != std::string::npos )
+            langName = langName.substr( 0, pos );
+        // strip variant
+        if ( auto pos = langName.find( '@' ); pos != std::string::npos )
+            langName = langName.substr( 0, pos );
+        return langName;
+    };
+
+    std::vector<std::string> results;
+    auto addLang = [&] ( const std::string& langName )
+    {
+        results.emplace_back( langName );
+        // also add the language code alone (de_CH -> de)
+        if ( auto pos = langName.find( '_' ); pos != std::string::npos )
+            results.emplace_back( langName.substr( 0, pos ) );
+    };
+#if defined _WIN32
+    ULONG numLangs, bufSize = 0;
+    if ( TRUE == GetUserPreferredUILanguages( MUI_LANGUAGE_NAME, &numLangs, NULL, &bufSize ) )
+    {
+        std::wstring buf( bufSize, L'\0' );
+        if ( TRUE == GetUserPreferredUILanguages( MUI_LANGUAGE_NAME, &numLangs, buf.data(), &bufSize ) )
+        {
+            ULONG actualNumLangs = 0;
+            for ( auto ptr = buf.data(); ptr[0] != L'\0'; ptr += std::wcslen( ptr ) + 1 )
+            {
+                actualNumLangs++;
+                const auto langName = wideToUtf8( ptr );
+                addLang( fromBcp47( langName ) );
+            }
+            assert( actualNumLangs == numLangs );
+        }
+    }
+#elif defined __APPLE__
+    for ( auto langName : detail::getMacosLocales() )
+        addLang( fromBcp47( langName ) );
+#elif defined __EMSCRIPTEN__
+    auto* langNames = (char*)EM_ASM_PTR( { return stringToNewUTF8( navigator.languages.join() ); } );
+    for ( auto langName : split( langNames, "," ) )
+        addLang( fromBcp47( langName ) );
+    free( langNames );
+#else
+    constexpr auto getenv = [] ( const char* name ) -> char*
+    {
+        if ( auto* var = std::getenv( name ); var != nullptr && *var != '\0' )
+            return var;
+        return nullptr;
+    };
+
+    // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html
+    // https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html
+    std::string currentLocale = "C";
+    if ( const auto* envLcAll = getenv( "LC_ALL" ) )
+        currentLocale = fromPosix( envLcAll );
+    else if ( const auto* envLcMessages = getenv( "LC_MESSAGES" ) )
+        currentLocale = fromPosix( envLcMessages );
+    else if ( const auto* envLang = getenv( "LANG" ) )
+        currentLocale = fromPosix( envLang );
+    if ( currentLocale != "C" )
+    {
+        addLang( currentLocale );
+
+        if ( const auto* envLanguage = getenv( "LANGUAGE" ) )
+            for ( auto langName : split( envLanguage, ":" ) )
+                addLang( fromPosix( langName ) );
+    }
+#endif
+
+    // remove duplicates
+    std::set<std::string> langSet;
+    auto it = std::remove_if( results.begin(), results.end(), [&] ( const std::string& langName )
+    {
+        auto [_, inserted] = langSet.insert( langName );
+        return !inserted;
+    } );
+    results.erase( it, results.end() );
+
+    return results;
 }
 
 MR_ON_INIT

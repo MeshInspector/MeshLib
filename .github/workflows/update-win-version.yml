@@ -87,3 +87,9 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.output_zip }}
           retention-days: 1
+
+      - name: Delete Windows Binaries Archive
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: WindowsArchive*
+          failOnError: false

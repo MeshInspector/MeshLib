@@ -10,6 +10,9 @@
 #include "MRPartMappingAdapters.h"
 #include "MRParallelFor.h"
 #include "MRPch/MRTBB.h"
+#include "MRFillContourByGraphCut.h"
+#include "MREdgeMetric.h"
+#include "MRRegionBoundary.h"
 
 namespace MR
 {
@@ -34,6 +37,11 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
         for ( const auto& path : cutPaths )
             for ( auto e : path )
                 cutEdges.set( e );
+        if ( intParams.graphCutSeparation )
+        {
+            auto left = fillContourLeftByGraphCut( origin.topology, cutPaths, edgeAbsCurvMetric( origin ) );
+            cutEdges |= findRegionBoundaryUndirectedEdgesInsideMesh( origin.topology, left );
+        }
         unionFind = MeshComponents::getUnionFindStructureFaces( origin, MeshComponents::PerEdge, &cutEdges );
     }
 
@@ -147,7 +155,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
 void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
                            const std::vector<EdgePath>& pathsA,
                            const std::vector<EdgePath>& pathsB,
-                           const AffineXf3f* rigidB2A, BooleanResultMapper* mapper )
+                           const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool graphCut )
 {
     MR_TIMER;
 
@@ -163,10 +171,20 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
         partA.addMesh( partB, &fMapNew, &vMapNew, &eMapNew );
     else
     {
-        if ( !pathsHaveLeftHole )
-            partA.addMeshPart( partB, false, pathsA, pathsB, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
+        if ( !graphCut )
+        {
+            if ( !pathsHaveLeftHole )
+                partA.addMeshPart( partB, false, pathsA, pathsB, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
+            else
+                partB.addMeshPart( partA, false, pathsB, pathsA, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
+        }
         else
-            partB.addMeshPart( partA, false, pathsB, pathsA, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
+        {
+            if ( !pathsHaveLeftHole )
+                partA.addMeshPart( partB, false, {}, {}, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
+            else
+                partB.addMeshPart( partA, false, {}, {}, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
+        }
     }
 
     if ( mapper )
@@ -232,7 +250,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
                              {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
     }
 
-    connectPreparedParts( aPart, bPart, false, {}, {}, rigidB2A, mapper );
+    connectPreparedParts( aPart, bPart, false, {}, {}, rigidB2A, mapper, intParams.graphCutSeparation );
 
     return aPart;
 }
@@ -311,7 +329,7 @@ Expected<MR::Mesh> doBooleanOperation(
     connectPreparedParts( aPart, bPart, pathsHaveLeftHole,
                           needStitch ? pathsACpy : std::vector<EdgePath>{},
                           needStitch ? pathsBCpy : std::vector<EdgePath>{},
-                          rigidB2A, mapper );
+                          rigidB2A, mapper, intParams.graphCutSeparation );
 
     if ( intParams.optionalOutCut )
     {

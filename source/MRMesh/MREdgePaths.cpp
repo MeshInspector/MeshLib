@@ -1,12 +1,14 @@
 #include "MREdgePaths.h"
 #include "MREdgePathsBuilder.h"
 #include "MREdgeIterator.h"
+#include "MREdgeMetric.h"
 #include "MRRegionBoundary.h"
 #include "MRPlane3.h"
 #include "MRTimer.h"
 #include "MRCube.h"
 #include "MRUnionFind.h"
 #include "MRGTest.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -84,6 +86,11 @@ double calcPathMetric( const EdgePath & path, EdgeMetric metric )
     return res;
 }
 
+double calcPathLength( const EdgePath & path, const Mesh & mesh )
+{
+    return calcPathMetric( path, edgeLengthMetric( mesh ) );
+}
+
 Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh )
 {
     assert( isEdgeLoop( mesh.topology, loop ) );
@@ -113,6 +120,11 @@ void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric )
         sorted[i] = std::move( paths[sortedIds[i]] );
     }
     paths = std::move( sorted );
+}
+
+void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh )
+{
+    sortPathsByMetric( paths, edgeLengthMetric( mesh ) );
 }
 
 void addLeftBand( const MeshTopology & topology, const EdgeLoop & loop, FaceBitSet & addHere )
@@ -673,6 +685,32 @@ int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f
         }
     }
     return found;
+}
+
+Contour3f edgePathToContour3f( const Mesh& mesh, const EdgePath& line )
+{
+    if ( line.empty() )
+        return {};
+    if ( !isEdgePath( mesh.topology, line ) )
+    {
+        assert( !"not supported for sparse paths" );
+        return {};
+    }
+    Contour3f res( line.size() + 1 );
+    for ( int i = 0; i < line.size(); ++i )
+        res[i] = mesh.orgPnt( line[i] );
+    res.back() = mesh.destPnt( line.back() );
+    return res;
+}
+
+Contours3f edgePathsToContours3f( const Mesh& mesh, const std::vector<EdgePath>& lines )
+{
+    Contours3f res( lines.size() );
+    ParallelFor( lines, [&] ( size_t i )
+    {
+        res[i] = edgePathToContour3f( mesh, lines[i] );
+    } );
+    return res;
 }
 
 TEST(MRMesh, BuildShortestPath)

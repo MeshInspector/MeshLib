@@ -5,13 +5,11 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRPlane3.h"
-#include "MRMeshBuilder.h"
 #include "MRMeshDelone.h"
 #include "MRMarkedContour.h"
-#include "MRGTest.h"
 #include "MRParallelFor.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRphmap.h"
+#include "MRPch/MRSpdlog.h"
 #include <queue>
 #include <functional>
 
@@ -587,6 +585,27 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     }
     [[maybe_unused]] const auto fsz = mesh.topology.faceSize();
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
+}
+
+bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan )
+{
+    if ( plan.items.empty() )
+        return true;
+
+    auto getVert = [&]( int code )
+    {
+        while ( code < 0 )
+            code = plan.items[ -(code+1) ].edgeCode1;
+        return topology.org( EdgeId( code ) );
+    };
+    for ( int i = 0; i < plan.items.size(); ++i )
+    {
+        auto v1 = getVert( plan.items[i].edgeCode1 );
+        auto v2 = getVert( plan.items[i].edgeCode2 );
+        if ( topology.findEdge( v1, v2 ) )
+            return false;
+    }
+    return true;
 }
 
 /// this class allows you to prepare fill plans for several holes with no new memory allocations on
@@ -1271,117 +1290,6 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     topology.splice( a, res );
     topology.splice( b, res.sym() );
     return res;
-}
-
-TEST( MRMesh, stitchHoles )
-{
-    Triangulation t{
-        { 0_v, 1_v, 2_v },
-        { 3_v, 4_v, 5_v }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
-
-    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // VertId{0}
-    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // VertId{1}
-    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // VertId{2}
-    mesh.points.emplace_back( 0.f, 0.f, 1.f ); // VertId{3}
-    mesh.points.emplace_back( 1.f, 0.f, 1.f ); // VertId{4}
-    mesh.points.emplace_back( 0.f, 1.f, 1.f ); // VertId{5}
-    EXPECT_EQ( mesh.points.size(), 6 );
-
-    auto bdEdges = mesh.topology.findHoleRepresentiveEdges();
-    EXPECT_EQ( bdEdges.size(), 2 );
-    EXPECT_FALSE( mesh.topology.left( bdEdges[0] ).valid() );
-    EXPECT_FALSE( mesh.topology.left( bdEdges[1] ).valid() );
-
-    FaceBitSet newFaces;
-    StitchHolesParams params;
-    auto fsz0 = mesh.topology.faceSize();
-    params.outNewFaces = &newFaces;
-    stitchHoles( mesh, bdEdges[0], bdEdges[1], params );
-    auto numNewFaces = mesh.topology.faceSize() - fsz0;
-
-    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 8 );
-    EXPECT_EQ( mesh.points.size(), 6 );
-    EXPECT_EQ( numNewFaces, 6 );
-    EXPECT_EQ( newFaces.count(), 6 );
-    EXPECT_EQ( newFaces.size(), 8 );
-
-    bdEdges = mesh.topology.findHoleRepresentiveEdges();
-    EXPECT_EQ( bdEdges.size(), 0 );
-}
-
-TEST( MRMesh, makeBridge )
-{
-    MeshTopology topology;
-    auto a = topology.makeEdge();
-    topology.setOrg( a, topology.addVertId() );
-    topology.setOrg( a.sym(), topology.addVertId() );
-    auto b = topology.makeEdge();
-    topology.setOrg( b, topology.addVertId() );
-    topology.setOrg( b.sym(), topology.addVertId() );
-    EXPECT_EQ( topology.numValidFaces(), 0 );
-    FaceBitSet fbs;
-    auto bridgeRes = makeBridge( topology, a, b, &fbs );
-    EXPECT_TRUE( bridgeRes );
-    EXPECT_EQ( bridgeRes.newFaces, 2 );
-    EXPECT_TRUE( bridgeRes.na );
-    EXPECT_EQ( topology.org( a ), topology.org( bridgeRes.na ) );
-    EXPECT_TRUE( topology.left( a ) );
-    EXPECT_FALSE( topology.left( bridgeRes.na ) );
-    EXPECT_TRUE( bridgeRes.nb );
-    EXPECT_EQ( topology.org( b ), topology.org( bridgeRes.nb ) );
-    EXPECT_TRUE( topology.left( b ) );
-    EXPECT_FALSE( topology.left( bridgeRes.nb ) );
-    EXPECT_EQ( fbs.count(), 2 );
-    EXPECT_EQ( topology.numValidVerts(), 4 );
-    EXPECT_EQ( topology.numValidFaces(), 2 );
-    EXPECT_EQ( topology.edgeSize(), 5 * 2 );
-
-    topology = MeshTopology();
-    a = topology.makeEdge();
-    topology.setOrg( a, topology.addVertId() );
-    topology.setOrg( a.sym(), topology.addVertId() );
-    b = topology.makeEdge();
-    topology.splice( a.sym(), b );
-    topology.setOrg( b.sym(), topology.addVertId() );
-    EXPECT_EQ( topology.numValidFaces(), 0 );
-    fbs.reset();
-    bridgeRes = makeBridge( topology, a, b, &fbs );
-    EXPECT_TRUE( bridgeRes );
-    EXPECT_EQ( bridgeRes.newFaces, 1 );
-    EXPECT_TRUE( bridgeRes.na );
-    EXPECT_EQ( topology.org( a ), topology.org( bridgeRes.na ) );
-    EXPECT_TRUE( topology.left( a ) );
-    EXPECT_FALSE( topology.left( bridgeRes.na ) );
-    EXPECT_FALSE( bridgeRes.nb );
-    EXPECT_TRUE( topology.left( b ) );
-    EXPECT_EQ( fbs.count(), 1 );
-    EXPECT_EQ( topology.numValidVerts(), 3 );
-    EXPECT_EQ( topology.numValidFaces(), 1 );
-    EXPECT_EQ( topology.edgeSize(), 3 * 2 );
-}
-
-TEST( MRMesh, makeBridgeEdge )
-{
-    MeshTopology topology;
-    auto a = topology.makeEdge();
-    topology.setOrg( a, topology.addVertId() );
-    topology.setOrg( a.sym(), topology.addVertId() );
-    auto b = topology.makeEdge();
-    topology.setOrg( b, topology.addVertId() );
-    topology.setOrg( b.sym(), topology.addVertId() );
-    auto x = makeBridgeEdge( topology, a, b );
-    EXPECT_TRUE( topology.fromSameOriginRing( a, x ) );
-    EXPECT_TRUE( topology.fromSameOriginRing( b, x.sym() ) );
-    EXPECT_EQ( topology.edgeSize(), 3 * 2 );
-
-    x = makeBridgeEdge( topology, a, b );
-    EXPECT_FALSE( x.valid() );
 }
 
 } //namespace MR

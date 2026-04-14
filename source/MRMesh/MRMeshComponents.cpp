@@ -8,6 +8,7 @@
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
 #include "MRUnionFindParallel.h"
+#include "MRFaceFace.h"
 #include "MRphmap.h"
 #include <climits>
 
@@ -571,6 +572,27 @@ std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, Fa
 
     const auto& allRoots = unionFindStruct.roots();
     return getUniqueRootIds( allRoots, region );
+}
+
+std::pair<Face2RegionMap, int> getFacePairRegionMap( const Mesh& mesh, const std::vector<FaceFace>& facePairs,
+    FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    MR_TIMER;
+
+    FaceBitSet fs( mesh.topology.faceSize() );
+    for ( const auto & f : facePairs )
+    {
+        fs.set( f.aFace );
+        fs.set( f.bFace );
+    }
+
+    auto unionFindStruct = getUnionFindStructureFaces( { mesh, &fs }, incidence, isCompBd );
+
+    for ( const auto & f : facePairs )
+        unionFindStruct.unite( f.aFace, f.bFace );
+
+    const auto& allRoots = unionFindStruct.roots();
+    return getUniqueRootIds( allRoots, fs );
 }
 
 Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,

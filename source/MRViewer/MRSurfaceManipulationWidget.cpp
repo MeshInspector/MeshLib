@@ -410,7 +410,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                 {
                     .maxEdgeLen = 0.0f // to use 'patchMesh' default
                 },
-                .smoothCurvature = !settings_.flatPatch,
+                .smoothCurvature = !settings_.mimicPatch,
                 .smoothSettings =
                 {
                     .edgeWeights = settings_.edgeWeights,
@@ -418,7 +418,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                 }
             };
             Mesh patchRefMesh;
-            if ( !settings_.flatPatch )
+            if ( !settings_.mimicPatch )
             {
                 settings.triangulateParams.metric = getUniversalMetric( *newMesh );
             }
@@ -431,7 +431,6 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                     {
                         return a + 100.0 * std::sqrt( b );
                     } );
-                //settings.triangulateParams.maxPolygonSubdivisions = 100;
             }
             settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
             {

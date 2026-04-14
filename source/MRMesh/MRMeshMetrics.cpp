@@ -347,7 +347,6 @@ FillHoleMetric getMinAreaMetric( const Mesh& mesh )
 FillHoleMetric getCloseSurfaceFillMetric( const Mesh& mesh, const Mesh& closeSurface )
 {
     FillHoleMetric metric;
-    closeSurface.getAABBTree(); // ensure the tree is constructed
     metric.triangleMetric = [&mesh, &closeSurface] ( VertId a, VertId b, VertId c )
     {
         Vector3f center = ( mesh.points[a] + mesh.points[b] + mesh.points[c] ) / 3.0f;

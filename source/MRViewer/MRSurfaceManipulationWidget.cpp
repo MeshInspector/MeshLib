@@ -404,19 +404,35 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             {
                 .triangulateParams =
                 {
-                    .metric = getUniversalMetric( *newMesh ),
                     .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                 },
                 .subdivideSettings =
                 {
                     .maxEdgeLen = 0.0f // to use 'patchMesh' default
                 },
+                .smoothCurvature = !settings_.flatPatch,
                 .smoothSettings =
                 {
                     .edgeWeights = settings_.edgeWeights,
                     .vmass = settings_.vmass
                 }
             };
+            Mesh patchRefMesh;
+            if ( !settings_.flatPatch )
+            {
+                settings.triangulateParams.metric = getUniversalMetric( *newMesh );
+            }
+            else
+            {
+                patchRefMesh.addMeshPart( { *newMesh,&delFaces } );
+                settings.triangulateParams.metric = mixMetrics(
+                    getCircumscribedMetric( *newMesh ), getCloseSurfaceFillMetric( *newMesh, patchRefMesh ),
+                    [] ( double a, double b )->double
+                    {
+                        return a + 100.0 * std::sqrt( b );
+                    } );
+                //settings.triangulateParams.maxPolygonSubdivisions = 100;
+            }
             settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
             {
                 if ( newFaceSelection.test( newMesh->topology.left( e ) ) )

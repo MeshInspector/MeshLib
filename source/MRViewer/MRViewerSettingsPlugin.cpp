@@ -909,9 +909,6 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
 
 void ViewerSettingsPlugin::drawLanguageSelector_()
 {
-    if ( !viewer->experimentalFeatures )
-        return;
-
     static const auto sLanguages = Locale::getAvailableLocales();
     static const auto sLanguageNames = [] ( const auto& languages )
     {

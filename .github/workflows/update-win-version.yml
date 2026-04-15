@@ -46,7 +46,7 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ env.vs19_vcpkg_version }}-${{ matrix.triplet }}
+          key: vcpkg-cache-${{ env.vs19_vcpkg_version }}-${{ matrix.vcpkg_triplet }}
           path: |
             C:\vcpkg\*
 
@@ -67,7 +67,7 @@ jobs:
           tar -xvzf MeshLibC2Headers.zip
 
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.triplet }}
+        run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0

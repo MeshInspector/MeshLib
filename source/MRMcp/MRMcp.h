@@ -128,6 +128,7 @@ public:
     // Fails if the tool with this `id` already exists.
     // Must be called early, before `setRunning(true)` is called for the first time, otherwise fails.
     // Returns true on success. Asserts when returning false, so you don't have to check the return value.
+    // NOTE: Consult `docs/testing_mcp.md` for how to test your tool.
     MRMCP_API bool addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func );
 
     [[nodiscard]] MRMCP_API Params getParams() const;

@@ -77,7 +77,8 @@ ENDIF()
 # Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the
 # vcpkg python3 port ships pre-built Release binaries (IDL=0) that cannot load
 # .pyd files built against a different debug CRT (error 1114 on Windows).
-IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*")
+# Only affects Debug builds; Release with this triplet uses IDL=0 (the default).
+IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
 ENDIF()

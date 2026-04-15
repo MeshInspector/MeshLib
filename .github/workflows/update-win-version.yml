@@ -24,7 +24,6 @@ jobs:
             output_zip: MeshLibDist.zip
             artifact_name: DistributivesWin
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
-            extract_release: MREDist_Release-IteratorDebug.zip
             extract_debug: MREDist_Debug-IteratorDebug.zip
             output_zip: MeshLibDist-IteratorDebug.zip
             artifact_name: DistributivesWin-IteratorDebug

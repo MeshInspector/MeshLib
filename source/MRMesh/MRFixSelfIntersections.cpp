@@ -153,7 +153,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     if ( res->none() )
         return {};
 
-    expand( mesh.topology, *res, settings.maxExpand );
+    expand( mesh.topology, *res, std::max( settings.maxExpand, 1 ) );
 
     Settings currentSettings = settings;
     if ( currentSettings.subdivideEdgeLen < FLT_MAX )
@@ -187,7 +187,8 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     if ( !res.has_value() )
         return unexpected( res.error() );
 
-    expand( mesh.topology, *res, settings.maxExpand );
+    if ( settings.maxExpand > 0 )
+        expand( mesh.topology, *res, settings.maxExpand );
 
     if ( settings.method == Settings::Method::Relax )
     {
@@ -204,6 +205,9 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     else
     {
         auto boundaryEdges = mesh.topology.findLeftBdEdges();
+        Mesh patchRefMesh;
+        if ( settings.mimicPatch )
+            patchRefMesh.addMeshPart( { mesh,&*res } );
         mesh.topology.deleteFaces( *res );
         mesh.topology.deleteFaces( findHoleComplicatingFaces( mesh ) );
         mesh.invalidateCaches();
@@ -230,8 +234,22 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
             // Fill hole
             // MultipleEdgesResolveMode::Simple should be enough after deleting findHoleComplicatingFaces(...)
             // But if multiple edges appear often, could be changed to MultipleEdgesResolveMode::Strong
-            fillHole( mesh, holes[i].front(), {.metric = getMinAreaMetric(mesh),
-                .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Simple });
+            FillHoleParams fhParams;
+            if ( settings.mimicPatch )
+            {
+                fhParams.metric = mixMetrics(
+                    getMinAreaMetric( mesh ), getCloseSurfaceFillMetric( mesh, patchRefMesh ),
+                    [] ( double a, double b )->double
+                    {
+                        return a + 1000.0 * b;
+                    } );
+            }
+            else
+            {
+                fhParams.metric = getMinAreaMetric( mesh );
+            }
+            fhParams.multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Simple;
+            fillHole( mesh, holes[i].front(), fhParams );
 
             if ( !reportProgress( sp, float( i + 1 ) / float( holes.size() ) ) )
                 return unexpectedOperationCanceled();

@@ -30,6 +30,8 @@ struct Settings
     /// Edge length for subdivision of holes covers (0.0f means auto)
     /// FLT_MAX to disable subdivision
     float subdivideEdgeLen = 0.0f;
+    /// trying to stay close to initial surface when patching
+    bool mimicPatch = false;
     /// Callback function
     ProgressCallback callback = {};
 };

@@ -111,23 +111,10 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-# Fastmcpp stuff.
-option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
-IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
-  # On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
-  IF(MESHLIB_USE_VCPKG)
-    add_subdirectory(../fastmcpp fastmcpp)
-  ENDIF()
-
-  target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
-
-  target_include_directories(${PROJECT_NAME} PRIVATE
-    ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include
-    ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
-    ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
-  )
+IF(MESHLIB_BUILD_MCP)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRMcp)
 ELSE()
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_ENABLE_MCP_SERVER=0)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
 ENDIF()
 
 file(GLOB JSONS "*.json")

@@ -94,6 +94,11 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 namespace MR
 {
 
+std::string getProductName()
+{
+    return MR_PROJECT_NAME;
+}
+
 void SetCurrentThreadName( const char * name )
 {
 #ifdef _MSC_VER

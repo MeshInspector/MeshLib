@@ -131,7 +131,7 @@ void OpenRawVoxelsPlugin::drawDialog( ImGuiContext* )
 
                     return [object, path] ()
                     {
-                        AppendHistory<ChangeSceneAction>( "Open Voxels", object, ChangeSceneAction::Type::AddObject );
+                        AppendHistory<ChangeSceneAction>( _t( "Open Voxels" ), object, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( object );
                         std::filesystem::path scenePath = path;
                         getViewerInstance().onSceneSaved( scenePath, false );

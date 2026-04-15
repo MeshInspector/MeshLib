@@ -62,7 +62,9 @@ jobs:
 
       - name: Extract Windows Binaries
         run: |
-          tar -xvzf ${{ matrix.extract_release }}
+          if ("${{ matrix.extract_release }}") { 
+            tar -xvzf ${{ matrix.extract_release }} 
+          }
           tar -xvzf ${{ matrix.extract_debug }}
           tar -xvzf MeshLibC2Headers.zip
 
@@ -78,7 +80,9 @@ jobs:
       - name: Test Example Plugin # call it after archive not to pack build results
         run: |
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
+          if ("${{ matrix.extract_release }}") {
+            msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
+          }
 
       - name: Upload Windows Distribution
         uses: actions/upload-artifact@v7

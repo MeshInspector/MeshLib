@@ -12,8 +12,8 @@ namespace MR::UI::TestEngine::Control
 {
 
 // Most changes in this file must be synced with:
-// * Python: `MeshLib/source/mrviewerpy/MRPythonUiInteraction.cpp`.
-// * MCP: `source/MRInspector/MRMcp.cpp`.
+// * Python: `source/mrviewerpy/MRPythonUiInteraction.cpp`.
+// * MCP: `source/MRViewer/MRViewerMcp.cpp`.
 
 enum class EntryType
 {

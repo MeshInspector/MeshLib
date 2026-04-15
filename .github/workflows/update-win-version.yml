@@ -78,8 +78,10 @@ jobs:
         run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
 
       - name: Test Example Plugin # call it after archive not to pack build results
+        env:
+          IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}
         run: |
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:MeshLibIteratorDebugLevel=$env:IDL
           if ("${{ matrix.extract_release }}") {
             msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
           }

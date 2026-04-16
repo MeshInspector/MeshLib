@@ -105,7 +105,7 @@ var web_req_send = function (url, async, ctxId) {
             url: urlCpy,
             code: req.status,
             text: req.responseText,
-            error: req.statusText
+            error: (req.status < 200 || req.status > 399) ? req.statusText : null
         };
         Module.ccall('emsCallResponseCallback', 'number', ['string', 'bool', 'number'], [JSON.stringify(res), async, ctxId]);
     };

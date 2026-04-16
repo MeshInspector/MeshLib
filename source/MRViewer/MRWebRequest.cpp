@@ -579,11 +579,17 @@ Expected<Json::Value> parseResponse( const Json::Value& response )
     if ( response["code"].asInt() == 0 )
         return unexpected( "Bad internet connection." );
     if ( response["error"].isString() )
-    {
-        auto error = response["error"].asString();
-        if ( !error.empty() && error != "OK" )
-            return unexpected( error );
-    }
+        mayBeError = response["error"].asString();
+
+    // in case of 200 and 300-th error codes 
+    // JS version of web request can fill `statusText` 
+    // with valid, but non 'OK' messages. 
+    if ( ( code < 200 || code > 399 ) && !mayBeError.empty() )
+        return MR::unexpected( mayBeError );
+
+    if ( code == 0 )
+        return MR::unexpected( "Bad internet connection." );
+
     if ( response["code"].asInt() == 403 )
         return unexpected( "Connection to " + response["url"].asString() + " is forbidden." );
     std::string text;

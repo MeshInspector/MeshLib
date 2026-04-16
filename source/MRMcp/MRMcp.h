@@ -106,11 +106,6 @@ namespace Schema
 /// Owns a HTTP MCP server (using the SSE protocol).
 class Server
 {
-    struct State;
-
-    /// This is null until either `setParams()` or `setRunning(true)` is called for the first time.
-    std::unique_ptr<State> state_;
-
 public:
     struct Params
     {
@@ -144,7 +139,7 @@ public:
     /// NOTE: Consult `docs/testing_mcp.md` for how to test your tool.
     MRMCP_API bool addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func );
 
-    [[nodiscard]] MRMCP_API Params getParams() const;
+    [[nodiscard]] MRMCP_API const Params& getParams() const;
 
     /// This restarts the server if necessary.
     MRMCP_API void setParams( Params params );
@@ -153,6 +148,14 @@ public:
     /// Returns true on success, including if the server is already running and you're trying to start it again.
     /// Stopping always returns true.
     MRMCP_API bool setRunning( bool enable );
+
+private:
+    struct State;
+
+    /// This is null until either `setParams()` or `setRunning(true)` is called for the first time.
+    std::unique_ptr<State> state_;
+
+    Params params_;
 };
 
 /// The global instance of the MCP server.

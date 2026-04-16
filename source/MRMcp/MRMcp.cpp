@@ -38,12 +38,11 @@ namespace MR::Mcp
 
 struct Server::State
 {
-    Params params;
     fastmcpp::tools::ToolManager toolManager; // This has to be persistent, or `fastmcpp::mcp::make_mcp_handler()` dangles it.
     std::unordered_map<std::string, std::string> toolDescs; // No idea why this is not a part of `toolManager`.
     std::optional<fastmcpp::server::SseServerWrapper> server;
 
-    void createServer()
+    void createServer( const Params& params )
     {
         assert( !server );
         server.emplace( fastmcpp::mcp::make_mcp_handler( params.name, params.version, toolManager, toolDescs ), params.address, params.port );
@@ -83,26 +82,25 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
     return true;
 }
 
-Server::Params Server::getParams() const
+const Server::Params& Server::getParams() const
 {
-    if ( state_ )
-        return state_->params;
-    else
-        return {};
+    return params_;
 }
 
 void Server::setParams( Server::Params params )
 {
     const bool serverExisted = state_ && bool( state_->server );
     const bool serverWasRunning = serverExisted && isRunning();
+
     if ( serverWasRunning )
         setRunning( false );
+    if ( serverExisted )
+        state_->server.reset();
 
-    state_->server.reset();
-    state_->params = std::move( params );
+    params_ = std::move( params );
 
     if ( serverExisted )
-        state_->createServer();
+        state_->createServer( params );
     if ( serverWasRunning )
         setRunning( true );
 }
@@ -119,7 +117,7 @@ bool Server::setRunning( bool enable )
         if ( !state_ )
             state_ = std::make_unique<State>();
         if ( !state_->server )
-            state_->createServer();
+            state_->createServer( params_ );
 
         bool ok = state_->server->start();
         if ( ok )

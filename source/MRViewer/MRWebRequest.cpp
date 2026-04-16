@@ -579,9 +579,9 @@ Expected<Json::Value> parseResponse( const Json::Value& response )
         return unexpected( "Bad internet connection." );
     if ( response["error"].isString() )
     {
-        auto error = response["error"].asString();
-        if ( !error.empty() && error != "OK" )
-            return unexpected( error );
+        auto code = response["code"].asInt();
+        if ( code < 200 || code > 399 )
+            return unexpected( response["error"].asString() );
     }
     if ( response["code"].asInt() == 403 )
         return unexpected( "Connection to " + response["url"].asString() + " is forbidden." );

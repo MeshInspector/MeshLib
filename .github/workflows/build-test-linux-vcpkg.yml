@@ -139,8 +139,8 @@ jobs:
         run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
 
       - name: Build
-        run:
-          cat /__w/MeshLib/MeshLib/source/MeshLibC2/include/MRCMesh/MRObjectsAccess.h
+        run: |
+          jq '.. | select(.name? == "ObjectSelectivityType")' /__w/MeshLib/MeshLib/source/MeshLibC2/temp/meshlib.generated.json
           ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}

@@ -19,7 +19,7 @@ IF(MESHLIB_USE_VCPKG OR APPLE)
   IF(APPLE)
     set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
   ENDIF()
-  add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/fastmcpp fastmcpp)
+  add_subdirectory(../fastmcpp fastmcpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
   target_include_directories(${PROJECT_NAME} PRIVATE
     ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include

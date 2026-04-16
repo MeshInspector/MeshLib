@@ -47,7 +47,7 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 20, GCC 11]
+        compiler: [Clang 20, GCC 14]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
@@ -55,19 +55,19 @@ jobs:
           - full_config_build: false
             compiler: Clang 20
             config: Debug
-          # Do not run Release GCC 11 build on every commit (but only once a day)
+          # Do not run Release GCC 14 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 11
+            compiler: GCC 14
             config: Release
         include:
           - compiler: Clang 20
             cxx-compiler: /usr/bin/clang++-20
             c-compiler: /usr/bin/clang-20
             cxx-standard: 23
-          - compiler: GCC 11
-            cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
-            c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
-            cxx-standard: 20
+          - compiler: GCC 14
+            cxx-compiler: /opt/rh/gcc-toolset-14/root/usr/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-14/root/usr/bin/gcc
+            cxx-standard: 23
           - arch: x64
             os: ubuntu-latest
           - arch: arm64
@@ -83,9 +83,9 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
-      - name: Enable GCC 11 toolset
+      - name: Enable GCC 14 toolset
         run: |
-          source /opt/rh/gcc-toolset-11/enable
+          source /opt/rh/gcc-toolset-14/enable
           for VAR in PATH ; do
             echo "${VAR}=${!VAR}" >> $GITHUB_ENV
             echo "${VAR}=${!VAR}"
@@ -139,7 +139,9 @@ jobs:
         run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
 
       - name: Build
-        run: ./scripts/build_source.sh
+        run: |
+          grep -RInP '(typedef enum|enum //) .*ObjectSelectivity' /__w/MeshLib/MeshLib/source/MeshLibC2
+          ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
@@ -150,7 +152,7 @@ jobs:
             -DMR_PLATFORM=Linux_vcpkg
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/g++
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON

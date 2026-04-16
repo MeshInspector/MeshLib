@@ -7,7 +7,7 @@ FROM rockylinux:8 AS build
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
     dnf -y install epel-release && \
     dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel \
+        git cmake gcc-toolset-14 ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
         $(: vcpkg package requirements ) \
@@ -46,14 +46,14 @@ COPY thirdparty/vcpkg/triplets MeshLib/triplets
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-RUN source /opt/rh/gcc-toolset-11/enable && \
+RUN source /opt/rh/gcc-toolset-14/enable && \
     source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
     ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
-FROM nvidia/cuda:12.0.1-devel-rockylinux8 AS production
+FROM nvidia/cuda:12.8.0-devel-rockylinux8 AS production
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
 
@@ -66,7 +66,7 @@ ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
     dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel \
+        git cmake gcc-toolset-14 ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
         $(: vcpkg package requirements ) \

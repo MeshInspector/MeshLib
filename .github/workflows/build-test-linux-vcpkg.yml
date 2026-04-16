@@ -140,7 +140,7 @@ jobs:
 
       - name: Build
         run: |
-          apt install jq
+          dnf -y install jq
           jq '.. | select(.name? == "ObjectSelectivityType")' /__w/MeshLib/MeshLib/source/MeshLibC2/temp/meshlib.generated.json
           ./scripts/build_source.sh
         env:

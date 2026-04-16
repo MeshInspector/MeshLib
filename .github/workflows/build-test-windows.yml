@@ -56,7 +56,7 @@ jobs:
       - name: Checkout third-party submodules
         run: |
           # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/mrbind thirdparty/fastmcpp thirdparty/nlohmann-json thirdparty/cpp-httplib
+          git submodule update --init --recursive --depth 1 thirdparty/mrbind
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

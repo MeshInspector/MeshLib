@@ -296,7 +296,7 @@ ENDIF()
 
 IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
   # On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
-  IF(MESHLIB_USE_VCPKG)
+  IF(MESHLIB_USE_VCPKG OR APPLE)
     add_subdirectory(../fastmcpp fastmcpp)
   ELSE()
     find_package(fastmcpp REQUIRED)

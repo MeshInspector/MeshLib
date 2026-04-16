@@ -575,14 +575,18 @@ void WebRequest::waitRemainingAsync()
 
 Expected<Json::Value> parseResponse( const Json::Value& response )
 {
-    if ( response["code"].asInt() == 0 )
-        return unexpected( "Bad internet connection." );
+    const auto code = response["code"].asInt();
+
+    std::string mayBeError;
     if ( response["error"].isString() )
-    {
-        auto code = response["code"].asInt();
-        if ( code < 200 || code > 399 )
-            return unexpected( response["error"].asString() );
-    }
+        mayBeError = response["error"].asString();
+
+    if ( ( code < 200 || code > 399 ) && !mayBeError.empty() )
+        return MR::unexpected( mayBeError );
+
+    if ( code == 0 )
+        return MR::unexpected( "Bad internet connection." );
+
     if ( response["code"].asInt() == 403 )
         return unexpected( "Connection to " + response["url"].asString() + " is forbidden." );
     std::string text;

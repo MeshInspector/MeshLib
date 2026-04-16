@@ -138,6 +138,12 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
 
+      - name: upload temprary data
+        uses: actions/upload-artifact@v7
+        with:
+          name: mrbind_parse_tree_${{ matrix.arch }}_${{matrix.config}}_${{matrix.compiler}}.json
+          path: /__w/MeshLib/MeshLib/source/MeshLibC2/temp/meshlib.generated.json
+
       - name: Build
         run: |
           dnf -y install jq

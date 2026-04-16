@@ -226,14 +226,14 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
     } );
 
     // It is necessary to redraw the contents of the window when moving the window in Windows OS
-    // 
+    //
     // (on Windows) The glfw_window_pos callback is called, but glfwWaitEvents does not pass,
     // and event queue processing is not performed until the end of the move.
     // For this reason, draw is called outside of EventQueue.
-    // 
+    //
     // "On some platforms, a window move, resize or menu operation will cause event processing to block. This is due to how event processing is designed on those platforms"
     // https://www.glfw.org/docs/latest/group__window.html#ga37bd57223967b4211d60ca1a0bf3c832
-    // 
+    //
     // https://stackoverflow.com/questions/71243906/glfw-window-poll-events-lag
 #ifdef _WIN32
     viewer->draw( true );
@@ -393,6 +393,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     CommandLoop::appendCommand( [&] ()
     {
         setup.setupExtendedLibraries();
+        setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
     int res = 0;
@@ -634,10 +635,10 @@ int Viewer::launch( const LaunchParams& params )
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     experimentalFeatures = params.developerFeatures;
-    
+
     bool defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewportKey, true );
     launchParams_.multiViewport = defaultMultiViewport && params.multiViewport;
-    
+
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;
@@ -914,7 +915,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         params.splashWindow->start();
         continueTime = std::chrono::steady_clock::now() + std::chrono::duration<float>( params.splashWindow->minimumTimeSec() );
     }
- 
+
     CommandLoop::setState( CommandLoop::StartPosition::AfterSplashAppear );
     CommandLoop::processCommands();
 

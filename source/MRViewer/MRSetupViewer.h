@@ -43,6 +43,10 @@ public:
     /// free all libraries loaded in setupExtendedLibraries()
     MRVIEWER_API virtual void unloadExtendedLibraries() const;
 
+    /// Launch the MCP server. Append this to the `CommandLoop` instead of calling immediately.
+    /// Returns false if the MCP support is not compiled in.
+    MRVIEWER_API virtual bool setupMcp() const;
+
     // functor to setup custom log sink, i.e. sending logs to web
     std::function<void()> setupCustomLogSink;
 

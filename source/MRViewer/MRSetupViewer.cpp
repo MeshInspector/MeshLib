@@ -19,6 +19,10 @@
 #include <dlfcn.h>
 #endif
 
+#ifndef MESHLIB_NO_MCP
+#include "MRMcp/MRMcp.h"
+#endif
+
 namespace MR
 {
 
@@ -187,6 +191,16 @@ void ViewerSetup::unloadExtendedLibraries() const
         loadedModules_.pop_back();
     }
 #endif // ifndef __EMSCRIPTEN__
+}
+
+bool ViewerSetup::setupMcp() const
+{
+    #ifndef MESHLIB_NO_MCP
+    Mcp::getDefaultServer().setRunning( true );
+    return true;
+    #else
+    return false;
+    #endif
 }
 
 } //namespace MR

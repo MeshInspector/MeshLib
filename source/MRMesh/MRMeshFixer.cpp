@@ -14,6 +14,7 @@
 #include "MRMeshSubdivide.h"
 #include "MREdgePaths.h"
 #include "MRFillHoleNicely.h"
+#include "MRMeshPatch.h"
 
 namespace MR
 {
@@ -245,65 +246,55 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     if ( !reportProgress( sbp, 0.25f ) )
         return unexpectedOperationCanceled();
 
-    auto boundaryEdges = delRegionKeepBd( mesh, *regRes );
-
-    auto sb = subprogress( sbp, 0.25f, 1.0f );
-    for ( int i = 0; i < boundaryEdges.size(); ++i )
+    FillHoleNicelySettings psettings
     {
-        const auto& boundaryEdge = boundaryEdges[i];
-        if ( boundaryEdge.empty() )
-            continue;
-
-        const auto len = calcPathLength( boundaryEdge, mesh );
-        const auto avgLen = len / boundaryEdge.size();
-        FillHoleNicelySettings settings
+        .triangulateParams =
         {
-            .triangulateParams =
-            {
-                .metric = getUniversalMetric( mesh ),
-                .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
-            },
-            .maxEdgeLen = float( avgLen ) * 1.5f,
+            .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
+        },
+        .subdivideSettings =
+        {
+            .maxEdgeLen = 0.0f, // to use default from `patchMesh`
             .maxEdgeSplits = 20'000,
-            .smoothCurvature = true,
-            .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
-        };
-
-        for ( auto e : boundaryEdge )
-        {
-            if ( mesh.topology.left( e ) )
-                continue;
-            auto newFaces = fillHoleNicely( mesh, e, settings );
-            if ( params.region )
-                *params.region |= newFaces;
         }
-        if ( !reportProgress( sb, ( i + 1.f ) / boundaryEdges.size() ) )
-            return unexpectedOperationCanceled();
+    };
+    Mesh patchRefMesh;
+    if ( params.mimicPatch )
+    {
+        patchRefMesh.addMeshPart( { mesh,&*regRes } );
+        psettings.triangulateParams.metric = mixMetrics(
+                getCircumscribedMetric( mesh ), getCloseSurfaceFillMetric( mesh, patchRefMesh ),
+                [] ( double a, double b )->double
+                {
+                    return a + 100.0 * std::sqrt( b );
+                } );
+        psettings.smoothCurvature = false;
     }
+    else
+    {
+        psettings.triangulateParams.metric = getUniversalMetric( mesh );
+        psettings.smoothCurvature = true;
+        psettings.smoothSettings.edgeWeights = EdgeWeights::Unit; // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
+    }
+
+    auto newFaces = patchMesh( mesh, *regRes, psettings );
+
     if ( params.region )
+    {
+        *params.region |= newFaces;
         *params.region &= mesh.topology.getValidFaces();
+    }
     return {};
 }
 
-VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
+VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
 {
     const auto& zone = topology.getVertIds( region );
     VertBitSet result( zone.size() );
     BitSetParallelFor( zone, [&] ( VertId v )
     {
-        int counter = 0;
-        for ( auto e : orgRing( topology, v ) )
-        {
-            if ( !topology.left( e ) )
-                return;
-            ++counter;
-            if ( counter > n )
-                return;
-        }
-        if ( counter < n )
-            return;
-        assert( counter == n );
-        result.set( v );
+        if ( topology.isVertInnerAndHasDegree( v, n ) )
+            result.set( v );
     } );
     return result;
 }
@@ -415,6 +406,38 @@ Expected<FaceBitSet> findDegenerateFaces( const MeshPart& mp, float criticalAspe
         if ( !mp.mesh.topology.hasFace( f ) )
             return;
         if ( mp.mesh.triangleAspectRatio( f ) >= criticalAspectRatio )
+            res.set( f );
+    }, cb );
+
+    if ( !completed )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+Expected<FaceBitSet> findNotSmoothFaces( const MeshPart& mp, float minAngle, ProgressCallback cb )
+{
+    MR_TIMER;
+    FaceBitSet res( mp.mesh.topology.faceSize() );
+    auto completed = BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
+    {
+        if ( !mp.mesh.topology.hasFace( f ) )
+            return;
+        EdgeId es[3];
+        mp.mesh.topology.getTriEdges( f, es );
+        Vector3f nc = mp.mesh.normal( f );
+        Vector3f n[3];
+        float a0 = 0;
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto r = mp.mesh.topology.right( es[i] );
+            if ( !r )
+                return; // f is boundary triangle
+            n[i] = mp.mesh.normal( r );
+            a0 += angle( nc, n[i] );
+        }
+        float a1 = angle( n[0], n[1] ) + angle( n[1], n[2] ) + angle( n[2], n[0] );
+        if ( a0 > a1 + minAngle )
             res.set( f );
     }, cb );
 

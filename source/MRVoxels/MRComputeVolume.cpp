@@ -43,7 +43,7 @@ float voxelizeAndComputeVolume( const std::vector<std::shared_ptr<Mesh>>& meshes
         for ( int i = firstGoodIndex + 1; i < grids.size(); ++i )
         {
             if ( grids[i] )
-                firstGood += grids[i];
+                firstGood += std::move( grids[i] );
         }
     }
     size_t numInternalVoxels = 0;

@@ -37,8 +37,6 @@ class RecentFilesStore;
 class ScopeHistory;
 class SelectScreenLasso;
 class SceneTextureGL;
-class SpaceMouseHandler;
-class SpaceMouseHandlerHidapi;
 class SplashWindow;
 class StateBasePlugin;
 class Toolbar;
@@ -64,8 +62,6 @@ class PlaneWidget;
 
 class TouchpadController;
 struct TouchpadParameters;
-class SpaceMouseController;
-struct SpaceMouseParameters;
 class TouchesController;
 class MouseController;
 struct PointInAllSpaces;
@@ -90,14 +86,22 @@ using RequirementsFunction = std::function<std::string( const std::shared_ptr<Ri
 
 using FontAndSize = std::pair<ImFont*, float>;
 
-// this is needed as far as MAKE_SLOT cannot be used with movable classes
-#define MR_DELETE_MOVE(ClassName)\
-ClassName(ClassName&&)noexcept = delete;\
-ClassName& operator=(ClassName&&)noexcept = delete
+namespace SpaceMouse
+{
+struct Parameters;
+class Handler;
+class HandlerHidapi;
+class Controller;
+}
 
-#define MR_ADD_CTOR_DELETE_MOVE(ClassName)\
-ClassName()=default;\
-ClassName(ClassName&&)noexcept = delete;\
-ClassName& operator=(ClassName&&)noexcept = delete
+// this is needed as far as MAKE_SLOT cannot be used with movable classes
+#define MR_DELETE_MOVE(StaticClassName)\
+StaticClassName(StaticClassName&&)noexcept = delete;\
+StaticClassName& operator=(StaticClassName&&)noexcept = delete
+
+#define MR_ADD_CTOR_DELETE_MOVE(StaticClassName)\
+StaticClassName()=default;\
+StaticClassName(StaticClassName&&)noexcept = delete;\
+StaticClassName& operator=(StaticClassName&&)noexcept = delete
 
 } //namespace MR

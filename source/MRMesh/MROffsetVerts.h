@@ -19,6 +19,11 @@ struct ThickenParams
 
     /// the amount of offset for cloned mirrored mesh vertices in the opposite direction
     float insideOffset = 0;
+
+    /// increasing this value will lead mesh vertices to shift in the directions closer to their raw pseudo-normals, but
+    /// it will increase the probability of self-intersections as well;
+    /// decreasing (to a positive value) will on the contrary make the field of shift directions smoother
+    float normalsTrustFactor = 1;
 };
 
 /// given a mesh \p m, representing a surface,

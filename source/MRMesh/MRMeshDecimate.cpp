@@ -65,7 +65,8 @@ private:
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
-    int numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t maxRemainingFlips_ = 0; // the number of flip-edge operations that can be performed before stop adding them in the queue
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -282,6 +283,8 @@ bool MeshDecimator::initialize_()
     if ( settings_.progressCallback && !settings_.progressCallback( 0.15f ) )
         return false;
 
+    // (maxRemainingFlips_ = 1) allows adding flip operations in the queue
+    maxRemainingFlips_ = settings_.maxAngleChange >= 0 ? 1 : 0;
     initializeQueue_();
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
@@ -329,6 +332,8 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
         v = {};
     }
     assert( elms.size() == queueSize );
+    // prevents never ending flips scenario, (maxRemainingFlips_ = queueSize) was not enough in real cases
+    maxRemainingFlips_ = settings_.maxAngleChange >= 0 ? 10 * queueSize : 0;
     return elms;
 }
 
@@ -412,7 +417,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     auto earlyReturn = [&]( float errSq )
     {
         EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
-        if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
+        if ( maxRemainingFlips_ > 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
@@ -515,10 +520,20 @@ void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
     assert( mesh_.topology.left( e ) );
     assert( mesh_.topology.right( e ) );
     addInQueueIfMissing_( e.undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e.sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.next( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.prev( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+
+    if ( maxRemainingFlips_ > 0 )
+    {
+        --maxRemainingFlips_;
+        assert( maxRemainingFlips_ > 0 ); // otherwise either the limit on the number of flips is too tight or flips are in never ending cycle
+    }
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes
@@ -739,9 +754,18 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
             if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
-                ++numOutdated_; // collapse error for of all neighbor edges with vo must increase
+            {
+                // collapse error for all the edges (including this one) incident to remaining vertex (vo) must increase,
+                // we do not put the edge in the queue again before previous (smaller) error-version is extracted from the queue
+                ++numOutdated_;
+            }
             if ( mesh_.topology.left( e ) )
+            {
+                // an edge can be missed in the queue before because some criterion did not allow collapsing it,
+                // and after just happened collapse that edge can become eligible again, so we try adding it in the queue;
+                // but if the edge was already in the queue, assume that its error does not change so numOutdated_ is not modified
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            }
         }
     }
     return vo;
@@ -852,7 +876,7 @@ DecimateResult MeshDecimator::run()
                 break; // if old queue was filled only with invalid elements
         }
         const auto topQE = queue_.top();
-        const auto ue = topQE.uedgeId();
+        auto ue = topQE.uedgeId();
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -894,33 +918,65 @@ DecimateResult MeshDecimator::run()
 
         validInQueue_.reset( ue );
 
-        UndirectedEdgeId twin;
-        if ( settings_.twinMap )
-            twin = getAt( *settings_.twinMap, ue );
-
         if ( qe->x.edgeOp == EdgeOp::Flip )
         {
             flipEdge_( ue );
-            if ( twin )
-                flipEdge_( twin );
+            if ( settings_.twinMap )
+                if ( auto twin = getAt( *settings_.twinMap, ue ) )
+                    flipEdge_( twin );
         }
         else
         {
             // edge collapse
-            const auto canCollapseRes = canCollapse_( ue, collapsePos );
+            auto canCollapseRes = canCollapse_( ue, collapsePos );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
+                {
                     addInQueue_( ue, false );
-                continue;
-            }
-            if ( twin )
-            {
-                const auto twinCollapseForm = collapseForm_( twin, collapsePos );
-                const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
-                if ( twinCollapseRes.status != CollapseStatus::Ok )
+                    continue;
+                }
+                if ( canCollapseRes.status != CollapseStatus::MultipleEdge )
+                    continue;
+
+                const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 && topQE.x.edgeOp == EdgeOp::CollapseEnd )
+                    ? mesh_.edgeLengthSq( ue ) <= sqr( settings_.tinyEdgeLength ) : false;
+                if ( !tinyEdge )
+                    continue;
+
+                // if the collapse of a tiny edge failed because of appearance of multiple edges,
+                // test whether left or right triangle contains single 3-degree vertex inside, then collapse it instead
+                const auto en = mesh_.topology.next( ue );
+                const auto ep = mesh_.topology.prev( ue );
+                // the check that left/right triangle exists is done by isOrgInnerAndHasDegree
+                ue = {};
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en.sym(), 3 ) )
+                {
+                    auto vo = mesh_.topology.org( en );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ en };
+                    ue = en;
+                }
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep.sym(), 3 ) )
+                {
+                    auto vo = mesh_.topology.org( ep );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ ep };
+                    ue = ep;
+                }
+                if ( !ue )
                     continue;
             }
+            if ( settings_.twinMap )
+                if ( auto twin = getAt( *settings_.twinMap, ue ) )
+                {
+                    const auto twinCollapseForm = collapseForm_( twin, collapsePos );
+                    const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
+                    if ( twinCollapseRes.status != CollapseStatus::Ok )
+                        continue;
+                }
             forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
     }

@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2025.10.17" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.03.18" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -31,7 +31,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_windows_vcpkg_rebuild:
         description:
-        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
@@ -128,13 +128,13 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: linux-changes
         with:
           filters: |
@@ -147,7 +147,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**)'
 
       - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: linux-vcpkg-changes
         with:
           filters: |
@@ -157,7 +157,7 @@ jobs:
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: windows-changes
         with:
           filters: |
@@ -199,10 +199,12 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@a8f8f59fd7f0625188492e945240f12d7ad2dca3 # v5.4.0
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
         id: version
         with:
           tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
           version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: true
@@ -237,7 +239,7 @@ jobs:
 
           jq \
             --arg vs19 "2024.10.21" \
-            --arg vs22 "2025.10.17" \
+            --arg vs22 "2026.03.18" \
             '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
             | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
             "$MATRIX_FILE" > tmp.json

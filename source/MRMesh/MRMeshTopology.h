@@ -8,6 +8,7 @@
 #include "MRMeshTriPoint.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MREnums.h"
 #include <fstream>
 
 namespace MR
@@ -120,6 +121,12 @@ public:
 
     /// returns the number of edges around the given vertex
     [[nodiscard]] int getVertDegree( VertId v ) const { return getOrgDegree( edgeWithOrg( v ) ); }
+
+    /// returns true if the origin of given edge is inner to the mesh (no boundary passes via it), and has the given number of incident edges (including input one)
+    [[nodiscard]] MRMESH_API bool isOrgInnerAndHasDegree( EdgeId a, int d ) const;
+
+    /// returns true if the given vertex is inner to the mesh (no boundary passes via it), and has the given number of incident edges
+    [[nodiscard]] bool isVertInnerAndHasDegree( VertId v, int d ) const { return isOrgInnerAndHasDegree( edgeWithOrg( v ), d ); }
 
     /// returns the number of edges around the left face: 3 for triangular faces, ...
     [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
@@ -348,11 +355,13 @@ public:
     /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
     [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ); }
 
-    /// given a (region) boundary edge with no right face in given region, returns next boundary edge for the same region: dest(e)==org(res)
-    [[nodiscard]] MRMESH_API EdgeId nextLeftBd( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// given a (region) boundary edge with no right face in given region, returns next boundary edge for the same region: dest(e)==org(res);
+    /// \param turn determines the selection of next boundary edge in case of several alternatives
+    [[nodiscard]] MRMESH_API EdgeId nextLeftBd( EdgeId e, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost ) const;
 
-    /// given a (region) boundary edge with no right face in given region, returns previous boundary edge for the same region; dest(res)==org(e)
-    [[nodiscard]] MRMESH_API EdgeId prevLeftBd( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// given a (region) boundary edge with no right face in given region, returns previous boundary edge for the same region; dest(res)==org(e);
+    /// \param turn determines the selection of previous boundary edge in case of several alternatives, note the turn is from previous (returned) edge to the current edge
+    [[nodiscard]] MRMESH_API EdgeId prevLeftBd( EdgeId e, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost ) const;
 
 
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
@@ -454,7 +463,8 @@ public:
 
     /// the same but copies only portion of (from) specified by fromFaces,
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {} );
-    void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} )
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} )
         { addPartByMask( from, &fromFaces, map ); }
 
     /// this version has more parameters
@@ -464,7 +474,9 @@ public:
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} );
-    void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map ); }
 
@@ -542,8 +554,14 @@ private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
+    /// writes all valid edge_.org by calling setOrg_ for each valid edgePerVertex_
+    void fillOrg_();
+
     /// sets new left face to the full left ring including this edge, without updating edgePerFace_ table
     void setLeft_( EdgeId a, FaceId f );
+
+    /// writes all valid edge_.left by calling setLeft_ for each valid edgePerFace_
+    void fillLeft_();
 
     /// data of every half-edge, align to put whole record in one cache line
     struct alignas( 16 ) HalfEdgeRecord

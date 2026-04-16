@@ -8,6 +8,7 @@
 #include "MRMeshDecimate.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRBox.h"
+#include "MRParallelFor.h"
 #include <random>
 
 namespace MR
@@ -41,13 +42,20 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b, const UnitePairOfMehsesPar
     params.rigidB2A = unitePairParams.shift ? &xf : nullptr;
     params.mapper = unitePairParams.commonParams.fixDegeneracies || unitePairParams.mapper ? &mapper_ : nullptr;
     params.mergeAllNonIntersectingComponents = unitePairParams.commonParams.mergeMode;
-    params.forceCut = unitePairParams.commonParams.forceCut;
-    auto res = MR::boolean(
-        std::move( a ),
-        std::move( b ),
-        BooleanOperation::Union,
-        params
-    );
+    BooleanResult res;
+    if ( !unitePairParams.commonParams.forceCut )
+    {
+        res = MR::boolean(
+            std::move( a ),
+            std::move( b ),
+            BooleanOperation::Union,
+            params
+        );
+    }
+    else
+    {
+        res = MR::forceBoolean( a, b, BooleanOperation::Union, params );
+    }
     if ( !res.valid() )
         return unexpected( res.errorString );
 
@@ -286,27 +294,19 @@ Expected<Mesh> uniteManyMeshes(
     std::vector<Mesh> mergedMeshes( separateComponentsProcess ? nonIntersectingGroups.size() : meshes.size() );
     if ( separateComponentsProcess )
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( nonIntersectingGroups.size() ) ),
-                           [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( nonIntersectingGroups, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                auto& mergedMesh = mergedMeshes[i];
-                auto& mergeGroup = nonIntersectingGroups[i];
-                for ( auto meshIndex : mergeGroup )
-                    mergedMesh.addMesh( *meshes[meshIndex] );
-            }
+            auto& mergedMesh = mergedMeshes[i];
+            auto& mergeGroup = nonIntersectingGroups[i];
+            for ( auto meshIndex : mergeGroup )
+                mergedMesh.addMesh( *meshes[meshIndex] );
         } );
     }
     else
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( meshes.size() ) ),
-                   [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( meshes, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                mergedMeshes[i] = *meshes[i];
-            }
+            mergedMeshes[i] = *meshes[i];
         } );
     }
 

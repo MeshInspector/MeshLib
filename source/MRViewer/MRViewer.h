@@ -401,10 +401,13 @@ public:
     // Applies redo if global history is enabled
     // return true if redo was applied
     MRVIEWER_API bool globalHistoryRedo();
-    // Returns global history store
-    const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
+
+    /// Returns global history store
+    /// returns nullptr if history store is not available
+    MRVIEWER_API HistoryStore* getGlobalHistoryStore() const { return globalHistoryStore_.get(); }
+    
     // Return spacemouse handler
-    const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
+    const std::shared_ptr<SpaceMouse::Handler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
     MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent = true );
@@ -499,11 +502,11 @@ public:
 
     MRVIEWER_API void postEmptyEvent();
 
-    [[nodiscard]] MRVIEWER_API const TouchpadParameters & getTouchpadParameters() const;
-    MRVIEWER_API void setTouchpadParameters( const TouchpadParameters & );
+    [[nodiscard]] const TouchpadController &touchpadController() const { return *touchpadController_; }
+    [[nodiscard]] TouchpadController& touchpadController() { return *touchpadController_; }
 
-    [[nodiscard]] MRVIEWER_API SpaceMouseParameters getSpaceMouseParameters() const;
-    MRVIEWER_API void setSpaceMouseParameters( const SpaceMouseParameters & );
+    [[nodiscard]] const SpaceMouse::Controller &spaceMouseController() const { return *spaceMouseController_; }
+    [[nodiscard]] SpaceMouse::Controller& spaceMouseController() { return *spaceMouseController_; }
 
     [[nodiscard]] const MouseController &mouseController() const { return *mouseController_; }
     [[nodiscard]] MouseController &mouseController() { return *mouseController_; }
@@ -518,16 +521,12 @@ public:
     /// sets whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene
     void setSortDroppedFiles( bool value ) { sortDroppedFiles_ = value; }
 
-    /// (re)initializes the handler of SpaceMouse events
-    /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
-    MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
-
     /// draw 2d (UI) part of objects in scene
     MRVIEWER_API void drawUiRenderObjects();
 
-    /// return true if imgui multi viewport enabled
-    /// (disabled for Apple, Wayland and Emscripten)
-    bool isMultiViewport();
+    /// return true if ImGui Multi Viewport is available
+    /// (it is unavailable for macOS, Linux, and Emscripten)
+    MRVIEWER_API bool isMultiViewportAvailable();
 private:
     Viewer();
     ~Viewer();
@@ -562,16 +561,13 @@ private:
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
     int forceRedrawFramesWithoutSwap_{ 0 };
 
-    // if this flag is set shows some developer features useful for debugging
-    bool enableDeveloperFeatures_{ false };
-
     std::unique_ptr<ViewerEventQueue> eventQueue_;
 
     // special plugin for menu (initialized before splash window starts)
     std::shared_ptr<ImGuiMenu> menuPlugin_;
 
     std::unique_ptr<TouchpadController> touchpadController_;
-    std::unique_ptr<SpaceMouseController> spaceMouseController_;
+    std::unique_ptr<SpaceMouse::Controller> spaceMouseController_;
     std::unique_ptr<TouchesController> touchesController_;
     std::unique_ptr<MouseController> mouseController_;
     std::unique_ptr<IDragDropHandler> dragDropAdvancedHandler_;
@@ -603,6 +599,9 @@ private:
     void initBasisViewControllerObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
+
+    /// (re)initializes the handler of SpaceMouse events
+    void initSpaceMouseHandler_();
 
     // recalculate pixel ratio
     void updatePixelRatio_();
@@ -638,15 +637,11 @@ private:
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;
 
-    // allows to move the imgui (tool) windows outside the main () window (enable ImGui Muilti Viewport)
-    // (disabled for Apple, Wayland and Emscripten)
-    bool multiViewport_{ true };
-
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
-    std::shared_ptr<HistoryStore> globalHistoryStore_;
+    std::unique_ptr<HistoryStore> globalHistoryStore_;
 
-    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
+    std::shared_ptr<SpaceMouse::Handler> spaceMouseHandler_;
 
     struct Connections;
     std::unique_ptr<Connections> connections_;

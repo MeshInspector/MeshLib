@@ -19,6 +19,7 @@
 #include <MRMesh/MRSceneRoot.h>
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -53,12 +54,12 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
 
-    UI::drag<LengthUnit>( "Voxel Size", voxelSize_, 1e-3f, 1e-3f, 1000.f );
+    UI::drag<LengthUnit>( _tr( "Voxel Size" ), voxelSize_, 1e-3f, 1e-3f, 1000.f );
 
-    UI::checkbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
-    UI::setTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume,"
-                                "invert to have iso-surface oriented from smaller value to bigger to represent distances volume" );
-    if ( UI::button( "Open Directory", { -1, 0 } ) )
+    UI::checkbox( _tr( "Invert Surface Orientation" ), &invertSurfaceOrientation_ );
+    UI::setTooltipIfHovered( _tr( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume,"
+                                "invert to have iso-surface oriented from smaller value to bigger to represent distances volume" ) );
+    if ( UI::button( _tr( "Open Directory" ), { -1, 0 } ) )
     {
         auto directory = openFolderDialog();
         if ( directory.empty() )
@@ -109,7 +110,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
             voxelsObject->select( true );
             return [this, viewer, voxelsObject, directory] ()
             {
-                AppendHistory<ChangeSceneAction>( "Open Voxels From TIFF", voxelsObject, ChangeSceneAction::Type::AddObject );
+                AppendHistory<ChangeSceneAction>( _t( "Open Voxels From TIFF" ), voxelsObject, ChangeSceneAction::Type::AddObject );
                 SceneRoot::get().addChild( voxelsObject );
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 std::filesystem::path scenePath = directory;

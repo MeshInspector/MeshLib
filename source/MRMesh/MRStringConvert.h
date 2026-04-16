@@ -72,8 +72,6 @@ std::string utf8string( const std::string & ) = delete;
 /// and containing at most \p count unicode symbols (but res.size() can be more than \p count since a unicode symbol can be represented by more than 1 byte)
 [[nodiscard]] MRMESH_API std::string utf8substr( const char * s, size_t pos, size_t count );
 
-/// \}
-
 /// converts given size in string:
 /// [0,1024) -> nnn bytes
 /// [1024,1024*1024) -> nnn.nn Kb
@@ -130,5 +128,7 @@ MRMESH_API MR_BIND_IGNORE char * formatNoTrailingZeros( char * fmt, double v, in
 
 /// return a copy of the string with all alphabetic ASCII characters replaced with upper-case variants
 [[nodiscard]] MRMESH_API std::string toLower( std::string str );
+
+/// \}
 
 } //namespace MR

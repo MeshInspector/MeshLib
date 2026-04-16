@@ -5,6 +5,8 @@
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -449,7 +451,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback, logName, url = urlP] ()
+        std::thread requestThread = std::thread( protectedFunc( [sendLambda, callback, logName, url = urlP] ()
         {
             spdlog::info( "WebRequest  {}: {}", logName.c_str(), url.c_str() );
             auto res = sendLambda();
@@ -476,7 +478,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
             {
                 callback( resJson );
             }, CommandLoop::StartPosition::AfterPluginInit );
-        } );
+        } ) );
         putIntoWaitingMap_( std::move( requestThread ) );
     }
 #else
@@ -526,9 +528,29 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     ctx->responseCallback = callback;
 
     if ( outputPath_.empty() )
+    {
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
+    }
+#ifndef __EMSCRIPTEN_PTHREADS__
+    else if ( !async )
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_sync_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
+#endif
     else
-        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), utf8string( outputPath_ ).c_str(), ctxId );
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
 #pragma clang diagnostic pop
 #endif
 }

@@ -42,7 +42,7 @@ jobs:
           .\thirdparty\install.bat
 
       - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: WindowsArchive*
           merge-multiple: true
@@ -57,7 +57,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }}
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
@@ -68,8 +68,14 @@ jobs:
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
 
       - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DistributivesWin
           path: MeshLibDist.zip
           retention-days: 1
+
+      - name: Delete Windows Binaries Archive
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: WindowsArchive*
+          failOnError: false

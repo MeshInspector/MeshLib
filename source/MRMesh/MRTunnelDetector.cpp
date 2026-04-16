@@ -1,12 +1,15 @@
 #include "MRTunnelDetector.h"
 #include "MRMesh.h"
 #include "MREdgePaths.h"
+#include "MREdgeMetric.h"
 #include "MRInTreePathBuilder.h"
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
-#include "MRExpected.h"
-#include "MRPch/MRTBB.h"
+#include "MREdgePathsBuilder.h"
+#include "MRParallelFor.h"
+#include "MRFillContourByGraphCut.h"
+#include "MRMeshPatch.h"
 
 namespace MR
 {
@@ -79,13 +82,10 @@ Expected<void> BasisTunnelsDetector::prepare( ProgressCallback cb )
         return unexpectedOperationCanceled();
 
     // compute curvature for every collected edge
-    tbb::parallel_for(tbb::blocked_range<size_t>( 0, innerEdges_.size() ), [&](const tbb::blocked_range<size_t> & range)
+    ParallelFor( innerEdges_, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            innerEdges_[i].metric = metric_( innerEdges_[i].edge );
-        }
-    });
+        innerEdges_[i].metric = metric_( innerEdges_[i].edge );
+    } );
 
     if ( !reportProgress( cb, 0.75f ) )
         return unexpectedOperationCanceled();
@@ -186,23 +186,20 @@ Expected<std::vector<EdgeLoop>> BasisTunnelsDetector::detect( ProgressCallback c
     std::vector<EdgeLoop> res( joinEdges.size() );
     InTreePathBuilder inTreePathBuilder( mp_.mesh.topology, primaryTree_ );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
+    ParallelFor( res, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto edge = joinEdges[i];
-            const auto o = mp_.mesh.topology.org( edge );
-            const auto d = mp_.mesh.topology.dest( edge );
-            assert( o != d );
-            assert( !primaryTree_.test( edge ) );
-            assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
+        auto edge = joinEdges[i];
+        const auto o = mp_.mesh.topology.org( edge );
+        const auto d = mp_.mesh.topology.dest( edge );
+        assert( o != d );
+        assert( !primaryTree_.test( edge ) );
+        assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
-            auto tunnel = inTreePathBuilder.build( d, o );
-            tunnel.push_back( edge );
-            assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
-            res[i] = std::move( tunnel );
-        }
-    });
+        auto tunnel = inTreePathBuilder.build( d, o );
+        tunnel.push_back( edge );
+        assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
+        res[i] = std::move( tunnel );
+    } );
 
     return res;
 }
@@ -221,12 +218,201 @@ Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMet
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
+Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric0, const FaceBitSet* region )
+{
+    MR_TIMER;
+    if ( !isEdgeLoop( topology, loop ) )
+        return unexpected( "no initial loop" );
+
+    // edges from one of loop's vertices exiting to the left from the oriented loop
+    EdgeBitSet toLeft( topology.edgeSize() );
+
+    // construct paths from right-side to left-side, to have back-path in opposite direction
+    EdgeId bestCoLoopFirstEdge;
+    float bestCoLoopMetric = FLT_MAX;
+    EdgePathsBuilder ebuilder( topology );
+
+    struct LoopVertInfo
+    {
+        int index = 0; // index of the vertex in the loop: org(loop[i])
+        float lenFrom0 = 0; // length along the loop from vertex #0: org(loop[0])
+    };
+    HashMap<VertId, LoopVertInfo> vert2info;
+    float loopLen = 0;
+    auto minPathAlongLoop = [&]( VertId v0, VertId v1, EdgePath * res = nullptr )
+    {
+        if ( v0 == v1 )
+            return 0.f;
+        auto it0 = vert2info.find( v0 );
+        if ( it0 == vert2info.end() )
+        {
+            assert( false );
+            return 0.f;
+        }
+        auto it1 = vert2info.find( v1 );
+        if ( it1 == vert2info.end() )
+        {
+            assert( false );
+            return 0.f;
+        }
+        assert( it1->second.index != it0->second.index );
+        bool forward = it1->second.index > it0->second.index;
+        float d = forward ?
+            it1->second.lenFrom0 - it0->second.lenFrom0 :
+            it0->second.lenFrom0 - it1->second.lenFrom0;
+        if ( 2 * d > loopLen )
+        {
+            forward = !forward;
+            d = loopLen - d;
+        }
+        if ( res )
+        {
+            if ( forward )
+            {
+                if ( it1->second.index > it0->second.index )
+                {
+                    for ( int i = it0->second.index; i < it1->second.index; ++i )
+                        res->push_back( loop[i] );
+                }
+                else
+                {
+                    for ( int i = it0->second.index; i < loop.size(); ++i )
+                        res->push_back( loop[i] );
+                    for ( int i = 0; i < it1->second.index; ++i )
+                        res->push_back( loop[i] );
+                }
+            }
+            else //backward
+            {
+                if ( it0->second.index > it1->second.index )
+                {
+                    for ( int i = it0->second.index; i > it1->second.index; --i )
+                        res->push_back( loop[i - 1].sym() );
+                }
+                else
+                {
+                    for ( int i = it0->second.index; i > 0; --i )
+                        res->push_back( loop[i - 1].sym() );
+                    for ( int i = (int)loop.size(); i > it1->second.index; --i )
+                        res->push_back( loop[i - 1].sym() );
+                }
+            }
+        }
+        return d;
+    };
+
+    auto metric = [&]( EdgeId e )
+    {
+        if ( !topology.isInnerOrBdEdge( e, region ) )
+            return FLT_MAX;
+        if ( toLeft.test( e ) )
+            return FLT_MAX;
+        const auto m = metric0( e );
+        if ( m < 0 )
+        {
+            assert( !"metric must be not-negative" );
+            return FLT_MAX;
+        }
+        if ( toLeft.test( e.sym() ) )
+        {
+            const auto v = topology.org( e );
+            const auto loopD = topology.dest( e );
+            const auto vi = ebuilder.getVertInfo( v );
+            assert( vi );
+            if ( vi )
+            {
+                const auto loopO = ebuilder.trackPathBack( loopD );
+                auto candidateMetric = vi->metric + m + minPathAlongLoop( loopO, loopD );
+                if ( candidateMetric < bestCoLoopMetric )
+                {
+                    bestCoLoopMetric = candidateMetric;
+                    bestCoLoopFirstEdge = e.sym();
+                }
+            }
+        }
+        return m;
+    };
+    ebuilder.reset( metric );
+
+    for ( int i = 0; i < loop.size(); ++i )
+    {
+        EdgeId e0 = loop[i];
+        EdgeId e1 = ( i > 0 ? loop[i - 1] : loop.back() ).sym();
+        auto v = topology.org( e0 );
+        assert( v == topology.org( e1 ) );
+        for ( EdgeId e : orgRing0( topology, e0 ) )
+        {
+            if ( e == e1 )
+                break;
+            toLeft.set( e );
+        }
+        ebuilder.addStart( v, 0 );
+        if ( !vert2info.insert( { v, LoopVertInfo{ i, loopLen } } ).second )
+            return unexpected( "initial loop passes some vertex twice" );
+        loopLen += metric0( e0 );
+    }
+
+    while( ebuilder.doneDistance() < bestCoLoopMetric )
+    {
+        auto c = ebuilder.growOneEdge();
+        if ( !c.v )
+            break;
+    }
+    if ( !bestCoLoopFirstEdge )
+        return unexpected( "not found" );
+
+    EdgePath res;
+    res.push_back( bestCoLoopFirstEdge );
+    const auto loopD = topology.org( bestCoLoopFirstEdge );
+    const auto loopO = ebuilder.trackPathBack( topology.dest( bestCoLoopFirstEdge ), &res );
+    assert( isEdgePath( topology, res ) );
+    minPathAlongLoop( loopO, loopD, &res );
+    assert( isEdgeLoop( topology, res ) );
+    return res;
+}
+
+Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const EdgeLoop& loop )
+{
+    return findSmallestMetricCoLoop( mp.mesh.topology, loop, edgeLengthMetric( mp.mesh ), mp.region );
+}
+
+std::vector<EdgeLoop> findSmallestMetricEquivalentLoops( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric0,
+    const FaceBitSet* region )
+{
+    MR_TIMER;
+    auto metric = [&]( EdgeId e )
+    {
+        if ( !topology.isInnerEdge( e, region ) )
+            return FLT_MAX;
+        return metric0( e );
+    };
+
+    const auto fs = fillContourLeftByGraphCut( topology, loop, metric );
+
+    auto es = findAllLeftBdEdges( topology, &fs, true );
+    // exclude input loop from (es)
+    for ( auto e : loop )
+    {
+        assert( es.test( e ) );
+        es.reset( e );
+    }
+
+    auto res = extractAllLoops( topology, es, Turn::Leftmost ); // turn parameter can be arbitrary, since no path splitting is expected
+    assert( es.none() ); // no not-closed paths remain
+    return res;
+}
+
+std::vector<EdgeLoop> findShortestEquivalentLoops( const MeshPart& mp, const EdgeLoop& loop )
+{
+    return findSmallestMetricEquivalentLoops( mp.mesh.topology, loop, edgeLengthMetric( mp.mesh ), mp.region );
+}
+
 Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )
 {
     MR_TIMER;
     auto metric = settings.metric;
     if ( !metric )
-        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
+        metric = settings.buildCoLoops ? edgeLengthMetric( mp.mesh ) : discreteMinusAbsMeanCurvatureMetric( mp.mesh );
 
     FaceBitSet activeRegion = mp.mesh.topology.getFaceIds( mp.region );
     MeshPart activeMeshPart{ mp.mesh, &activeRegion };
@@ -245,12 +431,28 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
         auto basisTunnels = d.detect( MR::subprogress( settings.progress, initialProgress, targetProgress ) );
         if ( !basisTunnels.has_value() )
             return unexpected( basisTunnels.error() );
+        if ( settings.buildCoLoops )
+        {
+            ParallelFor( *basisTunnels, [&]( size_t i )
+            {
+                if ( auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, (*basisTunnels)[i], metric, &activeRegion ) )
+                    (*basisTunnels)[i] = std::move( maybeCoLoop.value() );
+                else
+                {
+                    assert( false );
+                    (*basisTunnels)[i].clear();
+                }
+            } );
+            std::erase_if( *basisTunnels, [](const auto& v) { return v.empty(); } );
+        }
 
         const auto numBasisTunnels = basisTunnels->size();
 
-        sortPathsByLength( *basisTunnels, mp.mesh );
+        // sort loops by the sum of the given metric in ascending order
+        sortPathsByMetric( *basisTunnels, metric );
         for ( int i = 0; i < basisTunnels->size(); ++i )
         {
+            // and skip too long loops by their euclidean length, and not by the given metric
             if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > settings.maxTunnelLength )
             {
                 basisTunnels->erase( basisTunnels->begin() + i, basisTunnels->end() );
@@ -275,6 +477,14 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
             }
             if ( touchAlreadySelectedTunnel )
                 continue;
+
+            if ( settings.buildCoLoops && settings.filterEquivalentCoLoops && numSelectedTunnels > 0 )
+            {
+                auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, t, metric, &activeRegion );
+                if ( !maybeCoLoop )
+                    continue;
+            }
+
             ++numSelectedTunnels;
 
             for ( EdgeId e : t )
@@ -282,8 +492,8 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
                 tunnelVerts.set( mp.mesh.topology.org( e ) );
             }
             addLeftBand( mp.mesh.topology, t, tunnelFaces );
+            activeRegion -= tunnelFaces; // reduce region
         }
-        activeRegion -= tunnelFaces; // reduce region
         assert( numSelectedTunnels > 0 );
         if ( !reportProgress( settings.progress, targetProgress + 0.01f ) )
             return unexpectedOperationCanceled();
@@ -296,6 +506,21 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
     }
 
     return tunnelFaces;
+}
+
+Expected<void> eliminateTunnels( Mesh& mesh, const FillHoleNicelySettings& fillSettings, const FaceBitSet* region, const DetectTunnelSettings& detectSettings )
+{
+    MR_TIMER;
+
+    return detectTunnelFaces( { mesh, region }, detectSettings ).transform( [&]( FaceBitSet && tunnelFaces )
+    {
+        patchMesh( mesh, tunnelFaces, fillSettings );
+    } );
+}
+
+Expected<void> eliminateTunnels( Mesh& mesh, const FaceBitSet* region, const DetectTunnelSettings& detectSettings )
+{
+    return eliminateTunnels( mesh, {}, region, detectSettings );
 }
 
 } //namespace MR

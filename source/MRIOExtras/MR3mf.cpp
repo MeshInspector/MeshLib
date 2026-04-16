@@ -1,5 +1,5 @@
 #include "MR3mf.h"
-#ifndef MRIOEXTRAS_NO_3MF
+#ifndef MRIOEXTRAS_NO_XML
 
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRIOParsing.h"
@@ -19,6 +19,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRJson.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRObjectLines.h"
 
 #include <tinyxml2.h>
 
@@ -81,6 +82,7 @@ enum class NodeType
     Unknown,
     Model,
     Object,
+    Slicestack,
     ColorGroup,
     Texture2d,
     Texture2dGroup,
@@ -95,6 +97,7 @@ static const std::unordered_map<std::string, NodeType> nodeTypeMap =
 {
     { "model", NodeType::Model },
     { "object", NodeType::Object },
+    { "s:slicestack", NodeType::Slicestack },
     { "build", NodeType::Build },
     { "m:colorgroup", NodeType::ColorGroup },
     { "m:texture2d", NodeType::Texture2d },
@@ -139,13 +142,18 @@ private:
     Expected<void> loadMultiproperties_( const tinyxml2::XMLElement* xmlNode );
     
     Expected<void> loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElement* meshNode, const ProgressCallback& callback );
+    Expected<void> loadSlicestack_( ThreeMFLoader& loader, const tinyxml2::XMLElement* slicestackNode, const ProgressCallback& callback );
 
     int id_ = -1;
     int pid_ = -1;
     int pindex_ = -1;
     int texId_ = -1;
+    int slicestackId_ = -1;
+
+    std::unordered_map<int, Node*> slicestackNodes_;
 
     Node* pNode_ = nullptr;
+    Node* rootNode_ = nullptr;
 
     NodeType nodeType_ = NodeType::Unknown;
     std::vector<std::shared_ptr<Node>> children_;
@@ -155,7 +163,9 @@ private:
     std::vector<UVCoord> uvGroup_;
     std::shared_ptr<Object> obj_;
     std::vector<Color> colors_;
+    int defaultFillamentId_{ -1 };
 
+    void initDefaultFillament_( ThreeMFLoader& loader );
     void setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::string& id, FaceColors& fColorMap );
 
 
@@ -181,6 +191,7 @@ class ThreeMFLoader
     struct LoadedXml
     {
         std::unique_ptr<tinyxml2::XMLDocument> doc;
+        std::unique_ptr<Node> rootNode;
         bool loaded{ false };
     };
     std::unordered_map<std::string, LoadedXml> xmlDocuments_;
@@ -189,8 +200,6 @@ class ThreeMFLoader
     // Object tree - each node is either a mesh or compound object
 
     std::vector<Node*> objectNodes_;
-
-    std::vector<std::shared_ptr<Node>> roots_;
 
     Expected<std::unique_ptr<tinyxml2::XMLDocument>> loadXml_( const std::filesystem::path& file );
     // Load and parse all XML .model files
@@ -318,8 +327,12 @@ Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, const ProgressCallb
     for ( auto itemNode = resourcesNode->FirstChildElement( "object" ); itemNode; itemNode = itemNode->NextSiblingElement( "object" ) )
         ++objectCount_;
 
-    roots_.push_back( std::make_shared<Node>( xmlNode ) );
-    if ( const auto res = roots_.back()->load( *this ); !res )
+    for ( auto itemNode = resourcesNode->FirstChildElement( "s:slicestack" ); itemNode; itemNode = itemNode->NextSiblingElement( "s:slicestack" ) )
+        ++objectCount_; // for both refs and real slices
+
+    doc.rootNode = std::make_unique<Node>( xmlNode );
+    doc.rootNode->rootNode_ = doc.rootNode.get();
+    if ( const auto res = doc.rootNode->load( *this ); !res )
         return unexpected( res.error() );
 
     ++documentsLoaded_;
@@ -335,7 +348,7 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
     if ( !pathAttr )
         return unexpected( "Invalid 'p:path attribute'" );
 
-    std::filesystem::path path = rootPath_ / ( "./" + std::string( pathAttr ) );
+    std::filesystem::path path = rootPath_ / asU8String( "./" + std::string( pathAttr ) );
     auto docIt = xmlDocuments_.find( utf8string( path.lexically_normal() ) );
     if ( docIt == xmlDocuments_.end() )
         return unexpected( "Cannot find file specified in p:path" );
@@ -352,8 +365,6 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
 
 Expected<void> ThreeMFLoader::loadTree_( const ProgressCallback& callback )
 {
-    roots_.reserve( xmlDocuments_.size() );
-
     initFilamentColors_();
 
     for ( auto& [_, xmlDoc] : xmlDocuments_ )
@@ -468,6 +479,22 @@ Expected<void> Node::loadObject_( ThreeMFLoader& loader, const tinyxml2::XMLElem
     {
         return unexpected( "Object has no mesh" );
     }
+
+    if ( slicestackId_ != -1 )
+    {
+        auto slicestackIt = rootNode_->slicestackNodes_.find( slicestackId_ );
+        if ( slicestackIt == rootNode_->slicestackNodes_.end() || !slicestackIt->second || !slicestackIt->second->obj_ )
+            return unexpected( "Cannot read slicestack" );
+        if ( !slicestackIt->second->obj_->parent() )
+            obj_->addChild( slicestackIt->second->obj_ );
+        else
+        {
+            // need to clone in case of referencing existing objects:
+            auto cloneTree = slicestackIt->second->obj_->cloneTree();
+            obj_->addChild( cloneTree );
+        }
+    }
+
     auto nameAttr = xmlNode->Attribute( "name" );
     if ( nameAttr )
     {
@@ -554,6 +581,8 @@ Expected<void> Node::load( ThreeMFLoader& loader )
     if ( attr )
         pindex_ = std::stoi( attr );
 
+    slicestackId_ = node_->IntAttribute( "s:slicestackid", -1 );
+
     switch ( nodeType_ )
     {
     case NodeType::ColorGroup:
@@ -566,6 +595,10 @@ Expected<void> Node::load( ThreeMFLoader& loader )
         break;
     case NodeType::Object:
         if ( auto res = loadObject_( loader, node_, subprogress( loader.progress_, loader.objectsLoaded_++, loader.objectCount_ ) ); !res )
+            return unexpected( res.error() );
+        break;
+    case NodeType::Slicestack:
+        if ( auto res = loadSlicestack_( loader, node_, subprogress( loader.progress_, loader.objectsLoaded_++, loader.objectCount_ ) ); !res )
             return unexpected( res.error() );
         break;
     case NodeType::Build:
@@ -588,6 +621,7 @@ Expected<void> Node::load( ThreeMFLoader& loader )
         for ( auto childNode = node_->FirstChildElement(); childNode; childNode = childNode->NextSiblingElement() )
         {
             children_.push_back( std::make_shared<Node>( childNode ) );
+            children_.back()->rootNode_ = rootNode_;
             if ( auto resOrErr = children_.back()->load( loader ); !resOrErr )
                 return unexpected( resOrErr.error() );
         }
@@ -713,13 +747,20 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
 
     FaceColors fColorMap;
     VertColors vColorMap;
+    initDefaultFillament_( loader );
+    std::optional<Color> baseFilament;
+    if ( defaultFillamentId_ < loader.filamentColors_.size() )
+        baseFilament = loader.filamentColors_[defaultFillamentId_];
     bool allTrisHaveConstColors = true;
     bool someTrisHaveNotBgColor = !bgColor.has_value();
     VertUVCoords vUVCoords;
 
     Triangulation tris;
 #if TINYXML2_MAJOR_VERSION > 10
-    tris.reserve( trianglesNode->ChildElementCount( "triangle" ) );
+    const auto cNumTriangles = trianglesNode->ChildElementCount( "triangle" );
+    tris.reserve( cNumTriangles );
+    if ( baseFilament )
+        fColorMap.reserve( cNumTriangles );
 #endif
     for ( auto triangleNode = trianglesNode->FirstChildElement( "triangle" ); triangleNode; triangleNode = triangleNode->NextSiblingElement( "triangle" ) )
     {
@@ -743,6 +784,8 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
                 hasFilamentId = triangleNode->QueryStringAttribute( "paint_color", &filamentId );
             if ( hasFilamentId == tinyxml2::XML_SUCCESS )
                 setFilamentFaceColor_( loader, tris.backId(), std::string( filamentId ), fColorMap );
+            else if ( baseFilament )
+                fColorMap.push_back( *baseFilament );
             else if ( allTrisHaveConstColors && bgColor )
                 fColorMap.push_back( *bgColor );
             continue;
@@ -1041,6 +1084,101 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
     return {};
 }
 
+Expected<void> Node::loadSlicestack_( ThreeMFLoader& loader, const tinyxml2::XMLElement* slicestackNode, const ProgressCallback& callback )
+{
+    auto refNode = slicestackNode->FirstChildElement( "s:sliceref" );
+    int id = slicestackNode->IntAttribute( "id", -1 );
+    if ( id == -1 )
+        return unexpected( "Invalide slicestack" );
+    if ( refNode )
+    {
+        int refsliceid = refNode->IntAttribute( "slicestackid", -1 );
+        if ( refsliceid == -1 )
+            return unexpected( "Invalide sliceref" );
+        const char* path = refNode->Attribute( "slicepath" );
+        if ( !path )
+            return unexpected( "Invalide sliceref" );
+
+        auto combinedPath = std::filesystem::path( utf8string( loader.rootPath_ ) + path );
+        auto pathStr = utf8string( combinedPath.lexically_normal() );
+
+        auto docIt = loader.xmlDocuments_.find( pathStr );
+        if ( docIt == loader.xmlDocuments_.end() )
+            return unexpected( "Cannot find slicestack specified in sliceref" );
+        
+        // no progress reporting because this can be called from another loadDocument_
+        if ( auto e = loader.loadDocument_( docIt->second, {} ); !e )
+            return unexpected( std::move( e.error() ) );
+
+        if ( !docIt->second.rootNode )
+            return unexpected( "Cannot find slicestack specified in sliceref" );
+
+        auto realNodeIt = docIt->second.rootNode->slicestackNodes_.find( refsliceid );
+        if ( realNodeIt == docIt->second.rootNode->slicestackNodes_.end() || !realNodeIt->second )
+            return unexpected( "Cannot find slicestack specified in sliceref" );
+
+        rootNode_->slicestackNodes_[id] = realNodeIt->second;
+        if ( !reportProgress( callback, 1.0f ) )
+            return unexpectedOperationCanceled();
+        return {};
+    }
+    rootNode_->slicestackNodes_[id] = this;
+
+    int numSlices = 0;
+    for ( auto sliceNode = slicestackNode->FirstChildElement( "s:slice" ); sliceNode; sliceNode = sliceNode->NextSiblingElement( "s:slice" ) )
+        ++numSlices;
+
+    Polyline3 outPoly;
+    auto zbtm = slicestackNode->FloatAttribute( "zbottom" );
+    int i = 0;
+    for ( auto sliceNode = slicestackNode->FirstChildElement( "s:slice" ); sliceNode; sliceNode = sliceNode->NextSiblingElement( "s:slice" ) )
+    {
+        auto ztop = sliceNode->FloatAttribute( "ztop" );
+        auto zCoord = 0.5f * ( zbtm + ztop );
+        zbtm = ztop;
+
+        auto verticesNode = sliceNode->FirstChildElement( "s:vertices" );
+        if ( !verticesNode )
+            break;
+        Polyline3 localPoly;
+#if TINYXML2_MAJOR_VERSION > 10
+        localPoly.points.reserve( verticesNode->ChildElementCount( "s:vertex" ) );
+#endif
+        for ( auto vertexNode = verticesNode->FirstChildElement( "s:vertex" ); vertexNode;
+              vertexNode = vertexNode->NextSiblingElement( "s:vertex" ) )
+        {
+            localPoly.points.push_back( Vector3f( vertexNode->FloatAttribute( "x" ), vertexNode->FloatAttribute( "y" ), zCoord ) );
+        }
+
+        Edges localSegments;
+        for ( auto polygonNode = sliceNode->FirstChildElement( "s:polygon" ); polygonNode;
+              polygonNode = polygonNode->NextSiblingElement( "s:polygon" ) )
+        {
+            VertId startV = VertId( polygonNode->IntAttribute( "startv" ) );
+            for ( auto segmentNode = polygonNode->FirstChildElement( "s:segment" ); segmentNode;
+                segmentNode = segmentNode->NextSiblingElement( "s:segment" ) )
+            {
+                VertId v2 = VertId( segmentNode->IntAttribute( "v2" ) );
+                localSegments.push_back( { startV,v2 } );
+                startV = v2;
+            }
+        }
+        localPoly.topology.vertResize( localPoly.points.size() );
+        localPoly.topology.makeEdges( localSegments );
+
+        outPoly.addPart( localPoly );
+
+        if ( !reportProgress( callback, float( i++ ) / float( numSlices ) ) )
+            return unexpectedOperationCanceled();
+    }
+    auto obj = std::make_shared<ObjectLines>();
+    obj->setName( "Slicestack" );
+    obj->setPolyline( std::make_shared<Polyline3>( std::move( outPoly ) ) );
+    obj->select( true );
+    obj_ = obj;
+    return {};
+}
+
 void ThreeMFLoader::initFilamentColors_()
 {
     if ( filamentInited_ )
@@ -1073,6 +1211,58 @@ void ThreeMFLoader::initFilamentColors_()
     }
     if ( filamentColors_.size() != fColors.size() )
         filamentColors_.clear();
+}
+
+void Node::initDefaultFillament_( ThreeMFLoader& loader )
+{
+    const tinyxml2::XMLDocument* foundModelSettings{ nullptr };
+    for ( const auto& [path, xml] : loader.xmlDocuments_ )
+    {
+        if ( pathFromUtf8( path ).stem() == "model_settings" )
+        {
+            foundModelSettings = xml.doc.get();
+            break;
+        }
+    }
+    if ( !foundModelSettings )
+        return;
+    const auto& modelSettings = *foundModelSettings;
+    auto rootNode = modelSettings.FirstChildElement();
+    if ( rootNode->Name() != std::string( "config" ) )
+        return;
+
+    auto lookupMeta = [] ( const tinyxml2::XMLElement& root )->int
+    {
+        for ( auto metaNode = root.FirstChildElement( "metadata" ); metaNode; metaNode = metaNode->NextSiblingElement( "metadata" ) )
+        {
+            if ( !metaNode->Attribute( "key", "extruder" ) )
+                continue;
+            return metaNode->IntAttribute( "value", 0 ) - 1;;
+        }
+        return -1;
+    };
+
+    for ( auto objNode = rootNode->FirstChildElement( "object" ); objNode; objNode = objNode->NextSiblingElement( "object" ) )
+    {
+        int currentRootFillamentId = -1;
+        currentRootFillamentId = lookupMeta( *objNode );
+        if ( objNode->IntAttribute( "id" ) == id_ )
+        {
+            defaultFillamentId_ = currentRootFillamentId;
+            return;
+        }
+        for ( auto partNode = objNode->FirstChildElement( "part" ); partNode; partNode = partNode->NextSiblingElement( "part" ) )
+        {
+            auto thisFilamentId = lookupMeta( *partNode );
+            if ( thisFilamentId == -1 )
+                thisFilamentId = currentRootFillamentId;
+            if ( partNode->IntAttribute( "id" ) == id_ )
+            {
+                defaultFillamentId_ = thisFilamentId;
+                return;
+            }
+        }
+    }
 }
 
 void Node::setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::string& fId, FaceColors& fColorMap )

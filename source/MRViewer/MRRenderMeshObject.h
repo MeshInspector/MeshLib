@@ -117,9 +117,9 @@ protected:
     bool dirtyEdges_{ false };
 
 #ifdef __EMSCRIPTEN__
-    bool cornerMode = true;
+    bool cornerMode_ = true;
 #else
-    bool cornerMode = false;
+    bool cornerMode_ = false;
 #endif
 };
 

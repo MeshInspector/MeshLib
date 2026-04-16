@@ -10,6 +10,7 @@
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRViewer/MRSceneObjectsListDrawer.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -22,13 +23,13 @@ RibbonSceneSortByName::RibbonSceneSortByName() :
 std::string RibbonSceneSortByName::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return "At least one objects should be in scene";
+        return _tr( "At least one objects should be in scene" );
     return "";
 }
 
 bool RibbonSceneSortByName::action()
 {
-    SCOPED_HISTORY( "Sort scene" );
+    SCOPED_HISTORY( _t( "Sort scene" ) );
     sortObjectsRecursive_( SceneRoot::getSharedPtr() );
     return false;
 }
@@ -51,7 +52,7 @@ RibbonSceneSelectAll::RibbonSceneSelectAll() :
 std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return "At least one objects should be in scene";
+        return _tr( "At least one objects should be in scene" );
     return "";
 }
 
@@ -85,7 +86,7 @@ RibbonSceneShowAll::RibbonSceneShowAll() :
 std::string RibbonSceneShowAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
-        return "At least one objects should be in scene";
+        return _tr( "At least one objects should be in scene" );
     return "";
 }
 
@@ -106,7 +107,7 @@ RibbonSceneHideAll::RibbonSceneHideAll() :
 std::string RibbonSceneHideAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
-        return "At least one objects should be in scene";
+        return _tr( "At least one objects should be in scene" );
     return "";
 }
 
@@ -128,7 +129,7 @@ RibbonSceneShowOnlyPrev::RibbonSceneShowOnlyPrev() :
 std::string RibbonSceneShowOnlyPrev::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return "At least one objects should be in scene";
+        return _tr( "At least one objects should be in scene" );
     return "";
 }
 
@@ -151,7 +152,7 @@ RibbonSceneShowOnlyNext::RibbonSceneShowOnlyNext() :
 std::string RibbonSceneShowOnlyNext::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return "At least one objects should be in scene";
+        return _tr( "At least one objects should be in scene" );
     return "";
 }
 
@@ -190,7 +191,7 @@ std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::share
     {
         if ( !res.empty() )
             res += "\n";
-        res += "Deleting objects is blocked";
+        res += s_tr( "Deleting objects is blocked" );
     }
     return res;
 }
@@ -202,7 +203,7 @@ bool RibbonSceneRemoveSelected::action()
             return false;
 
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    SCOPED_HISTORY( "Remove Objects" );
+    SCOPED_HISTORY( _t( "Remove Objects" ) );
     for ( int i = (int) selected.size() - 1; i >= 0; --i )
         if ( selected[i] )
         {

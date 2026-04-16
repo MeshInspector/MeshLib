@@ -26,6 +26,7 @@ public:
     /// creates directory if not presented
     MRMESH_API void reset( std::string appName );
 
+    /// the name of the application, UTF8 encoded
     MRMESH_API const std::string& getAppName() const;
 
     /// writes current config to file. (implicitly called from destructor)

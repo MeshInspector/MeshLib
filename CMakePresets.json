@@ -1,0 +1,98 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "ninja",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}"
+        },
+        {
+            "name": "release",
+            "hidden": true,
+            "environment": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "debug",
+            "hidden": true,
+            "environment": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "emscripten",
+            "hidden": true,
+            "inherits": ["ninja"],
+            "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "cacheVariables": {
+                "CMAKE_FIND_ROOT_PATH": "${sourceDir}",
+                "MR_EMSCRIPTEN": "1"
+            }
+        },
+        {
+            "name": "wasm32-mt",
+            "hidden": true,
+            "inherits": ["emscripten"],
+            "cacheVariables": {
+                "MR_EMSCRIPTEN_SINGLETHREAD": "0",
+                "MR_EMSCRIPTEN_WASM64": "0"
+            }
+        },
+        {
+            "name": "wasm32-st",
+            "hidden": true,
+            "inherits": ["emscripten"],
+            "cacheVariables": {
+                "MR_EMSCRIPTEN_SINGLETHREAD": "1",
+                "MR_EMSCRIPTEN_WASM64": "0"
+            }
+        },
+        {
+            "name": "wasm64-mt",
+            "hidden": true,
+            "inherits": ["emscripten"],
+            "cacheVariables": {
+                "MR_EMSCRIPTEN_SINGLETHREAD": "0",
+                "MR_EMSCRIPTEN_WASM64": "1"
+            }
+        },
+        {
+            "name": "wasm32-mt-release",
+            "displayName": "Emscripten 32-bit multi-threaded (Release)",
+            "inherits": ["release", "wasm32-mt"]
+        },
+        {
+            "name": "wasm32-mt-debug",
+            "displayName": "Emscripten 32-bit multi-threaded (Debug)",
+            "inherits": ["debug", "wasm32-mt"]
+        },
+        {
+            "name": "wasm64-mt-release",
+            "displayName": "Emscripten 64-bit multi-threaded (Release)",
+            "inherits": ["release", "wasm64-mt"]
+        },
+        {
+            "name": "wasm64-mt-debug",
+            "displayName": "Emscripten 64-bit multi-threaded (Debug)",
+            "inherits": ["debug", "wasm64-mt"]
+        },
+        {
+            "name": "wasm32-st-release",
+            "displayName": "Emscripten 32-bit single-threaded (Release)",
+            "inherits": ["release", "wasm32-st"]
+        },
+        {
+            "name": "wasm32-st-debug",
+            "displayName": "Emscripten 32-bit single-threaded (Debug)",
+            "inherits": ["debug", "wasm32-st"]
+        }
+    ],
+    "buildPresets": []
+}

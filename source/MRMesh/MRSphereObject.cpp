@@ -108,7 +108,7 @@ void SphereObject::swapBase_( Object& other )
 void SphereObject::serializeFields_( Json::Value& root ) const
 {
     FeatureObject::serializeFields_( root );
-    root["Type"].append( SphereObject::TypeName() );
+    root["Type"].append( SphereObject::StaticTypeName() );
 }
 
 void SphereObject::setupRenderObject_() const

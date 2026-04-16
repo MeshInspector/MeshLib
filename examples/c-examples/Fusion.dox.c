@@ -24,10 +24,10 @@ int main( void )
 
     // load points
     MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "Points.ply", NULL, NULL );
-    MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_GetMutableValue( loadRes );
+    MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_value_mut( loadRes );
     if ( !pc )
     {
-        fprintf( stderr, "Failed to load points: %s\n", MR_std_string_Data( MR_expected_MR_PointCloud_std_string_GetError( loadRes ) ) );
+        fprintf( stderr, "Failed to load points: %s\n", MR_std_string_data( MR_expected_MR_PointCloud_std_string_error( loadRes ) ) );
         goto fail_load;
     }
 
@@ -41,17 +41,17 @@ int main( void )
     MR_PointsToMeshParameters_Set_minWeight( params, 1.0f );
 
     MR_expected_MR_Mesh_std_string* fusionRes = MR_pointsToMeshFusion( pc, params );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( fusionRes );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( fusionRes );
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to fuse points: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( fusionRes ) ) );
+        fprintf( stderr, "Failed to fuse points: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( fusionRes ) ) );
         goto fail_fuse;
     }
 
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "Mesh.ctm", NULL, NULL );
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save; // error while saving file
     }
 

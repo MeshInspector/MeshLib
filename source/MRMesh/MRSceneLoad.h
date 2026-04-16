@@ -15,6 +15,11 @@ struct Settings
 
     /// to report loading progress and allow the user to cancel it
     ProgressCallback progress;
+
+    /// if provided then folders will be open using this functions and added to scene,
+    /// otherwise folders will be skipped
+    using OpenFolder = std::function<Expected<LoadedObjects>( const std::filesystem::path&, const ProgressCallback& )>;
+    OpenFolder openFolder;
 };
 
 /// Scene loading result

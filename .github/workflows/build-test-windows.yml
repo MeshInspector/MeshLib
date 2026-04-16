@@ -44,7 +44,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'MSBuild' }}
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -97,7 +97,7 @@ jobs:
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@8e2d02296bcf12c081e192c60f3cb80d77f4f76a # v4
+        uses: aws-actions/configure-aws-credentials@4ce2bbcf5d401e557e0537d863a6aced08605794 # v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
@@ -122,12 +122,12 @@ jobs:
         run: choco install cuda --version=${{matrix.CUDA-VERSION}} --confirm
 
       - name: Setup CUDA
-        shell: bash
+        shell: cmd
         run: |
-          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
-          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
+          echo>>%GITHUB_ENV% CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
+          echo>>%GITHUB_ENV% CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
+          echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}
+          echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\bin
 
       - name: Install Visual Studio Integration
         run: |
@@ -140,7 +140,7 @@ jobs:
 
       - name: Add msbuild to PATH
         if: ${{ matrix.build_system == 'MSBuild' }}
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Install .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -148,54 +148,45 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore Dependencies
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@7a827ce5193af33b950d0fedfc0277cab2ff8887 # v2
-        with:
-          projects: 'source/**/*.csproj'
-
-        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
-        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
-        with:
-          msystem: clang64
-          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
-          location: C:\msys64_meshlib_mrbind
-
-      - name: Install Clang in MSYS2
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
-        shell: msys2 {0}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         run: |
-          ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
+          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
+          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
+          rm msys64_meshlib_mrbind.zip
 
-      - name: Install Ninja for CMake
-        if: ${{ matrix.build_system == 'CMake' }}
-        uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+      - name: Install gettext utilities
+        if: ${{ inputs.upload_artifacts }}
+        run: |
+          C:\msys64_meshlib_mrbind\msys2_shell.cmd -clang64 -defterm -no-start -c "pacman -S --noconfirm --needed mingw-w64-clang-x86_64-gettext-tools"
 
       - name: Build MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: cmd
-        env:
-          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
-          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
-        run: cd & call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate C bindings
-        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
 
+        # This consumes the JSON created by generating the C bindings.
+      - name: Generate C# bindings
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
+        shell: cmd
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        run: |
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
+          dotnet build examples/c-sharp-examples -c ${{matrix.config}}
+
       - name: Build
         shell: cmd
         env:
+          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
           VCPKG_ROOT: C:\vcpkg
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
@@ -209,26 +200,16 @@ jobs:
             if errorlevel 1 exit 1
             if not exist source\x64 mkdir source\x64
             if errorlevel 1 exit 1
-            move source\TempOutput\bin source\x64\${{matrix.config}}
+            xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y
             if errorlevel 1 exit 1
           ) else (
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
             if errorlevel 1 exit 1
           )
 
-      - name: Build .NET
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
-
-      - name: Build .NET examples
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
-
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind}}
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
@@ -241,10 +222,9 @@ jobs:
         shell: cmd
 
       - name: Unit Tests
+        env:
+          GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         run: source\x64\${{ matrix.config }}\MRTest.exe
-
-      - name: C Unit Tests (old bindings)
-        run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
 
       - name: C Unit Tests
         if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
@@ -252,12 +232,19 @@ jobs:
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
-        run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
+        run: |
+          dotnet build source\MRDotNet2Test -c ${{ matrix.config }}
+          source\x64\${{ matrix.config }}\MRDotNet2Test.exe --result="_report_nunit.xml"
+          # convert report to JUnit format
+          [Environment]::CurrentDirectory = $pwd
+          $xslt = New-Object System.Xml.Xsl.XslCompiledTransform
+          $xslt.Load("scripts\devops\nunit3-junit.xslt")
+          $xslt.Transform("_report_nunit.xml", "unit_tests_report_nunit.xml")
 
       - name: Python Sanity Tests
         timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
@@ -265,10 +252,16 @@ jobs:
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}
-          pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative"
+          pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ${{ matrix.test_artifacts_path }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
+
+      - name: Generate Test Performance Report
+        continue-on-error: true
+        run: |
+          py -3 scripts/junit_to_csv.py unit_tests_report.csv (get-item unit_tests_report_*.xml)
+          cat unit_tests_report.csv
 
       - name: Delete unwanted files
         # Those files should not exist when using CMake.
@@ -298,7 +291,7 @@ jobs:
           & $env:CMAKE_EXE `
             -S examples/cpp-examples `
             -B cpp-examples-build `
-            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include" `
+            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include;$env:VCPKG_ROOT/installed/x64-windows-meshlib/include/eigen3" `
             -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/x64-windows-meshlib/lib"
           & $env:CMAKE_EXE `
             --build cpp-examples-build `
@@ -329,7 +322,7 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_${{matrix.config}}
           path: MREDist_${{matrix.config}}.zip
@@ -346,32 +339,34 @@ jobs:
 
       - name: Upload MeshLibC2 headers archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers
           path: MeshLibC2Headers.zip
           retention-days: 1
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
-          python -m pip install delvewheel
-          python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MRMeshC.dll" "./patched_content/"
+          py -3 -m pip install delvewheel
+          py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/x64/Release/MeshLibC2.dll ./source/x64/Release/MeshLibC2Cuda.dll
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveWindows-x64
           path: ./patched_content/*
           retention-days: 1
 
-      - name: Upload NuGet library DLL to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v6
+      - name: Upload NuGet library DLL and XML to Artifacts
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        uses: actions/upload-artifact@v7
         with:
-          name: DotNetDll
-          path: ./source/x64/Release/MRDotNet.dll
+          name: DotNetDllXml
+          path: |
+            ./source/x64/Release/MRDotNet2.dll
+            ./source/x64/Release/MRDotNet2.xml
           retention-days: 1

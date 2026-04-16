@@ -224,12 +224,11 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
 
 } // anonymous namespace
 
-Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
-    const std::vector<std::filesystem::path>& excludeFiles, const char * password, ProgressCallback cb )
+Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, const CompressZipSettings& settings )
 {
     MR_TIMER;
 
-    if ( !reportProgress( cb, 0.0f ) )
+    if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
     std::error_code ec;
@@ -237,7 +236,7 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         return unexpected( "Directory '" + utf8string( sourceFolder ) + "' does not exist" );
 
     int err;
-    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( cb, 0.5f, 1.0f ) );
+    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( settings.cb, 0.5f, 1.0f ) );
     if ( !zip )
         return unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
@@ -245,11 +244,11 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     {
         if ( !is_regular_file( path, ec ) )
             return false;
-        auto excluded = std::find_if( excludeFiles.begin(), excludeFiles.end(), [&] ( const auto& a )
+        auto excluded = std::find_if( settings.excludeFiles.begin(), settings.excludeFiles.end(), [&] ( const auto& a )
         {
             return std::filesystem::equivalent( a, path, ec );
         } );
-        return excluded == excludeFiles.end();
+        return excluded == settings.excludeFiles.end();
     };
 
     // pass #1: add directories in the archive and count the files
@@ -272,8 +271,9 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     }
 
     // pass #2: add files in the archive
+    zip_uint32_t compressionLevel = zip_uint32_t( std::clamp( settings.compressionLevel, 0, 9 ) );
     int compressedFiles = 0;
-    auto scb = subprogress( cb, 0.0f, 0.5f );
+    auto scb = subprogress( settings.cb, 0.0f, 0.5f );
     for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
         const auto path = entry.path();
@@ -294,9 +294,12 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
             return unexpected( "Cannot add file " + archiveFilePath + " to archive" );
         }
 
-        if ( password )
+        if ( compressionLevel != 0 )
+            zip_set_file_compression( zip, index, ZIP_CM_DEFAULT, compressionLevel );
+
+        if ( !settings.password.empty() )
         {
-            if ( zip_file_set_encryption( zip, index, ZIP_EM_AES_256, password ) )
+            if ( zip_file_set_encryption( zip, index, ZIP_EM_AES_256, settings.password.c_str() ) )
                 return unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
         }
 
@@ -307,13 +310,19 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
 
     auto closeRes = zip.close();
 
-    if ( !reportProgress( cb, 1.0f ) )
+    if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
     if ( closeRes == -1 )
         return unexpected( "Cannot close zip" );
 
     return {};
+}
+
+Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
+    const std::vector<std::filesystem::path>& excludeFiles, const char* password, ProgressCallback cb )
+{
+    return compressZip( zipFile, sourceFolder, { .excludeFiles = excludeFiles ,.password = std::string( password ),.cb = cb } );
 }
 
 Expected<void> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )

@@ -265,7 +265,7 @@ R"(<?xml version="1.0" encoding="utf-8"?>
             return unexpected( std::move( maybeDone.error() ) );
     }
 
-    return compressZip( file, scenePath, {}, nullptr, subprogress( settings.progress, 0.9f, 1.0f ) );
+    return compressZip( file, scenePath, { .cb = subprogress( settings.progress, 0.9f, 1.0f ) } );
 }
 
 MR_ADD_MESH_SAVER( IOFilter( "3D Manufacturing model (.model)", "*.model" ), toModel3mf, {} )

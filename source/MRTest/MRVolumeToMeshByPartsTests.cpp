@@ -69,18 +69,15 @@ TEST( MRMesh, volumeToMeshByParts )
         VolumeIndexer indexer( result.dims );
         result.data.resize( indexer.size() );
 
-        tbb::parallel_for( tbb::blocked_range<int>( 0, dimensions.z ), [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( 0, dimensions.z, [&] ( size_t z )
         {
-            for ( auto z = range.begin(); z < range.end(); ++z )
+            for ( auto y = 0; y < dimensions.y; ++y )
             {
-                for ( auto y = 0; y < dimensions.y; ++y )
+                for ( auto x = begin; x < end; ++x )
                 {
-                    for ( auto x = begin; x < end; ++x )
-                    {
-                        const Vector3f pos( (float)x, (float)y, (float)z );
-                        const auto dist = ( center - pos ).length();
-                        result.data[indexer.toVoxelId( { x - begin, y, z } )] = dist - radius;
-                    }
+                    const Vector3f pos( (float)x, (float)y, (float)z );
+                    const auto dist = ( center - pos ).length();
+                    result.data[indexer.toVoxelId( { x - begin, y, (int)z } )] = dist - radius;
                 }
             }
         } );

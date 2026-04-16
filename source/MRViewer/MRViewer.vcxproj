@@ -36,6 +36,7 @@
     <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRLocale.cpp" />
     <ClCompile Include="MRRibbonFontHolder.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -53,6 +54,9 @@
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonRegisterItem.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
+    <ClCompile Include="MRSceneControlMenuItems.cpp" />
+    <ClCompile Include="MRSpaceMouseDevice.cpp" />
+    <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
@@ -153,8 +157,11 @@
     <ClCompile Include="MRUIQualityControl.cpp" />
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
     <ClCompile Include="MRFileDialogPortal.cpp" />
+    <ClCompile Include="MRWin32MessageHandler.cpp" />
+    <ClCompile Include="MRI18n.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRFileDialogCocoa.h" />
     <ClInclude Include="MRImGuiMultiViewport.h" />
     <ClInclude Include="MRAlphaSortGL.h" />
     <ClInclude Include="MRAncillaryLabels.h" />
@@ -183,6 +190,7 @@
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />
     <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRLocale.h" />
     <ClInclude Include="MRRibbonFontHolder.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
@@ -204,6 +212,9 @@
     <ClInclude Include="MRRibbonRegisterItem.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
     <ClInclude Include="MRMruFormatParameters.h" />
+    <ClInclude Include="MRSceneControlMenuItems.h" />
+    <ClInclude Include="MRSpaceMouseDevice.h" />
+    <ClInclude Include="MRSpaceMouseHandlerWinEvents.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />
@@ -269,6 +280,7 @@
     <ClInclude Include="MRTouchpadWin32Handler.h" />
     <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
+    <ClInclude Include="MRViewerConfigConstants.h" />
     <ClInclude Include="MRViewerEventQueue.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
@@ -324,6 +336,9 @@
     <ClInclude Include="MRItemEnabledPerViewport.h" />
     <ClInclude Include="MRWebResponseCallback.h" />
     <ClInclude Include="MRFileDialogPortal.h" />
+    <ClInclude Include="MRWin32MessageHandler.h" />
+    <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRLocaleMacos.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -336,6 +351,12 @@
     <CopyFileToFolders Include="MRLightTheme.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <None Include="MRFileDialogCocoa.mm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="MRLocaleMacos.mm" />
+    <None Include="MRLocaleNames.inl" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -531,6 +552,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>

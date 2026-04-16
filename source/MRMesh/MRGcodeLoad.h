@@ -13,7 +13,7 @@ namespace MR
 namespace GcodeLoad
 {
 
-/// \defgroup GcodeLoadGroup Mesh Load
+/// \defgroup GcodeLoadGroup Gcode Load
 /// \ingroup IOGroup
 /// \{
 

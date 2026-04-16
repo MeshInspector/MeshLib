@@ -31,6 +31,10 @@ Expected<FaceBitSet> findOverlappingTris( const MeshPart & mp, const FindOverlap
 
             if ( dot( fnormal, f1normal ) > settings.maxNormalDot )
                 return ProcessOneResult::ContinueProcessing;
+
+            if ( settings.pred && !settings.pred( f, f1 ) )
+                return ProcessOneResult::ContinueProcessing;
+
             overlapping = true;
             return ProcessOneResult::StopProcessing;
         };

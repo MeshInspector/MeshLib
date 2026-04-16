@@ -20,7 +20,6 @@ namespace MR
 enum class MRMESH_CLASS VisualizeMaskType
 {
     Visibility,
-    InvertedNormals,
     Name,
     ClippedByPlane,
     DepthTest,
@@ -78,8 +77,7 @@ enum DirtyFlags
     DIRTY_UV = 0x0002,
     DIRTY_VERTS_RENDER_NORMAL = 0x0004, //< gl normals
     DIRTY_FACES_RENDER_NORMAL = 0x0008, ///< gl normals
-    DIRTY_CORNERS_RENDER_NORMAL = 0x0010, ///< gl normals
-    DIRTY_RENDER_NORMALS = DIRTY_VERTS_RENDER_NORMAL | DIRTY_FACES_RENDER_NORMAL | DIRTY_CORNERS_RENDER_NORMAL,
+    DIRTY_RENDER_NORMALS = DIRTY_VERTS_RENDER_NORMAL | DIRTY_FACES_RENDER_NORMAL,
     DIRTY_SELECTION = 0x0020,
     DIRTY_TEXTURE = 0x0040,
     DIRTY_PRIMITIVES = 0x0080,
@@ -89,10 +87,8 @@ enum DirtyFlags
     DIRTY_FACES_COLORMAP = DIRTY_PRIMITIVE_COLORMAP,
     DIRTY_TEXTURE_PER_FACE = 0x0400,
     DIRTY_MESH = 0x07FF,
-    DIRTY_BOUNDING_BOX = 0x0800,
     DIRTY_BORDER_LINES = 0x1000,
     DIRTY_EDGES_SELECTION = 0x2000,
-    DIRTY_CACHES = DIRTY_BOUNDING_BOX,
     DIRTY_VOLUME = 0x4000,
     DIRTY_ALL = 0x7FFF
 };
@@ -124,14 +120,14 @@ public:
     VisualObject& operator = ( VisualObject&& ) = default;
     virtual ~VisualObject() = default;
 
-    constexpr static const char* TypeName() noexcept { return "VisualObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "VisualObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Visual Object"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Visual Object"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Visual Objects"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Visual Objects"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
     [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;
@@ -222,8 +218,7 @@ public:
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override
     {
         return Object::getRedrawFlag( viewportMask ) ||
-            ( isVisible( viewportMask ) &&
-              ( dirty_ & ( ~( DIRTY_CACHES ) ) ) );
+            ( isVisible( viewportMask ) && dirty_ );
     }
 
     /// whether the object can be picked (by mouse) in any of given viewports
@@ -298,6 +293,10 @@ protected:
     /// and assign renderObj_ inside
     virtual void setupRenderObject_() const {}
 
+    /// todo: make virtual and public when all children support separate fast dirty and cache invalidation
+    MRMESH_API void setDirtyFlagsFast_( uint32_t mask );
+    MRMESH_API void invalidateMetricsCache_( uint32_t mask );
+
     mutable UniquePtr<IRenderObject> renderObj_;
 
     /// Visualization options
@@ -306,7 +305,6 @@ protected:
     ViewportMask clipByPlane_;
     ViewportMask showName_;
     ViewportMask pickable_ = ViewportMask::all(); ///< enable picking by gl
-    ViewportMask invertNormals_; ///< invert mesh normals
     ViewportMask depthTest_ = ViewportMask::all();
 
     float shininess_{35.0f}; ///< specular exponent
@@ -354,7 +352,7 @@ protected:
 private:
     mutable Dirty dirty_; // private dirty, to force all using setDirtyFlags, instead of direct change
 
-    mutable Box3f boundingBoxCache_;
+    mutable std::optional<Box3f> boundingBoxCache_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

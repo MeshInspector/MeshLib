@@ -47,6 +47,23 @@ TEST(MRMesh, BitSet)
     bs3.set( 4 );
     EXPECT_FALSE( bs3.is_subset_of( bs0 ) );
     EXPECT_TRUE( bs0.is_subset_of( bs3 ) );
+
+    BitSet bs4( 270 );
+    bs4.set( 160 );
+    bs4.set( 161 );
+    EXPECT_EQ( bs4.find_first(), 160 );
+    EXPECT_EQ( bs4.find_next( 160 ), 161 );
+    EXPECT_EQ( bs4.find_first_not_set(), 0 );
+    EXPECT_EQ( bs4.find_next_not_set( 0 ), 1 );
+    EXPECT_EQ( bs4.find_last(), 161 );
+    EXPECT_EQ( bs4.find_last_not_set(), 269 );
+    bs4.flip();
+    EXPECT_EQ( bs4.find_first(), 0 );
+    EXPECT_EQ( bs4.find_next( 0 ), 1 );
+    EXPECT_EQ( bs4.find_first_not_set(), 160 );
+    EXPECT_EQ( bs4.find_next_not_set( 160 ), 161 );
+    EXPECT_EQ( bs4.find_last(), 269 );
+    EXPECT_EQ( bs4.find_last_not_set(), 161 );
 }
 
 TEST(MRMesh, TaggedBitSet)

@@ -1,5 +1,6 @@
 #ifndef __EMSCRIPTEN__
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMouseController.h"
@@ -7,22 +8,21 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include <bit>
 
-namespace MR
+namespace MR::SpaceMouse
 {
-SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
+HandlerHidapi::HandlerHidapi()
     : device_( nullptr )
-    , buttonsMapPtr_( nullptr )
     , terminateListenerThread_( false )
     , dataPacket_( { 0 } )
     , packetLength_( 0 )
     , active_( true )
-    , activeMouseScrollZoom_( true )
 {
     connect( &getViewerInstance(), 0, boost::signals2::connect_position::at_back );
 }
 
-SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
+HandlerHidapi::~HandlerHidapi()
 {
     terminateListenerThread_ = true;
     cv_.notify_one();
@@ -36,9 +36,8 @@ SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
     hid_exit();
 }
 
-bool SpaceMouseHandlerHidapi::initialize( std::function<void(const std::string&)> deviceSignal )
+bool HandlerHidapi::initialize()
 {
-    deviceSignal_ = std::move( deviceSignal );
     if ( hid_init() != 0 )
     {
         spdlog::error( "HID API: init error" );
@@ -55,12 +54,12 @@ bool SpaceMouseHandlerHidapi::initialize( std::function<void(const std::string&)
     return true;
 }
 
-bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
+bool HandlerHidapi::findAndAttachDevice_( bool verbose )
 {
     const static int HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER = 8; //Multi-axis Controller
     const static int HID_USAGE_PAGE_GENERIC = 1; //Generic Desktop Controls
     assert( !device_ );
-    for ( const auto& [vendorId, supportedDevicesId] : vendor2device_ )
+    for ( const auto& [vendorId, supportedDevicesId] : cVendor2Device )
     {
         // search through supported vendors
         hid_device_info* localDevicesIt = hid_enumerate( vendorId, 0x0 ); // hid_enumerate( 0x0, 0x0 ) to enumerate all devices of all vendors
@@ -71,8 +70,8 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                 spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}, name={}:{}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page,
                     wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) );
-                if ( deviceSignal_ && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
-                    deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
+                if ( localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
+                    TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} found: {}:{}", vendorId, localDevicesIt->product_id,
                         wideToUtf8( localDevicesIt->manufacturer_string ), wideToUtf8( localDevicesIt->product_string ) ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
@@ -82,14 +81,10 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     device_ = hid_open_path( localDevicesIt->path );
                     if ( device_ )
                     {
-                        anyAction_ = false;
+                        numMsg_ = 0;
                         spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vendorId, deviceId, localDevicesIt->path );
-                        if ( deviceSignal_ )
-                            deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
-                        // setup buttons logger
-                        buttonsState_ = 0;
-                        setButtonsMap_( vendorId, deviceId );
-                        activeMouseScrollZoom_ = false;
+                        TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
+                        smDevice_.resetDevice( vendorId, deviceId );
                         if ( !verbose )
                             break;
                     }
@@ -97,8 +92,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     {
                         spdlog::error( "HID API device ({:04x}:{:04x}, path={}) open error: {}",
                             vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );
-                        if ( deviceSignal_ )
-                            deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} open failed", vendorId, localDevicesIt->product_id ) );
+                        TelemetrySignal( fmt::format( "HID API device {:04x}:{:04x} open failed", vendorId, localDevicesIt->product_id ) );
                     }
                 }
             }
@@ -109,33 +103,12 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
     return (bool)device_;
 }
 
-
-void SpaceMouseHandlerHidapi::setButtonsMap_( VendorId vendorId, ProductId productId )
+void HandlerHidapi::handle()
 {
-    if ( vendorId == 0x256f )
-    {
-        if ( productId == 0xc635 || productId == 0xc652 ) // spacemouse compact
-            buttonsMapPtr_ = &buttonMapCompact;
-        else if ( productId == 0xc631 || productId == 0xc632 || productId == 0xc638 ) //  spacemouse pro
-            buttonsMapPtr_ = &buttonMapPro;
-        else if ( productId == 0xc633 ) // spacemouse enterprise
-            buttonsMapPtr_ = &buttonMapEnterprise;
-    }
-    else if ( vendorId == 0x046d )
-    {
-        if ( productId == 0xc62b ) //  spacemouse pro
-            buttonsMapPtr_ = &buttonMapPro;
-    }
-}
-
-void SpaceMouseHandlerHidapi::handle()
-{
-    // works in pair with SpaceMouseHandlerHidapi::startListenerThread_()
+    // works in pair with HandlerHidapi::startListenerThread_()
     std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_, std::defer_lock );
     if ( !syncThreadLock.try_lock() )
         return;
-
-    getViewerInstance().mouseController().setMouseScroll( !device_ || activeMouseScrollZoom_ );
 
     if ( packetLength_ <= 0 || !device_ )
     {
@@ -146,15 +119,15 @@ void SpaceMouseHandlerHidapi::handle()
     // set the device handle to be non-blocking
     hid_set_nonblocking( device_, 1 );
 
-    SpaceMouseAction action;
-    updateActionWithInput_( dataPacket_, packetLength_, action );
+    Action action;
+    smDevice_.parseRaw( dataPacket_, packetLength_, action );
 
     int packetLengthTmp = 0;
     do
     {
         DataPacketRaw dataPacketTmp;
         packetLengthTmp = hid_read( device_, dataPacketTmp.data(), dataPacketTmp.size() );
-        updateActionWithInput_( dataPacketTmp, packetLengthTmp, action );
+        smDevice_.parseRaw( dataPacketTmp, packetLengthTmp, action );
     } while ( packetLengthTmp > 0 );
 
     processAction_( action );
@@ -163,9 +136,9 @@ void SpaceMouseHandlerHidapi::handle()
     cv_.notify_one();
 }
 
-void SpaceMouseHandlerHidapi::initListenerThread_()
+void HandlerHidapi::initListenerThread_()
 {
-    // works in pair with SpaceMouseHandlerHidapi::handle()
+    // works in pair with HandlerHidapi::handle()
     // waits for updates on SpaceMouse and notifies main thread
     listenerThread_ = std::thread( [&] ()
     {
@@ -213,12 +186,9 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
             {
                 hid_close( device_ );
                 device_ = nullptr;
-                buttonsMapPtr_ = nullptr;
-                buttonsState_ = 0;
-                activeMouseScrollZoom_ =  true;
+                smDevice_.resetDevice();
                 spdlog::error( "HID API: device lost" );
-                if ( deviceSignal_ )
-                    deviceSignal_( fmt::format( "HID API device lost" ) );
+                TelemetrySignal( fmt::format( "HID API device lost" ) );
             }
             else if ( packetLength_ > 0 )
             {
@@ -231,93 +201,67 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     } );
 }
 
-void SpaceMouseHandlerHidapi::postFocus_( bool focused )
+void HandlerHidapi::postFocus_( bool focused )
 {
     active_ = focused;
     cv_.notify_one();
 }
 
-void SpaceMouseHandlerHidapi::activateMouseScrollZoom( bool activeMouseScrollZoom )
+void HandlerHidapi::processAction_( const Action& action )
 {
-    activeMouseScrollZoom_ = activeMouseScrollZoom;
-    getViewerInstance().mouseController().setMouseScroll(  activeMouseScrollZoom );
+    ++numMsg_;
+    if ( numMsg_ == 1 )
+        TelemetrySignal( "HID API first action processing" );
+    if ( std::popcount( numMsg_ ) == 1 ) // report every power of 2
+        TelemetrySignal( "HID API SpaceMouse next log messages" );
+    smDevice_.process( action );
+    glfwPostEmptyEvent();
 }
 
-
-float SpaceMouseHandlerHidapi::convertCoord_( int coord_byte_low, int coord_byte_high )
+bool HandlerHidapi::hasValidDeviceConnected() const
 {
-    int value = coord_byte_low | ( coord_byte_high << 8 );
-    if ( value > SHRT_MAX )
-    {
-        value = value - 65536;
-    }
-    float ret = ( float )value / 350.0f;
-    return ( std::abs( ret ) > 0.01f ) ? ret : 0.0f;
+    return smDevice_.valid();
 }
 
-void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action )
+void HandlerHidapi::AtomicDevice::resetDevice( VendorId vId, ProductId pId )
 {
-    // button update package
-    if ( packet[0] == 3 && buttonsMapPtr_ != nullptr )
+    std::unique_lock lock( mutex_ );
+    bool clear = vId == 0 && pId == 0;
+    if ( clear )
     {
-        action.isButtonStateChanged = true;
-        // for all bytes in packet
-        for ( int column = 1; column < buttonsMapPtr_->size(); ++column )
+        if ( device_ )
         {
-            for ( int i = 0; i < ( *buttonsMapPtr_ )[column].size(); ++i )
-            {
-                if ( packet[column] & ( 1 << i ) )
-                    action.buttons.set( ( *buttonsMapPtr_ )[column][i] );
-            }
+            device_->resetDevice();
+            device_.reset();
         }
         return;
     }
-
-    Vector3f matrix = { 0.0f, 0.0f, 0.0f };
-    if ( packet_length >= 7 )
-    {
-        matrix = { convertCoord_( packet[1], packet[2] ),
-                  convertCoord_( packet[3], packet[4] ),
-                  convertCoord_( packet[5], packet[6] ) };
-
-        if ( packet[0] == 1 )
-            action.translate = matrix;
-        else if ( packet[0] == 2 )
-            action.rotate = matrix;
-    }
-    if ( packet_length == 13 )
-    {
-        action.translate = matrix;
-        action.rotate = { convertCoord_( packet[7], packet[8] ),
-                         convertCoord_( packet[9], packet[10] ),
-                         convertCoord_( packet[11], packet[12] ) };
-    }
+    if ( !device_ )
+        device_ = std::make_unique<Device>();
+    device_->resetDevice(); // as far as we now only support single device with HID API we reset old one
+    device_->updateDevice( vId, pId );
 }
 
-void SpaceMouseHandlerHidapi::processAction_( const SpaceMouseAction& action )
+void HandlerHidapi::AtomicDevice::parseRaw( const DataPacketRaw& packet, int packet_length, Action& action ) const
 {
-    if ( deviceSignal_ && !anyAction_ )
-    {
-        deviceSignal_( "HID API first action processing" );
-        anyAction_ = true;
-    }
-    auto& viewer = getViewerInstance();
-    viewer.spaceMouseMove( action.translate, action.rotate );
-    glfwPostEmptyEvent();
+    std::unique_lock lock( mutex_ );
+    if ( device_ )
+        device_->parseRawEvent( packet, packet_length, action );
+}
 
-    if ( action.isButtonStateChanged  )
-     {
-         std::bitset<SMB_BUTTON_COUNT> new_pressed = action.buttons & ~buttonsState_;
-         std::bitset<SMB_BUTTON_COUNT> new_unpressed = buttonsState_ & ~action.buttons;
-         for (int btn = 0; btn < SMB_BUTTON_COUNT; ++btn)
-         {
-             if ( new_unpressed.test( btn ) )
-                 viewer.spaceMouseUp( btn );
-             if ( new_pressed.test( btn ) )
-                 viewer.spaceMouseDown( btn );
-         }
-         buttonsState_ = action.buttons;
-     }
+void HandlerHidapi::AtomicDevice::process( const Action& action )
+{
+    std::unique_lock lock( mutex_ );
+    if ( device_ )
+        device_->processAction( action );
+}
+
+bool HandlerHidapi::AtomicDevice::valid() const
+{
+    std::unique_lock lock( mutex_ );
+    if ( device_ )
+        return device_->valid();
+    return false;
 }
 
 }

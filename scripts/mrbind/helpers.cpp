@@ -31,7 +31,7 @@ namespace MR::Extra
         convert.voxelSize = voxelSize;
         auto gridA = convert(mesh1);
         auto gridB = convert(mesh2);
-        gridA -= gridB;
+        gridA -= std::move( gridB );
         return convert(gridA);
     }
 
@@ -42,7 +42,7 @@ namespace MR::Extra
         convert.voxelSize = voxelSize;
         auto gridA = convert(mesh1);
         auto gridB = convert(mesh2);
-        gridA += gridB;
+        gridA += std::move( gridB );
         return convert( gridA );
     }
 
@@ -53,7 +53,7 @@ namespace MR::Extra
         convert.voxelSize = voxelSize;
         auto gridA = convert(mesh1);
         auto gridB = convert(mesh2);
-        gridA *= gridB;
+        gridA *= std::move( gridB );
         return convert( gridA );
     }
 

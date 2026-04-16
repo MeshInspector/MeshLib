@@ -26,6 +26,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonFontHolder.h"
 #include "MRImGuiMultiViewport.h"
+#include "MRI18n.h"
 #include <imgui_internal.h>
 
 namespace ImGui
@@ -94,7 +95,7 @@ void drawTooltip( T min, T max )
             SetMouseCursor( ImGuiMouseCursor_None );
             drawCursorArrow();
             BeginTooltip();
-            Text( "Drag with Shift - faster, %s - slower", getAltModName() );
+            Text( _tr( "Drag with Shift - faster, %s - slower" ), getAltModName() );
             EndTooltip();
         }
 
@@ -124,6 +125,24 @@ static float calculateLabelsSizes( const std::vector<HistogramGridLine> &grid, i
         index++;
     }
     return maxCoord;
+}
+
+bool drawCrossButton( float btnSize )
+{
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 3.0f * UI::scale() );
+
+    auto drawList = GetWindowDrawList();
+    const auto pos = GetCursorScreenPos();
+
+    auto res = Button( "##ExitButton", ImVec2( btnSize, btnSize ) );
+    const float crossSize = btnSize * 0.58f;
+    auto shift = ( btnSize - crossSize ) * 0.5f;
+    const auto& textColor = ColorConvertFloat4ToU32( GetStyleColorVec4( ImGuiCol_Text ) );
+    drawList->AddLine( ImVec2( pos.x + shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ), ImVec2( pos.x + btnSize - shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ), textColor, 2.4f * UI::scale() );
+    drawList->AddLine( ImVec2( pos.x + shift, pos.y + btnSize - shift ) - ImVec2( 0.5f, 0.5f ), ImVec2( pos.x + btnSize - shift, pos.y + shift ) - ImVec2( 0.5f, 0.5f ), textColor, 2.4f * UI::scale() );
+
+    PopStyleVar();
+    return res;
 }
 
 void PlotCustomHistogram( const char* str_id,
@@ -379,7 +398,7 @@ bool DragFloatValidLineWidth( const char* label, float* value )
     {
         ImGui::PopStyleColor();
         if ( IsItemHovered() && !IsItemActive() )
-            SetTooltip( "Line width cannot be changed with current renderer." );
+            SetTooltip( "%s", _tr( "Line width cannot be changed with current renderer." ) );
     }
     return res;
 }
@@ -658,7 +677,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         float minHeight = 0;
         float maxHeight = ImGui::GetIO().DisplaySize.y;
 
-        if ( !MR::getViewerInstance().isMultiViewport() )
+        if ( !isMultiViewportEnabled() )
         {
             if ( params.height > 0.0f )
             {
@@ -843,7 +862,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     bool escapeClose = params.closeWithEscape && ImGui::IsKeyPressed( ImGuiKey_Escape ) && !ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
     if ( escapeClose && menu )
         escapeClose = window == menu->getLastFocusedPlugin();
-    if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) || escapeClose ) //close button
+    if ( ImGui::drawCrossButton( buttonSize ) || escapeClose ) //close button
     {
         *open = false;
 
@@ -1173,14 +1192,14 @@ PaletteChanges Palette(
         ImGui::SetNextItemWidth( scaledWidth );
         int presetIndex = currentIndex;
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * UI::scale() } );
-        if ( UI::combo( "Load preset", &presetIndex, presets, true, {}, "Select Palette Preset" ) )
+        if ( UI::combo( _tr( "Load preset" ), &presetIndex, presets, true, {}, _tr( "Select Palette Preset" ) ) )
         {
             if ( presetIndex != currentIndex )
             {
                 if ( PalettePresets::loadPreset( presets[presetIndex], palette ) )
                     presetName = presets[presetIndex];
                 else
-                    showError( "Cannot load preset with name: \"" + presets[presetIndex] + "\"" );
+                    showError( fmt::format( "{}: \"{}\"", _tr( "Cannot load preset with name" ), presets[presetIndex] ) );
             }
 
             if ( fixZero )
@@ -1189,27 +1208,27 @@ PaletteChanges Palette(
             CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
-        UI::setTooltipIfHovered( "Load one of custom presets" );
+        UI::setTooltipIfHovered( _tr( "Load one of custom presets" ) );
     }
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cSeparateBlocksSpacing * UI::scale(), cSeparateBlocksSpacing * UI::scale() } );
     bool fixZeroChanged = false;
     if ( fixZero )
     {
-        fixZeroChanged = UI::checkbox( "Set Zero to Green", fixZero );
-        UI::setTooltipIfHovered( "If checked, zero value always will be green" );
+        fixZeroChanged = UI::checkbox( _tr( "Set Zero to Green" ), fixZero );
+        UI::setTooltipIfHovered( _tr( "If checked, zero value always will be green" ) );
     }
     bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
 
     const auto& params = palette.getParameters();
 
-    if ( UI::checkbox( "Discrete Palette", &isDiscrete ) )
+    if ( UI::checkbox( _tr( "Discrete Palette" ), &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
         changes |= PaletteChanges::Texture | PaletteChanges::Ranges; // both the texture and uv-coordinates must be recomputed
         presetName.clear();
     }
-    UI::setTooltipIfHovered( "If checked, palette will have several discrete levels. Otherwise it will be smooth." );
+    UI::setTooltipIfHovered( _tr( "If checked, palette will have several discrete levels. Otherwise it will be smooth." ) );
     if ( isDiscrete )
     {
         ImGui::SameLine();
@@ -1225,7 +1244,7 @@ PaletteChanges Palette(
                 changes |= PaletteChanges::Ranges;
             presetName.clear();
         }
-        UI::setTooltipIfHovered( "Number of discrete levels" );
+        UI::setTooltipIfHovered( _tr( "Number of discrete levels" ) );
     }
 
     ImGui::PopStyleVar();
@@ -1236,8 +1255,8 @@ PaletteChanges Palette(
     ImGui::PushItemWidth( scaledWidth );
 
     const auto oldPaletteRangeMode = paletteRangeMode;
-    UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
-    UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit" );
+    UI::combo( _tr( "Palette Type" ), &paletteRangeMode, { _tr( "Even Space" ), _tr( "Central Zone" ) } );
+    UI::setTooltipIfHovered( _tr( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit" ) );
     if ( oldPaletteRangeMode != paletteRangeMode )
     {
         changes |= PaletteChanges::Ranges | PaletteChanges::Texture;
@@ -1274,15 +1293,15 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * UI::scale() } );
-            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.f, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Min/Max" ), ranges[3], speed, 0.f, max );
             ImGui::PopStyleVar();
             ranges[0] = -ranges[3];
         }
         else
         {
-            rangesChanged |= UI::drag<LengthUnit>( "Max (red)", ranges[3], speed, min, max );
+            rangesChanged |= UI::drag<LengthUnit>( _tr( "Max (red)" ), ranges[3], speed, min, max );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * UI::scale() } );
-            rangesChanged |= UI::drag<LengthUnit>( "Min (blue)", ranges[0], speed, min, max );
+            rangesChanged |= UI::drag<LengthUnit>( _tr( "Min (blue)" ), ranges[0], speed, min, max );
             ImGui::PopStyleVar();
         }
     }
@@ -1293,24 +1312,24 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
 
-            rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Max positive / Min negative" ), ranges[3], speed, min, max );
             ranges[0] = -ranges[3];
 
             if ( ranges[2] < 0.0f )
                 ranges[2] = 0.0f;
 
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * UI::scale() } );
-            rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Min positive / Max negative" ), ranges[2], speed, min, max );
             ImGui::PopStyleVar();
             ranges[1] = -ranges[2];
         }
         else
         {
-            rangesChanged |= UI::drag<NoUnit>( "Max positive (red)", ranges[3], speed, min, max );
-            rangesChanged |= UI::drag<NoUnit>( "Min positive (green)", ranges[2], speed, min, max );
-            rangesChanged |= UI::drag<NoUnit>( "Max negative (green)", ranges[1], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Max positive (red)" ), ranges[3], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Min positive (green)" ), ranges[2], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Max negative (green)" ), ranges[1], speed, min, max );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * UI::scale() } );
-            rangesChanged |= UI::drag<NoUnit>( "Min negative (blue)", ranges[0], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( _tr( "Min negative (blue)" ), ranges[0], speed, min, max );
             ImGui::PopStyleVar();
         }
     }
@@ -1334,7 +1353,7 @@ PaletteChanges Palette(
     if ( !correctOrder )
     {
         ImGui::PushStyleColor( ImGuiCol_Text, Color::red().getUInt32() );
-        ImGui::TextWrapped( "Invalid values order" );
+        ImGui::TextWrapped( "%s", _tr( "Invalid values order" ) );
         ImGui::PopStyleColor();
     }
     if ( correctOrder && ( fixZeroChanged || ( paletteRangeMode != paletteRangeModeBackUp ) || rangesChanged ) )
@@ -1368,7 +1387,7 @@ PaletteChanges Palette(
     };
 
 
-    auto textSize = ImGui::CalcTextSize( "Reset Palette" );
+    auto textSize = ImGui::CalcTextSize( _tr( "Reset Palette" ) );
     float widthButton = ( ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x ) / 2.0f;
     bool buttonOnOneLine = true;
     if ( widthButton < textSize.x )
@@ -1377,16 +1396,16 @@ PaletteChanges Palette(
         buttonOnOneLine = false;
     }
 
-    if ( UI::button( "Save Palette as", Vector2f( widthButton, 0 ) ) )
+    if ( UI::button( _tr( "Save Palette as" ), Vector2f( widthButton, 0 ) ) )
         saveModalSettings.triggerSave = true;
-    UI::setTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset." );
+    UI::setTooltipIfHovered( _tr( "Save the current palette settings to file. You can load it later as a preset." ) );
     if ( buttonOnOneLine )
         ImGui::SameLine();
     ImGui::PopStyleVar();
 
     UI::saveCustomConfigModal( saveModalSettings );
 
-    if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
+    if ( UI::button( _tr( "Reset Palette" ), Vector2f( widthButton, 0 ) ) )
     {
         presetName = std::string();
 
@@ -1402,7 +1421,7 @@ PaletteChanges Palette(
 
         changes |= ImGui::PaletteChanges::All;
     }
-    UI::setTooltipIfHovered( "Returns the palette to its default values" );
+    UI::setTooltipIfHovered( _tr( "Returns the palette to its default values" ) );
 
     // for linear texture filter, uv-coordinates depend on texture size
     if ( bool( changes & ImGui::PaletteChanges::Texture ) && palette.getTexture().filter == FilterType::Linear )
@@ -1427,13 +1446,13 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     float p = ImGui::GetStyle().FramePadding.x;
     ImVec2 iconSize = { 32 * UI::scale(), 32 * UI::scale() };
     ImVec2 buttonSize = { ( GetContentRegionAvail().x - 3 * p ) / 4, 70.0f * UI::scale() };
-    if ( MR::UI::buttonIcon( "Plane YZ", iconSize, "Plane YZ", buttonSize ) )
+    if ( MR::UI::buttonIcon( "Plane YZ", iconSize, _tr( "Plane YZ" ), buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine( 0, p );
-    if ( MR::UI::buttonIcon( "Plane XZ", iconSize, "Plane XZ", buttonSize ) )
+    if ( MR::UI::buttonIcon( "Plane XZ", iconSize, _tr( "Plane XZ" ), buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusY() );
     ImGui::SameLine( 0, p );
-    if ( MR::UI::buttonIcon( "Plane XY", iconSize, "Plane XY", buttonSize ) )
+    if ( MR::UI::buttonIcon( "Plane XY", iconSize, _tr( "Plane XY" ), buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
     ImGui::SameLine( 0, p );
 
@@ -1441,7 +1460,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::UI::buttonIcon( "Plane Import", iconSize, "Import Plane", buttonSize ) )
+    if ( MR::UI::buttonIcon( "Plane Import", iconSize, _tr( "Import Plane" ), buttonSize ) )
     {
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
     }
@@ -1453,7 +1472,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
         ImGui::PopStyleColor();
 
     if ( planeWidget.importPlaneMode() )
-        ImGui::Text( "%s", "Click on the plane object in scene to import its parameters" );
+        ImGui::Text( "%s", _tr( "Click on the plane object in scene to import its parameters" ) );
 
     if ( !planeWidget.getPlaneObject() )
     {
@@ -1468,7 +1487,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     auto plane = planeWidget.getPlane();
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
-    UI::drag<NoUnit>( "Normal", plane.n, 0.001f );
+    UI::drag<NoUnit>( _tr( "Normal" ), plane.n, 0.001f );
     ImGui::PushItemFlag( ImGuiItemFlags_ButtonRepeat, true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * UI::scale() + ImGui::GetTextLineHeight();
@@ -1491,11 +1510,11 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     ImGui::SameLine();
     ImGui::PopItemFlag();
 
-    ImGui::SetNextItemWidth( 80.0f * UI::scale() );
-    UI::drag<LengthUnit>( "Shift", shift, dragspeed );
+    ImGui::SetNextItemWidth( 132.0f * UI::scale() );
+    UI::drag<LengthUnit>( _tr( "Shift" ), shift, dragspeed );
 
     ImGui::SameLine();
-    if ( MR::UI::button( "Flip", { 60.0f * UI::scale(), 0 } ) )
+    if ( MR::UI::button( _tr( "Flip" ), { 60.0f * UI::scale(), 0 } ) )
         plane = -plane;
 
     ImGui::PopStyleVar();
@@ -1507,7 +1526,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * UI::scale() } );
         bool showPlane = planeWidget.getPlaneObject()->isVisible();
-        if ( MR::UI::checkbox( "Show Plane", &showPlane ) )
+        if ( MR::UI::checkbox( _tr( "Show Plane" ), &showPlane ) )
             planeWidget.getPlaneObject()->setVisible( showPlane );
         ImGui::PopStyleVar();
     }
@@ -1527,7 +1546,7 @@ void Plane( MR::PlaneWidget& planeWidget, PlaneWidgetFlags flags )
 bool Direction( MR::DirectionWidget& dirWidget, bool& editDragging, const std::string& historyName )
 {
     auto dir = dirWidget.getDirection();
-    bool res = UI::drag<NoUnit>( "Direction", dir, 0.01f, -1.0f, 1.0f );
+    bool res = UI::drag<NoUnit>( _tr( "Direction" ), dir, 0.01f, -1.0f, 1.0f );
     if ( res )
     {
         if ( !editDragging )
@@ -1621,6 +1640,11 @@ bool ModalExitButton()
     ImGui::PopStyleColor( 4 );
     ImGui::PopStyleVar();
     return false;
+}
+
+bool isMultiViewportEnabled()
+{
+    return ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
 }
 
 #ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS

@@ -8,7 +8,6 @@
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
-#include "MRPch/MRTBB.h"
 #include "MRTriangleIntersection.h"
 
 namespace MR
@@ -82,8 +81,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const auto aFace = aNode.leafId();
             const auto bFace = bNode.leafId();
 
-            Vector3f aPt, bPt;
-            Vector3f av[3], bv[3];
+            Triangle3f av, bv;
             a.mesh.getTriPoints( aFace, av[0], av[1], av[2] );
             b.mesh.getTriPoints( bFace, bv[0], bv[1], bv[2] );
             if ( rigidB2A )
@@ -93,11 +91,13 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 bv[2] = ( *rigidB2A )( bv[2] );
             }
 
-            float distSq = TriDist( aPt, bPt, av, bv );
-            if ( distSq < res.distSq )
+            const auto td = findTriTriDistance( av, bv, { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
+            if ( td.distSq < res.distSq )
             {
-                res.distSq = distSq;
-                if ( distSq == 0.0f )
+                Vector3f aPt = td.a;
+                Vector3f bPt = td.b;
+                res.distSq = td.distSq;
+                if ( td.distSq == 0 )
                 {
                     auto pt = findTriangleTriangleIntersection( av[0], av[1], av[2], bv[0], bv[1], bv[2] );
                     if ( pt )
@@ -213,23 +213,26 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
 MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b, const AffineXf3f* rigidB2A, float upDistLimitSq )
 {
     MR_TIMER;
-
     // If meshes has no collision no need to find signed distance
     auto res = findDistance( a, b, rigidB2A, upDistLimitSq );
-    if ( res.distSq > 0.0f )
-        return { res.a, res.b, std::sqrt( res.distSq ) };
+    std::vector<FaceFace> collisions;
+    auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
+    if ( status == MeshMeshCollisionStatus::Touching )
+        return { res.a, res.b,status, 0 }; // two meshes touch one another but do not intersect
+    if ( status != MeshMeshCollisionStatus::Colliding )
+    {
+        auto dist = status == MeshMeshCollisionStatus::BothOutside ? std::sqrt( res.distSq ) : -std::sqrt( res.distSq );
+        return { res.a, res.b,status, dist };
+    }
 
-    auto collisions = findCollidingTriangles( a, b, rigidB2A );
-    if ( collisions.empty() )
-        return { res.a, res.b, 0 }; // two meshes touch one another but do not intersect
+    // colliding
 
     auto zoneAndDistancesAB = findSignedDistanceOneWay( a, b, collisions, false, rigidB2A );
     auto zoneAndDistancesBA = findSignedDistanceOneWay( a, b, collisions, true, rigidB2A );
 
     MeshMeshSignedDistanceResult signedRes;
+    signedRes.status = status;
     signedRes.signedDist = FLT_MAX;
-    auto triZoneA = getInnerFaces( a.mesh.topology, zoneAndDistancesAB.vertBS );
-    auto triZoneB = getInnerFaces( b.mesh.topology, zoneAndDistancesBA.vertBS );
 
     auto getTriByVert = [&]( const MeshTopology& topology, VertId id )->FaceId
     {
@@ -242,8 +245,6 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     for ( VertId id : zoneAndDistancesAB.vertBS )
     {
         const auto& [proj, dist] = zoneAndDistancesAB.projectons[id];
-        if ( !triZoneB.test( proj.face ) )
-            continue;
         if ( dist < signedRes.signedDist )
         {
             signedRes.a = { getTriByVert( a.mesh.topology,id ), a.mesh.points[id] };
@@ -255,8 +256,6 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     for ( VertId id : zoneAndDistancesBA.vertBS )
     {
         const auto& [proj, dist] = zoneAndDistancesBA.projectons[id];
-        if ( !triZoneA.test( proj.face ) )
-            continue;
         if ( dist < signedRes.signedDist )
         {
             signedRes.a = proj;
@@ -264,10 +263,49 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
             signedRes.signedDist = dist;
         }
     }
-    return (signedRes.signedDist > 0.0f) ? MeshMeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
+    return ( signedRes.signedDist > 0.0f ) ? MeshMeshSignedDistanceResult{ res.a, res.b, status,0.0f } : signedRes;
 }
 
-MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& b, const MeshMeshDistanceResult& distRes, 
+    const AffineXf3f* rigidB2A /*= nullptr*/, std::vector<FaceFace>* collisions /*= nullptr */ )
+{
+    MR_TIMER;
+    MeshMeshCollisionStatus status;
+    if ( distRes.distSq == 0.0f )
+    {
+        auto thisCollisions = findCollidingTriangles( a, b, rigidB2A );
+        status = thisCollisions.empty() ? MeshMeshCollisionStatus::Touching : MeshMeshCollisionStatus::Colliding;
+        if ( collisions )
+            *collisions = std::move( thisCollisions );
+        return status;
+    }
+    MeshProjectionResult aRes, bRes;
+    aRes.proj = distRes.a;
+    bRes.proj = distRes.b;
+    aRes.mtp = a.mesh.toTriPoint( distRes.a );
+    bRes.mtp = b.mesh.toTriPoint( distRes.b );
+    bRes.distSq = aRes.distSq = distRes.distSq;
+    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.point ) : distRes.b.point, aRes, a.region );
+    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.point ) : distRes.a.point, bRes, b.region );
+    if ( isBOutside && isAOutside )
+        status = MeshMeshCollisionStatus::BothOutside;
+    else if ( !isBOutside && !isAOutside )
+        status = MeshMeshCollisionStatus::BothInside;
+    else if ( isBOutside )
+        status = MeshMeshCollisionStatus::AInside;
+    else
+        status = MeshMeshCollisionStatus::BInside;
+    return status;
+}
+
+MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A /*= nullptr */ )
+{
+    MR_TIMER;
+    auto res = findDistance( a, b, rigidB2A );
+    return findCollisionStatus( a, b, res, rigidB2A );
+}
+
+float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
 
@@ -279,7 +317,7 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
     return tbb::parallel_reduce
     (
         tbb::blocked_range( vertBitSet.find_first(), vertBitSet.find_last() + 1 ),
-        0.0f, 
+        0.0f,
         [&] ( const tbb::blocked_range<VertId>& range, float init )
         {
         for ( VertId i = range.begin(); i < range.end(); ++i )
@@ -290,10 +328,10 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
             auto distSq = findProjection( rigidB2A ? (*rigidB2A)( bMeshVerts[i] ) : bMeshVerts[i], a, maxDistanceSq ).distSq;
             if ( distSq > init )
                 init = distSq;
-        }           
+        }
 
         return  init;
-        }, 
+        },
         [] ( float a, float b ) -> float
         {
             return a > b ? a : b;

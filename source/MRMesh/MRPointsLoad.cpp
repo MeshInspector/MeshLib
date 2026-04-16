@@ -10,8 +10,11 @@
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
 #include "MRBitSetParallelFor.h"
+#include "MRTelemetry.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <fstream>
+#include <set>
 
 namespace MR::PointsLoad
 {
@@ -33,10 +36,18 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     if ( !buf )
         return unexpected( std::move( buf.error() ) );
 
+    auto bufData = buf->data();
+    auto bufSize = buf->size();
+    if ( hasBom( { bufData, bufSize } ) )
+    {
+        bufData += 3;
+        bufSize -= 3;
+    }
+
     if ( !reportProgress( settings.callback, 0.50f ) )
         return unexpectedOperationCanceled();
 
-    const auto newlines = splitByLines( buf->data(), buf->size() );
+    const auto newlines = splitByLines( bufData, bufSize );
     const auto lineCount = newlines.size() - 1;
 
     if ( !reportProgress( settings.callback, 0.60f ) )
@@ -46,23 +57,35 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     cloud.points.resizeNoInit( lineCount );
     cloud.validPoints.resize( lineCount, false );
 
+    // CSV format specification (RFC 4180) doesn't support comments.
+    // However, there's several unofficial conventions to mark lines as comments rather than data records.
+    // Some examples:
+    // https://stackoverflow.com/questions/1961006/can-a-csv-file-have-a-comment
+    // https://giftoolscookbook.readthedocs.io/en/latest/content/fileFormats/CSVfile.html
+    static const std::set<char> cCommentChars { '#', ';', '/', '!', '%' };
+
     // detect normals and colors
     constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
     constexpr Color cInvalidColor( 0, 0, 0, 0 );
     Vector3d firstPoint;
     auto hasNormals = false;
     auto hasColors = false;
+    std::string_view header;
     for ( auto i = 0; i < lineCount; ++i )
     {
-        const std::string_view line( buf->data() + newlines[i], newlines[i + 1] - newlines[i + 0] );
-        if ( line.empty() || line.starts_with( '#' ) || line.starts_with( ';' ) )
+        const std::string_view line( bufData + newlines[i], newlines[i + 1] - newlines[i + 0] );
+        if ( line.empty() || cCommentChars.contains( line[0] ) )
             continue;
 
         auto normal = cInvalidNormal;
         auto color = cInvalidColor;
         auto result = parseTextCoordinate( line, firstPoint, &normal, &color );
         if ( !result )
-            return unexpected( std::move( result.error() ) );
+        {
+            if ( header.empty() )
+                header = line;
+            continue;
+        }
 
         if ( settings.outXf )
             *settings.outXf = AffineXf3f::translation( Vector3f( firstPoint ) );
@@ -81,12 +104,11 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         break;
     }
 
-    std::string parseError;
-    tbb::task_group_context ctx;
+    BitSet parseErrorLines( lineCount, false );
     const auto keepGoing = BitSetParallelForAll( cloud.validPoints, [&] ( VertId v )
     {
-        const std::string_view line( buf->data() + newlines[v], newlines[v + 1] - newlines[v + 0] );
-        if ( line.empty() || line.starts_with( '#' ) || line.starts_with( ';' ) )
+        const std::string_view line( bufData + newlines[v], newlines[v + 1] - newlines[v + 0] );
+        if ( line.empty() || cCommentChars.contains( line[0] ) )
             return;
 
         Vector3d point( noInit );
@@ -95,8 +117,9 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         auto result = parseTextCoordinate( line, point, hasNormals ? &normal : nullptr, hasColors ? &color : nullptr );
         if ( !result )
         {
-            if ( ctx.cancel_group_execution() )
-                parseError = std::move( result.error() );
+            // ignore the parse error for the first line, assuming it is a header
+            if ( line.data() != header.data() )
+                parseErrorLines.set( v.get() );
             return;
         }
 
@@ -110,8 +133,29 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
-    if ( !parseError.empty() )
-        return unexpected( std::move( parseError ) );
+    if ( cloud.validPoints.none() )
+        return unexpected( "Could not read any points" );
+
+    if ( parseErrorLines.any() )
+    {
+        if ( parseErrorLines.count() < 10 )
+        {
+            std::ostringstream oss;
+            bool empty = true;
+            for ( auto line : parseErrorLines )
+            {
+                if ( !empty )
+                    oss << ", ";
+                oss << line;
+                empty = false;
+            }
+            spdlog::info( "Failed to parse lines: {}", oss.str() );
+        }
+        else
+        {
+            spdlog::info( "Failed to parse {} lines", parseErrorLines.count() );
+        }
+    }
 
     return cloud;
 }
@@ -132,6 +176,9 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     std::string numPointsLine;
     if ( !std::getline( in, numPointsLine ) )
         return unexpected( "Cannot read header line" );
+
+    if ( hasBom( numPointsLine ) )
+        numPointsLine = numPointsLine.substr( 3 );
 
     Vector3f testFirstLine;
     if ( parseTextCoordinate( numPointsLine, testFirstLine ).has_value() )
@@ -156,22 +203,37 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     const auto& data = *dataExp;
     auto lineOffsets = splitByLines( data.data(), data.size() );
 
+    // detect normals and colors
+    constexpr Vector3d cInvalidNormal( 0.f, 0.f, 0.f );
+    constexpr Color cInvalidColor( 0, 0, 0, 0 );
     int firstLine = 1;
     Vector3d firstLineCoord;
-    Color firstLineColor;
-    std::string_view shitLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
-    auto shiftLineRes = parsePtsCoordinate( shitLine, firstLineCoord, firstLineColor );
+    Vector3d firstLineNormal = cInvalidNormal;
+    Color firstLineColor = cInvalidColor;
+    auto hasNormals = false;
+    auto hasColors = false;
+    std::string_view shiftLine( data.data() + lineOffsets[firstLine], lineOffsets[firstLine + 1] - lineOffsets[firstLine] );
+    auto shiftLineRes = parsePtsCoordinate( shiftLine, firstLineCoord, &firstLineColor, &firstLineNormal );
     if ( !shiftLineRes.has_value() )
         return unexpected( shiftLineRes.error() );
 
     if ( settings.outXf )
         *settings.outXf = AffineXf3f::translation( Vector3f( firstLineCoord ) );
 
-    if ( settings.colors )
-        settings.colors->resize( lineOffsets.size() - firstLine - 1 );
+    if ( settings.colors && firstLineColor != cInvalidColor )
+    {
+        hasColors = true;
+        settings.colors->resizeNoInit( lineOffsets.size() - firstLine - 1 );
+    }
 
     PointCloud pc;
-    pc.points.resize( lineOffsets.size() - firstLine - 1 );
+    pc.points.resizeNoInit( lineOffsets.size() - firstLine - 1 );
+
+    if ( firstLineNormal != cInvalidNormal )
+    {
+        hasNormals = true;
+        pc.normals.resizeNoInit( lineOffsets.size() - firstLine - 1 );
+    }
 
     std::string parseError;
     tbb::task_group_context ctx;
@@ -179,13 +241,16 @@ Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settin
     {
         std::string_view line( data.data() + lineOffsets[firstLine + i], lineOffsets[firstLine + i + 1] - lineOffsets[firstLine + i] );
         Vector3d tempDoubleCoord;
+        Vector3d tempDoubleNormal;
         Color tempColor;
-        auto parseRes = parsePtsCoordinate( line, tempDoubleCoord, tempColor );
+        auto parseRes = parsePtsCoordinate( line, tempDoubleCoord, hasColors ? &tempColor : nullptr, hasNormals ? &tempDoubleNormal : nullptr );
         if ( !parseRes.has_value() && ctx.cancel_group_execution() )
             parseError = std::move( parseRes.error() );
 
         pc.points[VertId( i )] = Vector3f( tempDoubleCoord - firstLineCoord );
-        if ( settings.colors )
+        if ( hasNormals )
+            pc.normals[VertId( i )] = Vector3f( tempDoubleNormal );
+        if ( hasColors )
             ( *settings.colors )[VertId( i )] = tempColor;
     }, subprogress( settings.callback, 0.25f, 1.0f ) );
 
@@ -296,6 +361,8 @@ Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settin
 
     std::string str;
     std::getline( in, str );
+    if ( hasBom( str ) )
+        str = str.substr( 3 );
 
     int code{};
     if ( !parseSingleNumber<int>( str, code ) )
@@ -348,6 +415,34 @@ Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settin
     return cloud;
 }
 
+void telemetryLogSize( const PointCloud& cloud )
+{
+    TelemetrySignal( "Open Pnts Log Pnts " + std::to_string( intLog2( cloud.calcNumValidPoints() ) ) );
+}
+
+static void telemetryOpenPoints( const std::string& ext, const PointCloud& cloud, const PointsLoadSettings& settings )
+{
+    if ( !settings.telemetrySignal )
+        return;
+
+    std::string signalString = "Open " + ext;
+
+    if ( cloud.validPoints.any() )
+    {
+        signalString += " VP";
+        if ( cloud.hasNormals() )
+            signalString += 'N';
+        if ( settings.colors && settings.colors->size() >= cloud.points.size() )
+            signalString += 'C';
+    }
+
+    if ( settings.outXf && *settings.outXf != AffineXf3f{} )
+        signalString += " XF";
+
+    TelemetrySignal( signalString );
+    telemetryLogSize( cloud );
+}
+
 Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     auto ext = utf8string( file.extension() );
@@ -359,7 +454,10 @@ Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, 
     if ( !loader.fileLoad )
         return unexpectedUnsupportedFileExtension();
 
-    return loader.fileLoad( file, settings );
+    auto res = loader.fileLoad( file, settings );
+    if ( res )
+        telemetryOpenPoints( ext, *res, settings );
+    return res;
 }
 
 Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings )
@@ -372,7 +470,10 @@ Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string
     if ( !loader.streamLoad )
         return unexpectedUnsupportedFileExtension();
 
-    return loader.streamLoad( in, settings );
+    auto res = loader.streamLoad( in, settings );
+    if ( res )
+        telemetryOpenPoints( ext, *res, settings );
+    return res;
 }
 
 MR_ADD_POINTS_LOADER( IOFilter( "ASC (.asc)",        "*.asc" ), fromText )

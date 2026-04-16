@@ -152,11 +152,9 @@ Expected<int> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Mod
     }
     else
     {
-        const auto startSpan = vertexCoordinates.vec_.begin() + size_t( start );
-        ParallelFor( startSpan, vertexCoordinates.vec_.end(), [&] ( auto it )
+        ParallelFor( start, vertexCoordinates.endId(), [&] ( VertId v )
         {
-            const size_t i = std::distance( startSpan, it );
-            *it = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + i * bufferView.byteStride] );
+            vertexCoordinates[v] = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + (size_t)v.get() * bufferView.byteStride] );
         } );
     }
 
@@ -559,7 +557,7 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::file
     return scene;
 }
 
-Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const ObjectSave::Settings& settings )
+Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const SceneSave::Settings& settings )
 {
     tinygltf::Model model;
     model.asset.generator = "MeshLib";

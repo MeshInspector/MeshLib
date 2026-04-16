@@ -6,7 +6,9 @@
 #include "MRGladGlfw.h"
 #include "MRViewport.h"
 #include "MRShortcutManager.h"
+#include "MRSpaceMouseController.h"
 #include "MRMesh/MRConstants.h"
+#include "MRI18n.h"
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRWasm.h"
@@ -90,16 +92,16 @@ std::string MouseController::getControlString( const MouseControlKey& key )
     switch ( key.btn )
     {
     case MouseButton::Left:
-        res += "LMB";
+        res += s_tr( "LMB" );
         break;
     case MouseButton::Right:
-        res += "RMB";
+        res += s_tr( "RMB" );
         break;
     case MouseButton::Middle:
-        res += "MMB";
+        res += s_tr( "MMB" );
         break;
     default:
-        res += "Error";
+        res += s_tr( "Error" );
         break;
     }
     return res;
@@ -113,11 +115,6 @@ int MouseController::mouseAndModToKey( const MouseControlKey& key )
 MouseController::MouseControlKey MouseController::keyToMouseAndMod( int key )
 {
     return { MouseButton( key >> 6 ),key % ( 1 << 6 ) };
-}
-
-void MouseController::setMouseScroll( bool active )
-{
-    scrollActive_ = active;
 }
 
 void MouseController::connect()
@@ -370,8 +367,7 @@ bool MouseController::mouseScroll_( float delta )
 {
     resetAllIfNeeded_();
 
-    if ( !scrollActive_ )
-        return false;
+    auto& viewer = getViewerInstance();
 
     if ( currentMode_ != MouseMode::None )
         return false;
@@ -379,7 +375,9 @@ bool MouseController::mouseScroll_( float delta )
     if ( delta == 0.0f )
         return false;
 
-    auto& viewer = getViewerInstance();
+    const auto& spController = viewer.spaceMouseController();
+    if ( spController.getParameters().suppressMouseScrollZoom && spController.canDriverSendScroll() )
+        return false;
 
     viewer.select_hovered_viewport();
 

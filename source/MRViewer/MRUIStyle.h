@@ -128,6 +128,9 @@ struct PlotAxis
 /// returns imgui modifier Id based on current environment
 MRVIEWER_API ImGuiKey getImGuiModPrimaryCtrl();
 
+/// returns "Ctrl" by default or "Command" if ImGui has changed it internally for macos
+MRVIEWER_API const char* getImGuiPrimaryCtrlName();
+
 /// returns true if button is pressed in this frame, preserve its further processing in viewer keyboard events system if taken here
 MRVIEWER_API bool checkKey( ImGuiKey passedKey );
 
@@ -309,8 +312,15 @@ MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::strin
     bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
 /// draw custom content combo box
-MRVIEWER_API bool beginCombo( const char* label, const std::string& text = "Not selected", bool showPreview = true );
-MRVIEWER_API void endCombo( bool showPreview = true );
+/// If `enableTestEngine == true`, the ONLY thing you can call inside the combo-box is `comboElem()`. Then this function may always return true (so that we can discover the elements),
+///   but if it wasn't actually opened by the user, the `comboElem()`s called inside won't draw anything.
+/// If `enableTestEngine == false`, then you can call anything inside of this combo-box, but it won't be exposed to the test engine.
+MRVIEWER_API bool beginCombo( const char* label, const std::string& text, bool enableTestEngine = true );
+/// Only call this if `beginCombo()` returned true!
+MRVIEWER_API void endCombo();
+
+/// A replacement for `ImGui::Selectable()` that should be used with `beginCombo()` and `endCombo()` to be able to interact with the combo-box from the UI Test Engine.
+MRVIEWER_API bool comboElem( const char* label, bool selected );
 
 /// Draws text input, should be used instead of `ImGui::InputText()`.
 MRVIEWER_API bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
@@ -539,13 +549,13 @@ MRVIEWER_API void highlightWindowArea( const ImVec2& min = {-1.0f, -1.0f}, const
 /// Settings required for `UI::saveCustomConfigModal`
 struct CustomConfigModalSettings
 {
-    /// Name of desired config type 
+    /// Name of desired config type
     std::string configName;
     /// Optional string added at the end of popup name to have unique names
     std::string imGuiIdKey;
     /// Directory where to save config
     std::filesystem::path configDirectory;
-    /// String used by input 
+    /// String used by input
     std::string* inputName{ nullptr };
     /// If false, inputName is used (if inputName is nullptr this option is not used)
     bool inputNameDialog = true;
@@ -555,7 +565,7 @@ struct CustomConfigModalSettings
     bool warnExisting = true;
     /// Callback that is called when save is requested->returns true if file saved successfully (to close modal)
     std::function<bool( const std::string& name )> onSave;
-    
+
     /// returns accumulated name of the popup
     MRVIEWER_API std::string popupName() const;
 };
@@ -563,25 +573,34 @@ struct CustomConfigModalSettings
 /// Draw modal window to save user configs (for example Palettes)
 MRVIEWER_API void saveCustomConfigModal(const CustomConfigModalSettings& settings );
 
-// While this exists, it temporarily disables antialiasing for the lines drawn to this list.
-class LineAntialiasingDisabler
+// While this exists, it temporarily disables in the given list the flags with 0 bits in the given mask
+class Disabler
 {
     ImDrawList& list;
     ImDrawFlags oldFlags{};
 
 public:
-    LineAntialiasingDisabler( ImDrawList& list )
+    Disabler( ImDrawList& list, ImDrawFlags mask )
         : list( list ), oldFlags( list.Flags )
     {
-        list.Flags &= ~ImDrawListFlags_AntiAliasedLines;
+        list.Flags &= mask;
     }
 
-    LineAntialiasingDisabler( const LineAntialiasingDisabler& ) = delete;
-    LineAntialiasingDisabler& operator=( const LineAntialiasingDisabler& ) = delete;
+    Disabler( const Disabler& ) = delete;
+    Disabler& operator=( const Disabler& ) = delete;
 
-    ~LineAntialiasingDisabler()
+    ~Disabler()
     {
         list.Flags = oldFlags;
+    }
+};
+
+// While this exists, it temporarily disables antialiasing for the lines drawn to this list.
+class LineAntialiasingDisabler : Disabler
+{
+public:
+    LineAntialiasingDisabler( ImDrawList& list ) : Disabler( list, ~ImDrawListFlags_AntiAliasedLines )
+    {
     }
 };
 

@@ -42,7 +42,7 @@ struct SaveSettings
     /// optional texture to save with the geometry
     const MeshTexture * texture = nullptr;
 
-    /// the name of file without extension to save texture in some formats (e.g. .OBJ, .PLY)
+    /// the name of file (UTF8 encoded) without extension to save texture in some formats (e.g. .OBJ, .PLY)
     std::string materialName = "Default";
 
     /// this transformation can optionally be applied to all vertices (points) of saved object

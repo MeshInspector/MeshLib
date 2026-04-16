@@ -16,12 +16,12 @@ int main( void )
 {
     // Load mesh
     MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( meshEx );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshEx ) ) );
         MR_expected_MR_Mesh_std_string_Destroy( meshEx );
         return 1;
     }
@@ -51,11 +51,11 @@ int main( void )
     const MR_VertCoords* points = MR_Mesh_Get_points( mesh );
     MR_Vector3f posV0 = MR_Mesh_normal_MR_VertId( mesh, ancV0 );
     posV0 = MR_mul_MR_Vector3f_float( &posV0, shiftAmount );
-    posV0 = MR_add_MR_Vector3f( MR_VertCoords_index_const( points, ancV0 ), &posV0 );
+    posV0 = MR_add_MR_Vector3f( MR_VertCoords_index( points, ancV0 ), &posV0 );
     MR_Laplacian_fixVertex_3( lDeformer, ancV0, &posV0, NULL );
     MR_Vector3f posV1 = MR_Mesh_normal_MR_VertId( mesh, ancV1 );
     posV1 = MR_mul_MR_Vector3f_float( &posV1, shiftAmount );
-    posV1 = MR_add_MR_Vector3f( MR_VertCoords_index_const( points, ancV1 ), &posV1 );
+    posV1 = MR_add_MR_Vector3f( MR_VertCoords_index( points, ancV1 ), &posV1 );
     MR_Laplacian_fixVertex_3( lDeformer, ancV1, &posV1, NULL );
 
     // Move the free vertices according to the anchor ones

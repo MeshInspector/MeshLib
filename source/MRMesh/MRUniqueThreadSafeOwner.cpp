@@ -17,7 +17,7 @@ template<typename T>
 UniqueThreadSafeOwner<T>::UniqueThreadSafeOwner( const UniqueThreadSafeOwner& b ) 
 { 
     assert( this != &b );
-    // do not lock this since nobody can use it before the end of construction
+    // do not lock this since nobody can use it before the end of the constructor
     std::unique_lock lock( b.mutex_ );
     if ( b.obj_ )
         obj_.reset( new T( *b.obj_ ) );
@@ -40,9 +40,10 @@ template<typename T>
 UniqueThreadSafeOwner<T>::UniqueThreadSafeOwner( UniqueThreadSafeOwner&& b ) noexcept
 {
     assert( this != &b );
-    // do not lock this since nobody can use it before the end of construction
+    // do not lock this since nobody can use it before the end of the constructor
     std::unique_lock lock( b.mutex_ );
     obj_ = std::move( b.obj_ );
+    construction_ = std::move( b.construction_ );
 }
 
 template<typename T>
@@ -52,6 +53,7 @@ UniqueThreadSafeOwner<T>& UniqueThreadSafeOwner<T>::operator =( UniqueThreadSafe
     {
         std::scoped_lock lock( mutex_, b.mutex_ );
         obj_ = std::move( b.obj_ );
+        construction_ = std::move( b.construction_ );
     }
     return *this;
 }

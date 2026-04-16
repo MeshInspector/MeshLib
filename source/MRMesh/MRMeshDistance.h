@@ -20,9 +20,9 @@ enum class ProcessOneResult : bool
 };
 
 /// this callback is invoked for every triangle in range, where
-/// \param p closest point on original triangle (if distSq == 0 then it is random point on original triangle, see TriDist comment)
+/// \param p closest point on original triangle (if distSq == 0 then it is random point on original triangle, see triDist comment)
 /// \param f triangle id in question
-/// \param q closest point on f-triangle (if distSq == 0 then it is random point on f-triangle, see TriDist comment)
+/// \param q closest point on f-triangle (if distSq == 0 then it is random point on f-triangle, see triDist comment)
 /// \param distSq squared distance in between p and q
 /// \return whether to continue or to stop processing other triangles
 using TriangleCallback = std::function<ProcessOneResult( const Vector3f & p, FaceId f, const Vector3f & q, float distSq )>;

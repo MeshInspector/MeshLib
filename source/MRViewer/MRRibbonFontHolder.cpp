@@ -45,6 +45,7 @@ void RibbonFontHolder::popFont()
 {
     if ( !font_ )
         return;
+    assert( pushed_ && "Font not pushed!");
     pushed_ = false;
     ImGui::PopFont();
 }

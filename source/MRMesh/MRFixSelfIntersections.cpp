@@ -114,6 +114,16 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     if ( settings.touchIsIntersection )
     {
+        auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
+        auto res = findSelfCollidingTrianglesBS( mesh,
+                                                 subprogress( settings.callback, 0.0f, 0.2f ),
+                                                 &faceToRegionMap, settings.touchIsIntersection );
+
+        if ( !res.has_value() )
+            return unexpected( std::move( res.error() ) );
+        if ( res->none() )
+            return {};
+
         FixMeshDegeneraciesParams fdParams;
         fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
         fdParams.tinyEdgeLength = fdParams.maxDeviation * 0.1f;
@@ -123,7 +133,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         if ( settings.subdivideEdgeLen < FLT_MAX )
             fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
 
-        fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
+        fdParams.cb = subprogress( settings.callback, 0.2f, 0.3f );
         auto fdRes = fixMeshDegeneracies( mesh, fdParams );
         if ( !fdRes.has_value() )
             return fdRes;
@@ -131,11 +141,11 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
-    if ( !reportProgress( settings.callback, 0.25f ) )
+    if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
 
     auto res = findSelfCollidingTrianglesBS( mesh,
-                                             subprogress( settings.callback, 0.25f, 0.4f ),
+                                             subprogress( settings.callback, 0.3f, 0.5f ),
                                              &faceToRegionMap, settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -143,7 +153,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     if ( res->none() )
         return {};
 
-    expand( mesh.topology, *res, settings.maxExpand );
+    expand( mesh.topology, *res, std::max( settings.maxExpand, 1 ) );
 
     Settings currentSettings = settings;
     if ( currentSettings.subdivideEdgeLen < FLT_MAX )
@@ -158,51 +168,55 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         ssettings.maxEdgeSplits = 1000;
         ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
         ssettings.criticalAspectRatioFlip = FLT_MAX;
-        ssettings.progressCallback = subprogress( settings.callback, 0.4f, 0.5f );
+        ssettings.progressCallback = subprogress( settings.callback, 0.5f, 0.6f );
         subdivideMesh( mesh, ssettings );
     }
 
-    if ( !reportProgress( settings.callback, 0.5f ) )
+    if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
 
     faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
-    if ( !reportProgress( settings.callback, 0.55f ) )
+    if ( !reportProgress( settings.callback, 0.65f ) )
         return unexpectedOperationCanceled();
 
     res = findSelfCollidingTrianglesBS( MeshPart( mesh, &res.value() ),
-                                        subprogress( settings.callback, 0.55f, 0.7f ),
+                                        subprogress( settings.callback, 0.65f, 0.85f ),
                                         &faceToRegionMap,settings.touchIsIntersection );
 
     if ( !res.has_value() )
         return unexpected( res.error() );
 
-    expand( mesh.topology, *res, settings.maxExpand );
+    if ( settings.maxExpand > 0 )
+        expand( mesh.topology, *res, settings.maxExpand );
 
     if ( settings.method == Settings::Method::Relax )
     {
         auto verts = getIncidentVerts( mesh.topology, *res );
 
-        if ( !reportProgress( settings.callback, 0.8f ) )
+        if ( !reportProgress( settings.callback, 0.85f ) )
             return unexpectedOperationCanceled();
         MeshRelaxParams params;
         params.iterations = settings.relaxIterations;
         params.region = &verts;
-        if ( !relax( mesh, params, subprogress( settings.callback, 0.8f, 1.0f ) ) )
+        if ( !relax( mesh, params, subprogress( settings.callback, 0.85f, 1.0f ) ) )
             return unexpectedOperationCanceled();
     }
     else
     {
         auto boundaryEdges = mesh.topology.findLeftBdEdges();
+        Mesh patchRefMesh;
+        if ( settings.mimicPatch )
+            patchRefMesh.addMeshPart( { mesh,&*res } );
         mesh.topology.deleteFaces( *res );
         mesh.topology.deleteFaces( findHoleComplicatingFaces( mesh ) );
         mesh.invalidateCaches();
         auto holes = findRightBoundary( mesh.topology );
 
-        if ( !reportProgress( settings.callback, 0.8f ) )
+        if ( !reportProgress( settings.callback, 0.85f ) )
             return unexpectedOperationCanceled();
 
-        auto sp = subprogress( settings.callback, 0.8f, 0.95f );
+        auto sp = subprogress( settings.callback, 0.85f, 0.95f );
         for ( int i = 0; i < holes.size(); ++i )
         {
             bool outerBounds = false;
@@ -220,8 +234,22 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
             // Fill hole
             // MultipleEdgesResolveMode::Simple should be enough after deleting findHoleComplicatingFaces(...)
             // But if multiple edges appear often, could be changed to MultipleEdgesResolveMode::Strong
-            fillHole( mesh, holes[i].front(), {.metric = getMinAreaMetric(mesh),
-                .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Simple });
+            FillHoleParams fhParams;
+            if ( settings.mimicPatch )
+            {
+                fhParams.metric = mixMetrics(
+                    getMinAreaMetric( mesh ), getCloseSurfaceFillMetric( mesh, patchRefMesh ),
+                    [] ( double a, double b )->double
+                    {
+                        return a + 1000.0 * b;
+                    } );
+            }
+            else
+            {
+                fhParams.metric = getMinAreaMetric( mesh );
+            }
+            fhParams.multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Simple;
+            fillHole( mesh, holes[i].front(), fhParams );
 
             if ( !reportProgress( sp, float( i + 1 ) / float( holes.size() ) ) )
                 return unexpectedOperationCanceled();

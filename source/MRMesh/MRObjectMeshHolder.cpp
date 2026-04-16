@@ -140,7 +140,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 
     root["PointSize"] = pointSize_;
 
-    root["Type"].append( ObjectMeshHolder::TypeName() );
+    root["Type"].append( ObjectMeshHolder::StaticTypeName() );
 }
 
 size_t ObjectMeshHolder::getModelHash() const
@@ -517,33 +517,10 @@ void ObjectMeshHolder::clearAncillaryTexture()
         setAncillaryUVCoords( {} );
 }
 
-uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
-{
-    auto flatShading = getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
-    uint32_t res = 0;
-    if ( !( flatShading & viewportMask ).empty() )
-    {
-        res |= ( getDirtyFlags() & DIRTY_FACES_RENDER_NORMAL );
-    }
-    if ( ( flatShading & viewportMask ) != viewportMask )
-    {
-        if ( !data_.creases.any() )
-        {
-            res |= ( getDirtyFlags() & DIRTY_VERTS_RENDER_NORMAL );
-        }
-        else
-        {
-            res |= ( getDirtyFlags() & DIRTY_CORNERS_RENDER_NORMAL );
-        }
-    }
-    return res;
-}
-
 bool ObjectMeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
 {
     return Object::getRedrawFlag( viewportMask ) ||
-        ( isVisible( viewportMask ) &&
-          ( getDirtyFlags() & ( ~( DIRTY_CACHES | ( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) ) );
+        ( isVisible( viewportMask ) && getDirtyFlags() );
 }
 
 void ObjectMeshHolder::applyScale( float scaleFactor )
@@ -553,13 +530,9 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
 
     auto& points = data_.mesh->points;
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( points, [&] ( VertId i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            points[VertId( i )] *= scaleFactor;
-        }
+        points[i] *= scaleFactor;
     } );
     setDirtyFlags( DIRTY_POSITION );
 }
@@ -621,7 +594,7 @@ Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = data_.mesh->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : data_.mesh->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }
@@ -679,7 +652,7 @@ double ObjectMeshHolder::totalArea() const
 double ObjectMeshHolder::selectedArea() const
 {
     if ( !selectedArea_ )
-        selectedArea_ = data_.mesh ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
+        selectedArea_ = data_.mesh && data_.selectedFaces.any() ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
 
     return *selectedArea_;
 }
@@ -767,8 +740,25 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    VisualObject::setDirtyFlags( mask, invalidateCaches );
+    invalidateMetricsCache( mask );
 
+    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        data_.mesh->invalidateCaches();
+
+    // must be after data_.mesh->invalidateCaches(); for the subscribers of meshChangedSignal
+    setDirtyFlagsFast( mask );
+}
+
+void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
+{
+    VisualObject::setDirtyFlagsFast_( mask );
+    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        meshChangedSignal( mask );
+}
+
+void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
+{
+    VisualObject::invalidateMetricsCache_( mask );
     if ( mask & DIRTY_FACE )
     {
         numHoles_.reset();
@@ -786,9 +776,16 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         selectedArea_.reset();
         volume_.reset();
         avgEdgeLen_.reset();
-        if ( invalidateCaches && data_.mesh )
-            data_.mesh->invalidateCaches();
     }
+
+    if ( mask & DIRTY_SELECTION )
+        numSelectedFaces_.reset();
+
+    if ( mask & DIRTY_EDGES_SELECTION )
+        numSelectedEdges_.reset();
+
+    if ( mask & DIRTY_VERTS_RENDER_NORMAL )
+        numCreaseEdges_.reset();
 }
 
 void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
@@ -798,14 +795,7 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
     data_.creases = std::move( creases );
     numCreaseEdges_.reset();
     creasesChangedSignal();
-    if ( data_.creases.any() )
-    {
-        setDirtyFlags( DIRTY_CORNERS_RENDER_NORMAL );
-    }
-    else
-    {
-        setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
-    }
+    setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
 }
 
 void ObjectMeshHolder::swapBase_( Object& other )
@@ -824,6 +814,7 @@ void ObjectMeshHolder::swapSignals_( Object& other )
         std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
         std::swap( edgeSelectionChangedSignal, otherMesh->edgeSelectionChangedSignal );
         std::swap( creasesChangedSignal, otherMesh->creasesChangedSignal );
+        std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
     }
     else
         assert( false );

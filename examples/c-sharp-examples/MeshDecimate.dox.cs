@@ -1,5 +1,3 @@
-using static MR.DotNet;
-
 public class MeshDecimateExample
 {
     public static void Run(string[] args)
@@ -7,20 +5,20 @@ public class MeshDecimateExample
         try
         {
             // Load mesh
-            var mesh = MeshLoad.FromAnySupportedFormat("mesh.stl");
+            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
 
             // Setup decimate parameters
-            DecimateParameters dp = new DecimateParameters();
-            dp.strategy = DecimateStrategy.MinimizeError;
-            dp.maxError = 1e-5f * mesh.BoundingBox.Diagonal();
-            dp.tinyEdgeLength = 1e-3f;
-            dp.packMesh = true;
+            MR.DecimateSettings ds = new();
+            ds.strategy = MR.DecimateStrategy.MinimizeError;
+            ds.maxError = 1e-5f * mesh.computeBoundingBox().diagonal();
+            ds.tinyEdgeLength = 1e-3f;
+            ds.packMesh = true;
 
             // Decimate mesh
-            var result = Decimate(ref mesh, dp);
+            MR.DecimateResult result = MR.decimateMesh(mesh, ds);
 
             // Save result
-            MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh, "decimated_mesh.stl");
         }
         catch (Exception e)
         {

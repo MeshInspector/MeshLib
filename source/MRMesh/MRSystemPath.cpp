@@ -167,6 +167,7 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
         if ( maybeRes )
         {
             spdlog::info( "Executable path: {}", utf8string( *maybeRes ) );
+#ifndef __EMSCRIPTEN__ // in Wasm the path is not a file name, but starts with https://
             std::error_code ec;
             auto canonicalPath = canonical( *maybeRes, ec );
             if ( ec )
@@ -176,6 +177,7 @@ const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
                 *maybeRes = canonicalPath;
                 spdlog::info( "Executable path in canonical form: {}", utf8string( *maybeRes ) );
             }
+#endif
         }
         return maybeRes;
     }();
@@ -308,7 +310,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
             }
 
             if( isFont )
-                allSystemFonts.push_back( { font, font.filename().string() } );
+                allSystemFonts.push_back( { font, utf8string( font.filename() ) } );
         }
     }
 
@@ -356,7 +358,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         {
             for ( const auto& suffix : suffixes )
             {
-                auto curFontName = font.stem().string();
+                auto curFontName = utf8string( font.stem() );
                 for ( auto& format : supportFormat )
                 {
                     auto posEndName = curName.find( "-" + suffix + format );
@@ -402,7 +404,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 
         if ( suffixName.empty() )
         {
-            firstFontName = font.stem().string();
+            firstFontName = utf8string( font.stem() );
         }
 
         numFont = fonts.size() - 1;

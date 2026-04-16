@@ -38,8 +38,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRIOExtras
   MRSymbolMesh
   MRVoxels
-  # Boost.stacktrace uses something from libdl in its headers.
-  ${CMAKE_DL_LIBS}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)

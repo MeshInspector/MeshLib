@@ -33,6 +33,7 @@ RenderPointsObject::~RenderPointsObject()
 
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
     bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
     if ( !isColorTransparent && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
     {
@@ -58,12 +59,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
     GLStaticHolder::ShaderType shaderType = GLStaticHolder::Points;
     if ( desiredPass == RenderModelPassMask::Transparent )
-    {
-        if ( renderParams.transparencyMode.isAlphaSortEnabled() )
-            shaderType = GLStaticHolder::AlphaSortPoints;
-        else if ( renderParams.transparencyMode.isDepthPeelingEnabled() )
-            shaderType = GLStaticHolder::DepthPeelPoints;
-    }
+        shaderType = GLStaticHolder::getTransparentPointsShader( renderParams.transparencyMode );
 
     objectPreRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
@@ -86,7 +82,6 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
     }
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "invertNormals" ), objPoints_->getVisualizeProperty( VisualizeMaskType::InvertedNormals, renderParams.viewportId ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objPoints_->getColoringType() == ColoringType::VertsColorMap ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objPoints_->globalClippedByPlane( renderParams.viewportId ) ) );
@@ -136,6 +131,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
 void RenderPointsObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
@@ -266,6 +262,7 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 
 void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
@@ -310,6 +307,7 @@ void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
 
 void RenderPointsObject::bindPointsPicker_()
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );

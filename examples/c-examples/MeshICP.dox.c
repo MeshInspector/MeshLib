@@ -19,19 +19,19 @@ int main( void )
 
     // First mesh, which will be moved.
     MR_expected_MR_Mesh_std_string* meshFloatingEx = MR_MeshLoad_fromAnySupportedFormat_2( "meshA.stl", NULL, NULL );
-    MR_Mesh* meshFloating = MR_expected_MR_Mesh_std_string_GetMutableValue( meshFloatingEx );
+    MR_Mesh* meshFloating = MR_expected_MR_Mesh_std_string_value_mut( meshFloatingEx );
     if ( !meshFloating )
     {
-        fprintf( stderr, "Failed to load mesh A: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshFloatingEx ) ) );
+        fprintf( stderr, "Failed to load mesh A: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshFloatingEx ) ) );
         goto fail_mesh_loading_a;
     }
 
     // Second mesh, static.
     MR_expected_MR_Mesh_std_string* meshReferenceEx = MR_MeshLoad_fromAnySupportedFormat_2( "meshB.stl", NULL, NULL );
-    MR_Mesh* meshReference = MR_expected_MR_Mesh_std_string_GetMutableValue( meshReferenceEx );
+    MR_Mesh* meshReference = MR_expected_MR_Mesh_std_string_value_mut( meshReferenceEx );
     if ( !meshReference )
     {
-        fprintf( stderr, "Failed to load mesh B: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshReferenceEx ) ) );
+        fprintf( stderr, "Failed to load mesh B: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshReferenceEx ) ) );
         goto fail_mesh_loading_b;
     }
 
@@ -61,7 +61,7 @@ int main( void )
 
     // Output information string
     MR_std_string* info = MR_ICP_getStatusInfo( icp );
-    printf( "%s\n", MR_std_string_Data( info ) );
+    printf( "%s\n", MR_std_string_data( info ) );
     MR_std_string_Destroy( info );
 
     printf("Final transform:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n", xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z);
@@ -72,9 +72,9 @@ int main( void )
 
     // Save result
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( meshFloating, "meshA_icp.stl", NULL, NULL);
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save;
     }
 

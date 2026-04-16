@@ -17,6 +17,7 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRDragDropHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandlerWinEvents.h"
 #include "MRSpaceMouseHandler3dxMacDriver.h"
 #include "MRRenderGLHelpers.h"
 #include "MRTouchpadController.h"
@@ -38,6 +39,8 @@
 #include "MRFileLoadOptions.h"
 #include "MRWebRequest.h"
 #include "MRUnitSettings.h"
+#include "MROpenObjects.h"
+#include "MRVoxels/MRDicom.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
@@ -70,6 +73,7 @@
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
+#include "MRViewerConfigConstants.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -220,6 +224,20 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
     } );
+
+    // It is necessary to redraw the contents of the window when moving the window in Windows OS
+    // 
+    // (on Windows) The glfw_window_pos callback is called, but glfwWaitEvents does not pass,
+    // and event queue processing is not performed until the end of the move.
+    // For this reason, draw is called outside of EventQueue.
+    // 
+    // "On some platforms, a window move, resize or menu operation will cause event processing to block. This is due to how event processing is designed on those platforms"
+    // https://www.glfw.org/docs/latest/group__window.html#ga37bd57223967b4211d60ca1a0bf3c832
+    // 
+    // https://stackoverflow.com/questions/71243906/glfw-window-poll-events-lag
+#ifdef _WIN32
+    viewer->draw( true );
+#endif
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
@@ -262,7 +280,7 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static constexpr int minEmsSleep = 3; // ms - more than 300 fps possible
 static EM_BOOL emsEmptyCallback( double, void* )
 {
     return EM_TRUE;
@@ -343,7 +361,7 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
     float fontSize = 20.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        fontSize *= menu->menu_scaling();
+        fontSize *= menu->menuScaling();
     label->setFontHeight( fontSize );
     obj.addChild( label );
 }
@@ -365,7 +383,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 
     auto& viewer = MR::Viewer::instanceRef();
 
-    MR::setupLoggerByDefault();
+    MR::setupLoggerByDefault( setup.setupCustomLogSink );
 
     setup.setupBasePlugins( &viewer );
     setup.setupCommonModifiers( &viewer );
@@ -395,6 +413,8 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 #endif
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
+    if ( setup.shutdownCustomLogSink )
+        setup.shutdownCustomLogSink();
     return res;
 }
 
@@ -575,7 +595,7 @@ void Viewer::mainLoopFunc_()
         }
         else if ( !isAnimating && eventQueue_ && eventQueue_->empty() )
         {
-            emscripten_sleep( minEmsSleep ); // more then 300 fps possible
+            emscripten_sleep( minEmsSleep ); // more than 300 fps possible
             continue;
         }
 
@@ -614,7 +634,10 @@ int Viewer::launch( const LaunchParams& params )
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     experimentalFeatures = params.developerFeatures;
-    multiViewport_ = params.multiViewport;
+    
+    bool defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewportKey, true );
+    launchParams_.multiViewport = defaultMultiViewport && params.multiViewport;
+    
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;
@@ -796,21 +819,15 @@ bool Viewer::setupWindow_( const LaunchParams& params )
 
     mouseController_->connect();
 
-    if ( !touchesController_ )
-        touchesController_ = std::make_unique<TouchesController>();
     touchesController_->connect( this );
     spdlog::info( "TouchesController created" );
 
-    if ( !spaceMouseController_ )
-        spaceMouseController_ = std::make_unique<SpaceMouseController>();
     spaceMouseController_->connect();
     spdlog::info( "SpaceMouseController created" );
 
     if ( !spaceMouseHandler_ )
-        initSpaceMouseHandler();
+        initSpaceMouseHandler_();
 
-    if ( !touchpadController_ )
-        touchpadController_ = std::make_unique<TouchpadController>();
     touchpadController_->connect( this );
     touchpadController_->initialize( window );
     spdlog::info( "TouchpadController created" );
@@ -907,7 +924,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         menuPlugin_->init( this );
     }
 
-    // print after menu init to know valid menu_scaling
+    // print after menu init to know valid menuScaling
     spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
 
     init_();
@@ -988,6 +1005,8 @@ void Viewer::launchShut()
     if ( window )
         glfwHideWindow( window );
 
+    signals_->preShutdownSignal();
+
     if ( settingsMng_ )
     {
         spdlog::info( "Save user settings." );
@@ -1029,8 +1048,7 @@ void Viewer::launchShut()
     sceneTexture_.reset();
     depthPeeler_.reset();
 
-    if ( touchpadController_ )
-        touchpadController_->reset();
+    touchpadController_->reset();
 
     dragDropAdvancedHandler_.reset();
 
@@ -1110,40 +1128,12 @@ void Viewer::postEmptyEvent()
     glfwPostEmptyEvent();
 }
 
-const TouchpadParameters & Viewer::getTouchpadParameters() const
-{
-    if ( !touchpadController_ )
-    {
-        const static TouchpadParameters empty;
-        return empty;
-    }
-    return touchpadController_->getParameters();
-}
-
-void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
-{
-    if ( !touchpadController_ )
-        touchpadController_ = std::make_unique<TouchpadController>();
-    touchpadController_->setParameters( ps );
-}
-
-SpaceMouseParameters Viewer::getSpaceMouseParameters() const
-{
-    if ( !spaceMouseController_ )
-        return {};
-    return spaceMouseController_->getParameters();
-}
-
-void Viewer::setSpaceMouseParameters( const SpaceMouseParameters & ps )
-{
-    if ( !spaceMouseController_ )
-        spaceMouseController_ = std::make_unique<SpaceMouseController>();
-    spaceMouseController_->setParameters( ps );
-}
-
 Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
+    touchpadController_( std::make_unique<TouchpadController>() ),
+    spaceMouseController_( std::make_unique<SpaceMouse::Controller>() ),
+    touchesController_( std::make_unique<TouchesController>() ),
     mouseController_( std::make_unique<MouseController>() ),
     recentFilesStore_( std::make_unique<RecentFilesStore>() ),
     frameCounter_( std::make_unique<FrameCounter>() ),
@@ -1162,8 +1152,8 @@ Viewer::Viewer() :
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
         viewer->experimentalFeatures = false;
-        viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
-        viewer->setTouchpadParameters( TouchpadParameters{} );
+        viewer->spaceMouseController().setParameters( SpaceMouse::Parameters{} );
+        viewer->touchpadController().setParameters( TouchpadParameters{} );
         viewer->enableAlphaSort( true );
 
         for ( ViewportId id : viewer->getPresentViewports() )
@@ -1359,21 +1349,53 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         }
     };
 
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
+    auto openFolder = []( const std::filesystem::path& filename, const ProgressCallback& callback ) -> Expected<LoadedObjects>
     {
-        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::Result result )
+        auto loadRes = makeObjectTreeFromFolder( filename, false, callback );
+        if ( !loadRes )
+            return unexpected( std::move( loadRes.error() ) );
+        return LoadedObjects{
+            .objs = { loadRes->obj },
+            .warnings = std::move( loadRes->warnings ),
+            .lengthUnit = std::move( loadRes->lengthUnit )
+        };
+    };
+
+    auto checkDicomSlices = []( [[maybe_unused]] const std::vector<std::filesystem::path>& filesList )
+    {
+        SceneLoad::Result result;
+#ifndef MRVOXELS_NO_DICOM
+        for ( const auto& f : filesList )
         {
+            Vector3i dims;
+            if ( VoxelsLoad::isDicomFile( f, nullptr, &dims ) && dims.z == 1 )
+            {
+                result.errorSummary = "Please use Open Directory for loading multi-file DICOM volumes.";
+                break;
+            }
+        }
+#endif //MRVOXELS_NO_DICOM
+        return result;
+    };
+
+#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]
+    {
+        auto result = checkDicomSlices( filesList );
+        if ( result.errorSummary.empty() )
+            SceneLoad::asyncFromAnySupportedFormat( filesList, postProcess,
+                { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
+        else
             postProcess( result );
-            ProgressBar::finish();
-        },
-        { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
+        ProgressBar::finish();
     } );
 #else
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]
     {
-        auto result = SceneLoad::fromAnySupportedFormat( filesList,
-            { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress } );
+        auto result = checkDicomSlices( filesList );
+        if ( result.errorSummary.empty() )
+            result = SceneLoad::fromAnySupportedFormat( filesList,
+                { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
         return [result = std::move( result ), postProcess]
         {
             postProcess( result );
@@ -1381,7 +1403,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     } );
 #endif
 
-    MR::FileDialog::setLastUsedDir( utf8string( filesList[0].parent_path() ) );
+    MR::FileDialog::setLastUsedDir( filesList[0].parent_path() );
     return true;
 }
 
@@ -1702,6 +1724,7 @@ void Viewer::resetRedraw_()
 
 void Viewer::draw( bool force )
 {
+    MR_TIMER;
 #ifdef __EMSCRIPTEN__
     (void)force;
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
@@ -1720,6 +1743,7 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
+    MR_TIMER;
     SceneCache::invalidateAll();
     bool needSceneRedraw = needRedraw_();
     if ( !force && !needSceneRedraw )
@@ -1753,7 +1777,10 @@ bool Viewer::draw_( bool force )
         --forceRedrawFrames_;
     }
     if ( window && swapped )
+    {
+        Timer t( "glfwSwapBuffers" );
         glfwSwapBuffers( window );
+    }
     frameCounter_->endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
@@ -1765,6 +1792,7 @@ void Viewer::drawUiRenderObjects()
     // That's why each viewport is being drawn separately.
     if ( !window )
         return;
+    MR_TIMER;
     UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
 
     for ( Viewport& viewport : getViewerInstance().viewport_list )
@@ -1806,17 +1834,24 @@ void Viewer::drawUiRenderObjects()
     }
 }
 
-bool Viewer::isMultiViewport()
+bool Viewer::isMultiViewportAvailable()
 {
 #ifdef __EMSCRIPTEN__
     return false;
+#elif GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    // ImGui multi-viewport has unresolved issues with tooltips on X11 (incorrect window class?)
+    // See also:
+    //  - https://github.com/ocornut/imgui/issues/7950
+    //  - https://github.com/ocornut/imgui/issues/8252
+    return !hasScaledFramebuffer_ && glfwGetPlatform() != GLFW_PLATFORM_X11;
 #else
-    return multiViewport_ && !hasScaledFramebuffer_;
+    return !hasScaledFramebuffer_;
 #endif
 }
 
 void Viewer::drawFull( bool dirtyScene )
 {
+    MR_TIMER;
     // unbind to clean main framebuffer
     if ( sceneTexture_ )
         sceneTexture_->unbind();
@@ -1843,6 +1878,7 @@ void Viewer::drawFull( bool dirtyScene )
     signals_->postDrawSignal();
     if ( sceneTexture_ )
     {
+        Timer t( "sceneTexture" );
         sceneTexture_->unbind();
         if ( renderScene )
             sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
@@ -1858,6 +1894,7 @@ void Viewer::drawFull( bool dirtyScene )
 
 void Viewer::drawScene( FramebufferData* framebuffer )
 {
+    MR_TIMER;
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
 
@@ -1909,6 +1946,7 @@ void Viewer::drawScene( FramebufferData* framebuffer )
 
 void Viewer::setupScene()
 {
+    MR_TIMER;
     signals_->preSetupViewSignal();
     for ( auto& viewport : viewport_list )
         viewport.setupView();
@@ -1916,6 +1954,7 @@ void Viewer::setupScene()
 
 void Viewer::clearFramebuffers()
 {
+    MR_TIMER;
     for ( auto& viewport : viewport_list )
         viewport.clearFramebuffers();
 }
@@ -2121,7 +2160,7 @@ void Viewer::initBasisAxesObject_()
             return;
         auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
         for ( const auto& label : labels )
-            label->setFontHeight( 20.0f * menuPlugin_->menu_scaling() );
+            label->setFontHeight( 20.0f * menuPlugin_->menuScaling() );
     } ) );
 }
 
@@ -2152,28 +2191,40 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setAncillary( true );
 }
 
-void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const std::string&)> deviceSignal )
+void Viewer::initSpaceMouseHandler_()
 {
     spaceMouseHandler_.reset();
 #ifndef __EMSCRIPTEN__
 #ifdef __APPLE__
     // try to use the official driver first
-    auto driverHandler = std::make_unique<SpaceMouseHandler3dxMacDriver>();
+    auto driverHandler = std::make_unique<SpaceMouse::Handler3dxMacDriver>();
     driverHandler->setClientName( MR_PROJECT_NAME );
-    if ( driverHandler->initialize( deviceSignal ) )
+    if ( driverHandler->initialize() )
     {
         spaceMouseHandler_ = std::move( driverHandler );
-        spdlog::info( "SpaceMouseHandler3dxMacDriver initialized" );
+        spdlog::info( "SpaceMouse::Handler3dxMacDriver initialized" );
         return;
     }
 
     // fallback to the HIDAPI implementation
     spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-    if ( spaceMouseHandler_->initialize( std::move( deviceSignal ) ) )
+#ifdef _WIN32
+    auto winEventsHandler = std::make_unique<SpaceMouse::HandlerWinEvents>();
+    if ( winEventsHandler->initialize() )
     {
-        spdlog::info( "SpaceMouseHandlerHidapi initialized" );
+        spaceMouseHandler_ = std::move( winEventsHandler );
+        spdlog::info( "SpaceMouse::HandlerWinEvents initialized" );
+        return;
+    }
+
+    // fallback to the HIDAPI implementation
+    spdlog::warn( "Failed to init Windows Raw Input handeler for SpaceMouse; falling back to the HIDAPI implementation" );
+#endif
+    spaceMouseHandler_ = std::make_unique<SpaceMouse::HandlerHidapi>();
+    if ( spaceMouseHandler_->initialize() )
+    {
+        spdlog::info( "SpaceMouse::HandlerHidapi initialized" );
     }
     else
     {
@@ -2786,12 +2837,12 @@ void Viewer::enableGlobalHistory( bool on )
         return;
     if ( on )
     {
-        globalHistoryStore_ = std::make_shared<HistoryStore>();
-        globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
+        globalHistoryStore_ = std::make_unique<HistoryStore>();
+        globalHistoryStore_->changedSignal.connect( [this] ( const HistoryStore& st, HistoryStore::ChangeType type, std::shared_ptr<HistoryAction> )
         {
             if ( type == HistoryStore::ChangeType::PostUndo ||
                  type == HistoryStore::ChangeType::PostRedo ||
-                 type == HistoryStore::ChangeType::AppendAction )
+                 ( type == HistoryStore::ChangeType::PostAppendAction && !st.getScopeBlockPtr() ) )
                 makeTitleFromSceneRootPath();
         } );
     }

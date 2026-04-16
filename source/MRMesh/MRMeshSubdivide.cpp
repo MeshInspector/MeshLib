@@ -16,6 +16,7 @@
 #include "MRObjectMesh.h"
 #include "MRMeshSubdivideCallbacks.h"
 #include <queue>
+#include "MRMeshNormals.h"
 
 namespace MR
 {
@@ -67,6 +68,21 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     }
     auto numAboveMax = aboveMaxTriAspectRatio.count();
 
+    VertNormals ns;
+    if ( settings.curvaturePriority > 0 )
+        ns = computePerVertPseudoNormals( mesh );
+
+    auto calcEdgeLenSq = [&]( UndirectedEdgeId ue )
+    {
+        EdgeId e( ue );
+        auto o = mesh.topology.org( e );
+        auto d = mesh.topology.dest( e );
+        float lenSq = distanceSq( mesh.points[o], mesh.points[d] );
+        if ( settings.curvaturePriority > 0 )
+            lenSq *= 1 + settings.curvaturePriority * distanceSq( ns[o], ns[d] );
+        return lenSq;
+    };
+
     auto getQueueElem = [&]( UndirectedEdgeId ue )
     {
         EdgeLength x;
@@ -74,7 +90,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
             return x;
-        const float lenSq = mesh.edgeLengthSq( e );
+        const float lenSq = calcEdgeLenSq( ue );
         if ( lenSq < maxEdgeLenSq )
             return x;
         if ( !aboveMaxSplittableTriAspectRatio.empty() )
@@ -126,7 +142,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const EdgeId e = el.edge;
         queue.pop();
 
-        if ( el.lenSq != mesh.edgeLengthSq( e ) )
+        if ( el.lenSq != calcEdgeLenSq( el.edge ) )
             continue; // outdated record in the queue
 
         if ( settings.beforeEdgeSplit && !settings.beforeEdgeSplit( e ) )
@@ -134,6 +150,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
+        if ( settings.curvaturePriority > 0 )
+            ns.autoResizeSet( newVertId, ( ns[mesh.topology.org( e1 )] + ns[mesh.topology.dest( e )] ).normalized() );
 
         // in smooth mode remember all new inner vertices to reposition them at the end
         if ( ( settings.smoothMode || settings.projectOnOriginalMesh ) && mesh.topology.left( e ) && mesh.topology.right( e ) )

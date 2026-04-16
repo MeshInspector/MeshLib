@@ -221,7 +221,7 @@ __device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const
     }
 
     const float vb = d5 * d2 - d1 * d6;
-    if ( vb <= 0 && d6 <= 0 )
+    if ( vb <= 0 && d6 <= 0 && d2 >= 0 )
     {
         const float v = d2 / ( d2 - d6 );
         return { { 0, v }, a + ac * v };
@@ -230,6 +230,12 @@ __device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const
     const float va = d3 * d6 - d5 * d4;
     if ( va <= 0 )
     {
+        if ( d4 < d3 )
+            return { { 1, 0 }, b };
+
+        if ( d5 < d6 )
+            return { { 0, 1 }, c };
+
         const float v = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
         return { { 1 - v, v }, b + ( c - b ) * v };
     }

@@ -16,6 +16,7 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRVisualObject.h"
+#include "MRI18n.h"
 
 namespace MR
 {
@@ -30,7 +31,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
 
     ModalDialog dialog( str_id, {
         .headline = settings.header,
-        .text = showSave ? "Save your changes?" : "",
+        .text = showSave ? _tr( "Save your changes?" ) : "",
         .closeOnClickOutside = true,
     } );
     if ( dialog.beginPopup() )
@@ -43,7 +44,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
 
         if ( showSave )
         {
-            if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
+            if ( UI::button( _tr( "Save" ), btnSize, ImGuiKey_Enter ) )
             {
                 auto savePath = SceneRoot::getScenePath();
                 if ( savePath.empty() )
@@ -54,10 +55,10 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction = settings.onOk, savePath, &root = SceneRoot::get()] ()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
-                        {
+                        { {
                             .lengthUnit = UnitSettings::getActualModelLengthUnit(),
                             .progress = ProgressBar::callBackSetProgress
-                        } );
+                        } } );
 
                     return[customFunction = customFunction, savePath, res] ()
                     {
@@ -68,7 +69,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                                 customFunction();
                         }
                         else
-                            showError( "Error saving scene: " + res.error() );
+                            showError( s_tr( "Error saving scene: " ) + res.error() );
                     };
                 } );
             }
@@ -87,7 +88,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
             UI::setTooltipIfHovered( settings.dontSaveTooltip.c_str() );
 
         ImGui::SameLine();
-        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( _tr( "Cancel" ), btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
         if ( !settings.cancelTooltip.empty() )
             UI::setTooltipIfHovered( settings.cancelTooltip.c_str() );

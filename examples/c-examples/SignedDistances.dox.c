@@ -17,18 +17,18 @@ int main( void )
 
     // Load mesh.
     MR_expected_MR_Mesh_std_string* mesh1Res = MR_MeshLoad_fromAnySupportedFormat_2( "mesh1.ctm", NULL, NULL );
-    MR_Mesh* refMesh = MR_expected_MR_Mesh_std_string_GetMutableValue( mesh1Res );
+    MR_Mesh* refMesh = MR_expected_MR_Mesh_std_string_value_mut( mesh1Res );
     if ( !refMesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( mesh1Res ) ) );
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( mesh1Res ) ) );
         goto fail_load_1;
     }
 
     MR_expected_MR_Mesh_std_string* mesh2Res = MR_MeshLoad_fromAnySupportedFormat_2( "mesh2.ctm", NULL, NULL );
-    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( mesh2Res );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( mesh2Res );
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( mesh2Res ) ) );
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( mesh2Res ) ) );
         goto fail_load_2;
     }
 

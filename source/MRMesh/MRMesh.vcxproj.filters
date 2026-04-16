@@ -100,6 +100,9 @@
     <Filter Include="Source Files\Algorithms">
       <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Nesting">
+      <UniqueIdentifier>{f891eaa8-8411-45b7-8b9d-38cece180034}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -267,7 +270,7 @@
     <ClInclude Include="MRSurfacePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRGeodesicPath.h">
+    <ClInclude Include="MRReducePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneColors.h">
@@ -1364,9 +1367,6 @@
     <ClInclude Include="MRUnsigned.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRTelemetry.h">
-      <Filter>Source Files\System</Filter>
-    </ClInclude>
     <ClInclude Include="MRUnitInfo.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -1375,6 +1375,46 @@
     </ClInclude>
     <ClInclude Include="MRTextureColors.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCurve.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTelemetry.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFormat.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFunctional.h" />
+    <ClInclude Include="MRTwoLineSegmDist.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshPatch.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDivideWithPlane.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNestingStructures.h">
+      <Filter>Source Files\Nesting</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBoxNesting.h">
+      <Filter>Source Files\Nesting</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVersatileChangeMeshAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLoadedMeshData.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRProtectedRun.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshTotalAngle.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSegmentMesh.h">
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1477,7 +1517,7 @@
     <ClCompile Include="MRSurfacePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRGeodesicPath.cpp">
+    <ClCompile Include="MRReducePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">
@@ -1625,9 +1665,6 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRIntersection.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="MRContour.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp">
@@ -2240,9 +2277,6 @@
     <ClCompile Include="MRPartMappingAdapters.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="MRTelemetry.cpp">
-      <Filter>Source Files\System</Filter>
-    </ClCompile>
     <ClCompile Include="MRProjectionMeshAttribute.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
@@ -2257,6 +2291,44 @@
     </ClCompile>
     <ClCompile Include="MRTextureColors.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTelemetry.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTelemetryStlHead.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFormat.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRParallelFor.cpp" />
+    <ClCompile Include="MRBitSetParallelFor.cpp" />
+    <ClCompile Include="MRTwoLineSegmDist.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshPatch.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDivideWithPlane.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBoxNesting.cpp">
+      <Filter>Source Files\Nesting</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVersatileChangeMeshAction.cpp">
+      <Filter>Source Files\History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRProtectedRun.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshTotalAngle.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSegmentMesh.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgePathsBuilder.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

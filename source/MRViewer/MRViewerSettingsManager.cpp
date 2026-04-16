@@ -4,10 +4,11 @@
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
+#include "MRLocale.h"
 #include "MRRibbonMenu.h"
 #include "MRToolbar.h"
 #include "MRSpaceMouseHandlerHidapi.h"
-#include "MRSpaceMouseParameters.h"
+#include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
 #include "MRViewportGlobalBasis.h"
@@ -77,6 +78,7 @@ const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
 const std::string cVisualObjectTags = "visualObjectTags";
+const std::string cLanguage = "language";
 }
 
 namespace Defaults
@@ -436,27 +438,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
-        SpaceMouseParameters spaceMouseParams;
+        SpaceMouse::Parameters spaceMouseParams;
         if ( paramsJson.isMember( "translateScale" ) )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
-        viewer.setSpaceMouseParameters( spaceMouseParams );
-
-#ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
-        {
-            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
-            {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-                if ( hidapiHandler )
-                {
-                    const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
-                    hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom );
-                }
-            }
-        }
-#endif
+            spaceMouseParams.suppressMouseScrollZoom = !paramsJson["activeMouseScrollZoom"].asBool();
+        viewer.spaceMouseController().setParameters( spaceMouseParams );
     }
 
     if ( cfg.hasJsonValue( cTouchpadSettings ) )
@@ -479,7 +468,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             else
                 spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
         }
-        viewer.setTouchpadParameters( parameters );
+        viewer.touchpadController().setParameters( parameters );
     }
 
     if ( cfg.hasJsonValue( cAmbientCoefSelectedObj ) )
@@ -543,14 +532,22 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         setDefaultSerializeMeshFormat( format );
         format = loadString( cMruInnerPointsFormat, ".ply" );
         setDefaultSerializePointsFormat( format );
+        #ifndef MRVIEWER_NO_VOXELS
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
+        #endif
     }
 
     if ( cfg.hasJsonValue( cVisualObjectTags ) )
     {
         auto& manager = VisualObjectTagManager::instance();
         deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
+    }
+
+    if ( cfg.hasJsonValue( cLanguage ) )
+    {
+        const auto lang = cfg.getJsonValue( cLanguage ).asString();
+        Locale::set( lang );
     }
 }
 
@@ -664,23 +661,14 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cShowExperimentalFeatures, viewer.experimentalFeatures );
 
     Json::Value spaceMouseParamsJson;
-    SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();
+    SpaceMouse::Parameters spaceMouseParams = viewer.spaceMouseController().getParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
-#ifdef _WIN32
-    if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
-    {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-        if ( hidapinHandler )
-        {
-            spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();
-        }
-    }
-#endif
+    spaceMouseParamsJson["activeMouseScrollZoom"] = !spaceMouseParams.suppressMouseScrollZoom;
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 
     Json::Value touchpadParametersJson;
-    const auto& touchpadParameters = viewer.getTouchpadParameters();
+    const auto& touchpadParameters = viewer.touchpadController().getParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;
@@ -715,6 +703,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         serializeToJson( manager, visualObjectTagsJson );
         cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
+
+    cfg.setJsonValue( cLanguage, Locale::getName() );
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

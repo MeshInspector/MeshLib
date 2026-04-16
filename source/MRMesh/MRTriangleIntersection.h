@@ -3,6 +3,8 @@
 #include "MRVector3.h"
 #include "MRIntersectionPrecomputes.h"
 #include "MRTriPoint.h"
+#include "MRTriMath.h"
+#include "MRLineSegm.h"
 
 #include <algorithm>
 #include <optional>
@@ -26,14 +28,56 @@ struct TriIntersectResult
     }
 };
 
+/// given triangle ABC, rotates its vertices to make
+/// segment AB the longest on exit
+template <typename T>
+void rotateToLongestEdge( Vector3<T>& a, Vector3<T>& b, Vector3<T>& c )
+{
+    const auto ab2 = distanceSq( a, b );
+    const auto bc2 = distanceSq( b, c );
+    const auto ca2 = distanceSq( c, a );
+    if ( ab2 >= bc2 && ab2 >= ca2 )
+        return;
+
+    if ( bc2 >= ca2 )
+    {
+        assert( bc2 >= ab2 );
+        auto t = a;
+        a = b;
+        b = c;
+        c = t;
+        return;
+    }
+
+    assert( ca2 >= ab2 );
+    assert( ca2 >= bc2 );
+    auto t = a;
+    a = c;
+    c = b;
+    b = t;
+}
+
 /// checks whether triangles ABC and DEF intersect
-/// returns false if ABC and DEF are coplanar
+/// returns false if ABC and DEF are coplanar;
+/// due to floating-point errors inside, the result can be wrong in case of various degenerations of input triangles,
+/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors but slower
 template <typename T>
 bool doTrianglesIntersect(
     Vector3<T> a, Vector3<T> b, Vector3<T> c,
     Vector3<T> d, Vector3<T> e, Vector3<T> f
 )
 {
+    if ( dirDblArea( a, b, c ) == Vector3<T>{} ) // triangle ABC is degenerate
+    {
+        rotateToLongestEdge( a, b, c );
+        return doTriangleSegmentIntersect( d, e, f, a, b );
+    }
+    if ( dirDblArea( d, e, f ) == Vector3<T>{} ) // triangle DEF is degenerate
+    {
+        rotateToLongestEdge( d, e, f );
+        return doTriangleSegmentIntersect( a, b, c, d, e );
+    }
+
     const auto abcd = mixed( a - d, b - d, c - d );
     const auto abce = mixed( a - e, b - e, c - e );
     const auto abcf = mixed( a - f, b - f, c - f );
@@ -99,6 +143,48 @@ bool isPointInPlane( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>&
     return mixed( p - a, p - b, p - c ) == T( 0 );
 }
 
+MR_BIND_TEMPLATE( bool isPointInPlane( const Vector3<float>& p, const Vector3<float>& a, const Vector3<float>& b, const Vector3<float>& c ) )
+MR_BIND_TEMPLATE( bool isPointInPlane( const Vector3<double>& p, const Vector3<double>& a, const Vector3<double>& b, const Vector3<double>& c ) )
+
+/// returns true if AB line contains point P
+template<typename T>
+bool isPointInLine( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b )
+{
+    return cross( p - a, p - b ).lengthSq() == T( 0 );
+}
+
+/// returns true if AB line contains point P
+template<typename T>
+bool isPointInLine( const Vector2<T>& p, const Vector2<T>& a, const Vector2<T>& b )
+{
+    return cross( p - a, p - b ) == T( 0 );
+}
+
+/// returns true if AB segment contains point P
+template<typename T>
+bool isPointInSegm( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b )
+{
+    if ( !isPointInLine( p, a, b ) )
+        return false;
+
+    return dot( p - a, b - a ) >= 0 && dot( p - b, a - b ) >= 0;
+}
+
+/// returns true if AB segment contains point P
+template<typename T>
+bool isPointInSegm( const Vector2<T>& p, const Vector2<T>& a, const Vector2<T>& b )
+{
+    if ( !isPointInLine( p, a, b ) )
+        return false;
+
+    return dot( p - a, b - a ) >= 0 && dot( p - b, a - b ) >= 0;
+}
+
+MR_BIND_TEMPLATE( bool isPointInLine( const Vector3<float>& p, const Vector3<float>& a, const Vector3<float>& b ) )
+MR_BIND_TEMPLATE( bool isPointInLine( const Vector3<double>& p, const Vector3<double>& a, const Vector3<double>& b ) )
+MR_BIND_TEMPLATE( bool isPointInSegm( const Vector3<float>& p, const Vector3<float>& a, const Vector3<float>& b ) )
+MR_BIND_TEMPLATE( bool isPointInSegm( const Vector3<double>& p, const Vector3<double>& a, const Vector3<double>& b ) )
+
 /// returns true if ABC triangle contains point P
 template<typename T>
 bool isPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
@@ -112,8 +198,53 @@ bool isPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<
         return false;
     if ( dot( normDir, cross( a - c, p - c ) ) < 0 )
         return false;
+    if ( normDir.lengthSq() == 0 )
+    {
+
+        // ab parallel ac
+        if ( a == b && b == c && p != a )
+            return false; // fully degenerated
+        if ( dot( b - a, c - a ) <= 0 )
+            return isPointInSegm( p, b, c ); // ab ac looking in the opposite directions so check BC segm
+        else if ( ( b - a ).lengthSq() > ( c - a ).lengthSq() )
+            return isPointInSegm( p, a, b ); // ab ac looking in the same direction and AB is longer so check AB segm
+        else
+            return isPointInSegm( p, a, c ); // ab ac looking in the same direction and AC is longer so check AC segm
+    }
     return true;
 }
+
+/// returns true if ABC triangle contains point P
+template<typename T>
+bool isPointInTriangle( const Vector2<T>& p, const Vector2<T>& a, const Vector2<T>& b, const Vector2<T>& c )
+{
+    const auto normSign = cross( b - a, c - a );
+    if ( normSign * cross( b - a, p - a ) < 0 )
+        return false;
+    if ( normSign * cross( c - b, p - b ) < 0 )
+        return false;
+    if ( normSign * cross( a - c, p - c ) < 0 )
+        return false;
+    if ( normSign == 0 )
+    {
+        // ab parallel ac
+        if ( a == b && b == c && p != a )
+            return false; // fully degenerated
+        if ( dot( b - a, c - a ) <= 0 )
+            return isPointInSegm( p, b, c ); // ab ac looking in the opposite directions so check BC segm
+        else if ( ( b - a ).lengthSq() > ( c - a ).lengthSq() )
+            return isPointInSegm( p, a, b ); // ab ac looking in the same direction and AB is longer so check AB segm
+        else
+            return isPointInSegm( p, a, c ); // ab ac looking in the same direction and AC is longer so check AC segm
+    }
+
+    return true;
+}
+
+MR_BIND_TEMPLATE( bool isPointInTriangle( const Vector3<float>& p, const Vector3<float>& a, const Vector3<float>& b, const Vector3<float>& c ) )
+MR_BIND_TEMPLATE( bool isPointInTriangle( const Vector3<double>& p, const Vector3<double>& a, const Vector3<double>& b, const Vector3<double>& c ) )
+MR_BIND_TEMPLATE( bool isPointInTriangle( const Vector2<float>& p, const Vector2<float>& a, const Vector2<float>& b, const Vector2<float>& c ) )
+MR_BIND_TEMPLATE( bool isPointInTriangle( const Vector2<double>& p, const Vector2<double>& a, const Vector2<double>& b, const Vector2<double>& c ) )
 
 /// returns true if a plane containing edge XY separates point Z from triangle UVW
 template <typename T>
@@ -134,7 +265,9 @@ bool doesEdgeXySeparate(
 }
 
 /// checks whether triangles ABC and DEF intersect;
-/// performs more checks to avoid false positives of simple doTrianglesIntersect
+/// it is designed to resolve false positives from \ref doTrianglesIntersect function
+/// when two triangles are far apart but in one plane;
+/// please consider using \ref findTriTriDistance function instead that is more tolerant to floating-point errors but slower
 template <typename T>
 bool doTrianglesIntersectExt(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
@@ -229,7 +362,7 @@ std::optional<Vector3<T>> findTriangleTriangleIntersection(
 }
 
 template <typename T>
-std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
+std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
     const IntersectionPrecomputes<T>& prec )
 {
     const T& Sx = prec.Sx;
@@ -270,30 +403,62 @@ std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA,
     return TriIntersectResult( float( V * invDet ), float( W * invDet ), float( t * invDet ) );
 }
 
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3f& oriA, const Vector3f& oriB, const Vector3f& oriC,
-    const IntersectionPrecomputes<float>& prec )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<float >& oriA, const Vector3<float >& oriB, const Vector3<float >& oriC, const IntersectionPrecomputes<float >& prec ) )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<double>& oriA, const Vector3<double>& oriB, const Vector3<double>& oriC, const IntersectionPrecomputes<double>& prec ) )
+
+template <typename T>
+std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
+    const Vector3<T>& dir )
 {
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
-}
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3f& oriA, const Vector3f& oriB, const Vector3f& oriC,
-    const Vector3f& dir )
-{
-    const IntersectionPrecomputes<float> prec( dir );
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
+    const IntersectionPrecomputes<T> prec( dir );
+    return rayTriangleIntersect( oriA, oriB, oriC, prec );
 }
 
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3d& oriA, const Vector3d& oriB, const Vector3d& oriC,
-    const IntersectionPrecomputes<double>& prec )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<float >& oriA, const Vector3<float >& oriB, const Vector3<float >& oriC, const Vector3<float >& dir ) )
+MR_BIND_TEMPLATE( std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<double>& oriA, const Vector3<double>& oriB, const Vector3<double>& oriC, const Vector3<double>& dir ) )
+
+/// returns true if ABC and DEF overlaps or touches
+template<typename T>
+bool doTrianglesOverlap( const Vector2<T>& a, const Vector2<T>& b, const Vector2<T>& c, const Vector2<T>& d, const Vector2<T>& e, const Vector2<T>& f )
 {
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
+    // TODO: probably some of the checks are excessive?
+
+    // check if AB intersects any of DEF sides
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ a,b }, LineSegm<Vector2<T>>{ d,e } ) )
+        return true;
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ a,b }, LineSegm<Vector2<T>>{ d,f } ) )
+        return true;
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ a,b }, LineSegm<Vector2<T>>{ e,f } ) )
+        return true;
+
+    // check if AC intersects any of DEF sides
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ a,c }, LineSegm<Vector2<T>>{ d,e } ) )
+        return true;
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ a,c }, LineSegm<Vector2<T>>{ d,f } ) )
+        return true;
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ a,c }, LineSegm<Vector2<T>>{ e,f } ) )
+        return true;
+
+    // check if BC intersects any of DEF sides
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ b,c }, LineSegm<Vector2<T>>{ d,e } ) )
+        return true;
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ b,c }, LineSegm<Vector2<T>>{ d,f } ) )
+        return true;
+    if ( doSegmentsIntersect( LineSegm<Vector2<T>>{ b,c }, LineSegm<Vector2<T>>{ e,f } ) )
+        return true;
+
+    // no sides intersection:
+    // either ABC fully inside DEF or vice versa
+    if ( isPointInTriangle( a, d, e, f ) )
+        return true;
+    if ( isPointInTriangle( d, a, b, c ) )
+        return true;
+
+    return false;
 }
 
-inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3d& oriA, const Vector3d& oriB, const Vector3d& oriC,
-    const Vector3d& dir )
-{
-    const IntersectionPrecomputes<double> prec( dir );
-    return rayTriangleIntersect_( oriA, oriB, oriC, prec );
-}
+MR_BIND_TEMPLATE( bool doTrianglesOverlap( const Vector2<float>& a, const Vector2<float>& b, const Vector2<float>& c, const Vector2<float>& d, const Vector2<float>& e, const Vector2<float>& f ) )
+MR_BIND_TEMPLATE( bool doTrianglesOverlap( const Vector2<double>& a, const Vector2<double>& b, const Vector2<double>& c, const Vector2<double>& d, const Vector2<double>& e, const Vector2<double>& f ) )
 
 /// \}
 

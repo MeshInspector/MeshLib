@@ -188,7 +188,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 } // namespace ObjectSave
 
 Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
-                                  FolderCallback preCompress, const ObjectSave::Settings& settings )
+                                  FolderCallback preCompress, const SceneSave::Settings& settings )
 {
     MR_TIMER;
     if (path.empty())
@@ -211,7 +211,7 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     auto & saveModelFutures = expectedSaveModelFutures.value();
 
     assert( !object.name().empty() );
-    auto paramsFile = scenePath / ( object.name() + ".json" );
+    auto paramsFile = scenePath / asU8String( object.name() + ".json" );
     if ( !serializeJsonValue( root, paramsFile ) )
         return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
 
@@ -243,10 +243,10 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
     if ( preCompress )
         preCompress( scenePath );
 
-    return compressZip( path, scenePath, {}, nullptr, subprogress( settings.progress, 0.9f, 1.0f ) );
+    return compressZip( path, scenePath, { .cb = subprogress( settings.progress, 0.9f, 1.0f ) } );
 }
 
-Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path, const ObjectSave::Settings& settings )
+Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path, const SceneSave::Settings& settings )
 {
     return serializeObjectTree( object, path, {}, settings );
 }

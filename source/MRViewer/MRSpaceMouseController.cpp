@@ -1,61 +1,34 @@
 #include "MRSpaceMouseController.h"
 #include "MRViewer.h"
+#include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandlerWinEvents.h"
 #include "MRViewerSignals.h"
 #include "MRMakeSlot.h"
 #include "MRViewerInstance.h"
 #include "MRViewport.h"
-#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseDevice.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRVector3.h"
 #include "MRPch/MRSpdlog.h"
 
-namespace MR
+namespace MR::SpaceMouse
 {
 
-void SpaceMouseController::connect()
+void Controller::connect()
 {
     auto& viewer = getViewerInstance();
-    viewer.signals().spaceMouseMoveSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseMove_ ) );
-    viewer.signals().spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ) );
+    viewer.signals().spaceMouseMoveSignal.connect( MAKE_SLOT( &Controller::spaceMouseMove_ ) );
+    viewer.signals().spaceMouseDownSignal.connect( MAKE_SLOT( &Controller::spaceMouseDown_ ) );
 }
 
-void SpaceMouseController::setParameters( const SpaceMouseParameters& newParams )
-{
-    params = newParams;
-    for ( int i = 0; i < 3; ++i )
-    {
-        float sign = params.translateScale[i] < 0 ? -1.f : 1.f;
-        if ( params.translateScale[i] * sign < 50 )
-            params.translateScale[i] = ( 25.f + params.translateScale[i] * sign / 2.f ) * sign;
-        sign = params.rotateScale[i] < 0 ? -1.f : 1.f;
-        if ( params.rotateScale[i] < 50 )
-            params.rotateScale[i] = ( 25.f + params.rotateScale[i] * sign / 2.f ) * sign;
-    }
-}
-
-SpaceMouseParameters SpaceMouseController::getParameters() const
-{
-    SpaceMouseParameters out = params;
-    for ( int i = 0; i < 3; ++i )
-    {
-        float sign = out.translateScale[i] < 0 ? -1.f : 1.f;
-        if ( out.translateScale[i] * sign < 50 )
-            out.translateScale[i] = ( out.translateScale[i] * sign - 25.f ) * 2.f * sign;
-        sign = out.rotateScale[i] < 0 ? -1.f : 1.f;
-        if ( out.rotateScale[i] * sign < 50 )
-            out.rotateScale[i] = ( out.rotateScale[i] * sign - 25.f ) * 2.f * sign;
-    }
-    return out;
-}
-
-bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate )
+bool Controller::spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate )
 {
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    const Vector3f translateScaled = mult( translate, params.translateScale ) * 0.02f;
-    const Vector3f rotateScaled = mult( rotate, params.rotateScale ) * 0.001f;
+    const Vector3f translateScaled = mult( translate, params_.translateScale ) * 0.02f;
+    const Vector3f rotateScaled = mult( rotate, params_.rotateScale ) * 0.001f;
 
     const auto& viewportParams = viewport.getParameters();
 
@@ -95,7 +68,7 @@ bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vec
     return true;
 }
 
-bool SpaceMouseController::spaceMouseDown_( int key )
+bool Controller::spaceMouseDown_( int key )
 {
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
@@ -103,40 +76,58 @@ bool SpaceMouseController::spaceMouseDown_( int key )
     if ( showKeyDebug_ )
         spdlog::info( "SpaceMouse key down = {}", key );
 
-    if ( key == SMB_MENU )
+    using namespace SpaceMouse;
+
+    if ( key == int( Buttons::SMB_MENU ) )
     {
         showKeyDebug_ = !showKeyDebug_;
         return true;
     }
-    else if ( key == SMB_LOCK_ROT )
+    else if ( key == int( Buttons::SMB_LOCK_ROT ) )
     {
         lockRotate_ = !lockRotate_;
         return true;
     }
-    else if ( key == SMB_FIT )
+    else if ( key == int( Buttons::SMB_FIT ) )
     {
         getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::Visible } );
         return true;
     }
-    else if ( key == SMB_TOP )
+    else if ( key == int( Buttons::SMB_TOP ) )
     {
         viewport.setCameraTrackballAngle( getCanonicalQuaternions<float>()[1] );
         viewport.preciseFitDataToScreenBorder( { 0.9f } );
         return true;
     }
-    else if ( key == SMB_RIGHT )
+    else if ( key == int( Buttons::SMB_RIGHT ) )
     {
         viewport.setCameraTrackballAngle( getCanonicalQuaternions<float>()[6] );
         viewport.preciseFitDataToScreenBorder( { 0.9f } );
         return true;
     }
-    else if ( key == SMB_FRONT )
+    else if ( key == int( Buttons::SMB_FRONT ) )
     {
         viewport.setCameraTrackballAngle( getCanonicalQuaternions<float>()[0] );
         viewport.preciseFitDataToScreenBorder( { 0.9f } );
         return true;
     }
 	return false;
+}
+
+bool Controller::canDriverSendScroll() const
+{
+#ifndef _WIN32
+    return false;
+#else
+    auto handler = getViewerInstance().getSpaceMouseHandler();
+    if ( !handler )
+        return false;
+    if ( auto wHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerWinEvents >( handler ) )
+        return wHandler->hasValidDeviceConnected();
+    else if ( auto hHandler = std::dynamic_pointer_cast< SpaceMouse::HandlerHidapi >( handler ) )
+        return hHandler->hasValidDeviceConnected();
+    return false;
+#endif
 }
 
 }

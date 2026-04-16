@@ -20,6 +20,8 @@
 #include "MRTextureColors.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
+#include "MRBitSetParallelFor.h"
+#include "MRString.h"
 
 #include <array>
 #include <bit>
@@ -28,6 +30,8 @@
 
 namespace MR
 {
+
+void telemetryStlHead( const char* prefix, std::string s );
 
 Expected<Mesh> loadMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings )
 {
@@ -175,6 +179,8 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
 
     std::string header;
     in >> header;
+    if ( hasBom( header ) )
+        header = header.substr( 3 );
     if ( !in || header != "OFF" )
         return unexpected( std::string( "File is not in OFF-format" ) );
     // some options are not supported yet: http://www.geomview.org/docs/html/OFF.html
@@ -304,7 +310,8 @@ static Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& setting
     {
         .customXf = settings.xf != nullptr,
         .countSkippedFaces = settings.skippedFaceCount != nullptr,
-        .callback = settings.callback
+        .callback = settings.callback,
+        .telemetrySignal = settings.telemetrySignal
     };
     auto objs = fromSceneObjFile( in, true, dir, objLoadSettings );
     if ( !objs.has_value() )
@@ -489,7 +496,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
         return unexpectedOperationCanceled();
 
     if ( settings.telemetrySignal )
-        TelemetrySignal( std::string( "STL head " ) + header );
+        telemetryStlHead( "STL head ", header );
 
     return res;
 }
@@ -507,87 +514,110 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
 {
     MR_TIMER;
 
-    using HMap = ParallelHashMap<Vector3f, VertId>;
-    HMap hmap;
-    VertCoords points;
-    Triangulation t;
+    auto data = readCharBuffer( in );
+    if ( !data.has_value() )
+        return unexpected( data.error() );
 
-    std::string line;
-    std::string prefix;
-    Vector3f point;
-    ThreeVertIds currTri;
-    int triPos = 0;
-    bool solidFound = false;
+    std::string_view dataView( data->data(), data->size() );
 
-    const auto posStart = in.tellg();
-    const auto streamSize = getStreamSize( in );
+    if ( hasBom( dataView ) )
+        dataView = dataView.substr( 3 );
 
-    std::string header;
-    for ( int i = 0; std::getline( in, line ); ++i )
+    const auto newlines = splitByLines( dataView.data(), dataView.size() );
+
+    if ( !reportProgress( settings.callback, 0.15f ) )
+        return unexpectedOperationCanceled();
+
+    if ( newlines.size() < 2 )
+        return unexpected( std::string( "Ascii STL is too short" ) );
+
+    auto headerView = dataView.substr( newlines[0], newlines[1] );
+    if ( !headerView.starts_with( "solid" ) )
+        return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
+
+    BitSet faceRepresentativeLines( newlines.size() - 1 );
+    auto keepGoing = BitSetParallelForAll( faceRepresentativeLines, [&] ( size_t lineI )
     {
-        std::istringstream iss( line );
-        if ( !( iss >> prefix ) )
-            break;
+        auto startLine = newlines[lineI];
+        auto size = newlines[lineI + 1] - newlines[lineI];
+        if ( dataView.substr( startLine, size ).starts_with( "outer" ) )
+            faceRepresentativeLines.set( lineI );
+    }, subprogress( settings.callback, 0.15f, 0.3f ) );
 
-        if ( !solidFound )
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    auto numTris = faceRepresentativeLines.count();
+    const auto itemsInBuffer = std::min( numTris, size_t( 32768 ) );
+    int numChunks = ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer );
+    std::vector<Triangle3f> chunk( itemsInBuffer );
+    std::vector<Triangle3f> chunk2( itemsInBuffer );
+
+    auto lastFaceLine = faceRepresentativeLines.find_last();
+
+    MeshBuilder::VertexIdentifier vi;
+    vi.reserve( numTris );
+    tbb::task_group taskGroup;
+
+    int i = 0;
+    int processedChunks = 0;
+    auto sb = subprogress( settings.callback, 0.3f, 0.9f );
+    for ( auto fLine : faceRepresentativeLines )
+    {
+        if ( i < itemsInBuffer )
         {
-            if ( prefix == "solid" )
+            int triI = 0;
+            Triangle3f tri;
+            for ( auto lineI = fLine + 1; lineI + 1 < newlines.size(); ++lineI )
             {
-                solidFound = true;
-                std::getline( iss, header ); // header will include space after "solid"
+                if ( faceRepresentativeLines.test( lineI ) )
+                    break;
+                auto lineView = dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] );
+                if ( lineView.starts_with( "endloop" ) )
+                    break;
+                if ( !lineView.starts_with( "vertex" ) )
+                    continue;
+                if ( triI == 3 )
+                    return unexpected( "Polygonal STL is not supported, line: " + std::to_string( newlines[lineI] ) );
+                auto parseRes = parseTextCoordinate( lineView.substr( 7 ), tri[triI++] );
+                if ( !parseRes.has_value() )
+                    return unexpected( parseRes.error() + " line: " + std::to_string( newlines[lineI] ) );
             }
-            else
-                break;
+            if ( triI != 3 )
+                unexpected( "Too few vertices for triangle, line: " + std::to_string( newlines[fLine] ) );
+            chunk[i++] = std::move( tri );
         }
-
-        if ( prefix == "outer" )
+        if ( i == itemsInBuffer || fLine == lastFaceLine )
         {
-            triPos = 0;
-            continue;
-        }
-        if ( prefix == "vertex" )
-        {
-            double x, y, z; // double is used to correctly open coordinates like 1e-55 which are under of float-precision
-            if ( !( iss >> x >> y >> z ) )
-                break;
-            point = Vector3f{ Vector3d{ x, y, z } };
-
-            VertId& id = hmap[point];
-            if ( !id.valid() )
-            {
-                id = VertId( points.size() );
-                points.push_back( point );
-            }
-            currTri[triPos] = id;
-            ++triPos;
-            continue;
-        }
-        if ( prefix == "endloop" )
-        {
-            t.push_back( currTri );
-            continue;
-        }
-        if ( settings.callback && !( i & 0x3FF ) )
-        {
-            const float progress = float( in.tellg() - posStart ) / float( streamSize );
-            if ( !settings.callback( progress ) )
+            taskGroup.wait();
+            if ( !reportProgress( sb, float( ++processedChunks ) / float( numChunks ) ) )
                 return unexpectedOperationCanceled();
+            std::swap( chunk, chunk2 );
+            chunk2.resize( i );
+            i = 0;
+            if ( fLine != lastFaceLine ) // add previous chunk in indexer in parallel
+                taskGroup.run( [&chunk2, &vi] () { vi.addTriangles( chunk2 ); } );
+            else
+                vi.addTriangles( chunk2 );
         }
     }
 
-    if ( !solidFound )
-        return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
+    if ( !reportProgress( sb, 1.0f ) )
+        return unexpectedOperationCanceled();
 
+    auto t = vi.takeTriangulation();
     std::vector<MeshBuilder::VertDuplication> dups;
     std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
 
     if ( settings.telemetrySignal )
-        TelemetrySignal( "STL ASCII" + header );
+        telemetryStlHead( "STL ASCII ", std::string( headerView.substr( 6 ) ) ); // "solid " - 6 chars
 
     return res;
 }
@@ -686,6 +716,8 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     std::vector<Triangle3f> triangles;
     std::string str;
     std::getline( in, str );
+    if ( hasBom( str ) )
+        str = str.substr( 3 );
 
     int code = {};
     if ( !parseSingleNumber<int>( str, code ) )
@@ -737,6 +769,55 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     return Mesh::fromPointTriples( triangles, true );
 }
 
+void telemetryLogSize( const Mesh& mesh )
+{
+    if ( int logFaces = intLog2( mesh.topology.numValidFaces() ) )
+        TelemetrySignal( "Open Mesh Log Tris " + std::to_string( logFaces ) );
+    else if ( int logPoints = intLog2( (int)mesh.points.size() ) ) // if opened file contains no triangles but only points
+        TelemetrySignal( "Open Mesh Log Pnts " + std::to_string( logPoints ) );
+}
+
+static void telemetryOpenMesh( const std::string& ext, const Mesh& mesh, const MeshLoadSettings& settings )
+{
+    if ( !settings.telemetrySignal )
+        return;
+
+    std::string signalString = "Open " + ext;
+
+    if ( auto lv = mesh.points.size() ) // not lv = mesh.topology.lastValidVert(), since topology can be empty
+    {
+        signalString += " VP";
+        if ( settings.normals && settings.normals->size() >= lv )
+            signalString += 'N';
+        if ( settings.colors && settings.colors->size() >= lv )
+            signalString += 'C';
+        if ( settings.uvCoords && settings.uvCoords->size() >= lv )
+            signalString += "UV";
+    }
+
+    if ( auto lf = mesh.topology.lastValidFace() )
+    {
+        signalString += " TRI";
+        if ( settings.faceColors && settings.faceColors->size() >= lf )
+            signalString += 'C';
+    }
+
+    if ( settings.texture && !settings.texture->pixels.empty() )
+        signalString += " TEX";
+
+    if ( settings.skippedFaceCount && *settings.skippedFaceCount > 0 )
+        signalString += " SKIPF";
+
+    if ( settings.duplicatedVertexCount && *settings.duplicatedVertexCount > 0 )
+        signalString += " DUPV";
+
+    if ( settings.xf && *settings.xf != AffineXf3f{} )
+        signalString += " XF";
+
+    TelemetrySignal( signalString );
+    telemetryLogSize( mesh );
+}
+
 Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto ext = utf8string( file.extension() );
@@ -761,7 +842,10 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
         return unexpected( err );
     }
 
-    return loader.fileLoad( file, settings );
+    auto res = loader.fileLoad( file, settings );
+    if ( res )
+        telemetryOpenMesh( ext, *res, settings );
+    return res;
 }
 
 Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
@@ -782,7 +866,10 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
         return unexpected( err );
     }
 
-    return loader.streamLoad( in, settings );
+    auto res = loader.streamLoad( in, settings );
+    if ( res )
+        telemetryOpenMesh( ext, *res, settings );
+    return res;
 }
 
 /*

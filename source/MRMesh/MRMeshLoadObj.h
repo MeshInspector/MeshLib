@@ -31,6 +31,9 @@ struct ObjLoadSettings
 
     /// callback for set progress and stop process
     ProgressCallback callback;
+
+     /// permit telemetry signal about loading
+    bool telemetrySignal = true;
 };
 
 struct NamedMesh

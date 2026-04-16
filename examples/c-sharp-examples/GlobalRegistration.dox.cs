@@ -1,22 +1,21 @@
 using System.Reflection;
-using static MR.DotNet;
 
 public class GlobalRegistrationExample
 {
-    static void PrintStats(MultiwayICP icp)
+    static void PrintStats(MR.MultiwayICP icp)
     {
-        int numActivePairs = icp.GetNumActivePairs();
-        Console.WriteLine($"Number of samples: {icp.GetNumSamples()}");
+        ulong numActivePairs = icp.getNumActivePairs();
+        Console.WriteLine($"Number of samples: {icp.getNumSamples()}");
         Console.WriteLine($"Number of active pairs: {numActivePairs}");
 
         if (numActivePairs > 0)
         {
-            double p2ptMetric = icp.GetMeanSqDistToPoint();
-            double p2ptInaccuracy = icp.GetMeanSqDistToPoint(p2ptMetric);
+            double p2ptMetric = icp.getMeanSqDistToPoint();
+            double p2ptInaccuracy = icp.getMeanSqDistToPoint(p2ptMetric);
             Console.WriteLine($"RMS point-to-point distance: {p2ptMetric} ± {p2ptInaccuracy}");
 
-            double p2plMetric = icp.GetMeanSqDistToPlane();
-            double p2plInaccuracy = icp.GetMeanSqDistToPlane(p2ptMetric);
+            double p2plMetric = icp.getMeanSqDistToPlane();
+            double p2plInaccuracy = icp.getMeanSqDistToPlane(p2ptMetric);
             Console.WriteLine($"RMS point-to-plane distance: {p2plMetric} ± {p2plInaccuracy}");
         }
     }
@@ -31,38 +30,38 @@ public class GlobalRegistrationExample
         try
         {
             int inputNum = args.Length - 2;
-            List<MeshOrPointsXf> inputs = new List<MeshOrPointsXf>(inputNum);
-            Box3f maxBBox = new Box3f();
+            MR.Vector_MRMeshOrPointsXf_MRObjId inputs = new();
+            MR.Box3f maxBBox = new();
             for (int i = 0; i < inputNum; ++i)
             {
-                MeshOrPointsXf obj = new MeshOrPointsXf(PointsLoad.FromAnySupportedFormat(args[i + 1]), new AffineXf3f());
-                inputs.Add(obj);
-                Box3f bbox = obj.obj.BoundingBox;
-                if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
-                    maxBBox = bbox;
+                var pc = MR.PointsLoad.fromAnySupportedFormat(args[i + 1]);
+                MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
+                inputs.pushBack(obj);
+                maxBBox.include(obj.obj.computeBoundingBox());
             }
 
-            MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
-            samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
+            MR.MultiwayICPSamplingParameters samplingParams = new();
+            samplingParams.samplingVoxelSize = maxBBox.diagonal() * 0.03f;
 
-            MultiwayICP icp = new MultiwayICP(inputs, samplingParams);
-            ICPProperties iCPProperties = new ICPProperties();
-            icp.SetParams(iCPProperties);
-            icp.UpdateAllPointPairs();
+            MR.MultiwayICP icp = new(inputs, samplingParams);
+            MR.ICPProperties iCPProperties = new();
+            icp.setParams(iCPProperties);
+            icp.updateAllPointPairs();
             PrintStats(icp);
 
             Console.WriteLine("Calculating transformations...");
-            var xfs = icp.CalculateTransformations();
+            MR.Vector_MRAffineXf3f_MRObjId xfs = icp.calculateTransformations();
             PrintStats(icp);
-            PointCloud output = new PointCloud();
+            MR.PointCloud output = new();
             for (int i = 0; i < inputNum; ++i)
             {
-                var xf = xfs[i];
-                for (int j = 0; j < inputs[i].obj.Points.Count; j++)
-                    output.AddPoint(xf.Apply(inputs[i].obj.Points[j]));
+                MR.ObjId id = new(i);
+                var xf = xfs[id];
+                for (ulong j = 0; j < inputs[id].obj.points().size(); j++)
+                    output.addPoint(xf.call(inputs[id].obj.points()[new MR.VertId(j)]));
             }
 
-            PointsSave.ToAnySupportedFormat(output, args[args.Length - 1]);
+            MR.PointsSave.toAnySupportedFormat(output, args[args.Length - 1]);
         }
         catch (Exception e)
         {

@@ -11,11 +11,13 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4515)
+#pragma warning(disable: 4127) //conditional expression is constant
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
@@ -38,6 +40,8 @@ struct VoxelTraits<openvdb::FloatGrid::Accessor>
 };
 
 using VolumeMinMaxAccessor = VoxelsVolumeMinMax<openvdb::FloatGrid::Accessor>;
+
+static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
 
 namespace VoxelsLoad
 {
@@ -329,6 +333,9 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
     res.vol = std::move( vol );
     res.name = utf8string( file.stem() );
     res.xf = fileRes.xf;
+
+    TelemetrySignal( fmt::format( "Open DICOM file {}x{}x{}", res.vol.dims.x, res.vol.dims.y, res.vol.dims.z ) );
+
     return res;
 }
 
@@ -468,37 +475,33 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
     tbb::task_arena limitedArena( maxNumThreads );
     limitedArena.execute( [&]
     {
-        tbb::parallel_for( tbb::blocked_range( 0, int( files.size() ) ),
-            [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( files, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
+            gdcm::ImageReader ir;
+            std::ifstream ifs( files[i], std::ios_base::binary );
+            ir.SetStream( ifs );
+            ir.ReadSelectedTags( {
+                gdcm::Tag( 0x0002, 0x0002 ),
+                gdcm::Tag( 0x0008, 0x0016 ),
+                gdcm::Keywords::InstanceNumber::GetTag(),
+                gdcm::Keywords::ImagePositionPatient::GetTag() } );
+
+            SliceInfo sl;
+            sl.fileNum = (int)i;
+            const auto origin = gdcm::ImageHelper::GetOriginValue( ir.GetFile() );
+            sl.z = origin[2];
+            sl.imagePos = { origin[0], origin[1], origin[2] };
+
+            // if Instance Number is available then sort by it
+            const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
+            if( ds.FindDataElement( gdcm::Keywords::InstanceNumber::GetTag() ) )
             {
-                gdcm::ImageReader ir;
-                std::ifstream ifs( files[i], std::ios_base::binary );
-                ir.SetStream( ifs );
-                ir.ReadSelectedTags( {
-                    gdcm::Tag( 0x0002, 0x0002 ),
-                    gdcm::Tag( 0x0008, 0x0016 ),
-                    gdcm::Keywords::InstanceNumber::GetTag(),
-                    gdcm::Keywords::ImagePositionPatient::GetTag() } );
-
-                SliceInfo sl;
-                sl.fileNum = i;
-                const auto origin = gdcm::ImageHelper::GetOriginValue( ir.GetFile() );
-                sl.z = origin[2];
-                sl.imagePos = { origin[0], origin[1], origin[2] };
-
-                // if Instance Number is available then sort by it
-                const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
-                if( ds.FindDataElement( gdcm::Keywords::InstanceNumber::GetTag() ) )
-                {
-                    const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::InstanceNumber::GetTag() );
-                    gdcm::Keywords::InstanceNumber at = {0}; // default value if empty
-                    at.SetFromDataElement( de );
-                    sl.instanceNum = at.GetValue();
-                }
-                zOrder[i] = sl;
+                const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::InstanceNumber::GetTag() );
+                gdcm::Keywords::InstanceNumber at = {0}; // default value if empty
+                at.SetFromDataElement( de );
+                sl.instanceNum = at.GetValue();
             }
+            zOrder[i] = sl;
         } );
     } );
 
@@ -654,6 +657,9 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     else
          res.name = firstRes.seriesDescription;
     res.xf = firstRes.xf;
+
+    TelemetrySignal( fmt::format( "Open DICOM folder {}x{}x{}", res.vol.dims.x, res.vol.dims.y, res.vol.dims.z ) );
+
     return res;
 }
 
@@ -730,7 +736,7 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
 } // anonymous namespace
 
-DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
+DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid, Vector3i* outDims )
 {
     std::ifstream ifs( path, std::ios_base::binary );
 
@@ -797,6 +803,12 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
     {
         spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
         return { DicomStatusEnum::Unsupported, "unsupported dimensionality" };
+    }
+    if ( outDims )
+    {
+        (*outDims)[0] = dims[0];
+        (*outDims)[1] = dims[1];
+        (*outDims)[2] = dims[2];
     }
 
     if ( seriesUid )
@@ -937,6 +949,25 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesy
     return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
 }
 
+MR_ON_INIT
+{
+    setVoxelsLoader(
+        filter,
+        []( const std::filesystem::path& path, const ProgressCallback& cb )
+        {
+            return loadDicomFileAsVdb( path, cb ).transform(
+                []( DicomVolumeAsVdb&& r )
+                {
+                    std::vector<VdbVolume> ret;
+                    ret.push_back( std::move( r.vol ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.
+                    return ret;
+                }
+            );
+        }
+    );
+    ObjectLoad::setObjectLoader( filter, makeObjectFromVoxelsFile );
+};
+
 } // namespace VoxelsLoad
 
 namespace VoxelsSave
@@ -1017,26 +1048,9 @@ template Expected<void> toDicom<uint16_t>( const SimpleVolumeU16& volume, const 
 
 MR_ON_INIT
 {
-    static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
-    MR::VoxelsSave::setVoxelsSaver( filter, MR::VoxelsSave::toDicom );
+    setVoxelsSaver( filter, toDicom );
     /* additionally register the general saver as an object saver for this format */
-    MR::ObjectSave::setObjectSaver( filter, MR::saveObjectVoxelsToFile );
-
-    MR::VoxelsLoad::setVoxelsLoader(
-        filter,
-        []( const std::filesystem::path& path, const ProgressCallback& cb )
-        {
-            return MR::VoxelsLoad::loadDicomFileAsVdb( path, cb ).transform(
-                []( MR::VoxelsLoad::DicomVolumeAsVdb&& r )
-                {
-                    std::vector<VdbVolume> ret;
-                    ret.push_back( std::move( r.vol ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.
-                    return ret;
-                }
-            );
-        }
-    );
-    MR::ObjectLoad::setObjectLoader( filter, MR::makeObjectFromVoxelsFile );
+    ObjectSave::setObjectSaver( filter, saveObjectVoxelsToFile );
 };
 
 } // namespace VoxelsSave

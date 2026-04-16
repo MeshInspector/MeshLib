@@ -1328,9 +1328,13 @@ namespace miniply {
       }
       if ( commentLine )
       {
-          while ( m_end < m_pos && is_whitespace( *m_end ) )
-              ++m_end; // skip white spaces after "comment" tag
-          m_comments.emplace_back( m_end, m_pos );
+          auto first = m_end;
+          auto last = m_pos;
+          while ( first < last && is_whitespace( *first ) )
+              ++first; // skip white spaces after "comment" tag
+          while ( first < last && is_whitespace( *( last - 1 ) ) )
+              --last; // skip white spaces at the end of the comment
+          m_comments.emplace_back( first, last );
       }
       ++m_pos; // move past the newline char
       m_end = m_pos;

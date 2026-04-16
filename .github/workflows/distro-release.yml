@@ -12,7 +12,7 @@ jobs:
     runs-on: aws-micro
     env:
       vs19_vcpkg_version: "2024.10.21"
-      vs22_vcpkg_version: "2025.10.17"
+      vs22_vcpkg_version: "2026.03.18"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}
       release_tag: ${{ steps.set.outputs.release_tag }}
@@ -80,7 +80,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: Distributives*
           merge-multiple: true
@@ -109,13 +109,8 @@ jobs:
     steps:
         # all distribution
       - name: Delete All MeshInspector Distribution Files
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Distributives*
           failOnError: false
 
-      - name: Delete All MeshInspector Distribution Files
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: WindowsArchive*
-          failOnError: false

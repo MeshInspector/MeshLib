@@ -16,9 +16,10 @@ namespace ImageLoad
 {
 
 /// loads from .jpg format
-MRIOEXTRAS_API Expected<Image> fromJpeg( const std::filesystem::path& path );
-MRIOEXTRAS_API Expected<Image> fromJpeg( std::istream& in );
-MRIOEXTRAS_API Expected<Image> fromJpeg( const char* data, size_t size );
+/// \param ignoreDecompressErrors if true do not return decompression error if the header was read sucessfully
+MRIOEXTRAS_API Expected<Image> fromJpeg( const std::filesystem::path& path, bool ignoreDecompressErrors = false );
+MRIOEXTRAS_API Expected<Image> fromJpeg( std::istream& in, bool ignoreDecompressErrors = false );
+MRIOEXTRAS_API Expected<Image> fromJpeg( const char* data, size_t size, bool ignoreDecompressErrors = false );
 
 } // namespace ImageLoad
 

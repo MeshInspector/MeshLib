@@ -36,8 +36,8 @@ public:
     ObjectMeshHolder( ObjectMeshHolder&& ) noexcept = default;
     ObjectMeshHolder& operator = ( ObjectMeshHolder&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "MeshHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
@@ -63,6 +63,14 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
+
+    /// this is a faster version of setDirtyFlags(), which does not invalidate metrics cache (area, volume, ...);
+    /// the user is responsible for calling invalidateMetricsCache( mask ) or setDirtyFlags( mask ) at the end of mesh editing;
+    /// DANGER: all cached values returned until then can be outdated
+    MRMESH_API virtual void setDirtyFlagsFast( uint32_t mask );
+
+    /// invalidates same caches with mesh metrics (area, volume, ...) as by setDirtyFlags( mask )
+    MRMESH_API virtual void invalidateMetricsCache( uint32_t mask );
 
     const FaceBitSet& getSelectedFaces() const { return data_.selectedFaces; }
     MRMESH_API virtual void selectFaces( FaceBitSet newSelection );
@@ -193,9 +201,6 @@ public:
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
 
-    /// returns dirty flag of currently using normal type if they are dirty in render representation
-    MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
-
     MRMESH_API virtual bool getRedrawFlag( ViewportMask viewportMask ) const override;
 
     /// returns cached information whether the mesh is closed
@@ -264,6 +269,10 @@ public:
     SelectionChangedSignal faceSelectionChangedSignal;
     SelectionChangedSignal edgeSelectionChangedSignal;
     SelectionChangedSignal creasesChangedSignal;
+
+    /// signal about mesh changing, triggered in setDirtyFlag
+    using MeshChangedSignal = Signal<void( uint32_t mask )>;
+    MeshChangedSignal meshChangedSignal;
 
 protected:
     ObjectMeshData data_;

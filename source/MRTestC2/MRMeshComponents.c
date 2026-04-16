@@ -54,10 +54,10 @@ void testComponentsMap( void )
     CreatedMesh m = createMesh();
 
     MR_std_pair_MR_Face2RegionMap_int* map = MR_MeshComponents_getAllComponentsMap( m.part, NULL, NULL );
-    TEST_ASSERT( *MR_std_pair_MR_Face2RegionMap_int_Second( map ) == 2 );
-    TEST_ASSERT( MR_Face2RegionMap_size( MR_std_pair_MR_Face2RegionMap_int_First( map ) ) == 24 );
-    TEST_ASSERT( MR_Face2RegionMap_index_const( MR_std_pair_MR_Face2RegionMap_int_First( map ), (MR_FaceId){0} )->id_ == 0 );
-    TEST_ASSERT( MR_Face2RegionMap_index_const( MR_std_pair_MR_Face2RegionMap_int_First( map ), (MR_FaceId){12} )->id_ == 1 );
+    TEST_ASSERT( *MR_std_pair_MR_Face2RegionMap_int_second( map ) == 2 );
+    TEST_ASSERT( MR_Face2RegionMap_size( MR_std_pair_MR_Face2RegionMap_int_first( map ) ) == 24 );
+    TEST_ASSERT( MR_Face2RegionMap_index( MR_std_pair_MR_Face2RegionMap_int_first( map ), (MR_FaceId){0} )->id_ == 0 );
+    TEST_ASSERT( MR_Face2RegionMap_index( MR_std_pair_MR_Face2RegionMap_int_first( map ), (MR_FaceId){12} )->id_ == 1 );
 
     MR_std_pair_MR_Face2RegionMap_int_Destroy( map );
 
@@ -69,11 +69,11 @@ void testLargeRegions( void )
     CreatedMesh m = createMesh();
 
     MR_std_pair_MR_Face2RegionMap_int* map = MR_MeshComponents_getAllComponentsMap( m.part, NULL, NULL );
-    MR_std_pair_MR_FaceBitSet_int* regions = MR_MeshComponents_getLargeByAreaRegions( m.part, MR_std_pair_MR_Face2RegionMap_int_First( map ), *MR_std_pair_MR_Face2RegionMap_int_Second( map ), 0.1f );
+    MR_std_pair_MR_FaceBitSet_int* regions = MR_MeshComponents_getLargeByAreaRegions( m.part, MR_std_pair_MR_Face2RegionMap_int_first( map ), *MR_std_pair_MR_Face2RegionMap_int_second( map ), 0.1f );
 
-    TEST_ASSERT( *MR_std_pair_MR_FaceBitSet_int_Second( regions ) == 1 );
-    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int_First( regions ) ), 0 ) );
-    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int_First( regions ) ), 12 ) );
+    TEST_ASSERT( *MR_std_pair_MR_FaceBitSet_int_second( regions ) == 1 );
+    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int_first( regions ) ), 0 ) );
+    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int_first( regions ) ), 12 ) );
 
     MR_std_pair_MR_Face2RegionMap_int_Destroy( map );
 

@@ -1,5 +1,6 @@
 #include "MRIRenderObject.h"
 #include "MRphmap.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -48,10 +49,11 @@ RegisterRenderObjectConstructor::~RegisterRenderObjectConstructor()
 
 std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type )
 {
+    MR_TIMER;
     auto lambda = RenderObjectConstructorsHolder::findConstructorLambda( type );
     if ( !lambda )
         return {};
     return lambda( visObj );
 }
 
-}
+} //namespace MR

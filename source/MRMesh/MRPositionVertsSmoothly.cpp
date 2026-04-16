@@ -28,7 +28,7 @@ void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, co
     MR_TIMER;
 
     Laplacian laplacian( topology, points );
-    laplacian.init( verts, edgeWeights, vmass, Laplacian::RememberShape::No );
+    laplacian.init( verts, edgeWeights, vmass, RememberShape::No );
     if ( fixedSharpVertices )
         for ( auto v : *fixedSharpVertices )
             laplacian.fixVertex( v, false );

@@ -26,14 +26,14 @@ public:
     ConeObject( ConeObject&& ) noexcept = default;
     ConeObject& operator = ( ConeObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "ConeObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ConeObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* ClassName() noexcept { return "Cone"; }
-    virtual std::string className() const override { return ClassName(); }
+    constexpr static const char* StaticClassName() noexcept { return "Cone"; }
+    virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* ClassNameInPlural() noexcept { return "Cones"; }
-    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Cones"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ConeObject( ProtectedStruct, const ConeObject& obj ) : ConeObject( obj )

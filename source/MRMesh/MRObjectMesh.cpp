@@ -157,18 +157,6 @@ std::shared_ptr<Object> ObjectMesh::shallowClone() const
     return res;
 }
 
-void ObjectMesh::setDirtyFlags( uint32_t mask, bool invalidateCaches )
-{
-    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
-    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
-    {
-        if ( data_.mesh )
-        {
-            meshChangedSignal( mask );
-        }
-    }
-}
-
 void ObjectMesh::swapBase_( Object& other )
 {
     if ( auto otherMesh = other.asType<ObjectMesh>() )
@@ -177,19 +165,10 @@ void ObjectMesh::swapBase_( Object& other )
         assert( false );
 }
 
-void ObjectMesh::swapSignals_( Object& other )
-{
-    ObjectMeshHolder::swapSignals_( other );
-    if ( auto otherMesh = other.asType<ObjectMesh>() )
-        std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
-    else
-        assert( false );
-}
-
 void ObjectMesh::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
-    root["Type"].append( ObjectMesh::TypeName() );
+    root["Type"].append( ObjectMesh::StaticTypeName() );
 }
 
 std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh, const ObjectMeshMergeOptions& options )

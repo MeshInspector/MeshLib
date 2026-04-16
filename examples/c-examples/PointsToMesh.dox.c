@@ -17,14 +17,14 @@ int main( void )
     int rc = EXIT_FAILURE;
     // load points
     MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "Points.ply", NULL, NULL );
-    MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_GetMutableValue( loadRes );
+    MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_value_mut( loadRes );
     if ( !pointCloud )
     {
-        fprintf( stderr, "Failed to load points: %s\n", MR_std_string_Data( MR_expected_MR_PointCloud_std_string_GetError( loadRes ) ) );
+        fprintf( stderr, "Failed to load points: %s\n", MR_std_string_data( MR_expected_MR_PointCloud_std_string_error( loadRes ) ) );
         goto fail_load; // error while loading file
     }
     MR_std_optional_MR_Mesh* triangulationRes = MR_triangulatePointCloud( pointCloud, NULL, NULL );
-    MR_Mesh* mesh = MR_std_optional_MR_Mesh_MutableValue( triangulationRes );
+    MR_Mesh* mesh = MR_std_optional_MR_Mesh_value_mut( triangulationRes );
     if ( !mesh )
     {
         fprintf( stderr, "Triangulation canceled" );
@@ -32,9 +32,9 @@ int main( void )
     }
 
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "mesh.ply", NULL, NULL );
-    if ( MR_expected_void_std_string_GetError( saveEx ) )
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
         goto fail_save; // error while saving file
     }
 

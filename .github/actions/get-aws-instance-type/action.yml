@@ -39,7 +39,6 @@ runs:
 
     - name: Get AWS instance type (Windows)
       if: ${{ runner.os == 'Windows' }}
-      shell: powershell
       run: |
         try {
             $Token = Invoke-RestMethod -Uri "http://169.254.169.254/latest/api/token" -Method PUT -Headers @{ "X-aws-ec2-metadata-token-ttl-seconds" = "10" }

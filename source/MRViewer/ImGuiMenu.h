@@ -24,6 +24,7 @@ class MeshModifier;
 struct UiRenderManager;
 class SceneObjectsListDrawer;
 class ObjectComparableWithReference;
+class CombinedHistoryAction;
 
 enum class SelectedTypesMask
 {
@@ -132,8 +133,10 @@ protected:
       Quad // left lower vp, left upper vp, right lower vp, right upper vp
   } viewportConfig_{ Single };
 
-  // flag to correctly update scroll on transform window appearing
-  bool selectionChangedToSingleObj_{ false };
+  // Tracks whether the transform block is currently being drawn in the scene info panel.
+  // On the false→true transition (i.e. the block just appeared) the scene-list scroll is
+  // fixed up so the selected row stays in view as the properties panel grows.
+  bool transformBlockShown_{ false };
   // menu will change objects' colors in this viewport
   ViewportId selectedViewport_ = {};
 
@@ -410,7 +413,27 @@ protected:
 
     MRVIEWER_API float drawTransform_();
 
-    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
+    // Draws a read-only row of long-dashes ("—") matching the column layout of `UI::drag`;
+    // used in drawTransform_ when the selection's transforms are not all equal.
+    // `trailingLabel`, if non-null, is shown to the right of the last column (matches the
+    // label rendering of the editable `UI::drag` widgets).
+    MRVIEWER_API void drawMixedTransformField_( const char* labelId, int columns, const char* trailingLabel = nullptr );
+
+    // Builds one ChangeXfAction per object and wraps them in a single CombinedHistoryAction,
+    // so a multi-object transform edit goes into the history as a single undoable step.
+    MRVIEWER_API std::shared_ptr<CombinedHistoryAction> makeObjectsXfHistoryAction_(
+        const std::string& name,
+        const std::vector<std::shared_ptr<Object>>& objs ) const;
+
+    // Applies the same transform to every object in objs.
+    MRVIEWER_API void applyXfToObjects_(
+        const AffineXf3f& xf,
+        const std::vector<std::shared_ptr<Object>>& objs );
+
+    // Context menu for the transform panel. Invoked for the whole selection — caller guarantees
+    // all passed objects share the same xf, so Copy/Save read from the first and Paste/Load/Reset
+    // apply to every object under one combined history entry.
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ ) { return false; }
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();

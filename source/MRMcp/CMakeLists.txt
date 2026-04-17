@@ -24,6 +24,8 @@ IF(MESHLIB_USE_VCPKG OR APPLE)
   target_include_directories(${PROJECT_NAME} PRIVATE
     ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include
     ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
+  )
+  target_include_directories(${PROJECT_NAME} PUBLIC
     ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
   )
 ELSE()

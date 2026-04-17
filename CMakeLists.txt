@@ -58,6 +58,9 @@ option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are a
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
+IF(MR_EMSCRIPTEN)
+  set(MESHLIB_BUILD_MCP OFF)
+ENDIF()
 IF(MR_EMSCRIPTEN OR APPLE)
   set(MESHLIB_BUILD_MRCUDA OFF)
 ENDIF()

@@ -18,7 +18,10 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
-      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
+      # Pulled from GHCR (mirrored from Docker Hub in prepare-images.yml) for faster pulls
+      # on GitHub-hosted ARM64 runners. Falls back to re-pushing via prepare-images.yml if
+      # the GHCR copy is ever out of sync.
+      image: ghcr.io/meshinspector/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:

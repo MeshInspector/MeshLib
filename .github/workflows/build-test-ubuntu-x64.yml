@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 60
     runs-on: [ubuntu-latest]
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
+      image: ghcr.io/meshinspector/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
       options: --user root
     strategy:
       fail-fast: false

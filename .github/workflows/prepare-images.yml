@@ -38,6 +38,10 @@ jobs:
   linux-image-build-upload:
     if: ${{ inputs.need_linux_image_rebuild }}
     timeout-minutes: 75
+    # packages: write is needed to push the image mirrors to GHCR.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -92,11 +96,27 @@ jobs:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Linux image
         run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
 
       - name: Push Linux image
         run: docker push ${{ env.image }}
+
+      - name: Tag and push image to GHCR
+        # Mirror all Linux images to GHCR. Pulls from ghcr.io to GitHub-hosted runners
+        # are typically 2-3x faster than Docker Hub due to colocation.
+        env:
+          ghcr_image: ghcr.io/${{ github.repository_owner }}/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
+        run: |
+          docker tag ${{ env.image }} ${ghcr_image,,}
+          docker push ${ghcr_image,,}
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
@@ -104,6 +124,10 @@ jobs:
   linux-vcpkg-build-upload:
     if: ${{ inputs.need_linux_vcpkg_rebuild }}
     timeout-minutes: 75
+    # packages: write is needed to push the image mirror to GHCR.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -131,11 +155,26 @@ jobs:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Linux vcpkg image
         run: docker build -f ./docker/${{ matrix.os }}-vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
 
       - name: Push Linux vcpkg image
         run: docker push ${{ env.image }}
+
+      - name: Tag and push vcpkg image to GHCR
+        # Mirror the vcpkg image to GHCR for faster pulls from GitHub-hosted runners.
+        env:
+          ghcr_image: ghcr.io/${{ github.repository_owner }}/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
+        run: |
+          docker tag ${{ env.image }} ${ghcr_image,,}
+          docker push ${ghcr_image,,}
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes

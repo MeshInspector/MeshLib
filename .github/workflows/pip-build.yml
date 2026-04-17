@@ -60,7 +60,7 @@ jobs:
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.vcpkg_docker_image_tag || 'latest'}}
+      image: ghcr.io/meshinspector/meshlib-${{matrix.os}}:${{inputs.vcpkg_docker_image_tag || 'latest'}}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false

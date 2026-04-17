@@ -968,7 +968,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         group->setAncillary( false );
         group->setName( "Group" );
 
-        SCOPED_HISTORY( "Group" );
+        SCOPED_HISTORY( _t( "Group" ) );
         AppendHistory<ChangeSceneAction>( "Add object", group, ChangeSceneAction::Type::AddObject );
         parentObj->addChild( group );
         for ( int i = 0; i < selected.size(); ++i )
@@ -1003,7 +1003,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         std::erase_if( objs, []( const auto & pObj )
             { return !pObj || !pObj->parent() || pObj->parent()->isSelected(); } );
 
-        SCOPED_HISTORY( "Ungroup" );
+        SCOPED_HISTORY( _t( "Ungroup" ) );
         for ( const auto& selObj : objs )
         {
             // move all children of selObj to its parent
@@ -1033,7 +1033,7 @@ void RibbonMenu::pushNotification( const RibbonNotification& notification )
 void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects )
 {
     const std::regex pattern( R"(.*(?:| \([0-9]+\))$)" );
-    SCOPED_HISTORY( "Clone" );
+    SCOPED_HISTORY( _t( "Clone" ) );
     for ( const auto& obj : selectedObjects )
     {
         if ( !obj )
@@ -1068,7 +1068,7 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
 
 void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
 {
-    SCOPED_HISTORY( "Clone Selection" );
+    SCOPED_HISTORY( _t( "Clone Selection" ) );
     std::shared_ptr<VisualObject> newObj;
     std::string name;
     if ( auto selectedMesh = std::dynamic_pointer_cast< ObjectMesh >( object ) )
@@ -1193,7 +1193,7 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     if ( !UI::button( _tr( "Combine Subtree" ), Vector2f( -1, 0 ) ) )
         return false;
 
-    SCOPED_HISTORY( "Combine Subtree" );
+    SCOPED_HISTORY( _t( "Combine Subtree" ) );
     for ( auto& subtree : subtrees )
         mergeSubtree( std::move( subtree ) );
 
@@ -1858,7 +1858,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
 
         if ( ImGui::Button( "\xef\x80\x8d", smallBtnSize ) ) // X(cross) icon for reset
         {
-            AppendHistory<ChangeXfAction>( "Reset Transform", obj );
+            AppendHistory<ChangeXfAction>( _t( "Reset Transform" ), obj );
             obj->setXf( AffineXf3f() );
         }
         iconsFont.popFont();
@@ -1949,7 +1949,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             {
                 if ( UI::button( _tr( "Paste" ), Vector2f( buttonSize, 0 ) ) )
                 {
-                    AppendHistory<ChangeXfAction>( "Paste Transform", selected );
+                    AppendHistory<ChangeXfAction>( _t( "Paste Transform" ), selected );
                     selected->setXf( tr->xf );
                     uniformScale_ = tr->uniformScale;
                     ImGui::CloseCurrentPopup();
@@ -1989,7 +1989,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             {
                 if ( auto tr = deserializeTransform( *root ) )
                 {
-                    AppendHistory<ChangeXfAction>( "Load Transform from File", selected );
+                    AppendHistory<ChangeXfAction>( _t( "Load Transform from File" ), selected );
                     selected->setXf( tr->xf );
                     uniformScale_ = tr->uniformScale;
                 }
@@ -2022,7 +2022,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
         if ( UI::button( _tr( "Reset" ), Vector2f( buttonSize, 0 ) ) )
         {
-            AppendHistory<ChangeXfAction>( "Reset Transform (context menu)", selected );
+            AppendHistory<ChangeXfAction>( _t( "Reset Transform (context menu)" ), selected );
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }

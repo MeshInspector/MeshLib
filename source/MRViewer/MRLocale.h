@@ -21,7 +21,7 @@ MRVIEWER_API const std::locale& get();
 MRVIEWER_API const std::string& getName();
 /// \brief Loads and sets the active locale by its name. UTF-8 is always used as an encoding.
 /// \returns Reference to the new locale.
-MRVIEWER_API const std::locale& set( std::string localeName );
+MRVIEWER_API const std::locale& set( const std::string& localeName );
 /// \brief Connects to a signal emitted every time the active locale is changed.
 MRVIEWER_API boost::signals2::connection onChanged( const std::function<void ( const std::string& )>& cb );
 

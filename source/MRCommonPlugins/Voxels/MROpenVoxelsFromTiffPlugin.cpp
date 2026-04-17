@@ -110,7 +110,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
             voxelsObject->select( true );
             return [this, viewer, voxelsObject, directory] ()
             {
-                AppendHistory<ChangeSceneAction>( "Open Voxels From TIFF", voxelsObject, ChangeSceneAction::Type::AddObject );
+                AppendHistory<ChangeSceneAction>( _t( "Open Voxels From TIFF" ), voxelsObject, ChangeSceneAction::Type::AddObject );
                 SceneRoot::get().addChild( voxelsObject );
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 std::filesystem::path scenePath = directory;

@@ -99,6 +99,7 @@ if [[ $OSTYPE == 'darwin'* ]]; then
 else
   NPROC=$(nproc)
 fi
+echo "The number of concurrent build threads NPROC=${NPROC}"
 
 # exit if any command failed
 set -eo pipefail

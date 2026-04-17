@@ -66,6 +66,10 @@ struct FixMeshDegeneraciesParams
         RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
     } mode{ Mode::Remesh };
 
+    /// trying to stay close to initial surface when patching
+    /// also disables smoothing on patch
+    bool mimicPatch = false;
+
     ProgressCallback cb;
 };
 

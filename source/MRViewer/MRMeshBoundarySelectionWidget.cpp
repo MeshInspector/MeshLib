@@ -80,7 +80,7 @@ std::pair  <std::shared_ptr<MR::ObjectMeshHolder>, HoleEdgePoint> BoundarySelect
 bool BoundarySelectionWidget::selectHole_( std::shared_ptr<ObjectMeshHolder> object, int index, bool writeHistory )
 {
     if ( writeHistory )
-        AppendHistory<ChangeBoundarySelectionHistoryAction>( "Change Boundary Selection", *this, object, index );
+        AppendHistory<ChangeBoundarySelectionHistoryAction>( _t( "Change Boundary Selection" ), *this, object, index );
 
     bool result;
     {
@@ -124,7 +124,7 @@ bool  BoundarySelectionWidget::isSelectedAndHoveredTheSame_()
 
 bool BoundarySelectionWidget::selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index )
 {
-    SCOPED_HISTORY( "Select Mesh Boundary" );
+    SCOPED_HISTORY( _t( "Select Mesh Boundary" ) );
     return selectHole_( object, index );
 }
 

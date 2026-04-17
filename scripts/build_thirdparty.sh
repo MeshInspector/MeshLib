@@ -32,38 +32,10 @@ else
   echo "Host system: ${OSTYPE}"
 fi
 
-MR_EMSCRIPTEN_SINGLETHREAD=0
-if [[ $OSTYPE == "linux"* ]] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N) (s - singlethreaded, l - 64-bit)" -rsn 1
-    echo;
-    case $REPLY in
-      Y|y)
-        MR_EMSCRIPTEN="ON";;
-      S|s)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_SINGLETHREAD=1;;
-      L|l)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_WASM64=1;;
-      *)
-        MR_EMSCRIPTEN="OFF";;
-    esac
-  fi  
-else
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    MR_EMSCRIPTEN="OFF"
-  fi
-fi
-echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}, 64-bit ${MR_EMSCRIPTEN_WASM64}"
+. "$SCRIPT_DIR/ask_emscripten_mode.src"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
-  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
-    MR_EMSCRIPTEN_SINGLETHREAD=1
-  fi
-  if [[ $MR_EMSCRIPTEN_WASM64 == "ON" ]]; then
-    MR_EMSCRIPTEN_WASM64=1
-  fi
+  true # Nothing.
 elif [ -n "${INSTALL_REQUIREMENTS}" ]; then
   echo "Check requirements. Running ${INSTALL_REQUIREMENTS} ..."
   ${SCRIPT_DIR}/$INSTALL_REQUIREMENTS
@@ -165,6 +137,17 @@ else
 
   # build clip separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/clip.sh ${MESHLIB_THIRDPARTY_DIR}/clip
+
+  # Skip this on Mac, we use `add_subdirectory()` for those libraries there.
+  # This is because we can't use `find_package()` there to find our own libraries, because that breaks Python modules, as documented in the root `CMakeLists.txt`.
+  if [[ $OSTYPE != 'darwin'* ]]; then
+    # Build nlohmann-json separately. It is header-only, this just installs it. It is a dependency of fastmcpp.
+    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/nlohmann-json.sh "$MESHLIB_THIRDPARTY_DIR/nlohmann-json"
+    # Build cpp-httplib separately. It is header-only, this just installs it. It is a dependency of fastmcpp.
+    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/cpp-httplib.sh "$MESHLIB_THIRDPARTY_DIR/cpp-httplib"
+    # Build fastmcpp separately.
+    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/fastmcpp.sh "$MESHLIB_THIRDPARTY_DIR/fastmcpp" ./fastmcpp_build "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+  fi
 fi
 popd
 

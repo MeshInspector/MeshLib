@@ -86,6 +86,9 @@
     <Filter Include="Localization">
       <UniqueIdentifier>{29097c41-4b59-45fe-9b71-20f6095be069}</UniqueIdentifier>
     </Filter>
+    <Filter Include="AI">
+      <UniqueIdentifier>{a9f6cb49-a0c1-4ee7-bcef-760c93bdc757}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -382,6 +385,9 @@
     <ClCompile Include="MRUITestEngine.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRUITestEngineControl.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
     <ClCompile Include="MRSceneCache.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
@@ -522,6 +528,9 @@
     </ClCompile>
     <ClCompile Include="MRI18n.cpp">
       <Filter>Localization</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMcp.cpp">
+      <Filter>AI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -882,6 +891,9 @@
     <ClInclude Include="MRUITestEngine.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRUITestEngineControl.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
     <ClInclude Include="MRSceneCache.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -1037,6 +1049,9 @@
     </ClInclude>
     <ClInclude Include="MRLocaleMacos.h">
       <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMcp.h">
+      <Filter>AI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -36,6 +36,7 @@ namespace
 
 std::locale gLocale = {};
 std::string gLocaleName = "en";
+std::string gLocaleCanonicalName = "en.UTF-8";
 boost::signals2::signal<void ( const std::string& )> gLocaleNameChanged = {};
 boost::locale::generator gLocaleGen = {};
 std::vector<std::filesystem::path> gLocaleDirs = {};
@@ -63,17 +64,18 @@ const std::string& Locale::getName()
     return gLocaleName;
 }
 
-const std::locale& Locale::set( std::string localeName )
+const std::locale& Locale::set( const std::string& localeName )
 {
     gLocaleName = localeName;
     MR_FINALLY {
         gLocaleNameChanged( gLocaleName );
     };
 
+    gLocaleCanonicalName = localeName;
     // TODO: correct encoding processing
-    if ( !localeName.ends_with( ".UTF-8" ) )
-        localeName.append( ".UTF-8" );
-    return ( gLocale = gLocaleGen.generate( localeName ) );
+    if ( !gLocaleCanonicalName.ends_with( ".UTF-8" ) )
+        gLocaleCanonicalName.append( ".UTF-8" );
+    return ( gLocale = gLocaleGen.generate( gLocaleCanonicalName ) );
 }
 
 boost::signals2::connection Locale::onChanged( const std::function<void ( const std::string& )>& cb )
@@ -102,7 +104,7 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
         return;
     gLocaleDirs.emplace_back( path );
     gLocaleGen.add_messages_path( utf8string( path ) );
-    gLocale = gLocaleGen.generate( gLocaleName );
+    gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 }
 
 LocaleDomainId Locale::addDomain( const char* domainName )
@@ -111,7 +113,7 @@ LocaleDomainId Locale::addDomain( const char* domainName )
         return it->second;
 
     gLocaleGen.add_messages_domain( domainName );
-    gLocale = gLocaleGen.generate( gLocaleName );
+    gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 
     return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
 }
@@ -119,7 +121,7 @@ LocaleDomainId Locale::addDomain( const char* domainName )
 LocaleDomainId Locale::addDomain( const std::string& domainName )
 {
     gLocaleGen.add_messages_domain( domainName );
-    gLocale = gLocaleGen.generate( gLocaleName );
+    gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 
     return findDomain( domainName );
 }

@@ -112,7 +112,7 @@ public:
     /// returns xfs for all viewports, combined into a single object
     const ViewportProperty<AffineXf3f> & xfsForAllViewports() const { return xf_; }
     /// modifies xfs for all viewports at once
-    virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf ) { xf_ = std::move( xf ); }
+    MRMESH_API virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf );
 
     /// this space to world space transformation for default or specific viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)

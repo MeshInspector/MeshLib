@@ -41,11 +41,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [ ubuntu22, ubuntu24, emscripten ]
+        distro: [ ubuntu22, ubuntu24 ]
         arch: [ x64, arm64 ]
-        exclude:
-          - distro: emscripten
-            arch: x64
         include:
           - arch: x64
             image-suffix: ''
@@ -96,6 +93,59 @@ jobs:
         run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
 
       - name: Push Linux image
+        run: docker push ${{ env.image }}
+
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
+  emscripten-image-build-upload:
+    # Build the three Emscripten thirdparty variants (multi, single, wasm64) as
+    # independent images in parallel. Each consumer job pulls only its variant,
+    # which is ~40-50% of the previous combined image and cuts the
+    # "Initialize containers" step accordingly (extraction was the dominant cost).
+    if: ${{ inputs.need_linux_image_rebuild }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [ multi, single, wasm64 ]
+    runs-on: ubuntu-24.04-arm
+    env:
+      image: meshlib/meshlib-emscripten-arm64-${{ matrix.variant }}:${{ inputs.docker_image_tag }}
+    steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Login to DockerHub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Emscripten image
+        run: |
+          docker build \
+            -f ./docker/emscriptenDockerfile \
+            --build-arg VARIANT=${{ matrix.variant }} \
+            -t ${{ env.image }} \
+            . --progress=plain
+
+      - name: Push Emscripten image
         run: docker push ${{ env.image }}
 
       - name: Remove unused Docker data

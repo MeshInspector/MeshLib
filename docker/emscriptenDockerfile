@@ -1,5 +1,13 @@
 FROM emscripten/emsdk:4.0.10-arm64
 
+# Which thirdparty variant to build into this image. Built and pushed as three
+# separate images (-single, -multi, -wasm64) by prepare-images.yml; each CI job
+# pulls only the variant it needs, keeping the image ~40-50% smaller and the
+# "Initialize containers" step proportionally faster.
+#
+# Valid values: multi | single | wasm64
+ARG VARIANT=multi
+
 # Update and install req
 # install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
 RUN export DEBIAN_FRONTEND=noninteractive; \
@@ -27,25 +35,24 @@ WORKDIR "/home/MeshLib"
 #copy files
 COPY . .
 
-#build thirdparty
+# Build only the thirdparty variant requested by the VARIANT build-arg.
+# Each image ends up with exactly one /usr/local/lib/emscripten{,-single,-wasm64}
+# tree, and matching env defaults so downstream scripts don't need to know
+# which variant is installed.
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten && \
-    rm -rf bin include lib share thirdparty_build
-
-ENV MR_EMSCRIPTEN_SINGLE=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-single && \
-    rm -rf bin include lib share thirdparty_build
-
-ENV MR_EMSCRIPTEN_SINGLE=OFF
-ENV MR_EMSCRIPTEN_WASM64=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-wasm64 && \
-    rm -rf bin include lib share thirdparty_build
-
-ENV MR_EMSCRIPTEN_WASM64=OFF
+ARG VARIANT
+RUN case "${VARIANT}" in \
+      multi)  INSTALL_DIR=/usr/local/lib/emscripten;        SINGLE=OFF; WASM64=OFF ;; \
+      single) INSTALL_DIR=/usr/local/lib/emscripten-single; SINGLE=ON;  WASM64=OFF ;; \
+      wasm64) INSTALL_DIR=/usr/local/lib/emscripten-wasm64; SINGLE=OFF; WASM64=ON  ;; \
+      *) echo "Unknown VARIANT='${VARIANT}' (expected multi|single|wasm64)" >&2; exit 1 ;; \
+    esac \
+ && export MR_EMSCRIPTEN_SINGLE="${SINGLE}" \
+ && export MR_EMSCRIPTEN_WASM64="${WASM64}" \
+ && ./scripts/build_thirdparty.sh \
+ && ./scripts/cmake_install.sh "${INSTALL_DIR}" \
+ && rm -rf bin include lib share thirdparty_build
 
 # install aws cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \

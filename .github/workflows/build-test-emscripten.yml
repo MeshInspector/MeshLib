@@ -18,23 +18,29 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
-      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
+      # Three separate per-variant images are built by prepare-images.yml
+      # (see emscripten-image-build-upload). Each job pulls only the variant
+      # it needs, roughly halving the container-init time.
+      image: meshlib/meshlib-emscripten-arm64-${{ matrix.image-variant }}:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
         include:
           - config: Singlethreaded
+            image-variant: single
             target_name: emscripten-singlethreaded
             package_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
             aws-dir: RMISingle
           - config: Multithreaded
+            image-variant: multi
             target_name: emscripten
             package_name: emscripten-multithreaded
             thirdparty-dir: emscripten
             aws-dir: RMI
           - config: Multithreaded-64Bit
+            image-variant: wasm64
             target_name: emscripten-wasm64
             package_name: emscripten-multithreaded-64bit
             thirdparty-dir: emscripten-wasm64

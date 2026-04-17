@@ -1620,7 +1620,7 @@ void endCombo()
 
         callEndCombo = !active.uiIsHidden;
 
-        active.collectedElems.pop_back();
+        activeCombos.pop_back();
     }
 
     if ( callEndCombo )

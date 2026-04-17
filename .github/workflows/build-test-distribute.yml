@@ -36,6 +36,12 @@ jobs:
 
   prepare-image:
     needs: config
+    # Needed by prepare-images.yml to push image mirrors to GHCR (packages: write).
+    # Reusable-workflow jobs cannot elevate above the caller's token permissions,
+    # so the grant has to happen here.
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/prepare-images.yml
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}

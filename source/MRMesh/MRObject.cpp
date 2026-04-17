@@ -194,6 +194,14 @@ void Object::resetXf( ViewportId id )
     needRedraw_ = true;
 }
 
+void Object::setXfsForAllViewports( ViewportProperty<AffineXf3f> xf )
+{
+    if ( xf_ == xf )
+        return;
+    xf_ = std::move( xf );
+    needRedraw_ = true;
+}
+
 AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
 {
     auto xf = xf_.get( id, isDef );

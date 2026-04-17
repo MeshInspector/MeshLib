@@ -140,7 +140,7 @@ else
 
   # Skip this on Mac, we use `add_subdirectory()` for those libraries there.
   # This is because we can't use `find_package()` there to find our own libraries, because that breaks Python modules, as documented in the root `CMakeLists.txt`.
-  if [[ $OSTYPE == 'darwin'* ]]; then
+  if [[ $OSTYPE != 'darwin'* ]]; then
     # Build nlohmann-json separately. It is header-only, this just installs it. It is a dependency of fastmcpp.
     CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/nlohmann-json.sh "$MESHLIB_THIRDPARTY_DIR/nlohmann-json"
     # Build cpp-httplib separately. It is header-only, this just installs it. It is a dependency of fastmcpp.

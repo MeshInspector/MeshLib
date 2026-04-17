@@ -16,9 +16,7 @@ ENDIF()
 
 # On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
 IF(MESHLIB_USE_VCPKG OR APPLE)
-  IF(APPLE)
-    set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
-  ENDIF()
+  set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
   add_subdirectory(../fastmcpp fastmcpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
   target_include_directories(${PROJECT_NAME} PRIVATE

@@ -1,6 +1,7 @@
 FROM ubuntu:24.04 AS build
 
 
+# (PR #5931 trigger note: comment touched to exercise prepare-images.yml.)
 # update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \

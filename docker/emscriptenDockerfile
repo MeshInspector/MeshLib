@@ -10,6 +10,7 @@
 # three /usr/local/lib/emscripten* install trees cross the stage boundary.
 #
 # Install paths are preserved, so build-test-emscripten.yml needs no changes.
+# (PR #5931 trigger marker: removed when PR is finalized.)
 
 ## ============================================================================
 ## Stage 1: builder

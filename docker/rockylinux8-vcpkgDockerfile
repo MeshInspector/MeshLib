@@ -1,6 +1,7 @@
 ARG VCPKG_VERSION=2026.03.18
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
+# (PR #5931 trigger marker: removed when PR is finalized.)
 
 FROM rockylinux:8 AS build
 

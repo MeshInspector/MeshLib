@@ -10,8 +10,6 @@
 # three /usr/local/lib/emscripten* install trees cross the stage boundary.
 #
 # Install paths are preserved, so build-test-emscripten.yml needs no changes.
-# (Trigger note: comment touched to exercise prepare-images.yml on PR #5931
-# where only workflow YAML changed and config.yml's paths-filter didn't fire.)
 
 ## ============================================================================
 ## Stage 1: builder

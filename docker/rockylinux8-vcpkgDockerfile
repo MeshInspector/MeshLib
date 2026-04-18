@@ -1,7 +1,6 @@
 ARG VCPKG_VERSION=2026.03.18
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
-# (PR #5931 trigger note: comment touched to exercise prepare-images.yml.)
 
 FROM rockylinux:8 AS build
 

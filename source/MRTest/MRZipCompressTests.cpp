@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRZip.h>
+#include <MRPch/MRSpdlog.h>
 
 #include <filesystem>
 
@@ -36,6 +37,7 @@ TEST( MRMesh, CompressSphereToZip )
     ASSERT_TRUE( std::filesystem::exists( meshPath, ec ) );
     const auto meshSize = std::filesystem::file_size( meshPath, ec );
     EXPECT_GT( meshSize, 0u );
+    spdlog::info( "sphere.mrmesh size: {} bytes", meshSize );
 
     // Compress the temp folder into a .zip located in a second temp folder
     // (so the zip isn't inside the folder being compressed).
@@ -48,6 +50,7 @@ TEST( MRMesh, CompressSphereToZip )
     ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
+    spdlog::info( "sphere.zip size:    {} bytes", zipSize );
 
     // Sanity: the zip should not be absurdly larger than the source
     // (that would indicate something is wrong with the envelope); and

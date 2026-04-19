@@ -30,27 +30,28 @@ TEST( MRMesh, CompressSphereToZip )
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-<<<<<<< HEAD
-    constexpr int targetVerts = 1000; // increase it to make the file being compressed larger, 100'000 vertices -> 12M bytes
-=======
     // Generate a sphere with ~100K vertices. makeSphere's subdivision
     // targets the requested count but may land a handful over.
     constexpr int targetVerts = 100'000;
->>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
     SphereParams params;
     params.radius = 1.0f;
     params.numMeshVertices = targetVerts;
     const Mesh sphere = makeSphere( params );
 <<<<<<< HEAD
+<<<<<<< HEAD
     EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
 =======
     EXPECT_GE( (int)sphere.topology.numValidVerts(), targetVerts );
 >>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
+=======
+    EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
+>>>>>>> 1cb6fcc9 (fix)
 
     // Save mesh as a .mrmesh file in the temp folder.
     const std::filesystem::path meshPath = srcFolder / "sphere.mrmesh";
     const auto saveRes = MeshSave::toMrmesh( sphere, meshPath );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+<<<<<<< HEAD
 <<<<<<< HEAD
     std::error_code ec;
     ASSERT_TRUE( std::filesystem::exists( meshPath, ec ) );
@@ -60,6 +61,11 @@ TEST( MRMesh, CompressSphereToZip )
 =======
     ASSERT_TRUE( std::filesystem::exists( meshPath ) );
     const auto meshSize = std::filesystem::file_size( meshPath );
+=======
+    std::error_code ec;
+    ASSERT_TRUE( std::filesystem::exists( meshPath, ec ) );
+    const auto meshSize = std::filesystem::file_size( meshPath, ec );
+>>>>>>> 1cb6fcc9 (fix)
     EXPECT_GT( meshSize, 0u );
 >>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 
@@ -72,6 +78,7 @@ TEST( MRMesh, CompressSphereToZip )
     const auto compressRes = compressZip( zipPath, srcFolder );
     ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
 <<<<<<< HEAD
+<<<<<<< HEAD
     ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
@@ -79,6 +86,10 @@ TEST( MRMesh, CompressSphereToZip )
 =======
     ASSERT_TRUE( std::filesystem::exists( zipPath ) );
     const auto zipSize = std::filesystem::file_size( zipPath );
+=======
+    ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
+    const auto zipSize = std::filesystem::file_size( zipPath, ec );
+>>>>>>> 1cb6fcc9 (fix)
     EXPECT_GT( zipSize, 0u );
 >>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 

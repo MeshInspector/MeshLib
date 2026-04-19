@@ -17,7 +17,11 @@
 namespace MR
 {
 
+<<<<<<< HEAD
 // Writes a sphere to a .mrmesh file in a temporary folder, then
+=======
+// Writes a ~100K-vertex sphere to a .mrmesh file in a temporary folder, then
+>>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 // compresses that folder to a .zip and verifies the archive was created and
 // is non-empty. Serves as a realistic end-to-end exercise of MeshLib's zip
 // write path (libzip + deflate) on mesh-sized data.
@@ -26,22 +30,38 @@ TEST( MRMesh, CompressSphereToZip )
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
+<<<<<<< HEAD
     constexpr int targetVerts = 1000; // increase it to make the file being compressed larger, 100'000 vertices -> 12M bytes
+=======
+    // Generate a sphere with ~100K vertices. makeSphere's subdivision
+    // targets the requested count but may land a handful over.
+    constexpr int targetVerts = 100'000;
+>>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
     SphereParams params;
     params.radius = 1.0f;
     params.numMeshVertices = targetVerts;
     const Mesh sphere = makeSphere( params );
+<<<<<<< HEAD
     EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
+=======
+    EXPECT_GE( (int)sphere.topology.numValidVerts(), targetVerts );
+>>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 
     // Save mesh as a .mrmesh file in the temp folder.
     const std::filesystem::path meshPath = srcFolder / "sphere.mrmesh";
     const auto saveRes = MeshSave::toMrmesh( sphere, meshPath );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+<<<<<<< HEAD
     std::error_code ec;
     ASSERT_TRUE( std::filesystem::exists( meshPath, ec ) );
     const auto meshSize = std::filesystem::file_size( meshPath, ec );
     EXPECT_GT( meshSize, 0u );
     spdlog::info( "sphere.mrmesh size: {} bytes", meshSize );
+=======
+    ASSERT_TRUE( std::filesystem::exists( meshPath ) );
+    const auto meshSize = std::filesystem::file_size( meshPath );
+    EXPECT_GT( meshSize, 0u );
+>>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 
     // Compress the temp folder into a .zip located in a second temp folder
     // (so the zip isn't inside the folder being compressed).
@@ -51,10 +71,16 @@ TEST( MRMesh, CompressSphereToZip )
 
     const auto compressRes = compressZip( zipPath, srcFolder );
     ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
+<<<<<<< HEAD
     ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
     spdlog::info( "sphere.zip size:    {} bytes", zipSize );
+=======
+    ASSERT_TRUE( std::filesystem::exists( zipPath ) );
+    const auto zipSize = std::filesystem::file_size( zipPath );
+    EXPECT_GT( zipSize, 0u );
+>>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 
     // Sanity: the zip should not be absurdly larger than the source
     // (that would indicate something is wrong with the envelope); and
@@ -63,6 +89,7 @@ TEST( MRMesh, CompressSphereToZip )
     EXPECT_LT( zipSize, meshSize * 2u );
 }
 
+<<<<<<< HEAD
 // Writes many binary files and same number JSON files to a temporary folder, then
 // compresses the folder to a .zip. Pairs with CompressSphereToZip to compare
 // compression of one large binary vs many small mixed-type entries.
@@ -188,4 +215,6 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     EXPECT_LT( zipSize, totalInput * 2u );
 }
 
+=======
+>>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
 } // namespace MR

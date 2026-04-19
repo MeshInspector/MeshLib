@@ -37,15 +37,7 @@ TEST( MRMesh, CompressSphereToZip )
     params.radius = 1.0f;
     params.numMeshVertices = targetVerts;
     const Mesh sphere = makeSphere( params );
-<<<<<<< HEAD
-<<<<<<< HEAD
     EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
-=======
-    EXPECT_GE( (int)sphere.topology.numValidVerts(), targetVerts );
->>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
-=======
-    EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
->>>>>>> 1cb6fcc9 (fix)
 
     // Save mesh as a .mrmesh file in the temp folder.
     const std::filesystem::path meshPath = srcFolder / "sphere.mrmesh";
@@ -58,6 +50,7 @@ TEST( MRMesh, CompressSphereToZip )
     const auto meshSize = std::filesystem::file_size( meshPath, ec );
     EXPECT_GT( meshSize, 0u );
     spdlog::info( "sphere.mrmesh size: {} bytes", meshSize );
+<<<<<<< HEAD
 =======
     ASSERT_TRUE( std::filesystem::exists( meshPath ) );
     const auto meshSize = std::filesystem::file_size( meshPath );
@@ -68,6 +61,8 @@ TEST( MRMesh, CompressSphereToZip )
 >>>>>>> 1cb6fcc9 (fix)
     EXPECT_GT( meshSize, 0u );
 >>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
+=======
+>>>>>>> a700f5ed (test: log mesh and zip sizes via spdlog::info)
 
     // Compress the temp folder into a .zip located in a second temp folder
     // (so the zip isn't inside the folder being compressed).
@@ -83,6 +78,7 @@ TEST( MRMesh, CompressSphereToZip )
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
     spdlog::info( "sphere.zip size:    {} bytes", zipSize );
+<<<<<<< HEAD
 =======
     ASSERT_TRUE( std::filesystem::exists( zipPath ) );
     const auto zipSize = std::filesystem::file_size( zipPath );
@@ -92,6 +88,8 @@ TEST( MRMesh, CompressSphereToZip )
 >>>>>>> 1cb6fcc9 (fix)
     EXPECT_GT( zipSize, 0u );
 >>>>>>> 6dadccc9 (test: add sphere mesh compress-to-zip test)
+=======
+>>>>>>> a700f5ed (test: log mesh and zip sizes via spdlog::info)
 
     // Sanity: the zip should not be absurdly larger than the source
     // (that would indicate something is wrong with the envelope); and

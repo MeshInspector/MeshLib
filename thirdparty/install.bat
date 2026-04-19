@@ -71,10 +71,18 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
 )
 
 REM Install vcpkg core dependencies
-vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
 
 REM Install all required dependencies
-vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
+REM --overlay-ports makes our custom ports under thirdparty/vcpkg/ports take
+REM precedence over the upstream vcpkg registry. As of this change, the
+REM `zlib` entry there redirects to a zlib-ng-compat build (faster
+REM compression with identical API and output format); other overlaid ports
+REM (clip, laz-perf, opencascade-minimal, openctm) were only consumed on
+REM Rocky before and are now overlaid on Windows too — harmless since
+REM requirements/windows.txt doesn't request the ones that differ from
+REM upstream (opencascade vs opencascade-minimal, etc.).
+vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
 
 endlocal
 goto :EOF

@@ -26,14 +26,15 @@ TEST( MRMesh, CompressSphereToZip )
     params.radius = 1.0f;
     params.numMeshVertices = targetVerts;
     const Mesh sphere = makeSphere( params );
-    EXPECT_GE( (int)sphere.topology.numValidVerts(), targetVerts );
+    EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
 
     // Save mesh as a .mrmesh file in the temp folder.
     const std::filesystem::path meshPath = srcFolder / "sphere.mrmesh";
     const auto saveRes = MeshSave::toMrmesh( sphere, meshPath );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
-    ASSERT_TRUE( std::filesystem::exists( meshPath ) );
-    const auto meshSize = std::filesystem::file_size( meshPath );
+    std::error_code ec;
+    ASSERT_TRUE( std::filesystem::exists( meshPath, ec ) );
+    const auto meshSize = std::filesystem::file_size( meshPath, ec );
     EXPECT_GT( meshSize, 0u );
 
     // Compress the temp folder into a .zip located in a second temp folder
@@ -44,8 +45,8 @@ TEST( MRMesh, CompressSphereToZip )
 
     const auto compressRes = compressZip( zipPath, srcFolder );
     ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
-    ASSERT_TRUE( std::filesystem::exists( zipPath ) );
-    const auto zipSize = std::filesystem::file_size( zipPath );
+    ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
+    const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
 
     // Sanity: the zip should not be absurdly larger than the source

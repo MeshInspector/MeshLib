@@ -416,6 +416,7 @@
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRMeshOverhangs.h" />
     <ClInclude Include="MRZip.h" />
+    <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRFlagOperators.h" />
     <ClInclude Include="MRMeasurementObject.h" />
@@ -732,6 +733,7 @@
     <ClCompile Include="MRWatershedGraph.cpp" />
     <ClCompile Include="MRMeshOverhangs.cpp" />
     <ClCompile Include="MRZip.cpp" />
+    <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />

@@ -1,7 +1,6 @@
 #include "MRZlib.h"
-#ifndef MRIOEXTRAS_NO_ZLIB
-#include "MRMesh/MRBuffer.h"
-#include "MRMesh/MRFinally.h"
+#include "MRBuffer.h"
+#include "MRFinally.h"
 
 #include <zlib.h>
 
@@ -53,7 +52,9 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
         .opaque = Z_NULL,
     };
     int ret;
-    if ( Z_OK != ( ret = deflateInit( &stream, level ) ) )
+    // windowBits = -15: raw deflate (RFC 1951), no zlib/gzip wrapper, 32 KiB window.
+    // memLevel = 8: zlib's default internal-state size.
+    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {
@@ -98,7 +99,8 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
         .opaque = Z_NULL,
     };
     int ret;
-    if ( Z_OK != ( ret = inflateInit( &stream ) ) )
+    // windowBits = -15: matches the raw-deflate output of zlibCompressStream (no wrapper, 32 KiB window).
+    if ( Z_OK != ( ret = inflateInit2( &stream, -15 ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {
@@ -137,4 +139,3 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
 }
 
 } // namespace MR
-#endif

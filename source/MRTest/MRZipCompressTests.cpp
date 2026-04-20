@@ -27,6 +27,7 @@ namespace MR
 // write path (libzip + deflate) on mesh-sized data.
 TEST( MRMesh, CompressSphereToZip )
 {
+    // No-op re-trigger marker for CI; remove in cleanup commit.
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 

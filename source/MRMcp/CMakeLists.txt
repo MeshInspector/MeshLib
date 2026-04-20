@@ -10,12 +10,12 @@ target_link_libraries(${PROJECT_NAME}
     MRMesh
 )
 
-IF(MR_PCH)
+if(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
-ENDIF()
+endif()
 
 # On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
-IF(MESHLIB_USE_VCPKG OR APPLE)
+if(MESHLIB_USE_VCPKG)
   set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
   add_subdirectory(../fastmcpp fastmcpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
@@ -24,10 +24,15 @@ IF(MESHLIB_USE_VCPKG OR APPLE)
     ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
     ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
   )
-ELSE()
-  find_package(fastmcpp REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PUBLIC fastmcpp::fastmcpp_core)
-ENDIF()
+else()
+  find_package(fastmcpp REQUIRED
+    HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+  )
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      fastmcpp::fastmcpp_core
+  )
+endif()
 
 install(
   TARGETS ${PROJECT_NAME}

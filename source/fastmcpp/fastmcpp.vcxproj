@@ -15,7 +15,7 @@
          on basename. MSBuild's ClCompile task batches items with identical
          metadata into one CL.exe invocation; having one big batch lets CL's
          /MP parallelize across all of these files at once. Previously each
-         source subdirectory had its own ObjectFileName (e.g. $(IntDir)server\),
+         source subdirectory had its own ObjectFileName (e.g. $(IntDir)server/),
          which forced MSBuild to serialize ~11 separate CL invocations. -->
     <ClCompile Include="..\..\thirdparty\fastmcpp\src\app.cpp" />
     <ClCompile Include="..\..\thirdparty\fastmcpp\src\proxy.cpp" />

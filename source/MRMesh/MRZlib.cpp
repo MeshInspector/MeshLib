@@ -43,7 +43,7 @@ std::string zlibToString( int code )
 namespace MR
 {
 
-Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level )
+Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level, bool rawDeflate )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
@@ -52,9 +52,10 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
         .opaque = Z_NULL,
     };
     int ret;
-    // windowBits = -15: raw deflate (RFC 1951), no zlib/gzip wrapper, 32 KiB window.
-    // memLevel = 8: zlib's default internal-state size.
-    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY ) ) )
+    // windowBits = 15 → zlib wrapper (RFC 1950); -15 → raw deflate (RFC 1951, no wrapper).
+    // memLevel = 8 → zlib's default internal-state size.
+    const int windowBits = rawDeflate ? -15 : 15;
+    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, windowBits, 8, Z_DEFAULT_STRATEGY ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {
@@ -90,7 +91,7 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
     return {};
 }
 
-Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
+Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, bool rawDeflate )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
@@ -99,8 +100,9 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
         .opaque = Z_NULL,
     };
     int ret;
-    // windowBits = -15: matches the raw-deflate output of zlibCompressStream (no wrapper, 32 KiB window).
-    if ( Z_OK != ( ret = inflateInit2( &stream, -15 ) ) )
+    // windowBits = 15 → expect zlib wrapper (RFC 1950); -15 → expect raw deflate (RFC 1951).
+    const int windowBits = rawDeflate ? -15 : 15;
+    if ( Z_OK != ( ret = inflateInit2( &stream, windowBits ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {

@@ -56,6 +56,7 @@
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPng.h" />
     <ClInclude Include="MRStep.h" />
+    <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRTiff.h" />
     <ClInclude Include="MRSvg.h" />
   </ItemGroup>

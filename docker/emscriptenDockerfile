@@ -18,7 +18,10 @@ FROM emscripten/emsdk:4.0.10-arm64 AS builder
 
 # Minimal apt set required by ./scripts/build_thirdparty.sh.
 # No firefox/xvfb/dbus here — those are test-runtime only, not build deps.
+# The sed swap redirects ports.ubuntu.com to a faster mirror and must
+# run before the first apt-get update.
 RUN export DEBIAN_FRONTEND=noninteractive && \
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list && \
     apt-get update -qqy && \
     apt-get install -qqy --no-install-recommends \
         git pkg-config ninja-build gettext && \

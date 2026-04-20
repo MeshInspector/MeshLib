@@ -43,23 +43,6 @@ std::string zlibToString( int code )
 namespace MR
 {
 
-namespace
-{
-
-// zlib windowBits: positive = zlib wrapper (RFC 1950); negative = raw deflate (RFC 1951).
-// Magnitude is log2(window size) — 15 = 32 KiB.
-constexpr int kZlibWrapperBits = 15;
-constexpr int kRawDeflateBits  = -15;
-// zlib's default internal-state size.
-constexpr int kDefaultMemLevel = 8;
-
-int windowBitsFor( DeflateFormat f )
-{
-    return f == DeflateFormat::Raw ? kRawDeflateBits : kZlibWrapperBits;
-}
-
-} // namespace
-
 Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level, DeflateFormat format )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
@@ -69,7 +52,8 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
         .opaque = Z_NULL,
     };
     int ret;
-    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, windowBitsFor( format ), kDefaultMemLevel, Z_DEFAULT_STRATEGY ) ) )
+    // memLevel = 8 is zlib's default internal-state size.
+    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, static_cast<int>( format ), 8, Z_DEFAULT_STRATEGY ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {
@@ -114,7 +98,7 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, Deflat
         .opaque = Z_NULL,
     };
     int ret;
-    if ( Z_OK != ( ret = inflateInit2( &stream, windowBitsFor( format ) ) ) )
+    if ( Z_OK != ( ret = inflateInit2( &stream, static_cast<int>( format ) ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {

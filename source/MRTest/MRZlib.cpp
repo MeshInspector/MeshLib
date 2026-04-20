@@ -87,8 +87,8 @@ TEST_P( ZlibCompressTestFixture, ZlibCompress )
 }
 
 INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibCompressTestFixture, testing::Values(
-    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel1, sizeof( cWrappedLevel1 ), 1, MR::DeflateFormat::ZlibWrapper },
-    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel9, sizeof( cWrappedLevel9 ), 9, MR::DeflateFormat::ZlibWrapper },
+    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel1, sizeof( cWrappedLevel1 ), 1, MR::DeflateFormat::Zlib },
+    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel9, sizeof( cWrappedLevel9 ), 9, MR::DeflateFormat::Zlib },
     ZlibCompressParameters { cInput, sizeof( cInput ), cRawLevel1,     sizeof( cRawLevel1 ),     1, MR::DeflateFormat::Raw },
     ZlibCompressParameters { cInput, sizeof( cInput ), cRawLevel9,     sizeof( cRawLevel9 ),     9, MR::DeflateFormat::Raw }
 ) );
@@ -112,8 +112,8 @@ TEST_P( ZlibDecompressTestFixture, ZlibDecompress )
 }
 
 INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
-    ZlibDecompressParameters { cWrappedLevel1, sizeof( cWrappedLevel1 ), cInput, sizeof( cInput ), MR::DeflateFormat::ZlibWrapper },
-    ZlibDecompressParameters { cWrappedLevel9, sizeof( cWrappedLevel9 ), cInput, sizeof( cInput ), MR::DeflateFormat::ZlibWrapper },
+    ZlibDecompressParameters { cWrappedLevel1, sizeof( cWrappedLevel1 ), cInput, sizeof( cInput ), MR::DeflateFormat::Zlib },
+    ZlibDecompressParameters { cWrappedLevel9, sizeof( cWrappedLevel9 ), cInput, sizeof( cInput ), MR::DeflateFormat::Zlib },
     ZlibDecompressParameters { cRawLevel1,     sizeof( cRawLevel1 ),     cInput, sizeof( cInput ), MR::DeflateFormat::Raw },
     ZlibDecompressParameters { cRawLevel9,     sizeof( cRawLevel9 ),     cInput, sizeof( cInput ), MR::DeflateFormat::Raw }
 ) );

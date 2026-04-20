@@ -23,6 +23,7 @@
 #include "MRStatePlugin.h"
 #include "MRRibbonFontHolder.h"
 #include "MRI18n.h"
+#include "MRLocale.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -391,6 +392,64 @@ void RibbonMenu::drawHelpButton_( const std::string& url )
     ImGui::PopStyleVar( 2 );
 }
 
+void RibbonMenu::drawLanguageButton_()
+{
+    constexpr auto cPopupName = "LanguageSelector";
+    const auto buttonSize = UI::scale() * cTopPanelAditionalButtonSize;
+    const auto initPos = ImGui::GetCursorPos();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * UI::scale() );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
+    RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
+    if ( ImGui::Button( /* globe */ "\xef\x82\xac", { buttonSize, buttonSize } ) )
+        ImGui::OpenPopup( cPopupName );
+    font.popFont();
+    ImGui::PopStyleColor();
+    UI::setTooltipIfHovered( _tr( "Change the language" ) );
+
+    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleVar( 2 );
+
+    if ( ImGui::IsPopupOpen( cPopupName ) )
+    {
+        const auto windowWidth = 200 * UI::scale();
+        ImGui::SetNextWindowSizeConstraints(
+            { windowWidth, 0 },
+            { windowWidth, 5 * ImGui::GetTextLineHeightWithSpacing() }
+        );
+
+        const auto& style = ImGui::GetStyle();
+        const ImVec2 pos {
+            initPos.x + buttonSize + style.FramePadding.x - windowWidth,
+            initPos.y + buttonSize + style.FramePadding.y,
+        };
+        ImGuiMV::SetNextWindowPosMainViewport( pos );
+
+        if ( ImGui::Begin( cPopupName, NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+        {
+            MR_FINALLY { ImGui::End(); };
+
+            if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+                ImGui::CloseCurrentPopup();
+
+            // TODO: cache values
+            for ( const auto& lang : Locale::getAvailableLocales() )
+            {
+                if ( ImGui::Selectable( Locale::getDisplayName( lang ).c_str(), lang == Locale::getName() ) )
+                {
+                    Locale::set( lang );
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+        }
+    }
+}
+
 bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
     UI::TestEngine::pushTree( "CustomCheckBox" );
@@ -689,9 +748,14 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize )
     bool needActive = hasAnyActiveItem() && toolbar_->getCurrentToolbarWidth() == 0.0f;
     float activeBtnSize = cTabHeight * UI::scale() - 4 * UI::scale(); // small offset from border
 
-    int numBtns = 1;
+    int numBtns = 0;
+    auto availWidth = ImGui::GetContentRegionAvail().x;
     // 40 - collapse button size
-    auto availWidth = ImGui::GetContentRegionAvail().x - 40.0f * UI::scale();
+    availWidth -= 40.0f * UI::scale();
+    ++numBtns;
+    // 40 - language button size
+    availWidth -= 40.0f * UI::scale();
+    ++numBtns;
 
     // 40 - help button size
     if ( !menuUIConfig_.helpLink.empty() )
@@ -741,6 +805,11 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize )
     }
 
     float offset = ( numBtns * 40 - 10 ) * UI::scale();
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * UI::scale() ) );
+    drawLanguageButton_();
+    --numBtns;
+
+    offset = ( numBtns * 40 - 10 ) * UI::scale();
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * UI::scale() ) );
     drawCollapseButton_();
 

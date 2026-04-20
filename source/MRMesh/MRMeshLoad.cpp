@@ -540,7 +540,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     {
         auto startLine = newlines[lineI];
         auto size = newlines[lineI + 1] - newlines[lineI];
-        if ( dataView.substr( startLine, size ).starts_with( "outer" ) )
+        if ( trimLeft( dataView.substr( startLine, size ) ).starts_with( "outer" ) )
             faceRepresentativeLines.set( lineI );
     }, subprogress( settings.callback, 0.15f, 0.3f ) );
 
@@ -572,7 +572,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
             {
                 if ( faceRepresentativeLines.test( lineI ) )
                     break;
-                auto lineView = dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] );
+                auto lineView = trimLeft( dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] ) );
                 if ( lineView.starts_with( "endloop" ) )
                     break;
                 if ( !lineView.starts_with( "vertex" ) )

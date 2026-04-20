@@ -405,7 +405,7 @@ void RibbonMenu::drawLanguageButton_()
 
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
     RibbonFontHolder font( RibbonFontManager::FontType::Icons, 0.7f );
-    if ( ImGui::Button( "", { buttonSize, buttonSize } ) )
+    if ( ImGui::Button( /* globe */ "\xef\x82\xac", { buttonSize, buttonSize } ) )
         ImGui::OpenPopup( cPopupName );
     font.popFont();
     ImGui::PopStyleColor();

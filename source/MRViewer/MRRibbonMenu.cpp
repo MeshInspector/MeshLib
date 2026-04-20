@@ -46,6 +46,7 @@
 #include <MRPch/MRWasm.h>
 #include "MRGladGlfw.h"
 #include "MRImGuiMultiViewport.h"
+#include "MRMesh/MRCombinedHistoryAction.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
@@ -1848,18 +1849,21 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     UI::setTooltipIfHovered( _tr( "Open Transform Data context menu." ) );
     iconsFont.pushFont();
 
-    const auto& selectedObjectsCache = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
-    if ( numButtons >= 2.0f && selectedObjectsCache.size() == 1 && selectedObjectsCache.front()->xf() != AffineXf3f() )
+    // Reset / Apply write to every topmost-selected object (matching drawTransform_), so the
+    // header buttons stay in sync with the main transform panel. The availability check for
+    // "Apply Transform" still uses the full selected set — that's the ribbon item's own domain.
+    const auto& topmostSelected = SceneCache::getAllTopmostObjects<Object, ObjectSelectivityType::Selected>();
+    const bool anyNonIdentity = std::any_of( topmostSelected.begin(), topmostSelected.end(),
+        []( const auto& o ){ return o->xf() != AffineXf3f(); } );
+    if ( numButtons >= 2.0f && !topmostSelected.empty() && anyNonIdentity )
     {
-        auto obj = std::const_pointer_cast< Object >( selectedObjectsCache.front() );
-        assert( obj );
         contextBtnPos.x -= smallBtnSize.x;
         ImGui::SetCursorPos( contextBtnPos );
 
         if ( ImGui::Button( "\xef\x80\x8d", smallBtnSize ) ) // X(cross) icon for reset
         {
-            AppendHistory<ChangeXfAction>( _t( "Reset Transform" ), obj );
-            obj->setXf( AffineXf3f() );
+            AppendHistory( makeObjectsXfHistoryAction_( _t( "Reset Transform" ), topmostSelected ) );
+            applyXfToObjects_( AffineXf3f(), topmostSelected );
         }
         iconsFont.popFont();
         UI::setTooltipIfHovered( _tr( "Resets transform value to identity." ) );
@@ -1868,7 +1872,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         bool drawApplyBtn = numButtons >=3.0f &&
             item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( selectedObjectsCache ).empty();
+            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty();
 
         if ( drawApplyBtn )
         {
@@ -1888,10 +1892,22 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     return res;
 }
 
-bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
+bool RibbonMenu::drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     if ( !ImGui::BeginPopupContextItem( cTransformContextName ) )
         return false;
+
+    assert( !selected.empty() );
+
+    // When selected objects share a common xf we can read it for Copy / Save-to-file;
+    // when they differ, those read-the-xf buttons are disabled but write-to-all buttons
+    // (Paste / Load / Reset / Apply) still work because they don't need a shared source value.
+    const auto& startXf = selected.front()->xf();
+    const bool allSame = std::all_of( selected.begin() + 1, selected.end(),
+        [&]( const auto& o ){ return o->xf() == startXf; } );
+    // Reset / Apply are offered whenever at least one object has a non-identity xf to undo.
+    const bool anyNonIdentity = std::any_of( selected.begin(), selected.end(),
+        []( const auto& o ){ return o->xf() != AffineXf3f(); } );
 
     auto buttonSize = 100.0f * UI::scale();
 
@@ -1917,13 +1933,20 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         return Transform{ xf, uniformScale };
     };
 
+    // Write the same xf to every selected object under one combined history entry — so Ctrl+Z
+    // reverts a Paste/Load/Reset across all objects in a single step.
+    auto applyXfToAll = [&]( const AffineXf3f& xf, const std::string& actionName )
+    {
+        AppendHistory( makeObjectsXfHistoryAction_( actionName, selected ) );
+        applyXfToObjects_( xf, selected );
+    };
+
     RibbonFontHolder semiBoldFont( RibbonFontManager::FontType::SemiBold );
     ImGui::Text( "%s", _tr( "Transform Data" ) );
     semiBoldFont.popFont();
 
-    const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
-    if ( UI::button( _tr( "Copy" ), Vector2f( buttonSize, 0 ) ) )
+    if ( UI::button( _tr( "Copy" ), /*active=*/allSame, Vector2f( buttonSize, 0 ) ) )
     {
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
@@ -1949,8 +1972,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             {
                 if ( UI::button( _tr( "Paste" ), Vector2f( buttonSize, 0 ) ) )
                 {
-                    AppendHistory<ChangeXfAction>( _t( "Paste Transform" ), selected );
-                    selected->setXf( tr->xf );
+                    applyXfToAll( tr->xf, _t( "Paste Transform" ) );
                     uniformScale_ = tr->uniformScale;
                     ImGui::CloseCurrentPopup();
                 }
@@ -1958,7 +1980,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         }
     }
 
-    if ( UI::button( _tr( "Save to file" ), Vector2f( buttonSize, 0 ) ) )
+    if ( UI::button( _tr( "Save to file" ), /*active=*/allSame, Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = saveFileDialog( {
             .fileName = "Transform",
@@ -1989,8 +2011,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             {
                 if ( auto tr = deserializeTransform( *root ) )
                 {
-                    AppendHistory<ChangeXfAction>( _t( "Load Transform from File" ), selected );
-                    selected->setXf( tr->xf );
+                    applyXfToAll( tr->xf, _t( "Load Transform from File" ) );
                     uniformScale_ = tr->uniformScale;
                 }
                 else
@@ -2008,7 +2029,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         ImGui::CloseCurrentPopup();
     }
 
-    if ( startXf != AffineXf3f() )
+    if ( anyNonIdentity )
     {
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         if ( item != RibbonSchemaHolder::schema().items.end() &&
@@ -2022,8 +2043,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
         if ( UI::button( _tr( "Reset" ), Vector2f( buttonSize, 0 ) ) )
         {
-            AppendHistory<ChangeXfAction>( _t( "Reset Transform (context menu)" ), selected );
-            selected->setXf( AffineXf3f() );
+            applyXfToAll( AffineXf3f(), _t( "Reset Transform (context menu)" ) );
             ImGui::CloseCurrentPopup();
         }
         UI::setTooltipIfHovered( _tr( "Resets transform value to identity." ) );

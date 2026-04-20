@@ -91,7 +91,12 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}
+          # Repro PR: cache key with a unique suffix so the existing cached
+          # vcpkg tree is NOT used. This forces a fresh `vcpkg install` of
+          # all ports in requirements/windows.txt, which surfaces the
+          # msys2 mingw-w64-x86_64-pkgconf 1~2.2.0-1 download 404 inside
+          # upstream blosc's `vcpkg_fixup_pkgconfig()` call. Do NOT merge.
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-repro-blosc-msys2-2026-04-20
           path: |
             C:\vcpkg\*
 

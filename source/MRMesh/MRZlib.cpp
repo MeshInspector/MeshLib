@@ -43,6 +43,10 @@ std::string zlibToString( int code )
 namespace MR
 {
 
+// DeflateFormat enumerators are laid out as zlib's `windowBits` argument — keep them locked to zlib's own constants.
+static_assert( static_cast<int>( DeflateFormat::Zlib ) == MAX_WBITS );
+static_assert( static_cast<int>( DeflateFormat::Raw ) == -MAX_WBITS );
+
 Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level, DeflateFormat format )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
@@ -52,8 +56,7 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
         .opaque = Z_NULL,
     };
     int ret;
-    // memLevel = 8 is zlib's default internal-state size.
-    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, static_cast<int>( format ), 8, Z_DEFAULT_STRATEGY ) ) )
+    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, static_cast<int>( format ), DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {

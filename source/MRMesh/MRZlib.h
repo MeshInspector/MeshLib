@@ -9,8 +9,10 @@ namespace MR
 {
 
 /// Wire format produced by zlibCompressStream / consumed by zlibDecompressStream.
-/// Enumerator values are the zlib `windowBits` argument for the chosen format
-/// (positive = zlib wrapper per RFC 1950, negative = raw deflate per RFC 1951; magnitude = log2 window size).
+/// Enumerator values are the zlib `windowBits` argument for the chosen format —
+/// equal to zlib's `MAX_WBITS` and `-MAX_WBITS`; the magnitude is log2(window size) = 32 KiB.
+/// Literal values here avoid leaking `<zlib.h>` through this public header; see the
+/// static_asserts in MRZlib.cpp that lock them to `MAX_WBITS`.
 enum class DeflateFormat : int
 {
     Zlib = 15,  ///< RFC 1950 — zlib header + Adler-32 trailer (default)

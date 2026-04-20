@@ -42,17 +42,16 @@ vcpkg_cmake_configure(
 vcpkg_cmake_install()
 vcpkg_copy_pdbs()
 
-# Note: we intentionally do NOT call vcpkg_fixup_pkgconfig() here.
-# The generated lib/pkgconfig/zlib.pc already contains the correct `-lz`
-# Libs entry in compat mode, and every consumer of this port in MeshLib's
-# dependency graph finds zlib via the CMake target `ZLIB::ZLIB` (exported
-# by lib/cmake/ZLIB/ZLIBConfig.cmake) rather than via pkg-config.
-# Calling vcpkg_fixup_pkgconfig() would pull in pkgconf via msys2 on
-# Windows (vcpkg_acquire_msys → mingw-w64-x86_64-pkgconf), which has
-# proven unreliable: msys2 mirrors rotate old package versions out of
-# their live repos, causing a 404 storm when vcpkg's pinned pkgconf
-# version isn't on any mirror anymore. Skipping the step avoids that
-# failure mode entirely at zero cost to our consumers.
+# Rewrite absolute build-tree paths in lib/pkgconfig/zlib.pc into
+# ${prefix}-relative ones, so downstream pkg-config consumers (e.g. curl's
+# PkgConfig::curl target in our Linux-vcpkg build) don't end up with
+# imported-target include directories pointing into vcpkg's packages/
+# staging area. On Windows the call acquires pkgconf via vcpkg_acquire_msys
+# — the specific pinned msys2 build has been rotated out of msys2's live
+# mirrors but is pre-staged under thirdparty/vcpkg/downloads/ (see the
+# msys2-mingw-w64-x86_64-pkgconf-*.pkg.tar.zst file there), so the fetch
+# hits the local copy and succeeds.
+vcpkg_fixup_pkgconfig()
 
 # In compat mode, CMake config files live under lib/cmake/ZLIB/ and expose
 # the `ZLIB::ZLIB` imported target — same layout consumers of the upstream

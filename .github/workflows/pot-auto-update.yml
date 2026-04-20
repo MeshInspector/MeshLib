@@ -47,6 +47,11 @@ jobs:
             echo "need_update=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Update translations
+        if: ${{ steps.check-diff.outputs.need_update == 'true' }}
+        run: |
+          scripts/gettext/merge_po_from_pot.py locale/ locale/MeshLib.pot locale/MRRibbonCommonMenuStructure.pot
+
       - name: Push changes
         if: ${{ steps.check-diff.outputs.need_update == 'true' }}
         env:

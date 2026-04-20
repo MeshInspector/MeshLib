@@ -251,6 +251,8 @@ protected:
     MRVIEWER_API virtual void drawCollapseButton_();
     // header helper button link to help page
     MRVIEWER_API virtual void drawHelpButton_( const std::string& url );
+    // header helper button to change the UI language
+    MRVIEWER_API virtual void drawLanguageButton_();
 
     RibbonMenuSearch searcher_;
 

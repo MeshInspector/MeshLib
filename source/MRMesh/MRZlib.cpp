@@ -43,7 +43,24 @@ std::string zlibToString( int code )
 namespace MR
 {
 
-Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level, bool rawDeflate )
+namespace
+{
+
+// zlib windowBits: positive = zlib wrapper (RFC 1950); negative = raw deflate (RFC 1951).
+// Magnitude is log2(window size) — 15 = 32 KiB.
+constexpr int kZlibWrapperBits = 15;
+constexpr int kRawDeflateBits  = -15;
+// zlib's default internal-state size.
+constexpr int kDefaultMemLevel = 8;
+
+int windowBitsFor( DeflateFormat f )
+{
+    return f == DeflateFormat::Raw ? kRawDeflateBits : kZlibWrapperBits;
+}
+
+} // namespace
+
+Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level, DeflateFormat format )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
@@ -52,10 +69,7 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
         .opaque = Z_NULL,
     };
     int ret;
-    // windowBits = 15 → zlib wrapper (RFC 1950); -15 → raw deflate (RFC 1951, no wrapper).
-    // memLevel = 8 → zlib's default internal-state size.
-    const int windowBits = rawDeflate ? -15 : 15;
-    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, windowBits, 8, Z_DEFAULT_STRATEGY ) ) )
+    if ( Z_OK != ( ret = deflateInit2( &stream, level, Z_DEFLATED, windowBitsFor( format ), kDefaultMemLevel, Z_DEFAULT_STRATEGY ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {
@@ -91,7 +105,7 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
     return {};
 }
 
-Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, bool rawDeflate )
+Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, DeflateFormat format )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
@@ -100,9 +114,7 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, bool r
         .opaque = Z_NULL,
     };
     int ret;
-    // windowBits = 15 → expect zlib wrapper (RFC 1950); -15 → expect raw deflate (RFC 1951).
-    const int windowBits = rawDeflate ? -15 : 15;
-    if ( Z_OK != ( ret = inflateInit2( &stream, windowBits ) ) )
+    if ( Z_OK != ( ret = inflateInit2( &stream, windowBitsFor( format ) ) ) )
         return unexpected( zlibToString( ret ) );
 
     MR_FINALLY {

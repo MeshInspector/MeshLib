@@ -42,12 +42,17 @@ vcpkg_cmake_configure(
 vcpkg_cmake_install()
 vcpkg_copy_pdbs()
 
-# On Windows, zlib-ng in compat mode names its output library `zlib` (dynamic)
-# or `zlibstatic` (static). Upstream vcpkg zlib-ng port already patches the
-# pkgconfig file for the non-compat case; in compat mode the `zlib.pc` file
-# already says `-lz`, so no rewrite is needed here.
-
-vcpkg_fixup_pkgconfig()
+# Note: we intentionally do NOT call vcpkg_fixup_pkgconfig() here.
+# The generated lib/pkgconfig/zlib.pc already contains the correct `-lz`
+# Libs entry in compat mode, and every consumer of this port in MeshLib's
+# dependency graph finds zlib via the CMake target `ZLIB::ZLIB` (exported
+# by lib/cmake/ZLIB/ZLIBConfig.cmake) rather than via pkg-config.
+# Calling vcpkg_fixup_pkgconfig() would pull in pkgconf via msys2 on
+# Windows (vcpkg_acquire_msys → mingw-w64-x86_64-pkgconf), which has
+# proven unreliable: msys2 mirrors rotate old package versions out of
+# their live repos, causing a 404 storm when vcpkg's pinned pkgconf
+# version isn't on any mirror anymore. Skipping the step avoids that
+# failure mode entirely at zero cost to our consumers.
 
 # In compat mode, CMake config files live under lib/cmake/ZLIB/ and expose
 # the `ZLIB::ZLIB` imported target — same layout consumers of the upstream

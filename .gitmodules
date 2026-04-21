@@ -85,3 +85,6 @@
 [submodule "thirdparty/cpp-httplib"]
 	path = thirdparty/cpp-httplib
 	url = https://github.com/yhirose/cpp-httplib
+[submodule "thirdparty/libdeflate"]
+	path = thirdparty/libdeflate
+	url = https://github.com/ebiggers/libdeflate.git

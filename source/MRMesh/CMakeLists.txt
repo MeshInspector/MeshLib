@@ -65,6 +65,16 @@ ELSE()
 ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
+# libdeflate drives MRZlib's zlibCompressStream (compress path only;
+# decompression and the compressZip/libzip pipeline remain on zlib). Built
+# from thirdparty/libdeflate and installed to the thirdparty prefix; hint
+# find_package there explicitly since the prefix is not on CMake's default
+# search path on all platforms.
+find_package(libdeflate CONFIG REQUIRED
+  HINTS ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/libdeflate
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE libdeflate::libdeflate_shared)
+
 # TODO: CMake config
 target_include_directories(${PROJECT_NAME}
   PUBLIC

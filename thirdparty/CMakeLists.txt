@@ -85,6 +85,13 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
+# Always build libdeflate from submodule (MRZlib's compress path delegates
+# to it on every platform).
+set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "")
+set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "")
+set(LIBDEFLATE_BUILD_STATIC_LIB OFF CACHE BOOL "")
+add_subdirectory(./libdeflate)
+
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 

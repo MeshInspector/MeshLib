@@ -2336,6 +2336,9 @@
     <ClCompile Include="MREdgePathsBuilder.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
+    <ClCompile Include="MRZipFast.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

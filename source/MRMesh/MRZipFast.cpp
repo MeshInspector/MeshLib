@@ -373,7 +373,7 @@ Expected<void> compressZipFast( const std::filesystem::path& zipFile,
         if ( size < 0 )
             return unexpected( "Cannot size file " + utf8string( path ) );
         ifs.seekg( 0 );
-        std::vector<uint8_t> raw( size_t( size ) );
+        auto raw = std::vector<uint8_t>( size_t( size ) );
         if ( size > 0 && !ifs.read( reinterpret_cast<char*>( raw.data() ), size ) )
             return unexpected( "Cannot read file " + utf8string( path ) );
 

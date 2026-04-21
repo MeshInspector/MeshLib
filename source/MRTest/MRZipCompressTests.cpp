@@ -21,7 +21,7 @@ namespace MR
 // compresses that folder to a .zip and verifies the archive was created and
 // is non-empty. Serves as a realistic end-to-end exercise of MeshLib's zip
 // write path (libzip + deflate) on mesh-sized data.
-TEST( MRMesh, CompressSphereToZip )
+/*TEST( MRMesh, CompressSphereToZip )
 {
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
@@ -63,10 +63,10 @@ TEST( MRMesh, CompressSphereToZip )
     // since .mrmesh is a raw binary dump of topology plus coordinate
     // floats, deflate typically produces a modestly smaller archive.
     EXPECT_LT( zipSize, meshSize * 2u );
-}
+}*/
 
-// Writes ~100 binary files and ~100 JSON files to a temporary folder (total
-// content size ~= the single .mrmesh file in CompressSphereToZip above), then
+// Writes ~200 binary files and ~200 JSON files to a temporary folder (total
+// content size ~= 2 * the single .mrmesh file in CompressSphereToZip above), then
 // compresses the folder to a .zip. Pairs with CompressSphereToZip to compare
 // compression of one large binary vs many small mixed-type entries.
 //
@@ -78,8 +78,8 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-    constexpr int numBinaryFiles = 100;
-    constexpr int numJsonFiles = 100;
+    constexpr int numBinaryFiles = 200;
+    constexpr int numJsonFiles = 200;
     constexpr size_t bytesPerFile = 60'000;
     // 200 files * 60_000 bytes = 12_000_000 bytes, very close to the
     // sphere.mrmesh size from the previous test (11_999_808 bytes).

@@ -18,8 +18,9 @@ struct ZlibParams
     bool rawDeflate = false;
 };
 
-/// populated by zlibCompressStream (see ZlibCompressParams::properties)
-struct ZlibCompressProperties
+/// statistics gathered during compression: CRC-32 of the uncompressed input and
+/// the total numbers of bytes read from / written to the streams
+struct ZlibCompressStats
 {
     uint32_t crc32 = 0;            ///< CRC-32 of the uncompressed input
     size_t uncompressedSize = 0;   ///< total bytes read from the input stream
@@ -33,10 +34,9 @@ struct ZlibCompressParams : ZlibParams
     /// 9 = the most efficient but the slowest; -1 = zlib's default
     int level = -1;
 
-    /// Optional output. Populated only when non-null and `rawDeflate` is true —
-    /// the zlib wrapper already carries Adler-32 inline, so this metadata is
-    /// collected for the raw/ZIP path only.
-    ZlibCompressProperties* properties = nullptr;
+    /// optional output; if non-null, the pointed-to object is populated with
+    /// CRC-32 of the input and the uncompressed / compressed byte totals
+    ZlibCompressStats* stats = nullptr;
 };
 
 /**

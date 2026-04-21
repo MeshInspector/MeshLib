@@ -133,57 +133,51 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
     ZlibDecompressParameters { cRawLevel9,     sizeof( cRawLevel9 ),     cInput, sizeof( cInput ), true  }
 ) );
 
-TEST( MRMesh, ZlibCompressPropertiesRaw )
+TEST( MRMesh, ZlibCompressStats )
 {
     const std::string inputStr( reinterpret_cast<const char*>( cInput ), sizeof( cInput ) );
+    const uint32_t expectedCrc = crc32Ref( cInput, sizeof( cInput ) );
 
-    for ( int level : { 1, 9 } )
+    struct Case { bool rawDeflate; int level; size_t expectedCompSize; };
+    const Case cases[] = {
+        { true,  1, sizeof( cRawLevel1 ) },
+        { true,  9, sizeof( cRawLevel9 ) },
+        { false, 1, sizeof( cWrappedLevel1 ) },
+        { false, 9, sizeof( cWrappedLevel9 ) },
+    };
+
+    for ( const auto& c : cases )
     {
-        const size_t expectedCompSize = ( level == 1 ) ? sizeof( cRawLevel1 ) : sizeof( cRawLevel9 );
-
-        MR::ZlibCompressProperties props;
+        MR::ZlibCompressStats stats;
         std::istringstream in( inputStr );
         std::ostringstream out;
         auto res = MR::zlibCompressStream( in, out,
-            MR::ZlibCompressParams{ { .rawDeflate = true }, level, &props } );
+            MR::ZlibCompressParams{ { .rawDeflate = c.rawDeflate }, c.level, &stats } );
         EXPECT_TRUE( res.has_value() );
 
-        EXPECT_EQ( props.crc32, crc32Ref( cInput, sizeof( cInput ) ) );
-        EXPECT_EQ( props.uncompressedSize, sizeof( cInput ) );
-        EXPECT_EQ( props.compressedSize, expectedCompSize );
-        EXPECT_EQ( out.str().size(), expectedCompSize );
+        EXPECT_EQ( stats.crc32, expectedCrc );
+        EXPECT_EQ( stats.uncompressedSize, sizeof( cInput ) );
+        EXPECT_EQ( stats.compressedSize, c.expectedCompSize );
+        EXPECT_EQ( out.str().size(), c.expectedCompSize );
     }
 }
 
-TEST( MRMesh, ZlibCompressPropertiesEmpty )
+TEST( MRMesh, ZlibCompressStatsEmpty )
 {
-    MR::ZlibCompressProperties props;
-    std::istringstream in;            // empty input
-    std::ostringstream out;
-    auto res = MR::zlibCompressStream( in, out,
-        MR::ZlibCompressParams{ { .rawDeflate = true }, /*level*/ -1, &props } );
-    EXPECT_TRUE( res.has_value() );
+    for ( bool rawDeflate : { false, true } )
+    {
+        MR::ZlibCompressStats stats;
+        std::istringstream in;            // empty input
+        std::ostringstream out;
+        auto res = MR::zlibCompressStream( in, out,
+            MR::ZlibCompressParams{ { .rawDeflate = rawDeflate }, /*level*/ -1, &stats } );
+        EXPECT_TRUE( res.has_value() );
 
-    EXPECT_EQ( props.crc32, 0u );
-    EXPECT_EQ( props.uncompressedSize, 0u );
-    // raw deflate still emits a terminator block for Z_FINISH on empty input;
-    // pin whatever zlib actually wrote.
-    EXPECT_EQ( props.compressedSize, out.str().size() );
-    EXPECT_GT( props.compressedSize, 0u );
-}
-
-TEST( MRMesh, ZlibCompressPropertiesIgnoredInWrappedMode )
-{
-    MR::ZlibCompressProperties sentinel{ .crc32 = 0xDEADBEEFu, .uncompressedSize = 999, .compressedSize = 888 };
-    const std::string inputStr( reinterpret_cast<const char*>( cInput ), sizeof( cInput ) );
-    std::istringstream in( inputStr );
-    std::ostringstream out;
-    auto res = MR::zlibCompressStream( in, out,
-        MR::ZlibCompressParams{ { .rawDeflate = false }, /*level*/ -1, &sentinel } );
-    EXPECT_TRUE( res.has_value() );
-
-    // wrapped mode leaves properties untouched
-    EXPECT_EQ( sentinel.crc32, 0xDEADBEEFu );
-    EXPECT_EQ( sentinel.uncompressedSize, 999u );
-    EXPECT_EQ( sentinel.compressedSize, 888u );
+        EXPECT_EQ( stats.crc32, 0u );
+        EXPECT_EQ( stats.uncompressedSize, 0u );
+        // deflate emits at least a terminator block for Z_FINISH on empty input;
+        // pin whatever zlib actually wrote.
+        EXPECT_EQ( stats.compressedSize, out.str().size() );
+        EXPECT_GT( stats.compressedSize, 0u );
+    }
 }

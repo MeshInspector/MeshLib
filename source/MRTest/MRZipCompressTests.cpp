@@ -17,7 +17,6 @@
 namespace MR
 {
 
-
 // Writes a ~100K-vertex sphere to a .mrmesh file in a temporary folder, then
 // compresses that folder to a .zip and verifies the archive was created and
 // is non-empty. Serves as a realistic end-to-end exercise of MeshLib's zip
@@ -41,7 +40,6 @@ namespace MR
     const std::filesystem::path meshPath = srcFolder / "sphere.mrmesh";
     const auto saveRes = MeshSave::toMrmesh( sphere, meshPath );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
-
 
     // Compress the temp folder into a .zip located in a second temp folder
     // (so the zip isn't inside the folder being compressed).

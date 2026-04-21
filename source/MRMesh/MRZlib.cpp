@@ -109,7 +109,7 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
     return zlibCompressStream( in, out, ZlibCompressParams{ .level = level } );
 }
 
-Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, const ZlibDecompressParams& params )
+Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, const ZlibParams& params )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
@@ -158,7 +158,7 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, const 
 
 Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
 {
-    return zlibDecompressStream( in, out, ZlibDecompressParams{} );
+    return zlibDecompressStream( in, out, ZlibParams{} );
 }
 
 } // namespace MR

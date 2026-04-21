@@ -74,14 +74,14 @@ TEST_P( ZlibCompressTestFixture, ZlibCompress )
     const std::string outputStr( reinterpret_cast<const char*>( output ), outputSize );
     std::ostringstream out( outputStr );
 
-    auto res = MR::zlibCompressStream( in, out, MR::ZlibCompressParams{ .level = level, .rawDeflate = rawDeflate } );
+    auto res = MR::zlibCompressStream( in, out, MR::ZlibCompressParams{ { .rawDeflate = rawDeflate }, level } );
     EXPECT_TRUE( res.has_value() );
     // FIXME: Python and MeshLib output data mismatch; note that MeshLib output is still valid
     //EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 
     std::istringstream in2( out.str() );
     std::ostringstream out2;
-    res = MR::zlibDecompressStream( in2, out2, MR::ZlibDecompressParams{ .rawDeflate = rawDeflate } );
+    res = MR::zlibDecompressStream( in2, out2, MR::ZlibParams{ .rawDeflate = rawDeflate } );
     EXPECT_TRUE( res.has_value() );
     EXPECT_STREQ( out2.str().c_str(), inputStr.c_str() );
 }
@@ -106,7 +106,7 @@ TEST_P( ZlibDecompressTestFixture, ZlibDecompress )
     const std::string outputStr( reinterpret_cast<const char*>( output ), outputSize );
     std::ostringstream out( outputStr );
 
-    auto res = MR::zlibDecompressStream( in, out, MR::ZlibDecompressParams{ .rawDeflate = rawDeflate } );
+    auto res = MR::zlibDecompressStream( in, out, MR::ZlibParams{ .rawDeflate = rawDeflate } );
     EXPECT_TRUE( res.has_value() );
     EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 }

@@ -73,7 +73,7 @@ if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
       if [[ "${CMAKE_CXX_COMPILER}" == "${HOMEBREW_PREFIX}"* ]] ; then
         # use system libc++ instead of Clang's one
         MACOS_SDK_PATH=$(xcrun --show-sdk-path | xargs)  # trim trailing whitespace
-        CXXFLAGS="-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v3 -isysroot ${MACOS_SDK_PATH}"
+        CXXFLAGS="-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH}"
         LDFLAGS="-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi"
         # use Homebrew zlib instead of system one
         MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D ZLIB_ROOT=$(brew --prefix zlib)"

@@ -35,6 +35,7 @@ jobs:
           EOF
 
   prepare-image:
+    if: ${{ false }}
     needs: config
     uses: ./.github/workflows/prepare-images.yml
     with:

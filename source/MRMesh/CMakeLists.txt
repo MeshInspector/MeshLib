@@ -50,8 +50,9 @@ target_link_libraries(${PROJECT_NAME}
 # libzip on Emscripten is unable to resolve its dependencies by itself
 IF(EMSCRIPTEN)
   find_package(MbedTLS 1.0 REQUIRED)
-  find_package(ZLIB REQUIRED)
 ENDIF()
+find_package(ZLIB REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
 # libzip prior to version 1.11.4 has incorrect CMake config that requires libzip tools to be installed
 IF(MESHLIB_USE_VCPKG OR APPLE OR EMSCRIPTEN)
   # vcpkg, homebrew, and submodule versions are already updated

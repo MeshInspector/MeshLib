@@ -16,7 +16,7 @@
     <ClCompile Include="MRTriangleIntersectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRZlib.cpp">
+    <ClCompile Include="MRZlibTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTrimWithPlane.cpp">

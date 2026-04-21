@@ -55,8 +55,15 @@ find_package(ZLIB REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
 # libzip prior to version 1.11.4 has incorrect CMake config that requires libzip tools to be installed
 IF(MESHLIB_USE_VCPKG OR APPLE OR EMSCRIPTEN)
-  # vcpkg, homebrew, and submodule versions are already updated
-  find_package(libzip REQUIRED)
+  # vcpkg, homebrew, and submodule versions are already updated.
+  # On APPLE (and EMSCRIPTEN) we build libzip from thirdparty/libzip and
+  # install it to MESHLIB_THIRDPARTY_ROOT_DIR, which is not on CMake's default
+  # find_package search path, so hint it explicitly. The hint is harmless on
+  # vcpkg-based configurations (they still find the vcpkg-supplied libzip
+  # via the toolchain-provided CMAKE_PREFIX_PATH).
+  find_package(libzip REQUIRED
+    HINTS ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/libzip
+  )
 ELSE()
   # on Ubuntu LTS (22.04, 24.04) we have to use pkg-config instead
   find_package(PkgConfig REQUIRED)

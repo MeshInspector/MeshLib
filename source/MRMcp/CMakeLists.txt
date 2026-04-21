@@ -5,33 +5,19 @@ file(GLOB SOURCES "*.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+find_package(fastmcpp REQUIRED
+  HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+)
+
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh
+  PRIVATE
+    fastmcpp::fastmcpp_core
 )
 
 if(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
-endif()
-
-# On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
-if(MESHLIB_USE_VCPKG)
-  set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
-  add_subdirectory(../fastmcpp fastmcpp)
-  target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
-  target_include_directories(${PROJECT_NAME} PRIVATE
-    ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include
-    ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
-    ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
-  )
-else()
-  find_package(fastmcpp REQUIRED
-    HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
-  )
-  target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-      fastmcpp::fastmcpp_core
-  )
 endif()
 
 install(

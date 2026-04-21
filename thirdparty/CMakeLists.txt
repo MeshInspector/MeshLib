@@ -96,14 +96,25 @@ IF(EMSCRIPTEN)
   set(GDCM_BUILD_TESTING OFF)
   set(GDCM_BUILD_DOCBOOK_MANPAGES OFF)
   add_subdirectory(./GDCM)
+ENDIF()
 
+# Build libzip from our submodule on Emscripten (no system libzip available)
+# and on macOS (so we can link it against Homebrew's zlib-ng-compat drop-in
+# replacement for zlib, reached via ZLIB_ROOT / CMAKE_PREFIX_PATH from the
+# build scripts). Other platforms still pick libzip up from apt/brew/vcpkg.
+IF(EMSCRIPTEN OR APPLE)
   set(BUILD_TOOLS OFF CACHE BOOL "")
   set(BUILD_REGRESS OFF CACHE BOOL "")
   set(BUILD_EXAMPLES OFF CACHE BOOL "")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
+  IF(EMSCRIPTEN)
+    # Emscripten ships a bundled zlib port activated by this flag.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
+  ENDIF()
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)
+ENDIF()
 
+IF(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   set(JSONCPP_WITH_TESTS OFF)

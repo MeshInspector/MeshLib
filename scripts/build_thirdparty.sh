@@ -100,6 +100,15 @@ fi
 
 if [[ $OSTYPE == 'darwin'* ]]; then
   NPROC=$(sysctl -n hw.logicalcpu)
+  # Homebrew's zlib-ng-compat is keg-only (shadowed by macOS system zlib),
+  # so CMake's find_package(ZLIB) won't pick it up unless we point at its
+  # keg prefix explicitly. We want our libzip submodule (built just below)
+  # and MeshLib's own ZLIB::ZLIB consumers to link against zlib-ng, not the
+  # macOS-provided zlib.
+  ZLIB_NG_COMPAT_PREFIX=$(brew --prefix zlib-ng-compat 2>/dev/null || true)
+  if [ -n "${ZLIB_NG_COMPAT_PREFIX}" ] && [ -d "${ZLIB_NG_COMPAT_PREFIX}" ]; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D ZLIB_ROOT=${ZLIB_NG_COMPAT_PREFIX}"
+  fi
 else
   NPROC=$(nproc)
 fi

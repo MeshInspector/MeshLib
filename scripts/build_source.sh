@@ -92,6 +92,13 @@ if [[ $OSTYPE == 'darwin'* ]]; then
     -D PYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} \
     -D PYTHON_EXECUTABLE:FILEPATH=${PYTHON_EXECUTABLE} \
   "
+
+  # Homebrew's zlib-ng-compat is keg-only; point CMake at it so MRMesh's
+  # find_package(ZLIB) resolves to zlib-ng rather than the macOS system zlib.
+  ZLIB_NG_COMPAT_PREFIX=$(brew --prefix zlib-ng-compat 2>/dev/null || true)
+  if [ -n "${ZLIB_NG_COMPAT_PREFIX}" ] && [ -d "${ZLIB_NG_COMPAT_PREFIX}" ]; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D ZLIB_ROOT=${ZLIB_NG_COMPAT_PREFIX}"
+  fi
 fi
 
 if [[ $OSTYPE == 'darwin'* ]]; then

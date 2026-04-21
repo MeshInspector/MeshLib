@@ -19,6 +19,7 @@ gdcm
 gtest
 hidapi
 jsoncpp
+libdeflate
 libe57format
 libharu
 libzip

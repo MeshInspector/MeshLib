@@ -1,6 +1,7 @@
 #include "MRZip.h"
 #include "MRDirectory.h"
 #include "MRIOParsing.h"
+#include "MRParallelFor.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRZlib.h"
@@ -17,6 +18,7 @@
 #pragma clang diagnostic pop
 #endif
 
+#include <atomic>
 #include <cassert>
 #include <cstring>
 #include <fstream>
@@ -226,11 +228,18 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
     return {};
 }
 
+// Phase A output per file; pass #2 moves this into a DeflatedSourceCtx for libzip hand-off
+struct DeflatedEntry
+{
+    std::vector<uint8_t> data;  ///< raw DEFLATE bytes (RFC 1951, no zlib wrapper)
+    ZlibCompressStats stats;    ///< CRC-32 + uncompressed/compressed sizes
+};
+
 // context for a pre-deflated entry; the caller creates it as a unique_ptr, transfers ownership
 // to libzip via zip_source_function, and the ZIP_SOURCE_FREE command then deletes it
 struct DeflatedSourceCtx
 {
-    std::string data;           ///< raw DEFLATE bytes (RFC 1951, no zlib wrapper)
+    std::vector<uint8_t> data;  ///< raw DEFLATE bytes (RFC 1951, no zlib wrapper)
     ZlibCompressStats stats;    ///< size / comp_size / crc from zlibCompressStream
     zip_uint16_t gpbFlags = 0;  ///< precomputed GPB bits 1-2 encoding the deflate level
     size_t pos = 0;             ///< read cursor for ZIP_SOURCE_READ
@@ -374,27 +383,61 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     }
 
     // pass #2: deflate each file and hand libzip pre-deflated bytes via a source callback;
-    // libzip's trust-source fast path then copies them into the archive without recompressing
+    // libzip's trust-source fast path then copies them into the archive without recompressing.
     // level 0 (the settings-level "use default") normalizes to 6 — zlib's internal default is 6,
     // and APPNOTE has no sentinel for "default", so 6 is what the archive entry records
     const int level = settings.compressionLevel == 0 ? 6 : std::clamp( settings.compressionLevel, 1, 9 );
     const zip_uint16_t gpbFlags = deflateGpbLevelFlags( level );
-    auto scb = subprogress( settings.cb, 0.0f, 0.8f );
-    for ( size_t i = 0; i < files.size(); ++i )
+
+    // Phase A — parallel: read each file and deflate it into a per-slot DeflatedEntry
+    std::vector<Expected<DeflatedEntry>> results( files.size() );
+    std::atomic<bool> hadError{ false };
+    auto scbA = subprogress( settings.cb, 0.0f, 0.8f );
+
+    auto keepGoing = ParallelFor( files, [&]( size_t i )
     {
-        const auto& [path, archiveFilePath] = files[i];
+        if ( hadError.load( std::memory_order_relaxed ) )
+            return; // some other worker already failed; skip
 
-        std::ifstream in( path, std::ios::binary );
+        std::ifstream in( files[i].first, std::ios::binary );
         if ( !in )
-            return unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
+        {
+            results[i] = unexpected( "Cannot open file " + utf8string( files[i].first ) + " for reading" );
+            hadError.store( true, std::memory_order_relaxed );
+            return;
+        }
 
-        auto ctx = std::make_unique<DeflatedSourceCtx>();
-        ctx->gpbFlags = gpbFlags;
+        DeflatedEntry e;
         std::ostringstream out( std::ios::binary );
         if ( auto r = zlibCompressStream( in, out,
-                 ZlibCompressParams{ { .rawDeflate = true }, level, &ctx->stats } ); !r )
-            return unexpected( r.error() );
-        ctx->data = std::move( out ).str();
+                 ZlibCompressParams{ { .rawDeflate = true }, level, &e.stats } ); !r )
+        {
+            results[i] = unexpected( r.error() );
+            hadError.store( true, std::memory_order_relaxed );
+            return;
+        }
+        // zlibCompressStream requires std::ostream&, so we go through ostringstream and copy out;
+        // the copy is O(deflated_size), trivial next to zlib's own cost per file
+        const std::string s = std::move( out ).str();
+        e.data.assign( s.begin(), s.end() );
+        results[i] = std::move( e );
+    }, scbA, 16 /* reportProgressEvery — keeps the UI ticking and cancel responsive for typical file counts */ );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+    for ( auto& r : results )
+        if ( !r )
+            return unexpected( r.error() ); // first error (lowest index) wins
+
+    // Phase B — serial: hand each pre-deflated buffer to libzip
+    for ( size_t i = 0; i < files.size(); ++i )
+    {
+        const auto& archiveFilePath = files[i].second;
+
+        auto ctx = std::make_unique<DeflatedSourceCtx>();
+        ctx->data = std::move( results[i]->data );
+        ctx->stats = results[i]->stats;
+        ctx->gpbFlags = gpbFlags;
 
         zip_source_t* src = zip_source_function( zip, deflatedSourceCallback, ctx.get() );
         if ( !src )
@@ -415,9 +458,6 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
             if ( zip_file_set_encryption( zip, index, ZIP_EM_AES_256, settings.password.c_str() ) )
                 return unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
         }
-
-        if ( !reportProgress( scb, float( i + 1 ) / files.size() ) )
-            return unexpectedOperationCanceled();
     }
 
     auto closeRes = zip.close();

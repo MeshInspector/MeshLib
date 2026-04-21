@@ -3,6 +3,7 @@
 #include "MRIOParsing.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
+#include "MRZlib.h"
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -17,7 +18,10 @@
 #endif
 
 #include <cassert>
+#include <cstring>
 #include <fstream>
+#include <memory>
+#include <sstream>
 
 namespace MR
 {
@@ -222,6 +226,100 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
     return {};
 }
 
+// context for a pre-deflated entry; the caller creates it as a unique_ptr, transfers ownership
+// to libzip via zip_source_function, and the ZIP_SOURCE_FREE command then deletes it
+struct DeflatedSourceCtx
+{
+    std::string data;           ///< raw DEFLATE bytes (RFC 1951, no zlib wrapper)
+    ZlibCompressStats stats;    ///< size / comp_size / crc from zlibCompressStream
+    zip_uint16_t gpbFlags = 0;  ///< precomputed GPB bits 1-2 encoding the deflate level
+    size_t pos = 0;             ///< read cursor for ZIP_SOURCE_READ
+    zip_error_t err{};          ///< scratch for ZIP_SOURCE_ERROR
+};
+
+// PKZIP APPNOTE 4.4.4 buckets the deflate level into four coarse categories via GPB bits 1 and 2;
+// levels 6-8 all map to "normal" and levels 2-5 all map to "fast" — the spec has no finer resolution
+zip_uint16_t deflateGpbLevelFlags( int level )
+{
+    if ( level == 9 ) return 0b0010;                   // maximum:   bit 1 set
+    if ( level >= 2 && level <= 5 ) return 0b0100;     // fast:      bit 2 set
+    if ( level == 1 ) return 0b0110;                   // superfast: bits 1 + 2 set
+    return 0b0000;                                     // normal (levels 6-8): neither bit set
+}
+
+// zip_source_function callback for a pre-deflated buffer; lets libzip's trust-source
+// fast path in zip_close() copy the bytes into the archive without any recompression
+// (no SEEK/TELL on purpose — keeps libzip on the linear-read path)
+zip_int64_t deflatedSourceCallback( void* user, void* data, zip_uint64_t len, zip_source_cmd_t cmd )
+{
+    if ( !user )
+    {
+        assert( false );
+        return -1;
+    }
+    auto* ctx = static_cast<DeflatedSourceCtx*>( user );
+    switch ( cmd )
+    {
+        case ZIP_SOURCE_SUPPORTS:
+            return zip_source_make_command_bitmap( ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE,
+                ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR, ZIP_SOURCE_FREE, ZIP_SOURCE_SUPPORTS,
+                ZIP_SOURCE_GET_FILE_ATTRIBUTES, ZIP_SOURCE_SUPPORTS_REOPEN, -1 );
+
+        case ZIP_SOURCE_OPEN:
+            ctx->pos = 0;
+            return 0;
+
+        case ZIP_SOURCE_READ:
+        {
+            const size_t n = std::min<size_t>( size_t( len ), ctx->data.size() - ctx->pos );
+            if ( n )
+                std::memcpy( data, ctx->data.data() + ctx->pos, n );
+            ctx->pos += n;
+            return zip_int64_t( n );
+        }
+
+        case ZIP_SOURCE_CLOSE:
+            return 0;
+
+        case ZIP_SOURCE_STAT:
+        {
+            auto* st = (zip_stat_t*)data;
+            zip_stat_init( st );
+            st->size = ctx->stats.uncompressedSize;
+            st->comp_size = ctx->stats.compressedSize;
+            st->comp_method = ZIP_CM_DEFLATE;
+            st->crc = ctx->stats.crc32;
+            st->encryption_method = ZIP_EM_NONE;
+            st->valid = ZIP_STAT_SIZE | ZIP_STAT_COMP_SIZE
+                      | ZIP_STAT_COMP_METHOD | ZIP_STAT_CRC
+                      | ZIP_STAT_ENCRYPTION_METHOD;
+            return sizeof( zip_stat_t );
+        }
+
+        case ZIP_SOURCE_ERROR:
+            return zip_error_to_data( &ctx->err, data, len );
+
+        case ZIP_SOURCE_FREE:
+            delete ctx;
+            return 0;
+
+        case ZIP_SOURCE_GET_FILE_ATTRIBUTES:
+        {
+            auto* a = (zip_file_attributes_t*)data;
+            zip_file_attributes_init( a );
+            a->valid = ZIP_FILE_ATTRIBUTES_VERSION_NEEDED
+                     | ZIP_FILE_ATTRIBUTES_GENERAL_PURPOSE_BIT_FLAGS;
+            a->version_needed = 20;
+            a->general_purpose_bit_flags = ctx->gpbFlags;
+            a->general_purpose_bit_mask = 0b0110; // only bits 1-2 (deflate level) are authoritative here
+            return sizeof( zip_file_attributes_t );
+        }
+
+        default:
+            return -1;
+    }
+}
+
 } // anonymous namespace
 
 Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, const CompressZipSettings& settings )
@@ -236,7 +334,7 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         return unexpected( "Directory '" + utf8string( sourceFolder ) + "' does not exist" );
 
     int err;
-    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( settings.cb, 0.5f, 1.0f ) );
+    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( settings.cb, 0.8f, 1.0f ) );
     if ( !zip )
         return unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
@@ -275,26 +373,42 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         }
     }
 
-    // pass #2: add files in the archive
-    zip_uint32_t compressionLevel = zip_uint32_t( std::clamp( settings.compressionLevel, 0, 9 ) );
-    auto scb = subprogress( settings.cb, 0.0f, 0.5f );
+    // pass #2: deflate each file and hand libzip pre-deflated bytes via a source callback;
+    // libzip's trust-source fast path then copies them into the archive without recompressing
+    // level 0 (the settings-level "use default") normalizes to 6 — zlib's internal default is 6,
+    // and APPNOTE has no sentinel for "default", so 6 is what the archive entry records
+    const int level = settings.compressionLevel == 0 ? 6 : std::clamp( settings.compressionLevel, 1, 9 );
+    const zip_uint16_t gpbFlags = deflateGpbLevelFlags( level );
+    auto scb = subprogress( settings.cb, 0.0f, 0.8f );
     for ( size_t i = 0; i < files.size(); ++i )
     {
         const auto& [path, archiveFilePath] = files[i];
 
-        auto fileSource = zip_source_file( zip, utf8string( path ).c_str(), 0, 0 );
-        if ( !fileSource )
+        std::ifstream in( path, std::ios::binary );
+        if ( !in )
             return unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
 
-        const auto index = zip_file_add( zip, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
+        auto ctx = std::make_unique<DeflatedSourceCtx>();
+        ctx->gpbFlags = gpbFlags;
+        std::ostringstream out( std::ios::binary );
+        if ( auto r = zlibCompressStream( in, out,
+                 ZlibCompressParams{ { .rawDeflate = true }, level, &ctx->stats } ); !r )
+            return unexpected( r.error() );
+        ctx->data = std::move( out ).str();
+
+        zip_source_t* src = zip_source_function( zip, deflatedSourceCallback, ctx.get() );
+        if ( !src )
+            return unexpected( "Cannot create source for " + archiveFilePath );
+        ctx.release(); // libzip now owns ctx; ZIP_SOURCE_FREE will delete it
+
+        const auto index = zip_file_add( zip, archiveFilePath.c_str(), src, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
         if ( index < 0 )
         {
-            zip_source_free( fileSource );
+            zip_source_free( src ); // also fires ZIP_SOURCE_FREE → deletes ctx
             return unexpected( "Cannot add file " + archiveFilePath + " to archive" );
         }
 
-        if ( compressionLevel != 0 )
-            zip_set_file_compression( zip, index, ZIP_CM_DEFAULT, compressionLevel );
+        zip_set_file_compression( zip, index, ZIP_CM_DEFLATE, zip_uint32_t( level ) );
 
         if ( !settings.password.empty() )
         {

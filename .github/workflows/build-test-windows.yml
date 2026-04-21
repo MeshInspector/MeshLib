@@ -198,20 +198,26 @@ jobs:
         env:
           GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
           VCPKG_ROOT: C:\vcpkg
-          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-        # `|| exit /b 1` is used instead of `if errorlevel 1 exit 1`
-        # because the latter can miss exit codes inside parenthesized IF
-        # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
+        # Error handling: use `|| exit /b 1` chained to each command instead
+        # of the `if errorlevel 1 exit 1` pattern. The latter was failing to
+        # propagate `cmake --build` / ninja failures out of the step on
+        # windows-2025 runners; in a run where ninja reported
+        # `ninja: build stopped: subcommand failed` the step still exited 0
+        # and went on to `xcopy`, which hid the real failure and caused the
+        # next step's linker error for a nonexistent .lib. `|| exit /b 1`
+        # is evaluated at process-exit time rather than via the
+        # errorlevel-in-parens parsing quirks of cmd.exe IF blocks, and is
+        # the documented idiom for robust error propagation in batch files.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
             cmake --version || exit /b 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} || exit /b 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
           )
 
       - name: Generate and build Python bindings

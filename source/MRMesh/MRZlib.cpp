@@ -75,6 +75,10 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const Zl
         deflateEnd( &stream );
     };
 
+    const bool collect = params.properties && params.rawDeflate;
+    if ( collect )
+        *params.properties = {};
+
     while ( !in.eof() )
     {
         in.read( inChunk.data(), inChunk.size() );
@@ -83,6 +87,13 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const Zl
         stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
         stream.avail_in = (unsigned)in.gcount();
         assert( stream.avail_in <= (unsigned)inChunk.size() );
+
+        if ( collect )
+        {
+            // reuse the already-typed pointers zlib needs — no new casts.
+            params.properties->crc32 = (uint32_t)crc32( params.properties->crc32, stream.next_in, stream.avail_in );
+            params.properties->uncompressedSize += stream.avail_in;
+        }
 
         const auto flush = in.eof() ? Z_FINISH : Z_NO_FLUSH;
         do
@@ -94,9 +105,12 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const Zl
                 return unexpected( zlibToString( ret ) );
 
             assert( stream.avail_out <= (unsigned)outChunk.size() );
-            out.write( outChunk.data(), (unsigned)outChunk.size() - stream.avail_out );
+            const unsigned written = (unsigned)outChunk.size() - stream.avail_out;
+            out.write( outChunk.data(), written );
             if ( out.bad() )
                 return unexpected( "I/O error" );
+            if ( collect )
+                params.properties->compressedSize += written;
         }
         while ( stream.avail_out == 0 );
     }

@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 
+#include <cstdint>
 #include <iostream>
 
 namespace MR
@@ -17,12 +18,25 @@ struct ZlibParams
     bool rawDeflate = false;
 };
 
+/// populated by zlibCompressStream (see ZlibCompressParams::properties)
+struct ZlibCompressProperties
+{
+    uint32_t crc32 = 0;            ///< CRC-32 of the uncompressed input
+    size_t uncompressedSize = 0;   ///< total bytes read from the input stream
+    size_t compressedSize = 0;     ///< total bytes written to the output stream
+};
+
 /// parameters for zlibCompressStream (adds a compression level on top of ZlibParams)
 struct ZlibCompressParams : ZlibParams
 {
     /// compression level: 0 = no compression, 1 = the fastest but the most inefficient,
     /// 9 = the most efficient but the slowest; -1 = zlib's default
     int level = -1;
+
+    /// Optional output. Populated only when non-null and `rawDeflate` is true —
+    /// the zlib wrapper already carries Adler-32 inline, so this metadata is
+    /// collected for the raw/ZIP path only.
+    ZlibCompressProperties* properties = nullptr;
 };
 
 /**

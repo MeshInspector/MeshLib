@@ -6,7 +6,9 @@ REM   --write-s3                  push vcpkg binary cache to S3 (needs AWS crede
 REM   --use-s3-asset-provider     fetch vcpkg download assets via thirdparty\asset-provider-s3.bat (S3 then curl).
 REM                               Use only when pinned to an older vcpkg whose upstream download URLs are stale or broken;
 REM                               newer vcpkg ports usually do not need this.
-
+REM   --s3-suffix=<suffix> append <suffix> to the S3 tag folder, e.g. --s3-suffix=-ng
+REM                        yields s3://vcpkg-export/<tag>-ng/<triplet>/. Use to fence off
+REM                        caches whose contents diverge from upstream (e.g. overlay ports).
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
@@ -38,12 +40,15 @@ if not defined vcpkg_path (
 
 echo Using vcpkg version: !VCPKG_TAG!
 
+
 REM Check for CLI options
 set "write_s3_option=false"
 set "use_s3_assets=false"
+set "s3_suffix="
 for %%i in (%*) do (
     if /I "%%i"=="--write-s3" set "write_s3_option=true"
     if /I "%%i"=="--use-s3-asset-provider" set "use_s3_assets=true"
+    if /I "%%i"=="--s3-suffix=" set "s3_suffix=!arg:~12!"
 )
 if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
     echo "Error: --write-s3 requires AWS CLI to be installed."
@@ -51,7 +56,9 @@ if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
 )
 
 REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
+set "S3_CACHE_PATH=s3://vcpkg-export/!VCPKG_TAG!!s3_suffix!/x64-windows-meshlib/"
 if "!aws_cli_available!"=="true" (
+    echo Using S3 cache path: !S3_CACHE_PATH!
     if "!write_s3_option!"=="true" (
         echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
         set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"

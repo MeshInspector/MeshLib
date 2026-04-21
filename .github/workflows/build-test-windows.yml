@@ -89,6 +89,7 @@ jobs:
           vcpkg.exe integrate install
 
       - name: Restore Vcpkg Cache
+        if: ${{ false }}
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
@@ -113,9 +114,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Update vcpkg packages
-        timeout-minutes: 3
+        # timeout-minutes: 3
         run: |
-          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider
+          .\thirdparty\install.bat --write-s3 --s3-suffix=-ng
 
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg

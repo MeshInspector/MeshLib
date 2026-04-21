@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 
+#include <cstdint>
 #include <iostream>
 
 namespace MR
@@ -17,12 +18,25 @@ struct ZlibParams
     bool rawDeflate = false;
 };
 
+/// statistics gathered during compression: CRC-32 of the uncompressed input and
+/// the total numbers of bytes read from / written to the streams
+struct ZlibCompressStats
+{
+    uint32_t crc32 = 0;            ///< CRC-32 of the uncompressed input
+    size_t uncompressedSize = 0;   ///< total bytes read from the input stream
+    size_t compressedSize = 0;     ///< total bytes written to the output stream
+};
+
 /// parameters for zlibCompressStream (adds a compression level on top of ZlibParams)
 struct ZlibCompressParams : ZlibParams
 {
     /// compression level: 0 = no compression, 1 = the fastest but the most inefficient,
     /// 9 = the most efficient but the slowest; -1 = zlib's default
     int level = -1;
+
+    /// optional output; if non-null, the pointed-to object is populated with
+    /// CRC-32 of the input and the uncompressed / compressed byte totals
+    ZlibCompressStats* stats = nullptr;
 };
 
 /**

@@ -2,7 +2,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MeshInspector/fastmcpp
     REF 59e717403bf23113fc655284d482fcb8844b3595
-    SHA512 0
+    SHA512 cd97030888d5038a4b5e4313da003be2866a167c54499f4c831abb10ce0b876b08df3b3db926506d3bdc6b0fdcd6dae1cb4a0df203d3a19f5ca8669af4f8c7b1
     HEAD_REF main
 )
 

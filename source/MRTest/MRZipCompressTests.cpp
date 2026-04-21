@@ -17,18 +17,16 @@
 namespace MR
 {
 
-// Writes a ~100K-vertex sphere to a .mrmesh file in a temporary folder, then
+// Writes a sphere to a .mrmesh file in a temporary folder, then
 // compresses that folder to a .zip and verifies the archive was created and
 // is non-empty. Serves as a realistic end-to-end exercise of MeshLib's zip
 // write path (libzip + deflate) on mesh-sized data.
-/*TEST( MRMesh, CompressSphereToZip )
+TEST( MRMesh, CompressSphereToZip )
 {
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-    // Generate a sphere with ~100K vertices. makeSphere's subdivision
-    // targets the requested count but may land a handful over.
-    constexpr int targetVerts = 100'000;
+    constexpr int targetVerts = 1000; // increase it to make the file being compressed larger, 100'000 vertices -> 12M bytes
     SphereParams params;
     params.radius = 1.0f;
     params.numMeshVertices = targetVerts;
@@ -63,10 +61,9 @@ namespace MR
     // since .mrmesh is a raw binary dump of topology plus coordinate
     // floats, deflate typically produces a modestly smaller archive.
     EXPECT_LT( zipSize, meshSize * 2u );
-}*/
+}
 
-// Writes ~200 binary files and ~200 JSON files to a temporary folder (total
-// content size ~= 2 * the single .mrmesh file in CompressSphereToZip above), then
+// Writes many binary files and same number JSON files to a temporary folder, then
 // compresses the folder to a .zip. Pairs with CompressSphereToZip to compare
 // compression of one large binary vs many small mixed-type entries.
 //
@@ -78,11 +75,10 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-    constexpr int numBinaryFiles = 200;
-    constexpr int numJsonFiles = 200;
-    constexpr size_t bytesPerFile = 60'000;
-    // 200 files * 60_000 bytes = 12_000_000 bytes, very close to the
-    // sphere.mrmesh size from the previous test (11_999_808 bytes).
+    // increase both below numbers to make the files being compressed larger, 200 * 2 files * 60'000 bytes -> 24M bytes
+    constexpr int numBinaryFiles = 20;
+    constexpr int numJsonFiles = numBinaryFiles;
+    constexpr size_t bytesPerFile = 6000;
 
     // Simple LCG used to produce deterministic pseudo-random bytes.
     // Keeps the test reproducible across runs and platforms while avoiding
@@ -122,7 +118,7 @@ TEST( MRMesh, CompressManySmallFilesToZip )
         totalBinaryBytes += bytesPerFile;
     }
 
-    // 100 JSON files of deterministic structured-looking text. Highly
+    // JSON files of deterministic structured-looking text. Highly
     // compressible — representative of scene-description metadata, logs,
     // shader source, and other textual payloads.
     std::size_t totalJsonBytes = 0;

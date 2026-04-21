@@ -352,7 +352,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         intContours[f].closed = true;
     } );
 
-    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
+    // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
+    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt, nullptr, 0, false } );
     auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get() } );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );

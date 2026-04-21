@@ -157,8 +157,14 @@ TEST( MRMesh, ZlibCompressStats )
 
         EXPECT_EQ( stats.crc32, expectedCrc );
         EXPECT_EQ( stats.uncompressedSize, sizeof( cInput ) );
-        EXPECT_EQ( stats.compressedSize, c.expectedCompSize );
-        EXPECT_EQ( out.str().size(), c.expectedCompSize );
+        // Compressed size is not pinned to an exact reference: different
+        // deflate implementations (stock zlib, zlib-ng, etc.) may encode the
+        // same input into equivalently valid but slightly differently sized
+        // output. The internal-consistency check + a small ± window around
+        // the stock-zlib reference is enough.
+        EXPECT_EQ( stats.compressedSize, out.str().size() );
+        EXPECT_GE( stats.compressedSize, c.expectedCompSize - 4 );
+        EXPECT_LE( stats.compressedSize, c.expectedCompSize + 4 );
     }
 }
 

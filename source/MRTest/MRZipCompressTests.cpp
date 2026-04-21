@@ -97,7 +97,7 @@ TEST( MRMesh, CompressManySmallFilesToZip )
         return std::string( buf );
     };
 
-    // 100 binary files of pseudo-random bytes. Poor compressibility on
+    // Binary files of pseudo-random bytes. Poor compressibility on
     // purpose — representative of mesh coordinate floats, compressed-texture
     // blobs, and other near-incompressible payloads that often live in a
     // MeshLib scene save.

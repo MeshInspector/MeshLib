@@ -4,7 +4,7 @@ name: Build Test Distribute
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [ master, ci/libzip-zlib-ng-vcpkg-debug-test]
   pull_request:
     branches: [ master ]
 

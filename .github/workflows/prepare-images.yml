@@ -36,7 +36,7 @@ jobs:
         run: echo
 
   linux-image-build-upload:
-    if: ${{ inputs.need_linux_image_rebuild }}
+    if: ${{ false }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -102,7 +102,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
   linux-vcpkg-build-upload:
-    if: ${{ inputs.need_linux_vcpkg_rebuild }}
+    if: ${{ false }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -141,7 +141,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
-    if: ${{ inputs.need_windows_vcpkg_rebuild }}
+    if: ${{ false }}
     timeout-minutes: 240
     runs-on: ${{ matrix.runner }}
     strategy:

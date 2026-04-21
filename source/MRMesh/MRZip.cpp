@@ -251,8 +251,8 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         return excluded == settings.excludeFiles.end();
     };
 
-    // pass #1: add directories in the archive and count the files
-    int totalFiles = 0;
+    // pass #1: add directories in the archive and collect the files to compress
+    std::vector<std::pair<std::filesystem::path, std::string>> files;
     for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
         const auto path = entry.path();
@@ -267,26 +267,25 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         }
 
         if ( goodFile( path ) )
-            ++totalFiles;
+        {
+            auto archiveFilePath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
+            // convert folder separators in Linux style for the latest 7-zip to open archive correctly
+            std::replace( archiveFilePath.begin(), archiveFilePath.end(), '\\', '/' );
+            files.emplace_back( path, std::move( archiveFilePath ) );
+        }
     }
 
     // pass #2: add files in the archive
     zip_uint32_t compressionLevel = zip_uint32_t( std::clamp( settings.compressionLevel, 0, 9 ) );
-    int compressedFiles = 0;
     auto scb = subprogress( settings.cb, 0.0f, 0.5f );
-    for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
+    for ( size_t i = 0; i < files.size(); ++i )
     {
-        const auto path = entry.path();
-        if ( !goodFile( path ) )
-            continue;
+        const auto& [path, archiveFilePath] = files[i];
 
         auto fileSource = zip_source_file( zip, utf8string( path ).c_str(), 0, 0 );
         if ( !fileSource )
             return unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
 
-        auto archiveFilePath = utf8string( std::filesystem::relative( path, sourceFolder, ec ) );
-        // convert folder separators in Linux style for the latest 7-zip to open archive correctly
-        std::replace( archiveFilePath.begin(), archiveFilePath.end(), '\\', '/' );
         const auto index = zip_file_add( zip, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
         if ( index < 0 )
         {
@@ -303,8 +302,7 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
                 return unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
         }
 
-        ++compressedFiles;
-        if ( !reportProgress( scb, std::min( float( compressedFiles ) / totalFiles, 1.0f ) ) )
+        if ( !reportProgress( scb, float( i + 1 ) / files.size() ) )
             return unexpectedOperationCanceled();
     }
 

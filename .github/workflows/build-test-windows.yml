@@ -112,6 +112,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Update vcpkg packages
+        timeout-minutes: 3
         run: |
           .\thirdparty\install.bat --write-s3
 

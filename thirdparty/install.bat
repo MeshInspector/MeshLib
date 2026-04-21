@@ -46,9 +46,10 @@ set "write_s3_option=false"
 set "use_s3_assets=false"
 set "s3_suffix="
 for %%i in (%*) do (
-    if /I "%%i"=="--write-s3" set "write_s3_option=true"
-    if /I "%%i"=="--use-s3-asset-provider" set "use_s3_assets=true"
-    if /I "%%i"=="--s3-suffix=" set "s3_suffix=!arg:~12!"
+    set "arg=%%i"
+    if /I "!arg!"=="--write-s3" set "write_s3_option=true"
+    if /I "!arg!"=="--use-s3-asset-provider" set "use_s3_assets=true"
+    if /I "!arg:~0,12!"=="--s3-suffix=" set "s3_suffix=!arg:~12!"
 )
 if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
     echo "Error: --write-s3 requires AWS CLI to be installed."
@@ -56,15 +57,15 @@ if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
 )
 
 REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
-set "S3_CACHE_PATH=s3://vcpkg-export/!VCPKG_TAG!!s3_suffix!/x64-windows-meshlib/"
+set "S3_CACHE_PATH=s3://vcpkg-export/!VCPKG_TAG!!s3_suffix!/!VCPKG_DEFAULT_TRIPLET!/"
 if "!aws_cli_available!"=="true" (
     echo Using S3 cache path: !S3_CACHE_PATH!
     if "!write_s3_option!"=="true" (
         echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws,!S3_CACHE_PATH!,readwrite;"
     ) else (
         echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,!S3_CACHE_PATH!,readwrite;"
     )
 ) else (
     echo "Mode: build from source (no S3 binary cache)."

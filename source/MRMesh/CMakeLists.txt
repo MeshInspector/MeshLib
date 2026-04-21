@@ -65,6 +65,16 @@ ELSE()
 ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
+# libdeflate powers MRZip's unencrypted fast path (writes the ZIP container
+# ourselves, delegates the deflate primitive + CRC32 to libdeflate). It is
+# always built from our thirdparty submodule, installed to the thirdparty
+# prefix; hint find_package there explicitly so the main build picks up the
+# freshly-built config regardless of whether the system image has libdeflate.
+find_package(libdeflate CONFIG REQUIRED
+  HINTS ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/libdeflate
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE libdeflate::libdeflate_shared)
+
 # TODO: CMake config
 target_include_directories(${PROJECT_NAME}
   PUBLIC

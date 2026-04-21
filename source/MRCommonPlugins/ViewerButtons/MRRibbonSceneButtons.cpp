@@ -29,7 +29,7 @@ std::string RibbonSceneSortByName::isAvailable( const std::vector<std::shared_pt
 
 bool RibbonSceneSortByName::action()
 {
-    SCOPED_HISTORY( "Sort scene" );
+    SCOPED_HISTORY( _t( "Sort scene" ) );
     sortObjectsRecursive_( SceneRoot::getSharedPtr() );
     return false;
 }
@@ -203,7 +203,7 @@ bool RibbonSceneRemoveSelected::action()
             return false;
 
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    SCOPED_HISTORY( "Remove Objects" );
+    SCOPED_HISTORY( _t( "Remove Objects" ) );
     for ( int i = (int) selected.size() - 1; i >= 0; --i )
         if ( selected[i] )
         {

@@ -111,6 +111,19 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
+IF(MESHLIB_BUILD_MCP)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRMcp)
+
+  # If we're using fastmcpp from a subdirectory, we need to add this explicitly. Not the best way to do this, we should probably find a proper solution.
+  IF(MESHLIB_USE_VCPKG OR APPLE)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+      ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
+    )
+  ENDIF()
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
+ENDIF()
+
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")

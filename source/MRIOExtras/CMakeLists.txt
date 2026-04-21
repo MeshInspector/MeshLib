@@ -10,7 +10,6 @@ option(MRIOEXTRAS_NO_PNG "Disable PNG support" OFF)
 option(MRIOEXTRAS_NO_STEP "Disable STEP support" OFF)
 option(MRIOEXTRAS_NO_TIFF "Disable TIFF support" OFF)
 option(MRIOEXTRAS_NO_XML "Disable XML support (3MF, SVG)" OFF)
-option(MRIOEXTRAS_NO_ZLIB "Disable Zlib usage" OFF)
 
 option(MRIOEXTRAS_OPENCASCADE_USE_XDE "Use OpenCASCADE XDE module" ON)
 
@@ -141,11 +140,6 @@ ENDIF()
 IF(NOT MRIOEXTRAS_NO_TIFF)
   find_package(TIFF REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
-ENDIF()
-
-IF(NOT MRIOEXTRAS_NO_ZLIB)
-  find_package(ZLIB REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
 ENDIF()
 
 install(

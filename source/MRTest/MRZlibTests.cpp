@@ -1,8 +1,23 @@
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRZlib.h>
 
+#include <cstdint>
+
 namespace
 {
+
+/// independent CRC-32 reference (PKZIP polynomial 0xedb88320, init 0xffffffff, final xor 0xffffffff)
+uint32_t crc32Ref( const unsigned char* data, size_t len )
+{
+    uint32_t crc = 0xffffffffu;
+    for ( size_t i = 0; i < len; ++i )
+    {
+        crc ^= data[i];
+        for ( int k = 0; k < 8; ++k )
+            crc = ( crc & 1u ) ? ( crc >> 1 ) ^ 0xedb88320u : ( crc >> 1 );
+    }
+    return ~crc;
+}
 
 constexpr unsigned char cInput[] = {
     0xe1, 0x83, 0x9b, 0xe1, 0x83, 0x94, 0xe1, 0x83, 0xaa, 0xe1, 0x83, 0xae,
@@ -117,3 +132,52 @@ INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
     ZlibDecompressParameters { cRawLevel1,     sizeof( cRawLevel1 ),     cInput, sizeof( cInput ), true  },
     ZlibDecompressParameters { cRawLevel9,     sizeof( cRawLevel9 ),     cInput, sizeof( cInput ), true  }
 ) );
+
+TEST( MRMesh, ZlibCompressStats )
+{
+    const std::string inputStr( reinterpret_cast<const char*>( cInput ), sizeof( cInput ) );
+    const uint32_t expectedCrc = crc32Ref( cInput, sizeof( cInput ) );
+
+    struct Case { bool rawDeflate; int level; size_t expectedCompSize; };
+    const Case cases[] = {
+        { true,  1, sizeof( cRawLevel1 ) },
+        { true,  9, sizeof( cRawLevel9 ) },
+        { false, 1, sizeof( cWrappedLevel1 ) },
+        { false, 9, sizeof( cWrappedLevel9 ) },
+    };
+
+    for ( const auto& c : cases )
+    {
+        MR::ZlibCompressStats stats;
+        std::istringstream in( inputStr );
+        std::ostringstream out;
+        auto res = MR::zlibCompressStream( in, out,
+            MR::ZlibCompressParams{ { .rawDeflate = c.rawDeflate }, c.level, &stats } );
+        EXPECT_TRUE( res.has_value() );
+
+        EXPECT_EQ( stats.crc32, expectedCrc );
+        EXPECT_EQ( stats.uncompressedSize, sizeof( cInput ) );
+        EXPECT_EQ( stats.compressedSize, c.expectedCompSize );
+        EXPECT_EQ( out.str().size(), c.expectedCompSize );
+    }
+}
+
+TEST( MRMesh, ZlibCompressStatsEmpty )
+{
+    for ( bool rawDeflate : { false, true } )
+    {
+        MR::ZlibCompressStats stats;
+        std::istringstream in;            // empty input
+        std::ostringstream out;
+        auto res = MR::zlibCompressStream( in, out,
+            MR::ZlibCompressParams{ { .rawDeflate = rawDeflate }, /*level*/ -1, &stats } );
+        EXPECT_TRUE( res.has_value() );
+
+        EXPECT_EQ( stats.crc32, 0u );
+        EXPECT_EQ( stats.uncompressedSize, 0u );
+        // deflate emits at least a terminator block for Z_FINISH on empty input;
+        // pin whatever zlib actually wrote.
+        EXPECT_EQ( stats.compressedSize, out.str().size() );
+        EXPECT_GT( stats.compressedSize, 0u );
+    }
+}

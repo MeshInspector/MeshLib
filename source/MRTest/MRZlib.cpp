@@ -61,12 +61,12 @@ constexpr unsigned char cRawLevel1[] = {
 
 } // namespace
 
-using ZlibCompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, int, MR::DeflateFormat>;
+using ZlibCompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, int, bool>;
 class ZlibCompressTestFixture : public testing::TestWithParam<ZlibCompressParameters> {};
 
 TEST_P( ZlibCompressTestFixture, ZlibCompress )
 {
-    const auto& [input, inputSize, output, outputSize, level, format] = GetParam();
+    const auto& [input, inputSize, output, outputSize, level, rawDeflate] = GetParam();
 
     const std::string inputStr( reinterpret_cast<const char*>( input ), inputSize );
     std::istringstream in( inputStr );
@@ -74,31 +74,31 @@ TEST_P( ZlibCompressTestFixture, ZlibCompress )
     const std::string outputStr( reinterpret_cast<const char*>( output ), outputSize );
     std::ostringstream out( outputStr );
 
-    auto res = MR::zlibCompressStream( in, out, level, format );
+    auto res = MR::zlibCompressStream( in, out, MR::ZlibCompressParams{ .level = level, .rawDeflate = rawDeflate } );
     EXPECT_TRUE( res.has_value() );
     // FIXME: Python and MeshLib output data mismatch; note that MeshLib output is still valid
     //EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 
     std::istringstream in2( out.str() );
     std::ostringstream out2;
-    res = MR::zlibDecompressStream( in2, out2, format );
+    res = MR::zlibDecompressStream( in2, out2, MR::ZlibDecompressParams{ .rawDeflate = rawDeflate } );
     EXPECT_TRUE( res.has_value() );
     EXPECT_STREQ( out2.str().c_str(), inputStr.c_str() );
 }
 
 INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibCompressTestFixture, testing::Values(
-    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel1, sizeof( cWrappedLevel1 ), 1, MR::DeflateFormat::Zlib },
-    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel9, sizeof( cWrappedLevel9 ), 9, MR::DeflateFormat::Zlib },
-    ZlibCompressParameters { cInput, sizeof( cInput ), cRawLevel1,     sizeof( cRawLevel1 ),     1, MR::DeflateFormat::Raw },
-    ZlibCompressParameters { cInput, sizeof( cInput ), cRawLevel9,     sizeof( cRawLevel9 ),     9, MR::DeflateFormat::Raw }
+    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel1, sizeof( cWrappedLevel1 ), 1, false },
+    ZlibCompressParameters { cInput, sizeof( cInput ), cWrappedLevel9, sizeof( cWrappedLevel9 ), 9, false },
+    ZlibCompressParameters { cInput, sizeof( cInput ), cRawLevel1,     sizeof( cRawLevel1 ),     1, true  },
+    ZlibCompressParameters { cInput, sizeof( cInput ), cRawLevel9,     sizeof( cRawLevel9 ),     9, true  }
 ) );
 
-using ZlibDecompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, MR::DeflateFormat>;
+using ZlibDecompressParameters = std::tuple<const unsigned char*, size_t, const unsigned char*, size_t, bool>;
 class ZlibDecompressTestFixture : public testing::TestWithParam<ZlibDecompressParameters> {};
 
 TEST_P( ZlibDecompressTestFixture, ZlibDecompress )
 {
-    const auto& [input, inputSize, output, outputSize, format] = GetParam();
+    const auto& [input, inputSize, output, outputSize, rawDeflate] = GetParam();
 
     const std::string inputStr( reinterpret_cast<const char*>( input ), inputSize );
     std::istringstream in( inputStr );
@@ -106,14 +106,14 @@ TEST_P( ZlibDecompressTestFixture, ZlibDecompress )
     const std::string outputStr( reinterpret_cast<const char*>( output ), outputSize );
     std::ostringstream out( outputStr );
 
-    auto res = MR::zlibDecompressStream( in, out, format );
+    auto res = MR::zlibDecompressStream( in, out, MR::ZlibDecompressParams{ .rawDeflate = rawDeflate } );
     EXPECT_TRUE( res.has_value() );
     EXPECT_STREQ( out.str().c_str(), outputStr.c_str() );
 }
 
 INSTANTIATE_TEST_SUITE_P( MRMesh, ZlibDecompressTestFixture, testing::Values(
-    ZlibDecompressParameters { cWrappedLevel1, sizeof( cWrappedLevel1 ), cInput, sizeof( cInput ), MR::DeflateFormat::Zlib },
-    ZlibDecompressParameters { cWrappedLevel9, sizeof( cWrappedLevel9 ), cInput, sizeof( cInput ), MR::DeflateFormat::Zlib },
-    ZlibDecompressParameters { cRawLevel1,     sizeof( cRawLevel1 ),     cInput, sizeof( cInput ), MR::DeflateFormat::Raw },
-    ZlibDecompressParameters { cRawLevel9,     sizeof( cRawLevel9 ),     cInput, sizeof( cInput ), MR::DeflateFormat::Raw }
+    ZlibDecompressParameters { cWrappedLevel1, sizeof( cWrappedLevel1 ), cInput, sizeof( cInput ), false },
+    ZlibDecompressParameters { cWrappedLevel9, sizeof( cWrappedLevel9 ), cInput, sizeof( cInput ), false },
+    ZlibDecompressParameters { cRawLevel1,     sizeof( cRawLevel1 ),     cInput, sizeof( cInput ), true  },
+    ZlibDecompressParameters { cRawLevel9,     sizeof( cRawLevel9 ),     cInput, sizeof( cInput ), true  }
 ) );

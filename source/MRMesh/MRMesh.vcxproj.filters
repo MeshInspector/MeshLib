@@ -1991,6 +1991,9 @@
     <ClCompile Include="MRZlib.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRZlibNg.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
     <ClCompile Include="MROffsetContours.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>

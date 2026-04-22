@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRZip.h>
+#include <MRMesh/MRTimer.h>
 #include <MRPch/MRSpdlog.h>
 
 #include <cstdint>
@@ -49,12 +50,16 @@ TEST( MRMesh, CompressSphereToZip )
     ASSERT_TRUE( bool( dstFolder ) );
     const std::filesystem::path zipPath = dstFolder / "sphere.zip";
 
+    Timer t( "t" );
     const auto compressRes = compressZip( zipPath, srcFolder );
+    const auto sec = t.secondsPassed();
+
     ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
     ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
     spdlog::info( "sphere.zip size:    {} bytes", zipSize );
+    spdlog::info( "sphere.zip compression time: {} sec", sec );
 
     // Sanity: the zip should not be absurdly larger than the source
     // (that would indicate something is wrong with the envelope); and
@@ -176,13 +181,16 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     ASSERT_TRUE( bool( dstFolder ) );
     const std::filesystem::path zipPath = dstFolder / "many.zip";
 
+    Timer t( "t" );
     const auto compressRes = compressZip( zipPath, srcFolder );
+    const auto sec = t.secondsPassed();
     ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
     std::error_code ec;
     ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
     spdlog::info( "many.zip size:      {} bytes", zipSize );
+    spdlog::info( "many.zip compression time: {} sec", sec );
 
     // Sanity envelope: same bound as the sphere test.
     EXPECT_LT( zipSize, totalInput * 2u );

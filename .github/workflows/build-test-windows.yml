@@ -115,8 +115,16 @@ jobs:
         uses: actions/cache@v5
         id: cuda-cache
         with:
-          key: cuda-${{matrix.CUDA-VERSION}}
-          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
+          # Key version bumped (-v2) to invalidate the existing entries — the
+          # prior restore consistently warned "Failed to restore" and fell
+          # through to a 16-minute choco reinstall, even though the server
+          # reported a cache hit. Path tightened from the trailing-star glob
+          # (C:\...\CUDA* — which also captured "CUDA Samples", "CUDA SDK" and
+          # every toolkit version directory present on the runner) down to
+          # the exact per-version directory, so each cache entry maps to
+          # exactly one toolkit version and the restore is deterministic.
+          key: cuda-toolkit-${{ matrix.CUDA-VERSION }}-v2
+          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
 
       - name: Install CUDA
         if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' }}

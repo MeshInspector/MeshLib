@@ -99,7 +99,7 @@ jobs:
       - name: Work-around corrupted fastmcpp build
         working-directory: C:\vcpkg
         run: |
-          C:\vcpkg\vcpkg.exe remove fastmcpp:${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          C:\vcpkg\vcpkg.exe remove fastmcpp
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}

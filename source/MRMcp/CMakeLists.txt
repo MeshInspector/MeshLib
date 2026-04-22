@@ -15,6 +15,11 @@ target_link_libraries(${PROJECT_NAME}
   PRIVATE
     fastmcpp::fastmcpp_core
 )
+# TODO: why does it affect only Linux+vcpkg?
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND MESHLIB_USE_VCPKG)
+  # fix missing references to 'getaddrinfo_a' and 'gai_*' functions (required by cpp-httplib)
+  target_link_libraries(${PROJECT_NAME} PRIVATE anl)
+endif()
 
 if(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)

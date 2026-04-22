@@ -115,8 +115,8 @@ jobs:
         uses: actions/cache@v5
         id: cuda-cache
         with:
-          key: cuda-${{matrix.CUDA-VERSION}}
-          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
+          key: cuda-toolkit-${{ matrix.CUDA-VERSION }}-v2
+          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
 
       - name: Install CUDA
         if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' }}

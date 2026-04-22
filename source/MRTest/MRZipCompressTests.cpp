@@ -177,35 +177,6 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     spdlog::info( "many-files input:   {} binary + {} json = {} bytes",
         totalBinaryBytes, totalJsonBytes, totalInput );
 
-    // Compress to a zip in a separate temp folder.
-    UniqueTemporaryFolder dstFolder;
-    ASSERT_TRUE( bool( dstFolder ) );
-    const std::filesystem::path zipPath = dstFolder / "many.zip";
-
-    Timer t( "t" );
-    const auto compressRes = compressZip( zipPath, srcFolder );
-    const auto sec = t.secondsPassed();
-    ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
-    std::error_code ec;
-    ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
-    const auto zipSize = std::filesystem::file_size( zipPath, ec );
-    EXPECT_GT( zipSize, 0u );
-    spdlog::info( "many.zip size:      {} bytes", zipSize );
-    spdlog::info( "many.zip compression time: {} sec", sec );
-
-    // Sanity envelope: same bound as the sphere test.
-    EXPECT_LT( zipSize, totalInput * 2u );
-
-    // Round-trip: decompress the archive into a fresh temp folder and verify
-    // every original file comes back byte-for-byte. Catches subtle regressions
-    // in the compressZip -> decompressZip path that the size envelope above
-    // would miss (entry truncation, wrong method byte, CRC-vs-data mismatch,
-    // off-by-one in a local file header, etc.).
-    UniqueTemporaryFolder roundtripFolder;
-    ASSERT_TRUE( bool( roundtripFolder ) );
-    const auto decompressRes = decompressZip( zipPath, roundtripFolder );
-    ASSERT_TRUE( decompressRes.has_value() ) << decompressRes.error();
-
     auto readAllBytes = []( const std::filesystem::path& p ) -> std::vector<char>
     {
         std::ifstream in( p, std::ios::binary | std::ios::ate );
@@ -219,26 +190,68 @@ TEST( MRMesh, CompressManySmallFilesToZip )
         return buf;
     };
 
-    int verified = 0;
+    std::error_code ec;
     const std::filesystem::path srcRoot = srcFolder;
-    const std::filesystem::path rtRoot  = roundtripFolder;
-    for ( auto entry : DirectoryRecursive{ srcRoot, ec } )
+
+    // Exercise every compression level accepted by CompressZipSettings:
+    // 0 is documented as "use default level"; 1..9 span fastest -> best-ratio.
+    // For each level: compress the source tree, then decompress into a fresh
+    // temp folder and verify every file round-trips byte-for-byte. Catches
+    // level-dependent wiring bugs (wrong general-purpose bit flag for the
+    // entry, mis-encoded compression-method/level byte, store-mode fallthrough
+    // on a compressible payload, etc.) that a single-level run would miss.
+    for ( int level = 0; level <= 9; ++level )
     {
-        if ( !entry.is_regular_file( ec ) )
-            continue;
-        const auto rel = std::filesystem::relative( entry.path(), srcRoot, ec );
-        const auto dst = rtRoot / rel;
-        ASSERT_TRUE( std::filesystem::exists( dst, ec ) )
-            << "missing in roundtrip: " << rel.generic_string();
-        const auto origBytes = readAllBytes( entry.path() );
-        const auto rtBytes   = readAllBytes( dst );
-        ASSERT_EQ( origBytes.size(), rtBytes.size() )
-            << "size mismatch: " << rel.generic_string();
-        EXPECT_EQ( origBytes, rtBytes )
-            << "content mismatch: " << rel.generic_string();
-        ++verified;
+        UniqueTemporaryFolder dstFolder;
+        ASSERT_TRUE( bool( dstFolder ) ) << "level " << level;
+        const std::filesystem::path zipPath = dstFolder / "many.zip";
+
+        CompressZipSettings settings;
+        settings.compressionLevel = level;
+
+        Timer t( "t" );
+        const auto compressRes = compressZip( zipPath, srcFolder, settings );
+        const auto sec = t.secondsPassed();
+        ASSERT_TRUE( compressRes.has_value() )
+            << "level " << level << ": " << compressRes.error();
+        ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) ) << "level " << level;
+        const auto zipSize = std::filesystem::file_size( zipPath, ec );
+        EXPECT_GT( zipSize, 0u ) << "level " << level;
+        spdlog::info( "level {}: many.zip size: {} bytes, compression time: {} sec",
+            level, zipSize, sec );
+
+        // Sanity envelope: same bound as the sphere test.
+        EXPECT_LT( zipSize, totalInput * 2u ) << "level " << level;
+
+        // Round-trip: decompress into a fresh folder and compare every file's
+        // bytes. Built per-iteration so each level gets an independent target
+        // tree, with no cross-level contamination.
+        UniqueTemporaryFolder roundtripFolder;
+        ASSERT_TRUE( bool( roundtripFolder ) ) << "level " << level;
+        const auto decompressRes = decompressZip( zipPath, roundtripFolder );
+        ASSERT_TRUE( decompressRes.has_value() )
+            << "level " << level << ": " << decompressRes.error();
+
+        int verified = 0;
+        const std::filesystem::path rtRoot = roundtripFolder;
+        for ( auto entry : DirectoryRecursive{ srcRoot, ec } )
+        {
+            if ( !entry.is_regular_file( ec ) )
+                continue;
+            const auto rel = std::filesystem::relative( entry.path(), srcRoot, ec );
+            const auto dst = rtRoot / rel;
+            ASSERT_TRUE( std::filesystem::exists( dst, ec ) )
+                << "level " << level << ": missing in roundtrip: " << rel.generic_string();
+            const auto origBytes = readAllBytes( entry.path() );
+            const auto rtBytes   = readAllBytes( dst );
+            ASSERT_EQ( origBytes.size(), rtBytes.size() )
+                << "level " << level << ": size mismatch: " << rel.generic_string();
+            EXPECT_EQ( origBytes, rtBytes )
+                << "level " << level << ": content mismatch: " << rel.generic_string();
+            ++verified;
+        }
+        EXPECT_EQ( verified, numBinaryFiles + numJsonFiles ) << "level " << level;
     }
-    EXPECT_EQ( verified, numBinaryFiles + numJsonFiles );
 }
 
 } // namespace MR

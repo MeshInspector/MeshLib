@@ -95,6 +95,14 @@ IF(NOT WIN32 AND NOT APPLE AND NOT MESHLIB_USE_VCPKG)
   set(ZLIBNG_ENABLE_TESTS OFF CACHE BOOL "")
   set(WITH_GTEST        OFF CACHE BOOL "")
   set(WITH_GZFILEOP     OFF CACHE BOOL "")
+  IF(EMSCRIPTEN)
+    # zlib-ng's CMakeLists treats an undefined BUILD_SHARED_LIBS as "build both
+    # shared and static targets". Emscripten then demotes the SHARED one to
+    # STATIC, after which both rules emit the same libz-ng.a and ninja errors
+    # with "multiple rules generate libz-ng.a [-w dupbuild=err]". Force static
+    # only here -- Emscripten produces static output either way.
+    set(BUILD_SHARED_LIBS OFF)
+  ENDIF()
   add_subdirectory(./zlib-ng)
 ENDIF()
 

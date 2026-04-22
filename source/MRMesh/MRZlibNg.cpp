@@ -21,9 +21,11 @@ constexpr size_t cChunkSize = 256 * 1024; // 256 KiB, same as the zlib path
 
 // windowBits is sign-encoded the same way zlib documents it: positive =
 // zlib wrapper (RFC 1950), negative = raw deflate (RFC 1951, no wrapper).
-// Magnitude is log2(window size); Z_MAX_WINDOWBITS = 15 gives a 32 KiB window.
-constexpr int kZlibWrapperBits = Z_MAX_WINDOWBITS;
-constexpr int kRawDeflateBits  = -Z_MAX_WINDOWBITS;
+// Magnitude is log2(window size); MAX_WBITS = 15 gives a 32 KiB window.
+// zlib-ng re-exports the same MAX_WBITS macro through zconf-ng.h, so we
+// can use it here without pulling in stock zlib's headers.
+constexpr int kZlibWrapperBits = MAX_WBITS;
+constexpr int kRawDeflateBits  = -MAX_WBITS;
 
 // memLevel controls the compressor's internal state size. 8 is zlib's and
 // zlib-ng's shared default (matches the old MRZlib choice).

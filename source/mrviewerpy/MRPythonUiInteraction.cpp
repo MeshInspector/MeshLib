@@ -38,9 +38,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
     MR_PYTHON_CUSTOM_CLASS( UiEntry )
         .def_readonly( "name", &Control::TypedEntry::name )
         .def_readonly( "type", &Control::TypedEntry::type )
+        .def_readonly( "disabled", &Control::TypedEntry::disabled )
+        .def_readonly( "blocked", &Control::TypedEntry::blocked )
         .def("__repr__", []( const Control::TypedEntry& e )
         {
-            return fmt::format( "<mrmesh.mrviewerpy.UiEntry '{}' of type '{}'>", e.name, toString( e.type ) );
+            return fmt::format( "<mrmesh.mrviewerpy.UiEntry '{}' of type '{}'{}{}>", e.name, toString( e.type ),
+                e.disabled ? " disabled" : "",
+                e.blocked ? " blocked" : "" );
         } )
     ;
 } )

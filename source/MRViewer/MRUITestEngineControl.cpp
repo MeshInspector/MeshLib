@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRMeshFwd.h"
 #include "MRPch/MRFmt.h"
+#include "MRViewer/MRImGui.h"
 #include "MRViewer/MRUITestEngine.h"
 
 #include <algorithm>
@@ -57,12 +58,34 @@ std::string pathToString( const std::vector<std::string>& path )
     return pathString;
 }
 
+// Read the disabled flag off an internal entry (groups are never disabled).
+static bool entryDisabled( const TestEngine::Entry& entry )
+{
+    return std::visit( MR::overloaded{
+        []( const TestEngine::ButtonEntry& e ) { return e.disabled; },
+        []( const TestEngine::ValueEntry& e ) { return e.disabled; },
+        []( const TestEngine::GroupEntry& ) { return false; },
+    }, entry.value );
+}
+
+// Heuristic: "blocked" is set only on root-level (top-level) entries when any blocking popup is open.
+// The TestEngine tree is independent of ImGui's window/popup structure, so we can't do a precise
+// "is this entry occluded by that popup" check without extra bookkeeping. Mark top-level entries
+// as blocked so agents know a modal is intercepting input; entries inside `pushTree` groups (which
+// typically *are* the dialog contents) are left unmarked.
+static bool rootLevelBlocked()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel );
+}
+
 Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& path )
 {
     auto groupEx = findGroup( path );
     if ( !groupEx )
         return unexpected( groupEx.error() );
     const auto& group = **groupEx;
+
+    const bool blocked = path.empty() && rootLevelBlocked();
 
     std::vector<TypedEntry> ret;
     ret.reserve( group.elems.size() );
@@ -84,6 +107,8 @@ Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& p
                 },
                 []( const TestEngine::GroupEntry& ) { return EntryType::group; },
             }, elem.second.value ),
+            .disabled = entryDisabled( elem.second ),
+            .blocked = blocked,
         } );
     }
     return ret;
@@ -101,11 +126,18 @@ Expected<void> pressButton( const std::vector<std::string>& path )
 
     auto iter = group.elems.find( path.back() );
     if ( iter == group.elems.end() )
-        unexpected( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathToString( path ), path.back(), listKeys( group ) ) );
+        return unexpected( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathToString( path ), path.back(), listKeys( group ) ) );
 
     auto buttonEx = iter->second.getAs<TestEngine::ButtonEntry>( path.back() );
     if ( !buttonEx )
         return unexpected( buttonEx.error() );
+
+    if ( ( *buttonEx )->disabled )
+        return unexpected( fmt::format( "pressButton {}: button is disabled and cannot be pressed.", pathToString( path ) ) );
+
+    // Root-level entries are considered unreachable when a blocking popup is open on top of them.
+    if ( path.size() == 1 && rootLevelBlocked() )
+        return unexpected( fmt::format( "pressButton {}: a modal popup is currently open on top of this button; dismiss it first.", pathToString( path ) ) );
 
     ( *buttonEx )->simulateClick = true;
 
@@ -222,6 +254,12 @@ Expected<void> writeValue( const std::vector<std::string>& path, T value )
     if ( !entryEx )
         return unexpected( entryEx.error() );
     const auto& entry = **entryEx;
+
+    if ( entry.disabled )
+        return unexpected( fmt::format( "writeValue {}: widget is disabled and cannot be edited.", pathToString( path ) ) );
+
+    if ( path.size() == 1 && rootLevelBlocked() )
+        return unexpected( fmt::format( "writeValue {}: a modal popup is currently open on top of this widget; dismiss it first.", pathToString( path ) ) );
 
     auto writeValueOfCorrectType = [&entry, &path]( auto fixedValue ) -> Expected<void>
     {

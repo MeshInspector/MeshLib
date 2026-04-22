@@ -98,8 +98,11 @@ jobs:
 
       - name: Work-around corrupted fastmcpp build
         working-directory: C:\vcpkg
+        env:
+          VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\MeshLib\thirdparty\vcpkg\triplets
         run: |
-          C:\vcpkg\vcpkg.exe remove fastmcpp --triplet ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }} --overlay-triplets=$env:GITHUB_WORKSPACE\MeshLib\thirdparty\vcpkg\triplets
+          C:\vcpkg\vcpkg.exe list
+          C:\vcpkg\vcpkg.exe remove fastmcpp --triplet ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }} --recurse
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}

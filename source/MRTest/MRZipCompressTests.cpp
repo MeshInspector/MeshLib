@@ -194,6 +194,50 @@ TEST( MRMesh, CompressManySmallFilesToZip )
 
     // Sanity envelope: same bound as the sphere test.
     EXPECT_LT( zipSize, totalInput * 2u );
+
+    // Round-trip: decompress the archive into a fresh temp folder and verify
+    // every original file comes back byte-for-byte. Catches subtle regressions
+    // in the compressZip -> decompressZip path that the size envelope above
+    // would miss (entry truncation, wrong method byte, CRC-vs-data mismatch,
+    // off-by-one in a local file header, etc.).
+    UniqueTemporaryFolder roundtripFolder;
+    ASSERT_TRUE( bool( roundtripFolder ) );
+    const auto decompressRes = decompressZip( zipPath, roundtripFolder );
+    ASSERT_TRUE( decompressRes.has_value() ) << decompressRes.error();
+
+    auto readAllBytes = []( const std::filesystem::path& p ) -> std::vector<char>
+    {
+        std::ifstream in( p, std::ios::binary | std::ios::ate );
+        if ( !in )
+            return {};
+        const std::streamoff sz = in.tellg();
+        in.seekg( 0 );
+        std::vector<char> buf( sz < 0 ? 0 : size_t( sz ) );
+        if ( !buf.empty() )
+            in.read( buf.data(), std::streamsize( buf.size() ) );
+        return buf;
+    };
+
+    int verified = 0;
+    const std::filesystem::path srcRoot = srcFolder;
+    const std::filesystem::path rtRoot  = roundtripFolder;
+    for ( const auto& entry : std::filesystem::recursive_directory_iterator{ srcRoot } )
+    {
+        if ( !entry.is_regular_file( ec ) )
+            continue;
+        const auto rel = std::filesystem::relative( entry.path(), srcRoot, ec );
+        const auto dst = rtRoot / rel;
+        ASSERT_TRUE( std::filesystem::exists( dst, ec ) )
+            << "missing in roundtrip: " << rel.generic_string();
+        const auto origBytes = readAllBytes( entry.path() );
+        const auto rtBytes   = readAllBytes( dst );
+        ASSERT_EQ( origBytes.size(), rtBytes.size() )
+            << "size mismatch: " << rel.generic_string();
+        EXPECT_EQ( origBytes, rtBytes )
+            << "content mismatch: " << rel.generic_string();
+        ++verified;
+    }
+    EXPECT_EQ( verified, numBinaryFiles + numJsonFiles );
 }
 
 } // namespace MR

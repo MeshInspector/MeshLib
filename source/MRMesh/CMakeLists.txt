@@ -65,6 +65,25 @@ ELSE()
 ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
+# zlib-ng (native mode, zng_ prefix) powers MRZlib's zlibCompressStream;
+# decompression and the compressZip/libzip pipeline stay on stock zlib. On
+# vcpkg/brew it comes from the package; on Ubuntu apt and Emscripten the
+# copy built from thirdparty/zlib-ng is installed alongside the rest of the
+# thirdparty prefix. find_library + find_path is used instead of
+# find_package(zlib-ng CONFIG) -- the latter has the same non-relocatable
+# config issue we hit with libdeflate, so plain library/path lookup is
+# more robust across the Docker COPY-shuffle.
+find_library(LIBZLIBNG_LIBRARY
+  NAMES z-ng zlib-ng
+  REQUIRED
+)
+find_path(LIBZLIBNG_INCLUDE_DIR
+  NAMES zlib-ng.h
+  REQUIRED
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBZLIBNG_LIBRARY})
+target_include_directories(${PROJECT_NAME} PRIVATE ${LIBZLIBNG_INCLUDE_DIR})
+
 # TODO: CMake config
 target_include_directories(${PROJECT_NAME}
   PUBLIC

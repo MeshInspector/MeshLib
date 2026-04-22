@@ -85,6 +85,19 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
+# Build zlib-ng from our submodule (native mode -- zng_ prefix, does not shadow
+# stock zlib) on Ubuntu apt and Emscripten, which have no zlib-ng package.
+# Windows + macOS + any MESHLIB_USE_VCPKG config pick up the package-manager
+# copy instead (see requirements/{windows,macos,vcpkg-linux}.txt).
+IF(NOT WIN32 AND NOT APPLE AND NOT MESHLIB_USE_VCPKG)
+  set(ZLIB_COMPAT       OFF CACHE BOOL "")
+  set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "")
+  set(ZLIBNG_ENABLE_TESTS OFF CACHE BOOL "")
+  set(WITH_GTEST        OFF CACHE BOOL "")
+  set(WITH_GZFILEOP     OFF CACHE BOOL "")
+  add_subdirectory(./zlib-ng)
+ENDIF()
+
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 

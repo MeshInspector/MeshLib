@@ -100,10 +100,20 @@ IF(NOT WIN32 AND NOT APPLE AND NOT MESHLIB_USE_VCPKG)
     # shared and static targets". Emscripten then demotes the SHARED one to
     # STATIC, after which both rules emit the same libz-ng.a and ninja errors
     # with "multiple rules generate libz-ng.a [-w dupbuild=err]". Force static
-    # only here -- Emscripten produces static output either way.
+    # only for this add_subdirectory -- Emscripten produces static output
+    # either way. Scope via save/restore: jsoncpp, fmt, spdlog, onetbb etc.
+    # added further down rely on BUILD_SHARED_LIBS being in its previous
+    # (unset/ON) state, and a naked set() here would otherwise silently flip
+    # every later add_subdirectory to static, breaking their find_package
+    # lookups (seen as "Could NOT find JsonCpp (missing: JsonCpp_LIBRARY)").
+    set(ZLIB_NG_BUILD_SHARED_LIBS_BACKUP "${BUILD_SHARED_LIBS}")
     set(BUILD_SHARED_LIBS OFF)
+    add_subdirectory(./zlib-ng)
+    set(BUILD_SHARED_LIBS "${ZLIB_NG_BUILD_SHARED_LIBS_BACKUP}")
+    unset(ZLIB_NG_BUILD_SHARED_LIBS_BACKUP)
+  ELSE()
+    add_subdirectory(./zlib-ng)
   ENDIF()
-  add_subdirectory(./zlib-ng)
 ENDIF()
 
 option(PHMAP_INSTALL "" ON)

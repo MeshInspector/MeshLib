@@ -101,16 +101,19 @@ IF(NOT WIN32 AND NOT APPLE AND NOT MESHLIB_USE_VCPKG)
     # STATIC, after which both rules emit the same libz-ng.a and ninja errors
     # with "multiple rules generate libz-ng.a [-w dupbuild=err]". Force static
     # only for this add_subdirectory -- Emscripten produces static output
-    # either way. Scope via save/restore: jsoncpp, fmt, spdlog, onetbb etc.
-    # added further down rely on BUILD_SHARED_LIBS being in its previous
-    # (unset/ON) state, and a naked set() here would otherwise silently flip
-    # every later add_subdirectory to static, breaking their find_package
-    # lookups (seen as "Could NOT find JsonCpp (missing: JsonCpp_LIBRARY)").
-    set(ZLIB_NG_BUILD_SHARED_LIBS_BACKUP "${BUILD_SHARED_LIBS}")
+    # either way.
+    #
+    # After add_subdirectory(./zlib-ng) we MUST restore BUILD_SHARED_LIBS to
+    # its prior *undefined* state, not "defined but empty". jsoncpp further
+    # down expands ${BUILD_SHARED_LIBS} into set_target_properties() pairs and
+    # silently breaks with "set_target_properties called with incorrect number
+    # of arguments" when the expansion yields empty. jsoncpp's own option()
+    # fallback only fires for undefined, not empty. unset() is therefore the
+    # right tool here (BUILD_SHARED_LIBS was undefined before this block on
+    # every Emscripten MeshLib build).
     set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(./zlib-ng)
-    set(BUILD_SHARED_LIBS "${ZLIB_NG_BUILD_SHARED_LIBS_BACKUP}")
-    unset(ZLIB_NG_BUILD_SHARED_LIBS_BACKUP)
+    unset(BUILD_SHARED_LIBS)
   ELSE()
     add_subdirectory(./zlib-ng)
   ENDIF()

@@ -68,19 +68,27 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# update cmake
-RUN apt remove --purge --auto-remove -y cmake \
- && apt update \
- && apt install -y software-properties-common lsb-release \
- && apt clean all \
- && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
- && apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA \
- && apt update \
- && apt install -y kitware-archive-keyring \
- && rm /etc/apt/trusted.gpg.d/kitware.gpg \
- && apt update \
- && apt install -y cmake
+# Install a pinned CMake from the upstream Kitware release tarball published
+# on GitHub. Ubuntu 22.04's apt ships CMake 3.22, too old for several MeshLib
+# thirdparty submodules; previously we pulled CMake from apt.kitware.com, but
+# that mirror has been unreliable (connection-refused outages on arm64 runners,
+# Dec 2024 SSL-cert misconfiguration, etc.). GitHub Releases is served from
+# the same CDN we already hit on every run for git submodule checkouts, so
+# this path adds zero new points of failure relative to what we already depend
+# on. Bump CMAKE_VERSION to get a newer CMake; the tarball is the exact same
+# binary Kitware publishes through its apt repo.
+ENV CMAKE_VERSION=4.3.2
+RUN set -eux; \
+    apt remove --purge --auto-remove -y cmake; \
+    ARCH=$(uname -m); \
+    curl -fL -o /tmp/cmake.tar.gz \
+        "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-${ARCH}.tar.gz"; \
+    mkdir -p /opt/cmake; \
+    tar -xzf /tmp/cmake.tar.gz -C /opt/cmake --strip-components=1; \
+    rm /tmp/cmake.tar.gz; \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake; \
+    ln -s /opt/cmake/bin/ctest /usr/local/bin/ctest; \
+    ln -s /opt/cmake/bin/cpack /usr/local/bin/cpack
 
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \

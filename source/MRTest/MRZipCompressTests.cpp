@@ -1,3 +1,4 @@
+#include <MRMesh/MRDirectory.h>
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
@@ -221,7 +222,7 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     int verified = 0;
     const std::filesystem::path srcRoot = srcFolder;
     const std::filesystem::path rtRoot  = roundtripFolder;
-    for ( const auto& entry : std::filesystem::recursive_directory_iterator{ srcRoot } )
+    for ( auto entry : DirectoryRecursive{ srcRoot, ec } )
     {
         if ( !entry.is_regular_file( ec ) )
             continue;

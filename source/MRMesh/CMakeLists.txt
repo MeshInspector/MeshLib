@@ -66,14 +66,25 @@ ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
 # libdeflate powers MRZip's unencrypted fast path (writes the ZIP container
-# ourselves, delegates the deflate primitive + CRC32 to libdeflate). It is
-# always built from our thirdparty submodule, installed to the thirdparty
-# prefix; hint find_package there explicitly so the main build picks up the
-# freshly-built config regardless of whether the system image has libdeflate.
-find_package(libdeflate CONFIG REQUIRED
-  HINTS ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/libdeflate
+# ourselves, delegates the deflate primitive + CRC32 to libdeflate). We avoid
+# libdeflate's own CMake config package here: the config it installs bakes
+# the build-time absolute include path via $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>
+# rather than a relocatable relative path, which breaks the Ubuntu/Emscripten
+# Docker flow where thirdparty is built at /home/MeshLib and then COPYed to
+# /usr/local/lib/meshlib-thirdparty-lib/. Plain find_library / find_path uses
+# the search paths already set up by MeshLib's root CMakeLists (for the
+# submodule build) and the vcpkg toolchain (on Windows); same binary either
+# way.
+find_library(LIBDEFLATE_LIBRARY
+  NAMES deflate libdeflate
+  REQUIRED
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE libdeflate::libdeflate_shared)
+find_path(LIBDEFLATE_INCLUDE_DIR
+  NAMES libdeflate.h
+  REQUIRED
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBDEFLATE_LIBRARY})
+target_include_directories(${PROJECT_NAME} PRIVATE ${LIBDEFLATE_INCLUDE_DIR})
 
 # TODO: CMake config
 target_include_directories(${PROJECT_NAME}

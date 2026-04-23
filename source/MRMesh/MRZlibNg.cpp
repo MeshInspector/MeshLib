@@ -7,8 +7,10 @@
 // as libz-ng, so linking both into the same process is safe. The stock-zlib
 // header is NOT included in this translation unit -- each of the
 // Z_*/MAX_WBITS constants we need is also defined by <zlib-ng.h> under the
-// same name, and keeping the two headers in separate TUs sidesteps any
-// question of macro-redefinition ordering.
+// same name. MRZlib.cpp (the previous stock-zlib inflate path) has been
+// removed now that both compress and decompress run through zlib-ng here;
+// MeshLib's direct consumers of RFC 1950/1951 streams go through the
+// faster deflate AND the faster inflate uniformly.
 #include <zlib-ng.h>
 
 #include <cassert>
@@ -17,7 +19,7 @@
 namespace
 {
 
-constexpr size_t cChunkSize = 256 * 1024; // 256 KiB, same as the zlib path
+constexpr size_t cChunkSize = 256 * 1024; // 256 KiB
 
 // windowBits is sign-encoded the same way zlib documents it: positive =
 // zlib wrapper (RFC 1950), negative = raw deflate (RFC 1951, no wrapper).
@@ -117,6 +119,54 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const Zl
 Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level )
 {
     return zlibCompressStream( in, out, ZlibCompressParams{ .level = level } );
+}
+
+Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, const ZlibParams& params )
+{
+    Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
+    zng_stream stream{};
+    int ret;
+    if ( Z_OK != ( ret = zng_inflateInit2( &stream, windowBitsFor( params.rawDeflate ) ) ) )
+        return unexpected( zngToString( ret ) );
+
+    MR_FINALLY {
+        zng_inflateEnd( &stream );
+    };
+
+    while ( !in.eof() )
+    {
+        in.read( inChunk.data(), static_cast<std::streamsize>( inChunk.size() ) );
+        if ( in.bad() )
+            return unexpected( "I/O error" );
+        stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
+        stream.avail_in = static_cast<unsigned>( in.gcount() );
+        assert( stream.avail_in <= static_cast<unsigned>( inChunk.size() ) );
+
+        do
+        {
+            stream.next_out = reinterpret_cast<uint8_t*>( outChunk.data() );
+            stream.avail_out = static_cast<unsigned>( outChunk.size() );
+            ret = zng_inflate( &stream, Z_NO_FLUSH );
+            if ( Z_OK != ret && Z_STREAM_END != ret )
+                return unexpected( zngToString( ret ) );
+
+            assert( stream.avail_out <= static_cast<unsigned>( outChunk.size() ) );
+            out.write( outChunk.data(), static_cast<unsigned>( outChunk.size() ) - stream.avail_out );
+            if ( out.bad() )
+                return unexpected( "I/O error" );
+
+            if ( Z_STREAM_END == ret )
+                return {};
+        }
+        while ( stream.avail_out == 0 );
+    }
+
+    return {};
+}
+
+Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
+{
+    return zlibDecompressStream( in, out, ZlibParams{} );
 }
 
 } // namespace MR

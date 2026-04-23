@@ -1988,9 +1988,6 @@
     <ClCompile Include="MRZip.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRZlib.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRZlibNg.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>

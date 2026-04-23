@@ -66,23 +66,38 @@ ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
 # zlib-ng (native mode, zng_ prefix) powers MRZlib's zlibCompressStream;
-# decompression and the compressZip/libzip pipeline stay on stock zlib. On
-# vcpkg/brew it comes from the package; on Ubuntu apt and Emscripten the
-# copy built from thirdparty/zlib-ng is installed alongside the rest of the
-# thirdparty prefix. find_library + find_path is used instead of
-# find_package(zlib-ng CONFIG) -- the latter has the same non-relocatable
-# config issue we hit with libdeflate, so plain library/path lookup is
-# more robust across the Docker COPY-shuffle.
-find_library(LIBZLIBNG_LIBRARY
-  NAMES z-ng zlib-ng
-  REQUIRED
-)
-find_path(LIBZLIBNG_INCLUDE_DIR
-  NAMES zlib-ng.h
-  REQUIRED
-)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBZLIBNG_LIBRARY})
-target_include_directories(${PROJECT_NAME} PRIVATE ${LIBZLIBNG_INCLUDE_DIR})
+# decompression and the compressZip/libzip pipeline stay on stock zlib.
+#
+# Windows: use the proper CMake config package that vcpkg's zlib-ng port
+# ships. Multi-config Debug/Release matters here: find_library() picks one
+# .lib and uses it for every configuration, so a Debug build links against
+# the release zlib-ng2.dll and the applocal-copy step doesn't copy it next
+# to the .exe (STATUS_DLL_NOT_FOUND at launch, seen on msvc-2019 Debug
+# CMake with the x64-windows-meshlib-iterator-debug triplet). The
+# find_package(CONFIG) target has IMPORTED_CONFIGURATIONS=DEBUG;RELEASE
+# and drives applocal-copy correctly.
+#
+# Other platforms: find_library + find_path. On Ubuntu apt and Emscripten
+# we build zlib-ng from thirdparty/zlib-ng and its generated config has
+# the same non-relocatable-include-path bug we hit with libdeflate (breaks
+# under the Docker multi-stage COPY-shuffle). Plain library/path lookup
+# sidesteps it, and those platforms are single-config so the multi-config
+# concern above doesn't apply.
+IF(WIN32)
+  find_package(zlib-ng CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE zlib-ng::zlib)
+ELSE()
+  find_library(LIBZLIBNG_LIBRARY
+    NAMES z-ng zlib-ng
+    REQUIRED
+  )
+  find_path(LIBZLIBNG_INCLUDE_DIR
+    NAMES zlib-ng.h
+    REQUIRED
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBZLIBNG_LIBRARY})
+  target_include_directories(${PROJECT_NAME} PRIVATE ${LIBZLIBNG_INCLUDE_DIR})
+ENDIF()
 
 # TODO: CMake config
 target_include_directories(${PROJECT_NAME}

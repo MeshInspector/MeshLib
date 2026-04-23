@@ -68,19 +68,38 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# update cmake
-RUN apt remove --purge --auto-remove -y cmake \
- && apt update \
- && apt install -y software-properties-common lsb-release \
- && apt clean all \
- && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
- && apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA \
- && apt update \
- && apt install -y kitware-archive-keyring \
- && rm /etc/apt/trusted.gpg.d/kitware.gpg \
- && apt update \
- && apt install -y cmake
+# Install a newer CMake from Kitware's apt repo.
+# apt.kitware.com has occasional regional outages (connection-refused on
+# individual runners, Dec 2024 SSL-cert misconfiguration, etc.), so wrap the
+# whole block in a retry loop: 5 attempts with backoff 15s / 30s / 45s / 60s
+# between them before giving up. All apt / apt-add-repository / apt-key /
+# wget steps below are idempotent, so re-running the block from scratch on
+# a partial failure is safe.
+RUN set -eux; \
+    attempt=1; \
+    until ( set -e; \
+        apt remove --purge --auto-remove -y cmake; \
+        apt update; \
+        apt install -y software-properties-common lsb-release; \
+        apt clean all; \
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null; \
+        apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"; \
+        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA; \
+        apt update; \
+        apt install -y kitware-archive-keyring; \
+        rm -f /etc/apt/trusted.gpg.d/kitware.gpg; \
+        apt update; \
+        apt install -y cmake; \
+    ); do \
+        if [ $attempt -ge 5 ]; then \
+            echo "ERROR: Kitware CMake install failed after $attempt attempts" >&2; \
+            exit 1; \
+        fi; \
+        delay=$((attempt * 15)); \
+        echo "WARN: Kitware CMake install attempt $attempt failed; retrying in ${delay}s" >&2; \
+        sleep $delay; \
+        attempt=$((attempt + 1)); \
+    done
 
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \

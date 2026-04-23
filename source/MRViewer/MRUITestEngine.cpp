@@ -36,13 +36,27 @@ bool imGuiContextSaysDisabled()
     return g && ( g->CurrentItemFlags & ImGuiItemFlags_Disabled ) != 0;
 }
 
+// If a blocking modal popup is currently open and the widget being submitted is *outside* that
+// modal's window tree (walking ImGui's ParentWindow chain), returns a view of the modal's window
+// name. Otherwise returns empty (no modal open, or the widget is inside the modal).
+// The returned view is valid only while ImGui state is untouched (i.e. during the same callback).
+std::string_view imGuiBlockingModalName()
+{
+    ImGuiWindow* topModal = ImGui::GetTopMostPopupModal();
+    if ( !topModal )
+        return {};
+    for ( ImGuiWindow* w = ImGui::GetCurrentWindow(); w; w = w->ParentWindow )
+        if ( w == topModal )
+            return {};
+    return topModal->Name ? std::string_view{ topModal->Name } : std::string_view{ "<unnamed>" };
+}
+
 // Produce the effective disabled-reason string to store on an entry, given caller-supplied attrs.
 // - If caller passed a reason, use it verbatim (takes precedence).
 // - Else if ImGui says the widget is drawn under BeginDisabled, use a generic fallback so the
 //   entry is still marked disabled even though the caller didn't know why.
-// - Else, if a blocking modal popup is open and the widget is drawn outside it (walking the
-//   ParentWindow chain), return "blocked by modal '<name>'" — the widget can't receive input
-//   while the modal is on top.
+// - Else, if a blocking modal popup is open and the widget is drawn outside it, return
+//   "blocked by modal '<name>'" — the widget can't receive input while the modal is on top.
 // - Else empty (entry accepts input).
 std::string effectiveDisabledReason( const EntryAttributes& attrs )
 {
@@ -50,20 +64,8 @@ std::string effectiveDisabledReason( const EntryAttributes& attrs )
         return std::string( attrs.disabledReason );
     if ( imGuiContextSaysDisabled() )
         return "drawn inside ImGui::BeginDisabled";
-    if ( ImGuiWindow* topModal = ImGui::GetTopMostPopupModal() )
-    {
-        bool insideTopModal = false;
-        for ( ImGuiWindow* w = ImGui::GetCurrentWindow(); w; w = w->ParentWindow )
-        {
-            if ( w == topModal )
-            {
-                insideTopModal = true;
-                break;
-            }
-        }
-        if ( !insideTopModal )
-            return fmt::format( "blocked by modal '{}'", topModal->Name ? topModal->Name : "<unnamed>" );
-    }
+    if ( const auto modal = imGuiBlockingModalName(); !modal.empty() )
+        return fmt::format( "blocked by modal '{}'", modal );
     return {};
 }
 

@@ -44,7 +44,7 @@ int main( void )
     MR_std_vector_MR_EdgeId* edges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
     if ( MR_std_vector_MR_EdgeId_size( edges ) != 2 )
     {
-        fprintf( stderr, "Expected exactly 2 holes to stitch, but found %" PRIu64 "\n", MR_std_vector_MR_EdgeId_size( edges ) );
+        fprintf( stderr, "Expected exactly 2 holes to stitch, but found %zu\n", MR_std_vector_MR_EdgeId_size( edges ) );
         goto fail_not_two_holes;
     }
 

@@ -18,6 +18,13 @@
 namespace MR::UI::TestEngine
 {
 
+// Optional attributes reported to the test engine each frame alongside a widget registration.
+struct EntryAttributes
+{
+    // Non-empty marks the widget as disabled with this reason. Only read during the call.
+    std::string_view disabledReason;
+};
+
 namespace detail
 {
     template <typename T>
@@ -36,12 +43,12 @@ namespace detail
     };
 
     template <typename T>
-    [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride = true );
+    [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride = true, const EntryAttributes& attrs = {} );
 
-    extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride );
-    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride );
-    extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
-    extern template MRVIEWER_API std::optional<std::string> createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
+    extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+    extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+    extern template MRVIEWER_API std::optional<std::string> createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride, const EntryAttributes& attrs );
 
     template <typename T, typename = void> struct UnderlyingValueTypeHelper {};
     template <typename T> struct UnderlyingValueTypeHelper<T, std::enable_if_t<std::is_floating_point_v<T>>> {using type = double;};
@@ -55,7 +62,7 @@ namespace detail
 
 // Call this every frame when drawing a button you want to track (regardless of whether it returns true of false).
 // If this returns true, simulate a button click.
-[[nodiscard]] MRVIEWER_API bool createButton( std::string_view name );
+[[nodiscard]] MRVIEWER_API bool createButton( std::string_view name, const EntryAttributes& attrs = {} );
 
 template <typename T>
 concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::string>;
@@ -70,7 +77,7 @@ concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::str
 //   are in different groups created with `pushTree()`/`popTree()`).
 template <AllowedValueType T>
 requires std::is_arithmetic_v<T>
-[[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max, bool consumeValueOverride = true )
+[[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max, bool consumeValueOverride = true, const EntryAttributes& attrs = {} )
 {
     if ( !( min < max ) )
     {
@@ -81,20 +88,20 @@ requires std::is_arithmetic_v<T>
     using U = detail::UnderlyingValueType<T>;
     static_assert(sizeof(T) <= sizeof(U), "The used type is too large.");
 
-    auto ret = detail::createValueLow<U>( name, detail::BoundedValue<U>{ .value = U( value ), .min = U( min ), .max = U( max ) }, consumeValueOverride );
+    auto ret = detail::createValueLow<U>( name, detail::BoundedValue<U>{ .value = U( value ), .min = U( min ), .max = U( max ) }, consumeValueOverride, attrs );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
 // This overload is for strings.
-[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride = true, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
+[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride = true, std::optional<std::vector<std::string>> allowedValues = std::nullopt, const EntryAttributes& attrs = {} );
 
 // Usually you don't need this function.
 // This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
 // For those, call this version first to read the value override, then draw the widget, then call the normal `createValue()` with the same name
 //   and with the new value, and discard its return value.
 template <AllowedValueType T>
-[[nodiscard]] std::optional<T> createValueTentative( std::string_view name, bool consumeValueOverride = true )
+[[nodiscard]] std::optional<T> createValueTentative( std::string_view name, bool consumeValueOverride = true, const EntryAttributes& attrs = {} )
 {
-    auto ret = detail::createValueLow<detail::UnderlyingValueType<T>>( name, std::nullopt, consumeValueOverride );
+    auto ret = detail::createValueLow<detail::UnderlyingValueType<T>>( name, std::nullopt, consumeValueOverride, attrs );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
 
@@ -108,6 +115,10 @@ struct ButtonEntry
 {
     // Set this to true to simulate a button click.
     mutable bool simulateClick = false;
+
+    // Non-empty if the button was drawn disabled (greyed out / not accepting input) on the last frame,
+    // with a human-readable reason. Empty means the button accepts input.
+    std::string disabledReason;
 
     static constexpr std::string_view kindName = "button";
 };
@@ -145,6 +156,10 @@ struct ValueEntry
     };
     using ValueVar = std::variant<Value<std::int64_t>, Value<std::uint64_t>, Value<double>, Value<std::string>>;
     ValueVar value;
+
+    // Non-empty if the widget was drawn disabled (greyed out / read-only) on the last frame,
+    // with a human-readable reason. Empty means the widget accepts input.
+    std::string disabledReason;
 
     static constexpr std::string_view kindName = "value";
 };

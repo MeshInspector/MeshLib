@@ -47,6 +47,11 @@ struct TypedEntry
 {
     std::string name;
     EntryType type;
+
+    // Human-readable interaction status. Built by `composeStatus()` in MRUITestEngineControl.cpp —
+    // see that function for the set of values. Agents can branch on `status == "available"` or
+    // match `status.starts_with("disabled")`.
+    std::string status;
 };
 
 // Returns the elements of `path` combined into a single string.
@@ -54,6 +59,14 @@ struct TypedEntry
 
 // Returns the contents of `path`, or an error if the path is wrong.
 [[nodiscard]] MRVIEWER_API Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& path );
+
+// `listAllEntries` returns this: each element is `(fullPath, entry)` where `fullPath.back() == entry.name`.
+using PathedEntry = std::pair<std::vector<std::string>, TypedEntry>;
+
+// Returns every entry in the subtree rooted at `rootPath` as a flat depth-first list. Pass an empty
+// `rootPath` to get the whole tree. Groups are included in the list (identifiable by `type == group`)
+// and their descendants appear on subsequent rows with `path` extending theirs.
+[[nodiscard]] MRVIEWER_API Expected<std::vector<PathedEntry>> listAllEntries( const std::vector<std::string>& rootPath );
 
 // Presses the button at this path, or returns an error.
 MRVIEWER_API Expected<void> pressButton( const std::vector<std::string>& path );

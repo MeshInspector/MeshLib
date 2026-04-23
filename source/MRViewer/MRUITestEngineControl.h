@@ -48,13 +48,9 @@ struct TypedEntry
     std::string name;
     EntryType type;
 
-    // Human-readable interaction status. Always one of:
-    //   * "available"                                — entry accepts input
-    //   * "disabled"                                 — disabled, no specific reason known
-    //   * "disabled: <reason>"                       — disabled via requirements / UI::button(active=false)
-    //   * "disabled: blocked by modal '<name>'"      — modal popup currently on top
-    //   * "disabled: blocked by modal popup"         — modal open, its window name isn't determinable
-    // Agents can branch on `status.starts_with("disabled")` or pattern-match the whole string.
+    // Human-readable interaction status. Built by `composeStatus()` in MRUITestEngineControl.cpp —
+    // see that function for the set of values. Agents can branch on `status == "available"` or
+    // match `status.starts_with("disabled")`.
     std::string status;
 };
 

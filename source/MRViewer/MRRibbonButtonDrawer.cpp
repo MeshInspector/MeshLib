@@ -282,7 +282,6 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         pushRibbonButtonColors( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
-    // `requirements` empty = no unmet requirements = button enabled; non-empty = disabled with this reason.
     pressed = UI::TestEngine::createButton(
         item.item->name(),
         { .disabledReason = requirements } ) || pressed; // Must not short-circuit.

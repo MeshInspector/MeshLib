@@ -19,15 +19,9 @@ namespace MR::UI::TestEngine
 {
 
 // Optional attributes reported to the test engine each frame alongside a widget registration.
-// Passed to `createButton` / `createValue` / `createValueTentative`. All fields default to no-op.
 struct EntryAttributes
 {
-    // Non-empty marks the widget as disabled, with this human-readable reason ("Select an object
-    // first.", unmet requirements, etc.). Empty means "not explicitly disabled by caller" — the
-    // test engine may still infer disabled state from ImGui's CurrentItemFlags (BeginDisabled)
-    // and fill in a generic reason, so widgets wrapped in ImGui's native BeginDisabled don't need
-    // to set this. Surfaced on the listed entry and used by pressButton/writeValue to return a
-    // meaningful error instead of silently succeeding.
+    // Non-empty marks the widget as disabled with this reason. Only read during the call.
     std::string_view disabledReason;
 };
 
@@ -67,7 +61,7 @@ namespace detail
 }
 
 // Call this every frame when drawing a button you want to track (regardless of whether it returns true of false).
-// If this returns true, simulate a button click. See `EntryAttributes` for optional disabled-state reporting.
+// If this returns true, simulate a button click.
 [[nodiscard]] MRVIEWER_API bool createButton( std::string_view name, const EntryAttributes& attrs = {} );
 
 template <typename T>

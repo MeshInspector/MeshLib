@@ -253,9 +253,11 @@ const char* getImGuiPrimaryCtrlName()
 
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
+    TestEngine::EntryAttributes attrs;
+    if ( !customParams.enabled )
+        attrs.disabledReason = "inactive";
     bool simulateClick = customParams.enableTestEngine && TestEngine::createButton(
-        customParams.testEngineName.empty() ? label : customParams.testEngineName,
-        { .disabledReason = customParams.enabled ? std::string_view{} : std::string_view{ "inactive" } } );
+        customParams.testEngineName.empty() ? label : customParams.testEngineName, attrs );
     assert( ( simulateClick <= customParams.enabled ) && "Trying to programmatically press a button, but it's inactive!" );
     if ( !customParams.enabled )
         simulateClick = false;

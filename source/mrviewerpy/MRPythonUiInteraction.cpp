@@ -58,6 +58,17 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListEntries,
     "Add group name to the end of the vector to see its contents.\n"
     "When you find the button you need, pass it to `uiPressButton()`."
 )
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListAllEntries,
+    []( const std::vector<std::string>& rootPath )
+    {
+        std::vector<Control::PathedEntry> ret;
+        MR::CommandLoop::runCommandFromGUIThread( [&]{ ret = MR::expectedValueOrThrow( Control::listAllEntries( rootPath ) ); } );
+        return ret;
+    },
+    "Flat depth-first list of every UI entry in the subtree rooted at `rootPath`.\n"
+    "Pass an empty list for the whole tree.\n"
+    "Each element is a `(path, UiEntry)` tuple where `path[-1] == entry.name`."
+)
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
     []( const std::vector<std::string>& path )
     {

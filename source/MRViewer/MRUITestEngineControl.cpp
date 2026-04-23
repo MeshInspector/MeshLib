@@ -79,6 +79,23 @@ static std::string composeStatus( std::string_view disabledReason )
     return "available";
 }
 
+static EntryType typeOf( const TestEngine::Entry& entry )
+{
+    return std::visit( MR::overloaded{
+        []( const TestEngine::ButtonEntry& ) { return EntryType::button; },
+        []( const TestEngine::ValueEntry& e )
+        {
+            return std::visit( MR::overloaded{
+                []( const TestEngine::ValueEntry::Value<std::int64_t>& ){ return EntryType::valueInt; },
+                []( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ return EntryType::valueUint; },
+                []( const TestEngine::ValueEntry::Value<double>& ){ return EntryType::valueReal; },
+                []( const TestEngine::ValueEntry::Value<std::string>& ){ return EntryType::valueString; },
+            }, e.value );
+        },
+        []( const TestEngine::GroupEntry& ) { return EntryType::group; },
+    }, entry.value );
+}
+
 Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& path )
 {
     auto groupEx = findGroup( path );
@@ -93,21 +110,49 @@ Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& p
     {
         ret.push_back( {
             .name = elem.first,
-            .type = std::visit( MR::overloaded{
-                []( const TestEngine::ButtonEntry& ) { return EntryType::button; },
-                []( const TestEngine::ValueEntry& e )
-                {
-                    return std::visit( MR::overloaded{
-                        []( const TestEngine::ValueEntry::Value<std::int64_t>& ){ return EntryType::valueInt; },
-                        []( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ return EntryType::valueUint; },
-                        []( const TestEngine::ValueEntry::Value<double>& ){ return EntryType::valueReal; },
-                        []( const TestEngine::ValueEntry::Value<std::string>& ){ return EntryType::valueString; },
-                    }, e.value );
-                },
-                []( const TestEngine::GroupEntry& ) { return EntryType::group; },
-            }, elem.second.value ),
+            .type = typeOf( elem.second ),
             .status = composeStatus( entryDisabledReason( elem.second ) ),
         } );
+    }
+    return ret;
+}
+
+static void walkAll( std::vector<std::string>& pathStack,
+                     const TestEngine::Entry& entry,
+                     std::vector<PathedEntry>& out )
+{
+    TypedEntry te{
+        .name   = pathStack.back(),
+        .type   = typeOf( entry ),
+        .status = composeStatus( entryDisabledReason( entry ) ),
+    };
+    out.emplace_back( pathStack, std::move( te ) );
+
+    if ( auto g = std::get_if<TestEngine::GroupEntry>( &entry.value ) )
+    {
+        for ( const auto& [childName, childEntry] : g->elems )
+        {
+            pathStack.push_back( childName );
+            walkAll( pathStack, childEntry, out );
+            pathStack.pop_back();
+        }
+    }
+}
+
+Expected<std::vector<PathedEntry>> listAllEntries( const std::vector<std::string>& rootPath )
+{
+    auto groupEx = findGroup( rootPath );
+    if ( !groupEx )
+        return unexpected( groupEx.error() );
+    const auto& group = **groupEx;
+
+    std::vector<PathedEntry> ret;
+    std::vector<std::string> pathStack = rootPath;
+    for ( const auto& [childName, childEntry] : group.elems )
+    {
+        pathStack.push_back( childName );
+        walkAll( pathStack, childEntry, ret );
+        pathStack.pop_back();
     }
     return ret;
 }

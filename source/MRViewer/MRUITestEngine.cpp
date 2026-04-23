@@ -40,13 +40,30 @@ bool imGuiContextSaysDisabled()
 // - If caller passed a reason, use it verbatim (takes precedence).
 // - Else if ImGui says the widget is drawn under BeginDisabled, use a generic fallback so the
 //   entry is still marked disabled even though the caller didn't know why.
+// - Else, if a blocking modal popup is open and the widget is drawn outside it (walking the
+//   ParentWindow chain), return "blocked by modal '<name>'" — the widget can't receive input
+//   while the modal is on top.
 // - Else empty (entry accepts input).
-std::string_view effectiveDisabledReason( const EntryAttributes& attrs )
+std::string effectiveDisabledReason( const EntryAttributes& attrs )
 {
     if ( !attrs.disabledReason.empty() )
-        return attrs.disabledReason;
+        return std::string( attrs.disabledReason );
     if ( imGuiContextSaysDisabled() )
         return "drawn inside ImGui::BeginDisabled";
+    if ( ImGuiWindow* topModal = ImGui::GetTopMostPopupModal() )
+    {
+        bool insideTopModal = false;
+        for ( ImGuiWindow* w = ImGui::GetCurrentWindow(); w; w = w->ParentWindow )
+        {
+            if ( w == topModal )
+            {
+                insideTopModal = true;
+                break;
+            }
+        }
+        if ( !insideTopModal )
+            return fmt::format( "blocked by modal '{}'", topModal->Name ? topModal->Name : "<unnamed>" );
+    }
     return {};
 }
 
@@ -110,8 +127,7 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     if ( !entry )
         entry = &iter->second.value.emplace<ValueEntry>();
 
-    const auto reason = effectiveDisabledReason( attrs );
-    entry->disabledReason.assign( reason.data(), reason.size() );
+    entry->disabledReason = effectiveDisabledReason( attrs );
 
     std::optional<T> ret;
 
@@ -184,8 +200,7 @@ bool createButton( std::string_view name, const EntryAttributes& attrs )
     if ( !button )
         button = &iter->second.value.emplace<ButtonEntry>();
 
-    const auto reason = effectiveDisabledReason( attrs );
-    button->disabledReason.assign( reason.data(), reason.size() );
+    button->disabledReason = effectiveDisabledReason( attrs );
 
     iter->second.visitedOnThisFrame = true;
 

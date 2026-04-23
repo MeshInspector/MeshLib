@@ -1633,6 +1633,8 @@ void RibbonMenu::changeTab_( int newTab )
 
 std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const
 {
+    if ( item->isActive() )
+        return ""; // always allowed to disable
     return item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
 }
 

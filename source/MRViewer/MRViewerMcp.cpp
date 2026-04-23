@@ -15,6 +15,22 @@ static void skipFramesAfterInput()
         MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
 }
 
+// Hopefully "float" is more clear to LLMs than "real". The actual underlying type is `double`.
+static const char* mcpTypeStr( UI::TestEngine::Control::EntryType type )
+{
+    switch ( type )
+    {
+        case UI::TestEngine::Control::EntryType::button:      return "button";
+        case UI::TestEngine::Control::EntryType::group:       return "group";
+        case UI::TestEngine::Control::EntryType::valueInt:    return "int";
+        case UI::TestEngine::Control::EntryType::valueUint:   return "uint";
+        case UI::TestEngine::Control::EntryType::valueReal:   return "float";
+        case UI::TestEngine::Control::EntryType::valueString: return "string";
+    }
+    assert( false && "Unknown EntryType." );
+    return "invalid";
+}
+
 static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
 {
     std::vector<UI::TestEngine::Control::TypedEntry> list;
@@ -29,24 +45,35 @@ static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
     nlohmann::json ret = nlohmann::json::array();
     for ( const auto& elem : list )
     {
-        std::string typeStr;
-        switch ( elem.type )
-        {
-            case UI::TestEngine::Control::EntryType::button:      typeStr = "button"; break;
-            case UI::TestEngine::Control::EntryType::group:       typeStr = "group"; break;
-            case UI::TestEngine::Control::EntryType::valueInt:    typeStr = "int"; break;
-            case UI::TestEngine::Control::EntryType::valueUint:   typeStr = "uint"; break;
-            case UI::TestEngine::Control::EntryType::valueReal:   typeStr = "float"; break; // Hopefully "float" is more clear to LLMs than "real". The actual underlying type is `double`.
-            case UI::TestEngine::Control::EntryType::valueString: typeStr = "string"; break;
-        }
-
-        assert( !typeStr.empty() );
-        if ( typeStr.empty() )
-            typeStr = "invalid";
-
         ret.push_back( nlohmann::json::object( {
             { "name", elem.name },
-            { "type", std::move( typeStr ) },
+            { "type", mcpTypeStr( elem.type ) },
+            { "status", elem.status },
+        } ) );
+    }
+
+    return nlohmann::json::object( { { "result", ret } } );
+}
+
+static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
+{
+    std::vector<UI::TestEngine::Control::PathedEntry> list;
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto ex = UI::TestEngine::Control::listAllEntries( args.value( "path", std::vector<std::string>{} ) );
+        if ( !ex )
+            throw std::runtime_error( ex.error() );
+        list = std::move( *ex );
+    } );
+
+    nlohmann::json ret = nlohmann::json::array();
+    for ( const auto& pe : list )
+    {
+        ret.push_back( nlohmann::json::object( {
+            { "path", pe.first },
+            { "name", pe.second.name },
+            { "type", mcpTypeStr( pe.second.type ) },
+            { "status", pe.second.status },
         } ) );
     }
 
@@ -114,10 +141,30 @@ MR_ON_INIT{
     server.addTool(
         /*id*/"ui.listEntries",
         /*name*/"List UI entries",
-        /*desc*/"Returns the list of UI elements at the given path. The elements form a tree. Pass an empty array to get the top-level elements. Each element is described by a string. The path parameter describes the path from the root node to a specific element. Only elements of type `group` can have sub-elements.",
+        /*desc*/"Returns the list of UI elements at the given path. The elements form a tree. Pass an empty array to get the top-level elements. The path parameter describes the path from the root node to a specific element. Only elements of type `group` can have sub-elements. Each entry's `status` field is a human-readable interaction state: `\"available\"` means the entry accepts input; `\"disabled\"` or `\"disabled: <reason>\"` means the widget is currently greyed out (reason is typically the unmet requirement, e.g. `\"Select exactly one Object\"`); `\"disabled: blocked by modal '<name>'\"` means a modal popup is occluding the entry and must be dismissed first.",
         /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array( Mcp::Schema::Object{}.addMember( "name", Mcp::Schema::String{} ).addMember( "type", Mcp::Schema::String{} ) ),
+        /*output_schema*/Mcp::Schema::Array(
+            Mcp::Schema::Object{}
+                .addMember( "name", Mcp::Schema::String{} )
+                .addMember( "type", Mcp::Schema::String{} )
+                .addMember( "status", Mcp::Schema::String{} )
+        ),
         /*func*/mcpToolListUiEntries
+    );
+
+    server.addTool(
+        /*id*/"ui.listAllEntries",
+        /*name*/"List all UI entries (flat, recursive)",
+        /*desc*/"Returns a flat depth-first list of every UI element in the subtree rooted at `path` (default: the whole tree). Each item carries its own full `path`, so the tree structure is recoverable without extra calls. `type == \"group\"` identifies intermediate nodes; their descendants appear on subsequent rows whose `path` extends theirs. `name`, `type`, and `status` have the same meaning as in `ui.listEntries`. Use this instead of walking level-by-level with `ui.listEntries` when you want a one-shot view of the UI.",
+        /*input_schema*/Mcp::Schema::Object{}.addMemberOpt( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
+        /*output_schema*/Mcp::Schema::Array(
+            Mcp::Schema::Object{}
+                .addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) )
+                .addMember( "name", Mcp::Schema::String{} )
+                .addMember( "type", Mcp::Schema::String{} )
+                .addMember( "status", Mcp::Schema::String{} )
+        ),
+        /*func*/mcpToolListAllUiEntries
     );
 
     server.addTool(

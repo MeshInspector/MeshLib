@@ -57,6 +57,45 @@ std::string pathToString( const std::vector<std::string>& path )
     return pathString;
 }
 
+// Read the disabled-reason string off an internal entry. Empty means the entry accepts input.
+// Groups are never disabled.
+static std::string_view entryDisabledReason( const TestEngine::Entry& entry )
+{
+    return std::visit( MR::overloaded{
+        []( const TestEngine::ButtonEntry& e ) -> std::string_view { return e.disabledReason; },
+        []( const TestEngine::ValueEntry& e )  -> std::string_view { return e.disabledReason; },
+        []( const TestEngine::GroupEntry& )    -> std::string_view { return {}; },
+    }, entry.value );
+}
+
+// Compose the single user-facing status string from the entry's `disabledReason`.
+// The reason covers every disable source — caller-supplied requirements, ImGui::BeginDisabled
+// auto-detect, and "blocked by modal '<name>'" (all formatted at registration time in
+// `MRUITestEngine.cpp:effectiveDisabledReason`).
+static std::string composeStatus( std::string_view disabledReason )
+{
+    if ( !disabledReason.empty() )
+        return fmt::format( "disabled: {}", disabledReason );
+    return "available";
+}
+
+static EntryType typeOf( const TestEngine::Entry& entry )
+{
+    return std::visit( MR::overloaded{
+        []( const TestEngine::ButtonEntry& ) { return EntryType::button; },
+        []( const TestEngine::ValueEntry& e )
+        {
+            return std::visit( MR::overloaded{
+                []( const TestEngine::ValueEntry::Value<std::int64_t>& ){ return EntryType::valueInt; },
+                []( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ return EntryType::valueUint; },
+                []( const TestEngine::ValueEntry::Value<double>& ){ return EntryType::valueReal; },
+                []( const TestEngine::ValueEntry::Value<std::string>& ){ return EntryType::valueString; },
+            }, e.value );
+        },
+        []( const TestEngine::GroupEntry& ) { return EntryType::group; },
+    }, entry.value );
+}
+
 Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& path )
 {
     auto groupEx = findGroup( path );
@@ -71,20 +110,49 @@ Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& p
     {
         ret.push_back( {
             .name = elem.first,
-            .type = std::visit( MR::overloaded{
-                []( const TestEngine::ButtonEntry& ) { return EntryType::button; },
-                []( const TestEngine::ValueEntry& e )
-                {
-                    return std::visit( MR::overloaded{
-                        []( const TestEngine::ValueEntry::Value<std::int64_t>& ){ return EntryType::valueInt; },
-                        []( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ return EntryType::valueUint; },
-                        []( const TestEngine::ValueEntry::Value<double>& ){ return EntryType::valueReal; },
-                        []( const TestEngine::ValueEntry::Value<std::string>& ){ return EntryType::valueString; },
-                    }, e.value );
-                },
-                []( const TestEngine::GroupEntry& ) { return EntryType::group; },
-            }, elem.second.value ),
+            .type = typeOf( elem.second ),
+            .status = composeStatus( entryDisabledReason( elem.second ) ),
         } );
+    }
+    return ret;
+}
+
+static void walkAll( std::vector<std::string>& pathStack,
+                     const TestEngine::Entry& entry,
+                     std::vector<PathedEntry>& out )
+{
+    TypedEntry te{
+        .name   = pathStack.back(),
+        .type   = typeOf( entry ),
+        .status = composeStatus( entryDisabledReason( entry ) ),
+    };
+    out.emplace_back( pathStack, std::move( te ) );
+
+    if ( auto g = std::get_if<TestEngine::GroupEntry>( &entry.value ) )
+    {
+        for ( const auto& [childName, childEntry] : g->elems )
+        {
+            pathStack.push_back( childName );
+            walkAll( pathStack, childEntry, out );
+            pathStack.pop_back();
+        }
+    }
+}
+
+Expected<std::vector<PathedEntry>> listAllEntries( const std::vector<std::string>& rootPath )
+{
+    auto groupEx = findGroup( rootPath );
+    if ( !groupEx )
+        return unexpected( groupEx.error() );
+    const auto& group = **groupEx;
+
+    std::vector<PathedEntry> ret;
+    std::vector<std::string> pathStack = rootPath;
+    for ( const auto& [childName, childEntry] : group.elems )
+    {
+        pathStack.push_back( childName );
+        walkAll( pathStack, childEntry, ret );
+        pathStack.pop_back();
     }
     return ret;
 }
@@ -101,11 +169,15 @@ Expected<void> pressButton( const std::vector<std::string>& path )
 
     auto iter = group.elems.find( path.back() );
     if ( iter == group.elems.end() )
-        unexpected( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathToString( path ), path.back(), listKeys( group ) ) );
+        return unexpected( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathToString( path ), path.back(), listKeys( group ) ) );
 
     auto buttonEx = iter->second.getAs<TestEngine::ButtonEntry>( path.back() );
     if ( !buttonEx )
         return unexpected( buttonEx.error() );
+
+    const std::string_view disabledReason = ( *buttonEx )->disabledReason;
+    if ( !disabledReason.empty() )
+        return unexpected( fmt::format( "pressButton {}: {}", pathToString( path ), composeStatus( disabledReason ) ) );
 
     ( *buttonEx )->simulateClick = true;
 
@@ -222,6 +294,10 @@ Expected<void> writeValue( const std::vector<std::string>& path, T value )
     if ( !entryEx )
         return unexpected( entryEx.error() );
     const auto& entry = **entryEx;
+
+    const std::string_view disabledReason = entry.disabledReason;
+    if ( !disabledReason.empty() )
+        return unexpected( fmt::format( "writeValue {}: {}", pathToString( path ), composeStatus( disabledReason ) ) );
 
     auto writeValueOfCorrectType = [&entry, &path]( auto fixedValue ) -> Expected<void>
     {

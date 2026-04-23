@@ -15,6 +15,22 @@ static void skipFramesAfterInput()
         MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
 }
 
+// Hopefully "float" is more clear to LLMs than "real". The actual underlying type is `double`.
+static const char* mcpTypeStr( UI::TestEngine::Control::EntryType type )
+{
+    switch ( type )
+    {
+        case UI::TestEngine::Control::EntryType::button:      return "button";
+        case UI::TestEngine::Control::EntryType::group:       return "group";
+        case UI::TestEngine::Control::EntryType::valueInt:    return "int";
+        case UI::TestEngine::Control::EntryType::valueUint:   return "uint";
+        case UI::TestEngine::Control::EntryType::valueReal:   return "float";
+        case UI::TestEngine::Control::EntryType::valueString: return "string";
+    }
+    assert( false && "Unknown EntryType." );
+    return "invalid";
+}
+
 static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
 {
     std::vector<UI::TestEngine::Control::TypedEntry> list;
@@ -29,24 +45,35 @@ static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
     nlohmann::json ret = nlohmann::json::array();
     for ( const auto& elem : list )
     {
-        std::string typeStr;
-        switch ( elem.type )
-        {
-            case UI::TestEngine::Control::EntryType::button:      typeStr = "button"; break;
-            case UI::TestEngine::Control::EntryType::group:       typeStr = "group"; break;
-            case UI::TestEngine::Control::EntryType::valueInt:    typeStr = "int"; break;
-            case UI::TestEngine::Control::EntryType::valueUint:   typeStr = "uint"; break;
-            case UI::TestEngine::Control::EntryType::valueReal:   typeStr = "float"; break; // Hopefully "float" is more clear to LLMs than "real". The actual underlying type is `double`.
-            case UI::TestEngine::Control::EntryType::valueString: typeStr = "string"; break;
-        }
-
-        assert( !typeStr.empty() );
-        if ( typeStr.empty() )
-            typeStr = "invalid";
-
         ret.push_back( nlohmann::json::object( {
             { "name", elem.name },
-            { "type", std::move( typeStr ) },
+            { "type", mcpTypeStr( elem.type ) },
+            { "status", elem.status },
+        } ) );
+    }
+
+    return nlohmann::json::object( { { "result", ret } } );
+}
+
+static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
+{
+    std::vector<UI::TestEngine::Control::PathedEntry> list;
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto ex = UI::TestEngine::Control::listAllEntries( args.value( "path", std::vector<std::string>{} ) );
+        if ( !ex )
+            throw std::runtime_error( ex.error() );
+        list = std::move( *ex );
+    } );
+
+    nlohmann::json ret = nlohmann::json::array();
+    for ( const auto& pe : list )
+    {
+        ret.push_back( nlohmann::json::object( {
+            { "path", pe.first },
+            { "name", pe.second.name },
+            { "type", mcpTypeStr( pe.second.type ) },
+            { "status", pe.second.status },
         } ) );
     }
 
@@ -108,40 +135,78 @@ static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
+// Prepended to every path-accepting tool's `desc`. One place defines the vocabulary;
+// per-tool descs only say what the tool itself does.
+static constexpr std::string_view kPathSemantics =
+    "`path`: array of entry names from the root (empty = root). Whitespace-sensitive. "
+    "Names may contain `##<suffix>` — a hidden ImGui uniqueness marker; pass the name VERBATIM "
+    "as returned by `ui.listEntries` / `ui.listAllEntries`, do not strip `##<suffix>`.\n"
+    "`type`: `button` | `group` | `int` | `uint` | `float` | `string`.\n"
+    "`status`: `\"available\"` | `\"disabled: <reason>\"` (widget greyed out) | "
+    "`\"disabled: blocked by modal '<name>'\"` (dismiss the modal first).\n\n";
+
+static std::string withPreamble( std::string_view specific )
+{
+    return std::string( kPathSemantics ) + std::string( specific );
+}
+
 MR_ON_INIT{
     Mcp::Server& server = Mcp::getDefaultServer();
 
     server.addTool(
         /*id*/"ui.listEntries",
-        /*name*/"List UI entries",
-        /*desc*/"Returns the list of UI elements at the given path. The elements form a tree. Pass an empty array to get the top-level elements. Each element is described by a string. The path parameter describes the path from the root node to a specific element. Only elements of type `group` can have sub-elements.",
+        /*name*/"List UI entries (one level)",
+        /*desc*/withPreamble( "List the direct children of `path`. Use `ui.listAllEntries` to get the entire subtree in one call." ),
         /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array( Mcp::Schema::Object{}.addMember( "name", Mcp::Schema::String{} ).addMember( "type", Mcp::Schema::String{} ) ),
+        /*output_schema*/Mcp::Schema::Array(
+            Mcp::Schema::Object{}
+                .addMember( "name", Mcp::Schema::String{} )
+                .addMember( "type", Mcp::Schema::String{} )
+                .addMember( "status", Mcp::Schema::String{} )
+        ),
         /*func*/mcpToolListUiEntries
     );
 
     server.addTool(
+        /*id*/"ui.listAllEntries",
+        /*name*/"List UI entries (full subtree)",
+        /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui.listEntries` for a single level after a state change." ),
+        /*input_schema*/Mcp::Schema::Object{}.addMemberOpt( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
+        /*output_schema*/Mcp::Schema::Array(
+            Mcp::Schema::Object{}
+                .addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) )
+                .addMember( "name", Mcp::Schema::String{} )
+                .addMember( "type", Mcp::Schema::String{} )
+                .addMember( "status", Mcp::Schema::String{} )
+        ),
+        /*func*/mcpToolListAllUiEntries
+    );
+
+    server.addTool(
         /*id*/"ui.pressButton",
-        /*name*/"Press button",
-        /*desc*/"Presses the button at the given path.",
+        /*name*/"Click UI button",
+        /*desc*/withPreamble( "Click the button at `path` (must end in a `type == \"button\"` entry). Fails if `status` starts with `\"disabled\"`." ),
         /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
         /*output_schema*/Mcp::Schema::Empty{},
         /*func*/mcpToolPressButton
     );
 
-    auto handleValueType = [&]<typename T>( const std::string& typeName )
+    // (idSuffix, displayType) -- `idSuffix` is the CamelCase suffix on ui.readValue*/ui.writeValue*;
+    // `displayType` matches the `type` field in listEntries output.
+    auto handleValueType = [&]<typename T>( const std::string& idSuffix, const std::string& displayType )
     {
+        const std::string readDesc = std::is_same_v<T, std::string>
+            ? "Read the string value at `path`. If the response contains `allowedValues`, `ui.writeValue" + idSuffix + "` must pass one of those strings."
+            : "Read the " + displayType + " value at `path`. Bounds `min`/`max` are inclusive for `ui.writeValue" + idSuffix + "`.";
+
+        const std::string writeDesc = std::is_same_v<T, std::string>
+            ? "Set the string value at `path`. Must match `allowedValues` (from `ui.readValue" + idSuffix + "`) when present. Fails if `status` starts with `\"disabled\"`."
+            : "Set the " + displayType + " value at `path`. Must be within the inclusive `[min, max]` from `ui.readValue" + idSuffix + "`. Fails if `status` starts with `\"disabled\"`.";
+
         server.addTool(
-            /*id*/"ui.readValue" + typeName,
-            /*name*/"Read " + typeName + " value",
-            /*desc*/"Reads the value at the given path, of type `" + typeName + "`." +
-            (
-                std::is_same_v<T, std::string>
-                ?
-                    " If the result contains an array called `allowedValues`, then when assigning a new value using `ui.writeValue" + typeName + "`, it must match one of the strings listed in `allowedValues`."
-                :
-                    " When assigning a new value using `ui.writeValue" + typeName + "`, it must be between `min` and `max` inclusive."
-            ),
+            /*id*/"ui.readValue" + idSuffix,
+            /*name*/"Read UI " + displayType + " value",
+            /*desc*/withPreamble( readDesc ),
             /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
             /*output_schema*/(
                 std::is_same_v<T, std::string>
@@ -158,19 +223,19 @@ MR_ON_INIT{
         );
 
         server.addTool(
-            /*id*/"ui.writeValue" + typeName,
-            /*name*/"Write " + typeName + " value",
-            /*desc*/"Writes the value at the given path, of type `" + typeName + "`. You can call `ui.readValue" + typeName + "` before this to know what values are allowed.",
+            /*id*/"ui.writeValue" + idSuffix,
+            /*name*/"Write UI " + displayType + " value",
+            /*desc*/withPreamble( writeDesc ),
             /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Mcp::Schema::Base &&>( Mcp::Schema::String{} ) : static_cast<Mcp::Schema::Base &&>( Mcp::Schema::Number{} ) ),
             /*output_schema*/Mcp::Schema::Empty{},
             /*func*/mcpToolWriteValue<T>
         );
     };
 
-    handleValueType.operator()<std::int64_t>( "Int" );
-    handleValueType.operator()<std::uint64_t>( "Uint" );
-    handleValueType.operator()<double>( "Real" );
-    handleValueType.operator()<std::string>( "String" );
+    handleValueType.operator()<std::int64_t >( "Int",    "int"    );
+    handleValueType.operator()<std::uint64_t>( "Uint",   "uint"   );
+    handleValueType.operator()<double       >( "Real",   "float"  );
+    handleValueType.operator()<std::string  >( "String", "string" );
 }; // MR_ON_INIT
 
 } // namespace MR

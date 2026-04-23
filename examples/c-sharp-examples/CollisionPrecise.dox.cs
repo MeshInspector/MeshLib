@@ -1,38 +1,26 @@
-﻿using static MR;
+using static MR;
 
-public class CollisionPrecise {
-
-    public static void Run(string[] args) {
-        var meshA = MR.makeUVSphere();
-        var meshB = MR.makeUVSphere();
-
-        meshB.transform(MR.AffineXf3f.translation(new MR.Vector3f(0.1f, 0.1f, 0.1f)));
+public class CollisionPreciseExample
+{
+    public static void Run(string[] args)
+    {
+        var meshA = MR.makeUVSphere(); // make mesh A
+        var meshB = MR.makeUVSphere(); // make mesh B
+        meshB.transform(MR.AffineXf3f.translation(new MR.Vector3f(0.1f, 0.1f, 0.1f))); // shift mesh B for better demonstration
 
         var meshPartA = new MeshPart(meshA);
         var meshPartB = new MeshPart(meshB);
 
-        Console.WriteLine(" --- Beginning Colliding Precise Test! --- ");
-        var converters = MR.getVectorConverters(meshPartA, meshPartB).toInt;
-        var collidingFaceEdges = MR.findCollidingEdgeTrisPrecise(meshPartA, meshPartB, converters);
-
-        for (ulong i = 0; i < collidingFaceEdges.size(); i++) {
+        var converters = MR.getVectorConverters(meshPartA, meshPartB).toInt; // create converters to integer field (needed for absolute precision predicates)
+        var collidingFaceEdges = MR.findCollidingEdgeTrisPrecise(meshPartA, meshPartB, converters); // find each intersecting edge/triangle pair
+        // print pairs of edges triangles
+        for (ulong i = 0; i < collidingFaceEdges.size(); i++)
+        {
             var vet = collidingFaceEdges[i];
-            var text = vet.isEdgeATriB()
-                ? $"edgeA: {vet.edge.id}, triB: {vet.tri().id}"
-                : $"triA: {vet.tri().id}, edgeB: {vet.edge.id}";
-
-            Console.WriteLine(text);
+            if (vet.isEdgeATriB())
+                Console.WriteLine($"edgeA: {vet.edge.id}, triB: {vet.tri().id}");
+            else
+                Console.WriteLine($"triA: {vet.tri().id}, edgeB: {vet.edge.id}");
         }
-
-        var collidingFaceBitSet = MR.findCollidingTriangleBitsets(meshPartA, meshPartB);
-        var bitSet = collidingFaceBitSet.first();
-        Console.WriteLine($"Colliding faces on MeshA: {bitSet.count()}");
-        bitSet = collidingFaceBitSet.second();
-        Console.WriteLine($"Colliding faces on MeshB: {bitSet.count()}");
-
-        var isColliding = !MR.findCollidingTriangles(meshPartA, meshPartB, null, true).empty();
-        Console.WriteLine($"Is Colliding: {isColliding}\n");
-
     }
-
 }

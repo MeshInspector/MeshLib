@@ -84,7 +84,47 @@ target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 # sidesteps it, and those platforms are single-config so the multi-config
 # concern above doesn't apply.
 IF(WIN32)
-  find_package(zlib-ng CONFIG REQUIRED)
+  # Can't use find_package(zlib-ng CONFIG): the vcpkg zlib-ng 2.1.5 port
+  # that vcpkg 2024.10.21 (pinned for msvc-2019 legs) ships doesn't install
+  # a CMake config file. Can't use a plain find_library() either: it loses
+  # Debug/Release selectivity, linking Debug MRMesh.dll against release
+  # zlib-ng2.dll and breaking applocal-copy (see the diagnostic output on
+  # the iterator-debug triplet, STATUS_DLL_NOT_FOUND at MeshViewer.exe).
+  #
+  # Manually construct an imported target with per-configuration IMPLIB +
+  # LOCATION paths, locating the files directly under vcpkg's triplet
+  # install tree. Gives applocal-copy the metadata it needs to copy the
+  # correct DLL next to the .exe per configuration.
+  find_path(LIBZLIBNG_INCLUDE_DIR NAMES zlib-ng.h REQUIRED)
+  find_library(LIBZLIBNG_LIBRARY_RELEASE
+    NAMES zlib-ng
+    PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib"
+    NO_DEFAULT_PATH REQUIRED
+  )
+  find_library(LIBZLIBNG_LIBRARY_DEBUG
+    NAMES zlib-ngd zlib-ng
+    PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib"
+    NO_DEFAULT_PATH REQUIRED
+  )
+  find_program(LIBZLIBNG_DLL_RELEASE
+    NAMES zlib-ng2.dll zlib-ng.dll
+    PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
+    NO_DEFAULT_PATH REQUIRED
+  )
+  find_program(LIBZLIBNG_DLL_DEBUG
+    NAMES zlib-ngd2.dll zlib-ng2.dll zlib-ng.dll
+    PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
+    NO_DEFAULT_PATH REQUIRED
+  )
+  add_library(zlib-ng::zlib SHARED IMPORTED)
+  set_target_properties(zlib-ng::zlib PROPERTIES
+    IMPORTED_CONFIGURATIONS "DEBUG;RELEASE"
+    IMPORTED_IMPLIB_RELEASE  "${LIBZLIBNG_LIBRARY_RELEASE}"
+    IMPORTED_LOCATION_RELEASE "${LIBZLIBNG_DLL_RELEASE}"
+    IMPORTED_IMPLIB_DEBUG    "${LIBZLIBNG_LIBRARY_DEBUG}"
+    IMPORTED_LOCATION_DEBUG  "${LIBZLIBNG_DLL_DEBUG}"
+    INTERFACE_INCLUDE_DIRECTORIES "${LIBZLIBNG_INCLUDE_DIR}"
+  )
   target_link_libraries(${PROJECT_NAME} PRIVATE zlib-ng::zlib)
 ELSE()
   find_library(LIBZLIBNG_LIBRARY

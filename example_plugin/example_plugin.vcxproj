@@ -57,6 +57,11 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <!-- _ITERATOR_DEBUG_LEVEL: defaults to 0 (standard MeshLib distribution).
+       For iterator-debug distribution, pass /p:MeshLibIteratorDebugLevel=2 to msbuild. -->
+  <PropertyGroup>
+    <MeshLibIteratorDebugLevel Condition="'$(MeshLibIteratorDebugLevel)' == ''">0</MeshLibIteratorDebugLevel>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)TempOutput\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -67,7 +72,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=0;_DEBUG;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;EXAMPLEPLUGIN_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=$(MeshLibIteratorDebugLevel);MR_ITERATOR_DEBUG_LEVEL=$(MeshLibIteratorDebugLevel);_DEBUG;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;EXAMPLEPLUGIN_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -96,7 +101,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;EXAMPLEPLUGIN_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=0;MR_ITERATOR_DEBUG_LEVEL=0;NDEBUG;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;EXAMPLEPLUGIN_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

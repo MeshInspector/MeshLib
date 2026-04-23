@@ -273,6 +273,18 @@ jobs:
     if: ${{ inputs.test_windows }}
     runs-on: windows-2025
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dist_pattern: "MeshLibDist_*[!-]*.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDist_*-IteratorDebug.zip"
+            config: Debug
+            app_subdir: Debug
+            idl: 2
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -283,14 +295,14 @@ jobs:
         continue-on-error: true
         run: |
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "MeshLibDist*.zip" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
 
       - name: Unpack Distributive
         id: unpack-dist
         run: |
           if (Test-Path MeshLibDist*.zip) {
             Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
-            Write-Output "C:\\meshlib-built\\install\\app\\Release" >> $env:GITHUB_PATH
+            Write-Output "C:\\meshlib-built\\install\\app\\${{ matrix.app_subdir }}" >> $env:GITHUB_PATH
             Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
           } else {
             Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
@@ -312,9 +324,10 @@ jobs:
         run: |
           cmake -S . -B build `
             -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
-            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
-          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          .\build\Release\MeshModification.exe
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }} `
+            -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }} /DMR_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }}"
+          cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\${{ matrix.config }}\MeshModification.exe
 
       - name: Build C examples
         if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
@@ -324,6 +337,6 @@ jobs:
         run: |
           cmake -S . -B build `
             -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
-            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
-          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          .\build\Release\MeshModification.exe
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}
+          cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\${{ matrix.config }}\MeshModification.exe

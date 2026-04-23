@@ -282,7 +282,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         pushRibbonButtonColors( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
-    pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
+    pressed = UI::TestEngine::createButton(
+        item.item->name(),
+        { .disabledReason = requirements } ) || pressed; // Must not short-circuit.
     pressed = pressed || params.forcePressed;
 
     float fontScale = 1.f;

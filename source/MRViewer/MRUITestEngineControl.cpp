@@ -2,7 +2,10 @@
 
 #include "MRMesh/MRMeshFwd.h"
 #include "MRPch/MRFmt.h"
+#include "MRViewer/MRImGui.h"
 #include "MRViewer/MRUITestEngine.h"
+
+#include <imgui_internal.h>
 
 #include <algorithm>
 #include <span>
@@ -57,6 +60,56 @@ std::string pathToString( const std::vector<std::string>& path )
     return pathString;
 }
 
+// Read the disabled-reason string off an internal entry. Empty means the entry accepts input.
+// Groups are never disabled.
+static std::string_view entryDisabledReason( const TestEngine::Entry& entry )
+{
+    return std::visit( MR::overloaded{
+        []( const TestEngine::ButtonEntry& e ) -> std::string_view { return e.disabledReason; },
+        []( const TestEngine::ValueEntry& e )  -> std::string_view { return e.disabledReason; },
+        []( const TestEngine::GroupEntry& )    -> std::string_view { return {}; },
+    }, entry.value );
+}
+
+// Heuristic: "blocked" is set only on root-level (top-level) entries when any blocking popup is open.
+// The TestEngine tree is independent of ImGui's window/popup structure, so we can't do a precise
+// "is this entry occluded by that popup" check without extra bookkeeping. Mark top-level entries
+// as blocked so agents know a modal is intercepting input; entries inside `pushTree` groups (which
+// typically *are* the dialog contents) are left unmarked.
+static bool rootLevelBlocked()
+{
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel );
+}
+
+// Best-effort extraction of the topmost open popup's window name (for the blocking-modal status).
+// Returns empty if no popup is open or the name can't be determined. Callers must only use the
+// returned view while still on the GUI thread (ImGui owns the string).
+static std::string_view topBlockingModalName()
+{
+    ImGuiContext* g = ImGui::GetCurrentContext();
+    if ( !g || g->OpenPopupStack.empty() )
+        return {};
+    // The most recently opened popup is at the back of the stack.
+    const ImGuiPopupData& top = g->OpenPopupStack.back();
+    if ( top.Window && top.Window->Name )
+        return top.Window->Name;
+    return {};
+}
+
+// Compose the single user-facing status string. `disabledReason` is the widget's own reason
+// (non-empty when the widget was drawn greyed out); `blockingModal` is the topmost blocking
+// popup's name (non-empty when a modal is on top of this entry). The widget's own disable
+// takes precedence over modal occlusion (the widget is literally greyed out; the modal is
+// incidental).
+static std::string composeStatus( std::string_view disabledReason, std::string_view blockingModal )
+{
+    if ( !disabledReason.empty() )
+        return fmt::format( "disabled: {}", disabledReason );
+    if ( !blockingModal.empty() )
+        return fmt::format( "disabled: blocked by modal '{}'", blockingModal );
+    return "available";
+}
+
 Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& path )
 {
     auto groupEx = findGroup( path );
@@ -64,11 +117,14 @@ Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& p
         return unexpected( groupEx.error() );
     const auto& group = **groupEx;
 
+    const std::string_view blockingModal = ( path.empty() && rootLevelBlocked() ) ? topBlockingModalName() : std::string_view{};
+
     std::vector<TypedEntry> ret;
     ret.reserve( group.elems.size() );
 
     for ( const auto& elem : group.elems )
     {
+        const std::string_view disabledReason = entryDisabledReason( elem.second );
         ret.push_back( {
             .name = elem.first,
             .type = std::visit( MR::overloaded{
@@ -84,6 +140,7 @@ Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& p
                 },
                 []( const TestEngine::GroupEntry& ) { return EntryType::group; },
             }, elem.second.value ),
+            .status = composeStatus( disabledReason, blockingModal ),
         } );
     }
     return ret;
@@ -101,11 +158,20 @@ Expected<void> pressButton( const std::vector<std::string>& path )
 
     auto iter = group.elems.find( path.back() );
     if ( iter == group.elems.end() )
-        unexpected( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathToString( path ), path.back(), listKeys( group ) ) );
+        return unexpected( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathToString( path ), path.back(), listKeys( group ) ) );
 
     auto buttonEx = iter->second.getAs<TestEngine::ButtonEntry>( path.back() );
     if ( !buttonEx )
         return unexpected( buttonEx.error() );
+
+    const std::string_view disabledReason = ( *buttonEx )->disabledReason;
+    // Root-level entries are considered unreachable when a blocking popup is open on top of them.
+    const bool isBlocked = disabledReason.empty() && path.size() == 1 && rootLevelBlocked();
+    if ( !disabledReason.empty() || isBlocked )
+    {
+        const std::string_view blockingModal = isBlocked ? topBlockingModalName() : std::string_view{};
+        return unexpected( fmt::format( "pressButton {}: {}", pathToString( path ), composeStatus( disabledReason, blockingModal ) ) );
+    }
 
     ( *buttonEx )->simulateClick = true;
 
@@ -222,6 +288,14 @@ Expected<void> writeValue( const std::vector<std::string>& path, T value )
     if ( !entryEx )
         return unexpected( entryEx.error() );
     const auto& entry = **entryEx;
+
+    const std::string_view disabledReason = entry.disabledReason;
+    const bool isBlocked = disabledReason.empty() && path.size() == 1 && rootLevelBlocked();
+    if ( !disabledReason.empty() || isBlocked )
+    {
+        const std::string_view blockingModal = isBlocked ? topBlockingModalName() : std::string_view{};
+        return unexpected( fmt::format( "writeValue {}: {}", pathToString( path ), composeStatus( disabledReason, blockingModal ) ) );
+    }
 
     auto writeValueOfCorrectType = [&entry, &path]( auto fixedValue ) -> Expected<void>
     {

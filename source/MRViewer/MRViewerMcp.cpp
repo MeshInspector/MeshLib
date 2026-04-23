@@ -47,6 +47,7 @@ static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
         ret.push_back( nlohmann::json::object( {
             { "name", elem.name },
             { "type", std::move( typeStr ) },
+            { "status", elem.status },
         } ) );
     }
 
@@ -114,9 +115,14 @@ MR_ON_INIT{
     server.addTool(
         /*id*/"ui.listEntries",
         /*name*/"List UI entries",
-        /*desc*/"Returns the list of UI elements at the given path. The elements form a tree. Pass an empty array to get the top-level elements. Each element is described by a string. The path parameter describes the path from the root node to a specific element. Only elements of type `group` can have sub-elements.",
+        /*desc*/"Returns the list of UI elements at the given path. The elements form a tree. Pass an empty array to get the top-level elements. The path parameter describes the path from the root node to a specific element. Only elements of type `group` can have sub-elements. Each entry's `status` field is a human-readable interaction state: `\"available\"` means the entry accepts input; `\"disabled\"` or `\"disabled: <reason>\"` means the widget is currently greyed out (reason is typically the unmet requirement, e.g. `\"Select exactly one Object\"`); `\"disabled: blocked by modal '<name>'\"` means a modal popup is occluding the entry and must be dismissed first.",
         /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array( Mcp::Schema::Object{}.addMember( "name", Mcp::Schema::String{} ).addMember( "type", Mcp::Schema::String{} ) ),
+        /*output_schema*/Mcp::Schema::Array(
+            Mcp::Schema::Object{}
+                .addMember( "name", Mcp::Schema::String{} )
+                .addMember( "type", Mcp::Schema::String{} )
+                .addMember( "status", Mcp::Schema::String{} )
+        ),
         /*func*/mcpToolListUiEntries
     );
 

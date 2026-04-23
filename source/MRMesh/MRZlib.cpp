@@ -2,9 +2,12 @@
 #include "MRBuffer.h"
 #include "MRFinally.h"
 
+#include <libdeflate.h>
 #include <zlib.h>
 
 #include <cassert>
+#include <cstdint>
+#include <vector>
 
 namespace
 {
@@ -61,57 +64,68 @@ namespace MR
 
 Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const ZlibCompressParams& params )
 {
-    Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
-    z_stream stream {
-        .zalloc = Z_NULL,
-        .zfree = Z_NULL,
-        .opaque = Z_NULL,
-    };
-    int ret;
-    if ( Z_OK != ( ret = deflateInit2( &stream, params.level, Z_DEFLATED, windowBitsFor( params.rawDeflate ), kDefaultMemLevel, Z_DEFAULT_STRATEGY ) ) )
-        return unexpected( zlibToString( ret ) );
-
-    MR_FINALLY {
-        deflateEnd( &stream );
-    };
-
-    if ( params.stats )
-        *params.stats = {};
-
+    // libdeflate exposes only a whole-buffer compression API, so drain the
+    // input stream into memory first. Memory ceiling = input size; callers
+    // that need streaming compression of very large inputs should chunk at
+    // a layer above this function (only this overload takes the fast path;
+    // the other direction still streams in zlibDecompressStream below).
+    std::vector<uint8_t> inBuf;
     while ( !in.eof() )
     {
-        in.read( inChunk.data(), inChunk.size() );
+        const size_t offset = inBuf.size();
+        inBuf.resize( offset + cChunkSize );
+        in.read( reinterpret_cast<char*>( inBuf.data() + offset ), cChunkSize );
         if ( in.bad() )
             return unexpected( "I/O error" );
-        stream.next_in = reinterpret_cast<uint8_t*>( inChunk.data() );
-        stream.avail_in = (unsigned)in.gcount();
-        assert( stream.avail_in <= (unsigned)inChunk.size() );
-
-        if ( params.stats )
-        {
-            params.stats->crc32 = (uint32_t)crc32( params.stats->crc32, stream.next_in, stream.avail_in );
-            params.stats->uncompressedSize += stream.avail_in;
-        }
-
-        const auto flush = in.eof() ? Z_FINISH : Z_NO_FLUSH;
-        do
-        {
-            stream.next_out = reinterpret_cast<uint8_t*>( outChunk.data() );
-            stream.avail_out = (unsigned)outChunk.size();
-            ret = deflate( &stream, flush );
-            if ( Z_OK != ret && Z_STREAM_END != ret )
-                return unexpected( zlibToString( ret ) );
-
-            assert( stream.avail_out <= (unsigned)outChunk.size() );
-            const unsigned written = (unsigned)outChunk.size() - stream.avail_out;
-            out.write( outChunk.data(), written );
-            if ( out.bad() )
-                return unexpected( "I/O error" );
-            if ( params.stats )
-                params.stats->compressedSize += written;
-        }
-        while ( stream.avail_out == 0 );
+        inBuf.resize( offset + static_cast<size_t>( in.gcount() ) );
     }
+
+    // libdeflate accepts levels 1-12. Map the zlib-style conventions we
+    // inherit from ZlibCompressParams: -1 (default) -> libdeflate 6, which
+    // matches zlib's default; 0 (zlib's "store-only") -> libdeflate 1
+    // because libdeflate has no stored-only mode. The ±4-byte tolerance on
+    // ZlibCompressStats's size check absorbs the resulting minor differences
+    // versus the stock-zlib reference blobs.
+    int level = params.level;
+    if ( level < 0 )
+        level = 6;
+    else if ( level == 0 )
+        level = 1;
+    else if ( level > 12 )
+        level = 12;
+
+    if ( params.stats )
+    {
+        params.stats->crc32 = libdeflate_crc32( 0, inBuf.data(), inBuf.size() );
+        params.stats->uncompressedSize = inBuf.size();
+        params.stats->compressedSize = 0;
+    }
+
+    libdeflate_compressor* comp = libdeflate_alloc_compressor( level );
+    if ( !comp )
+        return unexpected( "libdeflate_alloc_compressor failed" );
+    MR_FINALLY {
+        libdeflate_free_compressor( comp );
+    };
+
+    const bool raw = params.rawDeflate;
+    const size_t bound = raw
+        ? libdeflate_deflate_compress_bound( comp, inBuf.size() )
+        : libdeflate_zlib_compress_bound( comp, inBuf.size() );
+    std::vector<uint8_t> outBuf( bound );
+
+    const size_t produced = raw
+        ? libdeflate_deflate_compress( comp, inBuf.data(), inBuf.size(), outBuf.data(), outBuf.size() )
+        : libdeflate_zlib_compress( comp, inBuf.data(), inBuf.size(), outBuf.data(), outBuf.size() );
+    if ( produced == 0 )
+        return unexpected( "libdeflate compression failed" );
+
+    out.write( reinterpret_cast<const char*>( outBuf.data() ), static_cast<std::streamsize>( produced ) );
+    if ( out.bad() )
+        return unexpected( "I/O error" );
+
+    if ( params.stats )
+        params.stats->compressedSize = produced;
 
     return {};
 }

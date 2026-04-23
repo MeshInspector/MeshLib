@@ -85,6 +85,17 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
+# Build libdeflate from submodule on every platform except Windows; Windows
+# picks it up from vcpkg (see requirements/windows.txt) because the MSBuild
+# matrix legs don't run the thirdparty CMake build. MRZlib's compress path
+# uses it on all platforms regardless of where the binary comes from.
+IF(NOT WIN32)
+  set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "")
+  set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "")
+  set(LIBDEFLATE_BUILD_STATIC_LIB OFF CACHE BOOL "")
+  add_subdirectory(./libdeflate)
+ENDIF()
+
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 

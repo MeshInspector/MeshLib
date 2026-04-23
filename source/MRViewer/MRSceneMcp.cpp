@@ -32,7 +32,7 @@ static Expected<std::shared_ptr<Object>> resolveId( uint64_t id )
     if ( !asPtr )
         return unexpected( "Object id 0 is not valid here." );
 
-    for ( const auto& obj : getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Any ) )
+    for ( const auto& obj : getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
     {
         if ( obj.get() == asPtr )
             return obj;
@@ -52,19 +52,29 @@ static Expected<Object*> pickRoot( const nlohmann::json& args )
     return resolved->get();
 }
 
-// Decompose the object's xf into the same translation/rotation/scale shape that `scene.setObjectState`
-// accepts, so agents can read-modify-write without matrix math. Rotation is XYZ-Euler in degrees.
-static nlohmann::json transformToJson( const AffineXf3f& xf )
+// Same translation/rotation/scale shape that `scene.setObjectState` accepts. Rotation is XYZ-Euler
+// in degrees. Agents can read-modify-write without matrix math.
+struct DecomposedXf { Vector3f translation, rotationDeg, scale; };
+
+static DecomposedXf decomposeXf( const AffineXf3f& xf )
 {
     Matrix3f rotation, scaling;
     decomposeMatrix3( xf.A, rotation, scaling );
-    const Vector3f eulerRad = rotation.toEulerAngles();
     constexpr float kRadToDeg = 57.29577951308232f; // 180 / pi
+    return {
+        .translation = xf.b,
+        .rotationDeg = rotation.toEulerAngles() * kRadToDeg,
+        .scale       = { scaling.x.x, scaling.y.y, scaling.z.z },
+    };
+}
 
+static nlohmann::json transformToJson( const AffineXf3f& xf )
+{
+    const auto d = decomposeXf( xf );
     return nlohmann::json::object( {
-        { "translation", nlohmann::json::array( { xf.b.x, xf.b.y, xf.b.z } ) },
-        { "rotation",    nlohmann::json::array( { eulerRad.x * kRadToDeg, eulerRad.y * kRadToDeg, eulerRad.z * kRadToDeg } ) },
-        { "scale",       nlohmann::json::array( { scaling.x.x, scaling.y.y, scaling.z.z } ) },
+        { "translation", nlohmann::json::array( { d.translation.x, d.translation.y, d.translation.z } ) },
+        { "rotation",    nlohmann::json::array( { d.rotationDeg.x, d.rotationDeg.y, d.rotationDeg.z } ) },
+        { "scale",       nlohmann::json::array( { d.scale.x,       d.scale.y,       d.scale.z } ) },
     } );
 }
 
@@ -91,7 +101,7 @@ static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
             throw std::runtime_error( rootEx.error() );
         Object* root = *rootEx;
 
-        for ( const auto& obj : getAllObjectsInTree<Object>( root, ObjectSelectivityType::Any ) )
+        for ( const auto& obj : getAllObjectsInTree<Object>( root, ObjectSelectivityType::Selectable ) )
             rows.push_back( objectRow( *obj, obj->parent() ) );
     } );
     return nlohmann::json::object( { { "result", std::move( rows ) } } );
@@ -121,7 +131,14 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
             { "max", nlohmann::json::array( { box.max.x, box.max.y, box.max.z } ) },
         } );
 
-        out["info"] = obj->getInfoLines();
+        // Start with the object's own info lines (same as MI's Information panel),
+        // then append the decomposed transform so it's also readable in plain text.
+        std::vector<std::string> info = obj->getInfoLines();
+        const auto d = decomposeXf( obj->xf() );
+        info.push_back( fmt::format( "translation: ({}, {}, {})", d.translation.x, d.translation.y, d.translation.z ) );
+        info.push_back( fmt::format( "rotation deg: ({}, {}, {})", d.rotationDeg.x, d.rotationDeg.y, d.rotationDeg.z ) );
+        info.push_back( fmt::format( "scale: ({}, {}, {})",       d.scale.x,       d.scale.y,       d.scale.z ) );
+        out["info"] = std::move( info );
     } );
     return nlohmann::json::object( { { "result", std::move( out ) } } );
 }

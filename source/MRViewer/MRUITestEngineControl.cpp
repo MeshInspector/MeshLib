@@ -119,14 +119,12 @@ Expected<std::vector<TypedEntry>> listEntries( const std::vector<std::string>& p
 
 static void walkAll( std::vector<std::string>& pathStack,
                      const TestEngine::Entry& entry,
-                     std::string_view rootBlockingModal, bool isRootLevel,
                      std::vector<PathedEntry>& out )
 {
     TypedEntry te{
         .name   = pathStack.back(),
         .type   = typeOf( entry ),
-        .status = composeStatus( entryDisabledReason( entry ),
-                                 isRootLevel ? rootBlockingModal : std::string_view{} ),
+        .status = composeStatus( entryDisabledReason( entry ) ),
     };
     out.emplace_back( pathStack, std::move( te ) );
 
@@ -135,7 +133,7 @@ static void walkAll( std::vector<std::string>& pathStack,
         for ( const auto& [childName, childEntry] : g->elems )
         {
             pathStack.push_back( childName );
-            walkAll( pathStack, childEntry, rootBlockingModal, /*isRootLevel=*/false, out );
+            walkAll( pathStack, childEntry, out );
             pathStack.pop_back();
         }
     }
@@ -148,14 +146,12 @@ Expected<std::vector<PathedEntry>> listAllEntries( const std::vector<std::string
         return unexpected( groupEx.error() );
     const auto& group = **groupEx;
 
-    const std::string_view blockingModal = ( rootPath.empty() && rootLevelBlocked() ) ? topBlockingModalName() : std::string_view{};
-
     std::vector<PathedEntry> ret;
     std::vector<std::string> pathStack = rootPath;
     for ( const auto& [childName, childEntry] : group.elems )
     {
         pathStack.push_back( childName );
-        walkAll( pathStack, childEntry, blockingModal, /*isRootLevel=*/true, ret );
+        walkAll( pathStack, childEntry, ret );
         pathStack.pop_back();
     }
     return ret;

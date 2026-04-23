@@ -11,12 +11,7 @@ IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
       # For our VS2022 CI:
       set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
     ELSE()
-      # CMake's NVCC flag-table entry for C++20 was added in the CMake 3.25.2
-      # patch release (gated on NVCC >= 12.0); earlier 3.25.x / 3.24 / 3.22
-      # etc. fail at CUDA project detection with "does not know the compile
-      # flags to use to enable it." Ubuntu 22.04 jammy ships 3.22.x through
-      # apt, well below the threshold, so fall back to C++17 there. MeshLib's
-      # CUDA code compiles cleanly under either standard.
+      # https://cmake.org/cmake/help/latest/release/3.25.html#id2
       IF(CMAKE_VERSION VERSION_LESS 3.25.2)
         set(CMAKE_CUDA_STANDARD 17)
       ELSE()

@@ -2,17 +2,26 @@
 
 #include "MRMcp/MRMcp.h"
 #include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRChangeNameAction.h"
+#include "MRMesh/MRChangeObjectFields.h"
+#include "MRMesh/MRChangeSceneAction.h"
+#include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRPch/MRFmt.h"
+#include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRMcpCommon.h"
 
 #include <cstdint>
+#include <fstream>
 #include <memory>
 
 namespace MR::Mcp
@@ -66,6 +75,38 @@ static DecomposedXf decomposeXf( const AffineXf3f& xf )
         .rotationDeg = rotation.toEulerAngles() * kRadToDeg,
         .scale       = { scaling.x.x, scaling.y.y, scaling.z.z },
     };
+}
+
+// Inverse of decomposeXf: build an AffineXf3f from translation + XYZ-Euler degrees + scale.
+static AffineXf3f composeXf( const DecomposedXf& d )
+{
+    constexpr float kDegToRad = 0.017453292519943295f; // pi / 180
+    AffineXf3f xf;
+    xf.A = Matrix3f::rotationFromEuler( d.rotationDeg * kDegToRad ) * Matrix3f::scale( d.scale );
+    xf.b = d.translation;
+    return xf;
+}
+
+// Parse the `transform` subobject accepted by scene.setObjectState. Every field is optional;
+// omitted components fall back to identity (translation=0, rotation=0, scale=1). `scale` may be
+// a scalar (applies uniformly) or a 3-element array.
+static DecomposedXf parseTransform( const nlohmann::json& t )
+{
+    DecomposedXf d{ .translation = {}, .rotationDeg = {}, .scale = { 1.f, 1.f, 1.f } };
+    const auto readVec3 = []( const nlohmann::json& j )
+    {
+        return Vector3f{ j[0].get<float>(), j[1].get<float>(), j[2].get<float>() };
+    };
+    if ( t.contains( "translation" ) )
+        d.translation = readVec3( t["translation"] );
+    if ( t.contains( "rotation" ) )
+        d.rotationDeg = readVec3( t["rotation"] );
+    if ( t.contains( "scale" ) )
+    {
+        const auto& s = t["scale"];
+        d.scale = s.is_number() ? Vector3f::diagonal( s.get<float>() ) : readVec3( s );
+    }
+    return d;
 }
 
 static nlohmann::json transformToJson( const AffineXf3f& xf )
@@ -143,6 +184,119 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
     return nlohmann::json::object( { { "result", std::move( out ) } } );
 }
 
+static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
+        if ( !objEx )
+            throw std::runtime_error( objEx.error() );
+        auto obj = *objEx;
+
+        SCOPED_HISTORY( _t( "MCP setObjectState" ) );
+        if ( args.contains( "name" ) )
+        {
+            AppendHistory<ChangeNameAction>( _t( "rename" ), obj );
+            obj->setName( args["name"].get<std::string>() );
+        }
+        if ( args.contains( "visible" ) )
+        {
+            AppendHistory<ChangeObjectVisibilityAction>( _t( "visibility" ), obj );
+            obj->setVisible( args["visible"].get<bool>(), ViewportMask::all() );
+        }
+        if ( args.contains( "selected" ) )
+        {
+            AppendHistory<ChangeObjectSelectedAction>( _t( "selection" ), obj );
+            obj->select( args["selected"].get<bool>() );
+        }
+        if ( args.contains( "transform" ) )
+        {
+            AppendHistory<ChangeXfAction>( _t( "transform" ), obj );
+            obj->setXf( composeXf( parseTransform( args["transform"] ) ) );
+        }
+    } );
+    skipFramesAfterInput();
+    return nlohmann::json::object();
+}
+
+static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
+        if ( !objEx )
+            throw std::runtime_error( objEx.error() );
+        auto obj = *objEx;
+
+        AppendHistory<ChangeSceneAction>( _t( "MCP removeObject" ), obj, ChangeSceneAction::Type::RemoveObject );
+        obj->detachFromParent();
+    } );
+    skipFramesAfterInput();
+    return nlohmann::json::object();
+}
+
+static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
+{
+    std::vector<uint64_t> addedIds;
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        std::shared_ptr<Object> parentHolder;
+        Object* parent = &SceneRoot::get();
+        if ( args.contains( "parentId" ) && args["parentId"].get<uint64_t>() != 0 )
+        {
+            auto pEx = resolveId( args["parentId"].get<uint64_t>() );
+            if ( !pEx )
+                throw std::runtime_error( pEx.error() );
+            parentHolder = *pEx;
+            parent = parentHolder.get();
+        }
+
+        std::filesystem::path path;
+        std::optional<UniqueTemporaryFolder> tmp;
+        std::optional<std::string> overrideName;
+
+        if ( args.contains( "filePath" ) )
+        {
+            path = std::filesystem::path( args["filePath"].get<std::string>() );
+        }
+        else if ( args.contains( "bytes" ) )
+        {
+            std::string ext = args.at( "extension" ).get<std::string>();
+            if ( !ext.empty() && ext.front() != '.' )
+                ext.insert( ext.begin(), '.' );
+            overrideName = args.at( "name" ).get<std::string>();
+            const auto decoded = decode64( args["bytes"].get<std::string>() );
+
+            tmp.emplace();
+            path = *tmp / ( *overrideName + ext );
+            std::ofstream out( path, std::ios::binary );
+            if ( !out )
+                throw std::runtime_error( fmt::format( "Could not write temp file {}", path.string() ) );
+            out.write( reinterpret_cast<const char*>( decoded.data() ), std::streamsize( decoded.size() ) );
+        }
+        else
+        {
+            throw std::runtime_error( "scene.addObject requires either `filePath` or `bytes`+`extension`+`name`." );
+        }
+
+        auto loaded = loadObjectFromFile( path );
+        if ( !loaded )
+            throw std::runtime_error( loaded.error() );
+
+        SCOPED_HISTORY( _t( "MCP addObject" ) );
+        for ( auto& obj : loaded->objs )
+        {
+            if ( overrideName )
+                obj->setName( *overrideName );
+            AppendHistory<ChangeSceneAction>( _t( "add" ), obj, ChangeSceneAction::Type::AddObject );
+            parent->addChild( obj );
+            addedIds.push_back( idOf( obj.get() ) );
+        }
+    } );
+    skipFramesAfterInput();
+    return nlohmann::json::object( { { "result", nlohmann::json::object( { { "ids", addedIds } } ) } } );
+}
+
 static constexpr std::string_view kSceneIdSemantics =
     "`id`: opaque uint64 from `scene.listObjectTree` / `scene.getObjectInfo`. Same integer appears as the `##<id>` "
     "suffix in ImGui labels for the object, so it's usable across `scene.*` and `ui.*`. "
@@ -199,6 +353,53 @@ MR_ON_INIT{
                 .addMember( "max", Schema::Array( Schema::Number{} ) ) )
             .addMember( "info",     Schema::Array( Schema::String{} ) ),
         /*func*/mcpSceneGetObjectInfo
+    );
+
+    server.addTool(
+        /*id*/  "scene.setObjectState",
+        /*name*/"Set scene object state",
+        /*desc*/std::string( kSceneIdSemantics ) +
+                "Mutate an existing object. Every field other than `id` is optional; absent fields leave state alone. "
+                "`transform` replaces the full xf and is itself composed from optional `translation` / `rotation` / `scale` "
+                "(missing components default to identity; `rotation` is XYZ-Euler degrees; `scale` accepts a scalar or a "
+                "3-element array). A single call that touches multiple fields is wrapped in one history entry, so Ctrl+Z "
+                "reverts it atomically.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "id",        Schema::Number{} )
+            .addMemberOpt( "name",      Schema::String{} )
+            .addMemberOpt( "visible",   Schema::Bool{} )
+            .addMemberOpt( "selected",  Schema::Bool{} )
+            .addMemberOpt( "transform", transformSchema() ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpSceneSetObjectState
+    );
+
+    server.addTool(
+        /*id*/  "scene.removeObject",
+        /*name*/"Remove scene object",
+        /*desc*/std::string( kSceneIdSemantics ) +
+                "Detach the object from its parent (recursive — removing a group removes its subtree). Undoable.",
+        /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpSceneRemoveObject
+    );
+
+    server.addTool(
+        /*id*/  "scene.addObject",
+        /*name*/"Add scene object from file or bytes",
+        /*desc*/std::string( kSceneIdSemantics ) +
+                "Load one or more objects into the scene. Pass either `filePath` (server-side path to an STL/OBJ/PLY/etc. "
+                "file), or `bytes` (base64 payload) + `extension` (e.g. `\"stl\"`) + `name` (display name). Optional "
+                "`parentId` (default = scene root). Returns `{ids: [uint64...]}` — loaders can produce multiple objects "
+                "for scene files (.mru, glTF). Undoable.",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "filePath",  Schema::String{} )
+            .addMemberOpt( "bytes",     Schema::String{} )
+            .addMemberOpt( "extension", Schema::String{} )
+            .addMemberOpt( "name",      Schema::String{} )
+            .addMemberOpt( "parentId",  Schema::Number{} ),
+        /*output_schema*/Schema::Object{}.addMember( "ids", Schema::Array( Schema::Number{} ) ),
+        /*func*/mcpSceneAddObject
     );
 }; // MR_ON_INIT
 

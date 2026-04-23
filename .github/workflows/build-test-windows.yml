@@ -49,17 +49,29 @@ jobs:
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
 
     steps:
-      # Wrap checkout in a retry loop. GitHub's submodule endpoints occasionally
-      # serve HTTP 500s for 30-60s (see run 24845654039); actions/checkout@v6
-      # retries submodule clones once, which isn't enough for a sustained blip.
       - name: Checkout
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/checkout@v6
         with:
-          action: actions/checkout@v6
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            submodules: true
+          # Fetched explicitly below with a retry loop. GitHub's submodule
+          # endpoints occasionally serve HTTP 500s for ~30-60s (see run
+          # 24845654039), and actions/checkout's built-in retry only tries
+          # each submodule twice, which wasn't enough for that blip.
+          submodules: false
+
+      - name: Checkout submodules (with retries)
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            if git -c protocol.version=2 submodule update --init --force --depth=1; then
+              break
+            fi
+            if [ "$i" = "3" ]; then
+              echo "::error::submodule update failed after 3 attempts"
+              exit 1
+            fi
+            echo "::warning::submodule update attempt $i failed — retrying in 30s"
+            sleep 30
+          done
 
       - name: Checkout third-party submodules
         run: |

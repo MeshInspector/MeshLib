@@ -48,13 +48,14 @@ struct TypedEntry
     std::string name;
     EntryType type;
 
-    // The widget is currently drawn in a disabled state (greyed out / read-only). Always false for groups.
-    bool disabled = false;
-
-    // A blocking popup (e.g. a modal dialog) is currently open and is likely intercepting input from this entry.
-    // Heuristic: set only on root-level (top-level) entries; entries inside `pushTree` groups are assumed to
-    // live inside the blocking popup itself and are not marked.
-    bool blocked = false;
+    // Human-readable interaction status. Always one of:
+    //   * "available"                                — entry accepts input
+    //   * "disabled"                                 — disabled, no specific reason known
+    //   * "disabled: <reason>"                       — disabled via requirements / UI::button(active=false)
+    //   * "disabled: blocked by modal '<name>'"      — modal popup currently on top
+    //   * "disabled: blocked by modal popup"         — modal open, its window name isn't determinable
+    // Agents can branch on `status.starts_with("disabled")` or pattern-match the whole string.
+    std::string status;
 };
 
 // Returns the elements of `path` combined into a single string.

@@ -51,16 +51,6 @@ namespace Schema
         {}
     };
 
-    /// A schema describing a boolean.
-    struct Bool : Base
-    {
-        Bool()
-            : Base( nlohmann::json::object( {
-                { "type", "boolean" },
-            } ) )
-        {}
-    };
-
     /// A schema describing an array of whatever is passed to the constructor.
     struct Array : Base
     {

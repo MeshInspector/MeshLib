@@ -92,7 +92,13 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          # Include a hash of the overlay ports / triplets / requirements /
+          # install.bat so that edits to any of them (like the overlay zlib
+          # port this PR adds, replacing stock zlib with zlib-ng-compat) bust
+          # the cache. Without the hash, a prior run's cached install tree is
+          # served verbatim -- `vcpkg install` then sees every port as
+          # already-installed and the overlay never takes effect. See #5934.
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-${{ hashFiles('thirdparty/vcpkg/ports/**', 'thirdparty/vcpkg/triplets/**', 'requirements/windows.txt', 'thirdparty/install.bat') }}
           path: |
             C:\vcpkg\*
 

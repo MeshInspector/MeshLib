@@ -47,6 +47,11 @@ struct TypedEntry
 {
     std::string name;
     EntryType type;
+
+    // Human-readable interaction status. Built by `composeStatus()` in MRUITestEngineControl.cpp —
+    // see that function for the set of values. Agents can branch on `status == "available"` or
+    // match `status.starts_with("disabled")`.
+    std::string status;
 };
 
 // Returns the elements of `path` combined into a single string.

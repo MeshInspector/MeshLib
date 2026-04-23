@@ -253,7 +253,11 @@ const char* getImGuiPrimaryCtrlName()
 
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
-    bool simulateClick = customParams.enableTestEngine && TestEngine::createButton( customParams.testEngineName.empty() ? label : customParams.testEngineName );
+    TestEngine::EntryAttributes attrs;
+    if ( !customParams.enabled )
+        attrs.disabledReason = "inactive";
+    bool simulateClick = customParams.enableTestEngine && TestEngine::createButton(
+        customParams.testEngineName.empty() ? label : customParams.testEngineName, attrs );
     assert( ( simulateClick <= customParams.enabled ) && "Trying to programmatically press a button, but it's inactive!" );
     if ( !customParams.enabled )
         simulateClick = false;

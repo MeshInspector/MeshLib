@@ -2,6 +2,8 @@
 #include "MRImGui.h"
 #include "MRPch/MRFmt.h"
 
+#include <imgui_internal.h>
+
 #ifndef MR_ENABLE_UI_TEST_ENGINE
 // Set to 0 to disable the UI test engine. All functions will act as if no UI elements are registered.
 #define MR_ENABLE_UI_TEST_ENGINE 1
@@ -26,6 +28,27 @@ struct State
 };
 // Our global state. Stores the current tree of buttons and button groups.
 State state;
+
+// True if the widget currently being submitted is inside an `ImGui::BeginDisabled` scope.
+bool imGuiContextSaysDisabled()
+{
+    ImGuiContext* g = ImGui::GetCurrentContext();
+    return g && ( g->CurrentItemFlags & ImGuiItemFlags_Disabled ) != 0;
+}
+
+// Produce the effective disabled-reason string to store on an entry, given caller-supplied attrs.
+// - If caller passed a reason, use it verbatim (takes precedence).
+// - Else if ImGui says the widget is drawn under BeginDisabled, use a generic fallback so the
+//   entry is still marked disabled even though the caller didn't know why.
+// - Else empty (entry accepts input).
+std::string_view effectiveDisabledReason( const EntryAttributes& attrs )
+{
+    if ( !attrs.disabledReason.empty() )
+        return attrs.disabledReason;
+    if ( imGuiContextSaysDisabled() )
+        return "drawn inside ImGui::BeginDisabled";
+    return {};
+}
 
 void checkForNewFrame()
 {
@@ -65,7 +88,7 @@ void checkForNewFrame()
 } // namespace
 
 template <typename T>
-std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride /*= true*/ )
+std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride /*= true*/, const EntryAttributes& attrs /*= {}*/ )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
 
@@ -86,6 +109,9 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     ValueEntry* entry = std::get_if<ValueEntry>( &iter->second.value );
     if ( !entry )
         entry = &iter->second.value.emplace<ValueEntry>();
+
+    const auto reason = effectiveDisabledReason( attrs );
+    entry->disabledReason.assign( reason.data(), reason.size() );
 
     std::optional<T> ret;
 
@@ -129,12 +155,12 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     #endif
 }
 
-template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride );
-template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride );
-template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
-template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
+template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride, const EntryAttributes& attrs );
 
-bool createButton( std::string_view name )
+bool createButton( std::string_view name, const EntryAttributes& attrs )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
@@ -158,6 +184,9 @@ bool createButton( std::string_view name )
     if ( !button )
         button = &iter->second.value.emplace<ButtonEntry>();
 
+    const auto reason = effectiveDisabledReason( attrs );
+    button->disabledReason.assign( reason.data(), reason.size() );
+
     iter->second.visitedOnThisFrame = true;
 
     // commented, because it is already logged in MRPythonUiInteraction.cpp/pressButton
@@ -166,13 +195,14 @@ bool createButton( std::string_view name )
 
     return std::exchange( button->simulateClick, false );
     #else
+    (void)attrs;
     return false;
     #endif
 }
 
-std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride, std::optional<std::vector<std::string>> allowedValues )
+std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride, std::optional<std::vector<std::string>> allowedValues, const EntryAttributes& attrs )
 {
-    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) }, consumeValueOverride );
+    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) }, consumeValueOverride, attrs );
 }
 
 void pushTree( std::string_view name )

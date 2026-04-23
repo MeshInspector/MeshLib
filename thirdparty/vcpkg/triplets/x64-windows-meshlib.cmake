@@ -8,5 +8,11 @@ set(VCPKG_C_FLAGS_DEBUG "${VCPKG_C_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 if($ENV{MESHLIB_VCPKG_TOOLSET})
     set(VCPKG_PLATFORM_TOOLSET "$ENV{MESHLIB_VCPKG_TOOLSET}")
     set(VCPKG_CMAKE_CONFIGURE_OPTIONS "${VCPKG_CMAKE_CONFIGURE_OPTIONS} -T $ENV{MESHLIB_VCPKG_TOOLSET}")
+    # VCPKG_PLATFORM_TOOLSET is not forwarded to VsDevCmd, so Ninja-backed ports
+    # pick the latest cl.exe in PATH regardless. VCPKG_PLATFORM_TOOLSET_VERSION
+    # is forwarded as -vcvars_ver and fixes that.
+    if("$ENV{MESHLIB_VCPKG_TOOLSET}" STREQUAL "v142")
+        set(VCPKG_PLATFORM_TOOLSET_VERSION "14.29")
+    endif()
 endif()
 

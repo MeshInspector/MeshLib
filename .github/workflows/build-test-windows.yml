@@ -34,7 +34,7 @@ on:
 
 jobs:
   windows-build-test:
-    timeout-minutes: 180
+    timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -92,14 +92,7 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          # MeshLib ships overlay ports under thirdparty/vcpkg/ports (e.g.
-          # a zlib→zlib-ng-compat override for #5932) and custom triplets.
-          # Partition the cache by triplet (the master-side approach, to
-          # separate e.g. x64-windows-meshlib-iterator-debug from the main
-          # triplet) and additionally hash the overlay port / triplet /
-          # install script files so changes to those bust the cache and the
-          # overrides actually take effect on the next run (the #5934 fix).
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-${{ hashFiles('thirdparty/vcpkg/ports/**', 'thirdparty/vcpkg/triplets/**', 'requirements/windows.txt', 'thirdparty/install.bat') }}
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           path: |
             C:\vcpkg\*
 
@@ -111,7 +104,6 @@ jobs:
           aws-region: us-east-1
 
       - name: Update vcpkg packages
-        timeout-minutes: 3
         run: |
           .\thirdparty\install.bat --write-s3 --use-s3-asset-provider
 

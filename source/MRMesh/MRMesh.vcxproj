@@ -733,7 +733,7 @@
     <ClCompile Include="MRWatershedGraph.cpp" />
     <ClCompile Include="MRMeshOverhangs.cpp" />
     <ClCompile Include="MRZip.cpp" />
-    <ClCompile Include="MRZlibNg.cpp" />
+    <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />

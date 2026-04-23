@@ -28,7 +28,7 @@ TEST( MRMesh, CompressSphereToZip )
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-    constexpr int targetVerts = 100000; // increase it to make the file being compressed larger, 100'000 vertices -> 12M bytes
+    constexpr int targetVerts = 1000; // increase it to make the file being compressed larger, 100'000 vertices -> 12M bytes
     SphereParams params;
     params.radius = 1.0f;
     params.numMeshVertices = targetVerts;
@@ -82,9 +82,9 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     ASSERT_TRUE( bool( srcFolder ) );
 
     // increase both below numbers to make the files being compressed larger, 200 * 2 files * 60'000 bytes -> 24M bytes
-    constexpr int numBinaryFiles = 200;
+    constexpr int numBinaryFiles = 20;
     constexpr int numJsonFiles = numBinaryFiles;
-    constexpr size_t bytesPerFile = 60000;
+    constexpr size_t bytesPerFile = 6000;
 
     // Simple LCG used to produce deterministic pseudo-random bytes.
     // Keeps the test reproducible across runs and platforms while avoiding

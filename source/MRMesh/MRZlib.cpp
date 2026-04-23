@@ -2,15 +2,11 @@
 #include "MRBuffer.h"
 #include "MRFinally.h"
 
-// zlib-ng native mode: its zlib-ng.h lives alongside zlib.h on most
-// platforms, uses the zng_ prefix on every symbol, and publishes its SONAME
-// as libz-ng, so linking both into the same process is safe. The stock-zlib
-// header is NOT included in this translation unit -- each of the
-// Z_*/MAX_WBITS constants we need is also defined by <zlib-ng.h> under the
-// same name. MRZlib.cpp (the previous stock-zlib inflate path) has been
-// removed now that both compress and decompress run through zlib-ng here;
-// MeshLib's direct consumers of RFC 1950/1951 streams go through the
-// faster deflate AND the faster inflate uniformly.
+// zlib-ng in native mode: the zng_ prefix on every symbol keeps it ABI-
+// distinct from stock zlib (which libzip still links as before), and
+// <zlib-ng.h> re-exports the MAX_WBITS / Z_* constants we need under the
+// same spelling as <zlib.h>, so this TU doesn't include stock zlib's
+// header at all.
 #include <zlib-ng.h>
 
 #include <cassert>

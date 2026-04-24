@@ -70,7 +70,7 @@ def patch_whl(out_dir : Path, libs_dirs : list[Path]):
             for dir in libs_dirs:
                 sys.path.append(dir) # to find SO files
             # see also: https://github.com/mayeut/pep600_compliance
-            manylinux_version = "2_31"
+            manylinux_version = "2_28"
             subprocess.check_call(
                 [
                     sys.executable, "-m", "auditwheel",

@@ -50,7 +50,7 @@ int main( void )
         goto fail_self_collision_bs;
     }
     // print number of self-intersecting faces
-    fprintf( stdout, "%" PRIu64 "\n", MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( selfCollidingBitSet ) ) );
+    fprintf( stdout, "%zu\n", (size_t)MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( selfCollidingBitSet ) ) );
 
     // fast check if mesh has self-intersections
     MR_expected_bool_std_string* isSelfCollidingRes = MR_findSelfCollidingTriangles_5( mp, NULL, MR_PassBy_DefaultArgument, NULL, NULL, NULL );

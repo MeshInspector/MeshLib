@@ -154,4 +154,10 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     }
 }
 
+void skipFramesAfterInput()
+{
+    for ( int i = 0; i < getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
+        CommandLoop::runCommandFromGUIThread( [] {} );
+}
+
 }

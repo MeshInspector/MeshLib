@@ -1,243 +1,414 @@
 #ifndef MESHLIB_NO_MCP
 
 #include "MRMcp/MRMcp.h"
+#include "MRMesh/MRBase64.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRImage.h"
+#include "MRMesh/MRImageSave.h"
+#include "MRMesh/MRObject.h"
 #include "MRMesh/MROnInit.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRVector3.h"
+#include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
-#include "MRViewer/MRUITestEngineControl.h"
+#include "MRViewer/MRFitData.h"
+#include "MRViewer/MRMcpCommon.h"
+#include "MRViewer/MRMouse.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewport.h"
 
-namespace MR
+#include <GLFW/glfw3.h>
+
+#include <cctype>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <future>
+#include <stdexcept>
+
+namespace MR::Mcp
 {
 
-static void skipFramesAfterInput()
+namespace
 {
-    for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
-        MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
+
+Vector3f readVec3( const nlohmann::json& j, std::string_view field )
+{
+    if ( !j.is_array() || j.size() != 3 )
+        throw std::runtime_error( fmt::format( "`{}` must be a 3-element array", field ) );
+    const Vector3f v{ j[0].get<float>(), j[1].get<float>(), j[2].get<float>() };
+    if ( !std::isfinite( v.x ) || !std::isfinite( v.y ) || !std::isfinite( v.z ) )
+        throw std::runtime_error( fmt::format( "`{}` contains non-finite value", field ) );
+    return v;
 }
 
-// Hopefully "float" is more clear to LLMs than "real". The actual underlying type is `double`.
-static const char* mcpTypeStr( UI::TestEngine::Control::EntryType type )
+int parseModifiers( const nlohmann::json& args )
 {
-    switch ( type )
+    int mods = 0;
+    if ( !args.contains( "modifiers" ) )
+        return mods;
+    for ( const auto& j : args["modifiers"] )
     {
-        case UI::TestEngine::Control::EntryType::button:      return "button";
-        case UI::TestEngine::Control::EntryType::group:       return "group";
-        case UI::TestEngine::Control::EntryType::valueInt:    return "int";
-        case UI::TestEngine::Control::EntryType::valueUint:   return "uint";
-        case UI::TestEngine::Control::EntryType::valueReal:   return "float";
-        case UI::TestEngine::Control::EntryType::valueString: return "string";
+        const std::string m = j.get<std::string>();
+        if ( m == "ctrl" )       mods |= GLFW_MOD_CONTROL;
+        else if ( m == "shift" ) mods |= GLFW_MOD_SHIFT;
+        else if ( m == "alt" )   mods |= GLFW_MOD_ALT;
+        else if ( m == "super" ) mods |= GLFW_MOD_SUPER;
+        else throw std::runtime_error( fmt::format( "Unknown modifier `{}` (expected `ctrl`/`shift`/`alt`/`super`)", m ) );
     }
-    assert( false && "Unknown EntryType." );
-    return "invalid";
+    return mods;
 }
 
-static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
+MouseButton parseMouseButton( const std::string& b )
 {
-    std::vector<UI::TestEngine::Control::TypedEntry> list;
+    if ( b == "left" )   return MouseButton::Left;
+    if ( b == "right" )  return MouseButton::Right;
+    if ( b == "middle" ) return MouseButton::Middle;
+    throw std::runtime_error( fmt::format( "Unknown mouse button `{}` (expected `left`/`right`/`middle`)", b ) );
+}
+
+int parseKey( const std::string& s )
+{
+    // Single printable ASCII char — GLFW key codes are ASCII-uppercase for letters/digits/punctuation.
+    if ( s.size() == 1 && std::isprint( static_cast<unsigned char>( s[0] ) ) )
+        return std::toupper( static_cast<unsigned char>( s[0] ) );
+    if ( s == "Escape" )    return GLFW_KEY_ESCAPE;
+    if ( s == "Enter" || s == "Return" ) return GLFW_KEY_ENTER;
+    if ( s == "Space" )     return GLFW_KEY_SPACE;
+    if ( s == "Tab" )       return GLFW_KEY_TAB;
+    if ( s == "Backspace" ) return GLFW_KEY_BACKSPACE;
+    if ( s == "Delete" )    return GLFW_KEY_DELETE;
+    if ( s == "Home" )      return GLFW_KEY_HOME;
+    if ( s == "End" )       return GLFW_KEY_END;
+    if ( s == "PageUp" )    return GLFW_KEY_PAGE_UP;
+    if ( s == "PageDown" )  return GLFW_KEY_PAGE_DOWN;
+    if ( s == "Left" || s == "ArrowLeft" )   return GLFW_KEY_LEFT;
+    if ( s == "Right" || s == "ArrowRight" ) return GLFW_KEY_RIGHT;
+    if ( s == "Up" || s == "ArrowUp" )       return GLFW_KEY_UP;
+    if ( s == "Down" || s == "ArrowDown" )   return GLFW_KEY_DOWN;
+    if ( s.size() >= 2 && s[0] == 'F' )
+    {
+        const int n = std::atoi( s.c_str() + 1 );
+        if ( n >= 1 && n <= 25 ) return GLFW_KEY_F1 + ( n - 1 );
+    }
+    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`)", s ) );
+}
+
+} // namespace
+
+static nlohmann::json mcpViewerFit( const nlohmann::json& args )
+{
+    const float factor = args.value( "factor", 1.0f );
+
+    // Collect ids / points outside the GUI thread so parse errors throw before the main loop blocks.
+    std::vector<uint64_t> ids;
+    if ( args.contains( "objectIds" ) )
+        for ( const auto& j : args["objectIds"] )
+            ids.push_back( j.get<uint64_t>() );
+
+    std::vector<Vector3f> points;
+    if ( args.contains( "points" ) )
+        for ( const auto& p : args["points"] )
+            points.push_back( readVec3( p, "points[i]" ) );
+
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        auto ex = UI::TestEngine::Control::listEntries( args.at( "path" ).get<std::vector<std::string>>() );
-        if ( !ex )
-            throw std::runtime_error( ex.error() );
-        list = std::move( *ex );
-    } );
-
-    nlohmann::json ret = nlohmann::json::array();
-    for ( const auto& elem : list )
-    {
-        ret.push_back( nlohmann::json::object( {
-            { "name", elem.name },
-            { "type", mcpTypeStr( elem.type ) },
-            { "status", elem.status },
-        } ) );
-    }
-
-    return nlohmann::json::object( { { "result", ret } } );
-}
-
-static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
-{
-    std::vector<UI::TestEngine::Control::PathedEntry> list;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
-    {
-        auto ex = UI::TestEngine::Control::listAllEntries( args.value( "path", std::vector<std::string>{} ) );
-        if ( !ex )
-            throw std::runtime_error( ex.error() );
-        list = std::move( *ex );
-    } );
-
-    nlohmann::json ret = nlohmann::json::array();
-    for ( const auto& pe : list )
-    {
-        ret.push_back( nlohmann::json::object( {
-            { "path", pe.first },
-            { "name", pe.second.name },
-            { "type", mcpTypeStr( pe.second.type ) },
-            { "status", pe.second.status },
-        } ) );
-    }
-
-    return nlohmann::json::object( { { "result", ret } } );
-}
-
-static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
-{
-    MR::CommandLoop::runCommandFromGUIThread( [&]
-    {
-        auto ex = UI::TestEngine::Control::pressButton( args.at( "path" ).get<std::vector<std::string>>() );
-        if ( !ex )
-            throw std::runtime_error( ex.error() );
+        auto& vp = getViewerInstance().viewport();
+        if ( ids.empty() && points.empty() )
+        {
+            FitDataParams p;
+            p.factor = factor;
+            vp.preciseFitDataToScreenBorder( p );
+            return;
+        }
+        Box3f box;
+        for ( uint64_t id : ids )
+        {
+            auto objEx = resolveId( id );
+            if ( !objEx )
+                throw std::runtime_error( objEx.error() );
+            box.include( ( *objEx )->getWorldBox() );
+        }
+        for ( const Vector3f& pt : points )
+            box.include( pt );
+        if ( !box.valid() )
+            throw std::runtime_error( "viewer.fit: the given objects and points contribute no bounding volume." );
+        vp.preciseFitBoxToScreenBorder( { box, factor } );
     } );
     skipFramesAfterInput();
-
     return nlohmann::json::object();
 }
 
-template <typename T>
-static nlohmann::json mcpToolReadValue( const nlohmann::json& args )
+static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
 {
-    UI::TestEngine::Control::Value<T> value;
+    const Vector3f forward = readVec3( args.at( "forwardDir" ), "forwardDir" );
+    const Vector3f upRaw = readVec3( args.at( "upDir" ), "upDir" );
+
+    if ( forward.lengthSq() < 1e-12f )
+        throw std::runtime_error( "`forwardDir` must be non-zero." );
+    const Vector3f fwdN = forward.normalized();
+
+    // Orthogonalize upDir against forwardDir (Gram-Schmidt). cameraLookAlong asserts they are
+    // perpendicular, so callers shouldn't have to compute it exactly.
+    Vector3f up = upRaw - fwdN * dot( fwdN, upRaw );
+    if ( up.lengthSq() < 1e-12f )
+        throw std::runtime_error( "`upDir` is parallel to `forwardDir`; provide a non-parallel up vector." );
+    up = up.normalized();
+
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        auto ex = UI::TestEngine::Control::readValue<T>( args.at( "path" ).get<std::vector<std::string>>() );
-        if ( !ex )
-            throw std::runtime_error( ex.error() );
-        value = std::move( *ex );
+        auto& vp = getViewerInstance().viewport();
+        vp.cameraLookAlong( fwdN, up );
+        // preciseFitDataToScreenBorder defaults to snapView=false — keeps the user's direction.
+        vp.preciseFitDataToScreenBorder();
     } );
+    skipFramesAfterInput();
+    return nlohmann::json::object();
+}
 
-    nlohmann::json ret = nlohmann::json::object();
-    ret["value"] = value.value;
-    if constexpr ( std::is_same_v<T, std::string> )
+static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
+{
+    const bool includeUi = args.value( "includeUi", false );
+    const int width = args.value( "width", 0 );
+    const int height = args.value( "height", 0 );
+    if ( width < 0 || height < 0 )
+        throw std::runtime_error( "`width` and `height` must be non-negative." );
+    const bool transparentBg = args.value( "transparentBg", false );
+
+    Image img;
+    if ( includeUi )
     {
-        if ( value.allowedValues )
-            ret["allowedValues"] = *value.allowedValues;
+        // captureUIScreenShot is async — it queues onto the GUI thread and fires the callback after
+        // the next frame. Block the MCP handler thread on a future until that happens.
+        std::promise<Image> promise;
+        auto future = promise.get_future();
+        getViewerInstance().captureUIScreenShot( [&promise]( const Image& i ) { promise.set_value( i ); } );
+        img = future.get();
     }
     else
     {
-        ret["min"] = value.min;
-        ret["max"] = value.max;
+        MR::CommandLoop::runCommandFromGUIThread( [&]
+        {
+            img = getViewerInstance().captureSceneScreenShot( { width, height }, transparentBg );
+        } );
     }
 
-    return ret;
+    nlohmann::json out = nlohmann::json::object();
+    if ( args.contains( "filePath" ) )
+    {
+        const auto path = pathFromUtf8( args["filePath"].get<std::string>() );
+        auto saved = ImageSave::toAnySupportedFormat( img, path );
+        if ( !saved )
+            throw std::runtime_error( saved.error() );
+        out["path"] = utf8string( path );
+    }
+    else
+    {
+        UniqueTemporaryFolder tmp{};
+        const std::filesystem::path path = tmp / "screenshot.png";
+        auto saved = ImageSave::toAnySupportedFormat( img, path );
+        if ( !saved )
+            throw std::runtime_error( saved.error() );
+        std::ifstream in( path, std::ios::binary );
+        if ( !in )
+            throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
+        std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+        out["bytes"] = encode64( bytes.data(), bytes.size() );
+    }
+    out["width"] = img.resolution.x;
+    out["height"] = img.resolution.y;
+    return nlohmann::json::object( { { "result", std::move( out ) } } );
 }
 
-template <typename T>
-static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
+static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
-    {
-        auto ex = UI::TestEngine::Control::writeValue<T>( args.at( "path" ).get<std::vector<std::string>>(), T( args.at( "value" ) ) );
-        if ( !ex )
-            throw std::runtime_error( ex.error() );
-    } );
-    skipFramesAfterInput();
+    const std::string type = args.at( "type" ).get<std::string>();
+    const int mods = parseModifiers( args );
+    auto& v = getViewerInstance();
 
+    // mouseMove between hover-resolve and click matters for many plugins; follow the pattern used
+    // by Python UI tests in test_ui/scenarios/scenario_helpers.py.
+    const bool hasXY = args.contains( "x" ) && args.contains( "y" );
+    auto doMove = [&]
+    {
+        const int x = args.at( "x" ).get<int>();
+        const int y = args.at( "y" ).get<int>();
+        v.emplaceEvent( "mcp mouseMove", [&v, x, y]{ v.mouseMove( x, y ); } );
+        skipFramesAfterInput();
+    };
+
+    if ( type == "move" )
+    {
+        if ( !hasXY )
+            throw std::runtime_error( "`move` requires `x` and `y`." );
+        doMove();
+    }
+    else if ( type == "scroll" )
+    {
+        if ( !args.contains( "scrollDelta" ) )
+            throw std::runtime_error( "`scroll` requires `scrollDelta` (positive = scroll up)." );
+        const float delta = args["scrollDelta"].get<float>();
+        v.emplaceEvent( "mcp mouseScroll", [&v, delta]{ v.mouseScroll( delta ); } );
+        skipFramesAfterInput();
+    }
+    else if ( type == "down" || type == "up" || type == "click" )
+    {
+        if ( !args.contains( "button" ) )
+            throw std::runtime_error( fmt::format( "`{}` requires `button` (`left`/`right`/`middle`).", type ) );
+        const MouseButton btn = parseMouseButton( args["button"].get<std::string>() );
+        if ( hasXY )
+            doMove();
+        if ( type == "down" || type == "click" )
+        {
+            v.emplaceEvent( "mcp mouseDown", [&v, btn, mods]{ v.mouseDown( btn, mods ); } );
+            skipFramesAfterInput();
+        }
+        if ( type == "up" || type == "click" )
+        {
+            v.emplaceEvent( "mcp mouseUp", [&v, btn, mods]{ v.mouseUp( btn, mods ); } );
+            skipFramesAfterInput();
+        }
+    }
+    else
+    {
+        throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`click`/`move`/`scroll`).", type ) );
+    }
     return nlohmann::json::object();
 }
 
-// Prepended to every path-accepting tool's `desc`. One place defines the vocabulary;
-// per-tool descs only say what the tool itself does.
-static constexpr std::string_view kPathSemantics =
-    "`path`: array of entry names from the root (empty = root). Whitespace-sensitive. "
-    "Names may contain `##<suffix>` — a hidden ImGui uniqueness marker; pass the name VERBATIM "
-    "as returned by `ui.listEntries` / `ui.listAllEntries`, do not strip `##<suffix>`.\n"
-    "`type`: `button` | `group` | `int` | `uint` | `float` | `string`.\n"
-    "`status`: `\"available\"` | `\"disabled: <reason>\"` (widget greyed out) | "
-    "`\"disabled: blocked by modal '<name>'\"` (dismiss the modal first).\n\n";
-
-static std::string withPreamble( std::string_view specific )
+static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
 {
-    return std::string( kPathSemantics ) + std::string( specific );
+    const std::string type = args.at( "type" ).get<std::string>();
+    const std::string keyStr = args.at( "key" ).get<std::string>();
+    const int mods = parseModifiers( args );
+    auto& v = getViewerInstance();
+
+    if ( type == "press" )
+    {
+        // keyPressed takes a unicode codepoint (text-input semantics). Require a single-char string;
+        // decoding full UTF-8 is out of scope for v1.
+        if ( keyStr.size() != 1 || !std::isprint( static_cast<unsigned char>( keyStr[0] ) ) )
+            throw std::runtime_error( "`press` requires a single printable ASCII character as `key` (for text input)." );
+        const unsigned int unicode = static_cast<unsigned char>( keyStr[0] );
+        v.emplaceEvent( "mcp keyPressed", [&v, unicode, mods]{ v.keyPressed( unicode, mods ); } );
+    }
+    else if ( type == "down" || type == "up" || type == "repeat" )
+    {
+        const int glfwKey = parseKey( keyStr );
+        if ( type == "down" )
+            v.emplaceEvent( "mcp keyDown", [&v, glfwKey, mods]{ v.keyDown( glfwKey, mods ); } );
+        else if ( type == "up" )
+            v.emplaceEvent( "mcp keyUp", [&v, glfwKey, mods]{ v.keyUp( glfwKey, mods ); } );
+        else
+            v.emplaceEvent( "mcp keyRepeat", [&v, glfwKey, mods]{ v.keyRepeat( glfwKey, mods ); } );
+    }
+    else
+    {
+        throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`press`/`repeat`).", type ) );
+    }
+    skipFramesAfterInput();
+    return nlohmann::json::object();
 }
 
 MR_ON_INIT{
-    Mcp::Server& server = Mcp::getDefaultServer();
+    Server& server = getDefaultServer();
 
     server.addTool(
-        /*id*/"ui.listEntries",
-        /*name*/"List UI entries (one level)",
-        /*desc*/withPreamble( "List the direct children of `path`. Use `ui.listAllEntries` to get the entire subtree in one call." ),
-        /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array(
-            Mcp::Schema::Object{}
-                .addMember( "name", Mcp::Schema::String{} )
-                .addMember( "type", Mcp::Schema::String{} )
-                .addMember( "status", Mcp::Schema::String{} )
-        ),
-        /*func*/mcpToolListUiEntries
+        /*id*/  "viewer.fit",
+        /*name*/"Fit camera to scene or a subset",
+        /*desc*/"Frame a set of objects and/or world-space points in the active viewport. Pass `objectIds` (scene-object "
+                "ids from `scene.listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
+                "their bounding volumes are unioned. If neither is given, fits the whole scene (same as the UI's "
+                "\"Fit\" action). `factor` (default 1.0) controls framing margin — higher means more screen coverage. "
+                "The camera angle is preserved (no canonical-view snapping).",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
+            .addMemberOpt( "factor",    Schema::Number{} ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerFit
     );
 
     server.addTool(
-        /*id*/"ui.listAllEntries",
-        /*name*/"List UI entries (full subtree)",
-        /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui.listEntries` for a single level after a state change." ),
-        /*input_schema*/Mcp::Schema::Object{}.addMemberOpt( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array(
-            Mcp::Schema::Object{}
-                .addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) )
-                .addMember( "name", Mcp::Schema::String{} )
-                .addMember( "type", Mcp::Schema::String{} )
-                .addMember( "status", Mcp::Schema::String{} )
-        ),
-        /*func*/mcpToolListAllUiEntries
+        /*id*/  "viewer.setupCamera",
+        /*name*/"Set camera forward and up directions",
+        /*desc*/"Point the camera along `forwardDir` (a world-space direction vector pointing from the camera toward "
+                "the subject). `upDir` sets the screen-up direction; it is automatically orthogonalized against "
+                "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. The "
+                "camera is always refit to the whole scene after reorientation.",
+        /*input_schema*/Schema::Object{}
+            .addMember( "forwardDir", Schema::Array( Schema::Number{} ) )
+            .addMember( "upDir",      Schema::Array( Schema::Number{} ) ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerSetupCamera
     );
 
     server.addTool(
-        /*id*/"ui.pressButton",
-        /*name*/"Click UI button",
-        /*desc*/withPreamble( "Click the button at `path` (must end in a `type == \"button\"` entry). Fails if `status` starts with `\"disabled\"`." ),
-        /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Empty{},
-        /*func*/mcpToolPressButton
+        /*id*/  "viewer.captureScreenshot",
+        /*name*/"Capture viewport screenshot",
+        /*desc*/"Render the viewer to a PNG. Default (`includeUi: false`) captures only the 3D viewport; set "
+                "`includeUi: true` to capture the whole window including panels, ribbon, and dialogs. "
+                "For the 3D-only mode, optional `width`/`height` request a specific resolution (zero or missing = "
+                "current viewport size) and `transparentBg` (default false) omits the background — these options "
+                "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "
+                "normal background). "
+                "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to get "
+                "an inline base64 PNG; response is `{bytes, width, height}`.",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "includeUi",     Schema::Bool{} )
+            .addMemberOpt( "width",         Schema::Number{} )
+            .addMemberOpt( "height",        Schema::Number{} )
+            .addMemberOpt( "transparentBg", Schema::Bool{} )
+            .addMemberOpt( "filePath",      Schema::String{} ),
+        /*output_schema*/Schema::Object{}
+            .addMemberOpt( "path",   Schema::String{} )
+            .addMemberOpt( "bytes",  Schema::String{} )
+            .addMember(    "width",  Schema::Number{} )
+            .addMember(    "height", Schema::Number{} ),
+        /*func*/mcpViewerCaptureScreenshot
     );
 
-    // (idSuffix, displayType) -- `idSuffix` is the CamelCase suffix on ui.readValue*/ui.writeValue*;
-    // `displayType` matches the `type` field in listEntries output.
-    auto handleValueType = [&]<typename T>( const std::string& idSuffix, const std::string& displayType )
-    {
-        const std::string readDesc = std::is_same_v<T, std::string>
-            ? "Read the string value at `path`. If the response contains `allowedValues`, `ui.writeValue" + idSuffix + "` must pass one of those strings."
-            : "Read the " + displayType + " value at `path`. Bounds `min`/`max` are inclusive for `ui.writeValue" + idSuffix + "`.";
+    server.addTool(
+        /*id*/  "viewer.sendMouseEvent",
+        /*name*/"Inject a mouse event",
+        /*desc*/"Queue a mouse event on the viewer's event loop. `type` is one of `down`, `up`, `click`, `move`, `scroll`. "
+                "`button` is `left`/`right`/`middle` (required for `down`/`up`/`click`). `x`/`y` are window pixels, "
+                "top-left origin (required for `move`; optional for `down`/`up`/`click` — if given, a mouseMove is "
+                "sent first so hover state resolves before the button event). `scrollDelta` is required for `scroll` "
+                "(positive = scroll up). `modifiers` is an array of any of `ctrl`/`shift`/`alt`/`super`. "
+                "`click` is shorthand for `down` + `up` at the same position.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "type",        Schema::String{} )
+            .addMemberOpt( "button",      Schema::String{} )
+            .addMemberOpt( "x",           Schema::Number{} )
+            .addMemberOpt( "y",           Schema::Number{} )
+            .addMemberOpt( "scrollDelta", Schema::Number{} )
+            .addMemberOpt( "modifiers",   Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerSendMouseEvent
+    );
 
-        const std::string writeDesc = std::is_same_v<T, std::string>
-            ? "Set the string value at `path`. Must match `allowedValues` (from `ui.readValue" + idSuffix + "`) when present. Fails if `status` starts with `\"disabled\"`."
-            : "Set the " + displayType + " value at `path`. Must be within the inclusive `[min, max]` from `ui.readValue" + idSuffix + "`. Fails if `status` starts with `\"disabled\"`.";
-
-        server.addTool(
-            /*id*/"ui.readValue" + idSuffix,
-            /*name*/"Read UI " + displayType + " value",
-            /*desc*/withPreamble( readDesc ),
-            /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-            /*output_schema*/(
-                std::is_same_v<T, std::string>
-                ?
-                    static_cast<Mcp::Schema::Base &&>(
-                        Mcp::Schema::Object{}.addMember( "value", Mcp::Schema::String{} ).addMemberOpt( "allowedValues", Mcp::Schema::Array( Mcp::Schema::String{} ) )
-                    )
-                :
-                    static_cast<Mcp::Schema::Base &&>(
-                        Mcp::Schema::Object{}.addMember( "value", Mcp::Schema::Number{} ).addMember( "min", Mcp::Schema::Number{} ).addMember( "max", Mcp::Schema::Number{} )
-                    )
-            ),
-            /*func*/mcpToolReadValue<T>
-        );
-
-        server.addTool(
-            /*id*/"ui.writeValue" + idSuffix,
-            /*name*/"Write UI " + displayType + " value",
-            /*desc*/withPreamble( writeDesc ),
-            /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Mcp::Schema::Base &&>( Mcp::Schema::String{} ) : static_cast<Mcp::Schema::Base &&>( Mcp::Schema::Number{} ) ),
-            /*output_schema*/Mcp::Schema::Empty{},
-            /*func*/mcpToolWriteValue<T>
-        );
-    };
-
-    handleValueType.operator()<std::int64_t >( "Int",    "int"    );
-    handleValueType.operator()<std::uint64_t>( "Uint",   "uint"   );
-    handleValueType.operator()<double       >( "Real",   "float"  );
-    handleValueType.operator()<std::string  >( "String", "string" );
+    server.addTool(
+        /*id*/  "viewer.sendKeyboardEvent",
+        /*name*/"Inject a keyboard event",
+        /*desc*/"Queue a keyboard event on the viewer's event loop. `type` is one of `down`, `up`, `press`, `repeat`. "
+                "`key` is either a single printable character (e.g. `\"a\"`, `\"A\"`, `\"5\"`) or a named key "
+                "(`Escape`, `Enter`, `Space`, `Tab`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, "
+                "`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, `F1`…`F25`). `press` is for text input — it emits a "
+                "unicode character event and requires a single printable character. `down`/`up`/`repeat` send raw "
+                "key events (use these for shortcuts like Ctrl+S, or for keys that don't produce text). `modifiers` "
+                "is an array of any of `ctrl`/`shift`/`alt`/`super`.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "type",      Schema::String{} )
+            .addMember(    "key",       Schema::String{} )
+            .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerSendKeyboardEvent
+    );
 }; // MR_ON_INIT
 
-} // namespace MR
+} // namespace MR::Mcp
 
 #endif

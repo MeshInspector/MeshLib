@@ -9,7 +9,7 @@ on:
 
 jobs:
   config:
-    runs-on: aws-micro
+    runs-on: ubuntu-slim
     env:
       vs19_vcpkg_version: "2024.10.21"
       vs22_vcpkg_version: "2026.03.18"
@@ -103,7 +103,7 @@ jobs:
 
   update-artifacts:
     timeout-minutes: 15
-    runs-on: aws-micro
+    runs-on: ubuntu-slim
     needs: upload-distributions
     if: always()
     steps:

@@ -26,7 +26,7 @@ jobs:
 
   debug-config:
     needs: config
-    runs-on: aws-micro
+    runs-on: ubuntu-slim
     steps:
       - name: Print config
         run: |
@@ -303,7 +303,7 @@ jobs:
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: aws-micro
+    runs-on: ubuntu-slim
     needs: [ config, upload-distributions ]
     if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
     continue-on-error: true
@@ -343,7 +343,7 @@ jobs:
 
   update-artifacts:
     timeout-minutes: 15
-    runs-on: aws-micro
+    runs-on: ubuntu-slim
     needs: [ collect-stats, update-dev-documentation ]
     if: always()
     continue-on-error: true

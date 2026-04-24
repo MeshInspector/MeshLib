@@ -30,7 +30,7 @@ on:
 
 jobs:
   always-success:
-    runs-on: aws-micro
+    runs-on: ubuntu-slim
     steps:
       - name: Do nothing
         run: echo

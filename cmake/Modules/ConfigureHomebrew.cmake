@@ -23,12 +23,22 @@ IF(APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -undefined dynamic_lookup -framework Cocoa -framework OpenGL -framework IOKit") # https://github.com/pybind/pybind11/issues/382
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # use Homebrew zlib instead of system one for Clang builds
-    execute_process(
-      COMMAND brew --prefix zlib
-      OUTPUT_VARIABLE HOMEBREW_ZLIB_PREFIX
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    set(ZLIB_ROOT ${HOMEBREW_ZLIB_PREFIX})
+    if(MESHLIB_MACOS_FORCE_SYSTEM_LIBCXX)
+      # use Homebrew zlib instead of system one for Clang builds
+      execute_process(
+        COMMAND brew --prefix zlib
+        OUTPUT_VARIABLE HOMEBREW_ZLIB_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      set(ZLIB_ROOT ${HOMEBREW_ZLIB_PREFIX})
+    else()
+      # force use Clang's libc++
+      if(CMAKE_CXX_COMPILER MATCHES "${HOMEBREW_PREFIX}")
+        cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH LLVM_PREFIX)
+        cmake_path(GET LLVM_PREFIX PARENT_PATH LLVM_PREFIX)
+        add_compile_options(-nostdinc++ -isystem ${LLVM_PREFIX}/include/c++/v1)
+        add_link_options(-nostdlib++ -L${LLVM_PREFIX}/lib -L${LLVM_PREFIX}/lib/c++ -Wl,-rpath,${LLVM_PREFIX}/lib -Wl,-rpath,${LLVM_PREFIX}/lib/c++ -lc++ -lc++abi)
+      endif()
+    endif()
   endif()
 ENDIF() # APPLE

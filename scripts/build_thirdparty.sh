@@ -58,11 +58,27 @@ MR_CMAKE_OPTIONS="\
 "
 
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
+  CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
   if [ -n "${CMAKE_C_COMPILER}" ] ; then
     MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
   fi
+
+  CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX}}"
   if [ -n "${CMAKE_CXX_COMPILER}" ] ; then
     MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+
+    # special conditions for Clang on macOS
+    if [[ $OSTYPE == 'darwin'* ]] && command -v brew >/dev/null 2>&1; then
+      HOMEBREW_PREFIX=$(brew --prefix)
+      if [[ "${CMAKE_CXX_COMPILER}" == "${HOMEBREW_PREFIX}"* ]] ; then
+        # use system libc++ instead of Clang's one
+        MACOS_SDK_PATH=$(xcrun --show-sdk-path | xargs)  # trim trailing whitespace
+        CXXFLAGS="-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH}"
+        LDFLAGS="-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi"
+        # use Homebrew zlib instead of system one
+        MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D ZLIB_ROOT=$(brew --prefix zlib)"
+      fi
+    fi
   fi
 fi
 

@@ -32,10 +32,7 @@ from pytest_check import check
                                           id="MeshBoolean"),
                             pytest.param({'sample': "MeshDecimateExample",
                                            'input_files': ['mesh.stl'],
-                                           # TODO: restore 'output_files': ['decimated_mesh.stl']
-                                           # once the S3 fixture is regenerated with the new
-                                           # canonical params (maxDeletedFaces=1000, maxError=0.05)
-                                           'output_files': []
+                                           'output_files': ['decimated_mesh_cs.stl']
                                            },
                                           id="MeshDecimate"),
                             pytest.param({'sample': "MeshOffsetExample",

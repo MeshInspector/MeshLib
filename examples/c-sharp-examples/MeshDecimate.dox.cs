@@ -26,7 +26,7 @@ public class MeshDecimateExample
             MR.decimateMesh(mesh, ds);
 
             // Save result
-            MR.MeshSave.toAnySupportedFormat(mesh, "decimated_mesh.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh, "decimated_mesh_cs.stl");
         }
         catch (Exception e)
         {

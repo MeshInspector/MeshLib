@@ -2,6 +2,7 @@
 
 #include "MRMcp/MRMcp.h"
 #include "MRMesh/MROnInit.h"
+#include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRUITestEngineControl.h"
 
@@ -75,11 +76,15 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
 
 static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
 {
+    const auto path = args.at( "path" ).get<std::vector<std::string>>();
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        auto ex = UI::TestEngine::Control::pressButton( args.at( "path" ).get<std::vector<std::string>>() );
+        auto ex = UI::TestEngine::Control::pressButton( path );
         if ( !ex )
             throw std::runtime_error( ex.error() );
+        // Non-empty = disabled status; surface to MCP as an error (empty = OK, click simulated).
+        if ( !ex->empty() )
+            throw std::runtime_error( fmt::format( "pressButton {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
     skipFramesAfterInput();
 
@@ -117,11 +122,15 @@ static nlohmann::json mcpToolReadValue( const nlohmann::json& args )
 template <typename T>
 static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
 {
+    const auto path = args.at( "path" ).get<std::vector<std::string>>();
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        auto ex = UI::TestEngine::Control::writeValue<T>( args.at( "path" ).get<std::vector<std::string>>(), T( args.at( "value" ) ) );
+        auto ex = UI::TestEngine::Control::writeValue<T>( path, T( args.at( "value" ) ) );
         if ( !ex )
             throw std::runtime_error( ex.error() );
+        // Non-empty = disabled status; surface to MCP as an error (empty = OK, write simulated).
+        if ( !ex->empty() )
+            throw std::runtime_error( fmt::format( "writeValue {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
     skipFramesAfterInput();
 

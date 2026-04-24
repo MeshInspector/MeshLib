@@ -45,8 +45,8 @@ int main( void )
     MR_uint64_t numColB = MR_BitSet_count(
         MR_FaceBitSet_UpcastTo_MR_BitSet(
             MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_second( collidingBitSets ) ) );
-    fprintf( stdout, "%" PRIu64 "\n", numColA ); // print number of colliding faces from mesh A
-    fprintf( stdout, "%" PRIu64 "\n", numColB ); // print number of colliding faces from mesh B
+    fprintf( stdout, "%zu\n", (size_t)numColA ); // print number of colliding faces from mesh A
+    fprintf( stdout, "%zu\n", (size_t)numColB ); // print number of colliding faces from mesh B
 
 
     // fast check if mesh A and mesh B collide

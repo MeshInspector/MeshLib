@@ -103,10 +103,10 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
 
-      - name: Spoof triplet for VS2019
+      - name: Enable VS2019 toolset for vcpkg
         if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
         run: |
-          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^\s*#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
+          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
       - name: Update vcpkg packages
         run: |

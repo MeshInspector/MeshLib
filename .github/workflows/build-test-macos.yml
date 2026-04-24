@@ -255,7 +255,6 @@ jobs:
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
 
-      # Retry the upload on self-hosted-runner network blips.
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         env:

@@ -162,6 +162,7 @@
     <ClCompile Include="MRUITestEngineControl.cpp" />
     <ClCompile Include="MRUiMcp.cpp" />
     <ClCompile Include="MRSceneMcp.cpp" />
+    <ClCompile Include="MRViewerMcp.cpp" />
     <ClCompile Include="MRMcpCommon.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -397,6 +397,9 @@
     <ClCompile Include="MRSceneMcp.cpp">
       <Filter>MCP</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
     <ClCompile Include="MRMcpCommon.cpp">
       <Filter>MCP</Filter>
     </ClCompile>

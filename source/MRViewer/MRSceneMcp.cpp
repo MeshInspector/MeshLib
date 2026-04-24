@@ -13,8 +13,10 @@
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRAppendHistory.h"
@@ -235,6 +237,48 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
+static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
+{
+    nlohmann::json out = nlohmann::json::object();
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
+        if ( !objEx )
+            throw std::runtime_error( objEx.error() );
+        auto obj = *objEx;
+
+        if ( args.contains( "filePath" ) )
+        {
+            const auto path = pathFromUtf8( args["filePath"].get<std::string>() );
+            auto saved = ObjectSave::toAnySupportedFormat( *obj, path );
+            if ( !saved )
+                throw std::runtime_error( saved.error() );
+            out["path"] = utf8string( path );
+            return;
+        }
+        if ( args.contains( "extension" ) )
+        {
+            std::string ext = args["extension"].get<std::string>();
+            if ( !ext.empty() && ext.front() != '.' )
+                ext.insert( ext.begin(), '.' );
+
+            UniqueTemporaryFolder tmp{};
+            const std::filesystem::path path = tmp / pathFromUtf8( obj->name() + ext );
+            auto saved = ObjectSave::toAnySupportedFormat( *obj, path );
+            if ( !saved )
+                throw std::runtime_error( saved.error() );
+            std::ifstream in( path, std::ios::binary );
+            if ( !in )
+                throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
+            std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+            out["bytes"] = encode64( bytes.data(), bytes.size() );
+            return;
+        }
+        throw std::runtime_error( "scene.getObject requires either `filePath` or `extension`." );
+    } );
+    return nlohmann::json::object( { { "result", std::move( out ) } } );
+}
+
 static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 {
     std::vector<uint64_t> addedIds;
@@ -257,7 +301,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 
         if ( args.contains( "filePath" ) )
         {
-            path = std::filesystem::path( args["filePath"].get<std::string>() );
+            path = pathFromUtf8( args["filePath"].get<std::string>() );
         }
         else if ( args.contains( "bytes" ) )
         {
@@ -268,10 +312,10 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
             const auto decoded = decode64( args["bytes"].get<std::string>() );
 
             tmp.emplace();
-            path = *tmp / ( *overrideName + ext );
+            path = *tmp / pathFromUtf8( *overrideName + ext );
             std::ofstream out( path, std::ios::binary );
             if ( !out )
-                throw std::runtime_error( fmt::format( "Could not write temp file {}", path.string() ) );
+                throw std::runtime_error( fmt::format( "Could not write temp file {}", utf8string( path ) ) );
             out.write( reinterpret_cast<const char*>( decoded.data() ), std::streamsize( decoded.size() ) );
         }
         else
@@ -382,6 +426,23 @@ MR_ON_INIT{
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
         /*output_schema*/Schema::Empty{},
         /*func*/mcpSceneRemoveObject
+    );
+
+    server.addTool(
+        /*id*/  "scene.getObject",
+        /*name*/"Serialize scene object (to file or inline bytes)",
+        /*desc*/std::string( kSceneIdSemantics ) +
+                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass either `filePath` (server-side path; "
+                "format selected by extension) — response is `{path: <written-path>}`; or `extension` (e.g. `\"stl\"`) — "
+                "response is `{bytes: <base64 payload>}`.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "id",        Schema::Number{} )
+            .addMemberOpt( "filePath",  Schema::String{} )
+            .addMemberOpt( "extension", Schema::String{} ),
+        /*output_schema*/Schema::Object{}
+            .addMemberOpt( "path",  Schema::String{} )
+            .addMemberOpt( "bytes", Schema::String{} ),
+        /*func*/mcpSceneGetObject
     );
 
     server.addTool(

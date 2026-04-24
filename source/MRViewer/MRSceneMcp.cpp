@@ -22,6 +22,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRMcpCommon.h"
 
 #include <cstdint>
 #include <fstream>
@@ -29,28 +30,6 @@
 
 namespace MR::Mcp
 {
-
-// Pointer -> id (as a JSON number). Matches the `##<id>` suffix in ImGui labels for the same object.
-static uint64_t idOf( const Object* obj )
-{
-    return static_cast<uint64_t>( reinterpret_cast<uintptr_t>( obj ) );
-}
-
-// Resolve a raw-pointer id (as returned by scene.listObjectTree) to a shared_ptr<Object>, verifying
-// the object is still reachable from SceneRoot. Defends against stale ids into freed memory.
-static Expected<std::shared_ptr<Object>> resolveId( uint64_t id )
-{
-    auto* asPtr = reinterpret_cast<Object*>( static_cast<uintptr_t>( id ) );
-    if ( !asPtr )
-        return unexpected( "Object id 0 is not valid here." );
-
-    for ( const auto& obj : getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-    {
-        if ( obj.get() == asPtr )
-            return obj;
-    }
-    return unexpected( fmt::format( "No object with id {}. Call scene.listObjectTree to enumerate.", id ) );
-}
 
 // Pick the root for a listObjectTree / getObjectInfo call: the supplied id, or SceneRoot if 0/absent.
 static Expected<Object*> pickRoot( const nlohmann::json& args )

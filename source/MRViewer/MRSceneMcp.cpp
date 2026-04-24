@@ -8,6 +8,7 @@
 #include "MRMesh/MRChangeObjectFields.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeXfAction.h"
+#include "MRMesh/MRConstants.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MROnInit.h"
@@ -20,7 +21,7 @@
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRAppendHistory.h"
-#include "MRViewer/MRMcpCommon.h"
+#include "MRViewer/MRCommandLoop.h"
 
 #include <cstdint>
 #include <fstream>
@@ -71,10 +72,9 @@ static DecomposedXf decomposeXf( const AffineXf3f& xf )
 {
     Matrix3f rotation, scaling;
     decomposeMatrix3( xf.A, rotation, scaling );
-    constexpr float kRadToDeg = 57.29577951308232f; // 180 / pi
     return {
         .translation = xf.b,
-        .rotationDeg = rotation.toEulerAngles() * kRadToDeg,
+        .rotationDeg = rotation.toEulerAngles() * ( 180.f / PI_F ),
         .scale       = { scaling.x.x, scaling.y.y, scaling.z.z },
     };
 }
@@ -82,9 +82,8 @@ static DecomposedXf decomposeXf( const AffineXf3f& xf )
 // Inverse of decomposeXf: build an AffineXf3f from translation + XYZ-Euler degrees + scale.
 static AffineXf3f composeXf( const DecomposedXf& d )
 {
-    constexpr float kDegToRad = 0.017453292519943295f; // pi / 180
     AffineXf3f xf;
-    xf.A = Matrix3f::rotationFromEuler( d.rotationDeg * kDegToRad ) * Matrix3f::scale( d.scale );
+    xf.A = Matrix3f::rotationFromEuler( d.rotationDeg * ( PI_F / 180.f ) ) * Matrix3f::scale( d.scale );
     xf.b = d.translation;
     return xf;
 }
@@ -174,13 +173,20 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
             { "max", nlohmann::json::array( { box.max.x, box.max.y, box.max.z } ) },
         } );
 
-        // Start with the object's own info lines (same as MI's Information panel),
-        // then append the decomposed transform so it's also readable in plain text.
+        // Start with the object's own info lines (same as MI's Information panel), then mirror
+        // the structured `transform` field in text form too — LLMs often skim `info` as the
+        // human-readable summary. Derived from `transformToJson`'s output so the text can't
+        // drift from JSON.
         std::vector<std::string> info = obj->getInfoLines();
-        const auto d = decomposeXf( obj->xf() );
-        info.push_back( fmt::format( "translation: ({}, {}, {})", d.translation.x, d.translation.y, d.translation.z ) );
-        info.push_back( fmt::format( "rotation deg: ({}, {}, {})", d.rotationDeg.x, d.rotationDeg.y, d.rotationDeg.z ) );
-        info.push_back( fmt::format( "scale: ({}, {}, {})",       d.scale.x,       d.scale.y,       d.scale.z ) );
+        const auto tfJson = transformToJson( obj->xf() );
+        const auto vec3Line = []( std::string_view label, const nlohmann::json& v )
+        {
+            return fmt::format( "{}: ({}, {}, {})", label,
+                v[0].get<float>(), v[1].get<float>(), v[2].get<float>() );
+        };
+        info.push_back( vec3Line( "translation",  tfJson["translation"] ) );
+        info.push_back( vec3Line( "rotation deg", tfJson["rotation"] ) );
+        info.push_back( vec3Line( "scale",        tfJson["scale"] ) );
         out["info"] = std::move( info );
     } );
     return nlohmann::json::object( { { "result", std::move( out ) } } );

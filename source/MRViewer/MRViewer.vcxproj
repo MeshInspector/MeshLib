@@ -343,7 +343,6 @@
     <ClInclude Include="MRI18n.h" />
     <ClInclude Include="MRLocaleMacos.h" />
     <ClInclude Include="MRUITestEngineControl.h" />
-    <ClInclude Include="MRMcpCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

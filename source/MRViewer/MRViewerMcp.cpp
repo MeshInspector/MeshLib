@@ -2,7 +2,7 @@
 
 #include "MRMcp/MRMcp.h"
 #include "MRMesh/MROnInit.h"
-#include "MRViewer/MRMcpCommon.h"
+#include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRUITestEngineControl.h"
 
 namespace MR::Mcp

@@ -89,7 +89,7 @@
     <Filter Include="AI">
       <UniqueIdentifier>{a9f6cb49-a0c1-4ee7-bcef-760c93bdc757}</UniqueIdentifier>
     </Filter>
-    <Filter Include="mcp">
+    <Filter Include="MCP">
       <UniqueIdentifier>{e4e7b2c1-6e0d-4a6d-9a7a-2a7e35a0a4a1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -392,10 +392,10 @@
       <Filter>UIStyle</Filter>
     </ClCompile>
     <ClCompile Include="MRViewerMcp.cpp">
-      <Filter>mcp</Filter>
+      <Filter>MCP</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneMcp.cpp">
-      <Filter>mcp</Filter>
+      <Filter>MCP</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneCache.cpp">
       <Filter>Viewer</Filter>
@@ -902,9 +902,6 @@
     </ClInclude>
     <ClInclude Include="MRUITestEngineControl.h">
       <Filter>UIStyle</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMcpCommon.h">
-      <Filter>mcp</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneCache.h">
       <Filter>Viewer</Filter>

@@ -31,10 +31,11 @@ jobs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     steps:
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
+          retry-max-attempts: 5
       - name: Start Instance
         run: |
           instanceState=$(aws ec2 describe-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} --query 'Reservations[].Instances[].State.Name' --output text)
@@ -52,10 +53,11 @@ jobs:
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
+          retry-max-attempts: 5
 
       - name: rm previous data
         shell: powershell
@@ -128,10 +130,11 @@ jobs:
     steps:
       - name: Configure AWS Credentials (OIDC)
         if: always()
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
+          retry-max-attempts: 5
       - name: Stop Instance
         if: always()
         run: |

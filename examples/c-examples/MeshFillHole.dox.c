@@ -28,18 +28,20 @@ int main( void )
     // Find single edge for each hole in mesh
     MR_std_vector_MR_EdgeId* holeEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
 
+    // Setup filling parameters
+    MR_FillHoleParams* params = MR_FillHoleParams_DefaultConstruct();
+    MR_FillHoleMetric* metric = MR_getUniversalMetric( mesh );
+    MR_FillHoleParams_Set_metric( params, MR_PassBy_Move, metric );
+    MR_FillHoleMetric_Destroy( metric );
+
+    // Alternatively, MR_fillHoles( mesh, holeEdges, params ) fills all holes at once.
     for ( size_t i = 0; i < MR_std_vector_MR_EdgeId_size( holeEdges ); ++i )
     {
-        // Setup filling parameters
-        MR_FillHoleParams* params = MR_FillHoleParams_DefaultConstruct();
-        MR_FillHoleMetric* metric = MR_getUniversalMetric( mesh );
-        MR_FillHoleParams_Set_metric( params, MR_PassBy_Move, metric );
-        MR_FillHoleMetric_Destroy( metric );
         // Fill hole represented by `e`
         MR_EdgeId e = *MR_std_vector_MR_EdgeId_at( holeEdges, i );
         MR_fillHole( mesh, e, params );
-        MR_FillHoleParams_Destroy( params );
     }
+    MR_FillHoleParams_Destroy( params );
 
     // Save result
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "filledMesh.stl", NULL, NULL);

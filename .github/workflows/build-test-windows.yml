@@ -111,6 +111,12 @@ jobs:
         working-directory: C:\vcpkg
         run: C:\vcpkg\vcpkg.exe integrate install
 
+      - name: Diagnostic — vcpkg installed tree
+        if: ${{ always() }}
+        shell: pwsh
+        continue-on-error: true
+        run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}"
+
       - name: Restore CUDA Cache
         uses: actions/cache@v5
         id: cuda-cache
@@ -212,6 +218,13 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
+
+      - name: Diagnostic — output bin DLL inventory + MRMesh imports
+        if: ${{ always() }}
+        shell: pwsh
+        continue-on-error: true
+        working-directory: source\x64\${{ matrix.config }}
+        run: ${{ github.workspace }}\scripts\diagnostics\windows-bin-imports.ps1 -VcPath "${{ matrix.vc-path }}"
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

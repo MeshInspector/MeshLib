@@ -15,9 +15,14 @@
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRFitData.h"
 #include "MRViewer/MRMcpCommon.h"
+#include "MRViewer/MRMouse.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
+#include <GLFW/glfw3.h>
+
+#include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <future>
@@ -37,6 +42,58 @@ Vector3f readVec3( const nlohmann::json& j, std::string_view field )
     if ( !std::isfinite( v.x ) || !std::isfinite( v.y ) || !std::isfinite( v.z ) )
         throw std::runtime_error( fmt::format( "`{}` contains non-finite value", field ) );
     return v;
+}
+
+int parseModifiers( const nlohmann::json& args )
+{
+    int mods = 0;
+    if ( !args.contains( "modifiers" ) )
+        return mods;
+    for ( const auto& j : args["modifiers"] )
+    {
+        const std::string m = j.get<std::string>();
+        if ( m == "ctrl" )       mods |= GLFW_MOD_CONTROL;
+        else if ( m == "shift" ) mods |= GLFW_MOD_SHIFT;
+        else if ( m == "alt" )   mods |= GLFW_MOD_ALT;
+        else if ( m == "super" ) mods |= GLFW_MOD_SUPER;
+        else throw std::runtime_error( fmt::format( "Unknown modifier `{}` (expected `ctrl`/`shift`/`alt`/`super`)", m ) );
+    }
+    return mods;
+}
+
+MouseButton parseMouseButton( const std::string& b )
+{
+    if ( b == "left" )   return MouseButton::Left;
+    if ( b == "right" )  return MouseButton::Right;
+    if ( b == "middle" ) return MouseButton::Middle;
+    throw std::runtime_error( fmt::format( "Unknown mouse button `{}` (expected `left`/`right`/`middle`)", b ) );
+}
+
+int parseKey( const std::string& s )
+{
+    // Single printable ASCII char — GLFW key codes are ASCII-uppercase for letters/digits/punctuation.
+    if ( s.size() == 1 && std::isprint( static_cast<unsigned char>( s[0] ) ) )
+        return std::toupper( static_cast<unsigned char>( s[0] ) );
+    if ( s == "Escape" )    return GLFW_KEY_ESCAPE;
+    if ( s == "Enter" || s == "Return" ) return GLFW_KEY_ENTER;
+    if ( s == "Space" )     return GLFW_KEY_SPACE;
+    if ( s == "Tab" )       return GLFW_KEY_TAB;
+    if ( s == "Backspace" ) return GLFW_KEY_BACKSPACE;
+    if ( s == "Delete" )    return GLFW_KEY_DELETE;
+    if ( s == "Home" )      return GLFW_KEY_HOME;
+    if ( s == "End" )       return GLFW_KEY_END;
+    if ( s == "PageUp" )    return GLFW_KEY_PAGE_UP;
+    if ( s == "PageDown" )  return GLFW_KEY_PAGE_DOWN;
+    if ( s == "Left" || s == "ArrowLeft" )   return GLFW_KEY_LEFT;
+    if ( s == "Right" || s == "ArrowRight" ) return GLFW_KEY_RIGHT;
+    if ( s == "Up" || s == "ArrowUp" )       return GLFW_KEY_UP;
+    if ( s == "Down" || s == "ArrowDown" )   return GLFW_KEY_DOWN;
+    if ( s.size() >= 2 && s[0] == 'F' )
+    {
+        const int n = std::atoi( s.c_str() + 1 );
+        if ( n >= 1 && n <= 25 ) return GLFW_KEY_F1 + ( n - 1 );
+    }
+    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`)", s ) );
 }
 
 } // namespace
@@ -165,6 +222,96 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
     return nlohmann::json::object( { { "result", std::move( out ) } } );
 }
 
+static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
+{
+    const std::string type = args.at( "type" ).get<std::string>();
+    const int mods = parseModifiers( args );
+    auto& v = getViewerInstance();
+
+    // mouseMove between hover-resolve and click matters for many plugins; follow the pattern used
+    // by Python UI tests in test_ui/scenarios/scenario_helpers.py.
+    const bool hasXY = args.contains( "x" ) && args.contains( "y" );
+    auto doMove = [&]
+    {
+        const int x = args.at( "x" ).get<int>();
+        const int y = args.at( "y" ).get<int>();
+        v.emplaceEvent( "mcp mouseMove", [&v, x, y]{ v.mouseMove( x, y ); } );
+        skipFramesAfterInput();
+    };
+
+    if ( type == "move" )
+    {
+        if ( !hasXY )
+            throw std::runtime_error( "`move` requires `x` and `y`." );
+        doMove();
+    }
+    else if ( type == "scroll" )
+    {
+        if ( !args.contains( "scrollDelta" ) )
+            throw std::runtime_error( "`scroll` requires `scrollDelta` (positive = scroll up)." );
+        const float delta = args["scrollDelta"].get<float>();
+        v.emplaceEvent( "mcp mouseScroll", [&v, delta]{ v.mouseScroll( delta ); } );
+        skipFramesAfterInput();
+    }
+    else if ( type == "down" || type == "up" || type == "click" )
+    {
+        if ( !args.contains( "button" ) )
+            throw std::runtime_error( fmt::format( "`{}` requires `button` (`left`/`right`/`middle`).", type ) );
+        const MouseButton btn = parseMouseButton( args["button"].get<std::string>() );
+        if ( hasXY )
+            doMove();
+        if ( type == "down" || type == "click" )
+        {
+            v.emplaceEvent( "mcp mouseDown", [&v, btn, mods]{ v.mouseDown( btn, mods ); } );
+            skipFramesAfterInput();
+        }
+        if ( type == "up" || type == "click" )
+        {
+            v.emplaceEvent( "mcp mouseUp", [&v, btn, mods]{ v.mouseUp( btn, mods ); } );
+            skipFramesAfterInput();
+        }
+    }
+    else
+    {
+        throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`click`/`move`/`scroll`).", type ) );
+    }
+    return nlohmann::json::object();
+}
+
+static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
+{
+    const std::string type = args.at( "type" ).get<std::string>();
+    const std::string keyStr = args.at( "key" ).get<std::string>();
+    const int mods = parseModifiers( args );
+    auto& v = getViewerInstance();
+
+    if ( type == "press" )
+    {
+        // keyPressed takes a unicode codepoint (text-input semantics). Require a single-char string;
+        // decoding full UTF-8 is out of scope for v1.
+        if ( keyStr.size() != 1 || !std::isprint( static_cast<unsigned char>( keyStr[0] ) ) )
+            throw std::runtime_error( "`press` requires a single printable ASCII character as `key` (for text input)." );
+        const unsigned int unicode = static_cast<unsigned char>( keyStr[0] );
+        v.emplaceEvent( "mcp keyPressed", [&v, unicode, mods]{ v.keyPressed( unicode, mods ); } );
+    }
+    else if ( type == "down" || type == "up" || type == "repeat" )
+    {
+        const int glfwKey = parseKey( keyStr );
+        if ( type == "down" )
+            v.emplaceEvent( "mcp keyDown", [&v, glfwKey, mods]{ v.keyDown( glfwKey, mods ); } );
+        else if ( type == "up" )
+            v.emplaceEvent( "mcp keyUp", [&v, glfwKey, mods]{ v.keyUp( glfwKey, mods ); } );
+        else
+            v.emplaceEvent( "mcp keyRepeat", [&v, glfwKey, mods]{ v.keyRepeat( glfwKey, mods ); } );
+    }
+    else
+    {
+        throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`press`/`repeat`).", type ) );
+    }
+    skipFramesAfterInput();
+    return nlohmann::json::object();
+}
+
 MR_ON_INIT{
     Server& server = getDefaultServer();
 
@@ -221,6 +368,44 @@ MR_ON_INIT{
             .addMember(    "width",  Schema::Number{} )
             .addMember(    "height", Schema::Number{} ),
         /*func*/mcpViewerCaptureScreenshot
+    );
+
+    server.addTool(
+        /*id*/  "viewer.sendMouseEvent",
+        /*name*/"Inject a mouse event",
+        /*desc*/"Queue a mouse event on the viewer's event loop. `type` is one of `down`, `up`, `click`, `move`, `scroll`. "
+                "`button` is `left`/`right`/`middle` (required for `down`/`up`/`click`). `x`/`y` are window pixels, "
+                "top-left origin (required for `move`; optional for `down`/`up`/`click` — if given, a mouseMove is "
+                "sent first so hover state resolves before the button event). `scrollDelta` is required for `scroll` "
+                "(positive = scroll up). `modifiers` is an array of any of `ctrl`/`shift`/`alt`/`super`. "
+                "`click` is shorthand for `down` + `up` at the same position.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "type",        Schema::String{} )
+            .addMemberOpt( "button",      Schema::String{} )
+            .addMemberOpt( "x",           Schema::Number{} )
+            .addMemberOpt( "y",           Schema::Number{} )
+            .addMemberOpt( "scrollDelta", Schema::Number{} )
+            .addMemberOpt( "modifiers",   Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerSendMouseEvent
+    );
+
+    server.addTool(
+        /*id*/  "viewer.sendKeyboardEvent",
+        /*name*/"Inject a keyboard event",
+        /*desc*/"Queue a keyboard event on the viewer's event loop. `type` is one of `down`, `up`, `press`, `repeat`. "
+                "`key` is either a single printable character (e.g. `\"a\"`, `\"A\"`, `\"5\"`) or a named key "
+                "(`Escape`, `Enter`, `Space`, `Tab`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, "
+                "`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, `F1`…`F25`). `press` is for text input — it emits a "
+                "unicode character event and requires a single printable character. `down`/`up`/`repeat` send raw "
+                "key events (use these for shortcuts like Ctrl+S, or for keys that don't produce text). `modifiers` "
+                "is an array of any of `ctrl`/`shift`/`alt`/`super`.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "type",      Schema::String{} )
+            .addMember(    "key",       Schema::String{} )
+            .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerSendKeyboardEvent
     );
 }; // MR_ON_INIT
 

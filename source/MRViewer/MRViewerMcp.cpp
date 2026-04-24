@@ -4,16 +4,9 @@
 #include "MRMesh/MROnInit.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRUITestEngineControl.h"
-#include "MRViewer/MRViewer.h"
 
-namespace MR
+namespace MR::Mcp
 {
-
-static void skipFramesAfterInput()
-{
-    for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
-        MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
-}
 
 // Hopefully "float" is more clear to LLMs than "real". The actual underlying type is `double`.
 static const char* mcpTypeStr( UI::TestEngine::Control::EntryType type )
@@ -151,18 +144,18 @@ static std::string withPreamble( std::string_view specific )
 }
 
 MR_ON_INIT{
-    Mcp::Server& server = Mcp::getDefaultServer();
+    Server& server = getDefaultServer();
 
     server.addTool(
         /*id*/"ui.listEntries",
         /*name*/"List UI entries (one level)",
         /*desc*/withPreamble( "List the direct children of `path`. Use `ui.listAllEntries` to get the entire subtree in one call." ),
-        /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array(
-            Mcp::Schema::Object{}
-                .addMember( "name", Mcp::Schema::String{} )
-                .addMember( "type", Mcp::Schema::String{} )
-                .addMember( "status", Mcp::Schema::String{} )
+        /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Array(
+            Schema::Object{}
+                .addMember( "name", Schema::String{} )
+                .addMember( "type", Schema::String{} )
+                .addMember( "status", Schema::String{} )
         ),
         /*func*/mcpToolListUiEntries
     );
@@ -171,13 +164,13 @@ MR_ON_INIT{
         /*id*/"ui.listAllEntries",
         /*name*/"List UI entries (full subtree)",
         /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui.listEntries` for a single level after a state change." ),
-        /*input_schema*/Mcp::Schema::Object{}.addMemberOpt( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Array(
-            Mcp::Schema::Object{}
-                .addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) )
-                .addMember( "name", Mcp::Schema::String{} )
-                .addMember( "type", Mcp::Schema::String{} )
-                .addMember( "status", Mcp::Schema::String{} )
+        /*input_schema*/Schema::Object{}.addMemberOpt( "path", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Array(
+            Schema::Object{}
+                .addMember( "path", Schema::Array( Schema::String{} ) )
+                .addMember( "name", Schema::String{} )
+                .addMember( "type", Schema::String{} )
+                .addMember( "status", Schema::String{} )
         ),
         /*func*/mcpToolListAllUiEntries
     );
@@ -186,8 +179,8 @@ MR_ON_INIT{
         /*id*/"ui.pressButton",
         /*name*/"Click UI button",
         /*desc*/withPreamble( "Click the button at `path` (must end in a `type == \"button\"` entry). Fails if `status` starts with `\"disabled\"`." ),
-        /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
-        /*output_schema*/Mcp::Schema::Empty{},
+        /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Empty{},
         /*func*/mcpToolPressButton
     );
 
@@ -207,16 +200,16 @@ MR_ON_INIT{
             /*id*/"ui.readValue" + idSuffix,
             /*name*/"Read UI " + displayType + " value",
             /*desc*/withPreamble( readDesc ),
-            /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ),
+            /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
             /*output_schema*/(
                 std::is_same_v<T, std::string>
                 ?
-                    static_cast<Mcp::Schema::Base &&>(
-                        Mcp::Schema::Object{}.addMember( "value", Mcp::Schema::String{} ).addMemberOpt( "allowedValues", Mcp::Schema::Array( Mcp::Schema::String{} ) )
+                    static_cast<Schema::Base &&>(
+                        Schema::Object{}.addMember( "value", Schema::String{} ).addMemberOpt( "allowedValues", Schema::Array( Schema::String{} ) )
                     )
                 :
-                    static_cast<Mcp::Schema::Base &&>(
-                        Mcp::Schema::Object{}.addMember( "value", Mcp::Schema::Number{} ).addMember( "min", Mcp::Schema::Number{} ).addMember( "max", Mcp::Schema::Number{} )
+                    static_cast<Schema::Base &&>(
+                        Schema::Object{}.addMember( "value", Schema::Number{} ).addMember( "min", Schema::Number{} ).addMember( "max", Schema::Number{} )
                     )
             ),
             /*func*/mcpToolReadValue<T>
@@ -226,8 +219,8 @@ MR_ON_INIT{
             /*id*/"ui.writeValue" + idSuffix,
             /*name*/"Write UI " + displayType + " value",
             /*desc*/withPreamble( writeDesc ),
-            /*input_schema*/Mcp::Schema::Object{}.addMember( "path", Mcp::Schema::Array( Mcp::Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Mcp::Schema::Base &&>( Mcp::Schema::String{} ) : static_cast<Mcp::Schema::Base &&>( Mcp::Schema::Number{} ) ),
-            /*output_schema*/Mcp::Schema::Empty{},
+            /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Schema::Base &&>( Schema::String{} ) : static_cast<Schema::Base &&>( Schema::Number{} ) ),
+            /*output_schema*/Schema::Empty{},
             /*func*/mcpToolWriteValue<T>
         );
     };
@@ -238,6 +231,6 @@ MR_ON_INIT{
     handleValueType.operator()<std::string  >( "String", "string" );
 }; // MR_ON_INIT
 
-} // namespace MR
+} // namespace MR::Mcp
 
 #endif

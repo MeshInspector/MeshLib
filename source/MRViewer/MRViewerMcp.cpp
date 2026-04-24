@@ -1,9 +1,15 @@
 #ifndef MESHLIB_NO_MCP
 
 #include "MRMcp/MRMcp.h"
+#include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRImage.h"
+#include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MROnInit.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
@@ -11,6 +17,9 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
+#include <filesystem>
+#include <fstream>
+#include <future>
 #include <stdexcept>
 
 namespace MR::Mcp
@@ -99,6 +108,60 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
+static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
+{
+    const bool includeUi = args.value( "includeUi", false );
+    const int width = args.value( "width", 0 );
+    const int height = args.value( "height", 0 );
+    if ( width < 0 || height < 0 )
+        throw std::runtime_error( "`width` and `height` must be non-negative." );
+    const bool transparentBg = args.value( "transparentBg", false );
+
+    Image img;
+    if ( includeUi )
+    {
+        // captureUIScreenShot is async — it queues onto the GUI thread and fires the callback after
+        // the next frame. Block the MCP handler thread on a future until that happens.
+        std::promise<Image> promise;
+        auto future = promise.get_future();
+        getViewerInstance().captureUIScreenShot( [&promise]( const Image& i ) { promise.set_value( i ); } );
+        img = future.get();
+    }
+    else
+    {
+        MR::CommandLoop::runCommandFromGUIThread( [&]
+        {
+            img = getViewerInstance().captureSceneScreenShot( { width, height }, transparentBg );
+        } );
+    }
+
+    nlohmann::json out = nlohmann::json::object();
+    if ( args.contains( "filePath" ) )
+    {
+        const auto path = pathFromUtf8( args["filePath"].get<std::string>() );
+        auto saved = ImageSave::toAnySupportedFormat( img, path );
+        if ( !saved )
+            throw std::runtime_error( saved.error() );
+        out["path"] = utf8string( path );
+    }
+    else
+    {
+        UniqueTemporaryFolder tmp{};
+        const std::filesystem::path path = tmp / "screenshot.png";
+        auto saved = ImageSave::toAnySupportedFormat( img, path );
+        if ( !saved )
+            throw std::runtime_error( saved.error() );
+        std::ifstream in( path, std::ios::binary );
+        if ( !in )
+            throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
+        std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+        out["bytes"] = encode64( bytes.data(), bytes.size() );
+    }
+    out["width"] = img.resolution.x;
+    out["height"] = img.resolution.y;
+    return nlohmann::json::object( { { "result", std::move( out ) } } );
+}
+
 MR_ON_INIT{
     Server& server = getDefaultServer();
 
@@ -131,6 +194,31 @@ MR_ON_INIT{
             .addMember( "upDir",      Schema::Array( Schema::Number{} ) ),
         /*output_schema*/Schema::Empty{},
         /*func*/mcpViewerSetupCamera
+    );
+
+    server.addTool(
+        /*id*/  "viewer.captureScreenshot",
+        /*name*/"Capture viewport screenshot",
+        /*desc*/"Render the viewer to a PNG. Default (`includeUi: false`) captures only the 3D viewport; set "
+                "`includeUi: true` to capture the whole window including panels, ribbon, and dialogs. "
+                "For the 3D-only mode, optional `width`/`height` request a specific resolution (zero or missing = "
+                "current viewport size) and `transparentBg` (default false) omits the background — these options "
+                "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "
+                "normal background). "
+                "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to get "
+                "an inline base64 PNG; response is `{bytes, width, height}`.",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "includeUi",     Schema::Bool{} )
+            .addMemberOpt( "width",         Schema::Number{} )
+            .addMemberOpt( "height",        Schema::Number{} )
+            .addMemberOpt( "transparentBg", Schema::Bool{} )
+            .addMemberOpt( "filePath",      Schema::String{} ),
+        /*output_schema*/Schema::Object{}
+            .addMemberOpt( "path",   Schema::String{} )
+            .addMemberOpt( "bytes",  Schema::String{} )
+            .addMember(    "width",  Schema::Number{} )
+            .addMember(    "height", Schema::Number{} ),
+        /*func*/mcpViewerCaptureScreenshot
     );
 }; // MR_ON_INIT
 

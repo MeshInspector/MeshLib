@@ -123,8 +123,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       # install helper utility for Python version management
       - name: Install uv

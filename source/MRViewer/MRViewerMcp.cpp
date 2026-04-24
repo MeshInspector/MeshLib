@@ -13,6 +13,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRFitData.h"
 #include "MRViewer/MRMcpCommon.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
@@ -43,7 +44,6 @@ Vector3f readVec3( const nlohmann::json& j, std::string_view field )
 static nlohmann::json mcpViewerFit( const nlohmann::json& args )
 {
     const float factor = args.value( "factor", 1.0f );
-    const bool snapView = args.value( "snapView", true );
 
     // Collect ids / points outside the GUI thread so parse errors throw before the main loop blocks.
     std::vector<uint64_t> ids;
@@ -61,7 +61,9 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         auto& vp = getViewerInstance().viewport();
         if ( ids.empty() && points.empty() )
         {
-            vp.fitData( factor, snapView );
+            FitDataParams p;
+            p.factor = factor;
+            vp.preciseFitDataToScreenBorder( p );
             return;
         }
         Box3f box;
@@ -72,11 +74,11 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
                 throw std::runtime_error( objEx.error() );
             box.include( ( *objEx )->getWorldBox() );
         }
-        for ( const Vector3f& p : points )
-            box.include( p );
+        for ( const Vector3f& pt : points )
+            box.include( pt );
         if ( !box.valid() )
             throw std::runtime_error( "viewer.fit: the given objects and points contribute no bounding volume." );
-        vp.fitBox( box, factor, snapView );
+        vp.preciseFitBoxToScreenBorder( { box, factor } );
     } );
     skipFramesAfterInput();
     return nlohmann::json::object();
@@ -102,7 +104,8 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
     {
         auto& vp = getViewerInstance().viewport();
         vp.cameraLookAlong( fwdN, up );
-        vp.fitData();
+        // preciseFitDataToScreenBorder defaults to snapView=false — keeps the user's direction.
+        vp.preciseFitDataToScreenBorder();
     } );
     skipFramesAfterInput();
     return nlohmann::json::object();
@@ -171,13 +174,12 @@ MR_ON_INIT{
         /*desc*/"Frame a set of objects and/or world-space points in the active viewport. Pass `objectIds` (scene-object "
                 "ids from `scene.listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
                 "their bounding volumes are unioned. If neither is given, fits the whole scene (same as the UI's "
-                "\"Fit\" action). `factor` (default 1.0) controls framing margin — higher means more screen coverage; "
-                "`snapView` (default true) snaps the camera to the nearest canonical quaternion.",
+                "\"Fit\" action). `factor` (default 1.0) controls framing margin — higher means more screen coverage. "
+                "The camera angle is preserved (no canonical-view snapping).",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
             .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
-            .addMemberOpt( "factor",    Schema::Number{} )
-            .addMemberOpt( "snapView",  Schema::Bool{} ),
+            .addMemberOpt( "factor",    Schema::Number{} ),
         /*output_schema*/Schema::Empty{},
         /*func*/mcpViewerFit
     );

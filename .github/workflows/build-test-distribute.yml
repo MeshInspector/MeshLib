@@ -331,7 +331,7 @@ jobs:
           output-credentials: true
 
       - name: Install dependencies
-        run: python3 -m pip install boto3 botocore
+        run: python3 -m pip install boto3 botocore requests
 
       - name: Collect stats
         env:

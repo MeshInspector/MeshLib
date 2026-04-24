@@ -10,11 +10,11 @@ def print_stats(icp):
     if num_active_pairs > 0:
         p2pt_metric = icp.getMeanSqDistToPoint()
         p2pt_inaccuracy = icp.getMeanSqDistToPoint(p2pt_metric)
-        print(f"RMS point-to-point distance: {p2pt_metric} \u00b1 {p2pt_inaccuracy}")
+        print(f"RMS point-to-point distance: {p2pt_metric} ± {p2pt_inaccuracy}")
 
         p2pl_metric = icp.getMeanSqDistToPlane()
         p2pl_inaccuracy = icp.getMeanSqDistToPlane(p2pl_metric)
-        print(f"RMS point-to-plane distance: {p2pl_metric} \u00b1 {p2pl_inaccuracy}")
+        print(f"RMS point-to-plane distance: {p2pl_metric} ± {p2pl_inaccuracy}")
 
 
 def main(argv):

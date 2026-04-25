@@ -323,12 +323,13 @@ jobs:
           pattern: ArtifactStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         id: aws-creds
         with:
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
+          retry-max-attempts: 5
 
       - name: Install dependencies
         run: python3 -m pip install boto3 botocore

@@ -212,14 +212,12 @@ jobs:
          path: MeshLib.nupkg
          retention-days: 1
 
-     # Delete the per-platform .NET patch archives only after the .nupkg has
-     # been successfully built and uploaded as the DistributivesNuGet artifact.
-     # Default `if: success()` keeps them intact on failure so "Re-run failed
-     # jobs" can pick them up without rebuilding the whole platform matrix.
-     - name: Delete consumed NuGet Patches artifacts
+     - name: Delete consumed NuGet input artifacts
        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
        with:
-         name: DotNetPatchArchive*
+         name: |
+           DotNetPatchArchive*
+           DotNetDllXml
          failOnError: false
 
   upload-distributions:
@@ -268,10 +266,6 @@ jobs:
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
-      # Delete the source artifacts only after they have been successfully
-      # uploaded to the GitHub release. Default `if: success()` keeps them
-      # intact on failure so "Re-run failed jobs" can pick them up without
-      # rebuilding from scratch.
       - name: Delete consumed Distribution artifacts
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
@@ -369,18 +363,6 @@ jobs:
     if: always()
     continue-on-error: true
     steps:
-      # .NET
-      - name: Delete .NET Binaries Archive artifact
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: DotNetDllXml
-          failOnError: false
-      # `DotNetPatchArchive*` artifacts are deleted at the tail of
-      # create-nuget-package once they have been successfully consumed by
-      # nuget.exe pack and the resulting .nupkg uploaded.
-      # `Distributives*` artifacts are deleted at the tail of upload-distributions
-      # once they have been successfully pushed to the GitHub release.
-
       - name: Delete Wheelhouse
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:

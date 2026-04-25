@@ -258,6 +258,16 @@ jobs:
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
+      # Delete the source artifacts only after they have been successfully
+      # uploaded to the GitHub release. Default `if: success()` keeps them
+      # intact on failure so "Re-run failed jobs" can pick them up without
+      # rebuilding from scratch.
+      - name: Delete consumed Distribution artifacts
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: Distributives*
+          failOnError: false
+
   windows-unity-test:
     if: ${{ needs.config.outputs.run_unity_nuget_test == 'true' }}
     needs:
@@ -360,12 +370,8 @@ jobs:
         with:
           name: DotNetPatchArchive*
           failOnError: false
-      # Distributives
-      - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: Distributives*
-          failOnError: false
+      # `Distributives*` artifacts are deleted at the tail of upload-distributions
+      # once they have been successfully pushed to the GitHub release.
 
       - name: Delete Wheelhouse
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0

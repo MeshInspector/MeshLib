@@ -160,7 +160,10 @@
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
     <ClCompile Include="MRUITestEngineControl.cpp" />
+    <ClCompile Include="MRUiMcp.cpp" />
+    <ClCompile Include="MRSceneMcp.cpp" />
     <ClCompile Include="MRViewerMcp.cpp" />
+    <ClCompile Include="MRMcpCommon.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -342,6 +345,7 @@
     <ClInclude Include="MRI18n.h" />
     <ClInclude Include="MRLocaleMacos.h" />
     <ClInclude Include="MRUITestEngineControl.h" />
+    <ClInclude Include="MRMcpCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

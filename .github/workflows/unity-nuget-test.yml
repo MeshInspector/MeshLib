@@ -26,7 +26,7 @@ concurrency:
 jobs:
   start-unity-instance:
     name: Start unity instance
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     outputs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     steps:
@@ -124,7 +124,7 @@ jobs:
 
 
   stop-instance:
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     needs: [ unity-nuget-test ]
     if: always()
     steps:

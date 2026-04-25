@@ -224,8 +224,24 @@ jobs:
         if: ${{ always() }}
         shell: pwsh
         continue-on-error: true
-        working-directory: source\x64\${{ matrix.config }}
-        run: ${{ github.workspace }}\scripts\diagnostics\windows-bin-imports.ps1 -VcPath "${{ matrix.vc-path }}"
+        # Don't pin working-directory to source\x64\${{ matrix.config }} — when
+        # an upstream step fails before MSBuild runs, that directory does not
+        # exist and the runner cannot start pwsh, which makes the failure
+        # cascade look like the previous step is the failing one.
+        # Instead enter the directory inside the script and bail out cleanly
+        # if it doesn't exist.
+        run: |
+          $buildDir = Join-Path $Env:GITHUB_WORKSPACE 'source\x64\${{ matrix.config }}'
+          if (-not (Test-Path $buildDir)) {
+            Write-Host "Build output directory '$buildDir' does not exist — skipping diagnostic."
+            exit 0
+          }
+          Push-Location $buildDir
+          try {
+            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ matrix.vc-path }}"
+          } finally {
+            Pop-Location
+          }
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

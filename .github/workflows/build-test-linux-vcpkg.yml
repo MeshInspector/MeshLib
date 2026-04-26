@@ -93,6 +93,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: true
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -109,13 +111,16 @@ jobs:
           build_config: ${{ matrix.config }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
-      - name: Checkout third-party submodules
+      - name: Checkout mrbind submodules
         run: |
-          # have to checkout selective submodules by our own
-          # related issue: https://github.com/actions/checkout/issues/1779
+          # The earlier `actions/checkout@... submodules: true` already
+          # initialised every top-level submodule, but non-recursively. Of
+          # the entire thirdparty/ tree, only thirdparty/mrbind has nested
+          # sub-submodules (deps/cppdecl), so a targeted recursive update
+          # here is enough.
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/mrbind-pybind11 thirdparty/mrbind thirdparty/fastmcpp thirdparty/nlohmann-json thirdparty/cpp-httplib
+          git submodule update --init --recursive --depth 1 thirdparty/mrbind
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}

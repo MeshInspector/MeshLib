@@ -54,6 +54,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: true
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -66,13 +68,16 @@ jobs:
           cxx_compiler: ${{ matrix.cxx-compiler }}
           build_config: ${{ matrix.config }}
 
-      - name: Checkout third-party submodules
+      - name: Checkout mrbind submodules
         run: |
-          # have to checkout selective submodules by our own
-          # related issue: https://github.com/actions/checkout/issues/1779
+          # The earlier `actions/checkout@... submodules: true` already
+          # initialised every top-level submodule, but non-recursively. Of
+          # the entire thirdparty/ tree, only thirdparty/mrbind has nested
+          # sub-submodules (deps/cppdecl), so a targeted recursive update
+          # here is enough.
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          git submodule update --init --recursive --depth 1 thirdparty/mrbind
 
       - name: Install thirdparty libs
         run: |

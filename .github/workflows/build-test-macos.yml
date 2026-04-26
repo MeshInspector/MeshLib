@@ -111,23 +111,42 @@ jobs:
           build_config: ${{ matrix.config }}
 
       - name: Install thirdparty libs
-        run: ./scripts/build_thirdparty.sh
         env:
           CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
           CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
+        run: |
+          # Suppress Homebrew's spurious GHA workflow commands
+          # (`::error::`/`::warning::` for "<pkg> is already installed" lines)
+          # emitted by the transitively-invoked install_brew_requirements.sh.
+          # Override `set -e` so the matching ::brew-quiet:: sentinel always
+          # runs and command parsing is restored even on failure.
+          set +e
+          echo "::stop-commands::brew-quiet"
+          ./scripts/build_thirdparty.sh
+          rc=$?
+          echo "::brew-quiet::"
+          exit $rc
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}
         env:
           HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
-          brew install gettext
+          ./scripts/brew_quiet.sh install gettext
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: |
-          ./scripts/mrbind/install_deps_macos.sh
-          ./scripts/mrbind/install_mrbind_macos.sh
+          # Same rationale as "Install thirdparty libs" — install_deps_macos.sh
+          # does `brew install make grep llvm@18` internally. Wrap both
+          # MRBind install steps so we only restore command parsing once.
+          set +e
+          echo "::stop-commands::brew-quiet"
+          ./scripts/mrbind/install_deps_macos.sh && \
+            ./scripts/mrbind/install_mrbind_macos.sh
+          rc=$?
+          echo "::brew-quiet::"
+          exit $rc
 
       - name: Create virtualenv
         run: |

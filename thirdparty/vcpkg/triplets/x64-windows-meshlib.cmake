@@ -5,3 +5,6 @@ set(VCPKG_DISABLE_COMPILER_TRACKING ON)
 set(VCPKG_CXX_FLAGS_DEBUG "${VCPKG_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 set(VCPKG_C_FLAGS_DEBUG "${VCPKG_C_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 
+# Build zlib-ng (overlaid as `zlib`) in compat mode. See arm64-linux-meshlib.cmake for the rationale.
+set(ZLIB_COMPAT ON)
+

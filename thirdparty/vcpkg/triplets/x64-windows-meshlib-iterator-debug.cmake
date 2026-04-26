@@ -8,3 +8,6 @@ set(VCPKG_CMAKE_CONFIGURE_OPTIONS "${VCPKG_CMAKE_CONFIGURE_OPTIONS} -T v142")
 
 set(VCPKG_CXX_FLAGS_DEBUG "${VCPKG_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=2")
 set(VCPKG_C_FLAGS_DEBUG "${VCPKG_C_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=2")
+
+# Build zlib-ng (overlaid as `zlib`) in compat mode. See arm64-linux-meshlib.cmake for the rationale.
+set(ZLIB_COMPAT ON)

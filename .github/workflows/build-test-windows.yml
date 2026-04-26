@@ -63,7 +63,7 @@ jobs:
           # below are header-only consumed directly by MeshLib's source,
           # plus the build-tool deps.
           # See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/expected thirdparty/mrbind thirdparty/mrbind-pybind11
+          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/expected thirdparty/OpenCTM-git thirdparty/laz-perf thirdparty/fastmcpp thirdparty/nlohmann-json thirdparty/cpp-httplib thirdparty/mrbind thirdparty/mrbind-pybind11
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

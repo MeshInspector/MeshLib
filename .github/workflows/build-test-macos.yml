@@ -73,13 +73,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Checkout third-party submodules
         run: |
-          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+          # Selective rather than `submodules: true` on the Checkout above:
+          # the parent only inits submodules we actually use. Apple skips
+          # the heavy ones that come from Homebrew or build_thirdparty.sh
+          # (openvdb, GDCM, libzip, jsoncpp, fmt, spdlog, onetbb, c-blosc,
+          # mbedtls, mbedtls, …). The list below covers the submodules built
+          # from source via thirdparty/CMakeLists.txt's Apple branch, plus
+          # header-only ones consumed directly, plus the build-tool deps.
+          # See: https://github.com/actions/checkout/issues/1779
+          git submodule update --init --recursive --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/googletest \
+            thirdparty/OpenCTM-git \
+            thirdparty/libE57Format \
+            thirdparty/glad \
+            thirdparty/tinygltf \
+            thirdparty/laz-perf \
+            thirdparty/mrbind \
+            thirdparty/mrbind-pybind11
 
       - name: Setup Homebrew prefix and resolve compiler paths
         id: setup

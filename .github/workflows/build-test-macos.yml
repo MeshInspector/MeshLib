@@ -95,6 +95,7 @@ jobs:
             thirdparty/glad \
             thirdparty/tinygltf \
             thirdparty/laz-perf \
+            thirdparty/clip \
             thirdparty/fastmcpp \
             thirdparty/nlohmann-json \
             thirdparty/cpp-httplib \

@@ -76,9 +76,15 @@ jobs:
         with:
           submodules: true
 
-      - name: Checkout third-party submodules
+      - name: Checkout mrbind submodules
         run: |
-          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
+          # The earlier `actions/checkout@... submodules: true` already
+          # initialised every top-level submodule, but non-recursively. Of
+          # the entire thirdparty/ tree, only thirdparty/mrbind has nested
+          # sub-submodules (deps/cppdecl), so a targeted recursive update
+          # here is enough. Avoiding `submodules: recursive` on the parent
+          # checkout improves build performance.
+          # See: https://github.com/actions/checkout/issues/1779
           git submodule update --init --recursive --depth 1 thirdparty/mrbind
 
       - name: Setup Homebrew prefix and resolve compiler paths

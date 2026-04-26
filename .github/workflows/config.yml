@@ -112,7 +112,7 @@ jobs:
       tag-disable-macos:          ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
       tag-disable-emscripten:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
 
     env:
       # duplicate output values here since they cannot be accessed from steps
@@ -123,8 +123,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       # install helper utility for Python version management
       - name: Install uv

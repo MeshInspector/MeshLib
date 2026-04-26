@@ -391,10 +391,16 @@
     <ClCompile Include="MRUITestEngineControl.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewerMcp.cpp">
+    <ClCompile Include="MRUiMcp.cpp">
       <Filter>MCP</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMcpCommon.cpp">
       <Filter>MCP</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneCache.cpp">
@@ -902,6 +908,9 @@
     </ClInclude>
     <ClInclude Include="MRUITestEngineControl.h">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMcpCommon.h">
+      <Filter>MCP</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneCache.h">
       <Filter>Viewer</Filter>

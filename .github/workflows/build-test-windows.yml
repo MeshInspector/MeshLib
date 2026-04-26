@@ -104,10 +104,11 @@ jobs:
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@4ce2bbcf5d401e557e0537d863a6aced08605794 # v4
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
+          retry-max-attempts: 5
 
       - name: Update vcpkg packages
         run: |
@@ -229,8 +230,24 @@ jobs:
         if: ${{ always() }}
         shell: pwsh
         continue-on-error: true
-        working-directory: source\x64\${{ matrix.config }}
-        run: ${{ github.workspace }}\scripts\diagnostics\windows-bin-imports.ps1 -VcPath "${{ matrix.vc-path }}"
+        # Don't pin working-directory to source\x64\${{ matrix.config }} — when
+        # an upstream step fails before MSBuild runs, that directory does not
+        # exist and the runner cannot start pwsh, which makes the failure
+        # cascade look like the previous step is the failing one.
+        # Instead enter the directory inside the script and bail out cleanly
+        # if it doesn't exist.
+        run: |
+          $buildDir = Join-Path $Env:GITHUB_WORKSPACE 'source\x64\${{ matrix.config }}'
+          if (-not (Test-Path $buildDir)) {
+            Write-Host "Build output directory '$buildDir' does not exist — skipping diagnostic."
+            exit 0
+          }
+          Push-Location $buildDir
+          try {
+            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ matrix.vc-path }}"
+          } finally {
+            Pop-Location
+          }
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

@@ -75,7 +75,10 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             spdlog::info( "pressButton {}: frame {}", MR::UI::TestEngine::Control::pathToString( path ), MR::getViewerInstance().getTotalFrames() );
-            MR::expectedValueOrThrow( MR::UI::TestEngine::Control::pressButton( path ) );
+            // Empty status = OK (click simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
+            auto status = MR::expectedValueOrThrow( MR::UI::TestEngine::Control::pressButton( path ) );
+            if ( !status.empty() )
+                spdlog::warn( "pressButton {}: {} (silent no-op)", MR::UI::TestEngine::Control::pathToString( path ), status );
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
             MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
@@ -117,7 +120,10 @@ namespace
     {
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
-            MR::expectedValueOrThrow( Control::writeValue<T>( path, std::move( value ) ) );
+            // Empty status = OK (write simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
+            auto status = MR::expectedValueOrThrow( Control::writeValue<T>( path, std::move( value ) ) );
+            if ( !status.empty() )
+                spdlog::warn( "writeValue {}: {} (silent no-op)", Control::pathToString( path ), status );
         } );
     }
 }

@@ -85,10 +85,10 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
 )
 
 REM Install vcpkg core dependencies
-vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
 
 REM Install all required dependencies
-vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
 
 endlocal
 goto :EOF

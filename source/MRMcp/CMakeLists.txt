@@ -20,9 +20,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND MESHLIB_USE_VCPKG)
   # fix missing references to 'getaddrinfo_a' and 'gai_*' functions (required by cpp-httplib)
   target_link_libraries(${PROJECT_NAME} PRIVATE anl)
 endif()
-
-if(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+# inject work-around for Clang libc++ and older Xcode versions' compatibility
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_precompile_headers(${PROJECT_NAME} 
+    PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:"<fastmcpp/clang.hpp>">
+  )
 endif()
 
 install(

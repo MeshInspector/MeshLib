@@ -41,6 +41,7 @@ struct Server::State
     fastmcpp::tools::ToolManager toolManager; // This has to be persistent, or `fastmcpp::mcp::make_mcp_handler()` dangles it.
     std::unordered_map<std::string, std::string> toolDescs; // No idea why this is not a part of `toolManager`.
     std::optional<fastmcpp::server::SseServerWrapper> server;
+    Server::ToolValidator toolValidator; // Empty by default; consulted per tool call when set.
 
     void createServer( const Params& params )
     {
@@ -78,7 +79,16 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
         return false;
     }
 
-    state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( inputSchema ).asJson(), std::move( outputSchema ).asJson(), func, name, desc, {} ) );
+    auto wrapped = [statePtr = state_.get(), id, inner = std::move( func )]( const nlohmann::json& args ) -> nlohmann::json
+    {
+        if ( statePtr->toolValidator )
+        {
+            if ( auto res = statePtr->toolValidator( id ); !res )
+                throw std::runtime_error( std::move( res.error() ) );
+        }
+        return inner( args );
+    };
+    state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( inputSchema ).asJson(), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
     return true;
 }
 
@@ -135,6 +145,13 @@ bool Server::setRunning( bool enable )
         }
         return true;
     }
+}
+
+void Server::setToolValidator( ToolValidator validator )
+{
+    if ( !state_ )
+        state_ = std::make_unique<State>();
+    state_->toolValidator = std::move( validator );
 }
 
 Server& getDefaultServer()

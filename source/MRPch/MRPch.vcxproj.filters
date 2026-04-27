@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MREigen.h" />
+    <ClInclude Include="MRFastmcpp.h" />
     <ClInclude Include="MRJson.h" />
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MRTBB.h" />

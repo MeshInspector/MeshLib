@@ -1,26 +1,5 @@
-// Must not include any standard headers
-
-#undef _t // Our translation macro interefers with Fastmcpp.
-
-#if defined( __GNUC__ )
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#elif defined( _MSC_VER )
-#pragma warning( push )
-#pragma warning( disable: 4100 ) // unreferenced formal parameter
-#pragma warning( disable: 4355 ) // 'this': used in base member initializer list
-#endif
-
-// This must be included before any standard library headers, because of the macro shenanigans we added to that header.
-// Those are duplicated into our PCH, so that shouldn't interfere.
-#include <fastmcpp.hpp>
-#include <fastmcpp/server/sse_server.hpp>
-
-#if defined( __GNUC__ )
-#pragma GCC diagnostic pop
-#elif defined( _MSC_VER )
-#pragma warning( pop )
-#endif
+// Must not include any standard headers (fastmcpp's macro shenanigans rely on it).
+#include "MRPch/MRFastmcpp.h"
 
 #include "MRMcp.h"
 

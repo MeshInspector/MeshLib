@@ -1,25 +1,6 @@
-// fastmcpp must be included before any standard headers per MRMcp's pattern.
-
-#if defined( __GNUC__ )
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#elif defined( _MSC_VER )
-#pragma warning( push )
-#pragma warning( disable: 4100 )
-#pragma warning( disable: 4355 )
-#endif
-
-#include <fastmcpp.hpp>
-#include <fastmcpp/proxy.hpp>
-#include <fastmcpp/server/stdio_server.hpp>
-#include <fastmcpp/client/transports.hpp>
-#include <fastmcpp/mcp/handler.hpp>
-
-#if defined( __GNUC__ )
-#pragma GCC diagnostic pop
-#elif defined( _MSC_VER )
-#pragma warning( pop )
-#endif
+// Must not include any standard headers before MRFastmcpp.h (fastmcpp's macro
+// shenanigans rely on it).
+#include "MRPch/MRFastmcpp.h"
 
 #include "MRMCPGatewaySpawn.h"
 
@@ -38,6 +19,11 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#ifndef _WIN32
+#include <pwd.h>
+#include <unistd.h>
+#endif
 
 namespace MR::McpGateway
 {
@@ -62,23 +48,37 @@ struct Config
 // touch this file (or just delete the cache dir).
 constexpr const char* kBuildStamp = __TIMESTAMP__;
 
-// Per-user app-data dir for the gateway. Mirrors the leaf-folder convention of
-// MR::getUserConfigDir() (in MRSystem.cpp:168-202) but uses "MRMCPGateway" so
-// the cache is namespaced to the gateway, not to MeshInspector.
+// PASTED from MR::getUserConfigDir() in MeshLib/source/MRMesh/MRSystem.cpp.
+// Adapted to: hardcode the leaf folder (no Config::instance() dep) and use
+// std::cerr instead of spdlog so the gateway keeps its zero-MRMesh,
+// zero-spdlog dependency footprint.
 std::filesystem::path gatewayUserConfigDir()
 {
-    constexpr const char* kAppName = "MRMCPGateway";
-#ifdef _WIN32
-    if ( const char* p = std::getenv( "APPDATA" ) )
-        return std::filesystem::path( p ) / kAppName;
-#elif defined( __APPLE__ )
-    if ( const char* h = std::getenv( "HOME" ) )
-        return std::filesystem::path( h ) / "Library" / "Application Support" / kAppName;
+#if defined( _WIN32 )
+    std::filesystem::path filepath( _wgetenv( L"APPDATA" ) );
 #else
-    if ( const char* h = std::getenv( "HOME" ) )
-        return std::filesystem::path( h ) / ".local" / "share" / kAppName;
+#if defined( __EMSCRIPTEN__ )
+    std::filesystem::path filepath( "/" );
+#else
+    std::filesystem::path filepath;
+    if ( const auto* pw = getpwuid( getuid() ) )
+        filepath = pw->pw_dir;
+    else if ( const char* h = std::getenv( "HOME" ) )
+        filepath = h;
 #endif
-    return std::filesystem::path{} / kAppName;
+    filepath /= ".local";
+    filepath /= "share";
+#endif
+    filepath /= "MRMCPGateway";
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( filepath, ec ) || ec )
+    {
+        std::filesystem::create_directories( filepath, ec );
+        if ( ec )
+            std::cerr << "MRMCPGateway: cannot create " << filepath.string()
+                      << ": " << ec.message() << "\n";
+    }
+    return filepath;
 }
 
 std::filesystem::path cacheDir( const Config& cfg )

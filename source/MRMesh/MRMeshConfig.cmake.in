@@ -8,6 +8,7 @@ find_dependency(JsonCpp)
 find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
+find_dependency(zlib-ng)
 
 # static builds require to find private dependencies
 if(EMSCRIPTEN)

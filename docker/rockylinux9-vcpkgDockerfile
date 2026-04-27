@@ -32,24 +32,13 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-# Retry on transient download failures (HTTP 502 / network blips from
-# github.com archive endpoint, etc.). vcpkg's per-port build cache means
-# that on retry, only the failed-to-download port is re-fetched; ports
-# already built earlier in the install sequence are reused from cache.
 RUN source /opt/rh/autoconf271/enable && \
-    for attempt in 1 2 3 ; do \
-        if ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ') ; then \
-            break ; \
-        fi ; \
-        if [ "$attempt" = "3" ] ; then \
-            echo "vcpkg install failed after 3 attempts" >&2 ; exit 1 ; \
-        fi ; \
-        echo "vcpkg install failed (attempt $attempt/3); retrying in 30s..." >&2 ; \
-        sleep 30 ; \
-    done
+    $(: network may flake ) \
+    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 

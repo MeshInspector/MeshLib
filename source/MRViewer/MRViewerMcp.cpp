@@ -312,6 +312,15 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
+static nlohmann::json mcpViewerShutdown( const nlohmann::json& )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        MR::getViewerInstance().stopEventLoop();
+    } );
+    return nlohmann::json::object();
+}
+
 MR_ON_INIT{
     Server& server = getDefaultServer();
 
@@ -406,6 +415,17 @@ MR_ON_INIT{
             .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
         /*output_schema*/Schema::Empty{},
         /*func*/mcpViewerSendKeyboardEvent
+    );
+
+    server.addTool(
+        /*id*/  "viewer.shutdown",
+        /*name*/"Close MeshInspector",
+        /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
+                "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
+                "After this call the gateway's `launch` tool can bring MeshInspector back up.",
+        /*input_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Empty{},
+        /*func*/mcpViewerShutdown
     );
 }; // MR_ON_INIT
 

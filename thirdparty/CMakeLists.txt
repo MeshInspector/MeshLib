@@ -85,8 +85,6 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
-# zlib-ng from our submodule on Ubuntu apt + Emscripten (no package available);
-# Windows/macOS/vcpkg pick it up via requirements/*.txt and find_package.
 IF(NOT WIN32 AND NOT APPLE AND NOT MESHLIB_USE_VCPKG)
   set(ZLIB_COMPAT       OFF CACHE BOOL "")
   set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "")
@@ -103,8 +101,6 @@ IF(NOT WIN32 AND NOT APPLE AND NOT MESHLIB_USE_VCPKG)
   ELSE()
     add_subdirectory(./zlib-ng)
   ENDIF()
-  # zlib-ng exports zlib-ng::zlib only at install time; alias for in-tree use.
-  add_library(zlib-ng::zlib ALIAS zlib)
 ENDIF()
 
 option(PHMAP_INSTALL "" ON)

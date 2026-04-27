@@ -33,6 +33,7 @@ find_package(JsonCpp REQUIRED)
 find_package(spdlog 1.9 REQUIRED)
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 find_package(tl-expected REQUIRED)
+find_package(zlib-ng REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
@@ -45,6 +46,7 @@ target_link_libraries(${PROJECT_NAME}
     tl::expected
   PRIVATE
     ${CMAKE_DL_LIBS}
+    zlib-ng::zlib
 )
 
 # libzip on Emscripten is unable to resolve its dependencies by itself
@@ -64,15 +66,6 @@ ELSE()
   add_library(libzip::zip ALIAS PkgConfig::libzip)
 ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
-
-# zlib-ng (native mode, zng_ prefix) powers MRZlib's compress/decompress streams.
-# Sourced via find_package on vcpkg/Homebrew (where the port installs a CMake
-# config), or via add_subdirectory + ALIAS in thirdparty/CMakeLists.txt on
-# Ubuntu apt and Emscripten.
-IF(NOT TARGET zlib-ng::zlib)
-  find_package(zlib-ng CONFIG REQUIRED)
-ENDIF()
-target_link_libraries(${PROJECT_NAME} PRIVATE zlib-ng::zlib)
 
 # TODO: CMake config
 target_include_directories(${PROJECT_NAME}

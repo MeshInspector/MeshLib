@@ -6,29 +6,6 @@ vcpkg_from_github(
     HEAD_REF develop
 )
 
-# MeshLib: strip zlib-ng's GNU symbol version script and the matching .symver
-# pragmas in its C sources.
-#
-# Upstream's CMakeLists.txt defines -DHAVE_SYMVER (which turns on __asm__(
-# ".symver foo, foo@@ZLIB_NG_2.0.0") pragmas in zbuild.h) and passes
-# -Wl,--version-script=zlib-ng.map to the linker whenever the target is
-# non-Apple, non-AIX UNIX. Both together tag every exported symbol in
-# libz-ng.so with ZLIB_NG_2.0.0 / ZLIB_NG_2.1.0 version nodes, which end up
-# in DT_VERNEED of anything linking against libz-ng.
-#
-# auditwheel's manylinux policy database has no entry for (libz-ng.so.2,
-# ZLIB_NG_*), so the MeshLib NuGet wheel-repair step fails with "too-recent
-# versioned symbols" even though no actual symbol is too recent. We don't
-# exercise zlib-ng's ABI-versioning machinery (our consumers rebuild against
-# whatever libz-ng we ship), so we neutralize both knobs by flipping the
-# guarding condition to FALSE. Upstream's zlib-ng.map file is left on disk
-# but never wired into the build.
-vcpkg_replace_string(
-    "${SOURCE_PATH}/CMakeLists.txt"
-    "if(NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL AIX)"
-    "if(FALSE)  # MeshLib: symbol versioning disabled, see thirdparty/vcpkg/ports/zlib-ng/portfile.cmake"
-)
-
 # Set ZLIB_COMPAT in the triplet file to turn on
 if(NOT DEFINED ZLIB_COMPAT)
     set(ZLIB_COMPAT OFF)

@@ -11,10 +11,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRMCPGatewayBackend.h" />
+    <ClInclude Include="MRMCPGatewayCache.h" />
+    <ClInclude Include="MRMCPGatewayConfig.h" />
     <ClInclude Include="MRMCPGatewaySpawn.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRMCPGateway.cpp" />
+    <ClCompile Include="MRMCPGatewayBackend.cpp" />
+    <ClCompile Include="MRMCPGatewayCache.cpp" />
     <ClCompile Include="MRMCPGatewaySpawn.cpp" />
   </ItemGroup>
   <ItemGroup>

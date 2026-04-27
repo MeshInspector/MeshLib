@@ -14,11 +14,26 @@
     <ClCompile Include="MRMCPGateway.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRMCPGatewayBackend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMCPGatewayCache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRMCPGatewaySpawn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRMCPGatewayBackend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMCPGatewayCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMCPGatewayConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="MRMCPGatewaySpawn.h">
       <Filter>Header Files</Filter>
     </ClInclude>

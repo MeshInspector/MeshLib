@@ -197,7 +197,7 @@ bool ViewerSetup::setupMcp() const
 {
     #ifndef MESHLIB_NO_MCP
     Mcp::getDefaultServer().setRunning( true );
-    Mcp::getDefaultServer().dumpToolCacheIfNeeded( getViewerInstance().commandArgs );
+    Mcp::getDefaultServer().processCmdArgs( getViewerInstance().commandArgs );
     return true;
     #else
     return false;

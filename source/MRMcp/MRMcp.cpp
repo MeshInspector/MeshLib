@@ -1,5 +1,5 @@
 // Must not include any standard headers (fastmcpp's macro shenanigans rely on it).
-#include "MRPch/MRFastmcpp.h"
+#include "MRMcp/MRFastmcpp.h"
 
 #include "MRMcp.h"
 
@@ -159,7 +159,7 @@ nlohmann::json Server::dumpToolsAsJson() const
     return out;
 }
 
-bool Server::saveToolsCache( const std::filesystem::path& path ) const
+Expected<void> Server::saveToolsCache( const std::filesystem::path& path ) const
 {
     nlohmann::json envelope = { { "tools", dumpToolsAsJson() } };
 
@@ -168,10 +168,8 @@ bool Server::saveToolsCache( const std::filesystem::path& path ) const
     {
         std::filesystem::create_directories( path.parent_path(), ec );
         if ( ec )
-        {
-            spdlog::error( "MRMcp: cannot create directory {}: {}", utf8string( path.parent_path() ), ec.message() );
-            return false;
-        }
+            return unexpected( fmt::format( "cannot create directory {}: {}",
+                utf8string( path.parent_path() ), ec.message() ) );
     }
 
     // Write to a sibling .tmp first then rename: this is atomic on the filesystem,
@@ -182,31 +180,29 @@ bool Server::saveToolsCache( const std::filesystem::path& path ) const
     {
         std::ofstream f( tmp );
         if ( !f )
-        {
-            spdlog::error( "MRMcp: cannot open {} for writing", utf8string( tmp ) );
-            return false;
-        }
+            return unexpected( fmt::format( "cannot open {} for writing", utf8string( tmp ) ) );
         f << envelope.dump( 2 );
     }
     std::filesystem::rename( tmp, path, ec );
     if ( ec )
     {
-        spdlog::error( "MRMcp: cannot rename {} -> {}: {}", utf8string( tmp ), utf8string( path ), ec.message() );
         std::filesystem::remove( tmp );
-        return false;
+        return unexpected( fmt::format( "cannot rename {} -> {}: {}",
+            utf8string( tmp ), utf8string( path ), ec.message() ) );
     }
     spdlog::info( "MRMcp: dumped {} tools to {}", state_ ? state_->toolManager.list_names().size() : 0u, utf8string( path ) );
-    return true;
+    return {};
 }
 
-void Server::dumpToolCacheIfNeeded( const std::vector<std::string>& commandArgs ) const
+void Server::processCmdArgs( const std::vector<std::string>& commandArgs ) const
 {
     for ( size_t i = 0; i + 1 < commandArgs.size(); ++i )
     {
         if ( commandArgs[i] == "-mcpDumpFile" )
         {
             const std::filesystem::path target = commandArgs[i + 1];
-            saveToolsCache( target );
+            if ( auto res = saveToolsCache( target ); !res )
+                spdlog::error( "MRMcp: {}", res.error() );
             return;
         }
     }

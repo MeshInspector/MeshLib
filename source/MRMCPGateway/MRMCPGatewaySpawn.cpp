@@ -69,9 +69,8 @@ void appendQuotedArg( std::wstring& cmdLine, const std::wstring& arg )
     cmdLine.push_back( L'"' );
 }
 
-} // anonymous namespace
-
-bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::string>& args )
+// Build the full Windows command line from the executable path + arg list.
+std::wstring buildCmdLine( const std::filesystem::path& exe, const std::vector<std::string>& args )
 {
     std::wstring cmdLine;
     appendQuotedArg( cmdLine, exe.wstring() );
@@ -80,16 +79,22 @@ bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::str
         cmdLine.push_back( L' ' );
         appendQuotedArg( cmdLine, utf8ToWide( a ) );
     }
+    return cmdLine;
+}
 
+// Launch @p exe with @p cmdLine and the given creation flags. On success fills
+// @p pi (caller must CloseHandle both handles); on failure logs and returns false.
+bool createProcessRaw( const std::filesystem::path& exe, std::wstring& cmdLine,
+                      DWORD creationFlags, PROCESS_INFORMATION& pi )
+{
     STARTUPINFOW si{};
     si.cb = sizeof( si );
-    PROCESS_INFORMATION pi{};
     BOOL ok = CreateProcessW(
         exe.c_str(),
         cmdLine.data(),
         nullptr, nullptr,
         FALSE,
-        DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+        creationFlags,
         nullptr, nullptr,
         &si, &pi );
     if ( !ok )
@@ -97,6 +102,17 @@ bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::str
         std::cerr << "MRMCPGateway: CreateProcess failed, error " << GetLastError() << "\n";
         return false;
     }
+    return true;
+}
+
+} // anonymous namespace
+
+bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::string>& args )
+{
+    auto cmdLine = buildCmdLine( exe, args );
+    PROCESS_INFORMATION pi{};
+    if ( !createProcessRaw( exe, cmdLine, DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP, pi ) )
+        return false;
     CloseHandle( pi.hProcess );
     CloseHandle( pi.hThread );
     return true;
@@ -105,39 +121,15 @@ bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::str
 bool spawnAndWait( const std::filesystem::path& exe, const std::vector<std::string>& args,
                    std::chrono::seconds timeout )
 {
-    std::wstring cmdLine;
-    appendQuotedArg( cmdLine, exe.wstring() );
-    for ( const auto& a : args )
-    {
-        cmdLine.push_back( L' ' );
-        appendQuotedArg( cmdLine, utf8ToWide( a ) );
-    }
-
-    STARTUPINFOW si{};
-    si.cb = sizeof( si );
+    auto cmdLine = buildCmdLine( exe, args );
     PROCESS_INFORMATION pi{};
-    BOOL ok = CreateProcessW(
-        exe.c_str(),
-        cmdLine.data(),
-        nullptr, nullptr,
-        FALSE,
-        0,                  // attached: no DETACHED_PROCESS
-        nullptr, nullptr,
-        &si, &pi );
-    if ( !ok )
-    {
-        std::cerr << "MRMCPGateway: CreateProcess failed, error " << GetLastError() << "\n";
+    if ( !createProcessRaw( exe, cmdLine, 0, pi ) )
         return false;
-    }
     const DWORD waitMs = static_cast<DWORD>(
         std::chrono::duration_cast<std::chrono::milliseconds>( timeout ).count() );
     const DWORD wait = WaitForSingleObject( pi.hProcess, waitMs );
-    bool finished = false;
-    if ( wait == WAIT_OBJECT_0 )
-    {
-        finished = true;
-    }
-    else
+    bool finished = ( wait == WAIT_OBJECT_0 );
+    if ( !finished )
     {
         std::cerr << "MRMCPGateway: prime spawn timed out after " << timeout.count() << "s, killing\n";
         TerminateProcess( pi.hProcess, 1 );
@@ -150,24 +142,31 @@ bool spawnAndWait( const std::filesystem::path& exe, const std::vector<std::stri
 
 #else // POSIX
 
-bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::string>& args )
+namespace
+{
+
+// Fork + exec @p exe with @p args. If @p detach, the child detaches into its own
+// session and double-forks before exec so the grandchild has no parent in our
+// process tree (prevents zombies after our process exits). Returns the pid of
+// the immediate child the caller should waitpid() on, or -1 on failure.
+pid_t forkExec( const std::filesystem::path& exe, const std::vector<std::string>& args, bool detach )
 {
     pid_t first = fork();
     if ( first < 0 )
-        return false;
+        return -1;
     if ( first == 0 )
     {
-        // First child: detach into a new session, then fork again so the
-        // grandchild has no parent in our process tree (no zombies).
-        if ( setsid() < 0 )
-            _exit( 127 );
-        pid_t second = fork();
-        if ( second < 0 )
-            _exit( 127 );
-        if ( second > 0 )
-            _exit( 0 );
-
-        // Grandchild: exec the target.
+        if ( detach )
+        {
+            if ( setsid() < 0 )
+                _exit( 127 );
+            pid_t second = fork();
+            if ( second < 0 )
+                _exit( 127 );
+            if ( second > 0 )
+                _exit( 0 );
+            // grandchild falls through to exec
+        }
         std::string exeStr = exe.string();
         std::vector<std::string> argsCopy = args;
         std::vector<char*> argv;
@@ -179,31 +178,14 @@ bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::str
         execvp( argv[0], argv.data() );
         _exit( 127 );
     }
-    // Parent: reap the first child (which exits immediately after the second fork).
-    int status = 0;
-    waitpid( first, &status, 0 );
-    return WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
+    return first;
 }
 
-bool spawnAndWait( const std::filesystem::path& exe, const std::vector<std::string>& args,
-                   std::chrono::seconds timeout )
+// Poll waitpid(WNOHANG) until @p pid exits or @p timeout elapses; on timeout
+// SIGKILL the child and reap. Returns true iff the child exited cleanly within
+// the timeout.
+bool waitForProcessWithTimeout( pid_t pid, std::chrono::seconds timeout )
 {
-    pid_t pid = fork();
-    if ( pid < 0 )
-        return false;
-    if ( pid == 0 )
-    {
-        std::string exeStr = exe.string();
-        std::vector<std::string> argsCopy = args;
-        std::vector<char*> argv;
-        argv.reserve( argsCopy.size() + 2 );
-        argv.push_back( exeStr.data() );
-        for ( auto& a : argsCopy )
-            argv.push_back( a.data() );
-        argv.push_back( nullptr );
-        execvp( argv[0], argv.data() );
-        _exit( 127 );
-    }
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     while ( std::chrono::steady_clock::now() < deadline )
     {
@@ -219,6 +201,28 @@ bool spawnAndWait( const std::filesystem::path& exe, const std::vector<std::stri
     kill( pid, SIGKILL );
     waitpid( pid, nullptr, 0 );
     return false;
+}
+
+} // anonymous namespace
+
+bool spawnDetached( const std::filesystem::path& exe, const std::vector<std::string>& args )
+{
+    pid_t first = forkExec( exe, args, /*detach=*/true );
+    if ( first < 0 )
+        return false;
+    // Reap the first child (which exits immediately after the second fork).
+    int status = 0;
+    waitpid( first, &status, 0 );
+    return WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
+}
+
+bool spawnAndWait( const std::filesystem::path& exe, const std::vector<std::string>& args,
+                   std::chrono::seconds timeout )
+{
+    pid_t pid = forkExec( exe, args, /*detach=*/false );
+    if ( pid < 0 )
+        return false;
+    return waitForProcessWithTimeout( pid, timeout );
 }
 
 #endif

@@ -2,6 +2,8 @@
 
 #include "exports.h"
 
+#include "MRMesh/MRExpected.h"
+
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
@@ -158,15 +160,14 @@ public:
     [[nodiscard]] MRMCP_API nlohmann::json dumpToolsAsJson() const;
 
     /// Atomically writes `{ "tools": dumpToolsAsJson() }` to @p path, creating parent
-    /// directories as needed. Returns false (and logs) on I/O failure.
-    MRMCP_API bool saveToolsCache( const std::filesystem::path& path ) const;
+    /// directories as needed. Returns an error message on I/O failure.
+    MRMCP_API Expected<void> saveToolsCache( const std::filesystem::path& path ) const;
 
-    /// If @p commandArgs contains `-mcpDumpFile <path>`, writes the tool cache to that path,
-    /// then calls `std::exit` to skip the rest of viewer init (which requires UI/GL context
-    /// the headless dump invocation doesn't provide). Otherwise a no-op. Intended to be
-    /// called once during MCP setup with the viewer's own launch arguments, after every
+    /// Processes MCP-related command-line arguments. Currently only `-mcpDumpFile <path>`,
+    /// which writes the tool cache to that path. Otherwise a no-op. Intended to be called
+    /// once during MCP setup with the viewer's own launch arguments, after every
     /// `MR_ON_INIT` tool registration has run.
-    MRMCP_API void dumpToolCacheIfNeeded( const std::vector<std::string>& commandArgs ) const;
+    MRMCP_API void processCmdArgs( const std::vector<std::string>& commandArgs ) const;
 
 private:
     struct State;

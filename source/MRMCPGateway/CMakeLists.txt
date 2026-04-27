@@ -2,6 +2,8 @@ project(MRMCPGateway CXX)
 
 add_executable(${PROJECT_NAME}
   MRMCPGateway.cpp
+  MRMCPGatewayBackend.cpp
+  MRMCPGatewayCache.cpp
   MRMCPGatewaySpawn.cpp
 )
 

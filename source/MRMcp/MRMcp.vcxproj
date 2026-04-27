@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRFastmcpp.h" />
     <ClInclude Include="MRMcp.h" />
   </ItemGroup>
   <ItemGroup>

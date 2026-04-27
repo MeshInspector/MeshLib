@@ -30,9 +30,11 @@
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -51,7 +53,46 @@ struct Config
     std::filesystem::path launchCommand;
     std::vector<std::string> launchArgs;
     std::chrono::seconds launchTimeout{ 30 };
+    std::string toolsCacheNamespace; // --tools-cache-namespace <name> (optional sub-folder)
 };
+
+// Compile-time build stamp baked into this translation unit. Written to a
+// sibling .stamp file after each successful cache prime; compared on startup
+// to decide whether the existing cache is still good. To force a re-prime,
+// touch this file (or just delete the cache dir).
+constexpr const char* kBuildStamp = __TIMESTAMP__;
+
+// Per-user app-data dir for the gateway. Mirrors the leaf-folder convention of
+// MR::getUserConfigDir() (in MRSystem.cpp:168-202) but uses "MRMCPGateway" so
+// the cache is namespaced to the gateway, not to MeshInspector.
+std::filesystem::path gatewayUserConfigDir()
+{
+    constexpr const char* kAppName = "MRMCPGateway";
+#ifdef _WIN32
+    if ( const char* p = std::getenv( "APPDATA" ) )
+        return std::filesystem::path( p ) / kAppName;
+#elif defined( __APPLE__ )
+    if ( const char* h = std::getenv( "HOME" ) )
+        return std::filesystem::path( h ) / "Library" / "Application Support" / kAppName;
+#else
+    if ( const char* h = std::getenv( "HOME" ) )
+        return std::filesystem::path( h ) / ".local" / "share" / kAppName;
+#endif
+    return std::filesystem::path{} / kAppName;
+}
+
+std::filesystem::path cacheDir( const Config& cfg )
+{
+    auto d = gatewayUserConfigDir();
+    if ( !cfg.toolsCacheNamespace.empty() )
+        d /= cfg.toolsCacheNamespace;
+    return d;
+}
+std::filesystem::path cachePath( const Config& cfg ) { return cacheDir( cfg ) / "mcp_tools_cache.json"; }
+
+// Cached tool entries loaded from the cache file at startup; spliced into
+// `tools/list` responses when the backend is offline.
+std::vector<nlohmann::json> g_cachedTools;
 
 bool probeBackendAlive( const std::string& targetUrl )
 {
@@ -92,6 +133,120 @@ bool probeAndTrackBackend( const std::string& targetUrl )
     if ( wasPrimed && wasAlive != nowAlive )
         emitToolsListChanged();
     return nowAlive;
+}
+
+// Reads the cache file and returns true iff its `stamp` field equals kBuildStamp.
+bool cacheStampMatches( const std::filesystem::path& cache )
+{
+    std::ifstream f( cache );
+    if ( !f )
+        return false;
+    nlohmann::json doc;
+    try { f >> doc; } catch ( ... ) { return false; }
+    if ( !doc.is_object() || !doc.contains( "stamp" ) || !doc["stamp"].is_string() )
+        return false;
+    return doc["stamp"].get<std::string>() == kBuildStamp;
+}
+
+// Reads the cache, sets its `stamp` field to kBuildStamp, atomically writes it back.
+bool embedStampInCache( const std::filesystem::path& cache )
+{
+    std::ifstream in( cache );
+    if ( !in )
+        return false;
+    nlohmann::json doc;
+    try { in >> doc; } catch ( ... ) { return false; }
+    in.close();
+    if ( !doc.is_object() )
+        return false;
+    doc["stamp"] = kBuildStamp;
+
+    auto tmp = cache;
+    tmp += ".tmp";
+    {
+        std::ofstream out( tmp );
+        if ( !out )
+            return false;
+        out << doc.dump( 2 );
+    }
+    std::error_code ec;
+    std::filesystem::rename( tmp, cache, ec );
+    if ( ec )
+    {
+        std::filesystem::remove( tmp );
+        return false;
+    }
+    return true;
+}
+
+// If the cache is stale or missing AND the backend is offline, spawn the backend
+// synchronously (attached, hidden) so it dumps the tool schemas, then embed our
+// build stamp into the just-written file. Best-effort — failures are logged but
+// non-fatal (the gateway proceeds with whatever cache content exists, or none).
+void ensureFreshCache( const Config& cfg )
+{
+    const auto cache = cachePath( cfg );
+
+    if ( cacheStampMatches( cache ) )
+        return; // already fresh
+
+    // Backend already running → live tools/list will be authoritative this
+    // session, skip the prime (and avoid port collision).
+    if ( probeBackendAlive( cfg.targetUrl ) )
+        return;
+
+    if ( cfg.launchCommand.empty() )
+        return;
+
+    std::error_code ec;
+    const auto mtimeBefore = std::filesystem::exists( cache, ec )
+        ? std::filesystem::last_write_time( cache, ec )
+        : std::filesystem::file_time_type{};
+
+    std::vector<std::string> primeArgs = cfg.launchArgs;
+    for ( const char* flag : { "-hidden", "-noEventLoop", "-noTelemetry", "-noSplash" } )
+        primeArgs.emplace_back( flag );
+    primeArgs.emplace_back( "-mcpDumpFile" );
+    primeArgs.emplace_back( cache.string() );
+
+    // Synchronous spawn: blocks until the backend exits (or times out). Avoids
+    // the polling-sees-stale-cache race that file-existence polling has when an
+    // older cache file is already on disk.
+    if ( !spawnAndWait( cfg.launchCommand, primeArgs, cfg.launchTimeout ) )
+    {
+        std::cerr << "MRMCPGateway: prime spawn did not complete cleanly\n";
+        return;
+    }
+
+    // Confirm the backend actually rewrote the cache file before stamping it.
+    if ( !std::filesystem::exists( cache, ec ) )
+    {
+        std::cerr << "MRMCPGateway: backend exited without writing cache file\n";
+        return;
+    }
+    const auto mtimeAfter = std::filesystem::last_write_time( cache, ec );
+    if ( mtimeAfter <= mtimeBefore )
+    {
+        std::cerr << "MRMCPGateway: cache file unchanged after prime; not stamping\n";
+        return;
+    }
+    embedStampInCache( cache );
+}
+
+void loadCachedTools( const Config& cfg )
+{
+    g_cachedTools.clear();
+    const auto cache = cachePath( cfg );
+    std::ifstream f( cache );
+    if ( !f )
+        return;
+    nlohmann::json doc;
+    try { f >> doc; } catch ( ... ) { return; }
+    if ( !doc.is_object() || !doc.contains( "tools" ) || !doc["tools"].is_array() )
+        return;
+    for ( const auto& t : doc["tools"] )
+        if ( t.is_object() )
+            g_cachedTools.push_back( t );
 }
 
 nlohmann::json emptyObjectSchema()
@@ -192,6 +347,9 @@ void printUsage()
         "  --target-url <url>       Backend MCP server URL (default http://127.0.0.1:7887).\n"
         "  --sse-path <path>        SSE endpoint path (default /sse).\n"
         "  --messages-path <path>   POST endpoint path (default /messages).\n"
+        "  --tools-cache-namespace <name>\n"
+        "                           Optional sub-folder under the gateway's user-data dir,\n"
+        "                           letting multiple installations keep independent caches.\n"
         "  --help, -h               Show this message.\n";
 }
 
@@ -240,6 +398,11 @@ bool parseArgs( int argc, char** argv, Config& cfg )
             if ( !needNext( "--launch-timeout" ) ) return false;
             cfg.launchTimeout = std::chrono::seconds( std::atoi( argv[++i] ) );
         }
+        else if ( a == "--tools-cache-namespace" )
+        {
+            if ( !needNext( "--tools-cache-namespace" ) ) return false;
+            cfg.toolsCacheNamespace = argv[++i];
+        }
         else if ( a == "--help" || a == "-h" )
         {
             printUsage();
@@ -274,6 +437,13 @@ int main( int argc, char** argv )
     if ( !parseArgs( argc, argv, cfg ) )
         return 1;
 
+    // Prime the on-disk tool cache (synchronous; ~3-5 s when actually priming) and
+    // load the resulting JSON into memory. Failures are non-fatal: we proceed with
+    // an empty cache and only the local `launch`/`status` tools will be visible
+    // until the backend actually launches.
+    ensureFreshCache( cfg );
+    loadCachedTools( cfg );
+
     fastmcpp::ProxyApp proxy(
         [cfg]() {
             // Fast pre-check: SseClientTransport blocks for a long internal timeout when the
@@ -302,7 +472,8 @@ int main( int argc, char** argv )
     //     enough to trip `claude mcp list`'s health-check timeout when the backend is offline.
     auto handler = [inner]( const fastmcpp::Json& req ) -> fastmcpp::Json
     {
-        if ( req.is_object() && req.value( "method", std::string{} ) == "initialize" )
+        const std::string method = req.is_object() ? req.value( "method", std::string{} ) : std::string{};
+        if ( method == "initialize" )
         {
             const auto id = req.contains( "id" ) ? req.at( "id" ) : fastmcpp::Json();
             return fastmcpp::Json{
@@ -315,7 +486,27 @@ int main( int argc, char** argv )
                 } },
             };
         }
-        return inner( req );
+
+        fastmcpp::Json resp = inner( req );
+
+        // When the backend is offline, fastmcpp's proxy returns only our local tools
+        // (`launch`, `status`). Splice in the cached schema array so the MCP client
+        // still sees the full proxied surface and can decide which tools to call.
+        if ( method == "tools/list" && !g_backendAlive.load() && !g_cachedTools.empty()
+             && resp.is_object() && resp.contains( "result" ) && resp["result"].contains( "tools" )
+             && resp["result"]["tools"].is_array() )
+        {
+            auto& tools = resp["result"]["tools"];
+            std::set<std::string> seen;
+            for ( const auto& t : tools )
+                if ( t.is_object() && t.contains( "name" ) && t["name"].is_string() )
+                    seen.insert( t["name"].get<std::string>() );
+            for ( const auto& cached : g_cachedTools )
+                if ( cached.contains( "name" ) && cached["name"].is_string()
+                     && !seen.count( cached["name"].get<std::string>() ) )
+                    tools.push_back( cached );
+        }
+        return resp;
     };
     fastmcpp::server::StdioServerWrapper server( handler );
     return server.run() ? 0 : 1;

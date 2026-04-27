@@ -4,8 +4,11 @@
 
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace MR::Mcp
 {
@@ -148,6 +151,22 @@ public:
     /// Returns true on success, including if the server is already running and you're trying to start it again.
     /// Stopping always returns true.
     MRMCP_API bool setRunning( bool enable );
+
+    /// Returns the list of currently-registered tools as a JSON array of MCP `tool` entries
+    /// (`name`, optional `title`/`description`, `inputSchema`, `outputSchema`).
+    /// Suitable for splicing into a `tools/list` response or persisting to a cache file.
+    [[nodiscard]] MRMCP_API nlohmann::json dumpToolsAsJson() const;
+
+    /// Atomically writes `{ "tools": dumpToolsAsJson() }` to @p path, creating parent
+    /// directories as needed. Returns false (and logs) on I/O failure.
+    MRMCP_API bool saveToolsCache( const std::filesystem::path& path ) const;
+
+    /// If @p commandArgs contains `-mcpDumpFile <path>`, writes the tool cache to that path,
+    /// then calls `std::exit` to skip the rest of viewer init (which requires UI/GL context
+    /// the headless dump invocation doesn't provide). Otherwise a no-op. Intended to be
+    /// called once during MCP setup with the viewer's own launch arguments, after every
+    /// `MR_ON_INIT` tool registration has run.
+    MRMCP_API void dumpToolCacheIfNeeded( const std::vector<std::string>& commandArgs ) const;
 
 private:
     struct State;

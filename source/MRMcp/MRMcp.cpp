@@ -24,12 +24,14 @@
 
 #include "MRMcp.h"
 
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRUITestEngineControl.h"
 #include "MRViewer/MRViewer.h"
 
+#include <fstream>
 #include <type_traits>
 
 
@@ -134,6 +136,100 @@ bool Server::setRunning( bool enable )
             spdlog::info( "MCP server stopped" );
         }
         return true;
+    }
+}
+
+nlohmann::json Server::dumpToolsAsJson() const
+{
+    auto out = nlohmann::json::array();
+    if ( !state_ )
+        return out;
+    for ( const auto& name : state_->toolManager.list_names() )
+    {
+        const auto& tool = state_->toolManager.get( name );
+        nlohmann::json entry = {
+            { "name", tool.name() },
+            { "inputSchema", tool.input_schema() },
+        };
+        if ( tool.title().has_value() )
+            entry["title"] = *tool.title();
+        if ( tool.description().has_value() )
+            entry["description"] = *tool.description();
+        else if ( auto it = state_->toolDescs.find( name ); it != state_->toolDescs.end() )
+            entry["description"] = it->second;
+        const auto& outSchema = tool.output_schema();
+        if ( !outSchema.is_null() && !( outSchema.is_object() && outSchema.empty() ) )
+        {
+            // MCP requires `outputSchema.type == "object"`. fastmcpp's mcp/handler.cpp
+            // wraps non-object schemas at runtime; mirror the same shape here so
+            // cached entries match what the live server emits in `tools/list`.
+            const bool alreadyObject = outSchema.is_object()
+                && outSchema.contains( "type" ) && outSchema.at( "type" ) == "object";
+            if ( alreadyObject )
+                entry["outputSchema"] = outSchema;
+            else
+                entry["outputSchema"] = {
+                    { "type", "object" },
+                    { "properties", { { "result", outSchema } } },
+                    { "required", nlohmann::json::array( { "result" } ) },
+                    { "x-fastmcp-wrap-result", true },
+                };
+        }
+        out.push_back( std::move( entry ) );
+    }
+    return out;
+}
+
+bool Server::saveToolsCache( const std::filesystem::path& path ) const
+{
+    nlohmann::json envelope = { { "tools", dumpToolsAsJson() } };
+
+    std::error_code ec;
+    if ( !path.parent_path().empty() )
+    {
+        std::filesystem::create_directories( path.parent_path(), ec );
+        if ( ec )
+        {
+            spdlog::error( "MRMcp: cannot create directory {}: {}", utf8string( path.parent_path() ), ec.message() );
+            return false;
+        }
+    }
+
+    // Write to a sibling .tmp first then rename: this is atomic on the filesystem,
+    // so a concurrent reader (e.g. the gateway polling for the cache) never sees a
+    // partial write or an empty file mid-flush.
+    auto tmp = path;
+    tmp += ".tmp";
+    {
+        std::ofstream f( tmp );
+        if ( !f )
+        {
+            spdlog::error( "MRMcp: cannot open {} for writing", utf8string( tmp ) );
+            return false;
+        }
+        f << envelope.dump( 2 );
+    }
+    std::filesystem::rename( tmp, path, ec );
+    if ( ec )
+    {
+        spdlog::error( "MRMcp: cannot rename {} -> {}: {}", utf8string( tmp ), utf8string( path ), ec.message() );
+        std::filesystem::remove( tmp );
+        return false;
+    }
+    spdlog::info( "MRMcp: dumped {} tools to {}", state_ ? state_->toolManager.list_names().size() : 0u, utf8string( path ) );
+    return true;
+}
+
+void Server::dumpToolCacheIfNeeded( const std::vector<std::string>& commandArgs ) const
+{
+    for ( size_t i = 0; i + 1 < commandArgs.size(); ++i )
+    {
+        if ( commandArgs[i] == "-mcpDumpFile" )
+        {
+            const std::filesystem::path target = commandArgs[i + 1];
+            saveToolsCache( target );
+            return;
+        }
     }
 }
 

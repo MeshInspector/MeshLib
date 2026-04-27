@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # NODE: using this script is deprecated! Better install meshlib(-dev).deb package
 # This script installs requirements by `apt` if not already installed

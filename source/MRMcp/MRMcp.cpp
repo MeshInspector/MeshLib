@@ -36,6 +36,44 @@
 namespace MR::Mcp
 {
 
+namespace
+{
+
+// Some MCP clients serialize array/object arguments as JSON-encoded strings
+// instead of native JSON values, which makes the server's argument parsing fail.
+// Tracked at https://github.com/anthropics/claude-code/issues/18260 .
+// For each top-level argument that the input schema types as `array` or `object`,
+// reify a string-encoded value back into the proper JSON shape. Idempotent for
+// well-behaved clients that already send the right type.
+nlohmann::json reifyStringEncodedArgs( nlohmann::json args, const nlohmann::json& schema )
+{
+    if ( !args.is_object() || !schema.is_object() )
+        return args;
+    auto propsIt = schema.find( "properties" );
+    if ( propsIt == schema.end() || !propsIt->is_object() )
+        return args;
+    for ( const auto& [key, propSchema] : propsIt->items() )
+    {
+        if ( !propSchema.is_object() )
+            continue;
+        auto typeIt = propSchema.find( "type" );
+        if ( typeIt == propSchema.end() || !typeIt->is_string() )
+            continue;
+        const auto& propType = typeIt->get_ref<const std::string&>();
+        if ( propType != "array" && propType != "object" )
+            continue;
+        auto argIt = args.find( key );
+        if ( argIt == args.end() || !argIt->is_string() )
+            continue;
+        auto parsed = nlohmann::json::parse( argIt->get_ref<const std::string&>(), nullptr, /* allow_exceptions */ false );
+        if ( !parsed.is_discarded() )
+            *argIt = std::move( parsed );
+    }
+    return args;
+}
+
+} // namespace
+
 struct Server::State
 {
     fastmcpp::tools::ToolManager toolManager; // This has to be persistent, or `fastmcpp::mcp::make_mcp_handler()` dangles it.
@@ -79,16 +117,17 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
         return false;
     }
 
-    auto wrapped = [statePtr = state_.get(), id, inner = std::move( func )]( const nlohmann::json& args ) -> nlohmann::json
+    auto schemaJson = std::move( inputSchema ).asJson();
+    auto wrapped = [statePtr = state_.get(), id, schema = schemaJson, inner = std::move( func )]( const nlohmann::json& args ) -> nlohmann::json
     {
         if ( statePtr->toolValidator )
         {
             if ( auto res = statePtr->toolValidator( id ); !res )
                 throw std::runtime_error( std::move( res.error() ) );
         }
-        return inner( args );
+        return inner( reifyStringEncodedArgs( args, schema ) );
     };
-    state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( inputSchema ).asJson(), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
+    state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
     return true;
 }
 

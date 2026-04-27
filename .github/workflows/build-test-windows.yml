@@ -58,7 +58,7 @@ jobs:
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git -c protocol.version=2 submodule update --init --force --depth=1 \
+          bash scripts/retry.sh -- git -c protocol.version=2 submodule update --init --depth=1 \
             thirdparty/imgui \
             thirdparty/eigen \
             thirdparty/parallel-hashmap \
@@ -71,7 +71,7 @@ jobs:
             thirdparty/mrbind \
             thirdparty/mrbind-pybind11
           # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --force --depth=1 deps/cppdecl
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth=1 deps/cppdecl
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

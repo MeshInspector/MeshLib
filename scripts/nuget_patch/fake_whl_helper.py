@@ -82,12 +82,6 @@ def patch_whl(out_dir : Path, libs_dirs : list[Path]):
                     # For some reason this only happes on Linux.
                     "--exclude", "libMeshLibC2.so",
 
-                    # zlib-ng's GNU symbol-versioned exports (ZLIB_NG_2.0.0/2.1.0)
-                    # aren't in auditwheel's manylinux policy database, so excluding
-                    # the SONAME bypasses the audit. The library stays in
-                    # dummy.libs/ from the make_fake_whl step.
-                    "--exclude", "libz-ng.so.2",
-
                     "dummy-1.0-py3-none-any.whl"
                 ]
             )

@@ -123,11 +123,6 @@ def build_wheel():
                 sys.executable, "-m", "auditwheel",
                 "repair",
                 "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
-                # zlib-ng's GNU symbol-versioned exports (ZLIB_NG_2.0.0/2.1.0) aren't
-                # in auditwheel's manylinux policy database, so excluding the SONAME
-                # bypasses the audit. The library stays in dummy.libs/ from the
-                # make_fake_whl step.
-                "--exclude", "libz-ng.so.2",
                 wheel_file
             ]
         )

@@ -13,7 +13,7 @@ namespace MR::UI::TestEngine::Control
 
 // Most changes in this file must be synced with:
 // * Python: `source/mrviewerpy/MRPythonUiInteraction.cpp`.
-// * MCP: `source/MRViewer/MRViewerMcp.cpp`.
+// * MCP: `source/MRViewer/MRUiMcp.cpp`.
 
 enum class EntryType
 {
@@ -68,8 +68,11 @@ using PathedEntry = std::pair<std::vector<std::string>, TypedEntry>;
 // and their descendants appear on subsequent rows with `path` extending theirs.
 [[nodiscard]] MRVIEWER_API Expected<std::vector<PathedEntry>> listAllEntries( const std::vector<std::string>& rootPath );
 
-// Presses the button at this path, or returns an error.
-MRVIEWER_API Expected<void> pressButton( const std::vector<std::string>& path );
+// Presses the button at this path.
+// Returns empty string on success (click simulated). If the button was drawn disabled, the press is a silent
+// no-op and the return is a non-empty status (`"disabled"` / `"disabled: <reason>"`) matching `composeStatus()`.
+// `unexpected` is returned only for hard errors (path not found, entry is not a button).
+MRVIEWER_API Expected<std::string> pressButton( const std::vector<std::string>& path );
 
 // Read/write values: (drags, sliders, etc)
 
@@ -101,14 +104,17 @@ extern template MRVIEWER_API Expected<Value<std::uint64_t>> readValue( const std
 extern template MRVIEWER_API Expected<Value<double       >> readValue( const std::vector<std::string>& path );
 extern template MRVIEWER_API Expected<Value<std::string  >> readValue( const std::vector<std::string>& path );
 
-// Modifies the value at the `path`, or returns an error if the path, type or value are wrong.
+// Modifies the value at the `path`.
+// Returns empty string on success (write simulated). If the widget was drawn disabled, the write is a silent
+// no-op and the return is a non-empty status (`"disabled"` / `"disabled: <reason>"`) matching `composeStatus()`.
+// `unexpected` is returned only for hard errors (path not found, wrong type, out-of-range / not-in-allowedValues).
 template <typename T>
-MRVIEWER_API Expected<void> writeValue( const std::vector<std::string>& path, T value );
+MRVIEWER_API Expected<std::string> writeValue( const std::vector<std::string>& path, T value );
 
-extern template MRVIEWER_API Expected<void> writeValue( const std::vector<std::string>& path, std::int64_t  value );
-extern template MRVIEWER_API Expected<void> writeValue( const std::vector<std::string>& path, std::uint64_t value );
-extern template MRVIEWER_API Expected<void> writeValue( const std::vector<std::string>& path, double        value );
-extern template MRVIEWER_API Expected<void> writeValue( const std::vector<std::string>& path, std::string   value );
+extern template MRVIEWER_API Expected<std::string> writeValue( const std::vector<std::string>& path, std::int64_t  value );
+extern template MRVIEWER_API Expected<std::string> writeValue( const std::vector<std::string>& path, std::uint64_t value );
+extern template MRVIEWER_API Expected<std::string> writeValue( const std::vector<std::string>& path, double        value );
+extern template MRVIEWER_API Expected<std::string> writeValue( const std::vector<std::string>& path, std::string   value );
 
 
 } // namespace MR::UI::TestEngine::Control

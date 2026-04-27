@@ -43,13 +43,15 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN source /opt/rh/gcc-toolset-11/enable && \
     source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
-    ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
+    $(: network may flake ) \
+    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 

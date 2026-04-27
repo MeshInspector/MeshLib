@@ -21,4 +21,14 @@ IF(APPLE)
   set(CPPFLAGS "-I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
   set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -undefined dynamic_lookup -framework Cocoa -framework OpenGL -framework IOKit") # https://github.com/pybind/pybind11/issues/382
+
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # use Homebrew zlib instead of system one for Clang builds
+    execute_process(
+      COMMAND brew --prefix zlib
+      OUTPUT_VARIABLE HOMEBREW_ZLIB_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(ZLIB_ROOT ${HOMEBREW_ZLIB_PREFIX})
+  endif()
 ENDIF() # APPLE

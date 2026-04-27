@@ -1,0 +1,27 @@
+name: 'Install MSYS2 for MRBind'
+description: 'Download the MeshLib MSYS2 archive from S3 with retry on transient failures and extract to C:\'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install MSYS2 for MRBind
+      shell: pwsh
+      run: |
+        # Retry the S3 fetch -- transient 404 / connection blips have been
+        # observed against vcpkg-export.s3.us-east-1.amazonaws.com.
+        $url = "https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip"
+        $dest = "./msys64_meshlib_mrbind.zip"
+        $maxAttempts = 5
+        $delay = 10
+        for ($i = 1; $i -le $maxAttempts; $i++) {
+          try {
+            (New-Object Net.WebClient).DownloadFile($url, $dest)
+            break
+          } catch {
+            if ($i -eq $maxAttempts) { throw }
+            Write-Host "Download attempt $i failed: $($_.Exception.Message). Retrying in $delay s..."
+            Start-Sleep -Seconds $delay
+            $delay *= 2
+          }
+        }
+        [IO.Compression.ZipFile]::ExtractToDirectory($dest, "C:\")
+        rm $dest

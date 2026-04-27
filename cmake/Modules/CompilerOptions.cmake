@@ -211,3 +211,14 @@ IF(MSVC)
   string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
   string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 ENDIF()
+
+# macOS: force Clang to use system libc++
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  execute_process(
+    COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE MACOS_SDK_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  add_compile_options(-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH})
+  add_link_options(-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi)
+endif()

@@ -11,4 +11,11 @@ CLANG_VER="$(cat $SCRIPT_DIR/clang_version.txt | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 brew update
-brew install make grep llvm@$CLANG_VER
+
+# `brew bundle` instead of `brew install` -- skips already-installed
+# formulae without the `::warning::` GHA annotations `brew install` emits.
+brew bundle install --no-upgrade --no-lock --file=- <<EOF
+brew "make"
+brew "grep"
+brew "llvm@${CLANG_VER}"
+EOF

@@ -121,7 +121,11 @@ jobs:
 
       - name: Python setup
         if: ${{ matrix.py-version != '3.11' }}
-        run: brew install python@${{matrix.py-version}}
+        run: |
+          # `brew bundle` -- no GHA annotations on already-installed.
+          brew bundle install --no-upgrade --no-lock --file=- <<EOF
+          brew "python@${{matrix.py-version}}"
+          EOF
 
       - name: Pip setup
         run: |

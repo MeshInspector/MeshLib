@@ -118,10 +118,12 @@ jobs:
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}
-        env:
-          HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
-          brew install gettext
+          # `brew bundle` keeps already-installed-and-up-to-date warnings
+          # from showing up as GHA `::warning::` annotations.
+          brew bundle install --no-upgrade --no-lock --file=- <<EOF
+          brew "gettext"
+          EOF
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}

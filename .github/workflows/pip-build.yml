@@ -332,13 +332,14 @@ jobs:
           # observed against vcpkg-export.s3.us-east-1.amazonaws.com.
           $url = "https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip"
           $dest = "./msys64_meshlib_mrbind.zip"
+          $maxAttempts = 5
           $delay = 10
-          for ($i = 1; $i -le 5; $i++) {
+          for ($i = 1; $i -le $maxAttempts; $i++) {
             try {
               (New-Object Net.WebClient).DownloadFile($url, $dest)
               break
             } catch {
-              if ($i -eq 5) { throw }
+              if ($i -eq $maxAttempts) { throw }
               Write-Host "Download attempt $i failed: $($_.Exception.Message). Retrying in $delay s..."
               Start-Sleep -Seconds $delay
               $delay *= 2

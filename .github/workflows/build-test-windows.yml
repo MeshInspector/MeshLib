@@ -56,34 +56,21 @@ jobs:
         shell: bash
         # Selective init -- parent Checkout drops submodules:true.
         # https://github.com/actions/checkout/issues/1779
-        # Wrapped in a retry loop because GitHub's submodule endpoints
-        # occasionally serve HTTP 500s for ~30-60s (see run 24845654039),
-        # and actions/checkout's built-in retry only tries each submodule
-        # twice, which wasn't enough for that blip.
+        # Retried via retry.sh: submodule endpoints occasionally 500.
         run: |
-          for i in 1 2 3; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 \
-                thirdparty/imgui \
-                thirdparty/eigen \
-                thirdparty/parallel-hashmap \
-                thirdparty/expected \
-                thirdparty/OpenCTM-git \
-                thirdparty/laz-perf \
-                thirdparty/fastmcpp \
-                thirdparty/nlohmann-json \
-                thirdparty/cpp-httplib \
-                thirdparty/mrbind \
-                thirdparty/mrbind-pybind11 \
-                && git -C thirdparty/mrbind submodule update --init --force --depth=1 deps/cppdecl; then
-              break
-            fi
-            if [ "$i" = "3" ]; then
-              echo "::error::submodule update failed after 3 attempts"
-              exit 1
-            fi
-            echo "::warning::submodule update attempt $i failed — retrying in 30s"
-            sleep 30
-          done
+          bash scripts/retry.sh -- git -c protocol.version=2 submodule update --init --force --depth=1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/OpenCTM-git \
+            thirdparty/laz-perf \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib \
+            thirdparty/mrbind \
+            thirdparty/mrbind-pybind11
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --force --depth=1 deps/cppdecl
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

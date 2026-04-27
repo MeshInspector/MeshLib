@@ -73,13 +73,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Checkout third-party submodules
         run: |
-          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+          # Selective init -- parent Checkout drops submodules:true.
+          # https://github.com/actions/checkout/issues/1779
+          git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/googletest \
+            thirdparty/OpenCTM-git \
+            thirdparty/libE57Format \
+            thirdparty/glad \
+            thirdparty/tinygltf \
+            thirdparty/laz-perf \
+            thirdparty/clip \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib \
+            thirdparty/mrbind \
+            thirdparty/mrbind-pybind11
+          # mrbind needs deps/cppdecl; recurse only there
+          git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Setup Homebrew prefix and resolve compiler paths
         id: setup

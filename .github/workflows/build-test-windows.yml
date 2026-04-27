@@ -159,9 +159,24 @@ jobs:
       - name: Install MSYS2 for MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         run: |
-          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
-          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
-          rm msys64_meshlib_mrbind.zip
+          # Retry the S3 fetch -- transient 404 / connection blips have been
+          # observed against vcpkg-export.s3.us-east-1.amazonaws.com.
+          $url = "https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip"
+          $dest = "./msys64_meshlib_mrbind.zip"
+          $delay = 10
+          for ($i = 1; $i -le 5; $i++) {
+            try {
+              (New-Object Net.WebClient).DownloadFile($url, $dest)
+              break
+            } catch {
+              if ($i -eq 5) { throw }
+              Write-Host "Download attempt $i failed: $($_.Exception.Message). Retrying in $delay s..."
+              Start-Sleep -Seconds $delay
+              $delay *= 2
+            }
+          }
+          [IO.Compression.ZipFile]::ExtractToDirectory($dest, "C:\")
+          rm $dest
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}

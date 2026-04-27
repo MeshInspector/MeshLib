@@ -41,8 +41,8 @@ TEST( MRMesh, CompressOneBigFileToZip )
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-    // ~120 KB; increase to compress a larger payload.
-    constexpr std::size_t fileBytes = 119808;
+    // ~12 MB; deliberately large for compression-time measurement.
+    constexpr std::size_t fileBytes = 12 * 1024 * 1024;
 
     const std::filesystem::path filePath = srcFolder / "big.bin";
     {
@@ -95,9 +95,9 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     ASSERT_TRUE( bool( srcFolder ) );
 
     // increase both below numbers to make the files being compressed larger, 200 * 2 files * 60'000 bytes -> 24M bytes
-    constexpr int numBinaryFiles = 20;
+    constexpr int numBinaryFiles = 200;
     constexpr int numJsonFiles = numBinaryFiles;
-    constexpr size_t bytesPerFile = 6000;
+    constexpr size_t bytesPerFile = 60000;
 
     auto makeName = []( const char * prefix, int i, const char * ext )
     {

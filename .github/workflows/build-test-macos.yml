@@ -133,13 +133,6 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
           CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
 
-      - name: Install gettext utilities
-        if: ${{ inputs.upload_artifacts }}
-        env:
-          HOMEBREW_NO_INSTALL_UPGRADE: 1
-        run: |
-          brew install gettext
-
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: |

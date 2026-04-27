@@ -33,7 +33,7 @@ find_package(JsonCpp REQUIRED)
 find_package(spdlog 1.9 REQUIRED)
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 find_package(tl-expected REQUIRED)
-find_package(zlib-ng REQUIRED)
+find_package(zlib-ng CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC

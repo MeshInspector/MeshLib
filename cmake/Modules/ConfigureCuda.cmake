@@ -11,7 +11,12 @@ IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
       # For our VS2022 CI:
       set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
     ELSE()
-      set(CMAKE_CUDA_STANDARD 20)
+      # https://cmake.org/cmake/help/latest/release/3.25.html#id2
+      IF(CMAKE_VERSION VERSION_LESS 3.25.2)
+        set(CMAKE_CUDA_STANDARD 17)
+      ELSE()
+        set(CMAKE_CUDA_STANDARD 20)
+      ENDIF()
       find_package(CUDAToolkit 12 REQUIRED)
     ENDIF()
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)

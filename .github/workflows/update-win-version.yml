@@ -96,7 +96,7 @@ jobs:
   cleanup-win-archives:
     needs: update-win-version
     if: always()
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     steps:
       - name: Delete Windows Binaries Archive
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0

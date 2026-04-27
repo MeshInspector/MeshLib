@@ -40,7 +40,7 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save the noised mesh
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "mesh_noised.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "noised_mesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
@@ -52,7 +52,7 @@ int main( void )
     MR_meshDenoiseViaNormals( mesh, NULL );
 
     // Save the denoised mesh
-    MR_expected_void_std_string* saveEx2 = MR_MeshSave_toAnySupportedFormat_3( mesh, "mesh_denoised.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx2 = MR_MeshSave_toAnySupportedFormat_3( mesh, "denoised_mesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx2 ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx2 ) ) );

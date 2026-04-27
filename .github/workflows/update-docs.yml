@@ -10,6 +10,14 @@ on:
 
 jobs:
   update-documentation:
+    # Serialize concurrent runs that publish to MeshInspector.github.io.
+    # Without this, two CI runs that finish near-simultaneously race on
+    # `git push` and the loser fails with "[rejected] master -> master
+    # (fetch first)". cancel-in-progress: false queues runs so every
+    # commit's docs eventually publish.
+    concurrency:
+      group: meshinspector-github-io-publish
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Install Doxygen

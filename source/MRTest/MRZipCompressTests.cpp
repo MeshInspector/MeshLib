@@ -1,8 +1,5 @@
 #include <MRMesh/MRDirectory.h>
 #include <MRMesh/MRGTest.h>
-#include <MRMesh/MRMakeSphereMesh.h>
-#include <MRMesh/MRMesh.h>
-#include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRZip.h>
 #include <MRMesh/MRTimer.h>
@@ -19,37 +16,55 @@
 namespace MR
 {
 
-// Writes a sphere to a .mrmesh file in a temporary folder, then
-// compresses that folder to a .zip and verifies the archive was created and
-// is non-empty. Serves as a realistic end-to-end exercise of MeshLib's zip
-// write path (libzip + deflate) on mesh-sized data.
-TEST( MRMesh, CompressSphereToZip )
+namespace
+{
+
+// Simple LCG used to produce deterministic pseudo-random bytes.
+// Keeps the test reproducible across runs and platforms while avoiding
+// trivially-compressible input (an all-zeros buffer would make deflate
+// look unrealistically good).
+inline uint64_t nextLcg( uint64_t & state )
+{
+    state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+    return state;
+}
+
+} // namespace
+
+// Writes one large file of deterministic pseudo-random bytes to a temp
+// folder and compresses that folder to a .zip. End-to-end check of the
+// zip write path (libzip + deflate) on a single big near-incompressible
+// entry. Pairs with CompressManySmallFilesToZip to contrast one-big-entry
+// vs many-small-entry archiver behaviour.
+TEST( MRMesh, CompressOneBigFileToZip )
 {
     UniqueTemporaryFolder srcFolder;
     ASSERT_TRUE( bool( srcFolder ) );
 
-    constexpr int targetVerts = 100000; // increase it to make the file being compressed larger, 100'000 vertices -> 12M bytes
-    SphereParams params;
-    params.radius = 1.0f;
-    params.numMeshVertices = targetVerts;
-    const Mesh sphere = makeSphere( params );
-    EXPECT_EQ( (int)sphere.topology.numValidVerts(), targetVerts );
+    // ~12 MB; deliberately large for compression-time measurement.
+    constexpr std::size_t fileBytes = 12 * 1024 * 1024;
 
-    // Save mesh as a .mrmesh file in the temp folder.
-    const std::filesystem::path meshPath = srcFolder / "sphere.mrmesh";
-    const auto saveRes = MeshSave::toMrmesh( sphere, meshPath );
-    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    const std::filesystem::path filePath = srcFolder / "big.bin";
+    {
+        uint64_t state = 0x00DDECAFCAFEF00DULL;
+        std::vector<char> buf( fileBytes );
+        for ( std::size_t j = 0; j < fileBytes; ++j )
+            buf[j] = (char)( nextLcg( state ) >> 56 );
+        std::ofstream out( filePath, std::ios::binary );
+        ASSERT_TRUE( out.is_open() );
+        out.write( buf.data(), (std::streamsize)buf.size() );
+        ASSERT_TRUE( out.good() );
+    }
     std::error_code ec;
-    ASSERT_TRUE( std::filesystem::exists( meshPath, ec ) );
-    const auto meshSize = std::filesystem::file_size( meshPath, ec );
-    EXPECT_GT( meshSize, 0u );
-    spdlog::info( "sphere.mrmesh size: {} bytes", meshSize );
+    ASSERT_TRUE( std::filesystem::exists( filePath, ec ) );
+    const auto fileSize = std::filesystem::file_size( filePath, ec );
+    EXPECT_EQ( fileSize, fileBytes );
+    spdlog::info( "big.bin size:       {} bytes", fileSize );
 
-    // Compress the temp folder into a .zip located in a second temp folder
-    // (so the zip isn't inside the folder being compressed).
+    // Zip lands in a separate temp folder so it isn't inside the source tree.
     UniqueTemporaryFolder dstFolder;
     ASSERT_TRUE( bool( dstFolder ) );
-    const std::filesystem::path zipPath = dstFolder / "sphere.zip";
+    const std::filesystem::path zipPath = dstFolder / "big.zip";
 
     Timer t( "t" );
     const auto compressRes = compressZip( zipPath, srcFolder );
@@ -59,18 +74,16 @@ TEST( MRMesh, CompressSphereToZip )
     ASSERT_TRUE( std::filesystem::exists( zipPath, ec ) );
     const auto zipSize = std::filesystem::file_size( zipPath, ec );
     EXPECT_GT( zipSize, 0u );
-    spdlog::info( "sphere.zip size:    {} bytes", zipSize );
-    spdlog::info( "sphere.zip compression time: {} sec", sec );
+    spdlog::info( "big.zip size:       {} bytes", zipSize );
+    spdlog::info( "big.zip compression time: {} sec", sec );
 
-    // Sanity: the zip should not be absurdly larger than the source
-    // (that would indicate something is wrong with the envelope); and
-    // since .mrmesh is a raw binary dump of topology plus coordinate
-    // floats, deflate typically produces a modestly smaller archive.
-    EXPECT_LT( zipSize, meshSize * 2u );
+    // Sanity envelope: random input is near-incompressible, so zipSize
+    // should be close to fileSize plus a small zip overhead.
+    EXPECT_LT( zipSize, fileSize * 2u );
 }
 
 // Writes many binary files and same number JSON files to a temporary folder, then
-// compresses the folder to a .zip. Pairs with CompressSphereToZip to compare
+// compresses the folder to a .zip. Pairs with CompressOneBigFileToZip to compare
 // compression of one large binary vs many small mixed-type entries.
 //
 // libzip compresses each entry independently, so per-entry overhead (local
@@ -85,16 +98,6 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     constexpr int numBinaryFiles = 200;
     constexpr int numJsonFiles = numBinaryFiles;
     constexpr size_t bytesPerFile = 60000;
-
-    // Simple LCG used to produce deterministic pseudo-random bytes.
-    // Keeps the test reproducible across runs and platforms while avoiding
-    // trivially-compressible input (an all-zeros buffer would make deflate
-    // look unrealistically good).
-    auto nextLcg = []( uint64_t & state ) -> uint64_t
-    {
-        state = state * 6364136223846793005ULL + 1442695040888963407ULL;
-        return state;
-    };
 
     auto makeName = []( const char * prefix, int i, const char * ext )
     {
@@ -220,7 +223,7 @@ TEST( MRMesh, CompressManySmallFilesToZip )
         spdlog::info( "level {}: many.zip size: {} bytes, compression time: {} sec",
             level, zipSize, sec );
 
-        // Sanity envelope: same bound as the sphere test.
+        // Sanity envelope: same bound as CompressOneBigFileToZip.
         EXPECT_LT( zipSize, totalInput * 2u ) << "level " << level;
 
         // Round-trip: decompress into a fresh folder and compare every file's

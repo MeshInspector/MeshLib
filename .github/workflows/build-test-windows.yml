@@ -54,16 +54,21 @@ jobs:
 
       - name: Checkout third-party submodules
         run: |
-          # Selective rather than `submodules: true` on the Checkout above:
-          # the parent only inits submodules we actually use. Windows gets
-          # its third-party stack from vcpkg (see thirdparty/install.bat
-          # + requirements/windows.txt), so the heavy ones (openvdb, GDCM,
-          # cpr, libzip, jsoncpp, fmt, spdlog, onetbb, c-blosc, mbedtls,
-          # libE57Format, …) are not needed in source form. The submodules
-          # below are header-only consumed directly by MeshLib's source,
-          # plus the build-tool deps.
-          # See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/expected thirdparty/OpenCTM-git thirdparty/laz-perf thirdparty/fastmcpp thirdparty/nlohmann-json thirdparty/cpp-httplib thirdparty/mrbind thirdparty/mrbind-pybind11
+          # Selective init -- parent Checkout drops submodules:true.
+          # https://github.com/actions/checkout/issues/1779
+          git submodule update --init --depth 1 thirdparty/imgui
+          git submodule update --init --depth 1 thirdparty/eigen
+          git submodule update --init --depth 1 thirdparty/parallel-hashmap
+          git submodule update --init --depth 1 thirdparty/expected
+          git submodule update --init --depth 1 thirdparty/OpenCTM-git
+          git submodule update --init --depth 1 thirdparty/laz-perf
+          git submodule update --init --depth 1 thirdparty/fastmcpp
+          git submodule update --init --depth 1 thirdparty/nlohmann-json
+          git submodule update --init --depth 1 thirdparty/cpp-httplib
+          git submodule update --init --depth 1 thirdparty/mrbind
+          git submodule update --init --depth 1 thirdparty/mrbind-pybind11
+          # mrbind needs deps/cppdecl; recurse only there
+          git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

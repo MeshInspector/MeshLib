@@ -24,7 +24,7 @@ endif()
 if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_precompile_headers(${PROJECT_NAME} 
     PRIVATE
-      $<$<COMPILE_LANGUAGE:CXX>:"<fastmcpp/clang.hpp>">
+      $<$<COMPILE_LANGUAGE:CXX>:"fastmcpp/clang.hpp">
   )
 endif()
 

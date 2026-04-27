@@ -12,7 +12,7 @@ BASEDIR=$(dirname $(realpath "$0"))
   if [ -n "$MESHLIB_EXTRA_BREW_REQUIREMENTS" ] ; then
     echo "$MESHLIB_EXTRA_BREW_REQUIREMENTS" | awk '/^[^[:space:]#]/{print "brew \""$1"\""}'
   fi
-} | brew bundle install --no-upgrade --no-lock --file=-
+} | brew bundle install --no-upgrade --file=-
 
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade

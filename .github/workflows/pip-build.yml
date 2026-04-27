@@ -611,7 +611,7 @@ jobs:
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
         run: |
           # `brew bundle` -- no GHA annotations on already-installed.
-          brew bundle install --no-upgrade --no-lock --file=- <<EOF
+          brew bundle install --no-upgrade --file=- <<EOF
           brew "python@${{matrix.py-version}}", link: :overwrite
           EOF
 

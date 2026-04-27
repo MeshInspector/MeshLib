@@ -244,7 +244,7 @@ jobs:
           # `brew bundle` -- no GHA annotations on already-installed.
           awk '/^[^[:space:]#]/{print "brew \""$1"\""}' \
             /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt \
-            | brew bundle install --no-upgrade --no-lock --file=-
+            | brew bundle install --no-upgrade --file=-
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer

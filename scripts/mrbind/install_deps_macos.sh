@@ -14,7 +14,7 @@ brew update
 
 # `brew bundle` instead of `brew install` -- skips already-installed
 # formulae without the `::warning::` GHA annotations `brew install` emits.
-brew bundle install --no-upgrade --no-lock --file=- <<EOF
+brew bundle install --no-upgrade --file=- <<EOF
 brew "make"
 brew "grep"
 brew "llvm@${CLANG_VER}"

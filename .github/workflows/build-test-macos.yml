@@ -121,7 +121,7 @@ jobs:
         run: |
           # `brew bundle` keeps already-installed-and-up-to-date warnings
           # from showing up as GHA `::warning::` annotations.
-          brew bundle install --no-upgrade --no-lock --file=- <<EOF
+          brew bundle install --no-upgrade --file=- <<EOF
           brew "gettext"
           EOF
 

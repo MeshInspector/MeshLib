@@ -170,6 +170,11 @@ bool Server::setRunning( bool enable )
     }
 }
 
+void Server::shutdown()
+{
+    state_.reset();
+}
+
 nlohmann::json Server::dumpToolsAsJson() const
 {
     auto out = nlohmann::json::array();

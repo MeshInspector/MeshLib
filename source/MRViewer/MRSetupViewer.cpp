@@ -207,4 +207,14 @@ bool ViewerSetup::setupMcp() const
     #endif
 }
 
+bool ViewerSetup::shutdownMcp() const
+{
+    #ifndef MESHLIB_NO_MCP
+    Mcp::getDefaultServer().shutdown();
+    return true;
+    #else
+    return false;
+    #endif
+}
+
 } //namespace MR

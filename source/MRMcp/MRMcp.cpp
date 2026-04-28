@@ -170,6 +170,15 @@ bool Server::setRunning( bool enable )
     }
 }
 
+void Server::shutdown()
+{
+    // ~State destroys members in reverse declaration order: server first (joins asio
+    // worker threads, releases the make_mcp_handler reference), then toolDescs, then
+    // toolManager last — so by the time tool callbacks destruct, no in-flight handler
+    // can be running, and we're still in MRMcp.dll's frame with all plugin DLLs loaded.
+    state_.reset();
+}
+
 nlohmann::json Server::dumpToolsAsJson() const
 {
     auto out = nlohmann::json::array();

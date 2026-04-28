@@ -5,29 +5,28 @@ file(GLOB SOURCES "*.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+find_package(fastmcpp REQUIRED
+  HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+)
+
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh
+  PRIVATE
+    fastmcpp::fastmcpp_core
 )
-
-IF(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
-ENDIF()
-
-# On Windows, and on Linux+Vcpkg there is no third-party build script, so add fastmcpp as a subdirectory.
-IF(MESHLIB_USE_VCPKG OR APPLE)
-  set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
-  add_subdirectory(../fastmcpp fastmcpp)
-  target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
-  target_include_directories(${PROJECT_NAME} PRIVATE
-    ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include
-    ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
-    ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
+# TODO: why does it affect only Linux+vcpkg?
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND MESHLIB_USE_VCPKG)
+  # fix missing references to 'getaddrinfo_a' and 'gai_*' functions (required by cpp-httplib)
+  target_link_libraries(${PROJECT_NAME} PRIVATE anl)
+endif()
+# inject work-around for Clang libc++ and older Xcode versions' compatibility
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_precompile_headers(${PROJECT_NAME} 
+    PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:"fastmcpp/clang.hpp">
   )
-ELSE()
-  find_package(fastmcpp REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PUBLIC fastmcpp::fastmcpp_core)
-ENDIF()
+endif()
 
 install(
   TARGETS ${PROJECT_NAME}

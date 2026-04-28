@@ -1,14 +1,5 @@
 #pragma once
 
-// Work around Clang quirk: https://github.com/llvm/llvm-project/issues/86077
-// This quirk causes issues for Fastmcpp on Mac Arm.
-// This must be included before `<exception>` to work correctly, so effectively before any standard library headers.
-#if defined( __APPLE__ ) && defined( __arm64__ )
-#include <version>
-#undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-#define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
-#endif
-
 #pragma warning(push)
 #pragma warning(disable: 4820) //#pragma warning: N bytes padding added after data member
 

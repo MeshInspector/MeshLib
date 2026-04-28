@@ -19,6 +19,11 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
 
 WORKDIR /root
 
+COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
+COPY thirdparty/vcpkg/ports MeshLib/ports
+COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY scripts/retry.sh /usr/local/bin/retry.sh
+
 ARG VCPKG_VERSION
 ENV VCPKG_VERSION=$VCPKG_VERSION
 RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
@@ -32,16 +37,12 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
     sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
 
 # build vcpkg packages
-COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
-COPY thirdparty/vcpkg/ports MeshLib/ports
-COPY thirdparty/vcpkg/triplets MeshLib/triplets
-
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN source /opt/rh/autoconf271/enable && \
     $(: network may flake ) \
-    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
-RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
+    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
+RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
 FROM nvidia/cuda:12.0.1-devel-rockylinux9 AS production

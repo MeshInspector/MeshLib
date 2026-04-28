@@ -30,6 +30,11 @@ RUN python3.12 -m venv venv && \
     source venv/bin/activate && \
     pip install jinja2
 
+COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
+COPY thirdparty/vcpkg/ports MeshLib/ports
+COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY scripts/retry.sh /usr/local/bin/retry.sh
+
 ARG VCPKG_VERSION
 ENV VCPKG_VERSION=$VCPKG_VERSION
 RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
@@ -43,18 +48,14 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
     sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
 
 # build vcpkg packages
-COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
-COPY thirdparty/vcpkg/ports MeshLib/ports
-COPY thirdparty/vcpkg/triplets MeshLib/triplets
-
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN source /opt/rh/gcc-toolset-11/enable && \
     source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
     $(: network may flake ) \
-    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
-RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
+    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
+RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
 FROM nvidia/cuda:12.0.1-devel-rockylinux8 AS production

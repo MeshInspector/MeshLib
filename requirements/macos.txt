@@ -24,3 +24,4 @@ tbb
 tinyxml2
 tl-expected
 zlib
+zlib-ng

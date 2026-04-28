@@ -107,6 +107,23 @@ def setup_workspace(version, modules, plat_name):
 
 def build_wheel():
     os.chdir(WHEEL_ROOT_DIR)
+
+    if SYSTEM == "Linux":
+        # Drop libz-ng.so.2 ZLIB_NG_* version requirements from every .so
+        # auditwheel will see -- the wheel's own modules in WHEEL_SRC_DIR
+        # (soon to be packed into the wheel) and the dep libs in LIB_DIR
+        # that auditwheel will pull in during repair. auditwheel has no
+        # manylinux policy entry for libz-ng, so leaving the tags in place
+        # fails the policy check.
+        # See scripts/wheel/strip_zlib_ng_symbol_versions.py for details.
+        subprocess.check_call(
+            [
+                sys.executable,
+                str(WHEEL_SCRIPT_DIR / "strip_zlib_ng_symbol_versions.py"),
+                str(LIB_DIR), str(WHEEL_SRC_DIR),
+            ]
+        )
+
     subprocess.check_call(
         [sys.executable, "-m", "build", "--wheel"]
     )

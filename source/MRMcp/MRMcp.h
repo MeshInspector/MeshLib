@@ -56,6 +56,16 @@ namespace Schema
         {}
     };
 
+    /// A schema describing a boolean.
+    struct Bool : Base
+    {
+        Bool()
+            : Base( nlohmann::json::object( {
+                { "type", "boolean" },
+            } ) )
+        {}
+    };
+
     /// A schema describing an array of whatever is passed to the constructor.
     struct Array : Base
     {
@@ -168,6 +178,12 @@ public:
     /// once during MCP setup with the viewer's own launch arguments, after every
     /// `MR_ON_INIT` tool registration has run.
     MRMCP_API void processCmdArgs( const std::vector<std::string>& commandArgs ) const;
+    /// Optional predicate consulted before every tool dispatch, given the tool's id.
+    /// Return {} to allow; return `unexpected("reason")` to block — the reason surfaces
+    /// to the MCP client as the tool-call error.
+    /// Evaluated per call, so changes (e.g. user sign-in) take effect immediately.
+    using ToolValidator = std::function<Expected<void>( const std::string& toolId )>;
+    MRMCP_API void setToolValidator( ToolValidator validator );
 
 private:
     struct State;

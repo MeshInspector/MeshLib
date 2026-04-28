@@ -138,12 +138,12 @@ TEST( MRMesh, ZlibCompressStats )
     const std::string inputStr( reinterpret_cast<const char*>( cInput ), sizeof( cInput ) );
     const uint32_t expectedCrc = crc32Ref( cInput, sizeof( cInput ) );
 
-    struct Case { bool rawDeflate; int level; size_t expectedCompSize; };
+    struct Case { bool rawDeflate; int level; };
     const Case cases[] = {
-        { true,  1, sizeof( cRawLevel1 ) },
-        { true,  9, sizeof( cRawLevel9 ) },
-        { false, 1, sizeof( cWrappedLevel1 ) },
-        { false, 9, sizeof( cWrappedLevel9 ) },
+        { true,  1 },
+        { true,  9 },
+        { false, 1 },
+        { false, 9 },
     };
 
     for ( const auto& c : cases )
@@ -155,10 +155,19 @@ TEST( MRMesh, ZlibCompressStats )
             MR::ZlibCompressParams{ { .rawDeflate = c.rawDeflate }, c.level, &stats } );
         EXPECT_TRUE( res.has_value() );
 
+        // Engine-agnostic assertions: CRC and uncompressed size are defined by
+        // the input; stats.compressedSize must equal out.str().size() (API
+        // consistency); compressed output must be non-empty and smaller than
+        // the input. We deliberately do NOT pin stats.compressedSize to the
+        // size of cRawLevel*/cWrappedLevel* -- those reference blobs were
+        // captured from stock zlib, and the exact compressed byte count drifts
+        // from one deflate implementation to another (stock zlib vs zlib-ng
+        // compat vs zlib-ng native vs libdeflate, all lossless).
         EXPECT_EQ( stats.crc32, expectedCrc );
         EXPECT_EQ( stats.uncompressedSize, sizeof( cInput ) );
-        EXPECT_EQ( stats.compressedSize, c.expectedCompSize );
-        EXPECT_EQ( out.str().size(), c.expectedCompSize );
+        EXPECT_EQ( stats.compressedSize, out.str().size() );
+        EXPECT_GT( stats.compressedSize, 0u );
+        EXPECT_LT( stats.compressedSize, sizeof( cInput ) );
     }
 }
 

@@ -1,4 +1,3 @@
-#include <MRCMesh/MRAffineXf.h>
 #include <MRCMesh/MRBox.h>
 #include <MRCMesh/MRCube.h>
 #include <MRCMesh/MRMesh.h>
@@ -11,11 +10,8 @@
 #include <MRCMisc/std_string.h>
 #include <MRCVoxels/MROffset.h>
 
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define APPROX_VOXEL_COUNT 10000000.f
 
 int main( void )
 {
@@ -31,16 +27,16 @@ int main( void )
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct( mesh, NULL );
 
     // Setup parameters
-    MR_OffsetParameters* params = MR_OffsetParameters_DefaultConstruct();
+    MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
     // calculate voxel size depending on desired accuracy and/or memory consumption
-    MR_BaseShellParameters_Set_voxelSize( MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters( params ), MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
+    MR_BaseShellParameters_Set_voxelSize( MR_GeneralOffsetParameters_MutableUpcastTo_MR_BaseShellParameters( params ), MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
     MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
     float offset = MR_Box3f_diagonal( &bbox ) * 0.1f;
 
     // Make offset mesh
-    MR_expected_MR_Mesh_std_string* outputMeshEx = MR_offsetMesh( inputMeshPart, offset, params );
+    MR_expected_MR_Mesh_std_string* outputMeshEx = MR_generalOffsetMesh( inputMeshPart, offset, params );
     MR_MeshPart_Destroy( inputMeshPart );
-    MR_OffsetParameters_Destroy( params );
+    MR_GeneralOffsetParameters_Destroy( params );
 
     MR_Mesh* outputMesh = MR_expected_MR_Mesh_std_string_value_mut( outputMeshEx );
 

@@ -51,13 +51,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Checkout third-party submodules
+        shell: bash
         run: |
-          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+          # Selective init -- parent Checkout drops submodules:true.
+          # https://github.com/actions/checkout/issues/1779
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/OpenCTM-git \
+            thirdparty/laz-perf \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib \
+            thirdparty/mrbind \
+            thirdparty/mrbind-pybind11
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -98,10 +112,11 @@ jobs:
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@4ce2bbcf5d401e557e0537d863a6aced08605794 # v4
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
+          retry-max-attempts: 5
 
       - name: Update vcpkg packages
         run: |
@@ -110,6 +125,12 @@ jobs:
       - name: Vcpkg integrate install
         working-directory: C:\vcpkg
         run: C:\vcpkg\vcpkg.exe integrate install
+
+      - name: Diagnostic — vcpkg installed tree
+        if: ${{ always() }}
+        shell: pwsh
+        continue-on-error: true
+        run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}"
 
       - name: Restore CUDA Cache
         uses: actions/cache@v5
@@ -151,10 +172,7 @@ jobs:
 
       - name: Install MSYS2 for MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        run: |
-          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
-          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
-          rm msys64_meshlib_mrbind.zip
+        uses: ./.github/actions/install-msys2-mrbind
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}
@@ -212,6 +230,29 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
+
+      - name: Diagnostic — output bin DLL inventory + MRMesh imports
+        if: ${{ always() }}
+        shell: pwsh
+        continue-on-error: true
+        # Don't pin working-directory to source\x64\${{ matrix.config }} — when
+        # an upstream step fails before MSBuild runs, that directory does not
+        # exist and the runner cannot start pwsh, which makes the failure
+        # cascade look like the previous step is the failing one.
+        # Instead enter the directory inside the script and bail out cleanly
+        # if it doesn't exist.
+        run: |
+          $buildDir = Join-Path $Env:GITHUB_WORKSPACE 'source\x64\${{ matrix.config }}'
+          if (-not (Test-Path $buildDir)) {
+            Write-Host "Build output directory '$buildDir' does not exist — skipping diagnostic."
+            exit 0
+          }
+          Push-Location $buildDir
+          try {
+            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ matrix.vc-path }}"
+          } finally {
+            Pop-Location
+          }
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
@@ -322,11 +363,16 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-        uses: actions/upload-artifact@v7
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
-          name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
-          retention-days: 1
+          action: actions/upload-artifact@v7
+          attempt_limit: 3
+          attempt_delay: 30000 # milliseconds
+          with: |
+            name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
+            path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+            retention-days: 1
+            overwrite: true
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build && inputs.upload_artifacts }}
@@ -339,11 +385,16 @@ jobs:
 
       - name: Upload MeshLibC2 headers archive
         if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
-        uses: actions/upload-artifact@v7
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
-          name: WindowsArchive_MeshLibC2Headers
-          path: MeshLibC2Headers.zip
-          retention-days: 1
+          action: actions/upload-artifact@v7
+          attempt_limit: 3
+          attempt_delay: 30000 # milliseconds
+          with: |
+            name: WindowsArchive_MeshLibC2Headers
+            path: MeshLibC2Headers.zip
+            retention-days: 1
+            overwrite: true
 
       - name: Create and fix fake Wheel for NuGet
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
@@ -355,18 +406,28 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
-          name: DotNetPatchArchiveWindows-x64
-          path: ./patched_content/*
-          retention-days: 1
+          action: actions/upload-artifact@v7
+          attempt_limit: 3
+          attempt_delay: 30000 # milliseconds
+          with: |
+            name: DotNetPatchArchiveWindows-x64
+            path: ./patched_content/*
+            retention-days: 1
+            overwrite: true
 
       - name: Upload NuGet library DLL and XML to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
-          name: DotNetDllXml
-          path: |
-            ./source/x64/Release/MRDotNet2.dll
-            ./source/x64/Release/MRDotNet2.xml
-          retention-days: 1
+          action: actions/upload-artifact@v7
+          attempt_limit: 3
+          attempt_delay: 30000 # milliseconds
+          with: |
+            name: DotNetDllXml
+            path: |
+              ./source/x64/Release/MRDotNet2.dll
+              ./source/x64/Release/MRDotNet2.xml
+            retention-days: 1
+            overwrite: true

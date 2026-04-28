@@ -1625,7 +1625,11 @@ bool ModalExitButton()
     const auto pos = ImGui::GetCursorScreenPos();
     const float buttonSize = MR::StyleConsts::Modal::exitBtnSize * UI::scale();
 
-    if ( ImGui::Button( "##ExitButton", ImVec2( buttonSize, buttonSize ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+    // Use UI::buttonEx so the X is exposed to UI::TestEngine under name "Close".
+    UI::ButtonCustomizationParams params;
+    params.forceImGuiBackground = true;
+    params.testEngineName = "Close";
+    if ( UI::buttonEx( "##ExitButton", MR::Vector2f( buttonSize, buttonSize ), params ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
     {
         ImGui::CloseCurrentPopup();
         ImGui::PopStyleColor( 4 );

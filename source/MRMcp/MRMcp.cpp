@@ -89,6 +89,9 @@ const Server::Params& Server::getParams() const
 
 void Server::setParams( Server::Params params )
 {
+    if ( params_ == params )
+        return;
+
     const bool serverExisted = state_ && bool( state_->server );
     const bool serverWasRunning = serverExisted && isRunning();
 

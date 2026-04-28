@@ -23,7 +23,10 @@ public:
         Control,
         Viewport,
         MeasurementUnits,
+        Mcp,
         Features,
+
+        // When adding/reordering/renaming constants here, don't forget to add the name in `MRViewerSettingsPlugin.cpp` -> `getViewerSettingTabName()`.
         Count
     };
 
@@ -75,6 +78,7 @@ private:
     void drawViewportTab_( float menuWidth );
     void drawMeasurementUnitsTab_();
     void drawFeaturesTab_();
+    void drawMcpTab_();
 
     void drawLanguageSelector_();
     void drawThemeSelector_();
@@ -88,6 +92,7 @@ private:
     void drawMouseSceneControlsSettings_( float menuWidth );
     void drawSpaceMouseSettings_( float menuWidth );
     void drawTouchpadSettings_();
+    void drawMcpSettings_();
 
     void drawMruInnerFormats_( float menuWidth );
 

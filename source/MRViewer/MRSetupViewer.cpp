@@ -1,6 +1,7 @@
 #include "MRSetupViewer.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
+#include "MRViewer/MRMcpSettings.h"
 #include "MRViewerSettingsManager.h"
 #include "MRMouseController.h"
 #include "MRHistoryStore.h"
@@ -196,7 +197,9 @@ void ViewerSetup::unloadExtendedLibraries() const
 bool ViewerSetup::setupMcp() const
 {
     #ifndef MESHLIB_NO_MCP
-    Mcp::getDefaultServer().setRunning( true );
+    McpSettings::applyToServer();
+    if ( McpSettings::getEnableByDefault() )
+        Mcp::getDefaultServer().setRunning( true );
     Mcp::getDefaultServer().processCmdArgs( getViewerInstance().commandArgs );
     return true;
     #else

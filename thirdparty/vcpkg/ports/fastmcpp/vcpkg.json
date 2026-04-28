@@ -1,7 +1,7 @@
 {
   "name": "fastmcpp",
   "version-string": "3.1.0",
-  "port-version": 2,
+  "port-version": 3,
   "homepage": "https://github.com/MeshInspector/fastmcpp",
   "description": "C++ port of the fastmcp Python library",
   "license": "Apache-2.0",

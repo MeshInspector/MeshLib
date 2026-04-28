@@ -29,6 +29,8 @@ void setPort( int port )
 {
     #ifndef MESHLIB_NO_MCP
     Config::instance().setInt( cPort, port );
+    #else
+    (void)port;
     #endif
 }
 
@@ -45,6 +47,8 @@ void setEnableByDefault( bool enable )
 {
     #ifndef MESHLIB_NO_MCP
     Config::instance().setBool( cEnableByDefault, enable );
+    #else
+    (void)enable;
     #endif
 }
 

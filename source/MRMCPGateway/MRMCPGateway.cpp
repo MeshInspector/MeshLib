@@ -33,28 +33,30 @@ namespace MR::McpGateway
 namespace
 {
 
-// Returns the directory containing the running gateway executable.
-std::filesystem::path gatewayExeDir()
+// PASTED from `getExecutablePath_()` in MeshLib/source/MRMesh/MRSystemPath.cpp.
+// Adapted: returns an empty path on failure instead of `Expected<>` so the
+// gateway keeps its zero-MRMesh dependency footprint.
+std::filesystem::path gatewayExePath()
 {
-#ifdef _WIN32
-    wchar_t buf[MAX_PATH];
-    DWORD n = GetModuleFileNameW( nullptr, buf, MAX_PATH );
-    if ( n == 0 || n == MAX_PATH )
+#if defined( _WIN32 )
+    wchar_t path[MAX_PATH];
+    auto size = GetModuleFileNameW( NULL, path, MAX_PATH );
+    if ( size == 0 || size == MAX_PATH )
         return {};
-    return std::filesystem::path( buf, buf + n ).parent_path();
+    return std::filesystem::path{ path };
 #elif defined( __APPLE__ )
-    char buf[PATH_MAX];
-    uint32_t size = sizeof( buf );
-    if ( _NSGetExecutablePath( buf, &size ) != 0 )
+    char path[PATH_MAX];
+    uint32_t size = PATH_MAX;
+    if ( _NSGetExecutablePath( path, &size ) != 0 )
         return {};
-    return std::filesystem::weakly_canonical( buf ).parent_path();
+    return std::filesystem::path{ path };
 #else
-    char buf[PATH_MAX];
-    ssize_t n = readlink( "/proc/self/exe", buf, sizeof( buf ) - 1 );
-    if ( n <= 0 )
+    char path[PATH_MAX];
+    auto size = readlink( "/proc/self/exe", path, PATH_MAX );
+    if ( size < 0 || size >= PATH_MAX )
         return {};
-    buf[n] = '\0';
-    return std::filesystem::path( buf ).parent_path();
+    path[size] = '\0';
+    return std::filesystem::path{ path };
 #endif
 }
 
@@ -65,8 +67,8 @@ std::filesystem::path resolveLaunchCommand( std::filesystem::path cmd )
 {
     if ( cmd.is_relative() )
     {
-        if ( auto base = gatewayExeDir(); !base.empty() )
-            cmd = base / cmd;
+        if ( auto exe = gatewayExePath(); !exe.empty() )
+            cmd = exe.parent_path() / cmd;
     }
 #ifdef _WIN32
     if ( cmd.extension().empty() )

@@ -1,5 +1,7 @@
 #include "MRViewerSettingsPlugin.h"
+#ifndef MESHLIB_NO_MCP
 #include "MRMcp/MRMcp.h"
+#endif
 #include "MRRibbonMenu.h"
 #include "ImGuiHelpers.h"
 #include "MRColorTheme.h"

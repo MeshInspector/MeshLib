@@ -281,7 +281,7 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.VCPKG-VERSION}}
+          key: vcpkg-cache-${{env.VCPKG-VERSION}}-x64-windows-meshlib
           path: |
             C:\vcpkg\*
 

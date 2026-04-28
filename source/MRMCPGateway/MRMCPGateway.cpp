@@ -5,7 +5,7 @@
 #include "MRMCPGatewayBackend.h"
 #include "MRMCPGatewayCache.h"
 #include "MRMCPGatewayConfig.h"
-#include "MRMCPGatewayMiTransport.h"
+#include "MRMCPGatewayMlTransport.h"
 
 #include <nlohmann/json.hpp>
 
@@ -60,7 +60,7 @@ std::filesystem::path gatewayExePath()
 #endif
 }
 
-// Resolves `--launch-cmd` so callers can pass just `MeshInspector` instead of
+// Resolves `--launch-cmd` so callers can pass a bare backend name instead of
 // a full path: a relative path becomes `<gateway-dir>/<path>`, and on Windows
 // a missing extension defaults to `.exe`.
 std::filesystem::path resolveLaunchCommand( std::filesystem::path cmd )
@@ -84,7 +84,7 @@ void printUsage()
         "  --launch-cmd <path>      Required. Backend executable launched by the 'launch' tool.\n"
         "                           Relative paths are resolved against the gateway's own\n"
         "                           directory; on Windows a missing extension defaults to '.exe'\n"
-        "                           (so 'MeshInspector' works for a co-located binary).\n"
+        "                           (so a bare name works for a co-located binary).\n"
         "                           Fixed at startup; not overridable via tool call.\n"
         "  --launch-arg <value>     Default argument forwarded to the backend (repeatable).\n"
         "                           A 'launch' tool call may override these for that call.\n"
@@ -191,11 +191,11 @@ int main( int argc, char** argv )
     loadCachedTools( cfg );
 
     // One persistent transport for the gateway's lifetime. Holds the SSE session
-    // (auto-reconnects if MI restarts) and serves every forwarded request via a
-    // plain POST that reads the JSON-RPC response from the POST body. Sidesteps
+    // (auto-reconnects on backend restart) and serves every forwarded request via
+    // a plain POST that reads the JSON-RPC response from the POST body. Sidesteps
     // fastmcpp's per-call SseClientTransport whose destructor blocks ~15 s/call
     // joining its listener thread.
-    auto transport = std::make_unique<MIClientTransport>(
+    auto transport = std::make_unique<MLClientTransport>(
         cfg.targetUrl, cfg.ssePath, cfg.messagesPath );
     fastmcpp::client::Client templateClient( std::move( transport ) );
 
@@ -238,7 +238,8 @@ int main( int argc, char** argv )
         // When the backend is offline, fastmcpp's proxy returns only our local tools
         // (`launch`, `status`). Splice in the cached schema array so the MCP client
         // still sees the full proxied surface and can decide which tools to call.
-        if ( method == "tools/list" && !g_backendAlive.load() && !g_cachedTools.empty()
+        const auto& cachedTools = getCachedTools();
+        if ( method == "tools/list" && !getBackendAlive().load() && !cachedTools.empty()
              && resp.is_object() && resp.contains( "result" ) && resp["result"].contains( "tools" )
              && resp["result"]["tools"].is_array() )
         {
@@ -247,7 +248,7 @@ int main( int argc, char** argv )
             for ( const auto& t : tools )
                 if ( t.is_object() && t.contains( "name" ) && t["name"].is_string() )
                     seen.insert( t["name"].get<std::string>() );
-            for ( const auto& cached : g_cachedTools )
+            for ( const auto& cached : cachedTools )
                 if ( cached.contains( "name" ) && cached["name"].is_string()
                      && !seen.count( cached["name"].get<std::string>() ) )
                     tools.push_back( cached );

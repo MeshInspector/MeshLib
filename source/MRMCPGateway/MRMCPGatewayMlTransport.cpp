@@ -1,4 +1,4 @@
-#include "MRMCPGatewayMiTransport.h"
+#include "MRMCPGatewayMlTransport.h"
 #include "MRMCPGatewayBackend.h"
 
 #include <chrono>
@@ -17,14 +17,14 @@ constexpr auto kPostReadTimeout     = std::chrono::seconds( 30 );
 constexpr int  kReconnectIntervalMs = 1000;
 // Briefly wait for the SSE listener to capture (or recapture) a session_id
 // before failing a request. Covers the gap between gateway startup / `launch`
-// completing / MI restarting and the next SSE reconnect arriving.
+// completing / backend restarting and the next SSE reconnect arriving.
 constexpr auto kSessionWaitTimeout  = std::chrono::seconds( 3 );
 
 } // anonymous namespace
 
 // Minimal "http://host:port" URL parser. Only called on `cfg.targetUrl`, so
 // we don't need a full URL grammar.
-MIClientTransport::HostPort MIClientTransport::parseHostPort( const std::string& url )
+MLClientTransport::HostPort MLClientTransport::parseHostPort( const std::string& url )
 {
     HostPort out;
     std::string rest = url;
@@ -51,13 +51,13 @@ MIClientTransport::HostPort MIClientTransport::parseHostPort( const std::string&
     return out;
 }
 
-MIClientTransport::MIClientTransport( const std::string& targetUrl,
+MLClientTransport::MLClientTransport( const std::string& targetUrl,
                                       const std::string& ssePath,
                                       const std::string& messagesPath )
-    : MIClientTransport( parseHostPort( targetUrl ), ssePath, messagesPath )
+    : MLClientTransport( parseHostPort( targetUrl ), ssePath, messagesPath )
 {}
 
-MIClientTransport::MIClientTransport( const HostPort& hp,
+MLClientTransport::MLClientTransport( const HostPort& hp,
                                       const std::string& ssePath,
                                       const std::string& messagesPath )
     : httpForSse_( hp.host.c_str(), hp.port )
@@ -84,9 +84,9 @@ MIClientTransport::MIClientTransport( const HostPort& hp,
         const auto sidEnd = msg.data.find_first_of( "&#", sidStart );
         std::string sid = msg.data.substr( sidStart,
             ( sidEnd == std::string::npos ) ? std::string::npos : ( sidEnd - sidStart ) );
-        // Publish g_backendAlive first, then the session_id, then notify. Any
+        // Publish backend-alive first, then the session_id, then notify. Any
         // thread woken by the cv sees the up-to-date alive state immediately.
-        g_backendAlive.store( true );
+        getBackendAlive().store( true );
         {
             std::lock_guard<std::mutex> lk( sessionMutex_ );
             sessionId_ = std::move( sid );
@@ -101,7 +101,7 @@ MIClientTransport::MIClientTransport( const HostPort& hp,
         // condition variable until the SSEClient's auto-reconnect produces a
         // fresh one — without this, after a backend restart we'd send the old
         // session_id and the server would 404 it.
-        g_backendAlive.store( false );
+        getBackendAlive().store( false );
         {
             std::lock_guard<std::mutex> lk( sessionMutex_ );
             sessionId_.clear();
@@ -114,18 +114,18 @@ MIClientTransport::MIClientTransport( const HostPort& hp,
     sse_.start_async();
 }
 
-MIClientTransport::~MIClientTransport()
+MLClientTransport::~MLClientTransport()
 {
     sse_.stop(); // fast: cancels pending Get + joins
 }
 
-fastmcpp::Json MIClientTransport::request( const std::string& route, const fastmcpp::Json& payload )
+fastmcpp::Json MLClientTransport::request( const std::string& route, const fastmcpp::Json& payload )
 {
     std::string sid;
     {
         // Briefly wait for the SSEClient to (re)acquire a session_id. On a freshly-started
-        // gateway with MI already up, this returns immediately; on a post-`launch` first
-        // call or after MI restart, it returns as soon as the SSE on_event fires.
+        // gateway with the backend already up, this returns immediately; on a post-`launch`
+        // first call or after a backend restart, it returns as soon as the SSE on_event fires.
         std::unique_lock<std::mutex> lk( sessionMutex_ );
         sessionCv_.wait_for( lk, kSessionWaitTimeout, [this]{ return !sessionId_.empty(); } );
         sid = sessionId_;

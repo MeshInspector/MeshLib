@@ -13,7 +13,11 @@
 namespace MR::McpGateway
 {
 
-std::atomic<bool> g_backendAlive{ false };
+std::atomic<bool>& getBackendAlive()
+{
+    static std::atomic<bool> instance{ false };
+    return instance;
+}
 
 namespace
 {
@@ -21,7 +25,11 @@ namespace
 // Suppresses the very first probe's transition emit, so we don't spuriously fire
 // `list_changed` during the client's initial `tools/list` (whose response already
 // carries the right tool set anyway).
-std::atomic<bool> g_backendPrimed{ false };
+std::atomic<bool>& backendPrimed()
+{
+    static std::atomic<bool> instance{ false };
+    return instance;
+}
 
 void emitToolsListChanged()
 {
@@ -78,8 +86,8 @@ bool probeBackendAlive( const std::string& targetUrl )
 bool probeAndTrackBackend( const std::string& targetUrl )
 {
     const bool nowAlive = probeBackendAlive( targetUrl );
-    const bool wasAlive = g_backendAlive.exchange( nowAlive );
-    const bool wasPrimed = g_backendPrimed.exchange( true );
+    const bool wasAlive = getBackendAlive().exchange( nowAlive );
+    const bool wasPrimed = backendPrimed().exchange( true );
     if ( wasPrimed && wasAlive != nowAlive )
         emitToolsListChanged();
     return nowAlive;

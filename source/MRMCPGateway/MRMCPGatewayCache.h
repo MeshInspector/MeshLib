@@ -11,7 +11,7 @@ struct Config;
 
 /// Tool-schema entries loaded from the on-disk cache at startup. Spliced into
 /// `tools/list` responses by the gateway's handler when the backend is offline.
-extern std::vector<nlohmann::json> g_cachedTools;
+std::vector<nlohmann::json>& getCachedTools();
 
 /// If the cache file is missing or its build stamp doesn't match this binary,
 /// and the backend isn't already running, spawn the backend hidden so it dumps
@@ -19,8 +19,8 @@ extern std::vector<nlohmann::json> g_cachedTools;
 /// Best-effort — failures are logged to stderr but non-fatal.
 void ensureFreshCache( const Config& cfg );
 
-/// Parses `mcp_tools_cache.json` and populates `g_cachedTools`. Errors are
-/// non-fatal (logged + leaves `g_cachedTools` empty).
+/// Parses `mcp_tools_cache.json` and populates `getCachedTools()`. Errors are
+/// non-fatal (logged + leaves the cache empty).
 void loadCachedTools( const Config& cfg );
 
 } // namespace MR::McpGateway

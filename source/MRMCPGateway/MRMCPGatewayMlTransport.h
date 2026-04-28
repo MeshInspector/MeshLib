@@ -12,21 +12,21 @@
 namespace MR::McpGateway
 {
 
-/// fastmcpp transport that talks to MeshInspector's MCP server using one
+/// fastmcpp transport that talks to a MeshLib-based MCP server using one
 /// persistent SSE session for liveness/session-id tracking and a plain POST
 /// per request, reading the JSON-RPC response from the POST body.
 ///
 /// Sidesteps fastmcpp's per-call `SseClientTransport` pattern, whose destructor
 /// blocks up to one heartbeat interval (~15 s) per call to join the listener
 /// thread. Auto-reconnects on backend restart via `httplib::sse::SSEClient`.
-class MIClientTransport final : public fastmcpp::client::ITransport
+class MLClientTransport final : public fastmcpp::client::ITransport
 {
 public:
     /// @param targetUrl  e.g. "http://127.0.0.1:7887". Parsed once into host+port.
-    MIClientTransport( const std::string& targetUrl,
+    MLClientTransport( const std::string& targetUrl,
                        const std::string& ssePath,
                        const std::string& messagesPath );
-    ~MIClientTransport() override;
+    ~MLClientTransport() override;
 
     fastmcpp::Json request( const std::string& route, const fastmcpp::Json& payload ) override;
 
@@ -36,7 +36,7 @@ private:
 
     /// Delegated-to constructor: takes the already-parsed host/port so the
     /// public constructor can parse `targetUrl` exactly once.
-    MIClientTransport( const HostPort& hp,
+    MLClientTransport( const HostPort& hp,
                        const std::string& ssePath,
                        const std::string& messagesPath );
 

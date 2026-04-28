@@ -114,7 +114,11 @@ bool embedStampInCache( const std::filesystem::path& cache )
 
 } // anonymous namespace
 
-std::vector<nlohmann::json> g_cachedTools;
+std::vector<nlohmann::json>& getCachedTools()
+{
+    static std::vector<nlohmann::json> instance;
+    return instance;
+}
 
 void ensureFreshCache( const Config& cfg )
 {
@@ -168,7 +172,8 @@ void ensureFreshCache( const Config& cfg )
 
 void loadCachedTools( const Config& cfg )
 {
-    g_cachedTools.clear();
+    auto& cachedTools = getCachedTools();
+    cachedTools.clear();
     const auto cache = cachePath( cfg );
     std::ifstream f( cache );
     if ( !f )
@@ -179,7 +184,7 @@ void loadCachedTools( const Config& cfg )
         return;
     for ( const auto& t : doc["tools"] )
         if ( t.is_object() )
-            g_cachedTools.push_back( t );
+            cachedTools.push_back( t );
 }
 
 } // namespace MR::McpGateway

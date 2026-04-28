@@ -200,6 +200,7 @@ bool ViewerSetup::setupMcp() const
     McpSettings::applyToServer();
     if ( McpSettings::getEnableByDefault() )
         Mcp::getDefaultServer().setRunning( true );
+    Mcp::getDefaultServer().processCmdArgs( getViewerInstance().commandArgs );
     return true;
     #else
     return false;

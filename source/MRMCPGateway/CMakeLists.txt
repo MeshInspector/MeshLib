@@ -8,9 +8,11 @@ add_executable(${PROJECT_NAME}
   MRMCPGatewaySpawn.cpp
 )
 
+find_package(httplib REQUIRED)
 find_package(fastmcpp REQUIRED)
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
+    httplib::httplib
     fastmcpp::fastmcpp_core
 )
 # TODO: why does it affect only Linux+vcpkg?

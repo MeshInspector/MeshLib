@@ -558,7 +558,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
 
     auto numTris = faceRepresentativeLines.count();
     const auto itemsInBuffer = std::min( numTris, size_t( 32768 ) );
-    int numChunks = ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer );
+    const int numChunks = itemsInBuffer > 0 ? ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer ) : 0;
     std::vector<Triangle3f> chunk( itemsInBuffer );
     std::vector<Triangle3f> chunk2( itemsInBuffer );
 

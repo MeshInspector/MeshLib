@@ -107,13 +107,14 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind-pybind11
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
-          git submodule update --init --depth 1 \
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/imgui \
             thirdparty/parallel-hashmap \
             thirdparty/mrbind-pybind11 \
             thirdparty/mrbind
           # mrbind needs deps/cppdecl; recurse only there
-          git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Install mrbind
         # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.

@@ -53,23 +53,25 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Checkout third-party submodules
+        shell: bash
         run: |
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
-          git submodule update --init --depth 1 `
-            thirdparty/imgui `
-            thirdparty/eigen `
-            thirdparty/parallel-hashmap `
-            thirdparty/expected `
-            thirdparty/OpenCTM-git `
-            thirdparty/laz-perf `
-            thirdparty/fastmcpp `
-            thirdparty/nlohmann-json `
-            thirdparty/cpp-httplib `
-            thirdparty/mrbind `
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/OpenCTM-git \
+            thirdparty/laz-perf \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib \
+            thirdparty/mrbind \
             thirdparty/mrbind-pybind11
           # mrbind needs deps/cppdecl; recurse only there
-          git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -294,7 +296,6 @@ jobs:
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
-          mrbind: ${{ inputs.mrbind }}
           pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ${{ matrix.test_artifacts_path }}

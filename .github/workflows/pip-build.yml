@@ -357,6 +357,20 @@ jobs:
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
+      - name: Diagnose mrmeshpy.pyd dependencies
+        if: always()
+        shell: pwsh
+        working-directory: source\x64\Release
+        run: |
+          $vsdevcmd = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio\2022' -Recurse -Filter 'VsDevCmd.bat' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($null -ne $vsdevcmd) { $env:Path = "$($vsdevcmd.Directory.Parent.FullName)\..\VC\Tools\MSVC\*\bin\Hostx64\x64;" + $env:Path }
+          $dumpbin = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio\2022' -Recurse -Filter 'dumpbin.exe' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
+          if ($null -eq $dumpbin) { Write-Host '::warning::dumpbin.exe not found'; exit 0 }
+          Write-Host "===== dumpbin /dependents mrmeshpy.pyd ====="
+          & $dumpbin.FullName /dependents mrmeshpy.pyd
+          Write-Host "===== DLLs present in $(Get-Location) ====="
+          Get-ChildItem -Filter *.dll | Sort-Object Name | Select-Object -ExpandProperty Name
+
       - name: Unit Tests
         run: source\x64\Release\MRTest.exe
 

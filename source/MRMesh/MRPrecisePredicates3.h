@@ -49,6 +49,16 @@ struct TriangleSegmentIntersectResult
 /// triangles ta and tb can have at most two shared points, all other points must be unique
 [[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs );
 
+/// given
+/// a) line segment s=01
+/// b) triangles ta=234 known to intersect segment s
+/// c) infinite plane pb given by three points 567, which intersects either segment s or the infinite line containing s
+/// finds the order of intersection using precise predicates:
+/// true:  s[0], s ^ ta, s ^ pb
+/// false: s ^ pb, s ^ ta, s[1]
+/// ta and pb can have at most two shared points, all other points must be unique
+[[nodiscard]] MRMESH_API bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs );
+
 /// float-to-int coordinate converter
 using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
 /// int-to-float coordinate converter

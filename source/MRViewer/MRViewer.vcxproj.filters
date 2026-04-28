@@ -400,6 +400,12 @@
     <ClCompile Include="MRViewerMcp.cpp">
       <Filter>MCP</Filter>
     </ClCompile>
+    <ClCompile Include="MRToolsMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSystemMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
     <ClCompile Include="MRMcpCommon.cpp">
       <Filter>MCP</Filter>
     </ClCompile>

@@ -4,21 +4,28 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRChangeColoringActions.h"
 #include "MRMesh/MRChangeNameAction.h"
 #include "MRMesh/MRChangeObjectFields.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeXfAction.h"
+#include "MRMesh/MRColor.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRObjectMeshHolder.h"
+#include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRMesh/MRViewportProperty.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRCommandLoop.h"
@@ -99,6 +106,53 @@ static nlohmann::json transformToJson( const AffineXf3f& xf )
     } );
 }
 
+// Color in/out as `[r, g, b]` or `[r, g, b, a]` floats in [0, 1].
+static nlohmann::json colorToJson( const Color& c )
+{
+    return nlohmann::json::array( { c.r / 255.f, c.g / 255.f, c.b / 255.f, c.a / 255.f } );
+}
+
+static Color parseColor( const nlohmann::json& j, std::string_view field )
+{
+    if ( !j.is_array() || ( j.size() != 3 && j.size() != 4 ) )
+        throw std::runtime_error( fmt::format( "`{}` must be a 3- or 4-element array of floats in [0,1]", field ) );
+    const float r = j[0].get<float>();
+    const float g = j[1].get<float>();
+    const float b = j[2].get<float>();
+    const float a = j.size() == 4 ? j[3].get<float>() : 1.0f;
+    return Color{ r, g, b, a }; // the float ctor clamps to [0, 1]
+}
+
+// Per-object visualization properties (colors, alpha, size, flags). Fields only present if the
+// object type supports them.
+static nlohmann::json visualizationToJson( const Object& obj )
+{
+    nlohmann::json viz = nlohmann::json::object();
+    const auto* vo = dynamic_cast<const VisualObject*>( &obj );
+    if ( !vo )
+        return viz;
+
+    viz["selectedColor"]   = colorToJson( vo->getFrontColor( true ) );
+    viz["unselectedColor"] = colorToJson( vo->getFrontColor( false ) );
+    viz["globalAlpha"]     = vo->getGlobalAlpha() / 255.f;
+
+    if ( const auto* mh = dynamic_cast<const ObjectMeshHolder*>( &obj ) )
+    {
+        viz["flatShading"] = mh->getVisualizeProperty( MeshVisualizePropertyType::FlatShading, ViewportMask::any() );
+        viz["showEdges"]   = mh->getVisualizeProperty( MeshVisualizePropertyType::Edges, ViewportMask::any() );
+        viz["edgeWidth"]   = mh->getEdgeWidth();
+    }
+    else if ( const auto* lh = dynamic_cast<const ObjectLinesHolder*>( &obj ) )
+    {
+        viz["edgeWidth"] = lh->getLineWidth();
+    }
+    if ( const auto* ph = dynamic_cast<const ObjectPointsHolder*>( &obj ) )
+    {
+        viz["pointSize"] = ph->getPointSize();
+    }
+    return viz;
+}
+
 static nlohmann::json objectRow( const Object& obj, const Object* parent )
 {
     return nlohmann::json::object( {
@@ -167,6 +221,8 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
         info.push_back( vec3Line( "rotation deg", tfJson["rotation"] ) );
         info.push_back( vec3Line( "scale",        tfJson["scale"] ) );
         out["info"] = std::move( info );
+
+        out["visualization"] = visualizationToJson( *obj );
     } );
     return nlohmann::json::object( { { "result", std::move( out ) } } );
 }
@@ -200,6 +256,81 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
         {
             AppendHistory<ChangeXfAction>( _t( "transform" ), obj );
             obj->setXf( composeXf( parseTransform( args["transform"] ) ) );
+        }
+        if ( args.contains( "visualization" ) )
+        {
+            const auto& viz = args["visualization"];
+
+            auto visObj = std::dynamic_pointer_cast<VisualObject>( obj );
+            const bool touchesVisProps =
+                viz.contains( "selectedColor" ) || viz.contains( "unselectedColor" ) || viz.contains( "globalAlpha" );
+            if ( touchesVisProps && !visObj )
+                throw std::runtime_error( "Object does not support color/alpha visualization properties." );
+
+            if ( viz.contains( "selectedColor" ) )
+            {
+                const Color c = parseColor( viz["selectedColor"], "selectedColor" );
+                AppendHistory<ChangeObjectColorAction>( _t( "selected color" ), visObj, ChangeObjectColorAction::Type::Selected );
+                visObj->setFrontColorsForAllViewports( ViewportProperty<Color>{ c }, true );
+            }
+            if ( viz.contains( "unselectedColor" ) )
+            {
+                const Color c = parseColor( viz["unselectedColor"], "unselectedColor" );
+                AppendHistory<ChangeObjectColorAction>( _t( "unselected color" ), visObj, ChangeObjectColorAction::Type::Unselected );
+                visObj->setFrontColorsForAllViewports( ViewportProperty<Color>{ c }, false );
+            }
+            if ( viz.contains( "globalAlpha" ) )
+            {
+                const float a = viz["globalAlpha"].get<float>();
+                if ( !std::isfinite( a ) || a < 0.f || a > 1.f )
+                    throw std::runtime_error( "`globalAlpha` must be in [0, 1]" );
+                // No dedicated history action for alpha yet — note: Ctrl+Z won't revert this alone.
+                visObj->setGlobalAlphaForAllViewports( ViewportProperty<uint8_t>{ uint8_t( a * 255.f + 0.5f ) } );
+            }
+
+            auto meshHolder   = std::dynamic_pointer_cast<ObjectMeshHolder>( obj );
+            auto linesHolder  = std::dynamic_pointer_cast<ObjectLinesHolder>( obj );
+            auto pointsHolder = std::dynamic_pointer_cast<ObjectPointsHolder>( obj );
+
+            if ( viz.contains( "flatShading" ) )
+            {
+                if ( !meshHolder )
+                    throw std::runtime_error( "`flatShading` is only available on mesh objects." );
+                const bool v = viz["flatShading"].get<bool>();
+                AppendHistory<ChangeVisualizePropertyAction>( _t( "flat shading" ), meshHolder, AnyVisualizeMaskEnum{ MeshVisualizePropertyType::FlatShading } );
+                meshHolder->setVisualizeProperty( v, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
+            }
+            if ( viz.contains( "showEdges" ) )
+            {
+                if ( !meshHolder )
+                    throw std::runtime_error( "`showEdges` is only available on mesh objects." );
+                const bool v = viz["showEdges"].get<bool>();
+                AppendHistory<ChangeVisualizePropertyAction>( _t( "show edges" ), meshHolder, AnyVisualizeMaskEnum{ MeshVisualizePropertyType::Edges } );
+                meshHolder->setVisualizeProperty( v, MeshVisualizePropertyType::Edges, ViewportMask::all() );
+            }
+            if ( viz.contains( "edgeWidth" ) )
+            {
+                const float w = viz["edgeWidth"].get<float>();
+                if ( !std::isfinite( w ) || w < 0.f )
+                    throw std::runtime_error( "`edgeWidth` must be a non-negative finite number." );
+                // No dedicated history action yet — Ctrl+Z won't revert this alone.
+                if ( meshHolder )
+                    meshHolder->setEdgeWidth( w );
+                else if ( linesHolder )
+                    linesHolder->setLineWidth( w );
+                else
+                    throw std::runtime_error( "`edgeWidth` is only available on mesh or polyline objects." );
+            }
+            if ( viz.contains( "pointSize" ) )
+            {
+                if ( !pointsHolder )
+                    throw std::runtime_error( "`pointSize` is only available on point-cloud objects." );
+                const float s = viz["pointSize"].get<float>();
+                if ( !std::isfinite( s ) || s < 0.f )
+                    throw std::runtime_error( "`pointSize` must be a non-negative finite number." );
+                // No dedicated history action yet — Ctrl+Z won't revert this alone.
+                pointsHolder->setPointSize( s );
+            }
         }
     } );
     skipFramesAfterInput();
@@ -372,15 +503,18 @@ MR_ON_INIT{
         /*name*/"Get scene object info",
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Return a single object's row (same shape as `scene.listObjectTree` entries) plus `childIds` (direct "
-                "children), `worldBox` (axis-aligned world-space bounding box), and `info` (human-readable property "
-                "lines - e.g. vertex/face counts, area - from the UI's info panel).",
+                "children), `worldBox` (axis-aligned world-space bounding box), `info` (human-readable property "
+                "lines - e.g. vertex/face counts, area - from the UI's info panel), and `visualization` (current "
+                "render-time properties — colors, alpha, size, flags; see `scene.setObjectState` for field semantics; "
+                "fields that don't apply to this object's type are omitted).",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
         /*output_schema*/entrySchema()
             .addMember( "childIds", Schema::Array( Schema::Number{} ) )
             .addMember( "worldBox", Schema::Object{}
                 .addMember( "min", Schema::Array( Schema::Number{} ) )
                 .addMember( "max", Schema::Array( Schema::Number{} ) ) )
-            .addMember( "info",     Schema::Array( Schema::String{} ) ),
+            .addMember( "info",     Schema::Array( Schema::String{} ) )
+            .addMember( "visualization", Schema::Object{} ),
         /*func*/mcpSceneGetObjectInfo
     );
 
@@ -391,14 +525,28 @@ MR_ON_INIT{
                 "Mutate an existing object. Every field other than `id` is optional; absent fields leave state alone. "
                 "`transform` replaces the full xf and is itself composed from optional `translation` / `rotation` / `scale` "
                 "(missing components default to identity; `rotation` is XYZ-Euler degrees; `scale` accepts a scalar or a "
-                "3-element array). A single call that touches multiple fields is wrapped in one history entry, so Ctrl+Z "
-                "reverts it atomically.",
+                "3-element array). `visualization` updates render-time properties: `selectedColor` / `unselectedColor` as "
+                "`[r,g,b]` or `[r,g,b,a]` floats in [0,1]; `globalAlpha` as a float in [0,1]; `flatShading` / `showEdges` "
+                "as bools (mesh objects only); `edgeWidth` as a non-negative float (meshes use it for edge width, "
+                "polylines for line width); `pointSize` as a non-negative float (point-cloud objects only). Fields "
+                "not applicable to the object's type return a typed error. "
+                "A single call that touches multiple fields is wrapped in one history entry, so Ctrl+Z reverts it "
+                "atomically (note: `globalAlpha`, `edgeWidth`, and `pointSize` do not have dedicated history actions "
+                "yet — they are applied but the undo step will skip them).",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "name",      Schema::String{} )
             .addMemberOpt( "visible",   Schema::Bool{} )
             .addMemberOpt( "selected",  Schema::Bool{} )
-            .addMemberOpt( "transform", transformSchema() ),
+            .addMemberOpt( "transform", transformSchema() )
+            .addMemberOpt( "visualization", Schema::Object{}
+                .addMemberOpt( "selectedColor",   Schema::Array( Schema::Number{} ) )
+                .addMemberOpt( "unselectedColor", Schema::Array( Schema::Number{} ) )
+                .addMemberOpt( "globalAlpha",     Schema::Number{} )
+                .addMemberOpt( "flatShading",     Schema::Bool{} )
+                .addMemberOpt( "showEdges",       Schema::Bool{} )
+                .addMemberOpt( "edgeWidth",       Schema::Number{} )
+                .addMemberOpt( "pointSize",       Schema::Number{} ) ),
         /*output_schema*/Schema::Empty{},
         /*func*/mcpSceneSetObjectState
     );

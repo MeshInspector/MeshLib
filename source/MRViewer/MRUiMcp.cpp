@@ -4,6 +4,7 @@
 #include "MRMesh/MROnInit.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRProgressBar.h"
 #include "MRViewer/MRUITestEngineControl.h"
 
 namespace MR::Mcp
@@ -152,6 +153,21 @@ static std::string withPreamble( std::string_view specific )
     return std::string( kPathSemantics ) + std::string( specific );
 }
 
+// Returns a snapshot of the global progress bar state. Read-only; safe to call any time.
+static nlohmann::json mcpToolProgressStatus( const nlohmann::json& )
+{
+    nlohmann::json out = nlohmann::json::object();
+    if ( !MR::ProgressBar::isOrdered() || MR::ProgressBar::isFinished() )
+    {
+        out["active"] = false;
+        return nlohmann::json::object( { { "result", std::move( out ) } } );
+    }
+    out["active"]  = true;
+    out["title"]   = MR::ProgressBar::getLastOperationTitle();
+    out["percent"] = MR::ProgressBar::getProgress() * 100.f;
+    return nlohmann::json::object( { { "result", std::move( out ) } } );
+}
+
 MR_ON_INIT{
     Server& server = getDefaultServer();
 
@@ -238,6 +254,22 @@ MR_ON_INIT{
     handleValueType.operator()<std::uint64_t>( "Uint",   "uint"   );
     handleValueType.operator()<double       >( "Real",   "float"  );
     handleValueType.operator()<std::string  >( "String", "string" );
+
+    server.addTool(
+        /*id*/"ui.progressStatus",
+        /*name*/"Read progress bar state",
+        /*desc*/"Snapshot of the global progress bar. Returns `{active: false}` if no long-running operation is in "
+                "flight, else `{active: true, title: string, percent: number}`. `title` is the operation name passed "
+                "to the underlying `ProgressBar::order(...)` (e.g. \"Boolean\", \"Loading\"). `percent` is 0-100. "
+                "Poll this while `ui.*` dispatch is blocked by a `'Progress'` modal — once `active: false` comes "
+                "back, the UI is responsive again.",
+        /*input_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{}
+            .addMember(    "active",  Schema::Bool{} )
+            .addMemberOpt( "title",   Schema::String{} )
+            .addMemberOpt( "percent", Schema::Number{} ),
+        /*func*/mcpToolProgressStatus
+    );
 }; // MR_ON_INIT
 
 } // namespace MR::Mcp

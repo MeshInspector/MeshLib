@@ -163,6 +163,8 @@
     <ClCompile Include="MRUiMcp.cpp" />
     <ClCompile Include="MRSceneMcp.cpp" />
     <ClCompile Include="MRViewerMcp.cpp" />
+    <ClCompile Include="MRToolsMcp.cpp" />
+    <ClCompile Include="MRSystemMcp.cpp" />
     <ClCompile Include="MRMcpCommon.cpp" />
   </ItemGroup>
   <ItemGroup>

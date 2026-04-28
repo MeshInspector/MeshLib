@@ -357,19 +357,75 @@ jobs:
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
-      - name: Diagnose mrmeshpy.pyd dependencies
+      - name: Diagnose mrmeshpy.pyd
         if: always()
         shell: pwsh
         working-directory: source\x64\Release
         run: |
-          $vsdevcmd = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio\2022' -Recurse -Filter 'VsDevCmd.bat' -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($null -ne $vsdevcmd) { $env:Path = "$($vsdevcmd.Directory.Parent.FullName)\..\VC\Tools\MSVC\*\bin\Hostx64\x64;" + $env:Path }
+          $ErrorActionPreference = 'Continue'
+          $ws = $env:GITHUB_WORKSPACE
+
+          Write-Host "===== Environment ====="
+          Write-Host "PWD = $(Get-Location)"
+          Write-Host "PYTHONPATH = $env:PYTHONPATH"
+          Write-Host "PYTHONHOME = $env:PYTHONHOME"
+          Write-Host "PYTHONNOUSERSITE = $env:PYTHONNOUSERSITE"
+          Write-Host "PATH ="
+          $env:Path -split ';' | ForEach-Object { Write-Host "  $_" }
+          Write-Host ""
+
+          Write-Host "===== Installed Python launchers (py -0) ====="
+          py -0 2>&1 | ForEach-Object { Write-Host "  $_" }
+          Write-Host ""
+
+          Write-Host "===== Locate mrmeshpy*.pyd anywhere under workspace ====="
+          $pyds = Get-ChildItem -LiteralPath $ws -Recurse -Filter 'mrmeshpy*.pyd' -ErrorAction SilentlyContinue
+          if (-not $pyds) { Write-Host "  (no mrmeshpy*.pyd found)" }
+          else { $pyds | ForEach-Object { Write-Host ("  {0,12:N0}  {1}" -f $_.Length, $_.FullName) } }
+          Write-Host ""
+
+          Write-Host "===== All *.pyd anywhere under workspace ====="
+          Get-ChildItem -LiteralPath $ws -Recurse -Filter '*.pyd' -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $($_.FullName)" }
+          Write-Host ""
+
+          Write-Host "===== Recursive listing of source\x64\Release ====="
+          Get-ChildItem -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Write-Host ("  {0,12:N0}  {1}" -f ($_.Length ?? 0), $_.FullName) }
+          Write-Host ""
+
           $dumpbin = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio\2022' -Recurse -Filter 'dumpbin.exe' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
-          if ($null -eq $dumpbin) { Write-Host '::warning::dumpbin.exe not found'; exit 0 }
-          Write-Host "===== dumpbin /dependents mrmeshpy.pyd ====="
-          & $dumpbin.FullName /dependents mrmeshpy.pyd
-          Write-Host "===== DLLs present in $(Get-Location) ====="
-          Get-ChildItem -Filter *.dll | Sort-Object Name | Select-Object -ExpandProperty Name
+          if ($null -eq $dumpbin) { Write-Host '::warning::dumpbin.exe not found' }
+
+          $targets = @()
+          if ($pyds) { $targets += $pyds.FullName }
+          foreach ($name in 'MRTest.exe','MREmbeddedPython.dll','MRPython.dll','MRMcp.dll','pybind11nonlimitedapi_meshlib_3.12.dll','pybind11nonlimitedapi_stubs.dll') {
+            $p = Join-Path (Get-Location) $name
+            if (Test-Path -LiteralPath $p) { $targets += $p }
+          }
+          if ($dumpbin) {
+            foreach ($t in $targets) {
+              Write-Host "===== dumpbin /dependents $t ====="
+              & $dumpbin.FullName /dependents $t 2>&1 | ForEach-Object { Write-Host "  $_" }
+              Write-Host ""
+            }
+          }
+
+          if ($pyds) {
+            foreach ($p in $pyds) {
+              $dir = $p.Directory.FullName
+              Write-Host "===== py -3.12 -v -c 'import mrmeshpy' from $dir ====="
+              $env:PYTHONPATH = $dir
+              py -3.12 -v -c "import mrmeshpy; print('OK', mrmeshpy.__file__)" 2>&1 | Select-Object -Last 100 | ForEach-Object { Write-Host "  $_" }
+              Write-Host ""
+            }
+            Remove-Item Env:\PYTHONPATH -ErrorAction SilentlyContinue
+          }
+
+          Write-Host "===== Run MRTest.exe with extra logging (won't fail this step) ====="
+          $env:PYTHONUNBUFFERED = '1'
+          $env:PYTHONFAULTHANDLER = '1'
+          $env:PYTHONVERBOSE = '1'
+          & .\MRTest.exe 2>&1 | Select-Object -Last 200 | ForEach-Object { Write-Host "  $_" }
+          Write-Host "  (MRTest exit code: $LASTEXITCODE)"
 
       - name: Unit Tests
         run: source\x64\Release\MRTest.exe

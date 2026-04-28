@@ -5,6 +5,7 @@
 #include "MRMCPGatewayBackend.h"
 #include "MRMCPGatewayCache.h"
 #include "MRMCPGatewayConfig.h"
+#include "MRMCPGatewayMiTransport.h"
 
 #include <nlohmann/json.hpp>
 
@@ -129,19 +130,19 @@ int main( int argc, char** argv )
     ensureFreshCache( cfg );
     loadCachedTools( cfg );
 
+    // One persistent transport for the gateway's lifetime. Holds the SSE session
+    // (auto-reconnects if MI restarts) and serves every forwarded request via a
+    // plain POST that reads the JSON-RPC response from the POST body. Sidesteps
+    // fastmcpp's per-call SseClientTransport whose destructor blocks ~15 s/call
+    // joining its listener thread.
+    auto transport = std::make_unique<MIClientTransport>(
+        cfg.targetUrl, cfg.ssePath, cfg.messagesPath );
+    fastmcpp::client::Client templateClient( std::move( transport ) );
+
     fastmcpp::ProxyApp proxy(
-        [cfg]() {
-            // Fast pre-check: SseClientTransport blocks for a long internal timeout when the
-            // backend is offline. Throw quickly so ProxyApp's per-method catch block falls
-            // back to local-only listings instead of hanging the stdio loop. The probe also
-            // updates g_backendAlive and fires `tools/list_changed` on transitions, so a forwarded
-            // tool call that discovers the backend has died emits the disappearance synchronously.
-            if ( !probeAndTrackBackend( cfg.targetUrl ) )
-                throw std::runtime_error( "backend unreachable at " + cfg.targetUrl );
-            auto transport = std::make_unique<fastmcpp::client::SseClientTransport>(
-                cfg.targetUrl, cfg.ssePath, cfg.messagesPath );
-            return fastmcpp::client::Client( std::move( transport ) );
-        },
+        // Each forwarded call clones the template Client, sharing the same
+        // shared_ptr<ITransport> internally. No new connections, no thread spawn.
+        [&templateClient]() { return templateClient.new_client(); },
         std::string( "MRMCPGateway" ),
         std::string( "0.1" )
     );

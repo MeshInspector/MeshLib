@@ -20,6 +20,9 @@
     <ClCompile Include="MRMCPGatewayCache.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRMCPGatewayMiTransport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRMCPGatewaySpawn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -32,6 +35,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMCPGatewayConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMCPGatewayMiTransport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMCPGatewaySpawn.h">

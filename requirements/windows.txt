@@ -31,5 +31,6 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng
 glad
 glfw3

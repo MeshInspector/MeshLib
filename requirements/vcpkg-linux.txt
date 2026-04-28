@@ -38,3 +38,4 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng

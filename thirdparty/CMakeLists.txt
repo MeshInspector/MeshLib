@@ -85,11 +85,6 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
-# Build zlib-ng from our submodule (native mode -- zng_ prefix, does not shadow
-# stock zlib) on Ubuntu apt and Emscripten, which have no zlib-ng package.
-# macOS picks up the Homebrew copy instead (see requirements/macos.txt).
-# Windows and MESHLIB_USE_VCPKG configs never enter this file -- they get
-# zlib-ng from vcpkg (see requirements/{windows,vcpkg-*}.txt).
 IF(NOT APPLE)
   set(ZLIB_COMPAT       OFF CACHE BOOL "")
   set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "")
@@ -97,21 +92,9 @@ IF(NOT APPLE)
   set(WITH_GTEST        OFF CACHE BOOL "")
   set(WITH_GZFILEOP     OFF CACHE BOOL "")
   IF(EMSCRIPTEN)
-    # zlib-ng's CMakeLists treats an undefined BUILD_SHARED_LIBS as "build both
-    # shared and static targets". Emscripten then demotes the SHARED one to
-    # STATIC, after which both rules emit the same libz-ng.a and ninja errors
-    # with "multiple rules generate libz-ng.a [-w dupbuild=err]". Force static
-    # only for this add_subdirectory -- Emscripten produces static output
-    # either way.
-    #
-    # After add_subdirectory(./zlib-ng) we MUST restore BUILD_SHARED_LIBS to
-    # its prior *undefined* state, not "defined but empty". jsoncpp further
-    # down expands ${BUILD_SHARED_LIBS} into set_target_properties() pairs and
-    # silently breaks with "set_target_properties called with incorrect number
-    # of arguments" when the expansion yields empty. jsoncpp's own option()
-    # fallback only fires for undefined, not empty. unset() is therefore the
-    # right tool here (BUILD_SHARED_LIBS was undefined before this block on
-    # every Emscripten MeshLib build).
+    # Force static: undefined BUILD_SHARED_LIBS makes zlib-ng emit duplicate
+    # libz-ng.a rules under Emscripten. Restore to undefined (not empty)
+    # afterwards -- jsoncpp downstream breaks on empty BUILD_SHARED_LIBS.
     set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(./zlib-ng)
     unset(BUILD_SHARED_LIBS)

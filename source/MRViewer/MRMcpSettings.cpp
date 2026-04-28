@@ -1,15 +1,20 @@
 #include "MRMcpSettings.h"
 
-#include "MRMcp/MRMcp.h"
 #include "MRMesh/MRConfig.h"
+
+#ifndef MESHLIB_NO_MCP
+#include "MRMcp/MRMcp.h"
+#endif
 
 #include <utility>
 
 namespace MR::McpSettings
 {
 
+#ifndef MESHLIB_NO_MCP
 static const std::string cPort = "mcp.port";
 static const std::string cEnableByDefault = "mcp.enableByDefault";
+#endif
 
 int getPort()
 {

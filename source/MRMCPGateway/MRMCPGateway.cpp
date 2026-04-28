@@ -11,9 +11,21 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <set>
 #include <string>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#elif defined( __APPLE__ )
+#include <mach-o/dyld.h>
+#include <climits>
+#else
+#include <climits>
+#include <unistd.h>
+#endif
 
 namespace MR::McpGateway
 {
@@ -21,11 +33,56 @@ namespace MR::McpGateway
 namespace
 {
 
+// Returns the directory containing the running gateway executable.
+std::filesystem::path gatewayExeDir()
+{
+#ifdef _WIN32
+    wchar_t buf[MAX_PATH];
+    DWORD n = GetModuleFileNameW( nullptr, buf, MAX_PATH );
+    if ( n == 0 || n == MAX_PATH )
+        return {};
+    return std::filesystem::path( buf, buf + n ).parent_path();
+#elif defined( __APPLE__ )
+    char buf[PATH_MAX];
+    uint32_t size = sizeof( buf );
+    if ( _NSGetExecutablePath( buf, &size ) != 0 )
+        return {};
+    return std::filesystem::weakly_canonical( buf ).parent_path();
+#else
+    char buf[PATH_MAX];
+    ssize_t n = readlink( "/proc/self/exe", buf, sizeof( buf ) - 1 );
+    if ( n <= 0 )
+        return {};
+    buf[n] = '\0';
+    return std::filesystem::path( buf ).parent_path();
+#endif
+}
+
+// Resolves `--launch-cmd` so callers can pass just `MeshInspector` instead of
+// a full path: a relative path becomes `<gateway-dir>/<path>`, and on Windows
+// a missing extension defaults to `.exe`.
+std::filesystem::path resolveLaunchCommand( std::filesystem::path cmd )
+{
+    if ( cmd.is_relative() )
+    {
+        if ( auto base = gatewayExeDir(); !base.empty() )
+            cmd = base / cmd;
+    }
+#ifdef _WIN32
+    if ( cmd.extension().empty() )
+        cmd += ".exe";
+#endif
+    return cmd;
+}
+
 void printUsage()
 {
     std::cerr <<
         "Usage: MRMCPGateway --launch-cmd <path> [options]\n"
         "  --launch-cmd <path>      Required. Backend executable launched by the 'launch' tool.\n"
+        "                           Relative paths are resolved against the gateway's own\n"
+        "                           directory; on Windows a missing extension defaults to '.exe'\n"
+        "                           (so 'MeshInspector' works for a co-located binary).\n"
         "                           Fixed at startup; not overridable via tool call.\n"
         "  --launch-arg <value>     Default argument forwarded to the backend (repeatable).\n"
         "                           A 'launch' tool call may override these for that call.\n"
@@ -122,6 +179,7 @@ int main( int argc, char** argv )
     Config cfg;
     if ( !parseArgs( argc, argv, cfg ) )
         return 1;
+    cfg.launchCommand = resolveLaunchCommand( cfg.launchCommand );
 
     // Prime the on-disk tool cache (synchronous; ~3-5 s when actually priming) and
     // load the resulting JSON into memory. Failures are non-fatal: we proceed with

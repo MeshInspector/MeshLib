@@ -132,12 +132,19 @@ jobs:
         continue-on-error: true
         run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}"
 
+      - name: Resolve CUDA semver
+        id: cuda-semver
+        shell: pwsh
+        run: |
+          $semver = (("${{ matrix.CUDA-VERSION }}" -split '\.')[0..2]) -join '.'
+          "version=$semver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - name: Install CUDA
         uses: Jimver/cuda-toolkit@3d45d157f327c09c04b50ee6ccdea2d9d017ec76 # v0.2.35
         with:
-          cuda: ${{ matrix.CUDA-VERSION }}
+          cuda: ${{ steps.cuda-semver.outputs.version }}
           method: network
-          sub-packages: '["nvcc", "cudart", "thrust", "visual_studio_integration"]'
+          sub-packages: '["nvcc", "cudart", "visual_studio_integration"]'
 
       - name: Setup CUDA
         shell: cmd

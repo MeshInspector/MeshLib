@@ -51,13 +51,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Checkout third-party submodules
+        shell: bash
         run: |
-          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+          # Selective init -- parent Checkout drops submodules:true.
+          # https://github.com/actions/checkout/issues/1779
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/OpenCTM-git \
+            thirdparty/laz-perf \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib \
+            thirdparty/mrbind \
+            thirdparty/mrbind-pybind11
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -158,10 +172,7 @@ jobs:
 
       - name: Install MSYS2 for MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        run: |
-          (New-Object Net.WebClient).DownloadFile("https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip", "./msys64_meshlib_mrbind.zip")
-          [IO.Compression.ZipFile]::ExtractToDirectory("msys64_meshlib_mrbind.zip", "C:\")
-          rm msys64_meshlib_mrbind.zip
+        uses: ./.github/actions/install-msys2-mrbind
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}
@@ -224,8 +235,24 @@ jobs:
         if: ${{ always() }}
         shell: pwsh
         continue-on-error: true
-        working-directory: source\x64\${{ matrix.config }}
-        run: ${{ github.workspace }}\scripts\diagnostics\windows-bin-imports.ps1 -VcPath "${{ matrix.vc-path }}"
+        # Don't pin working-directory to source\x64\${{ matrix.config }} — when
+        # an upstream step fails before MSBuild runs, that directory does not
+        # exist and the runner cannot start pwsh, which makes the failure
+        # cascade look like the previous step is the failing one.
+        # Instead enter the directory inside the script and bail out cleanly
+        # if it doesn't exist.
+        run: |
+          $buildDir = Join-Path $Env:GITHUB_WORKSPACE 'source\x64\${{ matrix.config }}'
+          if (-not (Test-Path $buildDir)) {
+            Write-Host "Build output directory '$buildDir' does not exist — skipping diagnostic."
+            exit 0
+          }
+          Push-Location $buildDir
+          try {
+            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ matrix.vc-path }}"
+          } finally {
+            Pop-Location
+          }
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

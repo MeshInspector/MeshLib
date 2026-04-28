@@ -15,9 +15,6 @@ if(EMSCRIPTEN)
   find_package(MbedTLS 1.0 REQUIRED)
   find_package(ZLIB REQUIRED)
   find_dependency(libzip)
-  # zlib-ng is PRIVATE on the build side -- only needed by consumers when
-  # MRMesh is a static archive (Emscripten), where private deps become
-  # interface deps because static archives don't pre-resolve symbols.
   find_dependency(zlib-ng)
 
   set(MRMESH_NO_GTEST @MRMESH_NO_GTEST@)

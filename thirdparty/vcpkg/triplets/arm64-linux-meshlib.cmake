@@ -2,10 +2,8 @@ set(VCPKG_TARGET_ARCHITECTURE arm64)
 set(VCPKG_CRT_LINKAGE dynamic)
 set(VCPKG_LIBRARY_LINKAGE dynamic)
 
-# Static-link zlib-ng so its symbols compile into libMRMesh.so directly.
-# Avoids DT_VERNEED entries on libMRMesh.so pointing at libz-ng.so.2's
-# ZLIB_NG_2.0.0/2.1.0 version nodes, which auditwheel's manylinux_2_28
-# policy database doesn't recognise.
+# Have to build zlib-ng as a static library due to the auditwheel issue:
+# https://github.com/pypa/auditwheel/issues/613
 if(PORT STREQUAL "zlib-ng")
   set(VCPKG_LIBRARY_LINKAGE static)
 endif()

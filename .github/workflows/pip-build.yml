@@ -107,12 +107,18 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind-pybind11
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/fastmcpp
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/nlohmann-json
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/cpp-httplib
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/imgui \
             thirdparty/parallel-hashmap \
             thirdparty/mrbind-pybind11 \
-            thirdparty/mrbind
+            thirdparty/mrbind \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
@@ -281,7 +287,7 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.VCPKG-VERSION}}
+          key: vcpkg-cache-${{env.VCPKG-VERSION}}-x64-windows-meshlib
           path: |
             C:\vcpkg\*
 

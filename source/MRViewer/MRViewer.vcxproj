@@ -166,6 +166,7 @@
     <ClCompile Include="MRToolsMcp.cpp" />
     <ClCompile Include="MRSystemMcp.cpp" />
     <ClCompile Include="MRMcpCommon.cpp" />
+    <ClCompile Include="MRMcpSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -348,6 +349,7 @@
     <ClInclude Include="MRLocaleMacos.h" />
     <ClInclude Include="MRUITestEngineControl.h" />
     <ClInclude Include="MRMcpCommon.h" />
+    <ClInclude Include="MRMcpSettings.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

@@ -54,7 +54,7 @@ const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
         _t( "Control" ),
         _t( "3D View" ),
         _t( "Units" ),
-        _t( "AI" ),
+        _t( "MCP" ),
         _t( "Features" ),
     };
     static_assert( std::extent_v<decltype( tabNames )> == size_t( MR::ViewerSettingsPlugin::TabType::Count ) );
@@ -90,7 +90,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 
 void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 420.0f * UI::scale();
+    auto menuWidth = 440.0f * UI::scale();
 
     ImVec2 position = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f ) );
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .position = &position } ) )
@@ -234,8 +234,8 @@ void ViewerSettingsPlugin::drawTab_( float menuWidth )
     case MR::ViewerSettingsPlugin::TabType::MeasurementUnits:
         drawMeasurementUnitsTab_();
         break;
-    case MR::ViewerSettingsPlugin::TabType::Ai:
-        drawAiTab_();
+    case MR::ViewerSettingsPlugin::TabType::Mcp:
+        drawMcpTab_();
         break;
     case MR::ViewerSettingsPlugin::TabType::Features:
         drawFeaturesTab_();
@@ -797,7 +797,7 @@ void ViewerSettingsPlugin::drawFeaturesTab_()
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 }
 
-void ViewerSettingsPlugin::drawAiTab_()
+void ViewerSettingsPlugin::drawMcpTab_()
 {
     #ifndef MESHLIB_NO_MCP
     auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
@@ -1298,16 +1298,16 @@ void ViewerSettingsPlugin::drawMcpSettings_()
     Mcp::Server& server = Mcp::getDefaultServer();
 
     bool enableNow = server.isRunning();
-    if ( UI::checkbox( _t( "Enable in this session" ), &enableNow ) )
+    if ( UI::checkbox( _tr( "Enable in This Session" ), &enableNow ) )
         server.setRunning( enableNow );
 
     bool enableByDefault = McpSettings::getEnableByDefault();
-    if ( UI::checkbox( _t( "Enable by default" ), &enableByDefault ) )
+    if ( UI::checkbox( _tr( "Enable by Default" ), &enableByDefault ) )
         McpSettings::setEnableByDefault( enableByDefault );
 
     int port = McpSettings::getPort();
     ImGui::SetNextItemWidth( ImGui::GetFrameHeight() * 3 );
-    if ( UI::input<NoUnit>( _t( "Port" ), port, 1, 65535, {}, UI::defaultSliderFlags, 0, 0 ) )
+    if ( UI::input<NoUnit>( _tr( "Port" ), port, 1, 65535, {}, UI::defaultSliderFlags, 0, 0 ) )
         McpSettings::setPort( port );
     if ( ImGui::IsItemDeactivatedAfterEdit() )
         McpSettings::applyToServer();

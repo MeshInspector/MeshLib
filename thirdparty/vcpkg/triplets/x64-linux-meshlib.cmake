@@ -6,3 +6,6 @@ set(VCPKG_CMAKE_SYSTEM_NAME Linux)
 set(VCPKG_BUILD_TYPE release)
 
 set(VCPKG_FIXUP_ELF_RPATH ON)
+
+# Build zlib-ng (overlaid as `zlib`) in compat mode. See arm64-linux-meshlib.cmake for the rationale.
+set(ZLIB_COMPAT ON)

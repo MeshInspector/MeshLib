@@ -1,0 +1,11 @@
+{
+  "name": "zlib",
+  "version-string": "zlib-ng",
+  "port-version": 101,
+  "description": "MeshLib overlay: alias `zlib` to vcpkg's stock `zlib-ng` port built in compat mode. The real artefacts come from the dependency; this port itself installs nothing. ZLIB_COMPAT is forced ON via the MeshLib triplet files (thirdparty/vcpkg/triplets/*-meshlib*.cmake), so the resulting libz / zlib.h / ZLIB::ZLIB target are bit-compatible with stock zlib.",
+  "homepage": "https://github.com/zlib-ng/zlib-ng",
+  "license": "Zlib",
+  "dependencies": [
+    "zlib-ng"
+  ]
+}

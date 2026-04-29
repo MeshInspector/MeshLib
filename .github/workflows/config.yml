@@ -147,13 +147,37 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            LABELS=$(gh pr view ${{ github.event.pull_request.number }} \
-                       --repo "${{ github.repository }}" \
-                       --json labels --jq '.labels[].name')
-          else
-            LABELS=""
+          read_labels() {
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              gh pr view ${{ github.event.pull_request.number }} \
+                --repo "${{ github.repository }}" \
+                --json labels --jq '.labels[].name'
+            fi
+          }
+
+          # On `pull_request.opened` the gh-pr-create-label race can delay
+          # label visibility by a few seconds after the webhook fires. We
+          # may also see this when labels are added via a separate API
+          # call right after creation (`gh pr edit --add-label`). Poll
+          # briefly so the workflow rides out that window without paying
+          # latency on `synchronize` / `reopened` runs where labels are
+          # already stable.
+          attempts=1
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.event.action }}" = "opened" ]; then
+            attempts=6   # up to ~10 s of polling: 0, 2, 2, 2, 2, 2
           fi
+
+          LABELS=""
+          for i in $(seq 1 $attempts); do
+            LABELS=$(read_labels)
+            if [ -n "$LABELS" ] || [ "$i" = "$attempts" ]; then
+              break
+            fi
+            echo "  (no labels yet — retry $i/$attempts in 2 s)"
+            sleep 2
+          done
+
           echo "Live labels:"
           if [ -n "$LABELS" ]; then echo "$LABELS" | sed 's/^/  - /'; else echo "  (none)"; fi
 

@@ -91,16 +91,11 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          # Cache key includes a hash of everything that influences which
-          # ports get built into C:\vcpkg\installed\. The vcpkg-version
-          # alone is insufficient: MeshLib ships overlay ports under
-          # thirdparty/vcpkg/ports (e.g. a zlib→zlib-ng-compat override,
-          # see MeshInspector/MeshLib#5932) and custom triplets; changes
-          # to any of those must bust the cache or the cached tree is
-          # served verbatim and the overrides never take effect.
-          # Also hashes the install list (windows.txt) and install.bat
-          # so that changing either forces a reinstall.
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ hashFiles('thirdparty/vcpkg/ports/**', 'thirdparty/vcpkg/triplets/**', 'requirements/windows.txt', 'thirdparty/install.bat') }}
+          # Bust the cache when overlay ports, the Windows triplet, the
+          # package list, or install.bat change — otherwise the cached
+          # C:\vcpkg\installed\ tree is served verbatim and overlays
+          # never take effect.
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ hashFiles('thirdparty/vcpkg/ports/**', 'thirdparty/vcpkg/triplets/x64-windows-meshlib.cmake', 'requirements/windows.txt', 'thirdparty/install.bat') }}
           path: |
             C:\vcpkg\*
 

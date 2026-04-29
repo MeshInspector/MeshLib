@@ -4,6 +4,7 @@
 
 #ifndef MESHLIB_NO_MCP
 #include "MRMcp/MRMcp.h"
+#include "MRViewer/MRViewer.h"
 #endif
 
 #include <utility>
@@ -58,6 +59,19 @@ void applyToServer()
     Mcp::Server::Params params = Mcp::getDefaultServer().getParams();
     params.port = getPort();
     Mcp::getDefaultServer().setParams( std::move( params ) );
+    #endif
+}
+
+bool isPortLockedFromCmdLine()
+{
+    #ifndef MESHLIB_NO_MCP
+    static const bool locked = []
+    {
+        return Mcp::parseCmdLineOverrides( getViewerInstance().commandArgs ).port > 0;
+    }();
+    return locked;
+    #else
+    return false;
     #endif
 }
 

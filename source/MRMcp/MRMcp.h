@@ -179,11 +179,6 @@ public:
     /// directories as needed. Returns an error message on I/O failure.
     MRMCP_API Expected<void> saveToolsCache( const std::filesystem::path& path ) const;
 
-    /// Processes MCP-related command-line arguments. Currently only `-mcpDumpFile <path>`,
-    /// which writes the tool cache to that path. Otherwise a no-op. Intended to be called
-    /// once during MCP setup with the viewer's own launch arguments, after every
-    /// `MR_ON_INIT` tool registration has run.
-    MRMCP_API void processCmdArgs( const std::vector<std::string>& commandArgs ) const;
     /// Optional predicate consulted before every tool dispatch, given the tool's id.
     /// Return {} to allow; return `unexpected("reason")` to block — the reason surfaces
     /// to the MCP client as the tool-call error.
@@ -202,5 +197,21 @@ private:
 
 /// The global instance of the MCP server.
 [[nodiscard]] MRMCP_API Server& getDefaultServer();
+
+/// Overrides parsed from the application's command-line arguments. Sentinel values
+/// (`port <= 0`, empty `dumpFilePath`) mean "no override".
+struct CmdLineOverrides
+{
+    int port = 0;                        ///< `-mcpPort N`. <= 0 means no override.
+    std::filesystem::path dumpFilePath;  ///< `-mcpDumpFile <path>`. Empty means no dump.
+};
+
+/// Pure parse: scans @p commandArgs for MCP-related flags and returns the resolved
+/// overrides. Last occurrence of each flag wins (matches shell convention).
+/// `-mcpPort N` forces the server port to N (overriding the config).
+/// `-mcpDumpFile <path>` requests writing the tool cache to that path; the caller
+/// (typically `ViewerSetup::setupMcp`) is expected to skip starting the live server
+/// in that case so a prime spawn does not collide with a real backend on the port.
+[[nodiscard]] MRMCP_API CmdLineOverrides parseCmdLineOverrides( const std::vector<std::string>& commandArgs );
 
 } // namespace MR

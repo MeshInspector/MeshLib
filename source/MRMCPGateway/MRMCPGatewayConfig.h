@@ -13,6 +13,7 @@ namespace MR::McpGateway
 /// read what they need without each replicating its own subset of CLI parsing.
 struct Config
 {
+    int mcpPort              = 7887;                   ///< -mcpPort N forwarded to spawned MI; targetUrl is derived from this if --target-url is omitted.
     std::string targetUrl    = "http://127.0.0.1:7887";
     std::string ssePath      = "/sse";
     std::string messagesPath = "/messages";

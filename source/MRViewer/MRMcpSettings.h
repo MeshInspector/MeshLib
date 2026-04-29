@@ -25,4 +25,8 @@ MRVIEWER_API void setEnableByDefault( bool enable );
 // This ignores `getEnableByDefault()`.
 MRVIEWER_API void applyToServer();
 
+// True iff `-mcpPort N` was passed on the command line. The config-backed port is then
+// ignored for this session, and the GUI shows the port read-only.
+[[nodiscard]] MRVIEWER_API bool isPortLockedFromCmdLine();
+
 } // namespace MR::McpSettings

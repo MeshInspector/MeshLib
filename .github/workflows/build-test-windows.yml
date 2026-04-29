@@ -106,9 +106,14 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          # Bump suffix (-slim1) to invalidate the previous oversized caches
+          # that included buildtrees/packages/downloads.
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-slim1
           path: |
-            C:\vcpkg\*
+            C:\vcpkg
+            !C:\vcpkg\buildtrees
+            !C:\vcpkg\packages
+            !C:\vcpkg\downloads
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}

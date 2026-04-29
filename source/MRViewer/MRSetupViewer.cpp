@@ -198,7 +198,7 @@ bool ViewerSetup::setupMcp() const
 {
     #ifndef MESHLIB_NO_MCP
     auto& server = Mcp::getDefaultServer();
-    const auto overrides = Mcp::parseCmdLineOverrides( getViewerInstance().commandArgs );
+    const auto overrides = McpSettings::parseCmdLineOverrides( getViewerInstance().commandArgs );
 
     // Push the effective port (CLI override beats config).
     Mcp::Server::Params params = server.getParams();

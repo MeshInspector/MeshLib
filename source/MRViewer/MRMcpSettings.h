@@ -2,10 +2,30 @@
 
 #include "exports.h"
 
+#include <filesystem>
+#include <string>
+#include <vector>
+
 // Those functions act on the default MCP settings in the config file.
 
 namespace MR::McpSettings
 {
+
+// Overrides parsed from the application's command-line arguments. Sentinel values
+// (`port <= 0`, empty `dumpFilePath`) mean "no override".
+struct CmdLineOverrides
+{
+    int port = 0;                        ///< `-mcpPort N`. <= 0 means no override.
+    std::filesystem::path dumpFilePath;  ///< `-mcpDumpFile <path>`. Empty means no dump.
+};
+
+// Pure parse: scans @p commandArgs for MCP-related flags and returns the resolved
+// overrides. Last occurrence of each flag wins (matches shell convention).
+// `-mcpPort N` forces the server port to N (overriding the config).
+// `-mcpDumpFile <path>` requests writing the tool cache to that path; the caller
+// (typically `ViewerSetup::setupMcp`) is expected to skip starting the live server
+// in that case so a prime spawn does not collide with a real backend on the port.
+[[nodiscard]] MRVIEWER_API CmdLineOverrides parseCmdLineOverrides( const std::vector<std::string>& commandArgs );
 
 // Returns the MCP port from the config file, or the default value.
 // Note that this acts on the config file and not on the actual MCP server that might be running.

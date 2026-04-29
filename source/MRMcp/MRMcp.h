@@ -198,20 +198,4 @@ private:
 /// The global instance of the MCP server.
 [[nodiscard]] MRMCP_API Server& getDefaultServer();
 
-/// Overrides parsed from the application's command-line arguments. Sentinel values
-/// (`port <= 0`, empty `dumpFilePath`) mean "no override".
-struct CmdLineOverrides
-{
-    int port = 0;                        ///< `-mcpPort N`. <= 0 means no override.
-    std::filesystem::path dumpFilePath;  ///< `-mcpDumpFile <path>`. Empty means no dump.
-};
-
-/// Pure parse: scans @p commandArgs for MCP-related flags and returns the resolved
-/// overrides. Last occurrence of each flag wins (matches shell convention).
-/// `-mcpPort N` forces the server port to N (overriding the config).
-/// `-mcpDumpFile <path>` requests writing the tool cache to that path; the caller
-/// (typically `ViewerSetup::setupMcp`) is expected to skip starting the live server
-/// in that case so a prime spawn does not collide with a real backend on the port.
-[[nodiscard]] MRMCP_API CmdLineOverrides parseCmdLineOverrides( const std::vector<std::string>& commandArgs );
-
 } // namespace MR

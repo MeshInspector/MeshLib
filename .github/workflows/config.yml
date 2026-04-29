@@ -183,24 +183,17 @@ jobs:
 
           has() { echo "$LABELS" | grep -qFx "$1" && echo true || echo false; }
 
-          # Step outputs — referenced from the job's outputs: block.
-          {
-            echo "tag-bump-vcpkg=$(has bump-vcpkg)"
-            echo "tag-full-ci=$(has full-ci)"
-            echo "tag-skip-image-rebuild=$(has skip-image-rebuild)"
-            echo "tag-update-doc=$(has update-doc)"
-            echo "tag-update-doc-only=$(has update-doc-only)"
-            echo "tag-upload-binaries=$(has upload-binaries)"
-            echo "tag-upload-test-artifacts=$(has upload-test-artifacts)"
-            echo "tag-test-pip-build=$(has test-pip-build)"
-            echo "tag-build-release-windows=$(has build-release-windows)"
-            echo "tag-disable-windows=$(has disable-build-windows)"
-            echo "tag-disable-ubuntu-x64=$(has disable-build-ubuntu-x64)"
-            echo "tag-disable-ubuntu-arm64=$(has disable-build-ubuntu-arm64)"
-            echo "tag-disable-linux-vcpkg=$(has disable-build-linux-vcpkg)"
-            echo "tag-disable-macos=$(has disable-build-macos)"
-            echo "tag-disable-emscripten=$(has disable-build-emscripten)"
-          } >> "$GITHUB_OUTPUT"
+          # Step outputs — one per label actually present on the PR.
+          # Mapping: label name → output key. The `disable-build-X`
+          # family drops the middle `build-` segment so the key becomes
+          # `tag-disable-X` (matches the existing workflow_call outputs);
+          # everything else just gets a literal `tag-` prefix.
+          # Absent outputs evaluate to empty strings downstream, which
+          # is falsy in `== 'true'` comparisons — so we don't need to
+          # emit `=false` rows.
+          for label in $LABELS; do
+            echo "tag-${label/disable-build-/disable-}=true"
+          done >> "$GITHUB_OUTPUT"
 
           # Derived env vars — replaces the previous job-level `env:` block
           # (which couldn't read step outputs). These three are referenced

@@ -84,28 +84,34 @@ MLClientTransport::MLClientTransport( const HostPort& hp,
         const auto sidEnd = msg.data.find_first_of( "&#", sidStart );
         std::string sid = msg.data.substr( sidStart,
             ( sidEnd == std::string::npos ) ? std::string::npos : ( sidEnd - sidStart ) );
-        // Publish backend-alive first, then the session_id, then notify. Any
-        // thread woken by the cv sees the up-to-date alive state immediately.
-        getBackendAlive().store( true );
+        // Set sessionId_ before flipping alive: when updateBackendAliveAndNotify
+        // emits `tools/list_changed`, the client's follow-up `tools/list` will
+        // route through the alive path of request(), which needs sessionId_
+        // already populated.
         {
             std::lock_guard<std::mutex> lk( sessionMutex_ );
             sessionId_ = std::move( sid );
         }
+        // updateBackendAliveAndNotify (not bare store): emits `tools/list_changed`
+        // on dead→alive transitions, so externally-launched MI surfaces tools to
+        // the MCP client without requiring a `launch` tool call.
+        updateBackendAliveAndNotify( true );
         sessionCv_.notify_all();
     } );
 
     sse_.on_error( [this]( httplib::Error /*err*/ )
     {
-        // Same publish-before-notify discipline: dead state visible before any
-        // waiter wakes up. Wipe sessionId_ so subsequent request() blocks on the
-        // condition variable until the SSEClient's auto-reconnect produces a
-        // fresh one — without this, after a backend restart we'd send the old
-        // session_id and the server would 404 it.
-        getBackendAlive().store( false );
+        // Wipe sessionId_ so subsequent request() blocks on the cv until the
+        // SSEClient's auto-reconnect produces a fresh one — without this, after
+        // a backend restart we'd send the old session_id and the server would
+        // 404 it.
         {
             std::lock_guard<std::mutex> lk( sessionMutex_ );
             sessionId_.clear();
         }
+        // alive→dead transition: emit `tools/list_changed` so the MCP client
+        // re-fetches and sees the cached-only tool surface (or fewer tools).
+        updateBackendAliveAndNotify( false );
         sessionCv_.notify_all();
     } );
 
@@ -121,6 +127,13 @@ MLClientTransport::~MLClientTransport()
 
 fastmcpp::Json MLClientTransport::request( const std::string& route, const fastmcpp::Json& payload )
 {
+    // Backend known dead → fail fast instead of waiting kSessionWaitTimeout for an SSE
+    // session_id that won't arrive. Critical for the gateway's `tools/list` cold-start path:
+    // without this, every proxied request blocks ~3 s when MI is offline, which exceeds
+    // some MCP clients' `tools/list` deadline and the registry stays empty for the session.
+    if ( !getBackendAlive().load() )
+        throw fastmcpp::TransportError( "backend not connected" );
+
     std::string sid;
     {
         // Briefly wait for the SSEClient to (re)acquire a session_id. On a freshly-started

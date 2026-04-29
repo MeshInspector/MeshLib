@@ -47,6 +47,7 @@ jobs:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
+      VCPKG_TRIPLET_FILE: ${{ format('thirdparty/vcpkg/triplets/{0}.cmake', matrix.vcpkg_triplet) }}
 
     steps:
       - name: Checkout
@@ -108,7 +109,10 @@ jobs:
         # cached C:\vcpkg\installed\ tree is served verbatim and
         # overlays never take effect.
         shell: bash
-        run: echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', format('thirdparty/vcpkg/triplets/{0}.cmake', matrix.vcpkg_triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}" >> "$GITHUB_ENV"
+        run: |
+          echo "Triplet file: $VCPKG_TRIPLET_FILE"
+          test -f "$VCPKG_TRIPLET_FILE" || { echo "::error::Triplet file not found: $VCPKG_TRIPLET_FILE"; exit 1; }
+          echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VCPKG_TRIPLET_FILE, 'requirements/windows.txt', 'thirdparty/install.bat') }}" >> "$GITHUB_ENV"
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v5

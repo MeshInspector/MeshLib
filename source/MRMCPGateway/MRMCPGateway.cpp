@@ -207,6 +207,8 @@ int main( int argc, char** argv )
     // Re-decode from `GetCommandLineW` so paths in --launch-cmd / --tools-cache-namespace
     // round-trip cleanly through to the spawned backend.
 #ifdef _WIN32
+    (void)argc;
+    (void)argv;
     const auto args = getUtf8Argv();
 #else
     std::vector<std::string> args( argv, argv + argc );

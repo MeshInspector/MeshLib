@@ -257,7 +257,10 @@ void Server::processCmdArgs( const std::vector<std::string>& commandArgs ) const
     {
         if ( commandArgs[i] == "-mcpDumpFile" )
         {
-            const std::filesystem::path target = commandArgs[i + 1];
+            // pathFromUtf8 instead of implicit string->path: commandArgs are UTF-8
+            // (see MR::ConvertArgv on Windows), and a plain construction would
+            // narrow through the system codepage and mangle non-ASCII paths.
+            const auto target = pathFromUtf8( commandArgs[i + 1] );
             if ( auto res = saveToolsCache( target ); !res )
                 spdlog::error( "MRMcp: {}", res.error() );
             return;

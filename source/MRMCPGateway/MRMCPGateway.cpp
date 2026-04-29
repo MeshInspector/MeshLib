@@ -6,6 +6,7 @@
 #include "MRMCPGatewayCache.h"
 #include "MRMCPGatewayConfig.h"
 #include "MRMCPGatewayMlTransport.h"
+#include "MRMCPGatewayUtf8.h"
 
 #include <nlohmann/json.hpp>
 
@@ -98,11 +99,12 @@ void printUsage()
         "  --help, -h               Show this message.\n";
 }
 
-bool parseArgs( int argc, char** argv, Config& cfg )
+bool parseArgs( const std::vector<std::string>& args, Config& cfg )
 {
+    const int argc = static_cast<int>( args.size() );
     for ( int i = 1; i < argc; ++i )
     {
-        const std::string a = argv[i];
+        const std::string& a = args[i];
         const auto needNext = [&]( const char* what ) -> bool
         {
             if ( i + 1 >= argc )
@@ -116,37 +118,40 @@ bool parseArgs( int argc, char** argv, Config& cfg )
         if ( a == "--target-url" )
         {
             if ( !needNext( "--target-url" ) ) return false;
-            cfg.targetUrl = argv[++i];
+            cfg.targetUrl = args[++i];
         }
         else if ( a == "--sse-path" )
         {
             if ( !needNext( "--sse-path" ) ) return false;
-            cfg.ssePath = argv[++i];
+            cfg.ssePath = args[++i];
         }
         else if ( a == "--messages-path" )
         {
             if ( !needNext( "--messages-path" ) ) return false;
-            cfg.messagesPath = argv[++i];
+            cfg.messagesPath = args[++i];
         }
         else if ( a == "--launch-cmd" )
         {
             if ( !needNext( "--launch-cmd" ) ) return false;
-            cfg.launchCommand = argv[++i];
+            // pathFromUtf8 instead of implicit string->path: argv is UTF-8
+            // (via getUtf8Argv on Windows), and a plain construction would
+            // re-narrow through the system codepage.
+            cfg.launchCommand = pathFromUtf8( args[++i] );
         }
         else if ( a == "--launch-arg" )
         {
             if ( !needNext( "--launch-arg" ) ) return false;
-            cfg.launchArgs.emplace_back( argv[++i] );
+            cfg.launchArgs.emplace_back( args[++i] );
         }
         else if ( a == "--launch-timeout" )
         {
             if ( !needNext( "--launch-timeout" ) ) return false;
-            cfg.launchTimeout = std::chrono::seconds( std::atoi( argv[++i] ) );
+            cfg.launchTimeout = std::chrono::seconds( std::atoi( args[++i].c_str() ) );
         }
         else if ( a == "--tools-cache-namespace" )
         {
             if ( !needNext( "--tools-cache-namespace" ) ) return false;
-            cfg.toolsCacheNamespace = argv[++i];
+            cfg.toolsCacheNamespace = args[++i];
         }
         else if ( a == "--help" || a == "-h" )
         {
@@ -178,8 +183,18 @@ int main( int argc, char** argv )
 {
     using namespace MR::McpGateway;
 
+    // On Windows, the CRT-supplied argv is system-codepage and silently drops any
+    // character not representable in the locale (e.g. CJK on a US-Windows install).
+    // Re-decode from `GetCommandLineW` so paths in --launch-cmd / --tools-cache-namespace
+    // round-trip cleanly through to the spawned backend.
+#ifdef _WIN32
+    const auto args = getUtf8Argv();
+#else
+    std::vector<std::string> args( argv, argv + argc );
+#endif
+
     Config cfg;
-    if ( !parseArgs( argc, argv, cfg ) )
+    if ( !parseArgs( args, cfg ) )
         return 1;
     cfg.launchCommand = resolveLaunchCommand( cfg.launchCommand );
 

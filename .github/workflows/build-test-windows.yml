@@ -106,14 +106,13 @@ jobs:
         uses: actions/cache@v5
         id: vcpkg-cache
         with:
-          # Bump suffix (-slim1) to invalidate the previous oversized caches
-          # that included buildtrees/packages/downloads.
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-slim1
+          # Bump suffix to invalidate previous oversized caches.
+          # Trim happens just before the post-action save (see "Trim vcpkg
+          # cache" step below), since !path negations on directory entries
+          # don't match files inside them in @actions/glob.
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-slim2
           path: |
-            C:\vcpkg
-            !C:\vcpkg\buildtrees
-            !C:\vcpkg\packages
-            !C:\vcpkg\downloads
+            C:\vcpkg\*
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
@@ -431,3 +430,16 @@ jobs:
               ./source/x64/Release/MRDotNet2.xml
             retention-days: 1
             overwrite: true
+
+      - name: Trim vcpkg cache (drop buildtrees/packages/downloads before save)
+        if: always()
+        shell: pwsh
+        run: |
+          foreach ($d in 'C:\vcpkg\buildtrees', 'C:\vcpkg\packages', 'C:\vcpkg\downloads') {
+            if (Test-Path $d) {
+              $sizeMB = [int]((Get-ChildItem $d -Recurse -File -ErrorAction SilentlyContinue |
+                              Measure-Object Length -Sum).Sum / 1MB)
+              Write-Host "Removing $d (~$sizeMB MB)"
+              Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }

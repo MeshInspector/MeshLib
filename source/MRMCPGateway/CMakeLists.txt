@@ -9,6 +9,10 @@ add_executable(${PROJECT_NAME}
   MRMCPGatewayUtf8.cpp
 )
 
+# Output binary name (project / target name stays MRMCPGateway for build-system
+# wiring; installers and clients invoke `McpGateway[.exe]`).
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME McpGateway)
+
 # Same fastmcpp acquisition strategy as MRMcp/CMakeLists.txt — bundled subdirectory
 # on Windows/vcpkg and macOS, system package on Debian/Ubuntu.
 IF(MESHLIB_USE_VCPKG OR APPLE)

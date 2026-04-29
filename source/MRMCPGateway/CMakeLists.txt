@@ -6,6 +6,7 @@ add_executable(${PROJECT_NAME}
   MRMCPGatewayCache.cpp
   MRMCPGatewayMlTransport.cpp
   MRMCPGatewaySpawn.cpp
+  MRMCPGatewayUtf8.cpp
 )
 
 # Same fastmcpp acquisition strategy as MRMcp/CMakeLists.txt — bundled subdirectory

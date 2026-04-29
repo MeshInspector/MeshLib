@@ -251,22 +251,6 @@ Expected<void> Server::saveToolsCache( const std::filesystem::path& path ) const
     return {};
 }
 
-void Server::processCmdArgs( const std::vector<std::string>& commandArgs ) const
-{
-    for ( size_t i = 0; i + 1 < commandArgs.size(); ++i )
-    {
-        if ( commandArgs[i] == "-mcpDumpFile" )
-        {
-            // pathFromUtf8 instead of implicit string->path: commandArgs are UTF-8
-            // (see MR::ConvertArgv on Windows), and a plain construction would
-            // narrow through the system codepage and mangle non-ASCII paths.
-            const auto target = pathFromUtf8( commandArgs[i + 1] );
-            if ( auto res = saveToolsCache( target ); !res )
-                spdlog::error( "MRMcp: {}", res.error() );
-            return;
-        }
-    }
-}
 void Server::setToolValidator( ToolValidator validator )
 {
     if ( !state_ )

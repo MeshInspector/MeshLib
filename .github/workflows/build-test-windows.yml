@@ -102,17 +102,21 @@ jobs:
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
+      - name: Compute Vcpkg Cache Key
+        # Bust the cache when overlay ports, the active triplet file,
+        # the package list, or install.bat change — otherwise the
+        # cached C:\vcpkg\installed\ tree is served verbatim and
+        # overlays never take effect.
+        shell: bash
+        run: echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', format('thirdparty/vcpkg/triplets/{0}.cmake', matrix.vcpkg_triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}" >> "$GITHUB_ENV"
+
       - name: Restore Vcpkg Cache
         uses: actions/cache@v5
         id: vcpkg-cache
         env:
           RUNNER_DEBUG: 1
         with:
-          # Bust the cache when overlay ports, the active triplet file,
-          # the package list, or install.bat change — otherwise the
-          # cached C:\vcpkg\installed\ tree is served verbatim and
-          # overlays never take effect.
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', format('thirdparty/vcpkg/triplets/{0}.cmake', matrix.vcpkg_triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}
+          key: ${{ env.VCPKG_CACHE_KEY }}
           path: |
             C:\vcpkg\*
 
@@ -123,7 +127,7 @@ jobs:
           Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
           Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
           Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
-          Write-Host "key:        vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', format('thirdparty/vcpkg/triplets/{0}.cmake', matrix.vcpkg_triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}"
+          Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
           Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
           if (Test-Path C:\vcpkg) {
             Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host

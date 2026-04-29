@@ -143,6 +143,8 @@ void ensureFreshCache( const Config& cfg )
     std::vector<std::string> primeArgs = cfg.launchArgs;
     for ( const char* flag : { "-hidden", "-noEventLoop", "-noTelemetry", "-noSplash" } )
         primeArgs.emplace_back( flag );
+    primeArgs.emplace_back( "-mcpPort" );
+    primeArgs.emplace_back( std::to_string( cfg.mcpPort ) );
     primeArgs.emplace_back( "-mcpDumpFile" );
     primeArgs.emplace_back( cache.string() );
 

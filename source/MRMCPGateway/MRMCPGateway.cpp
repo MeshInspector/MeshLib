@@ -89,7 +89,10 @@ void printUsage()
         "  --launch-arg <value>     Default argument forwarded to the backend (repeatable).\n"
         "                           A 'launch' tool call may override these for that call.\n"
         "  --launch-timeout <secs>  How long 'launch' waits for the backend (default 30).\n"
-        "  --target-url <url>       Backend MCP server URL (default http://127.0.0.1:7887).\n"
+        "  --mcp-port <port>        MCP port the backend should bind (default 7887). Forwarded\n"
+        "                           to spawned MI as -mcpPort; if --target-url is omitted, the\n"
+        "                           gateway's probe URL is derived from this port.\n"
+        "  --target-url <url>       Backend MCP server URL (default http://127.0.0.1:<mcp-port>).\n"
         "  --sse-path <path>        SSE endpoint path (default /sse).\n"
         "  --messages-path <path>   POST endpoint path (default /messages).\n"
         "  --tools-cache-namespace <name>\n"
@@ -100,6 +103,7 @@ void printUsage()
 
 bool parseArgs( int argc, char** argv, Config& cfg )
 {
+    bool targetUrlGiven = false;
     for ( int i = 1; i < argc; ++i )
     {
         const std::string a = argv[i];
@@ -117,6 +121,12 @@ bool parseArgs( int argc, char** argv, Config& cfg )
         {
             if ( !needNext( "--target-url" ) ) return false;
             cfg.targetUrl = argv[++i];
+            targetUrlGiven = true;
+        }
+        else if ( a == "--mcp-port" )
+        {
+            if ( !needNext( "--mcp-port" ) ) return false;
+            cfg.mcpPort = std::atoi( argv[++i] );
         }
         else if ( a == "--sse-path" )
         {
@@ -167,6 +177,15 @@ bool parseArgs( int argc, char** argv, Config& cfg )
         printUsage();
         return false;
     }
+    if ( cfg.mcpPort <= 0 )
+    {
+        std::cerr << "MRMCPGateway: --mcp-port must be a positive integer\n";
+        return false;
+    }
+    // Keep probe URL in sync with the port we tell MI to bind, unless the user
+    // pointed --target-url somewhere else explicitly (e.g. a remote backend).
+    if ( !targetUrlGiven )
+        cfg.targetUrl = "http://127.0.0.1:" + std::to_string( cfg.mcpPort );
     return true;
 }
 

@@ -179,11 +179,6 @@ public:
     /// directories as needed. Returns an error message on I/O failure.
     MRMCP_API Expected<void> saveToolsCache( const std::filesystem::path& path ) const;
 
-    /// Processes MCP-related command-line arguments. Currently only `-mcpDumpFile <path>`,
-    /// which writes the tool cache to that path. Otherwise a no-op. Intended to be called
-    /// once during MCP setup with the viewer's own launch arguments, after every
-    /// `MR_ON_INIT` tool registration has run.
-    MRMCP_API void processCmdArgs( const std::vector<std::string>& commandArgs ) const;
     /// Optional predicate consulted before every tool dispatch, given the tool's id.
     /// Return {} to allow; return `unexpected("reason")` to block — the reason surfaces
     /// to the MCP client as the tool-call error.

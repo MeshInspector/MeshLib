@@ -156,16 +156,16 @@ jobs:
           }
 
           # On `pull_request.opened` the gh-pr-create-label race can delay
-          # label visibility by a few seconds after the webhook fires. We
-          # may also see this when labels are added via a separate API
-          # call right after creation (`gh pr edit --add-label`). Poll
-          # briefly so the workflow rides out that window without paying
-          # latency on `synchronize` / `reopened` runs where labels are
-          # already stable.
+          # label visibility by 1–3 s after the webhook fires (the labels
+          # API call lands ~1 s after `POST /pulls`). Poll briefly so the
+          # workflow rides out that window. Capped at 3 attempts × 2 s so
+          # PRs intentionally opened without labels only pay ~4 s of
+          # latency. `synchronize` / `reopened` runs skip the polling
+          # entirely since labels are already stable by then.
           attempts=1
           if [ "${{ github.event_name }}" = "pull_request" ] && \
              [ "${{ github.event.action }}" = "opened" ]; then
-            attempts=6   # up to ~10 s of polling: 0, 2, 2, 2, 2, 2
+            attempts=3   # up to ~4 s of polling: 0, 2, 2
           fi
 
           LABELS=""

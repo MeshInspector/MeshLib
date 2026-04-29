@@ -385,7 +385,7 @@ jobs:
             overwrite: true
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:

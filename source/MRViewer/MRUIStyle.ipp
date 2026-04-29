@@ -434,7 +434,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
-bool input( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
+bool input( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, const U& step, const U& stepFast )
 {
     // This is a hack to activate the input with a single click, by pretending that Ctrl is also held.
     if (
@@ -449,7 +449,7 @@ bool input( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringP
         ImGui::GetIO().KeyCtrl = true;
     }
 
-    return (drag<E>)( label, v, 0.f, vMin, vMax, std::move( unitParams ), flags );
+    return (drag<E>)( label, v, 0.f, vMin, vMax, std::move( unitParams ), flags, step, stepFast );
 }
 
 template <UnitEnum E, detail::VectorOrScalar T>

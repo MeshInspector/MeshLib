@@ -38,9 +38,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
     MR_PYTHON_CUSTOM_CLASS( UiEntry )
         .def_readonly( "name", &Control::TypedEntry::name )
         .def_readonly( "type", &Control::TypedEntry::type )
+        .def_readonly( "status", &Control::TypedEntry::status )
         .def("__repr__", []( const Control::TypedEntry& e )
         {
-            return fmt::format( "<mrmesh.mrviewerpy.UiEntry '{}' of type '{}'>", e.name, toString( e.type ) );
+            return fmt::format( "<mrmesh.mrviewerpy.UiEntry '{}' of type '{}' status='{}'>", e.name, toString( e.type ), e.status );
         } )
     ;
 } )
@@ -57,13 +58,27 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListEntries,
     "Add group name to the end of the vector to see its contents.\n"
     "When you find the button you need, pass it to `uiPressButton()`."
 )
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListAllEntries,
+    []( const std::vector<std::string>& rootPath )
+    {
+        std::vector<Control::PathedEntry> ret;
+        MR::CommandLoop::runCommandFromGUIThread( [&]{ ret = MR::expectedValueOrThrow( Control::listAllEntries( rootPath ) ); } );
+        return ret;
+    },
+    "Flat depth-first list of every UI entry in the subtree rooted at `rootPath`.\n"
+    "Pass an empty list for the whole tree.\n"
+    "Each element is a `(path, UiEntry)` tuple where `path[-1] == entry.name`."
+)
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
     []( const std::vector<std::string>& path )
     {
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             spdlog::info( "pressButton {}: frame {}", MR::UI::TestEngine::Control::pathToString( path ), MR::getViewerInstance().getTotalFrames() );
-            MR::expectedValueOrThrow( MR::UI::TestEngine::Control::pressButton( path ) );
+            // Empty status = OK (click simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
+            auto status = MR::expectedValueOrThrow( MR::UI::TestEngine::Control::pressButton( path ) );
+            if ( !status.empty() )
+                spdlog::warn( "pressButton {}: {} (silent no-op)", MR::UI::TestEngine::Control::pathToString( path ), status );
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
             MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
@@ -105,7 +120,10 @@ namespace
     {
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
-            MR::expectedValueOrThrow( Control::writeValue<T>( path, std::move( value ) ) );
+            // Empty status = OK (write simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
+            auto status = MR::expectedValueOrThrow( Control::writeValue<T>( path, std::move( value ) ) );
+            if ( !status.empty() )
+                spdlog::warn( "writeValue {}: {} (silent no-op)", Control::pathToString( path ), status );
         } );
     }
 }

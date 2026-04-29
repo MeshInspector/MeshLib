@@ -15,7 +15,9 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(CustomPropertyDir)' == ''">
     <ClCompile>
-      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Set _ITERATOR_DEBUG_LEVEL based on vcpkg triplet -->
+      <PreprocessorDefinitions Condition="'$(VcpkgTriplet)' == 'x64-windows-meshlib-iterator-debug'">_ITERATOR_DEBUG_LEVEL=2;MR_ITERATOR_DEBUG_LEVEL=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(VcpkgTriplet)' != 'x64-windows-meshlib-iterator-debug'">_ITERATOR_DEBUG_LEVEL=0;MR_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(CustomPropertyDir)\CustomMRProps.props" Condition="'$(CustomPropertyDir)' != ''"/>

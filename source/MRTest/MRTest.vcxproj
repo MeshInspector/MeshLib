@@ -61,7 +61,8 @@
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
     <ClCompile Include="MRTriMathTests.cpp" />
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
-    <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRZipCompressTests.cpp" />
+    <ClCompile Include="MRZlibTests.cpp" />
     <ClCompile Include="MRProgressCallback.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCylinderApproximation.cpp" />

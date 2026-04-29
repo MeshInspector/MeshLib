@@ -10,6 +10,5 @@
 #cmakedefine MRIOEXTRAS_NO_STEP
 #cmakedefine MRIOEXTRAS_NO_TIFF
 #cmakedefine MRIOEXTRAS_NO_XML
-#cmakedefine MRIOEXTRAS_NO_ZLIB
 
 #cmakedefine MRIOEXTRAS_OPENCASCADE_USE_XDE

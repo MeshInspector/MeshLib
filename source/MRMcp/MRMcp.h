@@ -2,10 +2,15 @@
 
 #include "exports.h"
 
+#include "MRMesh/MRExpected.h"
+
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace MR::Mcp
 {
@@ -47,6 +52,16 @@ namespace Schema
         String()
             : Base( nlohmann::json::object( {
                 { "type", "string" },
+            } ) )
+        {}
+    };
+
+    /// A schema describing a boolean.
+    struct Bool : Base
+    {
+        Bool()
+            : Base( nlohmann::json::object( {
+                { "type", "boolean" },
             } ) )
         {}
     };
@@ -148,6 +163,28 @@ public:
     /// Returns true on success, including if the server is already running and you're trying to start it again.
     /// Stopping always returns true.
     MRMCP_API bool setRunning( bool enable );
+
+    /// Tears down the running asio server (if any) and clears all registered tools.
+    /// Use before unloading DLLs whose translation units called `addTool` — their captured
+    /// std::function deleters dangle once those DLLs are unmapped, so a later `~Server`
+    /// would segfault. Idempotent. Safe to call when nothing was registered.
+    MRMCP_API void shutdown();
+
+    /// Returns the list of currently-registered tools as a JSON array of MCP `tool` entries
+    /// (`name`, optional `title`/`description`, `inputSchema`, `outputSchema`).
+    /// Suitable for splicing into a `tools/list` response or persisting to a cache file.
+    [[nodiscard]] MRMCP_API nlohmann::json dumpToolsAsJson() const;
+
+    /// Atomically writes `{ "tools": dumpToolsAsJson() }` to @p path, creating parent
+    /// directories as needed. Returns an error message on I/O failure.
+    MRMCP_API Expected<void> saveToolsCache( const std::filesystem::path& path ) const;
+
+    /// Optional predicate consulted before every tool dispatch, given the tool's id.
+    /// Return {} to allow; return `unexpected("reason")` to block — the reason surfaces
+    /// to the MCP client as the tool-call error.
+    /// Evaluated per call, so changes (e.g. user sign-in) take effect immediately.
+    using ToolValidator = std::function<Expected<void>( const std::string& toolId )>;
+    MRMCP_API void setToolValidator( ToolValidator validator );
 
 private:
     struct State;

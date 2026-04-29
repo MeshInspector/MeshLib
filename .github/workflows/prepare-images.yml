@@ -30,7 +30,7 @@ on:
 
 jobs:
   always-success:
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     steps:
       - name: Do nothing
         run: echo
@@ -147,10 +147,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ windows-2025 ]
+        vs: [ vs2019, vs2022 ]
         include:
-          - runner: windows-2025
+          - vs: vs2022
+            runner: windows-2025
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
+            vcpkg_triplet: x64-windows-meshlib
+          - vs: vs2019
+            runner: windows-2025
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
+            vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
@@ -166,11 +172,15 @@ jobs:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@4ce2bbcf5d401e557e0537d863a6aced08605794 # v4
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+          retry-max-attempts: 5
 
       - name: Build and cache vcpkg
-        run: .\thirdparty\install.bat --write-s3
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+        run: |
+          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider

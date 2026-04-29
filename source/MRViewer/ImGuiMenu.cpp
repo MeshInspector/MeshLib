@@ -2705,75 +2705,149 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
     ImGui::PopStyleColor();
 }
 
+void ImGuiMenu::drawMixedTransformField_( const char* labelId, int columns, const char* trailingLabel )
+{
+    // Long-dash (em-dash) rendered in a read-only box per column; used when selected objects
+    // have differing transforms, so the field communicates "values differ" and cannot be edited.
+    static const std::string kDash = "\xE2\x80\x94";
+    const float w = getSceneInfoItemWidth_( columns );
+    for ( int i = 0; i < columns; ++i )
+    {
+        if ( i )
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+        const std::string label = ( i == columns - 1 && trailingLabel && *trailingLabel )
+            ? fmt::format( "{}##{}{}", trailingLabel, labelId, i )
+            : fmt::format( "##{}{}", labelId, i );
+        UI::inputTextCenteredReadOnly( label.c_str(), kDash, w );
+    }
+}
+
+std::shared_ptr<CombinedHistoryAction> ImGuiMenu::makeObjectsXfHistoryAction_(
+    const std::string& name,
+    const std::vector<std::shared_ptr<Object>>& objs ) const
+{
+    std::vector<std::shared_ptr<HistoryAction>> subs;
+    subs.reserve( objs.size() );
+    for ( const auto& o : objs )
+        subs.push_back( std::make_shared<ChangeXfAction>( name, o ) );
+    return std::make_shared<CombinedHistoryAction>( name, subs );
+}
+
+void ImGuiMenu::applyXfToObjects_(
+    const AffineXf3f& xf,
+    const std::vector<std::shared_ptr<Object>>& objs )
+{
+    for ( const auto& o : objs )
+        o->setXf( xf );
+}
+
 float ImGuiMenu::drawTransform_()
 {
-    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    // Use topmost-selected objects so that when a parent and its child are both selected,
+    // only the parent is edited — otherwise applying the same xf to both would move the
+    // child twice (once through its own xf, once through the parent's cascade).
+    const auto& selected = SceneCache::getAllTopmostObjects<Object, ObjectSelectivityType::Selected>();
+
+    // Hide the panel if nothing is selected or any selected object is locked —
+    // a generalisation of the original single-object `!selected[0]->isLocked()` gate.
+    const bool canShow = !selected.empty()
+        && std::none_of( selected.begin(), selected.end(),
+            []( const auto& o ){ return o->isLocked(); } );
+    if ( !canShow )
+    {
+        transformBlockShown_ = false;
+        return 0.f;
+    }
 
     auto& style = ImGui::GetStyle();
 
-    float resultHeight_ = 0.f;
-    if ( selected.size() == 1 && !selected[0]->isLocked() )
+    // Fix up the scene-list scroll on the frame the transform block first appears, so the
+    // selected row stays in view as the properties panel grows by the block's height.
+    if ( !transformBlockShown_ )
     {
-        if ( !selectionChangedToSingleObj_ )
-        {
-            selectionChangedToSingleObj_ = true;
-            sceneObjectsList_->setNextFrameFixScroll();
-        }
-        resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
-        bool openedContext = false;
-        if ( drawCollapsingHeaderTransform_() )
-        {
-            openedContext = drawTransformContextMenu_( selected[0] );
-            const float transformHeight = ( ImGui::GetTextLineHeight() + style.FramePadding.y * 2 ) * 3 + style.ItemSpacing.y * 2;
-            resultHeight_ += transformHeight + style.ItemSpacing.y;
-            ImGui::BeginChild( "SceneTransform", ImVec2( 0, transformHeight ) );
-            auto& data = *selected.front();
+        transformBlockShown_ = true;
+        sceneObjectsList_->setNextFrameFixScroll();
+    }
 
-            auto xf = data.xf();
-            Matrix3f q, r;
+    // When transforms differ across the selection, we display "—" in the fields, do not
+    // enter the editing path, and do not open the context menu — its Copy/Paste/Reset
+    // operations assume a single shared xf to read from and write back to.
+    const AffineXf3f& xf0 = selected.front()->xf();
+    const bool allSame = std::all_of( selected.begin() + 1, selected.end(),
+        [&]( const auto& o ){ return o->xf() == xf0; } );
+
+    float resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
+    bool openedContext = false;
+    if ( drawCollapsingHeaderTransform_() )
+    {
+        openedContext = drawTransformContextMenu_( selected );
+        const float transformHeight = ( ImGui::GetTextLineHeight() + style.FramePadding.y * 2 ) * 3 + style.ItemSpacing.y * 2;
+        resultHeight_ += transformHeight + style.ItemSpacing.y;
+        ImGui::BeginChild( "SceneTransform", ImVec2( 0, transformHeight ) );
+
+        auto xf = xf0;
+        Matrix3f q, r;
+        Vector3f euler;
+        Vector3f scale;
+        if ( allSame )
+        {
             decomposeMatrix3( xf.A, q, r );
+            euler = ( 180 / PI_F ) * q.toEulerAngles();
+            scale = Vector3f{ r.x.x, r.y.y, r.z.z };
+        }
 
-            auto euler = ( 180 / PI_F ) * q.toEulerAngles();
-            Vector3f scale{ r.x.x, r.y.y, r.z.z };
+        bool inputDeactivated = false;
+        bool inputChanged = false;
 
-            bool inputDeactivated = false;
-            bool inputChanged = false;
+        ImGui::PushItemWidth( getSceneInfoItemWidth_( 3 ) );
+        if ( !allSame )
+        {
+            // Mixed: render "—" in the same column layout the drag widgets would use.
+            drawMixedTransformField_( "scaleMixed", uniformScale_ ? 1 : 3 );
+            ImGui::SameLine( 0, uniformScale_
+                ? ImGui::GetStyle().ItemSpacing.x
+                : ImGui::GetStyle().ItemInnerSpacing.x );
+        }
+        else if ( uniformScale_ )
+        {
+            float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
+            ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
+            inputChanged = UI::drag<NoUnit>( "##scaleX", midScale, midScale * 0.01f, 1e-3f, 1e+6f );
+            if ( inputChanged )
+                scale.x = scale.y = scale.z = midScale;
+            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SameLine();
+        }
+        else
+        {
+            inputChanged = UI::drag<NoUnit>( "##scaleX", scale.x, scale.x * 0.01f, 1e-3f, 1e+6f );
+            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+            inputChanged = UI::drag<NoUnit>( "##scaleY", scale.y, scale.y * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
+            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+            inputChanged = UI::drag<NoUnit>( "##scaleZ", scale.z, scale.z * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
+            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+        }
 
-            ImGui::PushItemWidth( getSceneInfoItemWidth_( 3 ) );
-            if ( uniformScale_ )
-            {
-                float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
-                ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-                inputChanged = UI::drag<NoUnit>( "##scaleX", midScale, midScale * 0.01f, 1e-3f, 1e+6f );
-                if ( inputChanged )
-                    scale.x = scale.y = scale.z = midScale;
-                inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
-                ImGui::SameLine();
-            }
-            else
-            {
-                inputChanged = UI::drag<NoUnit>( "##scaleX", scale.x, scale.x * 0.01f, 1e-3f, 1e+6f );
-                inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
-                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                inputChanged = UI::drag<NoUnit>( "##scaleY", scale.y, scale.y * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
-                inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
-                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                inputChanged = UI::drag<NoUnit>( "##scaleZ", scale.z, scale.z * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
-                inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
-                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-            }
+        auto ctx = ImGui::GetCurrentContext();
+        assert( ctx );
+        auto window = ctx->CurrentWindow;
+        assert( window );
+        auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * UI::scale();
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
+        UI::checkbox( _tr( "Uni-scale" ), &uniformScale_ );
+        window->DC.CursorPosPrevLine.y -= diff;
+        UI::setTooltipIfHovered( _tr( "Selects between uniform scaling or separate scaling along each axis" ) );
+        ImGui::PopItemWidth();
 
-            auto ctx = ImGui::GetCurrentContext();
-            assert( ctx );
-            auto window = ctx->CurrentWindow;
-            assert( window );
-            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * UI::scale();
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            UI::checkbox( _tr( "Uni-scale" ), &uniformScale_ );
-            window->DC.CursorPosPrevLine.y -= diff;
-            UI::setTooltipIfHovered( _tr( "Selects between uniform scaling or separate scaling along each axis" ) );
-            ImGui::PopItemWidth();
-
+        if ( !allSame )
+        {
+            drawMixedTransformField_( "rotationMixed", 3, _tr( "Rotation XYZ" ) );
+        }
+        else
+        {
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
             bool rotationChanged = UI::drag<AngleUnit>( _tr( "Rotation XYZ" ), euler, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, { .sourceUnit = AngleUnit::degrees } );
             bool rotationDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
@@ -2806,7 +2880,14 @@ float ImGuiMenu::drawTransform_()
             euler.y = std::clamp( euler.y, -90.0f + 2.0f * cZenithEps, 90.0f - 2.0f * cZenithEps );
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
+        }
 
+        if ( !allSame )
+        {
+            drawMixedTransformField_( "translationMixed", 3, _tr( "Translation" ) );
+        }
+        else
+        {
             const auto trSpeed = ( selectionLocalBox_.valid() && selectionLocalBox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionLocalBox_.diagonal() : 0.003f;
 
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
@@ -2824,24 +2905,21 @@ float ImGuiMenu::drawTransform_()
             if ( xfHistUpdated_ )
                 xfHistUpdated_ = !inputDeactivated;
 
-            if ( xf != data.xf() && !xfHistUpdated_ )
+            if ( xf != xf0 && !xfHistUpdated_ )
             {
-                AppendHistory<ChangeXfAction>( _t( "Manual Change Transform" ), selected[0] );
+                // One combined history entry per drag, regardless of how many objects
+                // were selected — so Ctrl+Z reverts them all in one step.
+                AppendHistory( makeObjectsXfHistoryAction_( _t( "Manual Change Transform" ), selected ) );
                 xfHistUpdated_ = true;
             }
-            data.setXf( xf );
-            ImGui::EndChild();
-            if ( !openedContext )
-                openedContext = drawTransformContextMenu_( selected[0] );
+            applyXfToObjects_( xf, selected );
         }
+        ImGui::EndChild();
         if ( !openedContext )
-            drawTransformContextMenu_( selected[0] );
+            openedContext = drawTransformContextMenu_( selected );
     }
-    else
-    {
-        if ( selectionChangedToSingleObj_ )
-            selectionChangedToSingleObj_ = false;
-    }
+    if ( !openedContext )
+        drawTransformContextMenu_( selected );
 
     return resultHeight_;
 }

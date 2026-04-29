@@ -85,6 +85,24 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
+IF(NOT APPLE)
+  set(ZLIB_COMPAT       OFF CACHE BOOL "")
+  set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "")
+  set(ZLIBNG_ENABLE_TESTS OFF CACHE BOOL "")
+  set(WITH_GTEST        OFF CACHE BOOL "")
+  set(WITH_GZFILEOP     OFF CACHE BOOL "")
+  IF(EMSCRIPTEN)
+    # Force static: undefined BUILD_SHARED_LIBS makes zlib-ng emit duplicate
+    # libz-ng.a rules under Emscripten. Restore to undefined (not empty)
+    # afterwards -- jsoncpp downstream breaks on empty BUILD_SHARED_LIBS.
+    set(BUILD_SHARED_LIBS OFF)
+    add_subdirectory(./zlib-ng)
+    unset(BUILD_SHARED_LIBS)
+  ELSE()
+    add_subdirectory(./zlib-ng)
+  ENDIF()
+ENDIF()
+
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 

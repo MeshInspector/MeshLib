@@ -67,7 +67,7 @@ static nlohmann::json mcpSystemInfo( const nlohmann::json& )
         writer->write( sys, &oss );
         out = nlohmann::json::parse( oss.str() );
     } );
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 MR_ON_INIT{

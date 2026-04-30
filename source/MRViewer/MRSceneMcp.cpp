@@ -224,7 +224,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 
         out["visualization"] = visualizationToJson( *obj );
     } );
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
@@ -392,7 +392,7 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
         }
         throw std::runtime_error( "scene.getObject requires either `filePath` or `extension`." );
     } );
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
@@ -454,7 +454,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
         }
     } );
     skipFramesAfterInput();
-    return nlohmann::json::object( { { "result", nlohmann::json::object( { { "ids", addedIds } } ) } } );
+    return nlohmann::json::object( { { "ids", addedIds } } );
 }
 
 static constexpr std::string_view kSceneIdSemantics =

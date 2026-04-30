@@ -160,12 +160,12 @@ static nlohmann::json mcpToolProgressStatus( const nlohmann::json& )
     if ( !MR::ProgressBar::isOrdered() || MR::ProgressBar::isFinished() )
     {
         out["active"] = false;
-        return nlohmann::json::object( { { "result", std::move( out ) } } );
+        return out;
     }
     out["active"]  = true;
     out["title"]   = MR::ProgressBar::getLastOperationTitle();
     out["percent"] = MR::ProgressBar::getProgress() * 100.f;
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 MR_ON_INIT{

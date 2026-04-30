@@ -219,7 +219,7 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
     }
     out["width"] = img.resolution.x;
     out["height"] = img.resolution.y;
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )

@@ -115,12 +115,10 @@ static nlohmann::json mcpToolsGetInfo( const nlohmann::json& args )
         }
     } );
 
-    return nlohmann::json::object( { { "result",
-        nlohmann::json::object( {
-            { "items",   std::move( items ) },
-            { "missing", std::move( missing ) },
-        } )
-    } } );
+    return nlohmann::json::object( {
+        { "items",   std::move( items ) },
+        { "missing", std::move( missing ) },
+    } );
 }
 
 static nlohmann::json mcpToolsAction( const nlohmann::json& args )
@@ -145,9 +143,7 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
         nowActive = item->isActive();
     } );
     skipFramesAfterInput();
-    return nlohmann::json::object( { { "result",
-        nlohmann::json::object( { { "active", nowActive } } )
-    } } );
+    return nlohmann::json::object( { { "active", nowActive } } );
 }
 
 MR_ON_INIT{

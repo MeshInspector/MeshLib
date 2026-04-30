@@ -47,6 +47,7 @@ jobs:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
 
     steps:
       - name: Checkout
@@ -369,15 +370,15 @@ jobs:
 
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+        if: ${{ env.job_upload_artifact == 'true' }}
         run: tar -a -c -f MREDist_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
+        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
         run: tar -a -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+        if: ${{ env.job_upload_artifact == 'true' }}
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           action: actions/upload-artifact@v7
@@ -390,7 +391,7 @@ jobs:
             overwrite: true
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        if: ${{ inputs.internal_build && env.job_upload_artifact == 'true' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
@@ -399,7 +400,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
+        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           action: actions/upload-artifact@v7

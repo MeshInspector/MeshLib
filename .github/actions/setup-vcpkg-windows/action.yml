@@ -1,0 +1,105 @@
+name: 'Set up vcpkg for MeshLib (Windows)'
+description: 'Cleans C:\vcpkg, checks out the requested vcpkg ref, restores the build cache, optionally configures AWS credentials, and runs thirdparty\install.bat for MeshLib ports.'
+
+inputs:
+  vcpkg-version:
+    description: 'Vcpkg git ref (tag/branch/sha) to check out under C:\vcpkg.'
+    required: true
+  vcpkg-triplet:
+    description: 'Vcpkg triplet name. Used in the cache key and the post-install diagnostic.'
+    required: false
+    default: 'x64-windows-meshlib'
+  install-flags:
+    description: 'Extra flags forwarded to thirdparty\install.bat (e.g. "--write-s3 --use-s3-asset-provider").'
+    required: false
+    default: ''
+  aws-role-to-assume:
+    description: 'IAM role ARN for AWS OIDC. Empty (default) skips AWS configuration. The caller must grant `permissions.id-token: write` on the job when this is set.'
+    required: false
+    default: ''
+  aws-region:
+    description: 'AWS region for the OIDC role.'
+    required: false
+    default: 'us-east-1'
+  clean:
+    description: 'Run "git clean -ffdx" in C:\vcpkg before checkout.'
+    required: false
+    default: 'true'
+  pull-rebase:
+    description: 'Run "git pull --rebase" before "git checkout".'
+    required: false
+    default: 'true'
+  bootstrap:
+    description: 'Run bootstrap-vcpkg.bat after checkout.'
+    required: false
+    default: 'true'
+  integrate:
+    description: 'Run "vcpkg.exe integrate install" both before and after the cache restore.'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clean Vcpkg Directory
+      if: ${{ inputs.clean == 'true' }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: git clean -ffdx
+
+    - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: |
+        git fetch
+        if ('${{ inputs.pull-rebase }}' -eq 'true') { git pull --rebase }
+        git checkout ${{ inputs.vcpkg-version }}
+        if ('${{ inputs.bootstrap }}' -eq 'true') { ./bootstrap-vcpkg.bat }
+        if ('${{ inputs.integrate }}' -eq 'true') { vcpkg.exe integrate install }
+
+    - name: Restore Vcpkg Cache
+      uses: actions/cache@v5
+      id: vcpkg-cache
+      env:
+        RUNNER_DEBUG: 1
+      with:
+        key: vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}
+        path: |
+          C:\vcpkg\*
+
+    - name: Diagnostic — Restore Vcpkg Cache result
+      if: always()
+      shell: pwsh
+      run: |
+        Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
+        Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
+        Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
+        Write-Host "key:        vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}"
+        Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
+        if (Test-Path C:\vcpkg) {
+          Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
+        }
+
+    - name: Configure AWS Credentials
+      if: ${{ inputs.aws-role-to-assume != '' }}
+      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      with:
+        role-to-assume: ${{ inputs.aws-role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+        retry-max-attempts: 5
+
+    - name: Update vcpkg packages
+      shell: pwsh
+      run: ./thirdparty/install.bat ${{ inputs.install-flags }}
+
+    - name: Vcpkg integrate install
+      if: ${{ inputs.integrate == 'true' }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: vcpkg.exe integrate install
+
+    - name: Diagnostic — vcpkg installed tree
+      if: always()
+      shell: pwsh
+      continue-on-error: true
+      run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ inputs.vcpkg-triplet }}"

@@ -690,7 +690,7 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: ManyLinux-*
@@ -719,14 +719,14 @@ jobs:
 
 
       - name: Delete all Windows
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Windows
           failOnError: false
 
       - name: Delete all Macos
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Macos-*

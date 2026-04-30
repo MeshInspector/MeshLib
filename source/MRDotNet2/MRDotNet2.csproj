@@ -16,6 +16,12 @@
         1591 - Missing comments
     -->
     <NoWarn>CS0659;CS0661;1591</NoWarn>
+
+    <!-- Promoted to errors:
+        CS1570 - "XML comment has badly formed XML". Generated bindings should always emit well-formed XML doc comments;
+                 if this fires, the bug is in the C++ source comment or in mrbind's csharp generator and must be fixed.
+    -->
+    <WarningsAsErrors>CS1570</WarningsAsErrors>
   </PropertyGroup>
 
 </Project>

@@ -14,11 +14,11 @@ inputs:
     required: false
     default: ''
   internal-build:
-    description: 'When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
+    description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
     required: false
     default: 'false'
-  minimal:
-    description: 'Skip clean, pull --rebase, bootstrap, and pre-cache integrate. Used by callers that rely on a pre-warmed C:\vcpkg from a prior run (e.g. update-win-version.yml).'
+  reuse-vcpkg:
+    description: 'String boolean ("true" or "false"). When "true", trust the existing C:\vcpkg state and skip git clean, git pull --rebase, bootstrap-vcpkg.bat, and the pre-cache "vcpkg integrate install". Used by callers that rely on a pre-warmed tree (e.g. update-win-version.yml).'
     required: false
     default: 'false'
 
@@ -26,7 +26,7 @@ runs:
   using: 'composite'
   steps:
     - name: Clean Vcpkg Directory
-      if: ${{ inputs.minimal != 'true' }}
+      if: ${{ inputs.reuse-vcpkg != 'true' }}
       shell: pwsh
       working-directory: C:\vcpkg
       run: git clean -ffdx
@@ -36,9 +36,9 @@ runs:
       working-directory: C:\vcpkg
       run: |
         git fetch
-        if ('${{ inputs.minimal }}' -ne 'true') { git pull --rebase }
+        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') { git pull --rebase }
         git checkout ${{ inputs.vcpkg-version }}
-        if ('${{ inputs.minimal }}' -ne 'true') {
+        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') {
           ./bootstrap-vcpkg.bat
           vcpkg.exe integrate install
         }

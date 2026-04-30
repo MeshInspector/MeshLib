@@ -108,7 +108,11 @@ jobs:
         env:
           RUNNER_DEBUG: 1
         with:
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          # Bump suffix to invalidate previous oversized caches.
+          # Trim happens just before the post-action save (see "Trim vcpkg
+          # cache" step below), since !path negations on directory entries
+          # don't match files inside them in @actions/glob.
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-slim3
           path: |
             C:\vcpkg\*
 
@@ -446,3 +450,28 @@ jobs:
               ./source/x64/Release/MRDotNet2.xml
             retention-days: 1
             overwrite: true
+
+      - name: Trim vcpkg cache (drop buildtrees before save)
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "=== C:\vcpkg subfolder sizes (pre-trim) ==="
+          Get-ChildItem C:\vcpkg -Force -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                if ($_.PSIsContainer) {
+                  $sizeMB = [int]((Get-ChildItem $_.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                                  Measure-Object Length -Sum).Sum / 1MB)
+                  [pscustomobject]@{ Path = $_.FullName; SizeMB = $sizeMB }
+                } else {
+                  [pscustomobject]@{ Path = $_.FullName; SizeMB = [int]($_.Length / 1MB) }
+                }
+              } |
+              Sort-Object SizeMB -Descending |
+              Format-Table -AutoSize | Out-String | Write-Host
+
+          foreach ($d in 'C:\vcpkg\buildtrees') {
+            if (Test-Path $d) {
+              Write-Host "Removing $d"
+              Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }

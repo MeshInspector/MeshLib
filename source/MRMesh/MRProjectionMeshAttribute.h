@@ -33,7 +33,7 @@ bool projectFaceAttribute( const MeshPart& mp, const Mesh& oldMesh, F&& func, co
 /// \param oldMeshData old mesh along with input attributes
 /// \param newMeshData new mesh along with outpuyt attributes
 /// \param region optional input region for projecting (usefull if newMesh is changed part of old mesh)
-/// \param params parameters of prohecting
+/// \param params parameters of projecting
 [[nodiscard]] MRMESH_API Expected<void> projectObjectMeshData(
     const ObjectMeshData& oldMeshData, ObjectMeshData& newMeshData, const FaceBitSet* region = nullptr,
     const ProjectAttributeParams& params = {} );

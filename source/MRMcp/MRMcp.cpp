@@ -198,7 +198,20 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     }
 
     nlohmann::json args = nlohmann::json::object();
-    if ( !isGet && !req.body.empty() )
+    if ( isGet )
+    {
+        // URL query params become tool arguments. Each value is JSON-parsed when
+        // possible (so `?width=1920` -> 1920, `?path=[]` -> [], `?on=true` -> true)
+        // and falls back to the raw string when not (`?label=foo` -> "foo"). Tool
+        // schema validation still runs in toolManager.invoke and rejects type
+        // mismatches with -32602.
+        for ( const auto& [k, v] : req.params )
+        {
+            auto parsed = nlohmann::json::parse( v, nullptr, /* allow_exceptions */ false );
+            args[k] = parsed.is_discarded() ? nlohmann::json( v ) : std::move( parsed );
+        }
+    }
+    else if ( !req.body.empty() )
     {
         auto parsed = nlohmann::json::parse( req.body, nullptr, /* allow_exceptions */ false );
         if ( parsed.is_discarded() )

@@ -170,7 +170,7 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
 {
-    const bool includeUi = args.value( "includeUi", false );
+    const bool includeUi = args.value( "includeUi", true );
     const int width = args.value( "width", 0 );
     const int height = args.value( "height", 0 );
     if ( width < 0 || height < 0 )
@@ -358,8 +358,8 @@ MR_ON_INIT{
     server.addTool(
         /*id*/  "viewer.captureScreenshot",
         /*name*/"Capture viewport screenshot",
-        /*desc*/"Render the viewer to a PNG. Default (`includeUi: false`) captures only the 3D viewport; set "
-                "`includeUi: true` to capture the whole window including panels, ribbon, and dialogs. "
+        /*desc*/"Render the viewer to a PNG. Default (`includeUi: true`) captures the whole window including panels, ribbon, and dialogs; set "
+                "`includeUi: false` to capture only the 3D viewport. "
                 "For the 3D-only mode, optional `width`/`height` request a specific resolution (zero or missing = "
                 "current viewport size) and `transparentBg` (default false) omits the background — these options "
                 "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "

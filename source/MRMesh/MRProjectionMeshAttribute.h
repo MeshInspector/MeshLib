@@ -28,15 +28,13 @@ bool projectVertAttribute( const MeshVertPart& mp, const Mesh& oldMesh, F&& func
 template<typename F>
 bool projectFaceAttribute( const MeshPart& mp, const Mesh& oldMesh, F&& func, const ProjectAttributeParams& params = {} );
 
-/// <summary>
 /// finds attributes of new mesh by projecting faces/vertices on old mesh
 /// \note for now clears edges attributes
-/// </summary>
-/// <param name="oldMeshData">old mesh along with input attributes</param>
-/// <param name="newMeshData">new mesh along with outpuyt attributes</param>
-/// <param name="region">optional input region for projecting (usefull if newMesh is changed part of old mesh)</param>
-/// <param name="params">parameters of prohecting</param>
-[[nodiscard]] MRMESH_API Expected<void> projectObjectMeshData( 
+/// \param oldMeshData old mesh along with input attributes
+/// \param newMeshData new mesh along with outpuyt attributes
+/// \param region optional input region for projecting (usefull if newMesh is changed part of old mesh)
+/// \param params parameters of prohecting
+[[nodiscard]] MRMESH_API Expected<void> projectObjectMeshData(
     const ObjectMeshData& oldMeshData, ObjectMeshData& newMeshData, const FaceBitSet* region = nullptr,
     const ProjectAttributeParams& params = {} );
 

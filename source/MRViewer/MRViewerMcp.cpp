@@ -373,10 +373,11 @@ MR_ON_INIT{
             .addMemberOpt( "transparentBg", Schema::Bool{} )
             .addMemberOpt( "filePath",      Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",   Schema::String{} )
-            .addMemberOpt( "bytes",  Schema::String{} )
-            .addMember(    "width",  Schema::Number{} )
-            .addMember(    "height", Schema::Number{} ),
+            .addMemberOpt( "path",        Schema::String{} )
+            .addMemberOpt( "bytes",       Schema::String{} )
+            .addMemberOpt( "contentType", Schema::String{} )
+            .addMember(    "width",       Schema::Number{} )
+            .addMember(    "height",      Schema::Number{} ),
         /*func*/mcpViewerCaptureScreenshot
     );
 

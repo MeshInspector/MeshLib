@@ -105,10 +105,25 @@ jobs:
       - name: Restore Vcpkg Cache
         uses: actions/cache@v5
         id: vcpkg-cache
+        env:
+          RUNNER_DEBUG: 1
         with:
           key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           path: |
             C:\vcpkg\*
+
+      - name: Diagnostic — Restore Vcpkg Cache result
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
+          Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
+          Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
+          Write-Host "key:        vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}"
+          Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
+          if (Test-Path C:\vcpkg) {
+            Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
+          }
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
@@ -117,6 +132,11 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
           retry-max-attempts: 5
+
+      - name: Enable VS2019 toolset for vcpkg
+        if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
+        run: |
+          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
       - name: Update vcpkg packages
         run: |

@@ -78,7 +78,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty\fastmcpp\include;..\..\thirdparty\cpp-httplib;..\..\thirdparty\nlohmann-json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4099;4100;4242;4244;4355;4456;4458;4464;4505;4702;5204;5220;5233;5245;5267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -98,7 +98,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty\fastmcpp\include;..\..\thirdparty\cpp-httplib;..\..\thirdparty\nlohmann-json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4099;4100;4242;4244;4355;4456;4458;4464;4505;4702;5204;5220;5233;5245;5267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>

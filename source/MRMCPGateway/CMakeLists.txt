@@ -13,23 +13,25 @@ add_executable(${PROJECT_NAME}
 # wiring; installers and clients invoke `McpGateway[.exe]`).
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME McpGateway)
 
-# Same fastmcpp acquisition strategy as MRMcp/CMakeLists.txt — bundled subdirectory
-# on Windows/vcpkg and macOS, system package on Debian/Ubuntu.
-IF(MESHLIB_USE_VCPKG OR APPLE)
-  IF(NOT TARGET fastmcpp_core)
-    set(FASTMCPP_DEPS_ADD_SUBDIRECTORY ON)
-    add_subdirectory(../fastmcpp fastmcpp)
-  ENDIF()
-  target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp_core)
-  target_include_directories(${PROJECT_NAME} PRIVATE
-    ${MESHLIB_THIRDPARTY_DIR}/fastmcpp/include
-    ${MESHLIB_THIRDPARTY_DIR}/cpp-httplib
-    ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
+find_package(httplib REQUIRED)
+find_package(fastmcpp REQUIRED)
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    httplib::httplib
+    fastmcpp::fastmcpp_core
+)
+# TODO: why does it affect only Linux+vcpkg?
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND MESHLIB_USE_VCPKG)
+  # fix missing references to 'getaddrinfo_a' and 'gai_*' functions (required by cpp-httplib)
+  target_link_libraries(${PROJECT_NAME} PRIVATE anl)
+endif()
+# inject work-around for Clang libc++ and older Xcode versions' compatibility
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_precompile_headers(${PROJECT_NAME}
+    PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:"fastmcpp/clang.hpp">
   )
-ELSE()
-  find_package(fastmcpp REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE fastmcpp::fastmcpp_core)
-ENDIF()
+endif()
 
 install(
   TARGETS ${PROJECT_NAME}

@@ -303,7 +303,7 @@ jobs:
       - name: Install MRBind toolchain into runner MSYS2
         shell: pwsh
         run: |
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "pacman -Sy --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-libc++"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "pacman -Sy --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-llvm mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-libc++"
 
       - name: Build MRBind
         shell: cmd

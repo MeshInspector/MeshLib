@@ -90,6 +90,11 @@ jobs:
           build_system: ${{ matrix.build_system }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
+      - name: Enable VS2019 toolset for vcpkg
+        if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
+        run: |
+          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
+
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:

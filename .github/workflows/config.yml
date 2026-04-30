@@ -94,35 +94,110 @@ jobs:
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
-      # please list the required tags here
-      tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
-      tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
-      tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
-      tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
-      tag-upload-binaries:       ${{ contains( github.event.pull_request.labels.*.name, 'upload-binaries' ) }}
-      tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
-      tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
+      # Read PR labels live; github.event.pull_request.labels is a
+      # trigger-time snapshot (POST /pulls has no labels param —
+      # see community#24724).
+      tag-bump-vcpkg:            ${{ steps.live-labels.outputs.tag-bump-vcpkg }}
+      tag-full-ci:               ${{ steps.live-labels.outputs.tag-full-ci }}
+      tag-skip-image-rebuild:    ${{ steps.live-labels.outputs.tag-skip-image-rebuild }}
+      tag-update-doc:            ${{ steps.live-labels.outputs.tag-update-doc }}
+      tag-update-doc-only:       ${{ steps.live-labels.outputs.tag-update-doc-only }}
+      tag-upload-binaries:       ${{ steps.live-labels.outputs.tag-upload-binaries }}
+      tag-upload-test-artifacts: ${{ steps.live-labels.outputs.tag-upload-test-artifacts }}
+      tag-test-pip-build:        ${{ steps.live-labels.outputs.tag-test-pip-build }}
       # tags for disabling builds for different systems
-      tag-build-release-windows: ${{ contains( github.event.pull_request.labels.*.name, 'build-release-windows' ) }}
-      tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
-      tag-disable-ubuntu-x64:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
-      tag-disable-ubuntu-arm64:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
-      tag-disable-linux-vcpkg:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
-      tag-disable-macos:          ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
-      tag-disable-emscripten:     ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
+      tag-build-release-windows: ${{ steps.live-labels.outputs.tag-build-release-windows }}
+      tag-disable-windows:       ${{ steps.live-labels.outputs.tag-disable-windows }}
+      tag-disable-ubuntu-x64:     ${{ steps.live-labels.outputs.tag-disable-ubuntu-x64 }}
+      tag-disable-ubuntu-arm64:   ${{ steps.live-labels.outputs.tag-disable-ubuntu-arm64 }}
+      tag-disable-linux-vcpkg:    ${{ steps.live-labels.outputs.tag-disable-linux-vcpkg }}
+      tag-disable-macos:          ${{ steps.live-labels.outputs.tag-disable-macos }}
+      tag-disable-emscripten:     ${{ steps.live-labels.outputs.tag-disable-emscripten }}
 
     runs-on: ubuntu-latest
 
-    env:
-      # duplicate output values here since they cannot be accessed from steps
-      full_config_build: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      upload_artifacts: ${{ github.event_name == 'push' || github.event_name == 'schedule' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) || contains( github.event.pull_request.labels.*.name, 'upload-binaries' ) }}
-      version_namespace: ${{ ( contains( github.event.pull_request.labels.*.name, 'full-ci' ) || contains( github.event.pull_request.labels.*.name, 'upload-binaries' ) ) && github.event_name != 'push' && 'pr-test' || '' }}
+    # `env:` block removed — its three label-derived booleans
+    # (full_config_build / upload_artifacts / version_namespace) are
+    # written to $GITHUB_ENV by the live-labels step below.
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # Read PR labels live (trigger payload is empty right after
+      # `gh pr create --label X`). Emits one step output per label and
+      # full_config_build / upload_artifacts / version_namespace to $GITHUB_ENV.
+      - name: Read live PR labels
+        id: live-labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read_labels() {
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              gh pr view ${{ github.event.pull_request.number }} \
+                --repo "${{ github.repository }}" \
+                --json labels --jq '.labels[].name'
+            fi
+          }
+
+          # Poll briefly on `pull_request.opened` to ride out the
+          # ~1–3 s gh-pr-create-label race. 3×2 s cap, so label-less PRs
+          # only pay ~4 s; synchronize/reopened runs skip the polling.
+          attempts=1
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.event.action }}" = "opened" ]; then
+            attempts=3   # up to ~4 s of polling: 0, 2, 2
+          fi
+
+          LABELS=""
+          for i in $(seq 1 $attempts); do
+            LABELS=$(read_labels)
+            if [ -n "$LABELS" ] || [ "$i" = "$attempts" ]; then
+              break
+            fi
+            echo "  (no labels yet — retry $i/$attempts in 2 s)"
+            sleep 2
+          done
+
+          echo "Live labels:"
+          if [ -n "$LABELS" ]; then echo "$LABELS" | sed 's/^/  - /'; else echo "  (none)"; fi
+
+          has() { echo "$LABELS" | grep -qFx "$1" && echo true || echo false; }
+
+          # Emit `tag-<key>=true` per label present. The `disable-build-X`
+          # family drops the middle `build-` segment to match the existing
+          # workflow_call outputs (`tag-disable-X`). Absent outputs are falsy.
+          for label in $LABELS; do
+            echo "tag-${label/disable-build-/disable-}=true"
+          done >> "$GITHUB_OUTPUT"
+
+          # Derived env vars — replaces the removed job-level `env:`
+          # block. Referenced by `if:`/`env:` in later steps (Checkout
+          # full history, Versioning, Set matrix for ubuntu-x64, etc.).
+          FULL_CI=$(has full-ci)
+          UPLOAD_BIN=$(has upload-binaries)
+          EVT="${{ github.event_name }}"
+
+          full_config_build=false
+          if [ "$EVT" = "schedule" ] || [ "$EVT" = "workflow_dispatch" ] || [ "$FULL_CI" = "true" ]; then
+            full_config_build=true
+          fi
+
+          upload_artifacts=false
+          if [ "$EVT" = "push" ] || [ "$EVT" = "schedule" ] || [ "$FULL_CI" = "true" ] || [ "$UPLOAD_BIN" = "true" ]; then
+            upload_artifacts=true
+          fi
+
+          version_namespace=""
+          if { [ "$FULL_CI" = "true" ] || [ "$UPLOAD_BIN" = "true" ]; } && [ "$EVT" != "push" ]; then
+            version_namespace="pr-test"
+          fi
+
+          {
+            echo "full_config_build=$full_config_build"
+            echo "upload_artifacts=$upload_artifacts"
+            echo "version_namespace=$version_namespace"
+          } >> "$GITHUB_ENV"
 
       # install helper utility for Python version management
       - name: Install uv
@@ -229,7 +304,7 @@ jobs:
         run: |
           if [[ "${{ env.full_config_build }}" == "true" || github.event_name == 'schedule' ]]; then
             MATRIX_FILE=".github/workflows/matrix/windows-full-config.json"
-          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'build-release-windows') }}" == "true" ]]; then
+          elif [[ "${{ steps.live-labels.outputs.tag-build-release-windows }}" == "true" ]]; then
             MATRIX_FILE=".github/workflows/matrix/windows-standard-config.json"
           else
             MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"

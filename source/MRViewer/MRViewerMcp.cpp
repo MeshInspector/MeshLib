@@ -216,6 +216,7 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
             throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
         std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
         out["bytes"] = encode64( bytes.data(), bytes.size() );
+        out["contentType"] = "image/png";
     }
     out["width"] = img.resolution.x;
     out["height"] = img.resolution.y;

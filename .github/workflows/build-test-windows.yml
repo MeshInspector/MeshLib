@@ -90,68 +90,18 @@ jobs:
           build_system: ${{ matrix.build_system }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
-      - name: Clean Vcpkg Directory
-        working-directory: C:\vcpkg
-        run: git clean -ffdx
-
-      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git pull --rebase
-          git checkout ${{ matrix.vcpkg-version }}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v5
-        id: vcpkg-cache
-        env:
-          RUNNER_DEBUG: 1
-        with:
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-          path: |
-            C:\vcpkg\*
-
-      - name: Diagnostic — Restore Vcpkg Cache result
-        if: always()
-        shell: pwsh
-        run: |
-          Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
-          Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
-          Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
-          Write-Host "key:        vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}"
-          Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
-          if (Test-Path C:\vcpkg) {
-            Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
-          }
-
-      - name: Configure AWS Credentials
-        if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-          retry-max-attempts: 5
-
       - name: Enable VS2019 toolset for vcpkg
         if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
         run: |
           (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider
-
-      - name: Vcpkg integrate install
-        working-directory: C:\vcpkg
-        run: C:\vcpkg\vcpkg.exe integrate install
-
-      - name: Diagnostic — vcpkg installed tree
-        if: ${{ always() }}
-        shell: pwsh
-        continue-on-error: true
-        run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}"
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: ${{ matrix.vcpkg-version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          install-flags: '--write-s3 --use-s3-asset-provider'
+          internal-build: ${{ inputs.internal_build }}
 
       - name: Install CUDA
         uses: ./.github/actions/install-cuda

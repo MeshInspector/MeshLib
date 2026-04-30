@@ -110,7 +110,7 @@ jobs:
           # Trim happens just before the post-action save (see "Trim vcpkg
           # cache" step below), since !path negations on directory entries
           # don't match files inside them in @actions/glob.
-          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-slim
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}-slim3
           path: |
             C:\vcpkg\*
 

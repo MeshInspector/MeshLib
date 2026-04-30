@@ -550,8 +550,8 @@
     <ClCompile Include="MRI18n.cpp">
       <Filter>Localization</Filter>
     </ClCompile>
-    <ClCompile Include="MRMcp.cpp">
-      <Filter>AI</Filter>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1073,9 +1073,6 @@
     </ClInclude>
     <ClInclude Include="MRLocaleMacos.h">
       <Filter>Localization</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMcp.h">
-      <Filter>AI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

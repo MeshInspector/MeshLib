@@ -115,12 +115,10 @@ static nlohmann::json mcpToolsGetInfo( const nlohmann::json& args )
         }
     } );
 
-    return nlohmann::json::object( { { "result",
-        nlohmann::json::object( {
-            { "items",   std::move( items ) },
-            { "missing", std::move( missing ) },
-        } )
-    } } );
+    return nlohmann::json::object( {
+        { "items",   std::move( items ) },
+        { "missing", std::move( missing ) },
+    } );
 }
 
 static nlohmann::json mcpToolsAction( const nlohmann::json& args )
@@ -145,9 +143,7 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
         nowActive = item->isActive();
     } );
     skipFramesAfterInput();
-    return nlohmann::json::object( { { "result",
-        nlohmann::json::object( { { "active", nowActive } } )
-    } } );
+    return nlohmann::json::object( { { "active", nowActive } } );
 }
 
 MR_ON_INIT{
@@ -159,7 +155,7 @@ MR_ON_INIT{
         /*desc*/"Sorted array of every registered tool/plugin id, regardless of which ribbon tab is currently rendered. "
                 "Pass interesting ids to `tools.getInfo` for caption / tab / type / status / tooltip, or to "
                 "`tools.action` to open or fire the tool. Same id space as the ribbon `ui.pressButton` entries.",
-        /*input_schema*/Schema::Empty{},
+        /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Array( Schema::String{} ),
         /*func*/mcpToolsListAll
     );
@@ -169,7 +165,7 @@ MR_ON_INIT{
         /*name*/"List active tool ids",
         /*desc*/"Sorted array of currently-active tool ids — state plugins whose dialog is open. Empty when no tool is "
                 "open. Subset of `tools.listAll`.",
-        /*input_schema*/Schema::Empty{},
+        /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Array( Schema::String{} ),
         /*func*/mcpToolsListActive
     );

@@ -36,23 +36,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{env.vs19_vcpkg_version}}
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v5
-        id: vcpkg-cache
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
         with:
-          key: vcpkg-cache-${{ env.vs19_vcpkg_version }}-${{ matrix.vcpkg_triplet }}
-          path: |
-            C:\vcpkg\*
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat
+          vcpkg-version: ${{ env.vs19_vcpkg_version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet }}
+          reuse-vcpkg: 'true'
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v8

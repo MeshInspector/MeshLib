@@ -264,41 +264,12 @@ jobs:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Clean Vcpkg Directory
-        working-directory: C:\vcpkg
-        run: git clean -ffdx
-
-      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git pull --rebase
-          git checkout ${{env.VCPKG-VERSION}}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v5
-        id: vcpkg-cache
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
         with:
-          key: vcpkg-cache-${{env.VCPKG-VERSION}}
-          path: |
-            C:\vcpkg\*
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-          retry-max-attempts: 5
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat --write-s3
-
-      - name: Vcpkg integrate install
-        working-directory: C:\vcpkg
-        run: C:\vcpkg\vcpkg.exe integrate install
+          vcpkg-version: ${{ env.VCPKG-VERSION }}
+          install-flags: '--write-s3'
+          internal-build: 'true'
 
       - name: Install all Python versions
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
@@ -330,7 +301,6 @@ jobs:
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
       - name: Install MSYS2 for MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
@@ -690,7 +660,7 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: ManyLinux-*
@@ -719,14 +689,14 @@ jobs:
 
 
       - name: Delete all Windows
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Windows
           failOnError: false
 
       - name: Delete all Macos
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Macos-*

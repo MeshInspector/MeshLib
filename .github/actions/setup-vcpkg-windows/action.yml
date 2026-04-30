@@ -1,0 +1,97 @@
+name: 'Set up vcpkg for MeshLib (Windows)'
+description: 'Cleans C:\vcpkg, checks out the requested vcpkg ref, restores the build cache, optionally configures AWS credentials, and runs thirdparty\install.bat for MeshLib ports.'
+
+inputs:
+  vcpkg-version:
+    description: 'Vcpkg git ref (tag/branch/sha) to check out under C:\vcpkg.'
+    required: true
+  vcpkg-triplet:
+    description: 'Vcpkg triplet name. Used in the cache key and the post-install diagnostic.'
+    required: false
+    default: 'x64-windows-meshlib'
+  install-flags:
+    description: 'Extra flags forwarded to thirdparty\install.bat (e.g. "--write-s3 --use-s3-asset-provider").'
+    required: false
+    default: ''
+  internal-build:
+    description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
+    required: false
+    default: 'false'
+  reuse-vcpkg:
+    description: 'String boolean ("true" or "false"). When "true", trust the existing C:\vcpkg state and skip git clean, git pull --rebase, bootstrap-vcpkg.bat, and the pre-cache "vcpkg integrate install". Used by callers that rely on a pre-warmed tree (e.g. update-win-version.yml).'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clean Vcpkg Directory
+      if: ${{ inputs.reuse-vcpkg != 'true' }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: git clean -ffdx
+
+    - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: |
+        git fetch
+        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') { git pull --rebase }
+        git checkout ${{ inputs.vcpkg-version }}
+        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') {
+          ./bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
+        }
+
+    - name: Compute Vcpkg Cache Key
+      # Bust the cache when overlay ports, the active triplet file, the
+      # package list, or install.bat change — otherwise the cached
+      # C:\vcpkg\installed\ tree is served verbatim and overlays never
+      # take effect.
+      shell: bash
+      run: |
+        triplet_file="thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
+        echo "Triplet file: $triplet_file"
+        test -f "$triplet_file" || { echo "::error::Triplet file not found: $triplet_file"; exit 1; }
+        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}" >> "$GITHUB_ENV"
+
+    - name: Restore Vcpkg Cache
+      uses: actions/cache@v5
+      id: vcpkg-cache
+      env:
+        RUNNER_DEBUG: 1
+      with:
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        path: |
+          C:\vcpkg\*
+
+    - name: Diagnostic — Restore Vcpkg Cache result
+      if: always()
+      shell: pwsh
+      run: |
+        Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
+        Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
+        Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
+        Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
+        Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
+        if (Test-Path C:\vcpkg) {
+          Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
+        }
+
+    - name: Configure AWS Credentials
+      if: ${{ inputs.internal-build == 'true' }}
+      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      with:
+        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+        aws-region: us-east-1
+        retry-max-attempts: 5
+
+    - name: Update vcpkg packages
+      shell: pwsh
+      run: ./thirdparty/install.bat ${{ inputs.install-flags }}
+
+    - name: Diagnostic — vcpkg installed tree
+      if: always()
+      shell: pwsh
+      continue-on-error: true
+      run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ inputs.vcpkg-triplet }}"

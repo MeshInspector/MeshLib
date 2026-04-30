@@ -219,7 +219,7 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
     }
     out["width"] = img.resolution.x;
     out["height"] = img.resolution.y;
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
@@ -336,7 +336,7 @@ MR_ON_INIT{
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
             .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
             .addMemberOpt( "factor",    Schema::Number{} ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerFit
     );
 
@@ -350,7 +350,7 @@ MR_ON_INIT{
         /*input_schema*/Schema::Object{}
             .addMember( "forwardDir", Schema::Array( Schema::Number{} ) )
             .addMember( "upDir",      Schema::Array( Schema::Number{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSetupCamera
     );
 
@@ -395,7 +395,7 @@ MR_ON_INIT{
             .addMemberOpt( "y",           Schema::Number{} )
             .addMemberOpt( "scrollDelta", Schema::Number{} )
             .addMemberOpt( "modifiers",   Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSendMouseEvent
     );
 
@@ -413,7 +413,7 @@ MR_ON_INIT{
             .addMember(    "type",      Schema::String{} )
             .addMember(    "key",       Schema::String{} )
             .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSendKeyboardEvent
     );
 
@@ -423,8 +423,8 @@ MR_ON_INIT{
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
                 "After this call the gateway's `launch` tool can bring MeshInspector back up.",
-        /*input_schema*/Schema::Empty{},
-        /*output_schema*/Schema::Empty{},
+        /*input_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown
     );
 }; // MR_ON_INIT

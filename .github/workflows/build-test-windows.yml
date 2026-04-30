@@ -46,8 +46,8 @@ jobs:
     env:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
-      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
-      VCPKG_TRIPLET_FILE: ${{ format('thirdparty/vcpkg/triplets/{0}.cmake', matrix.vcpkg_triplet) }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
 
     steps:
       - name: Checkout
@@ -90,74 +90,18 @@ jobs:
           build_system: ${{ matrix.build_system }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
-      - name: Clean Vcpkg Directory
-        working-directory: C:\vcpkg
-        run: git clean -ffdx
-
-      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
-        working-directory: C:\vcpkg
+      - name: Enable VS2019 toolset for vcpkg
+        if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
         run: |
-          git fetch
-          git pull --rebase
-          git checkout ${{ matrix.vcpkg-version }}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
+          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
-      - name: Compute Vcpkg Cache Key
-        # Bust the cache when overlay ports, the active triplet file,
-        # the package list, or install.bat change — otherwise the
-        # cached C:\vcpkg\installed\ tree is served verbatim and
-        # overlays never take effect.
-        shell: bash
-        run: |
-          echo "Triplet file: $VCPKG_TRIPLET_FILE"
-          test -f "$VCPKG_TRIPLET_FILE" || { echo "::error::Triplet file not found: $VCPKG_TRIPLET_FILE"; exit 1; }
-          echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ matrix.vcpkg-version }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VCPKG_TRIPLET_FILE, 'requirements/windows.txt', 'thirdparty/install.bat') }}" >> "$GITHUB_ENV"
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v5
-        id: vcpkg-cache
-        env:
-          RUNNER_DEBUG: 1
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
         with:
-          key: ${{ env.VCPKG_CACHE_KEY }}
-          path: |
-            C:\vcpkg\*
-
-      - name: Diagnostic — Restore Vcpkg Cache result
-        if: always()
-        shell: pwsh
-        run: |
-          Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
-          Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
-          Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
-          Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
-          Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
-          if (Test-Path C:\vcpkg) {
-            Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
-          }
-
-      - name: Configure AWS Credentials
-        if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-          retry-max-attempts: 5
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider
-
-      - name: Vcpkg integrate install
-        working-directory: C:\vcpkg
-        run: C:\vcpkg\vcpkg.exe integrate install
-
-      - name: Diagnostic — vcpkg installed tree
-        if: ${{ always() }}
-        shell: pwsh
-        continue-on-error: true
-        run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ matrix.vcpkg_triplet }}"
+          vcpkg-version: ${{ matrix.vcpkg-version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          install-flags: '--write-s3 --use-s3-asset-provider'
+          internal-build: ${{ inputs.internal_build }}
 
       - name: Install CUDA
         uses: ./.github/actions/install-cuda
@@ -376,15 +320,15 @@ jobs:
 
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+        if: ${{ env.job_upload_artifact == 'true' }}
         run: tar -a -c -f MREDist_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
+        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
         run: tar -a -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+        if: ${{ env.job_upload_artifact == 'true' }}
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           action: actions/upload-artifact@v7
@@ -397,7 +341,7 @@ jobs:
             overwrite: true
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        if: ${{ inputs.internal_build && env.job_upload_artifact == 'true' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
@@ -406,7 +350,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive
-        if: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
+        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           action: actions/upload-artifact@v7

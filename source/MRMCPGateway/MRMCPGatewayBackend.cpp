@@ -38,6 +38,7 @@ void emitToolsListChanged()
         { "method",  "notifications/tools/list_changed" },
         { "params",  nlohmann::json::object() },
     };
+    std::lock_guard<std::mutex> lk( gatewayStdoutMutex() );
     std::cout << notif.dump() << std::endl;
     std::cout.flush();
 }
@@ -83,13 +84,24 @@ bool probeBackendAlive( const std::string& targetUrl )
     return static_cast<bool>( res );
 }
 
-bool probeAndTrackBackend( const std::string& targetUrl )
+void updateBackendAliveAndNotify( bool nowAlive )
 {
-    const bool nowAlive = probeBackendAlive( targetUrl );
-    const bool wasAlive = getBackendAlive().exchange( nowAlive );
+    const bool wasAlive  = getBackendAlive().exchange( nowAlive );
     const bool wasPrimed = backendPrimed().exchange( true );
     if ( wasPrimed && wasAlive != nowAlive )
         emitToolsListChanged();
+}
+
+std::mutex& gatewayStdoutMutex()
+{
+    static std::mutex instance;
+    return instance;
+}
+
+bool probeAndTrackBackend( const std::string& targetUrl )
+{
+    const bool nowAlive = probeBackendAlive( targetUrl );
+    updateBackendAliveAndNotify( nowAlive );
     return nowAlive;
 }
 

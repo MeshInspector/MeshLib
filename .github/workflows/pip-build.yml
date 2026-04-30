@@ -301,7 +301,6 @@ jobs:
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
       - name: Install MSYS2 for MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind

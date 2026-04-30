@@ -269,7 +269,7 @@ jobs:
         with:
           vcpkg-version: ${{ env.VCPKG-VERSION }}
           install-flags: '--write-s3'
-          aws-role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          internal-build: 'true'
 
       - name: Install all Python versions
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat

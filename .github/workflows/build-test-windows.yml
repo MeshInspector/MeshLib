@@ -100,7 +100,7 @@ jobs:
           vcpkg-version: ${{ matrix.vcpkg-version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           install-flags: '--write-s3 --use-s3-asset-provider'
-          aws-role-to-assume: ${{ inputs.internal_build && 'arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole' || '' }}
+          internal-build: ${{ inputs.internal_build }}
 
       - name: Install CUDA
         uses: ./.github/actions/install-cuda

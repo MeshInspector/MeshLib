@@ -136,12 +136,22 @@ nlohmann::json Server::State::buildToolEntryJson( const std::string& name ) cons
 namespace
 {
 
-void writeJsonError( httplib::Response& res, int httpStatus, std::string message, int rpcCode )
+// JSON-RPC 2.0 standard error codes (https://www.jsonrpc.org/specification#error_object).
+enum class RpcErrorCode : int
+{
+    ParseError     = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams  = -32602,
+    InternalError  = -32603,
+};
+
+void writeJsonError( httplib::Response& res, int httpStatus, std::string message, RpcErrorCode rpcCode )
 {
     res.status = httpStatus;
     res.set_content( nlohmann::json{
         { "error", std::move( message ) },
-        { "code",  rpcCode },
+        { "code",  static_cast<int>( rpcCode ) },
     }.dump(), "application/json" );
 }
 
@@ -181,7 +191,7 @@ void Server::State::handleToolDescribe( const httplib::Request& req, httplib::Re
     const std::string toolId = req.matches.size() > 1 ? req.matches[1].str() : std::string{};
     if ( !toolManager.has( toolId ) )
     {
-        writeJsonError( res, 404, "tool not found: " + toolId, -32601 );
+        writeJsonError( res, 404, "tool not found: " + toolId, RpcErrorCode::MethodNotFound );
         return;
     }
     res.status = 200;
@@ -193,7 +203,7 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     const std::string toolId = req.matches.size() > 1 ? req.matches[1].str() : std::string{};
     if ( !toolManager.has( toolId ) )
     {
-        writeJsonError( res, 404, "tool not found: " + toolId, -32601 );
+        writeJsonError( res, 404, "tool not found: " + toolId, RpcErrorCode::MethodNotFound );
         return;
     }
 
@@ -204,7 +214,7 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         // possible (so `?width=1920` -> 1920, `?path=[]` -> [], `?on=true` -> true)
         // and falls back to the raw string when not (`?label=foo` -> "foo"). Tool
         // schema validation still runs in toolManager.invoke and rejects type
-        // mismatches with -32602.
+        // mismatches with RpcErrorCode::InvalidParams.
         for ( const auto& [k, v] : req.params )
         {
             auto parsed = nlohmann::json::parse( v, nullptr, /* allow_exceptions */ false );
@@ -216,7 +226,7 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         auto parsed = nlohmann::json::parse( req.body, nullptr, /* allow_exceptions */ false );
         if ( parsed.is_discarded() )
         {
-            writeJsonError( res, 400, "invalid JSON request body", -32700 );
+            writeJsonError( res, 400, "invalid JSON request body", RpcErrorCode::ParseError );
             return;
         }
         args = std::move( parsed );
@@ -229,17 +239,17 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     }
     catch ( const fastmcpp::NotFoundError& e )
     {
-        writeJsonError( res, 404, e.what(), -32601 );
+        writeJsonError( res, 404, e.what(), RpcErrorCode::MethodNotFound );
         return;
     }
     catch ( const fastmcpp::ValidationError& e )
     {
-        writeJsonError( res, 400, e.what(), -32602 );
+        writeJsonError( res, 400, e.what(), RpcErrorCode::InvalidParams );
         return;
     }
     catch ( const std::exception& e )
     {
-        writeJsonError( res, 500, e.what(), -32603 );
+        writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
         return;
     }
 

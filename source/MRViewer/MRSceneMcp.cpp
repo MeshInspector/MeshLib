@@ -547,7 +547,7 @@ MR_ON_INIT{
                 .addMemberOpt( "showEdges",       Schema::Bool{} )
                 .addMemberOpt( "edgeWidth",       Schema::Number{} )
                 .addMemberOpt( "pointSize",       Schema::Number{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpSceneSetObjectState
     );
 
@@ -557,7 +557,7 @@ MR_ON_INIT{
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Detach the object from its parent (recursive — removing a group removes its subtree). Undoable.",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpSceneRemoveObject
     );
 

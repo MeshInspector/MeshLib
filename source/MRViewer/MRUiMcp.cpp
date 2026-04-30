@@ -205,7 +205,7 @@ MR_ON_INIT{
         /*name*/"Click UI button",
         /*desc*/withPreamble( "Click the button at `path` (must end in a `type == \"button\"` entry). Fails if `status` starts with `\"disabled\"`." ),
         /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpToolPressButton
     );
 
@@ -245,7 +245,7 @@ MR_ON_INIT{
             /*name*/"Write UI " + displayType + " value",
             /*desc*/withPreamble( writeDesc ),
             /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Schema::Base &&>( Schema::String{} ) : static_cast<Schema::Base &&>( Schema::Number{} ) ),
-            /*output_schema*/Schema::Empty{},
+            /*output_schema*/Schema::Object{},
             /*func*/mcpToolWriteValue<T>
         );
     };
@@ -263,7 +263,7 @@ MR_ON_INIT{
                 "to the underlying `ProgressBar::order(...)` (e.g. \"Boolean\", \"Loading\"). `percent` is 0-100. "
                 "Poll this while `ui.*` dispatch is blocked by a `'Progress'` modal — once `active: false` comes "
                 "back, the UI is responsive again.",
-        /*input_schema*/Schema::Empty{},
+        /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{}
             .addMember(    "active",  Schema::Bool{} )
             .addMemberOpt( "title",   Schema::String{} )

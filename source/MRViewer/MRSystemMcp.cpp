@@ -92,7 +92,7 @@ MR_ON_INIT{
                 "GPU / CUDA / framebuffer / monitor info when available. The `version` string is prefixed with "
                 "`\"Debug:\"` on Debug builds. Concrete keys vary by platform/build; treat the response as a "
                 "loosely-shaped JSON object.",
-        /*input_schema*/Schema::Empty{},
+        /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{},
         /*func*/mcpSystemInfo
     );

@@ -30,19 +30,6 @@ namespace Schema
         [[nodiscard]] nlohmann::json&& asJson() && { return std::move( json ); }
     };
 
-    /// An empty schema. Emits an empty-properties object schema (not JSON null) so
-    /// parameterless tools satisfy MCP clients that strict-validate `inputSchema`
-    /// — e.g. Claude Desktop's Zod validator rejects the entire `tools/list`
-    /// response when any tool's `inputSchema` is null.
-    struct Empty : Base
-    {
-        Empty() : Base( nlohmann::json::object( {
-            { "type", "object" },
-            { "properties", nlohmann::json::object() },
-            { "required", nlohmann::json::array() },
-        } ) ) {}
-    };
-
     /// A schema describing a scalar.
     struct Number : Base
     {

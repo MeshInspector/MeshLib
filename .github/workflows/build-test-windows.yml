@@ -34,7 +34,7 @@ on:
 
 jobs:
   windows-build-test:
-    timeout-minutes: 150
+    timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -89,11 +89,6 @@ jobs:
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
-
-      - name: Enable VS2019 toolset for vcpkg
-        if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
-        run: |
-          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows

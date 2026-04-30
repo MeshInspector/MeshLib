@@ -418,7 +418,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed = getDefaultDragSpeed<E, Sp
 
 // Like `drag()`, but clicking it immediately activates text input, so it's not actually draggable.
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
+bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = getDefaultStep<E, U, T>( false ), const U& stepFast = getDefaultStep<E, U, T>( true ) );
 
 // Draw a read-only copyable value.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...

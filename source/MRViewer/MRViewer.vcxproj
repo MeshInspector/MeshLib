@@ -166,6 +166,7 @@
     <ClCompile Include="MRToolsMcp.cpp" />
     <ClCompile Include="MRSystemMcp.cpp" />
     <ClCompile Include="MRMcpCommon.cpp" />
+    <ClCompile Include="MRMcpSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -348,6 +349,7 @@
     <ClInclude Include="MRLocaleMacos.h" />
     <ClInclude Include="MRUITestEngineControl.h" />
     <ClInclude Include="MRMcpCommon.h" />
+    <ClInclude Include="MRMcpSettings.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -528,7 +530,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\;..\..\thirdparty\fastmcpp\include;..\..\thirdparty\cpp-httplib;..\..\thirdparty\nlohmann-json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -555,7 +557,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\;..\..\thirdparty\fastmcpp\include;..\..\thirdparty\cpp-httplib;..\..\thirdparty\nlohmann-json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>

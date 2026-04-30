@@ -2,6 +2,7 @@
 #include "MRMCPGatewayBackend.h"
 #include "MRMCPGatewayConfig.h"
 #include "MRMCPGatewaySpawn.h"
+#include "MRMCPGatewayUtf8.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -52,7 +53,7 @@ std::filesystem::path gatewayUserConfigDir()
     {
         std::filesystem::create_directories( filepath, ec );
         if ( ec )
-            std::cerr << "MRMCPGateway: cannot create " << filepath.string()
+            std::cerr << "MRMCPGateway: cannot create " << pathToUtf8( filepath )
                       << ": " << ec.message() << "\n";
     }
     return filepath;
@@ -62,7 +63,7 @@ std::filesystem::path cacheDir( const Config& cfg )
 {
     auto d = gatewayUserConfigDir();
     if ( !cfg.toolsCacheNamespace.empty() )
-        d /= cfg.toolsCacheNamespace;
+        d /= pathFromUtf8( cfg.toolsCacheNamespace );
     return d;
 }
 
@@ -143,8 +144,13 @@ void ensureFreshCache( const Config& cfg )
     std::vector<std::string> primeArgs = cfg.launchArgs;
     for ( const char* flag : { "-hidden", "-noEventLoop", "-noTelemetry", "-noSplash" } )
         primeArgs.emplace_back( flag );
+    primeArgs.emplace_back( "-mcpPort" );
+    primeArgs.emplace_back( std::to_string( cfg.mcpPort ) );
     primeArgs.emplace_back( "-mcpDumpFile" );
-    primeArgs.emplace_back( cache.string() );
+    // pathToUtf8 instead of cache.string(): Spawn pipes args through utf8ToWide,
+    // and `path::string()` on Windows narrows via the system codepage, so
+    // non-ASCII path components were getting mangled before reaching the backend.
+    primeArgs.emplace_back( pathToUtf8( cache ) );
 
     // Synchronous spawn: blocks until the backend exits (or times out). Avoids
     // the polling-sees-stale-cache race that file-existence polling has when an

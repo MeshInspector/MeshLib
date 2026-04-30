@@ -119,6 +119,9 @@ const Server::Params& Server::getParams() const
 
 void Server::setParams( Server::Params params )
 {
+    if ( params_ == params )
+        return;
+
     const bool serverExisted = state_ && bool( state_->server );
     const bool serverWasRunning = serverExisted && isRunning();
 
@@ -165,6 +168,11 @@ bool Server::setRunning( bool enable )
         }
         return true;
     }
+}
+
+void Server::shutdown()
+{
+    state_.reset();
 }
 
 nlohmann::json Server::dumpToolsAsJson() const
@@ -243,19 +251,6 @@ Expected<void> Server::saveToolsCache( const std::filesystem::path& path ) const
     return {};
 }
 
-void Server::processCmdArgs( const std::vector<std::string>& commandArgs ) const
-{
-    for ( size_t i = 0; i + 1 < commandArgs.size(); ++i )
-    {
-        if ( commandArgs[i] == "-mcpDumpFile" )
-        {
-            const std::filesystem::path target = commandArgs[i + 1];
-            if ( auto res = saveToolsCache( target ); !res )
-                spdlog::error( "MRMcp: {}", res.error() );
-            return;
-        }
-    }
-}
 void Server::setToolValidator( ToolValidator validator )
 {
     if ( !state_ )

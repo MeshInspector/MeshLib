@@ -164,6 +164,12 @@ public:
     /// Stopping always returns true.
     MRMCP_API bool setRunning( bool enable );
 
+    /// Tears down the running asio server (if any) and clears all registered tools.
+    /// Use before unloading DLLs whose translation units called `addTool` — their captured
+    /// std::function deleters dangle once those DLLs are unmapped, so a later `~Server`
+    /// would segfault. Idempotent. Safe to call when nothing was registered.
+    MRMCP_API void shutdown();
+
     /// Returns the list of currently-registered tools as a JSON array of MCP `tool` entries
     /// (`name`, optional `title`/`description`, `inputSchema`, `outputSchema`).
     /// Suitable for splicing into a `tools/list` response or persisting to a cache file.
@@ -173,11 +179,6 @@ public:
     /// directories as needed. Returns an error message on I/O failure.
     MRMCP_API Expected<void> saveToolsCache( const std::filesystem::path& path ) const;
 
-    /// Processes MCP-related command-line arguments. Currently only `-mcpDumpFile <path>`,
-    /// which writes the tool cache to that path. Otherwise a no-op. Intended to be called
-    /// once during MCP setup with the viewer's own launch arguments, after every
-    /// `MR_ON_INIT` tool registration has run.
-    MRMCP_API void processCmdArgs( const std::vector<std::string>& commandArgs ) const;
     /// Optional predicate consulted before every tool dispatch, given the tool's id.
     /// Return {} to allow; return `unexpected("reason")` to block — the reason surfaces
     /// to the MCP client as the tool-call error.

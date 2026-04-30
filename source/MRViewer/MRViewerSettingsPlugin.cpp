@@ -1,8 +1,12 @@
 #include "MRViewerSettingsPlugin.h"
+#ifndef MESHLIB_NO_MCP
+#include "MRMcp/MRMcp.h"
+#endif
 #include "MRRibbonMenu.h"
 #include "ImGuiHelpers.h"
 #include "MRColorTheme.h"
 #include "MRMouseController.h"
+#include "MRViewer/MRMcpSettings.h"
 #include "MRViewport.h"
 #include "MRFileDialog.h"
 #include "MRModalDialog.h"
@@ -46,14 +50,17 @@ namespace
 {
 const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
 {
-    constexpr std::array<const char*, size_t( MR::ViewerSettingsPlugin::TabType::Count )> tabNames{
+    constexpr const char* tabNames[] = {
         _t( "Quick" ),
         _t( "Application" ),
         _t( "Control" ),
         _t( "3D View" ),
         _t( "Units" ),
+        _t( "MCP" ),
         _t( "Features" ),
     };
+    static_assert( std::extent_v<decltype( tabNames )> == size_t( MR::ViewerSettingsPlugin::TabType::Count ) );
+
     return tabNames[int( tab )];
 }
 }
@@ -85,7 +92,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 
 void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 400.0f * UI::scale();
+    auto menuWidth = 440.0f * UI::scale();
 
     ImVec2 position = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f ) );
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .position = &position } ) )
@@ -228,6 +235,9 @@ void ViewerSettingsPlugin::drawTab_( float menuWidth )
         break;
     case MR::ViewerSettingsPlugin::TabType::MeasurementUnits:
         drawMeasurementUnitsTab_();
+        break;
+    case MR::ViewerSettingsPlugin::TabType::Mcp:
+        drawMcpTab_();
         break;
     case MR::ViewerSettingsPlugin::TabType::Features:
         drawFeaturesTab_();
@@ -789,6 +799,18 @@ void ViewerSettingsPlugin::drawFeaturesTab_()
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 }
 
+void ViewerSettingsPlugin::drawMcpTab_()
+{
+    #ifndef MESHLIB_NO_MCP
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    if ( !ribbonMenu )
+        return;
+
+    drawMcpSettings_();
+    #endif
+}
+
+
 void ViewerSettingsPlugin::drawRenderOptions_()
 {
     auto& style = ImGui::GetStyle();
@@ -1240,7 +1262,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
 
     anyChanged = UI::checkboxValid( _tr( "Suppress Zoom by Mouse Scroll" ), &spaceMouseParams_.suppressMouseScrollZoom, viewer->spaceMouseController().canDriverSendScroll() ) || anyChanged;
     UI::setTooltipIfHovered( _tr( "This mode is recommended if you have 3Dconnexion driver installed, which sends fake mouse scroll events resulting in double reaction on SpaceMouse movement and camera tremble." ) );
-    
+
     if ( anyChanged )
         getViewerInstance().spaceMouseController().setParameters(spaceMouseParams_);
 }
@@ -1268,6 +1290,38 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
     ImGui::PopStyleVar();
     if ( updateSettings )
         viewer->touchpadController().setParameters( touchpadParameters_ );
+}
+
+void ViewerSettingsPlugin::drawMcpSettings_()
+{
+    #ifndef MESHLIB_NO_MCP
+    drawSeparator_( _t( "MCP" ) );
+
+    Mcp::Server& server = Mcp::getDefaultServer();
+
+    bool enableNow = server.isRunning();
+    if ( UI::checkbox( _tr( "Enable in This Session" ), &enableNow ) )
+        server.setRunning( enableNow );
+
+    bool enableByDefault = McpSettings::getEnableByDefault();
+    if ( UI::checkbox( _tr( "Enable by Default" ), &enableByDefault ) )
+        McpSettings::setEnableByDefault( enableByDefault );
+
+    ImGui::SetNextItemWidth( ImGui::GetFrameHeight() * 3 );
+    if ( McpSettings::isPortLockedFromCmdLine() )
+    {
+        UI::readOnlyValue<NoUnit>( _tr( "Port" ), server.getParams().port );
+        UI::setTooltipIfHovered( _tr( "Port forced by -mcpPort command-line flag" ) );
+    }
+    else
+    {
+        int port = McpSettings::getPort();
+        if ( UI::input<NoUnit>( _tr( "Port" ), port, 1, 65535, {}, UI::defaultSliderFlags, 0, 0 ) )
+            McpSettings::setPort( port );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            McpSettings::applyToServer();
+    }
+    #endif
 }
 
 void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
@@ -1339,7 +1393,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             break;
         }
         setDefaultSerializePointsFormat( format );
-    } 
+    }
     #ifndef MRVIEWER_NO_VOXELS
     if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {

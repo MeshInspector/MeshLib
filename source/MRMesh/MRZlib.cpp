@@ -2,7 +2,7 @@
 #include "MRBuffer.h"
 #include "MRFinally.h"
 
-#include <zlib.h>
+#include <zlib-ng.h>
 
 #include <cassert>
 
@@ -22,7 +22,7 @@ constexpr int kRawDeflateBits  = -MAX_WBITS;
 constexpr int kDefaultMemLevel = 8;
 static_assert( kDefaultMemLevel <= MAX_MEM_LEVEL );
 
-std::string zlibToString( int code )
+std::string zngToString( int code )
 {
     switch ( code )
     {
@@ -62,17 +62,17 @@ namespace MR
 Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const ZlibCompressParams& params )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
-    z_stream stream {
+    zng_stream stream {
         .zalloc = Z_NULL,
         .zfree = Z_NULL,
         .opaque = Z_NULL,
     };
     int ret;
-    if ( Z_OK != ( ret = deflateInit2( &stream, params.level, Z_DEFLATED, windowBitsFor( params.rawDeflate ), kDefaultMemLevel, Z_DEFAULT_STRATEGY ) ) )
-        return unexpected( zlibToString( ret ) );
+    if ( Z_OK != ( ret = zng_deflateInit2( &stream, params.level, Z_DEFLATED, windowBitsFor( params.rawDeflate ), kDefaultMemLevel, Z_DEFAULT_STRATEGY ) ) )
+        return unexpected( zngToString( ret ) );
 
     MR_FINALLY {
-        deflateEnd( &stream );
+        zng_deflateEnd( &stream );
     };
 
     if ( params.stats )
@@ -89,7 +89,7 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const Zl
 
         if ( params.stats )
         {
-            params.stats->crc32 = (uint32_t)crc32( params.stats->crc32, stream.next_in, stream.avail_in );
+            params.stats->crc32 = (uint32_t)zng_crc32( params.stats->crc32, stream.next_in, stream.avail_in );
             params.stats->uncompressedSize += stream.avail_in;
         }
 
@@ -98,9 +98,9 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, const Zl
         {
             stream.next_out = reinterpret_cast<uint8_t*>( outChunk.data() );
             stream.avail_out = (unsigned)outChunk.size();
-            ret = deflate( &stream, flush );
+            ret = zng_deflate( &stream, flush );
             if ( Z_OK != ret && Z_STREAM_END != ret )
-                return unexpected( zlibToString( ret ) );
+                return unexpected( zngToString( ret ) );
 
             assert( stream.avail_out <= (unsigned)outChunk.size() );
             const unsigned written = (unsigned)outChunk.size() - stream.avail_out;
@@ -124,17 +124,17 @@ Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int leve
 Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, const ZlibParams& params )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
-    z_stream stream {
+    zng_stream stream {
         .zalloc = Z_NULL,
         .zfree = Z_NULL,
         .opaque = Z_NULL,
     };
     int ret;
-    if ( Z_OK != ( ret = inflateInit2( &stream, windowBitsFor( params.rawDeflate ) ) ) )
-        return unexpected( zlibToString( ret ) );
+    if ( Z_OK != ( ret = zng_inflateInit2( &stream, windowBitsFor( params.rawDeflate ) ) ) )
+        return unexpected( zngToString( ret ) );
 
     MR_FINALLY {
-        inflateEnd( &stream );
+        zng_inflateEnd( &stream );
     };
 
     while ( !in.eof() )
@@ -150,9 +150,9 @@ Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out, const 
         {
             stream.next_out = reinterpret_cast<uint8_t*>( outChunk.data() );
             stream.avail_out = (unsigned)outChunk.size();
-            ret = inflate( &stream, Z_NO_FLUSH );
+            ret = zng_inflate( &stream, Z_NO_FLUSH );
             if ( Z_OK != ret && Z_STREAM_END != ret )
-                return unexpected( zlibToString( ret ) );
+                return unexpected( zngToString( ret ) );
 
             assert( stream.avail_out <= (unsigned)outChunk.size() );
             out.write( outChunk.data(), (unsigned)outChunk.size() - stream.avail_out );

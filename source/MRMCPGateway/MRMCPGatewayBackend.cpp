@@ -112,6 +112,10 @@ void registerLocalTools( fastmcpp::ProxyApp& proxy, const Config& cfg )
                             args.push_back( a.get<std::string>() );
                 }
             }
+            // Always tell MI the port the gateway will probe; last-occurrence-wins
+            // parsing on MI's side means this beats any user-supplied -mcpPort in args.
+            args.emplace_back( "-mcpPort" );
+            args.emplace_back( std::to_string( cfg.mcpPort ) );
             if ( probeAndTrackBackend( cfg.targetUrl ) )
                 return std::string( "already running" );
             if ( !spawnDetached( cfg.launchCommand, args ) )

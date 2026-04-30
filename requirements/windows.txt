@@ -14,6 +14,7 @@ boost-url
 libjpeg-turbo
 cpr
 eigen3
+fastmcpp
 freetype
 gdcm
 gtest
@@ -30,5 +31,6 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng
 glad
 glfw3

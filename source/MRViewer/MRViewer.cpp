@@ -412,6 +412,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         res = 1;
     }
 #endif
+    setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     if ( setup.shutdownCustomLogSink )

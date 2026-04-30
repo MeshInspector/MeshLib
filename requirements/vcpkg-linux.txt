@@ -15,6 +15,7 @@ clip
 cpr
 dbus
 eigen3
+fastmcpp
 freetype
 gdcm
 glad
@@ -37,3 +38,4 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng

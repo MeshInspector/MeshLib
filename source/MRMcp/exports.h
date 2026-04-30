@@ -1,6 +1,5 @@
 #pragma once
 
-// see explanation in MRMesh/MRMeshFwd.h
 #ifdef _WIN32
 #   ifdef MRMcp_EXPORTS
 #       define MRMCP_API __declspec(dllexport)

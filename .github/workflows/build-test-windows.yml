@@ -133,6 +133,11 @@ jobs:
           aws-region: us-east-1
           retry-max-attempts: 5
 
+      - name: Enable VS2019 toolset for vcpkg
+        if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
+        run: |
+          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
+
       - name: Update vcpkg packages
         run: |
           .\thirdparty\install.bat --write-s3 --use-s3-asset-provider

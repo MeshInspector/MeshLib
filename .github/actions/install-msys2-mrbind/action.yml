@@ -1,9 +1,19 @@
 name: 'Install MSYS2 for MRBind'
-description: 'Download the MeshLib MSYS2 archive from S3 with retry on transient failures and extract to C:\'
+description: 'Restore the MeshLib MSYS2 tree from GitHub Actions Cache, falling back to the S3 archive on cache miss.'
 runs:
   using: 'composite'
   steps:
-    - name: Install MSYS2 for MRBind
+    - name: Restore MSYS2 cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: C:\msys64_meshlib_mrbind
+        # Bump the version suffix manually if the upstream zip is re-uploaded
+        # under the same URL (otherwise stale caches will keep being served).
+        key: msys64-meshlib-mrbind-v1-${{ hashFiles('.github/actions/install-msys2-mrbind/action.yml') }}
+
+    - name: Download MSYS2 archive from S3
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         # Retry the S3 fetch -- transient 404 / connection blips have been

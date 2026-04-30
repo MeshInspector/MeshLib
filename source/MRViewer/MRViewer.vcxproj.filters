@@ -1120,7 +1120,7 @@
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansCJK-Regular.ttc">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">

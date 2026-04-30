@@ -41,7 +41,7 @@ RibbonFontManager::RibbonFontManager()
     fontPaths_ =
     {
     SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf",
-    SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf",
+    SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc",
     SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf",
     SystemPath::getFontsDirectory() / "NotoSansMono-Regular.ttf",
     SystemPath::getFontsDirectory() / "fa-solid-900.ttf",

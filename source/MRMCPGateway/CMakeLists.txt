@@ -9,6 +9,10 @@ add_executable(${PROJECT_NAME}
   MRMCPGatewayUtf8.cpp
 )
 
+# Output binary name (project / target name stays MRMCPGateway for build-system
+# wiring; installers and clients invoke `McpGateway[.exe]`).
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME McpGateway)
+
 find_package(httplib REQUIRED)
 find_package(fastmcpp REQUIRED)
 target_link_libraries(${PROJECT_NAME}
@@ -23,7 +27,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND MESHLIB_USE_VCPKG)
 endif()
 # inject work-around for Clang libc++ and older Xcode versions' compatibility
 if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  target_precompile_headers(${PROJECT_NAME} 
+  target_precompile_headers(${PROJECT_NAME}
     PRIVATE
       $<$<COMPILE_LANGUAGE:CXX>:"fastmcpp/clang.hpp">
   )

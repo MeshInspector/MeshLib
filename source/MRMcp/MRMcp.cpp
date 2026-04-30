@@ -243,7 +243,8 @@ Expected<void> Server::saveToolsCache( const std::filesystem::path& path ) const
     std::filesystem::rename( tmp, path, ec );
     if ( ec )
     {
-        std::filesystem::remove( tmp );
+        std::error_code removeTempEc;
+        std::filesystem::remove( tmp, removeTempEc );
         return unexpected( fmt::format( "cannot rename {} -> {}: {}",
             utf8string( tmp ), utf8string( path ), ec.message() ) );
     }

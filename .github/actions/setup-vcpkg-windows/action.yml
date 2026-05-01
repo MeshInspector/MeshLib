@@ -17,10 +17,6 @@ inputs:
     description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
     required: false
     default: 'false'
-  reuse-vcpkg:
-    description: 'String boolean ("true" or "false"). When "true", trust the existing C:\vcpkg state and skip git clean, git pull --rebase, bootstrap-vcpkg.bat, and the pre-cache "vcpkg integrate install". Used by callers that rely on a pre-warmed tree (e.g. update-win-version.yml).'
-    required: false
-    default: 'false'
   enable-vs2019-toolset:
     description: 'String boolean ("true" or "false"). When "true", uncomment the `^#vs2019toolset#` markers in thirdparty/vcpkg/triplets/x64-windows-meshlib.cmake before computing the cache key — pins vcpkg to the v142 (VS2019) platform toolset. Required for msvc-2019 jobs that need ABI compatibility with the v142-built S3 binary cache.'
     required: false
@@ -30,22 +26,24 @@ runs:
   using: 'composite'
   steps:
     - name: Clean Vcpkg Directory
-      if: ${{ inputs.reuse-vcpkg != 'true' }}
       shell: pwsh
       working-directory: C:\vcpkg
-      run: git clean -ffdx
+      run: git clean -ffdx --quiet
 
     - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
       shell: pwsh
       working-directory: C:\vcpkg
       run: |
-        git fetch
-        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') { git pull --rebase }
-        git checkout ${{ inputs.vcpkg-version }}
-        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') {
-          ./bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
+        # Shallow-fetch only the requested ref. Skip if already present
+        # locally (the runner image ships a full vcpkg clone, so old tags
+        # like 2024.10.21 are usually there already).
+        git rev-parse --verify --quiet "${{ inputs.vcpkg-version }}^{commit}" *> $null
+        if ($LASTEXITCODE -ne 0) {
+          git fetch --depth=1 --quiet origin "+refs/tags/${{ inputs.vcpkg-version }}:refs/tags/${{ inputs.vcpkg-version }}"
         }
+        git checkout --quiet ${{ inputs.vcpkg-version }}
+        ./bootstrap-vcpkg.bat
+        vcpkg.exe integrate install
 
     - name: Enable VS2019 toolset for vcpkg
       if: ${{ inputs.enable-vs2019-toolset == 'true' }}

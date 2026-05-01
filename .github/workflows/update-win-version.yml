@@ -41,6 +41,7 @@ jobs:
         with:
           vcpkg-version: ${{ env.vs19_vcpkg_version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet }}
+          enable-vs2019-toolset: 'true'
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v8

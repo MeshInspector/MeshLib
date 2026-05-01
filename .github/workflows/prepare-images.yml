@@ -155,7 +155,7 @@ jobs:
           - vs: vs2019
             runner: windows-2025
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
-            vcpkg_triplet: x64-windows-meshlib
+            vcpkg_triplet: x64-windows-vs2019-meshlib
           - vs: vs2019
             runner: windows-2025
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
@@ -181,11 +181,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
           retry-max-attempts: 5
-
-      - name: Enable VS2019 toolset for vcpkg
-        if: ${{ matrix.vs == 'vs2019' }}
-        run: |
-          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
       - name: Build and cache vcpkg
         env:

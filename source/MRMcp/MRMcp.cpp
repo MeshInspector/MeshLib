@@ -3,6 +3,7 @@
 
 #include "MRMcp.h"
 
+#include "MRMesh/MRBase64.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
@@ -62,12 +63,210 @@ struct Server::State
     std::optional<fastmcpp::server::SseServerWrapper> server;
     Server::ToolValidator toolValidator; // Empty by default; consulted per tool call when set.
 
-    void createServer( const Params& params )
-    {
-        assert( !server );
-        server.emplace( fastmcpp::mcp::make_mcp_handler( params.name, params.version, toolManager, toolDescs ), params.address, params.port );
-    }
+    void createServer( const Params& params );
+
+    // Build the catalog entry JSON for a single registered tool. Shared by
+    // `dumpToolsAsJson()` and the `/api/tool/<id>` HTTP route.
+    nlohmann::json buildToolEntryJson( const std::string& name ) const;
+
+    // HTTP handlers for the `/api/*` REST routes registered in createServer().
+    void handleToolsList( const httplib::Request& req, httplib::Response& res );
+    void handleToolDescribe( const httplib::Request& req, httplib::Response& res );
+    void handleToolsCall( const httplib::Request& req, httplib::Response& res, bool isGet );
 };
+
+void Server::State::createServer( const Params& params )
+{
+    assert( !server );
+    server.emplace( fastmcpp::mcp::make_mcp_handler( params.name, params.version, toolManager, toolDescs ), params.address, params.port );
+
+    auto onList = [this]( const httplib::Request& req, httplib::Response& res ) {
+        handleToolsList( req, res );
+    };
+    server->add_route( "GET",  "/api/tools/list", onList );
+    server->add_route( "POST", "/api/tools/list", onList );
+
+    auto onDescribe = [this]( const httplib::Request& req, httplib::Response& res ) {
+        handleToolDescribe( req, res );
+    };
+    server->add_route( "GET",  R"(/api/tool/(.+))", onDescribe );
+    server->add_route( "POST", R"(/api/tool/(.+))", onDescribe );
+
+    auto onCall = [this]( const httplib::Request& req, httplib::Response& res ) {
+        handleToolsCall( req, res, /* isGet = */ req.method == "GET" );
+    };
+    server->add_route( "GET",  R"(/api/tools/call/(.+))", onCall );
+    server->add_route( "POST", R"(/api/tools/call/(.+))", onCall );
+}
+
+nlohmann::json Server::State::buildToolEntryJson( const std::string& name ) const
+{
+    const auto& tool = toolManager.get( name );
+    nlohmann::json entry = {
+        { "name", tool.name() },
+        { "inputSchema", tool.input_schema() },
+    };
+    if ( tool.title().has_value() )
+        entry["title"] = *tool.title();
+    if ( tool.description().has_value() )
+        entry["description"] = *tool.description();
+    else if ( auto it = toolDescs.find( name ); it != toolDescs.end() )
+        entry["description"] = it->second;
+    const auto& outSchema = tool.output_schema();
+    if ( !outSchema.is_null() && !( outSchema.is_object() && outSchema.empty() ) )
+    {
+        // MCP requires `outputSchema.type == "object"`. fastmcpp's mcp/handler.cpp
+        // wraps non-object schemas at runtime; mirror the same shape here so
+        // cached entries match what the live server emits in `tools/list`.
+        const bool alreadyObject = outSchema.is_object()
+            && outSchema.contains( "type" ) && outSchema.at( "type" ) == "object";
+        if ( alreadyObject )
+            entry["outputSchema"] = outSchema;
+        else
+            entry["outputSchema"] = {
+                { "type", "object" },
+                { "properties", { { "result", outSchema } } },
+                { "required", nlohmann::json::array( { "result" } ) },
+                { "x-fastmcp-wrap-result", true },
+            };
+    }
+    return entry;
+}
+
+namespace
+{
+
+// JSON-RPC 2.0 standard error codes (https://www.jsonrpc.org/specification#error_object).
+enum class RpcErrorCode : int
+{
+    ParseError     = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams  = -32602,
+    InternalError  = -32603,
+};
+
+void writeJsonError( httplib::Response& res, int httpStatus, std::string message, RpcErrorCode rpcCode )
+{
+    res.status = httpStatus;
+    res.set_content( nlohmann::json{
+        { "error", std::move( message ) },
+        { "code",  static_cast<int>( rpcCode ) },
+    }.dump(), "application/json" );
+}
+
+// Inspect a tool's raw output for the file-output convention `{bytes, contentType}`,
+// transparently unwrapping one level of `{"result": {...}}` (the existing wrap used
+// by tools in MRViewerMcp / MRUiMcp / MRSystemMcp / MRSceneMcp).
+//
+// Returns a pointer to the inner object that has both `bytes` and `contentType`,
+// or `nullptr` if the convention isn't matched.
+const nlohmann::json* matchFileOutput( const nlohmann::json& result )
+{
+    auto isFileShape = []( const nlohmann::json& j ) {
+        return j.is_object()
+            && j.contains( "bytes" )       && j["bytes"].is_string()
+            && j.contains( "contentType" ) && j["contentType"].is_string();
+    };
+    if ( isFileShape( result ) )
+        return &result;
+    if ( result.is_object() && result.contains( "result" ) && isFileShape( result["result"] ) )
+        return &result["result"];
+    return nullptr;
+}
+
+} // namespace
+
+void Server::State::handleToolsList( const httplib::Request&, httplib::Response& res )
+{
+    auto tools = nlohmann::json::array();
+    for ( const auto& name : toolManager.list_names() )
+        tools.push_back( buildToolEntryJson( name ) );
+    res.status = 200;
+    res.set_content( nlohmann::json{ { "tools", std::move( tools ) } }.dump(), "application/json" );
+}
+
+void Server::State::handleToolDescribe( const httplib::Request& req, httplib::Response& res )
+{
+    const std::string toolId = req.matches.size() > 1 ? req.matches[1].str() : std::string{};
+    if ( !toolManager.has( toolId ) )
+    {
+        writeJsonError( res, 404, "tool not found: " + toolId, RpcErrorCode::MethodNotFound );
+        return;
+    }
+    res.status = 200;
+    res.set_content( buildToolEntryJson( toolId ).dump(), "application/json" );
+}
+
+void Server::State::handleToolsCall( const httplib::Request& req, httplib::Response& res, bool isGet )
+{
+    const std::string toolId = req.matches.size() > 1 ? req.matches[1].str() : std::string{};
+    if ( !toolManager.has( toolId ) )
+    {
+        writeJsonError( res, 404, "tool not found: " + toolId, RpcErrorCode::MethodNotFound );
+        return;
+    }
+
+    nlohmann::json args = nlohmann::json::object();
+    if ( isGet )
+    {
+        // URL query params become tool arguments. Each value is JSON-parsed when
+        // possible (so `?width=1920` -> 1920, `?path=[]` -> [], `?on=true` -> true)
+        // and falls back to the raw string when not (`?label=foo` -> "foo"). Tool
+        // schema validation still runs in toolManager.invoke and rejects type
+        // mismatches with RpcErrorCode::InvalidParams.
+        for ( const auto& [k, v] : req.params )
+        {
+            auto parsed = nlohmann::json::parse( v, nullptr, /* allow_exceptions */ false );
+            args[k] = parsed.is_discarded() ? nlohmann::json( v ) : std::move( parsed );
+        }
+    }
+    else if ( !req.body.empty() )
+    {
+        auto parsed = nlohmann::json::parse( req.body, nullptr, /* allow_exceptions */ false );
+        if ( parsed.is_discarded() )
+        {
+            writeJsonError( res, 400, "invalid JSON request body", RpcErrorCode::ParseError );
+            return;
+        }
+        args = std::move( parsed );
+    }
+
+    nlohmann::json result;
+    try
+    {
+        result = toolManager.invoke( toolId, args );
+    }
+    catch ( const fastmcpp::NotFoundError& e )
+    {
+        writeJsonError( res, 404, e.what(), RpcErrorCode::MethodNotFound );
+        return;
+    }
+    catch ( const fastmcpp::ValidationError& e )
+    {
+        writeJsonError( res, 400, e.what(), RpcErrorCode::InvalidParams );
+        return;
+    }
+    catch ( const std::exception& e )
+    {
+        writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
+        return;
+    }
+
+    if ( const auto* file = matchFileOutput( result ); file )
+    {
+        auto bytes = decode64( ( *file )["bytes"].get<std::string>() );
+        const auto& contentType = ( *file )["contentType"].get_ref<const std::string&>();
+        res.status = 200;
+        res.set_content(
+            std::string( reinterpret_cast<const char*>( bytes.data() ), bytes.size() ),
+            contentType.c_str() );
+        return;
+    }
+
+    res.status = 200;
+    res.set_content( result.dump(), "application/json" );
+}
 
 Server::Params::Params()
     : name( getProductName() ),
@@ -181,38 +380,7 @@ nlohmann::json Server::dumpToolsAsJson() const
     if ( !state_ )
         return out;
     for ( const auto& name : state_->toolManager.list_names() )
-    {
-        const auto& tool = state_->toolManager.get( name );
-        nlohmann::json entry = {
-            { "name", tool.name() },
-            { "inputSchema", tool.input_schema() },
-        };
-        if ( tool.title().has_value() )
-            entry["title"] = *tool.title();
-        if ( tool.description().has_value() )
-            entry["description"] = *tool.description();
-        else if ( auto it = state_->toolDescs.find( name ); it != state_->toolDescs.end() )
-            entry["description"] = it->second;
-        const auto& outSchema = tool.output_schema();
-        if ( !outSchema.is_null() && !( outSchema.is_object() && outSchema.empty() ) )
-        {
-            // MCP requires `outputSchema.type == "object"`. fastmcpp's mcp/handler.cpp
-            // wraps non-object schemas at runtime; mirror the same shape here so
-            // cached entries match what the live server emits in `tools/list`.
-            const bool alreadyObject = outSchema.is_object()
-                && outSchema.contains( "type" ) && outSchema.at( "type" ) == "object";
-            if ( alreadyObject )
-                entry["outputSchema"] = outSchema;
-            else
-                entry["outputSchema"] = {
-                    { "type", "object" },
-                    { "properties", { { "result", outSchema } } },
-                    { "required", nlohmann::json::array( { "result" } ) },
-                    { "x-fastmcp-wrap-result", true },
-                };
-        }
-        out.push_back( std::move( entry ) );
-    }
+        out.push_back( state_->buildToolEntryJson( name ) );
     return out;
 }
 

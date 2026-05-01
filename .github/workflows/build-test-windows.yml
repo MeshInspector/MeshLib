@@ -329,16 +329,12 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ env.job_upload_artifact == 'true' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-            path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
-            retention-days: 1
-            overwrite: true
+          name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
+          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+          retention-days: 1
+          overwrite: true
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build && env.job_upload_artifact == 'true' }}
@@ -351,16 +347,12 @@ jobs:
 
       - name: Upload MeshLibC2 headers archive
         if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: WindowsArchive_MeshLibC2Headers
-            path: MeshLibC2Headers.zip
-            retention-days: 1
-            overwrite: true
+          name: WindowsArchive_MeshLibC2Headers
+          path: MeshLibC2Headers.zip
+          retention-days: 1
+          overwrite: true
 
       - name: Create and fix fake Wheel for NuGet
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
@@ -372,28 +364,20 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: DotNetPatchArchiveWindows-x64
-            path: ./patched_content/*
-            retention-days: 1
-            overwrite: true
+          name: DotNetPatchArchiveWindows-x64
+          path: ./patched_content/*
+          retention-days: 1
+          overwrite: true
 
       - name: Upload NuGet library DLL and XML to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: DotNetDllXml
-            path: |
-              ./source/x64/Release/MRDotNet2.dll
-              ./source/x64/Release/MRDotNet2.xml
-            retention-days: 1
-            overwrite: true
+          name: DotNetDllXml
+          path: |
+            ./source/x64/Release/MRDotNet2.dll
+            ./source/x64/Release/MRDotNet2.xml
+          retention-days: 1
+          overwrite: true

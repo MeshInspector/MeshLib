@@ -21,6 +21,10 @@ inputs:
     description: 'String boolean ("true" or "false"). When "true", trust the existing C:\vcpkg state and skip git clean, git pull --rebase, bootstrap-vcpkg.bat, and the pre-cache "vcpkg integrate install". Used by callers that rely on a pre-warmed tree (e.g. update-win-version.yml).'
     required: false
     default: 'false'
+  enable-vs2019-toolset:
+    description: 'String boolean ("true" or "false"). When "true", uncomment the `^#vs2019toolset#` markers in thirdparty/vcpkg/triplets/x64-windows-meshlib.cmake before computing the cache key — pins vcpkg to the v142 (VS2019) platform toolset. Required for msvc-2019 jobs that need ABI compatibility with the v142-built S3 binary cache.'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -42,6 +46,12 @@ runs:
           ./bootstrap-vcpkg.bat
           vcpkg.exe integrate install
         }
+
+    - name: Enable VS2019 toolset for vcpkg
+      if: ${{ inputs.enable-vs2019-toolset == 'true' }}
+      shell: pwsh
+      run: |
+        (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
 
     - name: Compute Vcpkg Cache Key
       # Bust the cache when overlay ports, the active triplet file, the

@@ -3,7 +3,7 @@ index bbbff63a..e431df39 100644
 --- a/include/boost/interprocess/sync/windows/sync_utils.hpp
 +++ b/include/boost/interprocess/sync/windows/sync_utils.hpp
 @@ -122,8 +122,9 @@ class sync_handles
-
+ 
     //key: id -> mapped: HANDLE. Hash map to allow efficient sync operations
     typedef boost::container::flat_map<sync_id, void*> id_map_type;
 -   //key: ordered address of the sync type -> iterator from id_map_type. Ordered map to allow closing handles when unmapping
@@ -36,7 +36,7 @@ index bbbff63a..e431df39 100644
                           ithig(map_.lower_bound(hig_id)),
                           it(itlow);
        for (; it != ithig; ++it){
--         id_map_type::iterator uit = it->second;
+-         id_map_type::iterator uit = it->second; 
 +         sync_id ukey = it->second;
 +         id_map_type::iterator uit = umap_.find(ukey);
 +         BOOST_ASSERT(uit != umap_.end());

@@ -1,5 +1,6 @@
 FROM ubuntu:22.04 AS build
 
+# sandbox CI verification touch — exercises prepare-images.yml disable-build-* labels in PR #6029
 # update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \

@@ -24,6 +24,24 @@ on:
       vs22_vcpkg_version:
         required: true
         type: string
+      # `disable-build-<platform>` PR labels (resolved upstream in
+      # config.yml) — skip the matching image build cells / jobs so we
+      # don't burn runner time producing images no consumer will use.
+      disable_ubuntu_x64:
+        type: boolean
+        default: false
+      disable_ubuntu_arm64:
+        type: boolean
+        default: false
+      disable_emscripten:
+        type: boolean
+        default: false
+      disable_linux_vcpkg:
+        type: boolean
+        default: false
+      disable_windows:
+        type: boolean
+        default: false
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -35,24 +53,54 @@ jobs:
       - name: Do nothing
         run: echo
 
-  linux-image-build-upload:
+  # Build the linux-image matrix dynamically so we can drop cells the
+  # PR has opted out of via `disable-build-<platform>` labels. The
+  # `matrix` context is not available in job-level `if:` for reusable
+  # workflow inputs, so per-cell skipping must happen here.
+  compute-linux-image-matrix:
     if: ${{ inputs.need_linux_image_rebuild }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+      empty:  ${{ steps.compute.outputs.empty }}
+    steps:
+      - id: compute
+        env:
+          DISABLE_UBUNTU_X64:   ${{ inputs.disable_ubuntu_x64 }}
+          DISABLE_UBUNTU_ARM64: ${{ inputs.disable_ubuntu_arm64 }}
+          DISABLE_EMSCRIPTEN:   ${{ inputs.disable_emscripten }}
+        run: |
+          MATRIX=$(jq -nc \
+            --argjson dx64   "$DISABLE_UBUNTU_X64" \
+            --argjson darm64 "$DISABLE_UBUNTU_ARM64" \
+            --argjson demscr "$DISABLE_EMSCRIPTEN" \
+            '[
+              {distro:"ubuntu22",   arch:"x64",   "image-suffix":"",       os:"ubuntu-latest"},
+              {distro:"ubuntu24",   arch:"x64",   "image-suffix":"",       os:"ubuntu-latest"},
+              {distro:"ubuntu22",   arch:"arm64", "image-suffix":"-arm64", os:"ubuntu-24.04-arm"},
+              {distro:"ubuntu24",   arch:"arm64", "image-suffix":"-arm64", os:"ubuntu-24.04-arm"},
+              {distro:"emscripten", arch:"arm64", "image-suffix":"-arm64", os:"ubuntu-24.04-arm"}
+             ] | map(select(
+              (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
+              and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
+              and (((.distro=="emscripten")                              and $demscr) | not)
+             ))')
+          echo "matrix=${MATRIX}"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          if [[ "${MATRIX}" == "[]" ]]; then
+            echo "empty=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux-image-build-upload:
+    needs: compute-linux-image-matrix
+    if: ${{ needs.compute-linux-image-matrix.outputs.empty == 'false' }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        distro: [ ubuntu22, ubuntu24, emscripten ]
-        arch: [ x64, arm64 ]
-        exclude:
-          - distro: emscripten
-            arch: x64
-        include:
-          - arch: x64
-            image-suffix: ''
-            os: ubuntu-latest
-          - arch: arm64
-            image-suffix: '-arm64'
-            os: ubuntu-24.04-arm
+        include: ${{ fromJSON(needs.compute-linux-image-matrix.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
@@ -102,7 +150,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
   linux-vcpkg-build-upload:
-    if: ${{ inputs.need_linux_vcpkg_rebuild }}
+    if: ${{ inputs.need_linux_vcpkg_rebuild && !inputs.disable_linux_vcpkg }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -141,7 +189,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
-    if: ${{ inputs.need_windows_vcpkg_rebuild }}
+    if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}
     timeout-minutes: 240
     runs-on: ${{ matrix.runner }}
     strategy:

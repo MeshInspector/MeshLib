@@ -1,0 +1,55 @@
+{
+  "$comment": "Overlay of vcpkg 2024.10.21 boost-interprocess + boostorg/interprocess#224 (fixes iterator-invalidation crash on Windows native emulation, e.g. inside openvdb on VS2019).",
+  "name": "boost-interprocess",
+  "version": "1.86.0",
+  "port-version": 1,
+  "description": "Boost interprocess module",
+  "homepage": "https://www.boost.org/libs/interprocess",
+  "license": "BSL-1.0",
+  "dependencies": [
+    {
+      "name": "boost-assert",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-cmake",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-config",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-container",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-core",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-headers",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-intrusive",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-move",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-static-assert",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-type-traits",
+      "version>=": "1.86.0"
+    },
+    {
+      "name": "boost-winapi",
+      "version>=": "1.86.0"
+    }
+  ]
+}

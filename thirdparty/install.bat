@@ -84,11 +84,20 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
     set packages=!packages! %%i
 )
 
+REM Build the list of overlay-port flags. The VS2019/2024.10.21 build adds
+REM ports-vs19 in front so its boost-interprocess (with the iterator-
+REM invalidation patch from boostorg/interprocess#224) wins over the
+REM upstream port. Other builds use only the shared overlay dir.
+set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports""
+if /I "%MESHLIB_VS2019_OVERLAY%"=="true" (
+    set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19" --overlay-ports "%~dp0vcpkg\ports""
+)
+
 REM Install vcpkg core dependencies
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
 
 REM Install all required dependencies
-vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --debug --x-abi-tools-use-exact-versions || goto :error
 
 endlocal
 goto :EOF

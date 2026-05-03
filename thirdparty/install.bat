@@ -6,6 +6,10 @@ REM   --write-s3                  push vcpkg binary cache to S3 (needs AWS crede
 REM   --use-s3-asset-provider     fetch vcpkg download assets via thirdparty\asset-provider-s3.bat (S3 then curl).
 REM                               Use only when pinned to an older vcpkg whose upstream download URLs are stale or broken;
 REM                               newer vcpkg ports usually do not need this.
+REM   --extra-requirements <file> append packages from <file> to the install list (one package per line, vcpkg syntax).
+REM                               May be passed multiple times. Lets downstream repos (e.g. MeshInspectorCode) install
+REM                               their extra packages in the same vcpkg invocation as MeshLib's, so all the env-var
+REM                               and overlay setup lives in one place.
 
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
@@ -41,9 +45,23 @@ echo Using vcpkg version: !VCPKG_TAG!
 REM Check for CLI options
 set "write_s3_option=false"
 set "use_s3_assets=false"
+set "extra_req_files="
+set "expect_extra_req=false"
 for %%i in (%*) do (
-    if /I "%%i"=="--write-s3" set "write_s3_option=true"
-    if /I "%%i"=="--use-s3-asset-provider" set "use_s3_assets=true"
+    if "!expect_extra_req!"=="true" (
+        set "extra_req_files=!extra_req_files! %%~i"
+        set "expect_extra_req=false"
+    ) else if /I "%%i"=="--write-s3" (
+        set "write_s3_option=true"
+    ) else if /I "%%i"=="--use-s3-asset-provider" (
+        set "use_s3_assets=true"
+    ) else if /I "%%i"=="--extra-requirements" (
+        set "expect_extra_req=true"
+    )
+)
+if "!expect_extra_req!"=="true" (
+    echo Error: --extra-requirements requires a file path argument.
+    exit /b 1
 )
 if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
     echo "Error: --write-s3 requires AWS CLI to be installed."
@@ -82,6 +100,18 @@ REM Read package list from requirements file
 set packages=
 for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
     set packages=!packages! %%i
+)
+
+REM Append packages from any --extra-requirements files (downstream repos)
+for %%f in (!extra_req_files!) do (
+    if not exist "%%~f" (
+        echo Error: --extra-requirements file not found: %%~f
+        exit /b 1
+    )
+    echo Appending packages from %%~f
+    for /f "delims=" %%i in ('type "%%~f"') do (
+        set packages=!packages! %%i
+    )
 )
 
 REM Install vcpkg core dependencies

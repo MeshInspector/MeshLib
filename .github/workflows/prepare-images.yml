@@ -70,16 +70,19 @@ jobs:
           DISABLE_UBUNTU_ARM64: ${{ inputs.disable_ubuntu_arm64 }}
           DISABLE_EMSCRIPTEN:   ${{ inputs.disable_emscripten }}
         run: |
+          # Only `distro` and `arch` are encoded here so the auto-generated
+          # cell name stays "(<distro>, <arch>)"; the runner OS and image
+          # suffix are derived from `matrix.arch` inline below.
           MATRIX=$(jq -nc \
             --argjson dx64   "$DISABLE_UBUNTU_X64" \
             --argjson darm64 "$DISABLE_UBUNTU_ARM64" \
             --argjson demscr "$DISABLE_EMSCRIPTEN" \
             '[
-              {distro:"ubuntu22",   arch:"x64",   "image-suffix":"",       os:"ubuntu-latest"},
-              {distro:"ubuntu24",   arch:"x64",   "image-suffix":"",       os:"ubuntu-latest"},
-              {distro:"ubuntu22",   arch:"arm64", "image-suffix":"-arm64", os:"ubuntu-24.04-arm"},
-              {distro:"ubuntu24",   arch:"arm64", "image-suffix":"-arm64", os:"ubuntu-24.04-arm"},
-              {distro:"emscripten", arch:"arm64", "image-suffix":"-arm64", os:"ubuntu-24.04-arm"}
+              {distro:"ubuntu22",   arch:"x64"  },
+              {distro:"ubuntu24",   arch:"x64"  },
+              {distro:"ubuntu22",   arch:"arm64"},
+              {distro:"ubuntu24",   arch:"arm64"},
+              {distro:"emscripten", arch:"arm64"}
              ] | map(select(
               (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
               and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
@@ -101,10 +104,10 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.compute-linux-image-matrix.outputs.matrix) }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
-      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Work-around possible permission issues
         shell: bash

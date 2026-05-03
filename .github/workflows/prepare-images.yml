@@ -24,6 +24,24 @@ on:
       vs22_vcpkg_version:
         required: true
         type: string
+      # `disable-build-<platform>` PR labels (resolved upstream in
+      # config.yml) — skip the matching image build cells / jobs so we
+      # don't burn runner time producing images no consumer will use.
+      disable_ubuntu_x64:
+        type: boolean
+        default: false
+      disable_ubuntu_arm64:
+        type: boolean
+        default: false
+      disable_emscripten:
+        type: boolean
+        default: false
+      disable_linux_vcpkg:
+        type: boolean
+        default: false
+      disable_windows:
+        type: boolean
+        default: false
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -36,7 +54,13 @@ jobs:
         run: echo
 
   linux-image-build-upload:
-    if: ${{ inputs.need_linux_image_rebuild }}
+    # Skip per-cell when the disable-build-<platform> label for this
+    # (distro, arch) is set — see workflow_call inputs above.
+    if: >-
+      ${{ inputs.need_linux_image_rebuild
+          && !(matrix.distro == 'emscripten' && inputs.disable_emscripten)
+          && !(startsWith(matrix.distro, 'ubuntu') && matrix.arch == 'x64' && inputs.disable_ubuntu_x64)
+          && !(startsWith(matrix.distro, 'ubuntu') && matrix.arch == 'arm64' && inputs.disable_ubuntu_arm64) }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -102,7 +126,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
   linux-vcpkg-build-upload:
-    if: ${{ inputs.need_linux_vcpkg_rebuild }}
+    if: ${{ inputs.need_linux_vcpkg_rebuild && !inputs.disable_linux_vcpkg }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -141,7 +165,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
-    if: ${{ inputs.need_windows_vcpkg_rebuild }}
+    if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}
     timeout-minutes: 240
     runs-on: ${{ matrix.runner }}
     strategy:

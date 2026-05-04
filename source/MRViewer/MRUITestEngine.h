@@ -4,6 +4,7 @@
 #include "MRViewer/exports.h"
 
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <optional>
@@ -206,5 +207,29 @@ private:
 
 // Returns the current entry tree.
 [[nodiscard]] MRVIEWER_API const GroupEntry& getRootEntry();
+
+// True if a TestEngine-driven action ran during the current ImGui frame:
+// either a `createButton(...)` call returned a simulated click, or a
+// `createValueLow(...)` call consumed a value override. Cleared at frame boundary.
+// Read by code that wants to behave differently under TE control — e.g. file
+// dialogs that should bypass the OS modal.
+[[nodiscard]] MRVIEWER_API bool wasFrameTriggered();
+
+// Stage the path(s) that the next TE-triggered file dialog should return.
+// Replaces any previously staged value; empty vector is treated as "not staged".
+// Single-shot: consumed by the next file dialog opened during a TE-triggered frame.
+MRVIEWER_API void stageFileDialogPaths( std::vector<std::filesystem::path> paths );
+
+// Consume the staged paths. Returns empty if nothing is staged.
+// File-dialog code calls this; not normally called by user code.
+[[nodiscard]] MRVIEWER_API std::vector<std::filesystem::path> consumeStagedFileDialogPaths();
+
+// Append a status message describing a problem during a TE-driven action
+// (e.g. "file dialog triggered but no paths staged"). MCP tool handlers
+// drain these after dispatching input and surface them to the LLM.
+MRVIEWER_API void appendStatusMessage( std::string msg );
+
+// Drain and return all status messages accumulated since the last drain.
+[[nodiscard]] MRVIEWER_API std::vector<std::string> consumeStatusMessages();
 
 }

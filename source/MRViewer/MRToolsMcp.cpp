@@ -9,6 +9,7 @@
 #include "MRViewer/MRRibbonSchema.h"
 #include "MRViewer/MRSceneCache.h"
 #include "MRViewer/MRStatePlugin.h"
+#include "MRViewer/MRUITestEngine.h"
 
 #include <algorithm>
 #include <string>
@@ -16,6 +17,9 @@
 
 namespace MR::Mcp
 {
+
+// Defined in MRUiMcp.cpp — drains TestEngine status messages and surfaces them as a tool error.
+void surfaceTestEngineStatusMessages();
 
 // Public type label for a ribbon item. State plugins split by `blocking()` (default: true);
 // plain RibbonMenuItem subclasses are one-shot buttons.
@@ -139,10 +143,16 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
             if ( !reason.empty() )
                 throw std::runtime_error( fmt::format( "tools.action {}: {}", id, reason ) );
         }
+        // Mark the frame as TE-driven so any TE-gated hook the action triggers
+        // (file-dialog bypass via stageFileDialogPaths, etc.) sees the flag set.
+        // tools.action calls item->action() directly without going through
+        // TestEngine::createButton, which is the other code path that sets it.
+        UI::TestEngine::markFrameTriggered();
         item->action();
         nowActive = item->isActive();
     } );
     skipFramesAfterInput();
+    surfaceTestEngineStatusMessages();
     return nlohmann::json::object( { { "active", nowActive } } );
 }
 

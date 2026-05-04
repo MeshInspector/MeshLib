@@ -39,6 +39,9 @@ struct AABBTreeNode
     /// returns face (for the leaf node only)
     LeafId leafId() const { assert( leaf() ); return LeafId( int( l ) ); }
     void setLeafId( LeafId id ) { l = NodeId( int( id ) ); r = NodeId(); }
+
+    AABBTreeNode() noexcept = default;
+    explicit AABBTreeNode( NoInit ) noexcept : box( noInit ), l( noInit ), r( noInit ){}
 };
 
 template<typename T>

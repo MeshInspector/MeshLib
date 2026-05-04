@@ -77,8 +77,8 @@ template<typename T>
 auto AABBTreeMaker<T>::makeNode_( const Subtree & s ) -> std::pair<Subtree, Subtree>
 {
     assert( !s.leaf() );
-    auto & node = nodes_[s.root];
-    assert( !node.box.valid() );
+    auto& node = nodes_[s.root];
+    node.box = {};
     for ( size_t i = 0; i < s.numLeaves; ++i )
         node.box.include( boxedLeaves_[s.firstLeaf + i].box );
 
@@ -146,7 +146,7 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
     boxedLeaves_ = std::move( boxedLeaves );
 
     const auto numLeaves = (int)boxedLeaves_.size();
-    nodes_.resize( getNumNodes( numLeaves ) );
+    nodes_.resizeNoInit( getNumNodes( numLeaves ) );
 
     // to equally balance the load on threads, subdivide the task on
     // a power of two subtasks, which is at least twice the hardware concurrency

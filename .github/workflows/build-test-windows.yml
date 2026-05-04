@@ -97,7 +97,6 @@ jobs:
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           install-flags: '--write-s3 --use-s3-asset-provider'
           internal-build: ${{ inputs.internal_build }}
-          enable-vs2019-toolset: ${{ matrix.cxx_compiler == 'msvc-2019' }}
 
       - name: Install CUDA
         uses: ./.github/actions/install-cuda

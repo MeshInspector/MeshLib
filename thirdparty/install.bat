@@ -84,24 +84,16 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
     set packages=!packages! %%i
 )
 
-REM Build the list of overlay-port flags. Triplets that pin the v142
-REM (VS2019) toolset over vcpkg 2024.10.21 layer ports-vs19 in front so
-REM its boost-interprocess (with the iterator-invalidation patch from
-REM boostorg/interprocess#224) wins over the upstream port. Other
-REM triplets use only the shared overlay dir.
-set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports""
-if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-vs2019-meshlib" (
-    set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19" --overlay-ports "%~dp0vcpkg\ports""
-)
-if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" (
-    set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19" --overlay-ports "%~dp0vcpkg\ports""
-)
+REM On v142-pinned (VS2019/2024.10.21) triplets, prepend ports-vs19 so its backports win over the registry.
+set "OVERLAY_PORTS_FLAGS="
+if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-vs2019-meshlib" set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19""
+if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19""
 
 REM Install vcpkg core dependencies
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
 
 REM Install all required dependencies
-vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
 
 endlocal
 goto :EOF

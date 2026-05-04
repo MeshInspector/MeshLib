@@ -79,7 +79,8 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
 
 // Drain any TestEngine status messages emitted during a just-dispatched UI action and surface
 // them as a tool error. Run on the GUI thread because TE state isn't thread-safe.
-static void surfaceTestEngineStatusMessages_()
+// Non-static so MRToolsMcp.cpp's `tools.action` handler can reuse it across TUs.
+void surfaceTestEngineStatusMessages()
 {
     std::vector<std::string> msgs;
     MR::CommandLoop::runCommandFromGUIThread( [&]
@@ -107,7 +108,7 @@ static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
             throw std::runtime_error( fmt::format( "pressButton {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
     skipFramesAfterInput();
-    surfaceTestEngineStatusMessages_();
+    surfaceTestEngineStatusMessages();
 
     return nlohmann::json::object();
 }
@@ -167,7 +168,7 @@ static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
             throw std::runtime_error( fmt::format( "writeValue {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
     skipFramesAfterInput();
-    surfaceTestEngineStatusMessages_();
+    surfaceTestEngineStatusMessages();
 
     return nlohmann::json::object();
 }

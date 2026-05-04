@@ -209,11 +209,19 @@ private:
 [[nodiscard]] MRVIEWER_API const GroupEntry& getRootEntry();
 
 // True if a TestEngine-driven action ran during the current ImGui frame:
-// either a `createButton(...)` call returned a simulated click, or a
-// `createValueLow(...)` call consumed a value override. Cleared at frame boundary.
+// either a `createButton(...)` call returned a simulated click, a
+// `createValueLow(...)` call consumed a value override, or a caller
+// explicitly invoked `markFrameTriggered()`. Cleared at frame boundary.
 // Read by code that wants to behave differently under TE control — e.g. file
 // dialogs that should bypass the OS modal.
 [[nodiscard]] MRVIEWER_API bool wasFrameTriggered();
+
+// Explicitly mark the current frame as TestEngine-driven. Use from MCP tool
+// handlers that fire plugin actions on a path that does NOT go through
+// `createButton()` (e.g. `tools.action`) but should still trigger TE-gated
+// hooks (file-dialog bypass, etc.). Call from the GUI thread before invoking
+// the action.
+MRVIEWER_API void markFrameTriggered();
 
 // Stage the path(s) that the next TE-triggered file dialog should return.
 // Replaces any previously staged value; empty vector is treated as "not staged".

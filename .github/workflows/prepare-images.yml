@@ -206,7 +206,7 @@ jobs:
           - vs: vs2019
             runner: windows-2025
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
-            vcpkg_triplet: x64-windows-meshlib
+            vcpkg_triplet: x64-windows-vs2019-meshlib
           - vs: vs2019
             runner: windows-2025
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
@@ -232,18 +232,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
           retry-max-attempts: 5
-
-      - name: Enable VS2019 toolset for vcpkg
-        if: ${{ matrix.vs == 'vs2019' }}
-        run: |
-          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
-          # Tell install.bat to layer thirdparty/vcpkg/ports-vs19/ on top of
-          # the shared overlay dir (currently carries boost-interprocess with
-          # boostorg/interprocess#224 for the 2024.10.21 baseline). Must
-          # match the corresponding step in setup-vcpkg-windows/action.yml
-          # so the cache-producer here writes the same ABI the consumer
-          # jobs expect.
-          "MESHLIB_VS2019_OVERLAY=true" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Build and cache vcpkg
         env:

@@ -84,12 +84,16 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
     set packages=!packages! %%i
 )
 
-REM Build the list of overlay-port flags. The VS2019/2024.10.21 build adds
-REM ports-vs19 in front so its boost-interprocess (with the iterator-
-REM invalidation patch from boostorg/interprocess#224) wins over the
-REM upstream port. Other builds use only the shared overlay dir.
+REM Build the list of overlay-port flags. Triplets that pin the v142
+REM (VS2019) toolset over vcpkg 2024.10.21 layer ports-vs19 in front so
+REM its boost-interprocess (with the iterator-invalidation patch from
+REM boostorg/interprocess#224) wins over the upstream port. Other
+REM triplets use only the shared overlay dir.
 set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports""
-if /I "%MESHLIB_VS2019_OVERLAY%"=="true" (
+if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-vs2019-meshlib" (
+    set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19" --overlay-ports "%~dp0vcpkg\ports""
+)
+if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" (
     set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19" --overlay-ports "%~dp0vcpkg\ports""
 )
 

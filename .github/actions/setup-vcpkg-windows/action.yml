@@ -17,10 +17,6 @@ inputs:
     description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
     required: false
     default: 'false'
-  enable-vs2019-toolset:
-    description: 'String boolean ("true" or "false"). When "true", uncomment the `^#vs2019toolset#` markers in thirdparty/vcpkg/triplets/x64-windows-meshlib.cmake before computing the cache key — pins vcpkg to the v142 (VS2019) platform toolset. Required for msvc-2019 jobs that need ABI compatibility with the v142-built S3 binary cache.'
-    required: false
-    default: 'false'
 
 runs:
   using: 'composite'
@@ -45,25 +41,16 @@ runs:
         ./bootstrap-vcpkg.bat
         vcpkg.exe integrate install
 
-    - name: Enable VS2019 toolset for vcpkg
-      if: ${{ inputs.enable-vs2019-toolset == 'true' }}
-      shell: pwsh
-      run: |
-        (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
-        # Tell install.bat to layer thirdparty/vcpkg/ports-vs19/ on top of
-        # the shared overlay dir (currently carries boost-interprocess with
-        # boostorg/interprocess#224 for the 2024.10.21 baseline).
-        "MESHLIB_VS2019_OVERLAY=true" | Out-File -FilePath $env:GITHUB_ENV -Append
-
     - name: Compute Vcpkg Cache Key
       # Bust the cache when overlay ports, the active triplet file, the
       # package list, or install.bat change — otherwise the cached
       # C:\vcpkg\installed\ tree is served verbatim and overlays never
-      # take effect. The VS2019-only overlay glob is empty on VS2022 so
-      # changes under ports-vs19/ don't invalidate the VS2022 cache.
+      # take effect. The VS2019-only overlay glob is empty on triplets
+      # that don't use ports-vs19, so changes under ports-vs19/ don't
+      # invalidate other triplets' caches.
       shell: bash
       env:
-        VS19_PORTS_GLOB: ${{ inputs.enable-vs2019-toolset == 'true' && 'thirdparty/vcpkg/ports-vs19/**' || '' }}
+        VS19_PORTS_GLOB: ${{ (inputs.vcpkg-triplet == 'x64-windows-vs2019-meshlib' || inputs.vcpkg-triplet == 'x64-windows-meshlib-iterator-debug') && 'thirdparty/vcpkg/ports-vs19/**' || '' }}
       run: |
         triplet_file="thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
         echo "Triplet file: $triplet_file"

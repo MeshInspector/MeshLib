@@ -122,8 +122,10 @@ if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" set "OVERL
 REM Install vcpkg core dependencies
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
 
-REM Install all required dependencies
-vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
+REM Install all required dependencies. --recurse lets vcpkg rebuild already-installed
+REM packages whose feature set changes (e.g. when --extra-requirements adds a feature
+REM like curl[openssl] to a package already pulled in transitively by another dep).
+vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions --recurse || goto :error
 
 endlocal
 goto :EOF

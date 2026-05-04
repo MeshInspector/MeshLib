@@ -1,5 +1,5 @@
 {
-  "$comment": "Overlay of vcpkg 2024.10.21 boost-interprocess + boostorg/interprocess#224 (fixes iterator-invalidation crash on Windows native emulation, e.g. inside openvdb on VS2019).",
+  "$comment": "Overlay of vcpkg 2024.10.21 boost-interprocess + boostorg/interprocess#224 (fixes iterator-invalidation crash on Windows native emulation; required by MeshInspectorCode's SharedMemory on VS2019).",
   "name": "boost-interprocess",
   "version": "1.86.0",
   "port-version": 1,

@@ -61,8 +61,7 @@ struct BooleanResult
   */
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
-MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                                  const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
+// no version of the function with rvalue-referenced meshes, because meshes' copies are currently used for sorting intersections
 
 
 struct BooleanPreCutResult

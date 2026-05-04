@@ -3,11 +3,14 @@
 #include "MRViewerFwd.h"
 #include "MRColorTheme.h"
 #include "MRCommandLoop.h"
+#include "MRUITestEngine.h"
 #include "MRViewer.h"
 #include "MRMesh/MRConfig.h"
+#include "MRMesh/MRExpected.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 
@@ -384,8 +387,66 @@ std::string webAccumFilter( const MR::IOFilters& filters )
 }
 #endif
 
+// Validate paths staged by `MR::UI::TestEngine::stageFileDialogPaths` against the
+// dialog's `Parameters`. Empty error means OK. Rules:
+//   - paths must be non-empty.
+//   - if !multiselect: exactly one path.
+//   - saveDialog: target is always a file (no save-folder API). Skip existence check
+//     (file may be brand-new), but reject paths that already exist as a directory.
+//   - else folderDialog: each path must be an existing directory.
+//   - else (open file): each path must be an existing regular file.
+MR::Expected<void> sValidateStagedFileDialogPaths(
+    const std::vector<std::filesystem::path>& paths,
+    const MR::FileDialog::Parameters& parameters )
+{
+    if ( paths.empty() )
+        return MR::unexpected( std::string( "no paths were staged" ) );
+
+    if ( !parameters.multiselect && paths.size() > 1 )
+        return MR::unexpected( fmt::format( "dialog expects a single path but {} were staged", paths.size() ) );
+
+    if ( parameters.saveDialog )
+    {
+        std::error_code ec;
+        if ( std::filesystem::is_directory( paths[0], ec ) )
+            return MR::unexpected( fmt::format(
+                "save target '{}' exists and is a directory, expected a file path",
+                MR::utf8string( paths[0] ) ) );
+        return {};
+    }
+
+    for ( const auto& p : paths )
+    {
+        std::error_code ec;
+        const bool ok = parameters.folderDialog
+            ? std::filesystem::is_directory( p, ec )
+            : std::filesystem::is_regular_file( p, ec );
+        if ( !ok )
+        {
+            return MR::unexpected( fmt::format( "staged path '{}' is not an existing {}",
+                MR::utf8string( p ),
+                parameters.folderDialog ? "directory" : "file" ) );
+        }
+    }
+    return {};
+}
+
 std::vector<std::filesystem::path> runDialog( const MR::FileDialog::Parameters& parameters )
 {
+    if ( MR::UI::TestEngine::wasFrameTriggered() )
+    {
+        auto staged = MR::UI::TestEngine::consumeStagedFileDialogPaths();
+        if ( auto ex = sValidateStagedFileDialogPaths( staged, parameters ); !ex )
+        {
+            MR::UI::TestEngine::appendStatusMessage( fmt::format(
+                "TestEngine-triggered file dialog: {}. "
+                "Call ui.stageFileDialogPaths(...) with the right path(s) before pressing the button.",
+                ex.error() ) );
+            return {};
+        }
+        return staged;
+    }
+
 #if defined( __EMSCRIPTEN__ )
     (void)parameters;
     return {};

@@ -114,11 +114,16 @@ for %%f in (!extra_req_files!) do (
     )
 )
 
+REM On v142-pinned (VS2019/2024.10.21) triplets, prepend ports-vs19 so its backports win over the registry.
+set "OVERLAY_PORTS_FLAGS="
+if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-vs2019-meshlib" set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19""
+if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19""
+
 REM Install vcpkg core dependencies
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
 
 REM Install all required dependencies
-vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions || goto :error
 
 endlocal
 goto :EOF

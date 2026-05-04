@@ -292,6 +292,14 @@ bool wasFrameTriggered()
     #endif
 }
 
+void markFrameTriggered()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    checkForNewFrame();
+    state.frameTriggered = true;
+    #endif
+}
+
 void stageFileDialogPaths( std::vector<std::filesystem::path> paths )
 {
     #if MR_ENABLE_UI_TEST_ENGINE

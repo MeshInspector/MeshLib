@@ -64,18 +64,23 @@ FROM emscripten/emsdk:4.0.10-arm64
 # yaru-theme-icon fixes `Icon 'dialog-warning' not present in theme Yaru:
 # 'glib warning'` during testing.
 #
-# The post-install dpkg-query check guards against a silent regression: when
+# The two post-PPA checks guard against a silent regression: when
 # ppa.launchpadcontent.net is briefly unreachable, add-apt-repository /
 # apt-get update skip the PPA, Ubuntu's transitional `firefox` package (the
 # `snap install firefox` stub) becomes the only candidate, the build still
-# succeeds, and emrun later hangs at test time on /usr/bin/firefox. Real
-# mozillateam PPA versions end in `~mt1`; if it's missing, fail the build
-# loudly so CI retries instead of pushing a broken image to `:latest`.
+# succeeds, and emrun later hangs at test time on /usr/bin/firefox.
+#  1. `Acquire::Retries "5"` lets apt itself retry transient fetch failures.
+#  2. `apt-cache policy firefox | grep mozillateam` fails fast if the PPA's
+#     package list didn't actually load into apt's cache.
+#  3. The trailing dpkg-query confirms the *installed* firefox carries the
+#     mozillateam `~mt1` version suffix; if it doesn't, fail the build so
+#     CI retries instead of pushing a broken image to `:latest`.
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list; \
+    echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends gpg-agent software-properties-common \
  && echo '\
@@ -84,6 +89,10 @@ Pin: release o=LP-PPA-mozillateam\n\
 Pin-Priority: 1001\
 ' | tee /etc/apt/preferences.d/mozilla-firefox \
  && add-apt-repository -y ppa:mozillateam/ppa \
+ && { apt-cache policy firefox | grep -q mozillateam \
+      || { echo 'ERROR: mozillateam PPA did not load into apt cache (launchpad unreachable?); retry the build.' >&2 ; \
+           apt-cache policy firefox >&2 ; \
+           exit 1 ; } ; } \
  && apt-get install -qqy --no-install-recommends \
         tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 gettext \
  && { dpkg-query -W -f='${Version}\n' firefox | grep -qE '~mt1$' \

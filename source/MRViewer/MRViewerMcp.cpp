@@ -424,7 +424,9 @@ MR_ON_INIT{
         /*name*/"Close MeshInspector",
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
-                "After this call the gateway's `launch` tool can bring MeshInspector back up.",
+                "After this call the gateway's `launch` tool can bring MeshInspector back up. "
+                "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
+                "check `ui.listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown

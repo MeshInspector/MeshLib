@@ -78,7 +78,7 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
             ImGui::SameLine();
         }
 
-        if ( UI::buttonCommonSize( showSave ? settings.dontSaveText.c_str() : settings.shortCloseText.c_str(), btnSize, ImGuiKey_N) )
+        if ( UI::buttonCommonSize( _tr( showSave ? settings.dontSaveText.c_str() : settings.shortCloseText.c_str() ), btnSize, ImGuiKey_N ) )
         {
             ImGui::CloseCurrentPopup();
             if ( settings.onOk )

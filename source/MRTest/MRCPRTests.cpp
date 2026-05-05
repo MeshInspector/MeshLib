@@ -1,6 +1,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__)
 #include <cpr/cpr.h>
+#include <cpr/cprver.h>
 #include <curl/curl.h>
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRGTest.h"
@@ -10,9 +11,17 @@ constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
 
 TEST( MRViewer, CPRSslBackends )
 {
+    spdlog::info( "cpr version: {}", CPR_VERSION );
+    spdlog::info( "libcurl version: {}", curl_version() );
+
     const curl_version_info_data * info = curl_version_info( CURLVERSION_NOW );
     ASSERT_NE( info, nullptr );
     spdlog::info( "libcurl default SSL backend: {}", info->ssl_version ? info->ssl_version : "<none>" );
+
+#if LIBCURL_VERSION_NUM >= 0x075400 // 7.84.0: cainfo/capath fields added (CURLVERSION_TENTH)
+    spdlog::info( "libcurl compiled-in CAINFO: {}", info->cainfo ? info->cainfo : "<none>" );
+    spdlog::info( "libcurl compiled-in CAPATH: {}", info->capath ? info->capath : "<none>" );
+#endif
 
     const curl_ssl_backend ** avail = nullptr;
     // Documented query idiom: CURLSSLBACKEND_NONE returns CURLSSLSET_UNKNOWN_BACKEND and fills `avail`.

@@ -103,15 +103,10 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Stage MRTest bundle for host-side test job
+      - name: Stage MRTest bundle
         run: |
-          # The Unit Tests step now runs on the host runner (outside this
-          # container) so its image doesn't need firefox/xvfb/dbus. Ship
-          # MRTest* + a copy of the container's emrun.py — emrun is
-          # explicitly designed to run standalone (only stdlib imports).
-          mkdir -p mrtest-bundle
-          cp build/Release/bin/MRTest* mrtest-bundle/
-          cp /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
+          mkdir mrtest-bundle
+          cp build/Release/bin/MRTest* /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
 
       - name: Upload MRTest bundle
         uses: actions/upload-artifact@v7
@@ -157,21 +152,14 @@ jobs:
   emscripten-test:
     needs: emscripten-build
     timeout-minutes: 10
-    # Runs directly on the host (no `container:`) so we can use the runner
-    # image's pre-installed firefox instead of carrying one in the docker
-    # image. ubuntu-24.04-arm ships firefox + geckodriver out of the box.
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
-        config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
-        include:
-          - config: Singlethreaded
-            package_name: emscripten-singlethreaded
-          - config: Multithreaded
-            package_name: emscripten-multithreaded
-          - config: Multithreaded-64Bit
-            package_name: emscripten-multithreaded-64bit
+        package_name:
+          - emscripten-singlethreaded
+          - emscripten-multithreaded
+          - emscripten-multithreaded-64bit
 
     steps:
       - name: Download MRTest bundle

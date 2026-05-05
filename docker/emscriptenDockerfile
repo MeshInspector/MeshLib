@@ -59,10 +59,6 @@ RUN ./scripts/build_thirdparty.sh && \
 ## ============================================================================
 FROM emscripten/emsdk:4.0.10-arm64
 
-# Runtime apt set. Firefox/xvfb/dbus-x11/yaru-theme-icon and the
-# mozillateam PPA dance (needed to dodge Ubuntu's snap-only firefox) are
-# gone — MRTest now runs on the host runner where firefox is already
-# pre-installed. This image is build-only.
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \

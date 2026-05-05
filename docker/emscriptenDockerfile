@@ -63,6 +63,14 @@ FROM emscripten/emsdk:4.0.10-arm64
 # AWS CLI install was already dropped upstream.
 # yaru-theme-icon fixes `Icon 'dialog-warning' not present in theme Yaru:
 # 'glib warning'` during testing.
+#
+# The post-install dpkg-query check guards against a silent regression: when
+# ppa.launchpadcontent.net is briefly unreachable, add-apt-repository /
+# apt-get update skip the PPA, Ubuntu's transitional `firefox` package (the
+# `snap install firefox` stub) becomes the only candidate, the build still
+# succeeds, and emrun later hangs at test time on /usr/bin/firefox. Real
+# mozillateam PPA versions end in `~mt1`; if it's missing, fail the build
+# loudly so CI retries instead of pushing a broken image to `:latest`.
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
@@ -78,6 +86,11 @@ Pin-Priority: 1001\
  && add-apt-repository -y ppa:mozillateam/ppa \
  && apt-get install -qqy --no-install-recommends \
         tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 gettext \
+ && { dpkg-query -W -f='${Version}\n' firefox | grep -qE '~mt1$' \
+      || { dpkg-query -W -f='installed firefox version: ${Version}\n' firefox >&2 ; \
+           echo 'ERROR: firefox is the Ubuntu snap-install stub, not the mozillateam PPA build.' >&2 ; \
+           echo '       launchpad was likely unreachable during apt-get update; retry the build.' >&2 ; \
+           exit 1 ; } ; } \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

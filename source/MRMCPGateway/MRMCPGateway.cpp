@@ -89,7 +89,7 @@ void printUsage()
         "                           Fixed at startup; not overridable via tool call.\n"
         "  --launch-arg <value>     Default argument forwarded to the backend (repeatable).\n"
         "                           A 'launch' tool call may override these for that call.\n"
-        "  --launch-timeout <secs>  How long 'launch' waits for the backend (default 30).\n"
+        "  --launch-timeout <secs>  How long 'launch' waits for the backend (default 60).\n"
         "  --mcp-port <port>        MCP port the backend should bind (default 7887). Forwarded\n"
         "                           to spawned MI as -mcpPort; if --target-url is omitted, the\n"
         "                           gateway's probe URL is derived from this port.\n"

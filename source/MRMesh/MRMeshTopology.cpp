@@ -1887,47 +1887,30 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
     UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
-    if ( fromFaces0 )
     {
-        fromCopiedVerts = fromMappedVerts;
-        fromCopiedEdges = fromMappedEdges;
-        for ( auto f : fromFaces )
-        {
-            auto efrom = from.edgePerFace_[f];
-            for ( auto e : leftRing( from, efrom ) )
-            {
-                const UndirectedEdgeId ue = e.undirected();
-                if ( !fromCopiedEdges.test_set( ue ) )
-                    copyEdge( ue );
-                if ( auto v = from.org( e ); v.valid() )
-                {
-                    if ( !fromCopiedVerts.test_set( v ) )
-                        copyVert( v );
-                }
-            }
-            copyFace( f );
-        }
-        fromCopiedVerts -= fromMappedVerts;
-        fromCopiedEdges -= fromMappedEdges;
-    }
-    else
-    {
-        // whole (from) mesh is copied
         tbb::task_group taskGroup;
         taskGroup.run( [&] ()
         {
-            fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+            if ( fromFaces0 )
+                fromCopiedVerts = getIncidentVerts( from, *fromFaces0 ) - fromMappedVerts;
+            else
+                fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+
             for ( auto v : fromCopiedVerts )
                 copyVert( v );
         } );
 
         taskGroup.run( [&] ()
         {
-            for ( auto f : from.getValidFaces() )
+            for ( auto f : fromFaces )
                 copyFace( f );
         } );
 
-        fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+        if ( fromFaces0 )
+            fromCopiedEdges = getIncidentEdges( from, *fromFaces0 ) - fromMappedEdges;
+        else
+            fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+
         for ( auto ue : fromCopiedEdges )
             copyEdge( ue );
 

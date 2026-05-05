@@ -318,6 +318,11 @@ public:
     [[nodiscard]] friend TypedBitSet operator ^ ( const TypedBitSet & a, const TypedBitSet & b ) { auto res{ a }; res ^= b; return res; }
     [[nodiscard]] friend TypedBitSet operator - ( const TypedBitSet & a, const TypedBitSet & b ) { auto res{ a }; res -= b; return res; }
 
+    [[nodiscard]] friend TypedBitSet operator & ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a &= b ); }
+    [[nodiscard]] friend TypedBitSet operator | ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a |= b ); }
+    [[nodiscard]] friend TypedBitSet operator ^ ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a ^= b ); }
+    [[nodiscard]] friend TypedBitSet operator - ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a -= b ); }
+
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     TypedBitSet & subtract( const TypedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
@@ -459,6 +464,11 @@ template <typename M>
 [[nodiscard]] inline BitSet operator | ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res |= b; return res; }
 [[nodiscard]] inline BitSet operator ^ ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res ^= b; return res; }
 [[nodiscard]] inline BitSet operator - ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res -= b; return res; }
+
+[[nodiscard]] inline BitSet operator & ( BitSet && a, const BitSet & b ) { return std::move( a &= b ); }
+[[nodiscard]] inline BitSet operator | ( BitSet && a, const BitSet & b ) { return std::move( a |= b ); }
+[[nodiscard]] inline BitSet operator ^ ( BitSet && a, const BitSet & b ) { return std::move( a ^= b ); }
+[[nodiscard]] inline BitSet operator - ( BitSet && a, const BitSet & b ) { return std::move( a -= b ); }
 
 /// \}
 

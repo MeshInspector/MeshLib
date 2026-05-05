@@ -107,27 +107,19 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
-    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
-    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
     Mesh maCpy, mbCpy;
     tbb::task_group taskGroup;
-    if ( needCutMeshA )
+    taskGroup.run( [&] ()
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        taskGroup.run( [&] ()
-        {
-            meshA.getAABBTree();
-            maCpy = meshA;
-        } );
-    }
-    if ( needCutMeshB )
-    {
-        // build tree for input mesh for the cloned mesh to copy the tree,
-        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        meshB.getAABBTree();
-        mbCpy = meshB;
-    }
+        meshA.getAABBTree();
+        maCpy = meshA;
+    } );
+    // build tree for input mesh for the cloned mesh to copy the tree,
+    // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+    meshB.getAABBTree();
+    mbCpy = meshB;
     taskGroup.wait();
 
     return booleanImpl( std::move( maCpy ), std::move( mbCpy ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );

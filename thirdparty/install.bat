@@ -7,9 +7,8 @@ REM   --use-s3-asset-provider     fetch vcpkg download assets via thirdparty\ass
 REM                               Use only when pinned to an older vcpkg whose upstream download URLs are stale or broken;
 REM                               newer vcpkg ports usually do not need this.
 REM   --extra-requirements <file> append packages from <file> to the install list (one package per line, vcpkg syntax).
-REM                               May be passed multiple times. Lets downstream repos (e.g. MeshInspectorCode) install
-REM                               their extra packages in the same vcpkg invocation as MeshLib's, so all the env-var
-REM                               and overlay setup lives in one place.
+REM                               May be passed multiple times. Lets downstream callers append their own packages
+REM                               onto the same vcpkg invocation, so all the env-var and overlay setup lives here.
 
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags

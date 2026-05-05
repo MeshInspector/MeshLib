@@ -113,11 +113,29 @@ jobs:
           echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}
           echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\bin
 
+      - name: Resolve Visual Studio install path
+        # Discover the VS install path at runtime via vswhere instead of
+        # hardcoding e.g. `C:\Program Files\Microsoft Visual Studio\2022\Enterprise`.
+        # The hardcoded path used to break whenever GitHub flipped the
+        # `windows-2025` label to a newer image (see runner-images#14004).
+        # vswhere is shipped at the same well-known location on every runner
+        # image GitHub publishes, regardless of which VS edition is present.
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installationPath = & $vswhere -latest -property installationPath
+          if (-not $installationPath) {
+            Write-Error "vswhere returned no Visual Studio installation"
+            exit 1
+          }
+          Write-Host "VS install path: $installationPath"
+          "VC_PATH=$installationPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Install Visual Studio Integration
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi '${{matrix.vc-path}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+          (gi '${{ env.VC_PATH }}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Setup python
         run: py -3 scripts\setup_win_python_reqs.py
@@ -151,7 +169,7 @@ jobs:
         shell: cmd
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
 
         # This consumes the JSON created by generating the C bindings.
@@ -160,7 +178,7 @@ jobs:
         shell: cmd
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
           dotnet build examples/c-sharp-examples -c ${{matrix.config}}
 
@@ -175,7 +193,7 @@ jobs:
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
+            call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
             cmake --version || exit /b 1
             cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
@@ -190,7 +208,7 @@ jobs:
         shell: cmd
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
@@ -211,7 +229,7 @@ jobs:
           }
           Push-Location $buildDir
           try {
-            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ matrix.vc-path }}"
+            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ env.VC_PATH }}"
           } finally {
             Pop-Location
           }

@@ -288,11 +288,23 @@ jobs:
           "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $env:GITHUB_ENV
           "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $env:GITHUB_PATH
 
+      - name: Resolve Visual Studio install path
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installationPath = & $vswhere -latest -property installationPath
+          if (-not $installationPath) {
+            Write-Error "vswhere returned no Visual Studio installation"
+            exit 1
+          }
+          Write-Host "VS install path: $installationPath"
+          "VC_PATH=$installationPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Install Visual Studio Integration
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+          (gi '${{ env.VC_PATH }}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
@@ -310,7 +322,7 @@ jobs:
       - name: Generate and build MRBind bindings
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1
 
       - name: Run Test

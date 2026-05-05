@@ -1,0 +1,54 @@
+name: Test thirdparty/install.bat error paths
+
+# Smoke-test the early exit branches of thirdparty\install.bat that
+# never fire in normal CI (because callers pass valid args). Runs only
+# when install.bat itself changes, so it doesn't add cost to unrelated
+# PRs.
+#
+# Tests:
+#   1. --extra-requirements with no following value -> exit 1
+#   2. --extra-requirements <missing-file>          -> exit 1
+#
+# Both errors are raised before any vcpkg invocation, so a plain hosted
+# windows-latest runner is sufficient (no AWS CLI / vcpkg binary cache
+# needed).
+
+on:
+  pull_request:
+    paths:
+      - 'thirdparty/install.bat'
+      - '.github/workflows/test-install-bat.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'thirdparty/install.bat'
+      - '.github/workflows/test-install-bat.yml'
+
+jobs:
+  install-bat-error-paths:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: '--extra-requirements with no value -> exit 1'
+        shell: cmd
+        run: |
+          thirdparty\install.bat --extra-requirements
+          if %errorlevel% equ 0 (
+            echo FAIL: install.bat returned 0 with --extra-requirements missing its value
+            exit /b 1
+          )
+          echo OK: install.bat rejected --extra-requirements without a value (errorlevel=%errorlevel%)
+
+      - name: '--extra-requirements <missing-file> -> exit 1'
+        shell: cmd
+        run: |
+          thirdparty\install.bat --extra-requirements C:\does-not-exist\nope.txt
+          if %errorlevel% equ 0 (
+            echo FAIL: install.bat returned 0 with a non-existent --extra-requirements path
+            exit /b 1
+          )
+          echo OK: install.bat rejected non-existent --extra-requirements path (errorlevel=%errorlevel%)

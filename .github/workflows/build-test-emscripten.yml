@@ -103,20 +103,22 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Unit Tests
-        timeout-minutes: 5
+      - name: Stage MRTest bundle for host-side test job
         run: |
-          echo "check the \$HOME dir permissions in case of timeout issues"
-          echo ls -al \$HOME
-          ls -al $HOME
-          echo
+          # The Unit Tests step now runs on the host runner (outside this
+          # container) so its image doesn't need firefox/xvfb/dbus. Ship
+          # MRTest* + a copy of the container's emrun.py — emrun is
+          # explicitly designed to run standalone (only stdlib imports).
+          mkdir -p mrtest-bundle
+          cp build/Release/bin/MRTest* mrtest-bundle/
+          cp /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
 
-          emrun \
-            --browser=/usr/bin/firefox \
-            --browser-args="--headless" \
-            --safe-firefox-profile \
-            --kill-exit \
-            ./build/Release/bin/MRTest.html
+      - name: Upload MRTest bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: MRTest_${{ matrix.package_name }}
+          path: mrtest-bundle
+          retention-days: 1
 
       - name: Create Package
         run: |
@@ -151,3 +153,40 @@ jobs:
           artifact_path: ${{ github.workspace }}
           artifact_glob: meshlib_${{ matrix.package_name }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+  emscripten-test:
+    needs: emscripten-build
+    timeout-minutes: 10
+    # Runs directly on the host (no `container:`) so we can use the runner
+    # image's pre-installed firefox instead of carrying one in the docker
+    # image. ubuntu-24.04-arm ships firefox + geckodriver out of the box.
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
+        include:
+          - config: Singlethreaded
+            package_name: emscripten-singlethreaded
+          - config: Multithreaded
+            package_name: emscripten-multithreaded
+          - config: Multithreaded-64Bit
+            package_name: emscripten-multithreaded-64bit
+
+    steps:
+      - name: Download MRTest bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: MRTest_${{ matrix.package_name }}
+          path: mrtest-bundle
+
+      - name: Unit Tests
+        timeout-minutes: 5
+        working-directory: mrtest-bundle
+        run: |
+          python3 emrun.py \
+            --browser=/usr/bin/firefox \
+            --browser-args="--headless" \
+            --safe-firefox-profile \
+            --kill-exit \
+            ./MRTest.html

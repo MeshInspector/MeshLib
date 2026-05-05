@@ -36,6 +36,7 @@
     <ClCompile Include="MRGladGlfw.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRLocale.cpp" />
     <ClCompile Include="MRRibbonFontHolder.cpp" />
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -157,6 +158,15 @@
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
     <ClCompile Include="MRFileDialogPortal.cpp" />
     <ClCompile Include="MRWin32MessageHandler.cpp" />
+    <ClCompile Include="MRI18n.cpp" />
+    <ClCompile Include="MRUITestEngineControl.cpp" />
+    <ClCompile Include="MRUiMcp.cpp" />
+    <ClCompile Include="MRSceneMcp.cpp" />
+    <ClCompile Include="MRViewerMcp.cpp" />
+    <ClCompile Include="MRToolsMcp.cpp" />
+    <ClCompile Include="MRSystemMcp.cpp" />
+    <ClCompile Include="MRMcpCommon.cpp" />
+    <ClCompile Include="MRMcpSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -188,6 +198,7 @@
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />
     <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRLocale.h" />
     <ClInclude Include="MRRibbonFontHolder.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
@@ -334,6 +345,11 @@
     <ClInclude Include="MRWebResponseCallback.h" />
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
+    <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRLocaleMacos.h" />
+    <ClInclude Include="MRUITestEngineControl.h" />
+    <ClInclude Include="MRMcpCommon.h" />
+    <ClInclude Include="MRMcpSettings.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -350,6 +366,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="MRLocaleMacos.mm" />
+    <None Include="MRLocaleNames.inl" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -362,7 +380,7 @@
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansCJK-Regular.ttc">
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
@@ -465,6 +483,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRVoxels\MRVoxels.vcxproj">
       <Project>{7cc4f0fe-ace6-4441-9dd7-296066b6d69f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRMcp\MRMcp.vcxproj">
+      <Project>{c8250f26-e01d-4a63-98cd-68069d818080}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">

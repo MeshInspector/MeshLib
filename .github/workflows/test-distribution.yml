@@ -94,15 +94,12 @@ jobs:
           apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
-        if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -112,14 +109,12 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
 
       - name: Ubuntu python test
-        if: ${{ always() }}
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
@@ -192,15 +187,12 @@ jobs:
         run: apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
-        if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -210,14 +202,12 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
 
       - name: Ubuntu python test
-        if: always()
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
@@ -241,19 +231,16 @@ jobs:
       - name: Install Pkg
         run: |
           sudo installer -pkg meshlib_*x64.pkg  -target /
-          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+          xargs brew install --quiet < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
-        if: always()
         run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -263,7 +250,6 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
@@ -273,6 +259,18 @@ jobs:
     if: ${{ inputs.test_windows }}
     runs-on: windows-2025
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dist_pattern: "MeshLibDist_*[!-]*.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDist_*-IteratorDebug.zip"
+            config: Debug
+            app_subdir: Debug
+            idl: 2
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -283,47 +281,48 @@ jobs:
         continue-on-error: true
         run: |
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "MeshLibDist*.zip" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
 
       - name: Unpack Distributive
         id: unpack-dist
         run: |
           if (Test-Path MeshLibDist*.zip) {
             Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
-            Write-Output "C:\\meshlib-built\\install\\app\\Release" >> $env:GITHUB_PATH
+            Write-Output "C:\\meshlib-built\\install\\app\\${{ matrix.app_subdir }}" >> $env:GITHUB_PATH
             Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
           } else {
             Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
           }
 
       - name: Run MeshViewer
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         run: meshconv.exe --help
 
       - name: Build C++ examples
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         working-directory: examples/cpp-examples
         env:
           DIST_DIR: C:\meshlib-built
         run: |
           cmake -S . -B build `
             -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
-            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
-          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          .\build\Release\MeshModification.exe
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }} `
+            -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }} /DMR_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }}"
+          cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\${{ matrix.config }}\MeshModification.exe
 
       - name: Build C examples
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         working-directory: examples/c-examples
         env:
           DIST_DIR: C:\meshlib-built
         run: |
           cmake -S . -B build `
             -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
-            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\Release
-          cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          .\build\Release\MeshModification.exe
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}
+          cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\${{ matrix.config }}\MeshModification.exe

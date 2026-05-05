@@ -18,6 +18,7 @@
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRUISaveChangesPopup.h"
+#include "MRI18n.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -28,6 +29,8 @@ void SaveOnClosePlugin::preDraw_()
 {
     if ( !initialized_ )
         return;
+
+    const auto popupId = s_tr( "Application Close" ) + "##modal";
 
     if ( showCloseModal_ )
     {
@@ -54,7 +57,7 @@ void SaveOnClosePlugin::preDraw_()
         }
         else if ( noModalWasPresent )
         {
-            ImGui::OpenPopup( "Application Close##modal" );
+            ImGui::OpenPopup( popupId.c_str() );
             showCloseModal_ = false;
         }
         else
@@ -64,17 +67,17 @@ void SaveOnClosePlugin::preDraw_()
     }
 
     UI::SaveChangesPopupSettings settings;
-    settings.header = "Application Close";
-    settings.saveTooltip = "Save the current scene and close the application";
-    settings.dontSaveTooltip = "Close the application without saving";
-    settings.cancelTooltip = "Do not close the application";
+    settings.header = s_tr( "Application Close" );
+    settings.saveTooltip = s_tr( "Save the current scene and close the application" );
+    settings.dontSaveTooltip = s_tr( "Close the application without saving" );
+    settings.cancelTooltip = s_tr( "Do not close the application" );
     settings.onOk = [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );
         shouldClose_ = true;
     };
     UI::saveChangesPopup(
-        "Application Close##modal",
+        popupId.c_str(),
         settings );
 }
 

@@ -83,6 +83,15 @@
     <Filter Include="UserInputs">
       <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Localization">
+      <UniqueIdentifier>{29097c41-4b59-45fe-9b71-20f6095be069}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AI">
+      <UniqueIdentifier>{a9f6cb49-a0c1-4ee7-bcef-760c93bdc757}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MCP">
+      <UniqueIdentifier>{e4e7b2c1-6e0d-4a6d-9a7a-2a7e35a0a4a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -379,6 +388,27 @@
     <ClCompile Include="MRUITestEngine.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRUITestEngineControl.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUiMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRToolsMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSystemMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMcpCommon.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
     <ClCompile Include="MRSceneCache.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
@@ -513,6 +543,15 @@
     </ClCompile>
     <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp">
       <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLocale.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
+    <ClCompile Include="MRI18n.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -873,6 +912,12 @@
     <ClInclude Include="MRUITestEngine.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRUITestEngineControl.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMcpCommon.h">
+      <Filter>MCP</Filter>
+    </ClInclude>
     <ClInclude Include="MRSceneCache.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -1020,6 +1065,15 @@
     <ClInclude Include="MRSpaceMouseHandlerWinEvents.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
+    <ClInclude Include="MRI18n.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLocale.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLocaleMacos.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -1028,6 +1082,12 @@
     </None>
     <None Include="MRFileDialogCocoa.mm">
       <Filter>CustomOpenDialog</Filter>
+    </None>
+    <None Include="MRLocaleNames.inl">
+      <Filter>Localization</Filter>
+    </None>
+    <None Include="MRLocaleMacos.mm">
+      <Filter>Localization</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -1060,7 +1120,7 @@
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansCJK-Regular.ttc">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">

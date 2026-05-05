@@ -9,8 +9,15 @@ rem some other MSYS2 copy.
 
 setlocal
 
+rem Make sure we're not running from the VS dev prompt.
+rem Doing this just in case. `scripts/mrbind/install_mrbind_windows_msys2.bat` is known not to work there,
+rem   but this script could possibly work. But it's easier to not support this.
+if not "%VCToolsInstallDir%" == "" (
+    echo Must not run this script from the VS developer command prompt. Use the regular terminal.
+    exit /b 1
+)
+
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
-if "%CLANG_VER%" == "" set /p CLANG_VER=<%~dp0\clang_version_msys2.txt
 
 rem ------ Ensure MSYS2 is installed
 
@@ -39,17 +46,8 @@ if exist %MSYS2_DIR% (
     rmdir msys64
 )
 
-rem ------ Update MSYS2
-rem Note that we're running the update twice, because MSYS2 can close itself during the initial update,
-rem   and requires re-running the same command to finish the update.
-rem It's not entirely optimal to run the command twice even if the first one finishes successfully, but I'm not sure how to check that it failed.
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
-
-rem ------ Install needed packages
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed gawk make procps-ng $MINGW_PACKAGE_PREFIX-cmake"
-
-rem ------ Install a specific version of Clang
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "'%~dp0'/msys2_install_clang_ver.sh %CLANG_VER%"
+rem ------ Install MSYS2 packages
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh' && '%~dp0\msys2_install_packages.sh'"
+echo Please ignore the errors above, if any, after the words `:: Running post-transaction hooks...`.
 
 endlocal

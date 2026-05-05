@@ -38,8 +38,10 @@
     <ClCompile Include="MRRebuildMesh.cpp" />
     <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRScanHelpers.cpp" />
+    <ClCompile Include="MRSequentialNester.cpp" />
     <ClCompile Include="MRSweptVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRTetrisNesting.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
@@ -80,8 +82,10 @@
     <ClInclude Include="MRRebuildMesh.h" />
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRScanHelpers.h" />
+    <ClInclude Include="MRSequentialNester.h" />
     <ClInclude Include="MRSweptVolume.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
+    <ClInclude Include="MRTetrisNesting.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />

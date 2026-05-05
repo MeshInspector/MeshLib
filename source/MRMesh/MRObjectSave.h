@@ -35,8 +35,8 @@ MRMESH_API Expected<void> toAnySupportedFormat( const Object& object, const std:
  * saving is controlled with Object::serializeModel_ and Object::serializeFields_
  */
 MRMESH_API Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
-                                             FolderCallback preCompress, const ObjectSave::Settings& settings = {} );
+                                             FolderCallback preCompress, const SceneSave::Settings& settings = {} );
 MRMESH_API Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
-                                             const ObjectSave::Settings& settings = {} );
+                                             const SceneSave::Settings& settings = {} );
 
 } // namespace MR

@@ -33,6 +33,7 @@ find_package(JsonCpp REQUIRED)
 find_package(spdlog 1.9 REQUIRED)
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 find_package(tl-expected REQUIRED)
+find_package(zlib-ng CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
@@ -45,13 +46,15 @@ target_link_libraries(${PROJECT_NAME}
     tl::expected
   PRIVATE
     ${CMAKE_DL_LIBS}
+    zlib-ng::zlib
 )
 
 # libzip on Emscripten is unable to resolve its dependencies by itself
 IF(EMSCRIPTEN)
   find_package(MbedTLS 1.0 REQUIRED)
-  find_package(ZLIB REQUIRED)
 ENDIF()
+find_package(ZLIB REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
 # libzip prior to version 1.11.4 has incorrect CMake config that requires libzip tools to be installed
 IF(MESHLIB_USE_VCPKG OR APPLE OR EMSCRIPTEN)
   # vcpkg, homebrew, and submodule versions are already updated
@@ -109,6 +112,7 @@ install(
   EXPORT ${PROJECT_NAME}
   LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
   ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+  RUNTIME DESTINATION "${MR_BIN_DIR}"
 )
 install(
   EXPORT ${PROJECT_NAME}

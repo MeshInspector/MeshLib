@@ -5,6 +5,7 @@
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -31,13 +32,13 @@ void ObjectInfo::drawDialog( ImGuiContext* )
 
     if ( auto obj = getDepthFirstObject<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
     {
-        ImGui::Text( "Selected object: %s", obj->name().c_str() );
+        ImGui::Text( "%s: %s", _tr( "Selected object" ), obj->name().c_str() );
         for ( const auto & line : obj->getInfoLines() )
             ImGui::Text( "%s", line.c_str() );
     }
     else
     {
-        ImGui::Text( "No object selected" );
+        ImGui::Text( "%s", _tr( "No object selected" ) );
     }
 
     ImGui::EndCustomStatePlugin();

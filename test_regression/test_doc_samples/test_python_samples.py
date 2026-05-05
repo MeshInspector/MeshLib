@@ -46,7 +46,7 @@ def run_code_sample(code_path: str, args: list):
                                            'output_files': ['meshA_icp.stl']}, id="MeshICP.dox.py"),
                              pytest.param({'sample': "MeshLoadSave.dox.py", 'input_files': ['mesh.stl'],
                                            'output_files': ['mesh.ply']}, id="MeshLoadSave.dox.py"),
-                             pytest.param({'sample': "MeshModification.dox.py", 'input_files': ['mesh.stl'],
+                             pytest.param({'sample': "MeshModification.dox.py", 'input_files': [],
                                            'output_files': []}, id="MeshModification.dox.py"),
                              pytest.param({'sample': "MeshOffset.dox.py", 'input_files': ['mesh.stl'],
                                            'output_files': ['offsetMesh.stl']}, id="MeshOffset.dox.py"),

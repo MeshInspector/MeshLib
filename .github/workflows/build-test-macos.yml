@@ -73,13 +73,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
 
       - name: Checkout third-party submodules
         run: |
-          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
-          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+          # Selective init -- parent Checkout drops submodules:true.
+          # https://github.com/actions/checkout/issues/1779
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/expected \
+            thirdparty/googletest \
+            thirdparty/OpenCTM-git \
+            thirdparty/libE57Format \
+            thirdparty/glad \
+            thirdparty/tinygltf \
+            thirdparty/laz-perf \
+            thirdparty/clip \
+            thirdparty/fastmcpp \
+            thirdparty/nlohmann-json \
+            thirdparty/cpp-httplib \
+            thirdparty/mrbind \
+            thirdparty/mrbind-pybind11
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Setup Homebrew prefix and resolve compiler paths
         id: setup
@@ -197,7 +215,6 @@ jobs:
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
-          mrbind: ${{ inputs.mrbind }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: macos/${{ matrix.os }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
@@ -250,13 +267,18 @@ jobs:
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
         env:
           ACTIONS_ARTIFACT_UPLOAD_TIMEOUT_MS: 1800000
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
-          name: Distributives_macos-${{matrix.os}}
-          path: meshlib_${{matrix.os}}.pkg
-          retention-days: 1
+          action: actions/upload-artifact@v7
+          attempt_limit: 3
+          attempt_delay: 30000 # milliseconds
+          with: |
+            name: Distributives_macos-${{matrix.os}}
+            path: meshlib_${{matrix.os}}.pkg
+            retention-days: 1
+            overwrite: true
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build && inputs.upload_artifacts }}
@@ -274,13 +296,18 @@ jobs:
           python3 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
           python3 -m pip install delocate==0.10.7
-          python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMeshLibC2.dylib" "./patched_content/"
+          python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.dylib
           ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/libMeshLibC2.dylib
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
-          name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
-          path: ./patched_content/*
-          retention-days: 1
+          action: actions/upload-artifact@v7
+          attempt_limit: 3
+          attempt_delay: 30000 # milliseconds
+          with: |
+            name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
+            path: ./patched_content/*
+            retention-days: 1
+            overwrite: true

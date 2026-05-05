@@ -105,7 +105,6 @@ std::string getPointsFragmentShaderArgumetsBlock()
   uniform vec4 backColor;            // (in from base) back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform bool invertNormals;        // (in from base) invert normals if true
 
   uniform float specExp;   // (in from base) lighting parameter
   uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
@@ -150,7 +149,7 @@ std::string getPointsFragmentShaderColoringBlock()
     }
 
     bool frontFacing = dot_prod >= 0.0;
-    if ( frontFacing == invertNormals )
+    if ( gl_FrontFacing == false ) // don't use !gl_FrontFacing for some rare mac issue
     {
         if ( !selected )
             colorCpy = backColor;

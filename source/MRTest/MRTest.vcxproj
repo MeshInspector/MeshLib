@@ -22,11 +22,13 @@
     <ClCompile Include="MRContoursCutTests.cpp" />
     <ClCompile Include="MRContourTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRDeloneTests.cpp" />
     <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFeaturesTests.cpp" />
+    <ClCompile Include="MRFillHoleTests.cpp" />
     <ClCompile Include="MRMeshCollideTests.cpp" />
     <ClCompile Include="MRGridSamplingTests.cpp" />
     <ClCompile Include="MRICPTests.cpp" />
@@ -48,6 +50,7 @@
     <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
+    <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
@@ -58,7 +61,8 @@
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
     <ClCompile Include="MRTriMathTests.cpp" />
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
-    <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRZipCompressTests.cpp" />
+    <ClCompile Include="MRZlibTests.cpp" />
     <ClCompile Include="MRProgressCallback.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCylinderApproximation.cpp" />
@@ -66,6 +70,7 @@
     <ClCompile Include="MRFillingSurface.cpp" />
     <ClCompile Include="MRBendTextAlongCurveTests.cpp" />
     <ClCompile Include="MRFormatTests.cpp" />
+    <ClCompile Include="MRMeshMeshDistanceTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

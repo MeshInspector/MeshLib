@@ -114,14 +114,14 @@ struct LargeByAreaComponentsSettings
 
 /// gets all connected components of mesh part
 /// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size
-/// \param maxComponentCount should be more then 1
+/// \param maxComponentCount should be more than 1
 /// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount
 [[nodiscard]] MRMESH_API std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, int maxComponentCount,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets all connected components from components map ( FaceId => RegionId )
 /// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size (this similarly changes componentsMap)
-/// \param maxComponentCount should be more then 1
+/// \param maxComponentCount should be more than 1
 /// \return components bitsets vector
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region,
     int maxComponentCount );
@@ -130,6 +130,12 @@ struct LargeByAreaComponentsSettings
 /// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)
 /// 2. the total number of components
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+
+/// given some face pairs, collects them in regions, where for each face in a region
+/// its pair face and its incident faces from other pairs are also attributed to that region;
+/// returns 1. the mapping: FaceId -> RegionId, 2. the total number of regions
+[[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getFacePairRegionMap( const Mesh& mesh, const std::vector<FaceFace>& facePairs,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// computes the area of each region given via the map

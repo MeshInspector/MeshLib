@@ -777,6 +777,15 @@ void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
         volume_.reset();
         avgEdgeLen_.reset();
     }
+
+    if ( mask & DIRTY_SELECTION )
+        numSelectedFaces_.reset();
+
+    if ( mask & DIRTY_EDGES_SELECTION )
+        numSelectedEdges_.reset();
+
+    if ( mask & DIRTY_VERTS_RENDER_NORMAL )
+        numCreaseEdges_.reset();
 }
 
 void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )

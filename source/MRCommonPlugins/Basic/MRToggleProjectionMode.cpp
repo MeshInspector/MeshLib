@@ -5,6 +5,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRCommonPlugins/Basic/MRDrawViewportWidgetsItem.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -33,7 +34,7 @@ void ToggleProjectionModeItem::providedViewportWidgets( ViewportWidgetInterface&
     bool isOrtho = getViewerInstance().viewport( id ).getParameters().orthographic;
 
     in.addButton( 30, "Projection", false, isOrtho ? "Viewport projection orthographic" : "Viewport projection perspective",
-        isOrtho ? "Projection: switch to perspective" : "Projection: switch to orthographic",
+        isOrtho ? _tr( "Projection: switch to perspective" ) : _tr( "Projection: switch to orthographic" ),
         [id]
         {
             auto& viewport = getViewerInstance().viewport( id );

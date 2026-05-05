@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMesh/MRMeshFwd.h"
 #include <array>
 
 namespace MR
@@ -28,10 +29,10 @@ inline std::string getMouseModeString( MouseMode mode )
 {
     constexpr std::array<const char*, size_t( MouseMode::Count )> names =
     {
-        "None",
-        "Rotation",
-        "Translation",
-        "Roll"
+        _t( "None" ),
+        _t( "Rotation" ),
+        _t( "Translation" ),
+        _t( "Roll" )
     };
     return names[int( mode )];
 }

@@ -360,7 +360,7 @@ MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader, prio
 namespace SceneSave
 {
 
-using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const ObjectSave::Settings& );
+using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const Settings& );
 
 MR_FORMAT_REGISTRY_DECL( SceneSaver )
 

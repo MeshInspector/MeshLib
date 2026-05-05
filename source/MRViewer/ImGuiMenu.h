@@ -1,12 +1,4 @@
 #pragma  once
-// This file is part of libigl, a simple c++ geometry processing library.
-//
-// Copyright (C) 2018 Jérémie Dumas <jeremie.dumas@ens-lyon.org>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public License
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can
-// obtain one at http://mozilla.org/MPL/2.0/.
-
 #include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRNotificationType.h"
@@ -32,6 +24,7 @@ class MeshModifier;
 struct UiRenderManager;
 class SceneObjectsListDrawer;
 class ObjectComparableWithReference;
+class CombinedHistoryAction;
 
 enum class SelectedTypesMask
 {
@@ -66,11 +59,11 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
         PostResizeListener, PostRescaleListener, PostFocusListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
-  float hidpi_scaling_;
+  float hidpiScale_;
 
-  // Ratio between the framebuffer size and the window size.
+  // The ratio of the framebuffer size to the window size.
   // May be different from the hipdi scaling!
-  float pixel_ratio_;
+  float pixelRatio_;
 
   // user defined additional scaling modifier
   float userScaling_ = 1.0f;
@@ -140,8 +133,10 @@ protected:
       Quad // left lower vp, left upper vp, right lower vp, right upper vp
   } viewportConfig_{ Single };
 
-  // flag to correctly update scroll on transform window appearing
-  bool selectionChangedToSingleObj_{ false };
+  // Tracks whether the transform block is currently being drawn in the scene info panel.
+  // On the false→true transition (i.e. the block just appeared) the scene-list scroll is
+  // fixed up so the selected row stays in view as the properties panel grows.
+  bool transformBlockShown_{ false };
   // menu will change objects' colors in this viewport
   ViewportId selectedViewport_ = {};
 
@@ -179,8 +174,11 @@ public:
   // call this to draw valid imgui context at the end of the frame
   MRVIEWER_API virtual void finishFrame();
 
-  MRVIEWER_API virtual void load_font(int font_size = 13);
-  MRVIEWER_API virtual void reload_font(int font_size = 13);
+  MRVIEWER_API virtual void loadFonts( int fontSize = 13 );
+  [[deprecated]] virtual void load_font( int fontSize = 13 ) { loadFonts( fontSize ); }
+
+  MRVIEWER_API virtual void reloadFonts( int fontSize = 13 );
+  [[deprecated]] virtual void reload_font( int fontSize = 13 ) { reloadFonts( fontSize ); }
 
   MRVIEWER_API virtual void shutdown() override;
 
@@ -189,20 +187,18 @@ public:
 
   MRVIEWER_API void draw_helpers();
 
-  // Can be overwritten by `callback_draw_viewer_window`
-  MRVIEWER_API virtual void draw_viewer_window();
+  /// override this instead using callback_draw_viewer_window
+  MRVIEWER_API virtual void drawViewerWindow();
+  [[deprecated]] virtual void draw_viewer_window() { drawViewerWindow(); }
 
-  // Can be overwritten by `callback_draw_custom_window`
-  virtual void draw_custom_window() {}
+  /// override this instead using callback_draw_viewer_menu
+  virtual void drawViewerWindowContent() {}
 
-  // Easy-to-customize callbacks
-  std::function<void(void)> callback_draw_viewer_window;
-  std::function<void(void)> callback_draw_viewer_menu;
-  std::function<void(void)> callback_draw_custom_window;
+  /// override this instead using callback_draw_custom_window
+  virtual void drawAdditionalWindows() {}
+  [[deprecated]] virtual void draw_custom_window() { drawAdditionalWindows(); }
 
-  void draw_labels_window();
-
-  MRVIEWER_API void draw_text(
+  [[deprecated]] MRVIEWER_API void draw_text(
       const Viewport& viewport,
       const Vector3f& pos,
       const Vector3f& normal,
@@ -210,11 +206,21 @@ public:
       const Color& color,
       bool clipByViewport );
 
-  MRVIEWER_API float pixel_ratio();
+  void drawLabelsWindow();
+  [[deprecated]] void draw_labels_window() { drawLabelsWindow(); }
 
-  MRVIEWER_API float hidpi_scaling();
+  // Computes pixel ratio for hidpi devices
+  MRVIEWER_API float pixelRatio();
+  [[deprecated]] float pixel_ratio() { return pixelRatio(); }
 
-  MRVIEWER_API float menu_scaling() const;
+  // Computes scaling factor for hidpi devices
+  MRVIEWER_API float hidpiScaling();
+  [[deprecated]] float hidpi_scaling() { return hidpiScaling(); }
+
+  MRVIEWER_API void updateScaling();
+
+  MRVIEWER_API float menuScaling() const;
+  [[deprecated]] MRVIEWER_API float menu_scaling() const;
 
   // returns UI scaling modifier specified by user
   float getUserScaling() const { return userScaling_; }
@@ -389,7 +395,7 @@ protected:
     // Other events
     MRVIEWER_API virtual void postFocus_( bool focused ) override;
 
-    // This function reset ImGui style to current theme and scale it by menu_scaling
+    // This function reset ImGui style to current theme and scale it by menuScaling
     // called in ImGuiMenu::postRescale_()
     MRVIEWER_API virtual void rescaleStyle_();
 
@@ -407,7 +413,27 @@ protected:
 
     MRVIEWER_API float drawTransform_();
 
-    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
+    // Draws a read-only row of long-dashes ("—") matching the column layout of `UI::drag`;
+    // used in drawTransform_ when the selection's transforms are not all equal.
+    // `trailingLabel`, if non-null, is shown to the right of the last column (matches the
+    // label rendering of the editable `UI::drag` widgets).
+    MRVIEWER_API void drawMixedTransformField_( const char* labelId, int columns, const char* trailingLabel = nullptr );
+
+    // Builds one ChangeXfAction per object and wraps them in a single CombinedHistoryAction,
+    // so a multi-object transform edit goes into the history as a single undoable step.
+    MRVIEWER_API std::shared_ptr<CombinedHistoryAction> makeObjectsXfHistoryAction_(
+        const std::string& name,
+        const std::vector<std::shared_ptr<Object>>& objs ) const;
+
+    // Applies the same transform to every object in objs.
+    MRVIEWER_API void applyXfToObjects_(
+        const AffineXf3f& xf,
+        const std::vector<std::shared_ptr<Object>>& objs );
+
+    // Context menu for the transform panel. Invoked for the whole selection — caller guarantees
+    // all passed objects share the same xf, so Copy/Save read from the first and Paste/Load/Reset
+    // apply to every object under one combined history entry.
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ ) { return false; }
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();

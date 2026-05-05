@@ -2,6 +2,8 @@
 #include "MRImGui.h"
 #include "MRPch/MRFmt.h"
 
+#include <imgui_internal.h>
+
 #ifndef MR_ENABLE_UI_TEST_ENGINE
 // Set to 0 to disable the UI test engine. All functions will act as if no UI elements are registered.
 #define MR_ENABLE_UI_TEST_ENGINE 1
@@ -23,9 +25,59 @@ struct State
 
     // The stack for `pushTree()`, `popTree()`. Always has at least one element.
     std::vector<GroupEntry*> stack = { &root };
+
+    // True if a TE-driven action (simulated click or value override) ran this frame.
+    // Cleared at frame boundary in `checkForNewFrame()`.
+    bool frameTriggered = false;
+
+    // Paths staged for the next TE-triggered file dialog to return. Single-shot.
+    std::vector<std::filesystem::path> stagedFileDialogPaths;
+
+    // Status messages emitted during TE-driven actions; drained by MCP after each dispatch.
+    std::vector<std::string> statusMessages;
 };
 // Our global state. Stores the current tree of buttons and button groups.
 State state;
+
+// True if the widget currently being submitted is inside an `ImGui::BeginDisabled` scope.
+bool imGuiContextSaysDisabled()
+{
+    ImGuiContext* g = ImGui::GetCurrentContext();
+    return g && ( g->CurrentItemFlags & ImGuiItemFlags_Disabled ) != 0;
+}
+
+// If a blocking modal popup is currently open and the widget being submitted is *outside* that
+// modal's window tree (walking ImGui's ParentWindow chain), returns a view of the modal's window
+// name. Otherwise returns empty (no modal open, or the widget is inside the modal).
+// The returned view is valid only while ImGui state is untouched (i.e. during the same callback).
+std::string_view imGuiBlockingModalName()
+{
+    ImGuiWindow* topModal = ImGui::GetTopMostPopupModal();
+    if ( !topModal )
+        return {};
+    for ( ImGuiWindow* w = ImGui::GetCurrentWindow(); w; w = w->ParentWindow )
+        if ( w == topModal )
+            return {};
+    return topModal->Name ? std::string_view{ topModal->Name } : std::string_view{ "<unnamed>" };
+}
+
+// Produce the effective disabled-reason string to store on an entry, given caller-supplied attrs.
+// - If caller passed a reason, use it verbatim (takes precedence).
+// - Else if ImGui says the widget is drawn under BeginDisabled, use a generic fallback so the
+//   entry is still marked disabled even though the caller didn't know why.
+// - Else, if a blocking modal popup is open and the widget is drawn outside it, return
+//   "blocked by modal '<name>'" — the widget can't receive input while the modal is on top.
+// - Else empty (entry accepts input).
+std::string effectiveDisabledReason( const EntryAttributes& attrs )
+{
+    if ( !attrs.disabledReason.empty() )
+        return std::string( attrs.disabledReason );
+    if ( imGuiContextSaysDisabled() )
+        return "drawn inside ImGui::BeginDisabled";
+    if ( const auto modal = imGuiBlockingModalName(); !modal.empty() )
+        return fmt::format( "blocked by modal '{}'", modal );
+    return {};
+}
 
 void checkForNewFrame()
 {
@@ -33,6 +85,7 @@ void checkForNewFrame()
     if ( ImGui::GetFrameCount() != state.curFrame )
     {
         state.curFrame = ImGui::GetFrameCount();
+        state.frameTriggered = false;
 
         // Make sure the tree stack is fine.
         assert(state.stack.size() == 1 && "Missing `UI::TestEngine::popTree()`.");
@@ -65,7 +118,7 @@ void checkForNewFrame()
 } // namespace
 
 template <typename T>
-std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride /*= true*/ )
+std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride /*= true*/, const EntryAttributes& attrs /*= {}*/ )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
 
@@ -87,6 +140,8 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     if ( !entry )
         entry = &iter->second.value.emplace<ValueEntry>();
 
+    entry->disabledReason = effectiveDisabledReason( attrs );
+
     std::optional<T> ret;
 
     ValueEntry::Value<T>* val = std::get_if<ValueEntry::Value<T>>( &entry->value );
@@ -101,6 +156,8 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
         {
             ret = val->simulatedValue;
         }
+        if ( ret )
+            state.frameTriggered = true;
     }
     else
     {
@@ -129,12 +186,12 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     #endif
 }
 
-template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride );
-template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride );
-template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
-template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
+template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride, const EntryAttributes& attrs );
+template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride, const EntryAttributes& attrs );
 
-bool createButton( std::string_view name )
+bool createButton( std::string_view name, const EntryAttributes& attrs )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
@@ -158,21 +215,27 @@ bool createButton( std::string_view name )
     if ( !button )
         button = &iter->second.value.emplace<ButtonEntry>();
 
+    button->disabledReason = effectiveDisabledReason( attrs );
+
     iter->second.visitedOnThisFrame = true;
 
     // commented, because it is already logged in MRPythonUiInteraction.cpp/pressButton
     // if ( button->simulateClick )
     //    spdlog::info( "Button {} click simulation", name );
 
-    return std::exchange( button->simulateClick, false );
+    const bool clicked = std::exchange( button->simulateClick, false );
+    if ( clicked )
+        state.frameTriggered = true;
+    return clicked;
     #else
+    (void)attrs;
     return false;
     #endif
 }
 
-std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride, std::optional<std::vector<std::string>> allowedValues )
+std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride, std::optional<std::vector<std::string>> allowedValues, const EntryAttributes& attrs )
 {
-    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) }, consumeValueOverride );
+    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) }, consumeValueOverride, attrs );
 }
 
 void pushTree( std::string_view name )
@@ -218,6 +281,59 @@ std::string_view Entry::getKindName() const
 const GroupEntry& getRootEntry()
 {
     return state.root;
+}
+
+bool wasFrameTriggered()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return state.frameTriggered;
+    #else
+    return false;
+    #endif
+}
+
+void markFrameTriggered()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    checkForNewFrame();
+    state.frameTriggered = true;
+    #endif
+}
+
+void stageFileDialogPaths( std::vector<std::filesystem::path> paths )
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    state.stagedFileDialogPaths = std::move( paths );
+    #else
+    (void)paths;
+    #endif
+}
+
+std::vector<std::filesystem::path> consumeStagedFileDialogPaths()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return std::exchange( state.stagedFileDialogPaths, {} );
+    #else
+    return {};
+    #endif
+}
+
+void appendStatusMessage( std::string msg )
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    state.statusMessages.push_back( std::move( msg ) );
+    #else
+    (void)msg;
+    #endif
+}
+
+std::vector<std::string> consumeStatusMessages()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return std::exchange( state.statusMessages, {} );
+    #else
+    return {};
+    #endif
 }
 
 [[nodiscard]] MRVIEWER_API Unexpected<std::string> Entry::unexpected_( std::string_view selfName, std::string_view tKindName )

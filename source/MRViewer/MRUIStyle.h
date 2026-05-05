@@ -312,8 +312,15 @@ MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::strin
     bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
 /// draw custom content combo box
-MRVIEWER_API bool beginCombo( const char* label, const std::string& text = "Not selected", bool showPreview = true );
-MRVIEWER_API void endCombo( bool showPreview = true );
+/// If `enableTestEngine == true`, the ONLY thing you can call inside the combo-box is `comboElem()`. Then this function may always return true (so that we can discover the elements),
+///   but if it wasn't actually opened by the user, the `comboElem()`s called inside won't draw anything.
+/// If `enableTestEngine == false`, then you can call anything inside of this combo-box, but it won't be exposed to the test engine.
+MRVIEWER_API bool beginCombo( const char* label, const std::string& text, bool enableTestEngine = true );
+/// Only call this if `beginCombo()` returned true!
+MRVIEWER_API void endCombo();
+
+/// A replacement for `ImGui::Selectable()` that should be used with `beginCombo()` and `endCombo()` to be able to interact with the combo-box from the UI Test Engine.
+MRVIEWER_API bool comboElem( const char* label, bool selected );
 
 /// Draws text input, should be used instead of `ImGui::InputText()`.
 MRVIEWER_API bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
@@ -411,7 +418,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed = getDefaultDragSpeed<E, Sp
 
 // Like `drag()`, but clicking it immediately activates text input, so it's not actually draggable.
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
+bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = getDefaultStep<E, U, T>( false ), const U& stepFast = getDefaultStep<E, U, T>( true ) );
 
 // Draw a read-only copyable value.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
@@ -542,13 +549,13 @@ MRVIEWER_API void highlightWindowArea( const ImVec2& min = {-1.0f, -1.0f}, const
 /// Settings required for `UI::saveCustomConfigModal`
 struct CustomConfigModalSettings
 {
-    /// Name of desired config type 
+    /// Name of desired config type
     std::string configName;
     /// Optional string added at the end of popup name to have unique names
     std::string imGuiIdKey;
     /// Directory where to save config
     std::filesystem::path configDirectory;
-    /// String used by input 
+    /// String used by input
     std::string* inputName{ nullptr };
     /// If false, inputName is used (if inputName is nullptr this option is not used)
     bool inputNameDialog = true;
@@ -558,7 +565,7 @@ struct CustomConfigModalSettings
     bool warnExisting = true;
     /// Callback that is called when save is requested->returns true if file saved successfully (to close modal)
     std::function<bool( const std::string& name )> onSave;
-    
+
     /// returns accumulated name of the popup
     MRVIEWER_API std::string popupName() const;
 };

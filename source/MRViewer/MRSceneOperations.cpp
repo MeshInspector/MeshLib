@@ -113,7 +113,7 @@ void mergeSubtree( TypedFlatTree subtree )
         newObjMesh->setName( objsMesh.size() == objCount ? rootObj->name() : rootObj->name() + " (meshes)" );
         newObjMesh->select( true );
 
-        AppendHistory<ChangeSceneAction>( "Add Object", newObjMesh, ChangeSceneAction::Type::AddObject );
+        AppendHistory<ChangeSceneAction>( _t( "Add Object" ), newObjMesh, ChangeSceneAction::Type::AddObject );
         rootObj->parent()->addChild( newObjMesh );
 
         for ( const auto & objMesh : objsMesh )
@@ -130,7 +130,7 @@ void mergeSubtree( TypedFlatTree subtree )
         newObjLines->setName( objsLines.size() == objCount ? rootObj->name() : rootObj->name() + " (polylines)" );
         newObjLines->select( true );
 
-        AppendHistory<ChangeSceneAction>( "Add Object", newObjLines, ChangeSceneAction::Type::AddObject );
+        AppendHistory<ChangeSceneAction>( _t( "Add Object" ), newObjLines, ChangeSceneAction::Type::AddObject );
         rootObj->parent()->addChild( newObjLines );
 
         for ( const auto & objLine : objsLines )
@@ -169,14 +169,14 @@ void mergeSubtree( TypedFlatTree subtree )
             } );
         }
 
-        AppendHistory<ChangeSceneAction>( "Add Object", newObjPoints, ChangeSceneAction::Type::AddObject );
+        AppendHistory<ChangeSceneAction>( _t( "Add Object" ), newObjPoints, ChangeSceneAction::Type::AddObject );
         rootObj->parent()->addChild( newObjPoints );
 
         for ( const auto & objPoints : objsPoints )
             moveOtherChildrenWithUndo( *objPoints, *newObjPoints );
     }
 
-    AppendHistory<ChangeSceneAction>( "Remove Object", rootObj, ChangeSceneAction::Type::RemoveObject );
+    AppendHistory<ChangeSceneAction>( _t( "Remove Object" ), rootObj, ChangeSceneAction::Type::RemoveObject );
     rootObj->detachFromParent();
 }
 

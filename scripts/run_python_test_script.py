@@ -72,7 +72,8 @@ elif platformSystem == "Windows":
     python_cmds = ["py -3"]
     vcpkg_root = get_vcpkg_root_from_where()
     if vcpkg_root:
-        detected_version = detect_vcpkg_python_version(vcpkg_root)
+        triplet = os.environ.get("VCPKG_DEFAULT_TRIPLET") or "x64-windows-meshlib"
+        detected_version = detect_vcpkg_python_version(vcpkg_root, triplet=triplet)
         if detected_version:
             python_cmds = [f"py -{detected_version}"]
 

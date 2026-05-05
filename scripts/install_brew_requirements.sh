@@ -8,9 +8,9 @@ if [ -n "$MESHLIB_EXTRA_BREW_REQUIREMENTS" ] ; then
   MESHLIB_BREW_REQUIREMENTS=$MESHLIB_BREW_REQUIREMENTS$'\n'$MESHLIB_EXTRA_BREW_REQUIREMENTS
 fi
 
-brew install $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
+brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 
-brew install pybind11
+brew install --quiet pybind11
 
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade

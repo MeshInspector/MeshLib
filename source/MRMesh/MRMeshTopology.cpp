@@ -350,6 +350,23 @@ int MeshTopology::getOrgDegree( EdgeId a ) const
     return degree;
 }
 
+bool MeshTopology::isOrgInnerAndHasDegree( EdgeId a, int d ) const
+{
+    int counter = 0;
+    for ( auto e : orgRing( *this, a ) )
+    {
+        if ( !left( e ) )
+            return false;
+        ++counter;
+        if ( counter > d )
+            return false;
+    }
+    if ( counter < d )
+        return false;
+    assert( counter == d );
+    return true;
+}
+
 int MeshTopology::getLeftDegree( EdgeId a ) const
 {
     assert( a.valid() );
@@ -557,22 +574,26 @@ bool MeshTopology::isInnerOrBdVertex( VertId v, const FaceBitSet * region ) cons
     return false;
 }
 
-EdgeId MeshTopology::nextLeftBd( EdgeId e, const FaceBitSet * region ) const
+EdgeId MeshTopology::nextLeftBd( EdgeId e, const FaceBitSet * region, Turn turn ) const
 {
     assert( isLeftBdEdge( e, region ) );
 
-    for ( e = next( e.sym() ); !isLeftBdEdge( e, region ); e = next( e ) )
+    for ( e = ( turn == Turn::Leftmost ) ? prev( e.sym() ) : next( e.sym() );
+          !isLeftBdEdge( e, region );
+          e = ( turn == Turn::Leftmost ) ? prev( e ) : next( e ) )
     {
         assert( !isLeftBdEdge( e.sym(), region ) );
     }
     return e;
 }
 
-EdgeId MeshTopology::prevLeftBd( EdgeId e, const FaceBitSet * region ) const
+EdgeId MeshTopology::prevLeftBd( EdgeId e, const FaceBitSet * region, Turn turn ) const
 {
     assert( isLeftBdEdge( e, region ) );
 
-    for ( e = prev( e ); !isLeftBdEdge( e.sym(), region ); e = prev( e ) )
+    for ( e = ( turn == Turn::Leftmost ) ? next( e ) : prev( e );
+          !isLeftBdEdge( e.sym(), region );
+          e = ( turn == Turn::Leftmost ) ? next( e ) : prev( e ) )
     {
         assert( !isLeftBdEdge( e, region ) );
     }
@@ -1866,47 +1887,30 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
     UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
-    if ( fromFaces0 )
     {
-        fromCopiedVerts = fromMappedVerts;
-        fromCopiedEdges = fromMappedEdges;
-        for ( auto f : fromFaces )
-        {
-            auto efrom = from.edgePerFace_[f];
-            for ( auto e : leftRing( from, efrom ) )
-            {
-                const UndirectedEdgeId ue = e.undirected();
-                if ( !fromCopiedEdges.test_set( ue ) )
-                    copyEdge( ue );
-                if ( auto v = from.org( e ); v.valid() )
-                {
-                    if ( !fromCopiedVerts.test_set( v ) )
-                        copyVert( v );
-                }
-            }
-            copyFace( f );
-        }
-        fromCopiedVerts -= fromMappedVerts;
-        fromCopiedEdges -= fromMappedEdges;
-    }
-    else
-    {
-        // whole (from) mesh is copied
         tbb::task_group taskGroup;
         taskGroup.run( [&] ()
         {
-            fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+            if ( fromFaces0 )
+                fromCopiedVerts = getIncidentVerts( from, *fromFaces0 ) - fromMappedVerts;
+            else
+                fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+
             for ( auto v : fromCopiedVerts )
                 copyVert( v );
         } );
 
         taskGroup.run( [&] ()
         {
-            for ( auto f : from.getValidFaces() )
+            for ( auto f : fromFaces )
                 copyFace( f );
         } );
 
-        fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+        if ( fromFaces0 )
+            fromCopiedEdges = getIncidentEdges( from, *fromFaces0 ) - fromMappedEdges;
+        else
+            fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+
         for ( auto ue : fromCopiedEdges )
             copyEdge( ue );
 

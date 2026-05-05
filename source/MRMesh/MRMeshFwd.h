@@ -107,6 +107,7 @@ class MRMESH_CLASS ObjTag;
 class MRMESH_CLASS TextureTag;
 class MRMESH_CLASS GraphVertTag;
 class MRMESH_CLASS GraphEdgeTag;
+class MRMESH_CLASS LocaleDomainTag;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( EdgeId,           Id<EdgeTag>           )
@@ -121,6 +122,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( TextureId,        Id<TextureTag>        )
     ( GraphVertId,      Id<GraphVertTag>      )
     ( GraphEdgeId,      Id<GraphEdgeTag>      )
+    ( LocaleDomainId,   Id<LocaleDomainTag>   )
 )
 // Those are full specializations in `MRId.h`, so `MR_CANONICAL_TYPEDEFS` doesn't work on them.
 // Have to add this too.
@@ -495,6 +497,8 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), TriPoint,
     ( TriPointd, TriPoint<double> )
 )
 
+struct FaceFace;
+struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
 struct MeshTriPoint;
@@ -638,6 +642,8 @@ struct MRMESH_CLASS PartMapping;
 struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
+struct FillHoleParams;
+struct FillHoleNicelySettings;
 struct TriMesh;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,
@@ -685,6 +691,7 @@ class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
 struct ObjectMeshData;
+struct LoadedMeshData;
 class ObjectPointsHolder;
 class ObjectPoints;
 class ObjectLinesHolder;
@@ -716,6 +723,10 @@ class ChangeMeshAction;
 class ChangeMeshDataAction;
 class ChangeMeshPointsAction;
 class ChangeMeshTopologyAction;
+class PartialChangeMeshAction;
+class PartialChangeMeshPointsAction;
+class PartialChangeMeshTopologyAction;
+class VersatileChangeMeshPointsAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;
@@ -735,6 +746,7 @@ class WatershedGraph;
 struct TbbTaskArenaAndGroup;
 
 struct SaveSettings;
+namespace SceneSave  { struct Settings; }
 namespace ObjectSave { struct Settings; }
 
 /// Argument value - progress in [0,1];
@@ -791,6 +803,17 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
+namespace Locale
+{
+
+/// special no-op inline functions to mark string literal as translatable
+constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
+constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
+constexpr inline auto translate_noop( const char* single, const char* plural, Int64 n ) noexcept { return n == 1 ? single : plural; }
+constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, Int64 n ) noexcept { (void)ctx; return n == 1 ? single : plural; }
+
+} // namespace Locale
+
 } //namespace MR
 
 #ifdef __cpp_lib_unreachable
@@ -806,3 +829,7 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+#ifndef MR_NO_I18N_MACROS
+#define _t( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+#endif // MR_NO_I18N_MACROS

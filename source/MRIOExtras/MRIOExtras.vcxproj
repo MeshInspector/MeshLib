@@ -35,10 +35,10 @@
     <ClCompile Include="MRIOExtras.cpp" />
     <ClCompile Include="MRJpeg.cpp" />
     <ClCompile Include="MRLas.cpp" />
+    <ClCompile Include="MRNesting3mfExport.cpp" />
     <ClCompile Include="MRPdf.cpp" />
     <ClCompile Include="MRPng.cpp" />
     <ClCompile Include="MRStep.cpp" />
-    <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRTiff.cpp" />
     <ClCompile Include="MRSvg.cpp" />
   </ItemGroup>
@@ -52,6 +52,7 @@
     <ClInclude Include="MRIOExtras.h" />
     <ClInclude Include="MRJpeg.h" />
     <ClInclude Include="MRLas.h" />
+    <ClInclude Include="MRNesting3mfExport.h" />
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPng.h" />
     <ClInclude Include="MRStep.h" />

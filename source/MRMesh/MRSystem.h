@@ -8,6 +8,9 @@
 namespace MR
 {
 
+// The name of the current application.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE std::string getProductName();
+
 // sets debug name for the current thread
 MRMESH_API void SetCurrentThreadName( const char * name );
 

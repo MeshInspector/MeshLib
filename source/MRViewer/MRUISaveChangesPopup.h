@@ -4,6 +4,7 @@
 #include <functional>
 
 #include "exports.h"
+#include "MRI18n.h"
 
 namespace MR
 {
@@ -14,13 +15,13 @@ namespace UI
 struct SaveChangesPopupSettings
 {
     // text that is shown if we have nothing to save
-    std::string shortCloseText = "Close";
+    std::string shortCloseText = _t( "Close" );
     // text that is shown if we have changes but don't want to save them
-    std::string dontSaveText = "Don't Save";
+    std::string dontSaveText = _t( "Don't Save" );
 
-    std::string saveTooltip = "Save current scene";
-    std::string dontSaveTooltip = "Donh't save current scene";
-    std::string cancelTooltip = "Cansel";
+    std::string saveTooltip = _t( "Save current scene" );
+    std::string dontSaveTooltip = _t( "Don't save current scene" );
+    std::string cancelTooltip = _t( "Cancel" );
     // header that is used in dialog
     std::string header;
     // if not empty this function is called on "save" and "not save" options( if succeed )

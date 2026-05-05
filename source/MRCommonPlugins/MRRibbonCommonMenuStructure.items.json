@@ -225,7 +225,7 @@
     {
       "Name": "Ribbon Scene Sort by name",
       "Caption": "Sort by Name",
-      "Tooltip": "Select all objects in the scene",
+      "Tooltip": "Sort all objects in the scene by name",
       "Icon": "\uF15D"
     },
     {
@@ -249,7 +249,7 @@
     {
       "Name": "Ribbon Scene Unselect all",
       "Caption": "Unselect All",
-      "Tooltip": "Select all objects in the scene",
+      "Tooltip": "Unselect all objects in the scene",
       "Icon": "\uF204"
     },
     {

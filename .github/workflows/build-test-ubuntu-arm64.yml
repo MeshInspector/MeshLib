@@ -93,12 +93,21 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
@@ -123,10 +132,12 @@ jobs:
 
       - name: Upload C bindings headers
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: CBindings
-          path: ./source/MeshLibC2/include
+          path: |
+            ./source/MeshLibC2/include
+            ./source/MeshLibC2Cuda/include
           retention-days: 1
 
       - name: Generate C# bindings # generate only sources
@@ -135,7 +146,7 @@ jobs:
 
       - name: Upload C# bindings headers
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
           path: ./source/MRDotNet2/src
@@ -171,7 +182,7 @@ jobs:
 
       - name: Upload Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -182,7 +193,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
@@ -265,7 +276,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Distributives_${{matrix.os}}_arm64
           path: meshlib_${{matrix.os}}-arm64-dev.deb

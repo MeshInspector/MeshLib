@@ -75,7 +75,7 @@ int main( void )
     // Fix possible issues
     MR_OffsetParameters* offsetParams = MR_OffsetParameters_DefaultConstruct();
     MR_MeshPart* mp = MR_MeshPart_Construct( triangulated, NULL );
-    MR_BaseShellParameters_Set_voxelSize( MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters( offsetParams ), MR_suggestVoxelSize( mp, 5e+4f ) );
+    MR_BaseShellParameters_Set_voxelSize( MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters( offsetParams ), MR_suggestVoxelSize( mp, 5e+6f ) );
     MR_expected_MR_Mesh_std_string *meshEx = MR_offsetMesh( mp, 0.f, offsetParams );
     MR_MeshPart_Destroy( mp );
     MR_std_optional_MR_Mesh_Destroy( triangulatedOpt );

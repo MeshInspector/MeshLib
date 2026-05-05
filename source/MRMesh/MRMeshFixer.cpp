@@ -250,20 +250,32 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     {
         .triangulateParams =
         {
-            .metric = getUniversalMetric( mesh ),
             .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
         },
         .subdivideSettings =
         {
             .maxEdgeLen = 0.0f, // to use default from `patchMesh`
             .maxEdgeSplits = 20'000,
-        },
-        .smoothCurvature = true,
-        .smoothSeettings =
-        {
-            .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
         }
     };
+    Mesh patchRefMesh;
+    if ( params.mimicPatch )
+    {
+        patchRefMesh.addMeshPart( { mesh,&*regRes } );
+        psettings.triangulateParams.metric = mixMetrics(
+                getCircumscribedMetric( mesh ), getCloseSurfaceFillMetric( mesh, patchRefMesh ),
+                [] ( double a, double b )->double
+                {
+                    return a + 100.0 * std::sqrt( b );
+                } );
+        psettings.smoothCurvature = false;
+    }
+    else
+    {
+        psettings.triangulateParams.metric = getUniversalMetric( mesh );
+        psettings.smoothCurvature = true;
+        psettings.smoothSettings.edgeWeights = EdgeWeights::Unit; // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
+    }
 
     auto newFaces = patchMesh( mesh, *regRes, psettings );
 
@@ -275,25 +287,14 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     return {};
 }
 
-VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
+VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
 {
     const auto& zone = topology.getVertIds( region );
     VertBitSet result( zone.size() );
     BitSetParallelFor( zone, [&] ( VertId v )
     {
-        int counter = 0;
-        for ( auto e : orgRing( topology, v ) )
-        {
-            if ( !topology.left( e ) )
-                return;
-            ++counter;
-            if ( counter > n )
-                return;
-        }
-        if ( counter < n )
-            return;
-        assert( counter == n );
-        result.set( v );
+        if ( topology.isVertInnerAndHasDegree( v, n ) )
+            result.set( v );
     } );
     return result;
 }

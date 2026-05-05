@@ -134,30 +134,19 @@ Expected<Mesh> bendTextAlongCurve( const CurveFunc& curve, const BendTextAlongCu
         } );
 }
 
-Expected<Mesh> bendTextAlongCurve( const CurvePoints& cp, const BendTextAlongCurveParams& params0 )
+Expected<Mesh> bendTextAlongCurve( const CurvePoints& cp, const BendTextAlongCurveParams& params )
 {
     MR_TIMER;
-
-    float curveLen = 0;
-    auto maybeCurveFunc = curveFromPoints( cp, &curveLen );
+    auto maybeCurveFunc = curveFromPoints( cp );
     if ( !maybeCurveFunc )
         return unexpected( std::move( maybeCurveFunc.error() ) );
-    assert( curveLen > 0 );
-
-    BendTextAlongCurveParams params = params0;
-    if ( !params.stretch )
-    {
-        // pivotCurveTime from relative [0,1] into actual [0,len]
-        params.pivotCurveTime *= curveLen;
-    }
-
     return bendTextAlongCurve( *maybeCurveFunc, params );
 }
 
 Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,
-    const MeshTriPoint & start, const SurfacePath& path, const MeshTriPoint & end, const BendTextAlongCurveParams& params )
+    const GeodesicPath& path, const BendTextAlongCurveParams& params )
 {
-    return bendTextAlongCurve( meshPathCurvePoints( mesh, start, path, end ), params );
+    return bendTextAlongCurve( meshPathCurvePoints( mesh, path ), params );
 }
 
 Expected<Mesh> bendTextAlongSurfacePath( const Mesh& mesh,

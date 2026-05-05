@@ -49,6 +49,12 @@ enum class EdgeWeights
     // CotanWithAreaEqWeight => use EdgeWeights::Cotan and VertexMass::NeiArea instead
 };
 
+enum class RememberShape
+{
+    Yes,  ///< true Laplacian mode when initial mesh shape is remembered and copied in apply
+    No    ///< ignore initial mesh shape in the region and just position vertices smoothly in the region
+};
+
 /// typically returned from callbacks to control the behavior of main algorithm
 enum class Processing : bool
 {

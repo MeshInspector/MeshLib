@@ -32,7 +32,7 @@ namespace PointCloudComponents
 /// gets all components of point cloud connected by a distance no greater than \param maxDist
 /// \detail if components number more than the maxComponentCount, they will be combined into groups of the same size 
 /// \note be careful, if point cloud is large enough and has many components, the memory overflow will occur
-/// \param maxComponentCount should be more then 1
+/// \param maxComponentCount should be more than 1
 /// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount
 [[nodiscard]] MRMESH_API Expected<std::pair<std::vector<VertBitSet>, int>> getAllComponents( const PointCloud& pointCloud, float maxDist,
     int maxComponentCount = INT_MAX, ProgressCallback pc = {} );

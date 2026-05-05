@@ -12,6 +12,19 @@ void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t )> f )
     } );
 }
 
+void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t )> f, tbb::task_group_context& tgc )
+{
+    tbb::parallel_for( tbb::blocked_range( begin, end ), [&f, &tgc] ( const tbb::blocked_range<size_t>& range )
+    {
+        for ( auto i = range.begin(); i != range.end(); ++i )
+        {
+            if ( tgc.is_group_execution_cancelled() )
+                break;
+            f( i );
+        }
+    }, tgc );
+}
+
 void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> f, FunctionRef<void* ()> ctx )
 {
     tbb::parallel_for( tbb::blocked_range( begin, end ), [&f, &ctx] ( const tbb::blocked_range<size_t>& range )

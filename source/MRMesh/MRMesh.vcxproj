@@ -12,11 +12,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlignContoursToMesh.h" />
+    <ClInclude Include="MRBoxNesting.h" />
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRImageTransform.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
+    <ClInclude Include="MRLoadedMeshData.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
@@ -147,15 +149,18 @@
     <ClInclude Include="MRMeshPatch.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
+    <ClInclude Include="MRSegmentMesh.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />
+    <ClInclude Include="MRMeshTotalAngle.h" />
     <ClInclude Include="MRMinMaxArg.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMultiwayAligningTransform.h" />
     <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MRMutexOwner.h" />
+    <ClInclude Include="MRNestingStructures.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MRObjectMeshData.h" />
@@ -236,6 +241,7 @@
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProcessSelfTreeSubtasks.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
+    <ClInclude Include="MRProtectedRun.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRResizeNoInit.h" />
@@ -361,6 +367,7 @@
     <ClInclude Include="MRUnsigned.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVector2.h" />
+    <ClInclude Include="MRVersatileChangeMeshAction.h" />
     <ClInclude Include="MRVertCoordsDiff.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
@@ -409,6 +416,7 @@
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRMeshOverhangs.h" />
     <ClInclude Include="MRZip.h" />
+    <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRFlagOperators.h" />
     <ClInclude Include="MRMeasurementObject.h" />
@@ -446,10 +454,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
+    <ClCompile Include="MREdgePathsBuilder.cpp" />
     <ClCompile Include="MREnums.cpp" />
     <ClCompile Include="MRImageTransform.cpp" />
     <ClCompile Include="MRMeshDivideWithPlane.cpp" />
@@ -458,6 +468,8 @@
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRMeshPatch.cpp" />
     <ClCompile Include="MRMeshSave3mf.cpp" />
+    <ClCompile Include="MRSegmentMesh.cpp" />
+    <ClCompile Include="MRMeshTotalAngle.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROneMeshContours.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
@@ -633,6 +645,7 @@
     <ClCompile Include="MRProcessSelfTreeSubtasks.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRProjectionMeshAttribute.cpp" />
+    <ClCompile Include="MRProtectedRun.cpp" />
     <ClCompile Include="MRRadiusCompensation.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />
@@ -682,6 +695,7 @@
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
     <ClCompile Include="MRUnitInfo.cpp" />
+    <ClCompile Include="MRVersatileChangeMeshAction.cpp" />
     <ClCompile Include="MRVertCoordsDiff.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
@@ -719,6 +733,7 @@
     <ClCompile Include="MRWatershedGraph.cpp" />
     <ClCompile Include="MRMeshOverhangs.cpp" />
     <ClCompile Include="MRZip.cpp" />
+    <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />

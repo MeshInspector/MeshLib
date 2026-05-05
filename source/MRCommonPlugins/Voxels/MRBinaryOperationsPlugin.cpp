@@ -4,6 +4,7 @@
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRShowModal.h"
+#include "MRViewer/MRI18n.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRVoxels/MRObjectVoxels.h"
@@ -25,25 +26,25 @@ BinaryOperations::BinaryOperations() :
 }
 
 const std::vector<std::string> operationNames = {
-    "Union",
-    "Intersection",
-    "Difference",
-    "Max",
-    "Min",
-    "Sum",
-    "Multiply",
-    "Divide"
+    _t( "Union" ),
+    _t( "Intersection" ),
+    _t( "Difference" ),
+    _t( "Max" ),
+    _t( "Min" ),
+    _t( "Sum" ),
+    _t( "Multiply" ),
+    _t( "Divide" )
 };
 
 const std::vector<std::string> operationTooltips = {
-    "Union A + B",
-    "Intersection A * B",
-    "Difference A - B",
-    "Compute max(a, b) per voxel",
-    "Compute min(a, b) per voxel",
-    "Compute a + b per voxel",
-    "Compute a * b per voxel",
-    "Compute a / b per voxel"
+    _t( "Union A + B" ),
+    _t( "Intersection A * B" ),
+    _t( "Difference A - B" ),
+    _t( "Compute max(a, b) per voxel" ),
+    _t( "Compute min(a, b) per voxel" ),
+    _t( "Compute a + b per voxel" ),
+    _t( "Compute a * b per voxel" ),
+    _t( "Compute a / b per voxel" )
 };
 
 void BinaryOperations::drawDialog( ImGuiContext*)
@@ -53,11 +54,11 @@ void BinaryOperations::drawDialog( ImGuiContext*)
         return;
 
     const auto& style = ImGui::GetStyle();
-    const float textWidth = menuWidth - 2 * style.WindowPadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "Reference object" ).x;
-    UI::inputTextCenteredReadOnly( "Object A", obj1_->name(), textWidth, ImVec4{ 1.0f, 0.4f, 0.4f, 1.0f } );
-    UI::inputTextCenteredReadOnly( "Object B", obj2_->name(), textWidth, ImVec4{ 0.4f, 0.4f, 1.0f, 1.0f } );
+    const float textWidth = menuWidth - 2 * style.WindowPadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( _tr( "Reference object" ) ).x;
+    UI::inputTextCenteredReadOnly( _tr( "Object A" ), obj1_->name(), textWidth, ImVec4{ 1.0f, 0.4f, 0.4f, 1.0f } );
+    UI::inputTextCenteredReadOnly( _tr( "Object B" ), obj2_->name(), textWidth, ImVec4{ 0.4f, 0.4f, 1.0f, 1.0f } );
 
-    if ( UI::button( "Swap", {-1, 0} ) )
+    if ( UI::button( _tr( "Swap" ), {-1, 0} ) )
     {
         std::swap( obj1_, obj2_ );
         std::swap( conn1_, conn2_ );
@@ -65,9 +66,9 @@ void BinaryOperations::drawDialog( ImGuiContext*)
             doOperation_( operation_, true );
     }
 
-    UI::separator( "Operations");
+    UI::separator( _tr( "Operations" ) );
 
-    if ( UI::checkbox( "Enable preview", &previewMode_ ) )
+    if ( UI::checkbox( _tr( "Enable preview" ), &previewMode_ ) )
     {
         if ( previewMode_ )
         {
@@ -92,13 +93,13 @@ void BinaryOperations::drawDialog( ImGuiContext*)
         }
     }
 
-    if ( UI::combo( "Operation", (int*)&operation_, enabledOps_, true, enabledOpsTooltips_ ) )
+    if ( UI::combo( _tr( "Operation" ), (int*)&operation_, Locale::translateAll( enabledOps_ ), true, Locale::translateAll( enabledOpsTooltips_ ) ) )
     {
         if ( previewMode_ )
             doOperation_( operation_, true );
     }
 
-    if ( UI::button( "Apply", { -1, 0 } ) )
+    if ( UI::button( _tr( "Apply" ), { -1, 0 } ) )
     {
         doOperation_( operation_, false );
     }
@@ -116,7 +117,7 @@ bool BinaryOperations::onEnable_()
 
     if ( obj1_->vdbVolume().data->getGridClass() != obj2_->vdbVolume().data->getGridClass() )
     {
-        showError( "Objects must have the same grid class (e.g. level set or unknown)" );
+        showError( _tr( "Objects must have the same grid class (e.g. level set or unknown)" ) );
         return false;
     }
 
@@ -277,7 +278,7 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
         }
     }
     else
-        ProgressBar::orderWithMainThreadPostProcessing(operationNames[int(op)].c_str(), [this, op, func] () -> std::function<void()> {
+        ProgressBar::orderWithMainThreadPostProcessing( _tr( operationNames[int( op )]), [this, op, func] () -> std::function<void()> {
             std::function<void()> cancelRes = []
             {
                 showError(stringOperationCanceled());

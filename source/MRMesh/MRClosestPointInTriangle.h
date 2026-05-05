@@ -17,12 +17,13 @@
 
 #include "MRVector3.h"
 #include "MRTriPoint.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
 
 template <typename T>
-static std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
+std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
 {
     // https://stackoverflow.com/a/74395029/7325599
     const Vector3<T> ab = b - a;
@@ -54,9 +55,8 @@ static std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<
     }
 
     const T vb = d5 * d2 - d1 * d6;
-    if ( vb <= 0 && d6 <= 0 )
+    if ( vb <= 0 && d6 <= 0 && d2 >= 0 )
     {
-        assert( d2 >= 0 );
         const T v = d2 / ( d2 - d6 );
         return { a + v * ac, { 0, v } }; //#5
     }
@@ -83,5 +83,8 @@ static std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<
     const T w = vc * denom;
     return { a + v * ab + w * ac, { v, w } }; //#0
 }
+
+MR_BIND_TEMPLATE( std::pair<Vector3f, TriPointf> closestPointInTriangle( const Vector3f& p, const Vector3f& a, const Vector3f& b, const Vector3f& c ) );
+MR_BIND_TEMPLATE( std::pair<Vector3d, TriPointd> closestPointInTriangle( const Vector3d& p, const Vector3d& a, const Vector3d& b, const Vector3d& c ) );
 
 } //namespace MR

@@ -4,6 +4,7 @@
 
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -12,6 +13,8 @@ struct PointsToDistanceVolumeParams;
 
 struct PointsToMeshParameters
 {
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
+
     /// it the distance of highest influence of a point;
     /// the maximal influence distance is 3*sigma; beyond that distance the influence is strictly zero
     float sigma = 1;
@@ -42,13 +45,13 @@ struct PointsToMeshParameters
 
     /// Callback for volume creation by parts. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
     /// This callback takes precedence over createVolumeCallback
-    MR_BIND_IGNORE std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )> createVolumeCallbackByParts;
+    std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )> createVolumeCallbackByParts;
 
     /// Callback for volume creation. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
-    MR_BIND_IGNORE std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
+    std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
 
     /// Callback for checking whether it's possible to use the volume creation function
-    MR_BIND_IGNORE std::function<bool ( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> canCreateVolume;
+    std::function<bool ( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> canCreateVolume;
 };
 
 /// makes mesh from points with normals by constructing intermediate volume with signed distances

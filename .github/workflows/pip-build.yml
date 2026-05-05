@@ -33,7 +33,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2026.01.16'
+  VCPKG-VERSION: '2026.03.18'
   CUDA-VERSION: '12.0.1.52833'
   CUDA-MAJOR: '12'
   CUDA-MINOR: '0'
@@ -106,7 +106,15 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/parallel-hashmap
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind-pybind11
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Install mrbind
         # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
@@ -135,16 +143,16 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
 
       - name: Build Python shim libs
         run: |
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
-          
+
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
             export PKG_CONFIG_PATH=$(uv run --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
-          
+
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \
               CXX_FOR_ABI=${{ matrix.compiler }} \
@@ -164,11 +172,11 @@ jobs:
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
           REQUIREMENTS_FILE=${PWD}/requirements/python.txt
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
-          
+
           cd build/Release/bin
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
             PYTHON_LIB_DIR=$(uv run --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBDIR)
-          
+
             LD_LIBRARY_PATH=${PYTHON_LIB_DIR} \
             uv run \
               --python ${PYTHON_VER} \
@@ -186,7 +194,7 @@ jobs:
 
       - name: Upload Python Stubs
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -202,10 +210,12 @@ jobs:
 
       - name: Upload C bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: CBindings
-          path: ./source/MeshLibC2/include
+          path: |
+            ./source/MeshLibC2/include
+            ./source/MeshLibC2Cuda/include
           retention-days: 1
 
       - name: Generate C# bindings # generate only sources
@@ -214,14 +224,14 @@ jobs:
 
       - name: Upload C# bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
           path: ./source/MRDotNet2/src
           retention-days: 1
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ManyLinux-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
@@ -254,54 +264,22 @@ jobs:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Clean Vcpkg Directory
-        working-directory: C:\vcpkg
-        run: git clean -ffdx
-
-      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git pull --rebase
-          git checkout ${{env.VCPKG-VERSION}}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v5
-        id: vcpkg-cache
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
         with:
-          key: vcpkg-cache-${{env.VCPKG-VERSION}}
-          path: |
-            C:\vcpkg\*
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@4ce2bbcf5d401e557e0537d863a6aced08605794 # v4
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat --write-s3
-
-      - name: Vcpkg integrate install
-        working-directory: C:\vcpkg
-        run: C:\vcpkg\vcpkg.exe integrate install
+          vcpkg-version: ${{ env.VCPKG-VERSION }}
+          install-flags: '--write-s3'
+          internal-build: 'true'
 
       - name: Install all Python versions
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
 
-      - name: Restore CUDA Cache
-        uses: actions/cache@v5
-        id: cuda-cache
-        with:
-          key: cuda-${{env.CUDA-VERSION}}
-          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
-
       - name: Install CUDA
-        if: steps.cuda-cache.outputs.cache-hit != 'true'
-        run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
+        uses: ./.github/actions/install-cuda
+        with:
+          cuda-version: ${{ env.CUDA-VERSION }}
+          cuda-major: ${{ env.CUDA-MAJOR }}
+          cuda-minor: ${{ env.CUDA-MINOR }}
 
       - name: Setup CUDA
         run: |
@@ -317,37 +295,20 @@ jobs:
           (gi 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
-        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
-        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2
-        with:
-          msystem: clang64
-          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
-          location: C:\msys64_meshlib_mrbind
-
-      - name: Install Clang in MSYS2
-        shell: msys2 {0}
-        run: |
-          ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
+        uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
         shell: cmd
-        env:
-          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
-          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate and build MRBind bindings
         shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1
@@ -371,7 +332,7 @@ jobs:
           python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Windows
           path: wheelhouse\meshlib-*.whl
@@ -454,7 +415,7 @@ jobs:
           python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Macos-${{matrix.platform}}
           path: meshlib-*.whl
@@ -531,7 +492,7 @@ jobs:
           ${{ env.PYTHON_CMD }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ManyLinux-${{matrix.platform}}
           merge-multiple: true
@@ -558,7 +519,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Windows
           merge-multiple: true
@@ -619,7 +580,7 @@ jobs:
 
       - name: Python setup
         if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
-        run: brew install --overwrite python@${{matrix.py-version}}
+        run: brew install --overwrite --quiet python@${{matrix.py-version}}
 
       - name: Create virtualenv
         run: |
@@ -639,7 +600,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Macos-${{matrix.platform}}
           merge-multiple: true
@@ -660,19 +621,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: ManyLinux-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: Windows
           merge-multiple: true
 
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: Macos-*
           merge-multiple: true
@@ -699,37 +660,44 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: ManyLinux-*
           failOnError: false
 
       - name: Delete Python Stubs
-        if: ${{ github.event_name == 'release' || inputs.publish }}
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: PythonStubs
           failOnError: false
 
       - name: Delete C bindings headers
-        if: ${{ github.event_name == 'release' || inputs.publish }}
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CBindings
           failOnError: false
 
+      - name: Delete Csharp bindings
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: CsharpBindings
+          failOnError: false
+
 
       - name: Delete all Windows
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Windows
           failOnError: false
 
       - name: Delete all Macos
-        if: ${{ !(github.event_name == 'release' || inputs.publish) || needs.upload-to-release.outputs.uploaded == 'true' }}
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Macos-*
           failOnError: false

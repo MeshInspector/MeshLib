@@ -1,6 +1,7 @@
 #include <MRMesh/MRTriMath.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRGTest.h>
+#include <MRMesh/MRClosestPointInTriangle.h>
 
 namespace MR
 {
@@ -17,6 +18,12 @@ TEST( MRMesh, TriMath )
     EXPECT_TRUE(  circumballCenters( Vector3d{ 0, 0, 0 }, Vector3d{ 2, 0, 0 }, Vector3d{ 0, 2, 0 }, std::sqrt( 3.0 ), centerPos, centerNeg ) );
     EXPECT_NEAR( ( centerPos - Vector3d( 1, 1,  1 ) ).length(), 0.0, 1e-15 );
     EXPECT_NEAR( ( centerNeg - Vector3d( 1, 1, -1 ) ).length(), 0.0, 1e-15 );
+
+    EXPECT_NEAR( circumcircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), 2, 1e-15 );
+    EXPECT_NEAR(    mincircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), 2, 1e-15 );
+
+    EXPECT_GT( circumcircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 2, 0, 0 } ), DBL_MAX );
+    EXPECT_EQ(    mincircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 2, 0, 0 } ), 4 );
 
     EXPECT_EQ( posFromTriEdgeLengths( 4., 5., 3. ), Vector2d( 4., 0. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 3. ), Vector2d( 4., 3. ) );
@@ -156,6 +163,22 @@ TEST( MRMesh, triangleAnglesFromEdgeLengths )
 
     EXPECT_NEAR(            cotan( 5.f, 3.f, 4.f ), 0.f, 1e-6f );
     EXPECT_NEAR( tanSqOfHalfAngle( 5.f, 3.f, 4.f ), 1.f, 1e-6f );
+}
+
+TEST( MRMesh, closestPointInTriangle )
+{
+    // this case previously failed assert in closestPointInTriangle#5 and produced negative barycentric coordinates
+    Vector3d a( 0, 0, 0 );
+    Vector3d b( 0, 0, 1.6487993830814958 );
+    Vector3d c( 0, 0,-0.0025229454040527344 );
+    Vector3d x( 0, 0, 0.29875588417053223 );
+    Vector3d p = Vector3d(-0.17274856567382812, -0.092119634151458740, 0 ) + x;
+    auto res = closestPointInTriangle( p, a, b, c );
+    EXPECT_EQ( res.first, x );
+    EXPECT_GE( res.second.a, 0 );
+    EXPECT_GE( res.second.b, 0 );
+    EXPECT_LE( res.second.a + res.second.b, 1 );
+    EXPECT_NEAR( distance( res.second.interpolate( a, b, c ), x ), 0.0, 1e-15 );
 }
 
 } //namespace MR

@@ -25,15 +25,15 @@ int main()
     // common basic offset applied for all point
     // Vertex-specific weighted offsets applied after the basic one
     params.offset = 0.2f;
-    params.dist.maxWeight = *std::max_element( MR::begin( scalars ), MR::end( scalars ) ); // should always have maximum between weights provided
- 
+    params.dist.maxWeight = *std::max_element( begin( scalars ), end( scalars ) ); // should always have maximum between weights provided
+
     auto res = MR::WeightedShell::meshShell( mesh, scalars, params );
     if ( !res.has_value() )
     {
         std::cerr << res.error();
         return 1;
     }
- 
+
     auto saveRes = MR::MeshSave::toAnySupportedFormat( *res, "offset_weighted.ctm" );
     if ( !saveRes.has_value() )
     {

@@ -309,6 +309,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     {
         // segments sa and sb have one shared point
         auto secondPointB = ( sharedPoint.id == vs[4].id ) ? vs[5] : vs[4];
+        assert( secondPointB.id != vs[2].id && secondPointB.id != vs[3].id ); // the case when both segments share all 2 points is not valid
         return ccw( { vs[2], vs[3], secondPointB } ) == ccw( { vs[2], vs[3], vs[1] } );
     }
     else

@@ -27,7 +27,7 @@ namespace MRTest
 
             EdgeWeights edgeWeights = EdgeWeights.Unit;
             VertexMass vertexMass = VertexMass.Unit;
-            Laplacian.RememberShape rememberShape = Laplacian.RememberShape.No;
+            RememberShape rememberShape = RememberShape.No;
 
             // fix specific vertices
             VertBitSet freeVerts = new VertBitSet();

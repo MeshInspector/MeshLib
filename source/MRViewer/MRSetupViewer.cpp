@@ -1,6 +1,7 @@
 #include "MRSetupViewer.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
+#include "MRViewer/MRMcpSettings.h"
 #include "MRViewerSettingsManager.h"
 #include "MRMouseController.h"
 #include "MRHistoryStore.h"
@@ -17,6 +18,10 @@
 #include <Windows.h>
 #else
 #include <dlfcn.h>
+#endif
+
+#ifndef MESHLIB_NO_MCP
+#include "MRMcp/MRMcp.h"
 #endif
 
 namespace MR
@@ -187,6 +192,46 @@ void ViewerSetup::unloadExtendedLibraries() const
         loadedModules_.pop_back();
     }
 #endif // ifndef __EMSCRIPTEN__
+}
+
+bool ViewerSetup::setupMcp() const
+{
+    #ifndef MESHLIB_NO_MCP
+    auto& server = Mcp::getDefaultServer();
+    const auto overrides = McpSettings::parseCmdLineOverrides( getViewerInstance().commandArgs );
+
+    // Push the effective port (CLI override beats config).
+    Mcp::Server::Params params = server.getParams();
+    params.port = overrides.port > 0 ? overrides.port : McpSettings::getPort();
+    server.setParams( std::move( params ) );
+
+    if ( !overrides.dumpFilePath.empty() )
+    {
+        // Dump-and-exit: write the tool cache and skip server start so a prime spawn
+        // does not collide with a real backend on the same port.
+        if ( auto res = server.saveToolsCache( overrides.dumpFilePath ); !res )
+            spdlog::error( "MRMcp: {}", res.error() );
+        return true;
+    }
+
+    // `-mcpPort N` forces auto-start (gateway's launch path needs MCP up regardless of
+    // the user's `mcp.enableByDefault` config). Without the flag, honor the config.
+    if ( overrides.port > 0 || McpSettings::getEnableByDefault() )
+        server.setRunning( true );
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+bool ViewerSetup::shutdownMcp() const
+{
+    #ifndef MESHLIB_NO_MCP
+    Mcp::getDefaultServer().shutdown();
+    return true;
+    #else
+    return false;
+    #endif
 }
 
 } //namespace MR

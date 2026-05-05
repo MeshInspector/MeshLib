@@ -116,6 +116,68 @@ Eventually we want to support `std::span`, but for now use `std::vector` and `st
 
 Note that function parameters that look like arrays: `void foo(int a[42])` (or `[]` without size) are actually pointers in C++, equivalent to `void foo(int *a)`.
 
+## How the C++ templates have to be written
+
+Templates are more affected more than other things. There are some limitations on how you write them:
+
+### Correct `requires` everywhere
+
+The bindings parser will try to instantiate every template it sees, even if it's not called.
+
+If a member function of a class template is only valid for **some** template arguments, the bindings will choke on it.
+
+You must correctly annotate all your template functions with `requires`. Or, since not all of our platforms support C++20 at the moment, use `MR_REQUIRES_IF_SUPPORTED(...)` from `MRMesh/MRMacros.h`.
+
+```cpp
+template <typename T>
+struct Pair
+{
+    T first, second;
+
+    T sum() const MR_REQUIRES_IF_SUPPORTED( std::is_arithmetic_v<T> )
+    {
+        return first + second;
+    }
+};
+```
+
+This is normally only needed for class members. We don't instantiate free functions automatically, because it's hard to determine the right template arguments for that.
+
+Of course, if literally **nothing** in the code instantiates the class with the wrong template arguments (e.g. if `Pair` in the example above is only instantiated with arithmetic types), you can omit the `requires`. But then it's a good practice to mark the entire class with `requires`.
+
+### Manually instantiate classes and non-member functions
+
+Non-member template functions have to be instantiated manually with all desired template arguments. We have a macro for that:
+
+```cpp
+template <typename T> T foo(T t) {...}
+MR_BIND_TEMPLATE( int foo(int t) )     // Or `int foo<int>(int t)`
+MR_BIND_TEMPLATE( float foo(float t) ) // Or `float foo<float>(float t)`
+```
+This is **not** needed if you already have an `extern template ...;` for this template in the header.
+
+The same applies to class templates. But they are also instantiated automatically if a typedef is pointing to them: `using MyClassInt = MyClass<int>;`.
+
+Alternatively, you can instantiate the templates in a separate file, [`mrbind/extra_headers/instantiate_templates.h`](./extra_headers/instantiate_templates.h). This is useful if you want to instantiate e.g. some class from `std`, e.g. `std::vector<MyType>`.
+
+### Prefer `friend`-definitions to free functions
+
+Prefer `friend`-definitions to free functions, because we automatically instantiate the friends.
+
+```cpp
+template <typename T>
+struct A
+{
+    friend A operator+(A, A) {...}
+};
+```
+
+This is better than making `template <typename T> A operator+(A, A) {...}` a free function, because you would have to `MR_BIND_TEMPLATE(...)` that free function, while the `friend` can be instantiated automatically by us.
+
+This is a good practice in C++ anyway, because the friends can only be reached via ADL, meaning the compiler has to search through less functions.
+
+In particular, you should use `friend` for overloaded operators, and for `begin()`/`end()`.
+
 ## Lifetime annotations / keep-alive
 
 If you're storing raw pointers or references in your classes, you have the risk of them dangling. Either due to user error, or in C# due to the compiler destroying local variables too early, incorrectly assuming that they aren't needed anymore.
@@ -267,66 +329,6 @@ struct VecA
 Notice that `MR_LIFETIMEBOUND_NESTED` and `MR_LIFETIME_CAPTURE_BY[_NESTED]` all have a `THIS` variant (you'll get an error if you incorrectly add or don't add `THIS`), but `MR_LIFETIMEBOUND` doesn't (it works in both places with the same syntax). This is sadly a technical limitation. (We could add `MR_THIS_LIFETIMEBOUND` with the same contents as `MR_LIFETIMEBOUND`, but there's no point.)
 
 At the time of writing, all those annotations only affect C#, but they will be eventually ported to Python bindings too.
-
-## How the C++ templates have to be written
-
-Templates are more affected more than other things. There are some limitations on how you write them:
-
-### Correct `requires` everywhere
-
-The bindings parser will try to instantiate every template it sees, even if it's not called.
-
-If a member function of a class template is only valid for **some** template arguments, the bindings will choke on it.
-
-You must correctly annotate all your template functions with `requires`. Or, since not all of our platforms support C++20 at the moment, use `MR_REQUIRES_IF_SUPPORTED(...)` from `MRMesh/MRMacros.h`.
-
-```cpp
-template <typename T>
-struct Pair
-{
-    T first, second;
-
-    T sum() const MR_REQUIRES_IF_SUPPORTED( std::is_arithmetic_v<T> )
-    {
-        return first + second;
-    }
-};
-```
-
-This is normally only needed for class members. We don't instantiate free functions automatically, because it's hard to determine the right template arguments for that.
-
-Of course, if literally **nothing** in the code instantiates the class with the wrong template arguments (e.g. if `Pair` in the example above is only instantiated with arithmetic types), you can omit the `requires`. But then it's a good practice to mark the entire class with `requires`.
-
-### Manually instantiate classes and non-member functions
-
-Non-member template functions have to be instantiated manually with all desired template arguments. We have a macro for that:
-
-```cpp
-template <typename T> T foo(T t) {...}
-MR_BIND_TEMPLATE( int foo(int t) )     // Or `int foo<int>(int t)`
-MR_BIND_TEMPLATE( float foo(float t) ) // Or `float foo<float>(float t)`
-```
-This is **not** needed if you already have an `extern template ...;` for this template in the header.
-
-The same applies to class templates. But they are also instantiated automatically if a typedef is pointing to them: `using MyClassInt = MyClass<int>;`.
-
-Alternatively, you can instantiate the templates in a separate file, [`mrbind/extra_headers/instantiate_templates.h`](./extra_headers/instantiate_templates.h). This is useful if you want to instantiate e.g. some class from `std`, e.g. `std::vector<MyType>`.
-
-### Prefer `friend`-definitions to free functions
-
-Prefer `friend`-definitions to free functions, because we automatically instantiate the friends.
-
-```cpp
-template <typename T>
-struct A
-{
-    friend A operator+(A, A) {...}
-};
-```
-
-This is better than making `template <typename T> A operator+(A, A) {...}` a free function, because you would have to `MR_BIND_TEMPLATE(...)` that free function, while the `friend` can be instantiated automatically by us.
-
-This is a good practice in C++ anyway, because the friends can only be reached via ADL, meaning the compiler has to search through less functions.
 
 ## Missing bindings for `std::` classes and more in Python
 

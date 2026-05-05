@@ -31,7 +31,13 @@ Expected<void> parseTextCoordinate( const std::string_view& str, Vector3<T>& v, 
 template<typename T>
 Expected<void> parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c = nullptr );
 template<typename T>
-Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
+Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color* c = nullptr, Vector3<T>* n = nullptr );
+template<typename T>
+[[deprecated( "use parsePtsCoordinate( str, v, &c ) instead" )]]
+Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
+{
+    return parsePtsCoordinate( str, v, &c );
+}
 
 // reads the first integer number in the line
 MRMESH_API Expected<void> parseFirstNum( const std::string_view& str, int& num );

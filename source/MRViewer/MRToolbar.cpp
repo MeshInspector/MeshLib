@@ -13,6 +13,7 @@
 #include "MRViewer.h"
 #include "MRRibbonFontHolder.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRI18n.h"
 #include <imgui_internal.h>
 
 namespace MR
@@ -237,7 +238,7 @@ void Toolbar::drawCustomizeModal_()
         return;
     }
 
-    bool shouldClose = ImGui::ModalBigTitle( "Customize Viewport Toolbar" );
+    bool shouldClose = ImGui::ModalBigTitle( _tr( "Customize Viewport Toolbar" ) );
     if ( shouldClose )
         ImGui::CloseCurrentPopup();
 
@@ -248,14 +249,14 @@ void Toolbar::drawCustomizeModal_()
             searchString_.clear();
     };
 
-    ImGui::Text( "%s", "Select icons to show in Toolbar" );
+    ImGui::Text( "%s", _tr( "Select icons to show in Toolbar" ) );
 
     ImGui::SameLine();
     auto& style = ImGui::GetStyle();
-    float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
+    float textPosX = windowSize.x - ( ImGui::CalcTextSize( _tr( "Icons in Toolbar" ) ).x + ImGui::CalcTextSize( " : 00/00" ).x ) - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 12 * UI::scale() ) );
-    ImGui::Text( "Icons in Toolbar : %02d/%02d", int( itemsListCustomize_.size() ), maxItemCount_ );
+    ImGui::Text( "%s : %02d/%02d", _tr( "Icons in Toolbar" ), int( itemsListCustomize_.size() ), maxItemCount_ );
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
@@ -387,7 +388,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::BeginChild( "##QuickAccessCustomizeAndSearch", ImVec2( -1, -1 ) );
     ImGui::PopStyleVar();
-    const float buttonWidth = cGradientButtonFramePadding * 2 * UI::scale() + ImGui::CalcTextSize( "Reset to default" ).x;
+    const float buttonWidth = cGradientButtonFramePadding * 2 * UI::scale() + ImGui::CalcTextSize( _tr( "Reset to default" ) ).x;
     const float searchWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - buttonWidth;
 
     ImGui::SetNextItemWidth( searchWidth );
@@ -407,7 +408,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
     ImGui::SameLine();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * UI::scale() ) );
-    if ( UI::button( "Reset to default", Vector2f( buttonWidth, 0 ) ) )
+    if ( UI::button( _tr( "Reset to default" ), Vector2f( buttonWidth, 0 ) ) )
     {
         resetItemsList();
         itemsListCustomize_ = itemsList_;

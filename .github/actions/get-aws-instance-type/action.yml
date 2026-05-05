@@ -20,6 +20,14 @@ runs:
           echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
           echo $AWS_INSTANCE_TYPE
 
+          # spot or on-demand
+          AWS_INSTANCE_LIFE_CYCLE=$(curl -fsS --max-time 2 --connect-timeout 1 \
+            -H "X-aws-ec2-metadata-token: $TOKEN" \
+            "http://169.254.169.254/latest/meta-data/instance-life-cycle" 2>/dev/null || true)
+          
+          echo "AWS_INSTANCE_LIFE_CYCLE=$AWS_INSTANCE_LIFE_CYCLE" >> $GITHUB_ENV
+          echo $AWS_INSTANCE_LIFE_CYCLE
+
     - name: Get AWS instance type (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
@@ -27,8 +35,14 @@ runs:
         try {
             $Token = Invoke-RestMethod -Uri "http://169.254.169.254/latest/api/token" -Method PUT -Headers @{ "X-aws-ec2-metadata-token-ttl-seconds" = "10" }
             $InstanceType = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-type" -Headers @{ "X-aws-ec2-metadata-token" = $Token }
+            $InstanceLifeCycle = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-life-cycle" -Headers @{ "X-aws-ec2-metadata-token" = $Token }
+            # if not an EC2 instance
+            if ($null -eq $InstanceType) { $InstanceType = "self-hosted" }
+            if ($null -eq $InstanceLifeCycle) { $InstanceType = "self-hosted" }
             # https://github.com/actions/runner-images/issues/5251#issuecomment-1071030822
             echo "AWS_INSTANCE_TYPE=$InstanceType" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            echo "AWS_INSTANCE_LIFE_CYCLE=$InstanceLifeCycle" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             Write-Output $InstanceType
+            Write-Output $InstanceLifeCycle
         } catch { Write-Warning -Message "Error returned! $_" }
         

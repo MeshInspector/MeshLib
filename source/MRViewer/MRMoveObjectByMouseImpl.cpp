@@ -364,7 +364,7 @@ void MoveObjectByMouseImpl::clear_()
 void MoveObjectByMouseImpl::applyCurrentXf_()
 {
     const bool appendHistory = historyEnabled_ && !xfChanged_;
-    std::unique_ptr<ScopeHistory> scope = appendHistory ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
+    std::unique_ptr<ScopeHistory> scope = appendHistory ? std::make_unique<ScopeHistory>( _t( "Move Object" ) ) : nullptr;
     auto itXf = initialXfs_.begin();
     changingXfFromMouseMove_ = true;
     for ( std::shared_ptr<Object>& obj : objects_ )

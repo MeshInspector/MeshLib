@@ -50,10 +50,10 @@ option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library" ON)
 option(MESHLIB_BUILD_MESHVIEWER "Build MeshViewer application" ON)
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
-option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" OFF)
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
+option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
@@ -73,7 +73,16 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
-  set(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING OFF)
+  set(MESHLIB_BUILD_MCP OFF)
+ENDIF()
+
+# Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the
+# vcpkg python3 port ships pre-built Release binaries (IDL=0) that cannot load
+# .pyd files built against a different debug CRT (error 1114 on Windows).
+# Only affects Debug builds; Release with this triplet uses IDL=0 (the default).
+IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(MESHLIB_PYTHON_SUPPORT OFF)
+  set(MESHLIB_BUILD_PYTHON_MODULES OFF)
 ENDIF()
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
@@ -218,6 +227,9 @@ IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
   option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
+
+  # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
 ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)
@@ -292,8 +304,9 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE)
   ENDIF()
 ENDIF()
 
-IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMeshC ./MRMeshC)
+IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMcp ./MRMcp)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMCPGateway ./MRMCPGateway)
 ENDIF()
 
 IF(BUILD_TESTING)
@@ -301,9 +314,6 @@ IF(BUILD_TESTING)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
   IF(MESHLIB_BUILD_MRCUDA)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestCuda ./MRTestCuda)
-  ENDIF()
-  IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC ./MRTestC)
   ENDIF()
 ENDIF()
 

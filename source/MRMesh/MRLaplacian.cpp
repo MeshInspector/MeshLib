@@ -12,30 +12,55 @@
 namespace MR
 {
 
+namespace
+{
+
+using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+
+} // anonymous namespace
+
+class Laplacian::Solver
+{
+public:
+    Solver( size_t rows, size_t cols, const std::vector< Eigen::Triplet<double> >& mTriplets );
+    auto rows() const { return M_.rows(); }
+    auto cols() const { return M_.cols(); }
+    Eigen::VectorXd solve( const Eigen::VectorXd & rhs ) const;
+
+private:
+    SparseMatrix M_;
+
+    using SparseMatrixColMajor = Eigen::SparseMatrix<double,Eigen::ColMajor>;
+    Eigen::SimplicialLDLT<SparseMatrixColMajor> solver_;
+};
+
+Laplacian::Solver::Solver( size_t rows, size_t cols, const std::vector< Eigen::Triplet<double> >& mTriplets )
+{
+    MR_TIMER;
+    M_.resize( rows, cols );
+    M_.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+
+    SparseMatrix A = M_.adjoint() * M_;
+    solver_.compute( A );
+}
+
+Eigen::VectorXd Laplacian::Solver::solve( const Eigen::VectorXd & rhs ) const
+{
+    MR_TIMER;
+    return solver_.solve( M_.adjoint() * rhs );
+}
+
 Laplacian::Laplacian( const MeshTopology & topology, VertCoords & points ) : topology_( topology ), points_( points )
 {
-    class SimplicialLDLTSolver final : public Solver
-    {
-    public:
-        virtual void compute( const SparseMatrixColMajor& A ) final
-        {
-            solver_.compute( A );
-        }
-
-        virtual Eigen::VectorXd solve( const Eigen::VectorXd& rhs ) final
-        {
-            return solver_.solve( rhs );
-        }
-    private:
-        Eigen::SimplicialLDLT<SparseMatrixColMajor> solver_;
-    };
-
-    solver_ = std::make_unique<SimplicialLDLTSolver>();
 }
 
 Laplacian::Laplacian( Mesh & mesh ) : Laplacian( mesh.topology, mesh.points ) { }
 
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
+Laplacian::Laplacian( Laplacian && ) noexcept = default;
+
+Laplacian::~Laplacian() = default;
+
+void Laplacian::initFromPoints( const VertCoords & points, const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
@@ -43,8 +68,8 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
     for ( auto v : freeVerts_ )
         freeVert2id_[v] = -1;
 
-    solverValid_ = false;
-    rhsValid_ = false;
+    solver_.reset();
+    fixedSharpVertices_.clear();
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;
@@ -71,10 +96,10 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         {
             double w = 1;
             if ( weights == EdgeWeights::Cotan )
-                w = std::clamp( cotan( topology_, points_, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+                w = std::clamp( cotan( topology_, points, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             auto d = topology_.dest( e );
             rowElements.push_back( { -w, d } );
-            sumWPos -= w * Vector3d( points_[d] );
+            sumWPos -= w * Vector3d( points[d] );
             sumW += w;
         }
         if ( sumW == 0 )
@@ -85,7 +110,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             // in updateSolver_ we build A = M_^T * M_;
             // if here we divide each row of M_ on square root of mass,
             // then M' = sqrt(Mass^-1) * M_; A = M'^T * M' = M_^T * Mass^-1 * M_
-            if ( auto d = dblArea( topology_, points_, v ); d > 0 )
+            if ( auto d = dblArea( topology_, points, v ); d > 0 )
                 a =  1 / std::sqrt( d );
         }
         const double rSumW = a / sumW;
@@ -94,7 +119,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             el.coeff *= rSumW;
             nonZeroElements_.push_back( el );
         }
-        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points_[v] ) : Vector3d();
+        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points[v] ) : Vector3d();
         eq.centerCoeff = a;
         equations_.push_back( eq );
     }
@@ -105,14 +130,13 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
 
 void Laplacian::fixVertex( VertId v, bool smooth )
 {
-    rhsValid_ = false;
     if ( freeVerts_.autoResizeTestSet( v, false ) )
     {
-        solverValid_ = false;
+        solver_.reset();
         freeVert2id_[v] = -1;
     }
     if ( fixedSharpVertices_.autoResizeTestSet( v, !smooth ) != !smooth )
-        solverValid_ = false;
+        solver_.reset();
 }
 
 void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth )
@@ -121,34 +145,55 @@ void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth )
     fixVertex( v, smooth );
 }
 
-void Laplacian::updateSolver()
+void Laplacian::multVertexWeight( VertId v, double factor )
 {
-    updateSolver_();
-    updateRhs_();
+    if ( !region_.test( v ) )
+        return;
+
+    solver_.reset();
+
+    int eqN = regionVert2id_[v];
+    auto& eq = equations_[eqN];
+    eq.centerCoeff *= factor;
+    eq.rhs *= factor;
+    const auto lastElem = equations_[eqN+1].firstElem;
+    for ( int ei = eq.firstElem; ei < lastElem; ++ei )
+        nonZeroElements_[ei].coeff *= factor;
 }
 
-void Laplacian::updateSolver_()
+void Laplacian::addAttractor( const Attractor& a )
 {
-    if ( solverValid_ )
+    assert( a.weight > 0 );
+    solver_.reset();
+    attractors_.push_back( a );
+}
+
+void Laplacian::removeAllAttractors()
+{
+    if ( attractors_.empty() )
         return;
-    solverValid_ = true;
+    solver_.reset();
+    attractors_.clear();
+}
+
+void Laplacian::updateSolver()
+{
+    if ( solver_ )
+        return;
 
     MR_TIMER;
 
     const auto sz = freeVerts_.count();
     if ( sz <= 0 )
-    {
-        rhsValid_ = true;
         return;
-    }
-    rhsValid_ = false;
 
     fillVectorWithSeqNums( freeVerts_, freeVert2id_ );
 
+    assert( !fixedSharpVertices_.intersects( freeVerts_ ) );
     firstLayerFixedVerts_ = freeVerts_;
     expand( topology_, firstLayerFixedVerts_ );
     firstLayerFixedVerts_ -= fixedSharpVertices_;
-    const auto rowSz = firstLayerFixedVerts_.count();
+    [[maybe_unused]] const auto numSmoothVerts = firstLayerFixedVerts_.count();
     firstLayerFixedVerts_ -= freeVerts_;
 
     std::vector< Eigen::Triplet<double> > mTriplets;
@@ -170,7 +215,7 @@ void Laplacian::updateSolver_()
         ++n;
     }
 
-    // equations for free neighbors of fixed vertices
+    // equations for free neighbors of smooth fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];
@@ -184,18 +229,32 @@ void Laplacian::updateSolver_()
         }
         ++n;
     }
-    assert( n == rowSz );
 
-    M_.resize( rowSz, sz );
-    M_.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+    // equations for attractors
+    for ( const auto & a : attractors_ )
+    {
+        const auto vs = a.p.getWeightedVerts( topology_ );
+        bool anyFreeVert = false;
+        for ( int i = 0; i < 3; ++i )
+        {
+            if ( vs[i].weight == 0 )
+                continue;
+            auto vid = freeVert2id_[vs[i].v];
+            if ( vid < 0 )
+                continue;
+            mTriplets.emplace_back( n, vid, a.weight * vs[i].weight );
+            anyFreeVert = true;
+        }
+        if ( anyFreeVert )
+            ++n;
+    }
 
-    SparseMatrix A = M_.adjoint() * M_;
-
-    solver_->compute( A );
+    assert( n >= numSmoothVerts && n <= numSmoothVerts + attractors_.size() );
+    solver_ = std::make_unique<Solver>( n, sz, mTriplets );
 }
 
-template <typename I, typename G, typename S>
-void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
+template <typename I, typename G, typename S, typename P>
+void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const
 {
     // equations for free vertices
     int n = 0;
@@ -216,7 +275,7 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
         ++n;
     }
 
-    // equations for free neighbors of fixed vertices
+    // equations for free neighbors of smooth fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];
@@ -233,58 +292,63 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
         s( n, r );
         ++n;
     }
-    assert( n == M_.rows() );
-}
 
-void Laplacian::updateRhs_()
-{
-    assert( solverValid_ );
-    if ( rhsValid_ )
-        return;
-    rhsValid_ = true;
-
-    MR_TIMER;
-
-    Eigen::VectorXd rhs[3];
-    for ( int i = 0; i < 3; ++i )
-        rhs[i].resize( M_.rows() );
-
-    prepareRhs_(
-        [&]( const Equation & eq ) { return eq.rhs; },
-        [&]( VertId v ) { return Vector3d{ points_[v] }; },
-        [&]( int n, const Vector3d & r )
-        {
-            for ( int i = 0; i < 3; ++i )
-                rhs[i][n] = r[i];
-        }
-    );
-
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
+    // equations for attractors
+    for ( const auto & a : attractors_ )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-            rhs_[i] = M_.adjoint() * rhs[i];
-    } );
+        auto r = a.weight * p( a.target );
+        const auto vs = a.p.getWeightedVerts( topology_ );
+        bool anyFreeVert = false;
+        for ( int i = 0; i < 3; ++i )
+        {
+            if ( vs[i].weight == 0 )
+                continue;
+            if ( freeVerts_.test( vs[i].v ) )
+                anyFreeVert = true;
+            else
+                r -= a.weight * vs[i].weight * g( vs[i].v );
+        }
+        if ( anyFreeVert )
+            s( n++, r );
+    }
+
+    assert( n == solver_->rows() );
 }
 
-void Laplacian::apply()
+void Laplacian::applyToVector( VertCoords & points )
 {
     MR_TIMER;
     if ( !freeVerts_.any() )
         return;
     updateSolver();
 
+    Eigen::VectorXd rhs[3];
+    for ( int i = 0; i < 3; ++i )
+        rhs[i].resize( solver_->rows() );
+
+    prepareRhs_(
+        [&]( const Equation & eq ) { return eq.rhs; },
+        [&]( VertId v ) { return Vector3d{ points[v] }; },
+        [&]( int n, const Vector3d & r )
+        {
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][n] = r[i];
+        },
+        []( const Vector3d& p ) { return p; }
+    );
+
     Eigen::VectorXd sol[3];
     tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
         for ( int i = range.begin(); i < range.end(); ++i )
-            sol[i] = solver_->solve( rhs_[i] );
+            sol[i] = solver_->solve( rhs[i] );
     } );
 
     // copy solution back into mesh points
     for ( auto v : freeVerts_ )
     {
         int mapv = freeVert2id_[v];
-        auto & pt = points_[v];
+        auto & pt = points[v];
         pt.x = (float) sol[0][mapv];
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];
@@ -298,15 +362,16 @@ void Laplacian::applyToScalar( VertScalars & scalarField )
         return;
     updateSolver();
 
-    Eigen::VectorXd rhs( M_.rows() );
+    Eigen::VectorXd rhs( solver_->rows() );
 
     prepareRhs_(
         [&]( const Equation & ) { return 0.0; },
         [&]( VertId v ) { return scalarField[v]; },
-        [&]( int n, double r ) { rhs[n] = r; }
+        [&]( int n, double r ) { rhs[n] = r; },
+        []( const Vector3d& p ) { return p.x; }
     );
 
-    Eigen::VectorXd sol = solver_->solve( M_.adjoint() * rhs );
+    Eigen::VectorXd sol = solver_->solve( rhs );
     for ( auto v : freeVerts_ )
     {
         int mapv = freeVert2id_[v];

@@ -3,8 +3,8 @@
 #include "MRBitSet.h"
 #include "MRVector.h"
 #include "MRVector3.h"
+#include "MRMeshTriPoint.h"
 #include "MREnums.h"
-#include <MRPch/MREigenSparseCore.h>
 
 namespace MR
 {
@@ -20,19 +20,20 @@ namespace MR
 class Laplacian
 {
 public:
-    enum class RememberShape
-    {
-        Yes,  // true Laplacian mode when initial mesh shape is remembered and copied in apply
-        No    // ignore initial mesh shape in the region and just position vertices smoothly in the region
-    };
-
     MRMESH_API explicit Laplacian( Mesh & mesh );
     MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
+    MRMESH_API Laplacian( Laplacian && ) noexcept;
+    MRMESH_API ~Laplacian();
 
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
-    /// \param freeVerts must not include all vertices of a mesh connected component
-    MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit,
-        RememberShape rem = Laplacian::RememberShape::Yes );
+    /// \param freeVerts must not include all vertices of a mesh connected component;
+    /// \param usePoints is not nullptr, then these points will be used instead of passed to a constructor for weights computation and shape memory
+    void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes )
+        { initFromPoints( points_, freeVerts, weights, vmass, rem ); }
+
+    /// same as init() but uses the given points instead of ones passed to a constructor for weights computation and shape memory
+    MRMESH_API void initFromPoints( const VertCoords & points, const VertBitSet & freeVerts, EdgeWeights weights,
+        VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes );
 
     /// notify Laplacian that given vertex has changed after init and must be fixed during apply;
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
@@ -42,13 +43,22 @@ public:
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
     MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos, bool smooth = true );
 
+    /// multiplies vertex equation's weight on the given factor
+    MRMESH_API void multVertexWeight( VertId v, double factor );
+
     /// if you manually call this method after initialization and fixing vertices then next apply call will be much faster
     MRMESH_API void updateSolver();
 
-    /// given fixed vertices, computes positions of remaining region vertices
-    MRMESH_API void apply();
+    /// takes fixed vertex positions from the given points vector,
+    /// computes and writes free vertex positions in the given points vector as well
+    MRMESH_API void applyToVector( VertCoords & points );
 
-    /// given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
+    /// takes fixed vertex positions from the points vector passed to a constructor,
+    /// computes and writes free vertex positions in the points vector passed to a constructor as well
+    void apply() { applyToVector( points_ ); }
+
+    /// takes fixed vertex scalars from the given field,
+    /// computes and writes free vertex scalars in the given field as well
     MRMESH_API void applyToScalar( VertScalars & scalarField );
 
     /// return all initially free vertices and the first layer of vertices around them
@@ -58,17 +68,35 @@ public:
     [[nodiscard]] const VertBitSet & freeVerts() const { return freeVerts_; }
 
     /// return fixed vertices from the first layer around free vertices
-    [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
+    [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solver_ ); return firstLayerFixedVerts_; }
+
+    /// return the topology for which Laplacian was constructed
+    [[nodiscard]] const MeshTopology & topology() const { return topology_; }
+
+    /// return the vector of coordinates for which Laplacian was constructed
+    [[nodiscard]] VertCoords & points() const { return points_; }
+
+    /// attracts the given point inside some mesh's triangle to the given target with the given weight
+    struct Attractor
+    {
+        MeshTriPoint p;
+        Vector3d target;
+        /// the weight or priority of this attractor relative to all other equations,
+        /// which must be compatible with weights of other equations;
+        /// the weight of ordinary equations is 1 for VertexMass::Unit,
+        /// and 1 / sqrt( double area around central vertex ) for VertexMass::NeiArea
+        double weight = 1;
+    };
+
+    /// adds one more attractor to the stored list
+    MRMESH_API void addAttractor( const Attractor& a );
+
+    /// forgets all attractors added previously
+    MRMESH_API void removeAllAttractors();
 
 private:
-    // updates solver_ only
-    void updateSolver_();
-
-    // updates rhs_ only
-    void updateRhs_();
-
-    template <typename I, typename G, typename S>
-    void prepareRhs_( I && iniRhs, G && g, S && s );
+    template <typename I, typename G, typename S, typename P>
+    void prepareRhs_( I && iniRhs, G && g, S && s, P && p ) const;
 
     const MeshTopology & topology_;
     VertCoords & points_;
@@ -94,6 +122,8 @@ private:
     };
     std::vector<Equation> equations_;
 
+    std::vector<Attractor> attractors_;
+
     struct Element
     {
         double coeff = 0;
@@ -105,26 +135,8 @@ private:
     Vector< int, VertId > regionVert2id_;
     Vector< int, VertId > freeVert2id_;
 
-    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
-    SparseMatrix M_;
-
-    // if true then we do not need to recompute solver_ in the apply
-    bool solverValid_ = false;
-    using SparseMatrixColMajor = Eigen::SparseMatrix<double,Eigen::ColMajor>;
-
-    // interface needed to hide implementation headers
-    class Solver
-    {
-    public:
-        virtual ~Solver() = default;
-        virtual void compute( const SparseMatrixColMajor& A ) = 0;
-        virtual Eigen::VectorXd solve( const Eigen::VectorXd& rhs ) = 0;
-    };
+    class Solver;
     std::unique_ptr<Solver> solver_;
-
-    // if true then we do not need to recompute rhs_ in the apply
-    bool rhsValid_ = false;
-    Eigen::VectorXd rhs_[3];
 };
 
 } //namespace MR

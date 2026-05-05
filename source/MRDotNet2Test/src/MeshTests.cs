@@ -223,7 +223,7 @@ namespace MRTest
                 //obj1.mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
                 //obj1.name = "Cube";
                 //obj1.toWorld = AffineXf3f.translation(Vector3f.diagonal(1));
-                var obj1 = new MeshSave.NamedXfMesh("Cube", AffineXf3f.translation(Vector3f.diagonal(1)), makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f)));
+                var obj1 = new MeshSave.NamedXfMesh("Cube", AffineXf3f.translation(Vector3f.diagonal(1)), new MR.Std.SharedPtr_ConstMRMesh(makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f))));
                 objects.pushBack(Misc.Move(obj1));
 
                 // TODO: fix field assignment
@@ -231,7 +231,7 @@ namespace MRTest
                 //obj2.mesh = makeSphere(new SphereParams(1.0f, 100));
                 //obj2.name = "LongSphereName"; // must be long enough to deactivate short string optimization (SSO) in C++
                 //obj2.toWorld = AffineXf3f.translation(Vector3f.diagonal(-2));
-                var obj2 = new MeshSave.NamedXfMesh("LongSphereName", AffineXf3f.translation(Vector3f.diagonal(-2)), makeSphere(new SphereParams(1.0f, 100)));
+                var obj2 = new MeshSave.NamedXfMesh("LongSphereName", AffineXf3f.translation(Vector3f.diagonal(-2)), new MR.Std.SharedPtr_ConstMRMesh(makeSphere(new SphereParams(1.0f, 100))));
                 objects.pushBack(Misc.Move(obj2));
 
                 var tempFile = Path.GetTempFileName() + ".obj";

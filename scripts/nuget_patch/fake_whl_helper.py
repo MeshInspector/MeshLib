@@ -7,7 +7,7 @@ from pathlib import Path
 
 SYSTEM = platform.system()
 
-def make_fake_whl(dll_path : Path):
+def make_fake_whl(dll_paths : list[Path]):
     w_dir = Path(".").resolve()
     whl_dir = w_dir / "temp_whl_dir"
     os.mkdir(whl_dir)
@@ -16,19 +16,21 @@ def make_fake_whl(dll_path : Path):
     os.mkdir( whl_libs_path )
     os.mkdir( whl_info_path )
     # copy dll
-    shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
+    for dll_path in dll_paths:
+        shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
     # create servant files
     with open( whl_info_path / "WHEEL", "w" ) as wheel_file:
         pass
     with open( whl_info_path / "RECORD", "w" ) as record_file:
-        record_file.write( "dummy.libs/" + dll_path.name )
+        for dll_path in dll_paths:
+            record_file.write( "dummy.libs/" + dll_path.name + "\n" )
     # actually create whl file
     shutil.make_archive("dummy-1.0-py3-none-any","zip",whl_dir)
     os.rename("dummy-1.0-py3-none-any.zip","dummy-1.0-py3-none-any.whl")
     # clean
     shutil.rmtree(whl_dir)
 
-def patch_whl(out_dir,libs_dir):
+def patch_whl(out_dir : Path, libs_dirs : list[Path]):
     def copy_libs(src_wheel):
         temp_dir = Path("patched_whl")
         shutil.unpack_archive(src_wheel, temp_dir, "zip")
@@ -54,7 +56,7 @@ def patch_whl(out_dir,libs_dir):
                     #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
                     #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
 
-                    "--add-path",libs_dir, # path where input dependencies are located
+                    "--add-path", ":".join(str(x) for x in libs_dirs), # path where input dependencies are located
 
                     # main option - needed to mangle whl/libs/ content (only thing we doing it for)
                     "--analyze-existing",
@@ -65,14 +67,21 @@ def patch_whl(out_dir,libs_dir):
             copy_libs(repaired_files[0])
             shutil.rmtree("wheelhouse")
         elif SYSTEM == "Linux":
-            sys.path.append(libs_dir) # to find SO files
+            for dir in libs_dirs:
+                sys.path.append(dir) # to find SO files
             # see also: https://github.com/mayeut/pep600_compliance
-            manylinux_version = "2_31"
+            manylinux_version = "2_28"
             subprocess.check_call(
                 [
                     sys.executable, "-m", "auditwheel",
                     "repair",
                     "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
+
+                    # Must exclude the C library, because we have other libraries depending on it (`libMeshLibC2Cuda.so`).
+                    # If we don't do this, then another copy of this library gets copied, with a hash added to the name.
+                    # For some reason this only happes on Linux.
+                    "--exclude", "libMeshLibC2.so",
+
                     "dummy-1.0-py3-none-any.whl"
                 ]
             )

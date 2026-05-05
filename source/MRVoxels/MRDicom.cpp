@@ -17,6 +17,7 @@
 
 #pragma warning(push)
 #pragma warning(disable: 4515)
+#pragma warning(disable: 4127) //conditional expression is constant
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif

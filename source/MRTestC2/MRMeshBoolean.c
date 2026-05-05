@@ -130,7 +130,7 @@ void testBooleanMultipleEdgePropogationSort( void )
         const MR_MeshTopology* meshATopology = MR_Mesh_Get_topology( meshA );
         MR_std_vector_MR_EdgeId* meshAHoles = MR_MeshTopology_findHoleRepresentiveEdges( meshATopology, NULL );
 
-        MR_std_vector_MR_EdgeId* border = MR_trackRightBoundaryLoop_MR_EdgeId( meshATopology, *MR_std_vector_MR_EdgeId_at( meshAHoles, 0 ), NULL );
+        MR_std_vector_MR_EdgeId* border = MR_trackRightBoundaryLoop( meshATopology, *MR_std_vector_MR_EdgeId_at( meshAHoles, 0 ), NULL, &(MR_Turn){MR_Turn_Rightmost} );
 
         MR_std_vector_std_vector_MR_EdgeId* borderVec = MR_std_vector_std_vector_MR_EdgeId_DefaultConstruct();
         MR_std_vector_std_vector_MR_EdgeId_push_back( borderVec, MR_PassBy_Move, border );
@@ -225,13 +225,11 @@ void testBooleanMapper( void )
     TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) ) == 252 )
 
     const MR_BooleanResultMapper_Maps* mapsA = MR_BooleanResultMapper_getMaps( mapper, MR_BooleanResultMapper_MapObject_A );
-    TEST_ASSERT( !*MR_BooleanResultMapper_Maps_Get_identity( mapsA ) )
     TEST_ASSERT( MR_VertMap_size( MR_BooleanResultMapper_Maps_Get_old2newVerts( mapsA ) ) == 160 )
     TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2newFaces( mapsA ) ) == 348 )
     TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2origin( mapsA ) ) == 348 )
 
     const MR_BooleanResultMapper_Maps* mapsB = MR_BooleanResultMapper_getMaps( mapper, MR_BooleanResultMapper_MapObject_B );
-    TEST_ASSERT( !*MR_BooleanResultMapper_Maps_Get_identity( mapsB ) )
     TEST_ASSERT( MR_VertMap_size( MR_BooleanResultMapper_Maps_Get_old2newVerts( mapsB ) ) == 160 )
     TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2newFaces( mapsB ) ) == 384 )
     TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2origin( mapsB ) ) == 384 )

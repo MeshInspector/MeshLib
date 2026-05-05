@@ -1,0 +1,78 @@
+name: Update Translation Template Files
+
+on:
+  workflow_dispatch:
+  #schedule:
+  #  - cron: "0 0 * * 0"  # Run every Sunday at midnight
+
+jobs:
+  update-pot-files:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43  # gettext 0.25.1
+
+    env:
+      GIT_BRANCH_NAME: auto-ci/update_pot_files
+
+    steps:
+      - name: Install tools
+        run: |
+          dnf install -y gettext gh git python3
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          token: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
+
+      # https://github.com/actions/checkout/issues/766
+      - name: Fix git permissions
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Update translation templates
+        run: |
+          scripts/gettext/update_translations.py locale/MeshLib.pot source/
+          scripts/gettext/update_json_translations.py locale/MRRibbonCommonMenuStructure.pot source/MRCommonPlugins/MRRibbonCommonMenuStructure.items.json
+
+      - name: Check for changes
+        id: check-diff
+        run: |
+          # ignore auto-updated timestamp, ignore source line comments
+          pot_diff () { git diff --unified=0 --ignore-matching-lines="POT-Creation-Date.*" --ignore-matching-lines="#: .*" locale/*.pot ; }
+          pot_diff
+          if [ -n "$(pot_diff)" ] ; then
+            echo "need_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "need_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update translations
+        if: ${{ steps.check-diff.outputs.need_update == 'true' }}
+        run: |
+          scripts/gettext/merge_po_from_pot.py locale/ locale/MeshLib.pot locale/MRRibbonCommonMenuStructure.pot
+
+      - name: Push changes
+        if: ${{ steps.check-diff.outputs.need_update == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
+        run: |
+          git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+          git config --global user.name "meshinspector-bot"
+          
+          git checkout -b $GIT_BRANCH_NAME
+          git commit -am "Auto CI: Update translation templates"
+          git push --force origin $GIT_BRANCH_NAME
+
+      - name: Create pull request
+        if: ${{ steps.check-diff.outputs.need_update == 'true' }}
+        # https://github.com/cli/cli/discussions/5792#discussioncomment-2939617
+        # > running `gh pr create` on a branch that already has a PR will error out with a descriptive message
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
+        run: |
+          gh pr create --title "Auto CI: Update translation templates" \
+                       --base master \
+                       --head $GIT_BRANCH_NAME \
+                       --reviewer oitel,Grantim

@@ -75,4 +75,9 @@ private:
     std::mutex mutex_;
 };
 
+// Push a handful of empty commands onto the main thread so the Viewer advances a few frames,
+// ensuring any UI state touched by a recent input (click, write, transform) is reflected before
+// the caller's next observation.
+MRVIEWER_API void skipFramesAfterInput();
+
 }

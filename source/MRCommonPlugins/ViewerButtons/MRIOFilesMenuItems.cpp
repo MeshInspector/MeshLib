@@ -52,6 +52,7 @@
 #include "MRIOExtras/MRPng.h"
 #include "MRViewer/MRRibbonFontHolder.h"
 #include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRViewer/MRI18n.h"
 
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -283,7 +284,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( ProgressBar::isOrdered() )
     {
         if ( menu )
-            menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
+            menu->pushNotification( { .text = _tr( "Another operation in progress." ), .lifeTimeSec = 3.0f } );
         return true;
     }
 
@@ -347,9 +348,9 @@ void OpenFilesMenuItem::preDraw_()
 
     RibbonFontHolder bigFont( RibbonFontManager::FontType::Headline );
 
-    auto textSize = ImGui::CalcTextSize( "Load as Scene" );
+    auto textSize = ImGui::CalcTextSize( _tr( "Load as Scene" ) );
     auto textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
-    drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), "Load as Scene" );
+    drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), _tr( "Load as Scene" ) );
 
     if ( menu )
     {
@@ -359,9 +360,9 @@ void OpenFilesMenuItem::preDraw_()
         drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * UI::scale() );
         drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * UI::scale(), 0, 2.0f * UI::scale() );
 
-        textSize = ImGui::CalcTextSize( "Add Files" );
+        textSize = ImGui::CalcTextSize( _tr( "Add Files" ) );
         textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
-        drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), "Add Files" );
+        drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), _tr( "Add Files" ) );
     }
 
     bigFont.popFont();
@@ -448,7 +449,7 @@ void sOpenDICOMs( const std::filesystem::path & directory )
             return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
             {
                 sSelectRecursive( *obj );
-                AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
+                AppendHistory<ChangeSceneAction>( _t( "Open DICOMs" ), obj, ChangeSceneAction::Type::AddObject );
                 SceneRoot::get().addChild( obj );
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 getViewerInstance().recentFilesStore().storeFile( directory );
@@ -475,7 +476,7 @@ void sOpenDICOMs( const std::filesystem::path & directory )
 
 std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    static const std::string reason = isMobileBrowser() ? "This web browser doesn't support directory selection" : "";
+    const std::string reason = isMobileBrowser() ? s_tr( "This web browser doesn't support directory selection" ) : std::string();
     return reason;
 }
 
@@ -500,7 +501,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
                 return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
                 {
                     sSelectRecursive( *obj );
-                    AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
+                    AppendHistory<ChangeSceneAction>( _t( "Open Directory" ), obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                     getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     getViewerInstance().recentFilesStore().storeFile( directory );
@@ -591,10 +592,10 @@ std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<c
 {
 #ifdef __EMSCRIPTEN__
     if ( objs.size() != 1 || !getSaveInfo( objs ) )
-        return "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or Volume)";
+        return _tr( "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or Volume)" );
 #else
     if ( !getSaveInfo( objs ) )
-        return "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)";
+        return _tr( "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)" );
 #endif
     return "";
 }
@@ -659,7 +660,7 @@ bool SaveObjectMenuItem::action()
             const auto prefix = ( stem == objs[0]->name() ) ? std::string{} : ( stem + "_" );
             const auto ext = utf8string( savePath0.extension() );
             if ( ext.empty() )
-                return [] { showError( "File name is not set" ); };
+                return [] { showError( _tr( "File name is not set" ) ); };
 
             std::vector<std::filesystem::path> savePaths;
             std::unordered_set<std::string> usedNames;
@@ -755,17 +756,17 @@ bool SaveSelectedMenuItem::action()
         ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, rootShallowClone]()->std::function<void()>
         {
             auto res = ObjectSave::toAnySupportedSceneFormat( *rootShallowClone, savePath,
-                {
+                { {
                     .lengthUnit = UnitSettings::getActualModelLengthUnit(),
                     .progress = ProgressBar::callBackSetProgress
-                } );
+                } } );
 
             return[savePath, res]()
             {
                 if ( res )
                     getViewerInstance().recentFilesStore().storeFile(savePath);
                 else
-                    showError( "Error saving selected: " + res.error() );
+                    showError( s_tr( "Error saving selected:" ) + " " + res.error() );
             };
         } );
     }
@@ -784,7 +785,7 @@ bool SaveSelectedMenuItem::action()
                 if ( res.has_value() )
                     getViewerInstance().recentFilesStore().storeFile( savePath );
                 else
-                    showError( "Error saving selected: " + res.error() );
+                    showError( s_tr( "Error saving selected:" ) + " " + res.error() );
             };
         } );
     }
@@ -801,20 +802,20 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
     {
         if ( savePath.extension().empty() )
-            return [] { showError( "File name is not set" ); };
+            return [] { showError( _tr( "File name is not set" ) ); };
 
         auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath,
-            {
+            { {
                 .lengthUnit = UnitSettings::getActualModelLengthUnit(),
                 .progress = ProgressBar::callBackSetProgress
-            } );
+            } } );
 
         return[savePath, res]()
         {
             if ( res )
                 getViewerInstance().onSceneSaved( savePath );
             else
-                showError( "Error saving scene: " + res.error() );
+                showError( s_tr( "Error saving scene:" ) + " " + res.error() );
         };
     } );
 }
@@ -849,7 +850,7 @@ bool SaveSceneAsMenuItem::action()
 std::string SaveSceneAsMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
-        return "Scene is empty - nothing to save";
+        return _tr( "Scene is empty - nothing to save" );
     return {};
 }
 
@@ -883,10 +884,10 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
     if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
-    UI::drag<PixelSizeUnit>( "Width", resolution_.x, 1, 256 );
-    UI::drag<PixelSizeUnit>( "Height", resolution_.y, 1, 256 );
-    UI::checkbox( "Transparent Background", &transparentBg_ );
-    if ( UI::button( "Capture", ImVec2( -1, 0 ) ) )
+    UI::drag<PixelSizeUnit>( _tr( "Width" ), resolution_.x, 1, 256 );
+    UI::drag<PixelSizeUnit>( _tr( "Height" ), resolution_.y, 1, 256 );
+    UI::checkbox( _tr( "Transparent Background" ), &transparentBg_ );
+    if ( UI::button( _tr( "Capture" ), ImVec2( -1, 0 ) ) )
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
@@ -923,7 +924,7 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
             }
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
-                showError( "Error saving screenshot: " + res.error() );
+                showError( s_tr( "Error saving screenshot:" ) + " " + res.error() );
         }
     }
     ImGui::EndCustomStatePlugin();
@@ -950,7 +951,7 @@ bool CaptureUIScreenshotMenuItem::action()
         {
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
-                showError( "Error saving screenshot: " + res.error() );
+                showError( s_tr( "Error saving screenshot:" ) + " " + res.error() );
         }
     } );
     return false;
@@ -964,7 +965,7 @@ CaptureScreenshotToClipBoardMenuItem::CaptureScreenshotToClipBoardMenuItem() :
 std::string CaptureScreenshotToClipBoardMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
 #if defined( __EMSCRIPTEN__ )
-    return "This function is not currently supported in web edition";
+    return _tr( "This function is not currently supported in web edition" );
 #else
     return "";
 #endif

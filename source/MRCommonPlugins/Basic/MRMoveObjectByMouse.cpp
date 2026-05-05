@@ -9,6 +9,7 @@
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/ImGuiMenu.h"
+#include "MRViewer/MRI18n.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -57,30 +58,30 @@ void MoveObjectByMouse::drawDialog( ImGuiContext*)
 
     if ( int( moveByMouse_.modXfMode ) == int( XfMode::Scale ) )
     {
-        ImGui::Text( "Drag object with LMB to uniform scale\nRMB - non-uniform" );
+        ImGui::Text( "%s", _tr( "Drag object with LMB to uniform scale\nRMB - non-uniform" ) );
     }
     else if ( int( moveByMouse_.modXfMode ) == int( XfMode::Rotate ) )
     {
-        ImGui::Text( "Drag object with LMB to rotate\n" );
+        ImGui::Text( "%s", _tr( "Drag object with LMB to rotate\n" ) );
     }
     else
     {
-        ImGui::Text( "Drag object with LMB to move\n" );
+        ImGui::Text( "%s", _tr( "Drag object with LMB to move\n" ) );
     }
 
     ImGui::Separator();
 
-    ImGui::Text( "Mode:" );
-    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode, int( XfMode::Move ),   0,                          UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
+    ImGui::Text( "%s", _tr( "Mode:" ) );
+    UI::radioButtonOrModifier( _tr( "Move" ),   moveByMouse_.modXfMode, int( XfMode::Move ),   0,                          UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode, int( XfMode::Rotate ), UI::getImGuiModPrimaryCtrl(), UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( _tr( "Rotate" ), moveByMouse_.modXfMode, int( XfMode::Rotate ), UI::getImGuiModPrimaryCtrl(), UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,               UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( _tr( "Scale" ),  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,               UI::getImGuiModPrimaryCtrl() | ImGuiMod_Alt );
 
-    ImGui::Text( "Target:" );
-    UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
+    ImGui::Text( "%s", _tr( "Target:" ) );
+    UI::radioButtonOrModifier( _tr( "Picked object" ),      moveByMouse_.modXfTarget, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Selected object(s)", moveByMouse_.modXfTarget, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
+    UI::radioButtonOrModifier( _tr( "Selected object(s)" ), moveByMouse_.modXfTarget, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
 
     ImGui::EndCustomStatePlugin();
 }

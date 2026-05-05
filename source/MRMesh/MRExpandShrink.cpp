@@ -1,5 +1,6 @@
 #include "MRExpandShrink.h"
 #include "MREdgePaths.h"
+#include "MREdgeMetric.h"
 #include "MRTimer.h"
 #include "MRMeshTopology.h"
 #include "MRBitSetParallelFor.h"

@@ -66,14 +66,18 @@ struct FixMeshDegeneraciesParams
         RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
     } mode{ Mode::Remesh };
 
+    /// trying to stay close to initial surface when patching
+    /// also disables smoothing on patch
+    bool mimicPatch = false;
+
     ProgressCallback cb;
 };
 
 /// Fixes degenerate faces and short edges in mesh (changes topology)
 MRMESH_API Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params );
 
-/// finds vertices in region with complete ring of N edges
-[[nodiscard]] MRMESH_API VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );
+/// finds all inner vertices in region with the given number of incident edges each
+[[nodiscard]] MRMESH_API VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );
 
 /// returns true if the edge e has both left and right triangular faces and the degree of dest( e ) is 2
 [[nodiscard]] MRMESH_API bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e );

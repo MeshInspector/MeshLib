@@ -22,6 +22,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRJson.h"
+#include "MRViewer/MRI18n.h"
 #include <fstream>
 
 #ifndef MESHLIB_NO_VOXELS
@@ -46,22 +47,22 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
 
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushItemWidth( 220.0f * UI::scale() );
-    UI::combo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( _tr( "Ribbon theme preset" ), &selectedUserPreset_, userThemesPresets_ );
     if ( selectedUserPreset_ != selectedUserIdxBackup )
         update_();
     ImGui::Separator();
 
-    ImGui::Text( "Scene colors:" );
+    ImGui::Text( "%s", _tr( "Scene colors:" ) );
     for ( int i = 0; i < sceneColors_.size(); ++i )
         ImGui::ColorEdit4( SceneColors::getName( SceneColors::Type( i ) ), &sceneColors_[i].x );
     ImGui::Separator();
 
-    ImGui::Text( "UI colors:" );
+    ImGui::Text( "%s", _tr( "UI colors:" ) );
     for ( int i = 0; i < ribbonColors_.size(); ++i )
         ImGui::ColorEdit4( ColorTheme::getRibbonColorTypeName( ColorTheme::RibbonColorsType( i ) ), &ribbonColors_[i].x );
     ImGui::Separator();
 
-    ImGui::Text( "Viewport colors:" );
+    ImGui::Text( "%s", _tr( "Viewport colors:" ) );
     for ( int i = 0; i < viewportColors_.size(); ++i )
     {
         std::string label = ColorTheme::getViewportColorTypeName( ColorTheme::ViewportColorsType( i ) ) +
@@ -71,17 +72,17 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
     ImGui::Separator();
 
     ImGui::Separator();
-    ImGui::Text( "ImGui preset:" );
-    UI::radioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
+    ImGui::Text( "%s", _tr( "ImGui preset:" ) );
+    UI::radioButton( _tr( "Dark" ), ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
     ImGui::SameLine();
-    UI::radioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
+    UI::radioButton( _tr( "Light" ), ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
 
     ImGui::Separator();
-    UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
+    UI::checkbox( _tr( "Apply to new objects only" ), &applyToNewObjectsOnly_ );
     ImGui::SetNextItemWidth( 150.0f * UI::scale() );
-    UI::inputText( "Theme name", themeName_ );
+    UI::inputText( _tr( "Theme name" ), themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
-    if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
+    if ( UI::button( _tr( "Apply & Save" ), valid, Vector2f( -1, 0 ) ) )
     {
         std::error_code ec;
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
@@ -99,14 +100,15 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
     }
     if ( !valid )
     {
-        UI::setTooltipIfHovered( themeName_.empty() ?
-            "Cannot save theme with empty name" :
-            "Please do not use any of these symbols: \? * / \\ \" < >" );
+        if ( themeName_.empty() )
+            UI::setTooltipIfHovered( _tr( "Cannot save theme with empty name" ) );
+        else
+            UI::setTooltipIfHovered( s_tr( "Please do not use any of these symbols" ) + ": \? * / \\ \" < >" );
     }
 
     ModalDialog modalDialog( "File already exists", {
-        .headline = "File already exists",
-        .text = "Theme with name " + themeName_ + " already exists, override it?",
+        .headline = _tr( "File already exists" ),
+        .text = fmt::format( f_tr( "Theme with name {} already exists, override it?" ), themeName_ ),
     } );
     if ( modalDialog.beginPopup() )
     {
@@ -116,7 +118,7 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
         const float p = ImGui::GetStyle().ItemSpacing.x;
         const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
 
-        if ( UI::buttonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( _tr( "Save" ), btnSize, ImGuiKey_Enter ) )
         {
             auto error = save_();
             if ( error.empty() )
@@ -125,7 +127,7 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
                 showError( error );
         }
         ImGui::SameLine( 0, p );
-        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( _tr( "Cancel" ), btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -142,7 +144,7 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
 std::string AddCustomThemePlugin::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !ColorTheme::isInitialized() )
-        return "Color theme is not initialized";
+        return _tr( "Color theme is not initialized" );
     return "";
 }
 
@@ -272,7 +274,7 @@ std::string AddCustomThemePlugin::save_()
         if ( !serializeJsonValue( makeJson_(), saveDir ) )
         {
             spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( saveDir ) );
-            return "Cannot save theme with name: \"" + themeName_ + "\"";
+            return fmt::format( "{}: \"{}\"", _tr( "Cannot save theme with name" ), themeName_ );
         }
     }
 

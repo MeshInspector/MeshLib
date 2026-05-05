@@ -234,7 +234,7 @@ void init()
 
 ImGuiKey getImGuiModPrimaryCtrl()
 {
-    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL || 
+    if ( getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL ||
         ( getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER && ImGui::GetIO().ConfigMacOSXBehaviors ) ) // In new version of ImGui ImGuiMod_Ctrl is already swapped with ImGuiMod_Super internally, so we don't swap it on our end
     {
         return ImGuiMod_Ctrl;
@@ -253,7 +253,11 @@ const char* getImGuiPrimaryCtrlName()
 
 bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
-    bool simulateClick = customParams.enableTestEngine && TestEngine::createButton( customParams.testEngineName.empty() ? label : customParams.testEngineName );
+    TestEngine::EntryAttributes attrs;
+    if ( !customParams.enabled )
+        attrs.disabledReason = "inactive";
+    bool simulateClick = customParams.enableTestEngine && TestEngine::createButton(
+        customParams.testEngineName.empty() ? label : customParams.testEngineName, attrs );
     assert( ( simulateClick <= customParams.enabled ) && "Trying to programmatically press a button, but it's inactive!" );
     if ( !customParams.enabled )
         simulateClick = false;
@@ -355,7 +359,6 @@ bool buttonEx( const char* label, bool active, const Vector2f& size /*= Vector2f
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-    const auto menu = ImGuiMenu::instance();
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * UI::scale() ) );
 
@@ -371,8 +374,6 @@ bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
 {
-    const auto menu = ImGuiMenu::instance();
-
     Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
@@ -707,7 +708,6 @@ bool toggle( const char* label, bool* value )
         return false;
     const ImGuiStyle& style = ImGui::GetStyle();
 
-    const auto menu = ImGuiMenu::instance();
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
     sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
@@ -761,8 +761,6 @@ bool toggle( const char* label, bool* value )
 static bool checkboxWithoutTestEngine( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-
-    const auto menu = ImGuiMenu::instance();
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
@@ -1004,9 +1002,11 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
 
 bool radioButton( const char* label, int* value, int valButton )
 {
-    const ImGuiStyle& style = ImGui::GetStyle();
+    const bool simulateClick = TestEngine::createButton( label );
+    if ( simulateClick )
+        *value = valButton;
 
-    const auto menu = ImGuiMenu::instance();
+    const ImGuiStyle& style = ImGui::GetStyle();
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * UI::scale(), style.ItemInnerSpacing.y * UI::scale() ) );
@@ -1050,7 +1050,6 @@ bool radioButton( const char* label, int* value, int valButton )
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
-        const auto menu = ImGuiMenu::instance();
         const ImVec2 pos = window->DC.CursorPos;
         const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
         const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
@@ -1097,9 +1096,7 @@ bool radioButton( const char* label, int* value, int valButton )
         return pressed;
     };
 
-    auto res = drawCustomRadioButton( label, value, valButton );
-
-    return res;
+    return drawCustomRadioButton( label, value, valButton ) || simulateClick;
 }
 
 bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std::optional<int> valueOverride )
@@ -1518,6 +1515,8 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     for ( int i = 0; i < int( options.size() ); ++i )
     {
         ImGui::PushID( ( label + std::to_string( i ) ).c_str() );
+
+        // Not using `comboElem()`, because that would add Test Engine integration, and we already have our own here.
         if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
         {
             selected = true;
@@ -1536,7 +1535,29 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     return selected || valueOverridden;
 }
 
-bool beginCombo( const char* label, const std::string& text /*= "Not selected" */, bool showPreview /*= true*/ )
+
+namespace
+{
+    struct ActiveCombo
+    {
+        std::string label;
+        std::string value;
+
+        std::optional<std::string> simulateClickForElem;
+
+        // Don't render the UI, but collect the calls to `comboElem()`, and possibly override their return values.
+        bool uiIsHidden = false;
+
+        bool testEngineEnabled = false;
+
+        // This could eventually be made a set. Then you'd need to change `allowedValue` in the test engine to a set too.
+        std::vector<std::string> collectedElems;
+    };
+
+    thread_local std::vector<ActiveCombo> activeCombos;
+}
+
+bool beginCombo( const char* label, const std::string& text, bool enableTestEngine /*= true*/ )
 {
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, StyleConsts::CustomCombo::framePadding );
@@ -1546,18 +1567,13 @@ bool beginCombo( const char* label, const std::string& text /*= "Not selected" *
     const auto& style = ImGui::GetStyle();
     const ImVec2 pos = window->DC.CursorPos;
     const float arrowSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight();
-    if ( !showPreview )
-        ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
     float itemWidth = ( context->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
     auto res = ImGui::BeginCombo( label, nullptr, ImGuiComboFlags_NoArrowButton );
-    if ( showPreview )
-    {
-        ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, text.c_str(), nullptr, nullptr );
-    }
+    ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, text.c_str(), nullptr, nullptr );
 
     const float halfHeight = arrowBox.GetHeight() * 0.5f;
     const float arrowHeight = arrowBox.GetHeight() * 5.0f / 42.0f;
@@ -1572,15 +1588,70 @@ bool beginCombo( const char* label, const std::string& text /*= "Not selected" *
 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 
+    { // Test engine integration.
+        ActiveCombo &activeCombo = activeCombos.emplace_back();
+        activeCombo.label = label;
+        activeCombo.value = text;
+
+        if ( enableTestEngine )
+        {
+            activeCombo.simulateClickForElem = TestEngine::createValueTentative<std::string>( label );
+            activeCombo.uiIsHidden = !res;
+            activeCombo.testEngineEnabled = true;
+
+            // Force return true to discover the contents.
+            res = true;
+        }
+    }
+
     return res;
 }
 
-void endCombo( bool showPreview /*= true*/ )
+void endCombo()
 {
-    ImGui::EndCombo();
-    if ( !showPreview )
-        ImGui::PopItemWidth();
+    bool callEndCombo = true;
+
+    { // Test engine integration.
+        assert( !activeCombos.empty() );
+        ActiveCombo& active = activeCombos.back();
+
+        // This assert shouldn't happen often, since we also collect the list of known elements and give them to the test engine.
+        // I think this can only trigger if the offending element disappears from the list on the same frame as it's clicked through the test engine.
+        assert( !active.simulateClickForElem && "A non-existing element was clicked through the test engine." );
+
+        if ( active.testEngineEnabled )
+            (void)TestEngine::createValue( active.label, active.value, true, active.collectedElems );
+
+        callEndCombo = !active.uiIsHidden;
+
+        activeCombos.pop_back();
+    }
+
+    if ( callEndCombo )
+        ImGui::EndCombo();
 }
+
+bool comboElem( const char* label, bool selected )
+{
+    assert( !activeCombos.empty() );
+
+    ActiveCombo& active = activeCombos.back();
+    if ( active.testEngineEnabled )
+        active.collectedElems.push_back( label );
+
+    bool ret = false;
+    if ( active.simulateClickForElem && *active.simulateClickForElem == label )
+    {
+        ret = true;
+        active.simulateClickForElem = {};
+    }
+
+    if ( !active.uiIsHidden && ImGui::Selectable( label, selected ) )
+        ret = true;
+
+    return ret;
+}
+
 
 // copied from ImGui::SliderScalar with some visual changes
 bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags )
@@ -1699,8 +1770,7 @@ static void drawDragCursor()
     auto mousePos = ImGui::GetMousePos();
     mousePos.x += 5.f;
 
-    const auto menuPlugin = MR::ImGuiMenu::instance();
-    const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
+    const float scale = UI::scale();
 
     const float spaceX = 10 * scale;
     const float sizeX = 12 * scale;

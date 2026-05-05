@@ -1,6 +1,7 @@
 project(MRViewer CXX)
 
 option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux)" OFF)
+option(MRVIEWER_NO_LOCALE "Disable i18n support" OFF)
 option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
 option(MRVIEWER_NO_XDG_DESKTOP_PORTAL "Disable XDG Desktop Portal support (affects file dialog support on Linux)" OFF)
 option(MRVIEWER_WITH_BUNDLED_CURL "Link with cURL for extra functions required for portable Linux builds" OFF)
@@ -48,6 +49,10 @@ target_link_libraries(${PROJECT_NAME}
 
 IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
+  # remove explicit macOS SDK include dir to fix Clang and system libc++ mismatch
+  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set_target_properties(CURL::libcurl PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+  endif()
 
   # prefer config over module for vcpkg compatibility
   set(CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV ${CMAKE_FIND_PACKAGE_PREFER_CONFIG})
@@ -101,8 +106,19 @@ IF(NOT MRVIEWER_NO_VOXELS)
   target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
 ENDIF()
 
+IF(NOT MRVIEWER_NO_LOCALE)
+  find_package(Boost COMPONENTS locale REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Boost::locale)
+ENDIF()
+
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()
+
+IF(MESHLIB_BUILD_MCP)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRMcp)
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
 ENDIF()
 
 file(GLOB JSONS "*.json")

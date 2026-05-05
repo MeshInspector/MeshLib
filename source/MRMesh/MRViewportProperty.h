@@ -18,6 +18,7 @@ class ViewportProperty
 public:
     ViewportProperty() = default;
     ViewportProperty( const T& def ) :def_{ def } {}
+    bool operator==( const ViewportProperty& ) const = default;
     /// sets default property value
     void set( T def ) { def_ = std::move( def ); }
     /// gets default property value

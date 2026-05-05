@@ -15,6 +15,7 @@ if(EMSCRIPTEN)
   find_package(MbedTLS 1.0 REQUIRED)
   find_package(ZLIB REQUIRED)
   find_dependency(libzip)
+  find_dependency(zlib-ng)
 
   set(MRMESH_NO_GTEST @MRMESH_NO_GTEST@)
   if(NOT MRMESH_NO_GTEST)

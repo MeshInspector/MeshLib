@@ -44,6 +44,7 @@ COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/
 
 COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=build /home/MeshLib/share /usr/local/lib/meshlib-thirdparty-lib/share
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -55,7 +56,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/install_apt_cuda.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
@@ -66,20 +67,6 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -y gh g++-12 clang-14 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-
-# update cmake
-RUN apt remove --purge --auto-remove -y cmake \
- && apt update \
- && apt install -y software-properties-common lsb-release \
- && apt clean all \
- && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
- && apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA \
- && apt update \
- && apt install -y kitware-archive-keyring \
- && rm /etc/apt/trusted.gpg.d/kitware.gpg \
- && apt update \
- && apt install -y cmake
 
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \

@@ -1,8 +1,12 @@
 #include "MRViewerSettingsPlugin.h"
+#ifndef MESHLIB_NO_MCP
+#include "MRMcp/MRMcp.h"
+#endif
 #include "MRRibbonMenu.h"
 #include "ImGuiHelpers.h"
 #include "MRColorTheme.h"
 #include "MRMouseController.h"
+#include "MRViewer/MRMcpSettings.h"
 #include "MRViewport.h"
 #include "MRFileDialog.h"
 #include "MRModalDialog.h"
@@ -38,19 +42,25 @@
 #include "MRViewerConfigConstants.h"
 #include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
+#include "MRI18n.h"
+#include "MRLocale.h"
+#include "MRRibbonFontHolder.h"
 
 namespace
 {
 const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
 {
-    constexpr std::array<const char*, size_t( MR::ViewerSettingsPlugin::TabType::Count )> tabNames{
-        "Quick",
-        "Application",
-        "Control",
-        "3D View",
-        "Units",
-        "Features",
+    constexpr const char* tabNames[] = {
+        _t( "Quick" ),
+        _t( "Application" ),
+        _t( "Control" ),
+        _t( "3D View" ),
+        _t( "Units" ),
+        _t( "MCP" ),
+        _t( "Features" ),
     };
+    static_assert( std::extent_v<decltype( tabNames )> == size_t( MR::ViewerSettingsPlugin::TabType::Count ) );
+
     return tabNames[int( tab )];
 }
 }
@@ -74,7 +84,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
             gpuOverridesMSAA_ = storedSamples_ != viewer.getRequestedMSAA(); // if it fails on application start - gpu overrides settings
 #ifdef __EMSCRIPTEN__
             if ( !viewer.isSceneTextureEnabled() )
-                maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more then x4 msaa for main framebuffer
+                maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more than x4 msaa for main framebuffer
 #endif
         }
     }, CommandLoop::StartPosition::AfterWindowAppear );
@@ -82,7 +92,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 
 void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 400.0f * UI::scale();
+    auto menuWidth = 440.0f * UI::scale();
 
     ImVec2 position = ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f ) );
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .position = &position } ) )
@@ -103,13 +113,13 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
             }
             auto tab = TabType( i );
             bool neetToSelect = orderedTab_ == tab;
-            if ( UI::beginTabItem( getViewerSettingTabName( tab ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
+            if ( UI::beginTabItem( _tr( getViewerSettingTabName( tab ) ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
             {
                 if ( neetToSelect )
                     orderedTab_ = TabType::Count;
                 activeTab_ = tab;
                 drawTab_( menuWidth );
-                drawCustomSettings_( "Tools", true );
+                drawCustomSettings_( _t( "Tools" ), true );
                 UI::endTabItem();
             }
         }
@@ -123,8 +133,8 @@ void ViewerSettingsPlugin::updateThemes()
 {
     selectedUserPreset_ = -1;
     userThemesPresets_.clear();
-    userThemesPresets_.push_back( "Dark" );
-    userThemesPresets_.push_back( "Light" );
+    userThemesPresets_.push_back( _t( "Dark" ) );
+    userThemesPresets_.push_back( _t( "Light" ) );
     auto colorThemeType = ColorTheme::getThemeType();
     auto colorThemeName = ColorTheme::getThemeName();
     if ( colorThemeType == ColorTheme::Type::Default )
@@ -226,6 +236,9 @@ void ViewerSettingsPlugin::drawTab_( float menuWidth )
     case MR::ViewerSettingsPlugin::TabType::MeasurementUnits:
         drawMeasurementUnitsTab_();
         break;
+    case MR::ViewerSettingsPlugin::TabType::Mcp:
+        drawMcpTab_();
+        break;
     case MR::ViewerSettingsPlugin::TabType::Features:
         drawFeaturesTab_();
         break;
@@ -241,7 +254,9 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     if ( !ribbonMenu )
         return;
 
-    drawSeparator_( "General" );
+    drawSeparator_( _t( "General" ) );
+
+    drawLanguageSelector_();
 
     drawThemeSelector_();
 
@@ -254,10 +269,10 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     ImGui::PopStyleVar();
 
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
-    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+    if ( UI::button( _tr( "Toolbar Customize" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();
     ImGui::SameLine();
-    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+    if ( UI::button( _tr( "Show Hotkeys" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->setShowShortcuts( true );
 
     drawMouseSceneControlsSettings_( menuWidth );
@@ -265,9 +280,9 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
 
 void ViewerSettingsPlugin::drawGlobalSettings_( float buttonWidth )
 {
-    drawSeparator_( "Global" );
+    drawSeparator_( _t( "Global" ) );
 
-    bool resetClicked = UI::button( "Reset Settings", Vector2f( buttonWidth, 0 ) );
+    bool resetClicked = UI::button( _tr( "Reset Settings" ), Vector2f( buttonWidth, 0 ) );
     drawResetDialog_( resetClicked );
 }
 
@@ -278,14 +293,16 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         return;
     const float btnHalfSizeX = 168.0f * UI::scale();
 
-    drawSeparator_( "Interface" );
+    drawSeparator_( _t( "Interface" ) );
+
+    drawLanguageSelector_();
 
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     drawThemeSelector_();
 
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
-    UI::drag<RatioUnit>( "UI Scale", tempUserScaling_, 0.01f, 0.5f, 4.0f );
+    UI::drag<RatioUnit>( _tr( "UI Scale" ), tempUserScaling_, 0.01f, 0.5f, 4.0f );
     if ( ImGui::IsItemDeactivatedAfterEdit() )
     {
         viewer->getMenuPlugin()->setUserScaling( tempUserScaling_ );
@@ -294,8 +311,8 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
 
     bool savedDialogsBackUp = viewer->getMenuPlugin()->isSavedDialogPositionsEnabled();
     bool savedDialogsVal = savedDialogsBackUp;
-    UI::checkbox( "Save Tool Window Positions", &savedDialogsVal );
-    UI::setTooltipIfHovered( "If checked then enables using of saved positions of tool windows in the config file" );
+    UI::checkbox( _tr( "Save Tool Window Positions" ), &savedDialogsVal );
+    UI::setTooltipIfHovered( _tr( "If checked then enables using of saved positions of tool windows in the config file" ) );
     ImGui::PopStyleVar();
 
     if ( savedDialogsVal != savedDialogsBackUp )
@@ -305,15 +322,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     {
         auto& config = Config::instance();
         bool value = config.getBool( cDefaultMultiViewportKey, true );
-        if ( UI::checkbox( "Enable multi-windows", &value ) )
+        if ( UI::checkbox( _tr( "Enable multi-windows" ), &value ) )
             config.setBool( cDefaultMultiViewportKey, value );
-        UI::setTooltipIfHovered( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." );
+        UI::setTooltipIfHovered( _tr( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." ) );
     }
 
-    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+    if ( UI::button( _tr( "Toolbar Customize" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();
 
-    drawSeparator_( "Behavior" );
+    drawSeparator_( _t( "Behavior" ) );
 
     ImGui::SetNextItemWidth( menuWidth * 0.5f );
     if ( ribbonMenu )
@@ -321,43 +338,43 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         auto sceneObjectsListDrawer = ribbonMenu->getSceneObjectsList();
         if ( sceneObjectsListDrawer )
         {
-            UI::checkbox( "Make Visible on Select",
+            UI::checkbox( _tr( "Make Visible on Select" ),
                                                     std::bind( &SceneObjectsListDrawer::getShowNewSelectedObjects, sceneObjectsListDrawer ),
                                                     std::bind( &SceneObjectsListDrawer::setShowNewSelectedObjects, sceneObjectsListDrawer, std::placeholders::_1 ) );
-            UI::checkbox( "Deselect on Hide",
+            UI::checkbox( _tr( "Deselect on Hide" ),
                                                     std::bind( &SceneObjectsListDrawer::getDeselectNewHiddenObjects, sceneObjectsListDrawer ),
                                                     std::bind( &SceneObjectsListDrawer::setDeselectNewHiddenObjects, sceneObjectsListDrawer, std::placeholders::_1 ) );
 
             if ( auto ribbonSceneObjectsListDrawer = std::dynamic_pointer_cast< RibbonSceneObjectsListDrawer >( sceneObjectsListDrawer ) )
             {
-                UI::checkbox( "Close Context Menu on Click",
+                UI::checkbox( _tr( "Close Context Menu on Click" ),
                                                         std::bind( &RibbonSceneObjectsListDrawer::getCloseContextOnChange, ribbonSceneObjectsListDrawer ),
                                                         std::bind( &RibbonSceneObjectsListDrawer::setCloseContextOnChange, ribbonSceneObjectsListDrawer, std::placeholders::_1 ) );
-                UI::setTooltipIfHovered( "Close scene context menu on any change or click outside" );
+                UI::setTooltipIfHovered( _tr( "Close scene context menu on any change or click outside" ) );
             }
         }
 
-        UI::checkbox( "Auto Close Previous Tool",
+        UI::checkbox( _tr( "Auto Close Previous Tool" ),
                                                 std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu ),
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated" );
+        UI::setTooltipIfHovered( _tr( "Automatically close blocking tool when another blocking tool is activated" ) );
 
-        UI::checkbox( "Sort Dropped Files",
+        UI::checkbox( _tr( "Sort Dropped Files" ),
                                                 std::bind( &Viewer::getSortDroppedFiles, viewer ),
                                                 std::bind( &Viewer::setSortDroppedFiles, viewer, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene" );
+        UI::setTooltipIfHovered( _tr( "Whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene" ) );
 
-        UI::checkbox( "Show Experimental Features", &viewer->experimentalFeatures );
-        UI::setTooltipIfHovered( "Show experimental or diagnostic tools and controls" );
+        UI::checkbox( _tr( "Show Experimental Features" ), &viewer->experimentalFeatures );
+        UI::setTooltipIfHovered( _tr( "Show experimental or diagnostic tools and controls" ) );
     }
 
     drawGlobalSettings_( btnHalfSizeX );
 
     if ( ribbonMenu )
     {
-        drawSeparator_( "Notifications" );
+        drawSeparator_( _t( "Notifications" ) );
 
-        UI::checkbox( "Time Reports", [&] ()
+        UI::checkbox( _tr( "Time Reports" ), [&] ()
         {
             return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::Report );
         }, [&] ( bool on )
@@ -367,9 +384,9 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
             else
                 ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::Report;
         } );
-        UI::setTooltipIfHovered( "Show duration of last operation of the application." );
+        UI::setTooltipIfHovered( _tr( "Show duration of last operation of the application." ) );
 
-        UI::checkbox( "Recommendations", [&] ()
+        UI::checkbox( _tr( "Recommendations" ), [&] ()
         {
             return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::Recommendation );
         }, [&] ( bool on )
@@ -379,9 +396,9 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
             else
                 ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::Recommendation;
         } );
-        UI::setTooltipIfHovered( "Show notifications with recommended actions." );
+        UI::setTooltipIfHovered( _tr( "Show notifications with recommended actions." ) );
 
-        UI::checkbox( "Implicit Changes", [&] ()
+        UI::checkbox( _tr( "Implicit Changes" ), [&] ()
         {
             return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::ImplicitChanges );
         }, [&] ( bool on )
@@ -391,9 +408,9 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
             else
                 ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::ImplicitChanges;
         } );
-        UI::setTooltipIfHovered( "Notify when some changes were made implicitly by the application. (mostly appear on import of non-manifold models)" );
+        UI::setTooltipIfHovered( _tr( "Notify when some changes were made implicitly by the application. (mostly appear on import of non-manifold models)" ) );
 
-        UI::checkbox( "Important", [&] ()
+        UI::checkbox( _tr( "Important" ), [&] ()
         {
             return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::Important );
         }, [&] ( bool on )
@@ -403,20 +420,20 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
             else
                 ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::Important;
         } );
-        UI::setTooltipIfHovered( "Show important messages about errors or warnings that could happen." );
+        UI::setTooltipIfHovered( _tr( "Show important messages about errors or warnings that could happen." ) );
     }
 
     drawMruInnerFormats_( menuWidth );
 
 #if 0 // Hide unimplemented settings
 #ifndef __EMSCRIPTEN__
-    drawSeparator_( "Files and Folders" );
+    drawSeparator_( _t( "Files and Folders" ) );
     // TODO
     static std::string logFolderPath = utf8string( Logger::instance().getLogFileName().parent_path() );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 1.5f * cButtonPadding * UI::scale(), cButtonPadding * UI::scale() } );
     UI::inputText( "##LogFolderPath", logFolderPath );
     ImGui::SameLine( 0, 1.5f * style.ItemInnerSpacing.x );
-    if ( ImGui::Link( "Logs folder") )
+    if ( ImGui::Link( _tr( "Logs folder" ) ) )
         OpenDocument( asU8String( logFolderPath ) );
     ImGui::PopStyleVar();
     ImGui::SameLine( 0.0f, 0.0f );
@@ -436,11 +453,11 @@ void ViewerSettingsPlugin::drawControlTab_( float menuWidth )
     auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
     if ( !ribbonMenu )
         return;
-    drawSeparator_( "Keyboard" );
+    drawSeparator_( _t( "Keyboard" ) );
 
     auto& style = ImGui::GetStyle();
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
-    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+    if ( UI::button( _tr( "Show Hotkeys" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->setShowShortcuts( true );
 
     drawMouseSceneControlsSettings_( menuWidth );
@@ -454,10 +471,10 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     const auto& viewportParameters = viewport.getParameters();
     const auto& style = ImGui::GetStyle();
 
-    drawSeparator_( "Viewport" );
+    drawSeparator_( _t( "Viewport" ) );
 
     if ( viewer->viewport_list.size() > 1 )
-        ImGui::Text( "Current viewport: %d", viewport.id.value() );
+        ImGui::Text( "%s: %d", _tr( "Current viewport" ), viewport.id.value() );
 
     ImGui::SetNextItemWidth( 170.0f * UI::scale() );
     auto rotMode = viewportParameters.rotationMode;
@@ -465,25 +482,25 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
+    UI::combo( _tr( "Rotation Mode" ), ( int* )&rotMode, { _tr( "Scene Center" ), _tr( "Pick / Scene Center" ), _tr( "Pick" ) } );
     viewport.rotationCenterMode( rotMode );
     ImGui::PopStyleVar();
 
     ImGui::PushItemWidth( 80 * UI::scale() );
 
     bool showAxes = viewer->basisAxes->isVisible( viewport.id );
-    UI::checkbox( "Show Axes", &showAxes );
+    UI::checkbox( _tr( "Show Axes" ), &showAxes );
     viewport.showAxes( showAxes );
     ImGui::SameLine();
 
     ImGui::SetCursorPosX( 155.0f * UI::scale() );
     bool showGlobalBasis = viewer->globalBasis->isVisible( viewport.id );
-    UI::checkbox( "Show Global Basis", &showGlobalBasis );
+    UI::checkbox( _tr( "Show Global Basis" ), &showGlobalBasis );
     viewport.showGlobalBasis( showGlobalBasis );
 
     ImGui::SameLine( 310 * UI::scale() );
     bool showGlobalBasisGrid = viewer->globalBasis->isGridVisible( viewport.id );
-    UI::checkboxValid( "Grid", &showGlobalBasisGrid, showGlobalBasis );
+    UI::checkboxValid( _tr( "Grid" ), &showGlobalBasisGrid, showGlobalBasis );
     viewer->globalBasis->setGridVisible( showGlobalBasisGrid, viewport.id );
 
     ImGui::PushItemWidth( 170 * UI::scale() );
@@ -491,18 +508,18 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
     if ( isAutoGlobalBasisSize )
     {
-        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
+        UI::readOnlyValue<LengthUnit>( _tr( "Global Basis Scale" ), viewportParameters.objectScale * 0.5f );
     }
     else
     {
         auto size = viewer->globalBasis->getAxesLength( viewport.id );
-        UI::drag<LengthUnit>( "Global Basis Scale", size, viewportParameters.objectScale * 0.01f, 1e-9f );
+        UI::drag<LengthUnit>( _tr( "Global Basis Scale" ), size, viewportParameters.objectScale * 0.01f, 1e-9f );
         viewer->globalBasis->setAxesProps( size, viewer->globalBasis->getAxesWidth( viewport.id ), viewport.id );
     }
     ImGui::PopStyleVar();
     ImGui::SameLine( 310 * UI::scale() );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * UI::scale() );
-    if ( UI::checkbox( "Auto", &isAutoGlobalBasisSize ) )
+    if ( UI::checkbox( _tr( "Auto" ), &isAutoGlobalBasisSize ) )
     {
         auto paramsCpy = viewportParameters;
         paramsCpy.globalBasisScaleMode = isAutoGlobalBasisSize ?
@@ -512,7 +529,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     }
 
     bool showRotCenter = viewer->rotationSphere->isVisible( viewport.id );
-    UI::checkbox( "Show Rotation Center", &showRotCenter );
+    UI::checkbox( _tr( "Show Rotation Center" ), &showRotCenter );
     viewport.showRotationCenter( showRotCenter );
 
     ImGui::PopItemWidth();
@@ -527,16 +544,16 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     auto coef = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
     ImGui::SetNextItemWidth( 170.0f * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::drag<NoUnit>( "Selected Highlight Modifier", coef, 0.01f, 1.0f, 10.0f ) )
+    if ( UI::drag<NoUnit>( _tr( "Selected Highlight Modifier" ), coef, 0.01f, 1.0f, 10.0f ) )
     {
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, coef );
     }
 
-    UI::setTooltipIfHovered( "Ambient light brightness multiplication factor for selected objects" );
+    UI::setTooltipIfHovered( _tr( "Ambient light brightness multiplication factor for selected objects" ) );
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    const bool showClippingPlane = viewer->experimentalFeatures && RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" );
+    const bool showClippingPlane = viewer->experimentalFeatures && RibbonButtonDrawer::CustomCollapsingHeader( _tr( "Clipping Plane" ) );
     ImGui::PopStyleVar();
 
     if ( showClippingPlane )
@@ -553,27 +570,28 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
         ImGui::SameLine();
         ImGui::PopStyleVar();
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * UI::scale() );
-        UI::checkbox( "Show##ClippingPlane", &showPlane );
+        const auto showClippingPlaneLabel = s_tr( "Show" ) + "##ClippingPlane";
+        UI::checkbox( showClippingPlaneLabel.c_str(), &showPlane );
         viewport.setClippingPlane( plane );
         viewport.showClippingPlane( showPlane );
     }
 
-    drawSeparator_( "Options" );
+    drawSeparator_( _t( "Options" ) );
 
     ImGui::SetNextItemWidth( 170.0f * UI::scale() );
     int pickRadius = int( getViewerInstance().glPickRadius );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::drag<PixelSizeUnit>( "Picker Radius", pickRadius, 1, 0, 10 );
+    UI::drag<PixelSizeUnit>( _tr( "Picker Radius" ), pickRadius, 1, 0, 10 );
     ImGui::PopStyleVar();
     getViewerInstance().glPickRadius = uint16_t( pickRadius );
-    UI::setTooltipIfHovered( "Radius of area under cursor to pick objects in scene." );
+    UI::setTooltipIfHovered( _tr( "Radius of area under cursor to pick objects in scene." ) );
 
-    drawSeparator_( "Defaults" );
+    drawSeparator_( _t( "Defaults" ) );
 
     drawShadingModeCombo_( true, 170.0f * UI::scale() );
     drawUpDirectionSelector_();
 
-    drawSeparator_( "Render" );
+    drawSeparator_( _t( "Render" ) );
 
     drawRenderOptions_();
     drawShadowsOptions_( menuWidth );
@@ -586,15 +604,15 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
     static constexpr int cMaxPrecision = 9;
 
     { // Common.
-        drawSeparator_( "Common" );
+        drawSeparator_( _t( "Common" ) );
 
         // --- Leading zero
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
         bool value = UnitSettings::getShowLeadingZero();
-        if ( UI::checkbox( "Leading zero", &value ) )
+        if ( UI::checkbox( _tr( "Leading zero" ), &value ) )
             UnitSettings::setShowLeadingZero( value );
-        UI::setTooltipIfHovered( "If disabled, remove the lone zeroes before the decimal point." );
+        UI::setTooltipIfHovered( _tr( "If disabled, remove the lone zeroes before the decimal point." ) );
         ImGui::PopStyleVar();
 
         // --- Thousands separator
@@ -606,23 +624,23 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * UI::scale() ) );
         MR_FINALLY{ ImGui::PopStyleVar(); };
 
-        if ( UI::inputTextIntoArray( "Thousands Separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
+        if ( UI::inputTextIntoArray( _tr( "Thousands Separator" ), thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
             UnitSettings::setThousandsSeparator( thouSep[0] );
-        UI::setTooltipIfHovered( "A symbol used to separate groups of thousands in large numbers to make them easier to read." );
+        UI::setTooltipIfHovered( _tr( "A symbol used to separate groups of thousands in large numbers to make them easier to read." ) );
 
         // If the separator is empty or a space, display a string explaining that on top of the textbox.
         if ( !ImGui::IsItemActive() )
         {
-            const char* label = nullptr;
+            std::string label;
             if ( thouSep[0] == 0 )
-                label = "None";
+                label = s_tr( "None" );
             else if ( thouSep[0] == ' ' )
-                label = "Space";
+                label = s_tr( "Space" );
 
-            if ( label )
+            if ( !label.empty() )
             {
-                ImVec2 textSize = ImGui::CalcTextSize( label );
-                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
+                ImVec2 textSize = ImGui::CalcTextSize( label.c_str() );
+                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label.c_str() );
             }
         }
     }
@@ -630,7 +648,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
     { // Length.
         ImGui::PushItemWidth( 170.0f * UI::scale() );
-        drawSeparator_( "Linear" );
+        drawSeparator_( _t( "Linear" ) );
 
         ImGui::PushID( "length" );
         MR_FINALLY{ ImGui::PopID(); };
@@ -650,32 +668,34 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         int targetOption = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        static const std::vector<std::string> uiLengthUnitNames = makeLengthUnitsVec( "No Units" );
-        if ( UI::combo( "UI Units##length", &targetOption, uiLengthUnitNames ) )
+        static const std::vector<std::string> uiLengthUnitNames = makeLengthUnitsVec( _t( "No Units" ) );
+        const auto uiUnitsLengthLabel = s_tr( "UI Units" ) + "##length";
+        if ( UI::combo( uiUnitsLengthLabel.c_str(), &targetOption, Locale::translateAll( uiLengthUnitNames ) ) )
         {
             if ( targetOption == int( LengthUnit::_count ) )
                 UnitSettings::setUiLengthUnit( {}, true );
             else
                 UnitSettings::setUiLengthUnit( LengthUnit( targetOption ), true );
         }
-        UI::setTooltipIfHovered( "It selects length units to be show in the user interface. If model units are different, then stored values will be automatically converted when shown in UI." );
+        UI::setTooltipIfHovered( _tr( "It selects length units to be show in the user interface. If model units are different, then stored values will be automatically converted when shown in UI." ) );
 
         int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
-        static const std::vector<std::string> modelLengthUnitNames = makeLengthUnitsVec( "Same as UI Units" );
-        if ( UI::combo( "Model Units##length", &sourceOption, modelLengthUnitNames ) )
+        static const std::vector<std::string> modelLengthUnitNames = makeLengthUnitsVec( _t( "Same as UI Units" ) );
+        const auto modelUnitsLengthLabel = s_tr( "Model Units" ) + "##length";
+        if ( UI::combo( modelUnitsLengthLabel.c_str(), &sourceOption, Locale::translateAll( modelLengthUnitNames ) ) )
         {
             if ( sourceOption == int( LengthUnit::_count ) )
                 UnitSettings::setModelLengthUnit( {} );
             else
                 UnitSettings::setModelLengthUnit( LengthUnit( sourceOption ) );
         }
-        UI::setTooltipIfHovered( "It selects length units of model's actual values (e.g. coordinates of points stored in memory). And it affects on importing and exporting of data." );
+        UI::setTooltipIfHovered( _tr( "It selects length units of model's actual values (e.g. coordinates of points stored in memory). And it affects on importing and exporting of data." ) );
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();
-        if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, cMaxPrecision ) )
+        if ( UI::drag<NoUnit>( ( s_tr( "Precision" ) + "##length" ).c_str(), precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiLengthPrecision( precision );
-        UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for length measurements." );
+        UI::setTooltipIfHovered( _tr( "The number of digits to be shown after decimal point for length measurements." ) );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -683,7 +703,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
     { // Angle.
         ImGui::PushItemWidth( 170.0f * UI::scale() );
-        drawSeparator_( "Angular" );
+        drawSeparator_( _t( "Angular" ) );
 
         static const std::vector<std::string> flavorOptions = []{
             std::vector<std::string> ret;
@@ -698,9 +718,10 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
         // Degree mode.
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-        if ( UI::combo( "Units##angle", &flavorOption, flavorOptions ) )
+        const auto unitsAngleLabel = s_tr( "Units" ) + "##angle";
+        if ( UI::combo( unitsAngleLabel.c_str(), &flavorOption, Locale::translateAll( flavorOptions ) ) )
             UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
-        UI::setTooltipIfHovered( "It selects angular units to be show in the user interface." );
+        UI::setTooltipIfHovered( _tr( "It selects angular units to be show in the user interface." ) );
 
         // Degree-mode-specific options.
 
@@ -709,9 +730,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
             // --- Precision
 
             int precision = UnitSettings::getUiAnglePrecision();
-            if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, cMaxPrecision ) )
+            if ( UI::drag<NoUnit>( ( s_tr( "Precision" ) + "##angle" ).c_str(), precision, 1, 0, cMaxPrecision ) )
                 UnitSettings::setUiAnglePrecision( precision );
-            UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for angular measurements." );
+            UI::setTooltipIfHovered( _tr( "The number of digits to be shown after decimal point for angular measurements." ) );
         }
 
         ImGui::PopStyleVar();
@@ -720,16 +741,16 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
 
     { // Ratio.
         ImGui::PushItemWidth( 170.0f * UI::scale() );
-        drawSeparator_( "Scale and Ratios" );
+        drawSeparator_( _t( "Scale and Ratios" ) );
 
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * UI::scale() } );
 
         // --- Precision
 
         int precision = UnitSettings::getUiRatioPrecision();
-        if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, cMaxPrecision ) )
+        if ( UI::drag<NoUnit>( ( s_tr( "Precision" ) + "##ratio" ).c_str(), precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiRatioPrecision( precision );
-        UI::setTooltipIfHovered( "The number of digits to be shown after decimal point for dimensionless measurements." );
+        UI::setTooltipIfHovered( _tr( "The number of digits to be shown after decimal point for dimensionless measurements." ) );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -739,9 +760,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_()
     ImGui::Separator();
     ImGui::Spacing();
 
-    if ( UI::button( "Reset Unit Settings" ) )
+    if ( UI::button( _tr( "Reset Unit Settings" ) ) )
         UnitSettings::resetToDefaults();
-    UI::setTooltipIfHovered( "Set all settings here to their default values." );
+    UI::setTooltipIfHovered( _tr( "Set all settings here to their default values." ) );
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_()
@@ -755,28 +776,40 @@ void ViewerSettingsPlugin::drawFeaturesTab_()
 
     float value = 0;
 
-    drawSeparator_( "Visuals" );
+    drawSeparator_( _t( "Visuals" ) );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha );
-    if ( UI::slider<NoUnit>( "Surface opacity", value, 0.f, 1.f ) )
+    if ( UI::slider<NoUnit>( _tr( "Surface opacity" ), value, 0.f, 1.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureMeshAlpha, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeaturePointSize );
-    if ( UI::slider<PixelSizeUnit>( "Point size", value, 1.f, 20.f ) )
+    if ( UI::slider<PixelSizeUnit>( _tr( "Point size" ), value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeaturePointSize, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureSubPointSize );
-    if ( UI::slider<PixelSizeUnit>( "Point size (subfeatures)", value, 1.f, 20.f ) )
+    if ( UI::slider<PixelSizeUnit>( _tr( "Point size (subfeatures)" ), value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubPointSize, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureLineWidth );
-    if ( UI::slider<PixelSizeUnit>( "Line width", value, 1.f, 20.f ) )
+    if ( UI::slider<PixelSizeUnit>( _tr( "Line width" ), value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureLineWidth, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureSubLineWidth );
-    if ( UI::slider<PixelSizeUnit>( "Line width (subfeatures)", value, 1.f, 20.f ) )
+    if ( UI::slider<PixelSizeUnit>( _tr( "Line width (subfeatures)" ), value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 }
+
+void ViewerSettingsPlugin::drawMcpTab_()
+{
+    #ifndef MESHLIB_NO_MCP
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    if ( !ribbonMenu )
+        return;
+
+    drawMcpSettings_();
+    #endif
+}
+
 
 void ViewerSettingsPlugin::drawRenderOptions_()
 {
@@ -787,7 +820,7 @@ void ViewerSettingsPlugin::drawRenderOptions_()
     {
         bool alphaSortBackUp = viewer->isAlphaSortEnabled();
         bool alphaBoxVal = alphaSortBackUp;
-        UI::checkbox( "Alpha Sort", &alphaBoxVal );
+        UI::checkbox( _tr( "Alpha Sort" ), &alphaBoxVal );
         if ( alphaBoxVal != alphaSortBackUp )
             viewer->enableAlphaSort( alphaBoxVal );
     }
@@ -795,12 +828,12 @@ void ViewerSettingsPlugin::drawRenderOptions_()
     ImGui::PushItemWidth( 100.0f * UI::scale() );
     if ( viewer->isAlphaSortEnabled() )
     {
-        UI::readOnlyValue<NoUnit>( "Depth Peeling Passes", viewer->getDepthPeelNumPasses() );
+        UI::readOnlyValue<NoUnit>( _tr( "Depth Peeling Passes" ), viewer->getDepthPeelNumPasses() );
     }
     else
     {
         int dpNumPasses = viewer->getDepthPeelNumPasses();
-        UI::input<NoUnit>( "Depth Peeling Passes", dpNumPasses, 0, 64 );
+        UI::input<NoUnit>( _tr( "Depth Peeling Passes" ), dpNumPasses, 0, 64 );
         viewer->setDepthPeelNumPasses( dpNumPasses );
     }
     ImGui::PopItemWidth();
@@ -811,8 +844,8 @@ void ViewerSettingsPlugin::drawRenderOptions_()
         {
             auto backUpSamples = viewer->getRequestedMSAA();
             auto newSamples = backUpSamples;
-            ImGui::Text( "Multisample anti-aliasing (MSAA):" );
-            UI::setTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance." );
+            ImGui::Text( "%s", _tr( "Multisample anti-aliasing (MSAA):" ) );
+            UI::setTooltipIfHovered( _tr( "The number of samples per pixel: more samples - better render quality but worse performance." ) );
             int counter = 0;
             for ( int i = 0; i <= maxSamples_; i <<= 1 )
             {
@@ -822,7 +855,7 @@ void ViewerSettingsPlugin::drawRenderOptions_()
 #endif
                 if ( i == 0 )
                 {
-                    UI::radioButton( "Off", &newSamples, i );
+                    UI::radioButton( _tr( "Off" ), &newSamples, i );
                     ++i;
                 }
                 else
@@ -841,9 +874,9 @@ void ViewerSettingsPlugin::drawRenderOptions_()
             if ( actualMSAA != requestedMSAA )
             {
                 if ( gpuOverridesMSAA_ )
-                    UI::transparentTextWrapped( "GPU multisampling settings override application value." );
+                    UI::transparentTextWrapped( "%s", _tr( "GPU multisampling settings override application value." ) );
                 if ( requestedMSAA != initMSAA && !viewer->isSceneTextureEnabled() )
-                    UI::transparentTextWrapped( "Application requires restart to apply this change" );
+                    UI::transparentTextWrapped( "%s", _tr( "Application requires restart to apply this change" ) );
             }
         }
     }
@@ -855,7 +888,7 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
 {
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    const bool showShadows = shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" );
+    const bool showShadows = shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( _tr( "Shadows" ) );
     ImGui::PopStyleVar();
 
     if ( showShadows )
@@ -863,7 +896,7 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * UI::scale() * 0.5f );
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
         bool isEnableShadows = shadowGl_->isEnabled();
-        UI::checkbox( "Enabled", &isEnableShadows );
+        UI::checkbox( _tr( "Enabled" ), &isEnableShadows );
         if ( isEnableShadows != shadowGl_->isEnabled() )
         {
             CommandLoop::appendCommand( [shadowGl = shadowGl_.get(), isEnableShadows] ()
@@ -873,7 +906,7 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
         }
         ImGui::SameLine( 116.0f * UI::scale() );
         auto color = shadowGl_->getShadowColor();
-        UI::colorEdit4( "Shadow Color", color,
+        UI::colorEdit4( _tr( "Shadow Color" ), color,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
         shadowGl_->setShadowColor( color );
         ImGui::PopStyleVar();
@@ -883,17 +916,49 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
         auto shift = shadowGl_->getShadowShift();
         auto radius = shadowGl_->getBlurRadius();
         auto quality = shadowGl_->getQuality();
-        UI::drag<PixelSizeUnit>( "Shift", shift, 0.4f, -200.0f, 200.0f );
-        ImGui::SetItemTooltip( "X = shift to the left, Y = shift upwards" );
-        UI::drag<PixelSizeUnit>( "Blur Radius", radius, 0.2f, 0.f, 200.f );
-        UI::drag<NoUnit>( "Quality", quality, 0.001f, 0.0625f, 1.0f );
+        UI::drag<PixelSizeUnit>( _tr( "Shift" ), shift, 0.4f, -200.0f, 200.0f );
+        ImGui::SetItemTooltip( "%s", _tr( "X = shift to the left, Y = shift upwards" ) );
+        UI::drag<PixelSizeUnit>( _tr( "Blur Radius" ), radius, 0.2f, 0.f, 200.f );
+        UI::drag<NoUnit>( _tr( "Quality" ), quality, 0.001f, 0.0625f, 1.0f );
         ImGui::PopItemWidth();
         ImGui::PopStyleVar();
-        UI::setTooltipIfHovered( "Blur texture downscaling coefficient" );
+        UI::setTooltipIfHovered( _tr( "Blur texture downscaling coefficient" ) );
         shadowGl_->setShadowShift( shift );
         shadowGl_->setBlurRadius( radius );
         shadowGl_->setQuality( quality );
     }
+}
+
+void ViewerSettingsPlugin::drawLanguageSelector_()
+{
+    static const auto sLanguages = Locale::getAvailableLocales();
+    static const auto sLanguageNames = [] ( const auto& languages )
+    {
+        auto results = languages;
+        for ( auto& locale : results )
+            locale = Locale::getDisplayName( locale );
+        return results;
+    } ( sLanguages );
+
+    if ( selectedLanguage_ < 0 )
+    {
+        auto it = std::find( sLanguages.begin(), sLanguages.end(), Locale::getName() );
+        if ( it == sLanguages.end() )
+        {
+            it = std::find( sLanguages.begin(), sLanguages.end(), "en" );
+            assert( it != sLanguages.end() );
+        }
+        selectedLanguage_ = (int)std::distance( sLanguages.begin(), it );
+    }
+
+    ImGui::SetNextItemWidth( 200.0f * UI::scale() );
+    if ( UI::combo( _tr( "Language" ), &selectedLanguage_, sLanguageNames ) )
+        Locale::set( sLanguages[selectedLanguage_] );
+
+    ImGui::SameLine();
+    RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );
+    ImGui::Text( "" );
+    icons.popFont();
 }
 
 void ViewerSettingsPlugin::drawThemeSelector_()
@@ -903,7 +968,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     ImGui::SetNextItemWidth( 200.0f * UI::scale() );
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( "Color Theme", &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( _tr( "Color Theme" ), &selectedUserPreset_, Locale::translateAll( userThemesPresets_ ) );
     ImGui::PopStyleVar();
     if ( selectedUserPreset_ != selectedUserIdxBackup )
     {
@@ -923,7 +988,7 @@ void ViewerSettingsPlugin::drawThemeSelector_()
                 ColorTheme::setupUserTheme( userThemesPresets_[selectedUserIdxBackup] );
             selectedUserPreset_ = selectedUserIdxBackup;
 
-            showError( "This theme is not valid." );
+            showError( _tr( "This theme is not valid." ) );
         }
         backgroundColor_ = Vector4f( ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ) );
     }
@@ -931,22 +996,23 @@ void ViewerSettingsPlugin::drawThemeSelector_()
     if ( item != RibbonSchemaHolder::schema().items.end() )
     {
         ImGui::SameLine( 300.0f * UI::scale() );
-        if ( UI::button( "Add",
+        if ( UI::button( _tr( "Add" ),
             item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
             Vector2f( 50.0f * UI::scale(), 0 ) ) )
         {
             item->second.item->action();
         }
-        UI::setTooltipIfHovered( item->second.tooltip );
+        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), item->second.localeDomainId ) );
     }
 }
 
 void ViewerSettingsPlugin::drawResetDialog_( bool activated )
 {
+    const auto settingsResetId = s_tr( "Settings reset" ) + "##reset";
     if ( activated )
-        ImGui::OpenPopup( "Settings reset" );
-    ModalDialog dialog( "Settings reset", {
-        .text = "Reset all application settings?",
+        ImGui::OpenPopup( settingsResetId.c_str() );
+    ModalDialog dialog( settingsResetId, {
+        .text = _tr( "Reset all application settings?" ),
     } );
     if ( dialog.beginPopup() )
     {
@@ -956,13 +1022,13 @@ void ViewerSettingsPlugin::drawResetDialog_( bool activated )
         const float p = style.ItemSpacing.x;
         const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
 
-        if ( UI::buttonCommonSize( "Reset", btnSize, ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( _tr( "Reset" ), btnSize, ImGuiKey_Enter ) )
         {
             resetSettings_();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( _tr( "Cancel" ), btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
         ImGui::PopStyleVar(); // ImGuiStyleVar_FramePadding
@@ -974,15 +1040,15 @@ void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float toolWidth 
 {
     const auto& style = ImGui::GetStyle();
 
-    static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
+    const std::vector<std::string> shadingModes = { _tr( "Auto Detect" ), _tr( "Smooth" ), _tr( "Flat" ) };
     SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
     ImGui::SetNextItemWidth( toolWidth );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::combo( inGroup ? "Shading Mode" : "Default Shading Mode", ( int* )&shadingMode, shadingModes);
+    UI::combo( inGroup ? _tr( "Shading Mode" ) : _tr( "Default Shading Mode" ), ( int* )&shadingMode, shadingModes );
     ImGui::PopStyleVar();
-    UI::setTooltipIfHovered( "Shading mode for mesh objects imported from files\n"
+    UI::setTooltipIfHovered( _tr( "Shading mode for mesh objects imported from files\n"
         "Detection depends on source format and mesh shape\n"
-        "This setting also affects some tools" );
+        "This setting also affects some tools" ) );
     if ( shadingMode != SceneSettings::getDefaultShadingMode() )
         SceneSettings::setDefaultShadingMode( shadingMode );
 }
@@ -992,10 +1058,10 @@ void ViewerSettingsPlugin::drawProjectionModeSelector_( float toolWidth )
     const auto& style = ImGui::GetStyle();
 
     ImGui::SetNextItemWidth( toolWidth );
-    static std::vector<std::string> projectionModes = { "Orthographic", "Perspective" };
+    const std::vector<std::string> projectionModes = { _tr( "Orthographic" ), _tr( "Perspective" ) };
     int projectionMode = viewer->viewport().getParameters().orthographic ? 0 : 1;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::combo( "Projection Mode", &projectionMode, projectionModes) )
+    if ( UI::combo( _tr( "Projection Mode" ), &projectionMode, projectionModes ) )
         viewer->viewport().setOrthographic( projectionMode == 0 );
     ImGui::PopStyleVar();
 }
@@ -1023,7 +1089,7 @@ void ViewerSettingsPlugin::drawBackgroundButton_( bool allViewports )
 
     auto backgroundColor = backgroundColor_;
 
-    if ( UI::colorEdit4( "Background Color", backgroundColor,
+    if ( UI::colorEdit4( _tr( "Background Color" ), backgroundColor,
         ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
         backgroundColor_ = backgroundColor;
     else if ( ImGui::IsWindowFocused() || !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
@@ -1039,13 +1105,13 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
 {
     const auto& style = ImGui::GetStyle();
 
-    drawSeparator_( "Mouse" );
+    drawSeparator_( _t( "Mouse" ) );
 
     ImGui::SetNextItemWidth( 100 * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::drag<NoUnit>( "Zoom Gain", viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    UI::drag<NoUnit>( _tr( "Zoom Gain" ), viewer->scrollForce, 0.01f, 0.2f, 3.0f );
     ImGui::PopStyleVar();
-    UI::setTooltipIfHovered( "Sensitivity for mouse wheel rotation affecting the speed of zooming." );
+    UI::setTooltipIfHovered( _tr( "Sensitivity for mouse wheel rotation affecting the speed of zooming." ) );
 
     UI::separator( UI::SeparatorParams{ .extraScale = cSeparatorIndentMultiplier } );
 
@@ -1055,14 +1121,14 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
         if ( mode == MouseMode::None )
             continue;
         std::string modeName = getMouseModeString( mode );
-        std::string ctrlStr = "None";
+        std::string ctrlStr = s_tr( "None" );
         auto ctrl = viewer->mouseController().findControlByMode( mode );
         if ( ctrl )
             ctrlStr = MouseController::getControlString( *ctrl );
 
         const float posY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( posY + cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
-        ImGui::Text( "%s", modeName.c_str() );
+        ImGui::Text( "%s", _tr( modeName) );
 
         ImGui::SetCursorPosX( 110.0f * UI::scale() );
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
@@ -1104,12 +1170,12 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
 
         ImGui::SetCursorPosX( menuWidth - 120.0f * UI::scale() );
 		ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
-        UI::buttonCommonSize( fmt::format( "Set other##{}", i ).c_str(), Vector2f( 80 * UI::scale(), 0 ) );
+        UI::buttonCommonSize( fmt::format( "{}##{}", _tr( "Set other" ), i ).c_str(), Vector2f( 80 * UI::scale(), 0 ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
             ctrlStr = ShortcutManager::getModifierString( getGlfwModPrimaryCtrl() );
-            ImGui::Text( "Click here with preferred mouse button \nwith/without modifier (%s/%s/Shift)", getAltModName(), ctrlStr.c_str() );
+            ImGui::Text( "%s (%s/%s/Shift)", _tr( "Click here with preferred mouse button \nwith/without modifier" ), getAltModName(), ctrlStr.c_str() );
             ImGui::EndTooltip();
 
             if ( ImGui::GetIO().MouseClicked[0] || ImGui::GetIO().MouseClicked[1] || ImGui::GetIO().MouseClicked[2] )
@@ -1146,14 +1212,14 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
             keysListWithAlt += ", ";
         keysListWithAlt += MouseController::getControlString( ctrlAlt );
     }
-    UI::transparentTextWrapped( "Camera controls can also be used with %s", getAltModName() );
+    UI::transparentTextWrapped( _tr( "Camera controls can also be used with %s" ), getAltModName() );
     if ( !keysListWithAlt.empty() )
         UI::setTooltipIfHovered( keysListWithAlt );
 }
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
 {
-    drawSeparator_( "Spacemouse" );
+    drawSeparator_( _t( "Spacemouse" ) );
 
     bool anyChanged = false;
     auto drawSlider = [&anyChanged, menuWidth] ( const char* label, float& value )
@@ -1165,7 +1231,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + ( cInputPadding - cCheckboxPadding ) * UI::scale() );
-        changed = UI::checkbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
+        changed = UI::checkbox( ( s_tr( "Inverse" ) + "##" + label ).c_str(), &inverse ) || changed;
         if ( changed )
             value = valueAbs * ( inverse ? -1.f : 1.f );
         anyChanged = anyChanged || changed;
@@ -1173,7 +1239,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
 
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
-    ImGui::Text( "%s", "Translation Sensitivity" );
+    ImGui::Text( "%s", _tr( "Translation Sensitivity" ) );
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
@@ -1185,7 +1251,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
-    ImGui::Text( "%s", "Rotation Sensitivity" );
+    ImGui::Text( "%s", _tr( "Rotation Sensitivity" ) );
     ImGui::PopStyleVar();
 
     drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
@@ -1194,9 +1260,9 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth )
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
     ImGui::PopStyleVar( 2 );
 
-    anyChanged = UI::checkboxValid( "Suppress Zoom by Mouse Scroll", &spaceMouseParams_.suppressMouseScrollZoom, viewer->spaceMouseController().canDriverSendScroll() ) || anyChanged;
-    UI::setTooltipIfHovered( "This mode is recommended if you have 3Dconnexion driver installed, which sends fake mouse scroll events resulting in double reaction on SpaceMouse movement and camera tremble." );
-    
+    anyChanged = UI::checkboxValid( _tr( "Suppress Zoom by Mouse Scroll" ), &spaceMouseParams_.suppressMouseScrollZoom, viewer->spaceMouseController().canDriverSendScroll() ) || anyChanged;
+    UI::setTooltipIfHovered( _tr( "This mode is recommended if you have 3Dconnexion driver installed, which sends fake mouse scroll events resulting in double reaction on SpaceMouse movement and camera tremble." ) );
+
     if ( anyChanged )
         getViewerInstance().spaceMouseController().setParameters(spaceMouseParams_);
 }
@@ -1205,41 +1271,73 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
 {
     const auto& style = ImGui::GetStyle();
 
-    drawSeparator_( "Touchpad" );
+    drawSeparator_( _t( "Touchpad" ) );
 
-    const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
+    const std::vector<std::string> swipeModeList = { _tr( "Swipe Rotates Camera" ), _tr( "Swipe Moves Camera" ) };
     assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     bool updateSettings = false;
-    if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
+    if ( UI::checkbox( _tr( "Ignore Kinetic Movements" ), &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
-    if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
+    if ( UI::checkbox( _tr( "Allow System to Interrupt Gestures" ), &touchpadParameters_.cancellable ) )
         updateSettings = true;
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
+    if ( UI::combo( _tr( "Swipe Mode" ), (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;
     ImGui::PopStyleVar();
     if ( updateSettings )
         viewer->touchpadController().setParameters( touchpadParameters_ );
 }
 
+void ViewerSettingsPlugin::drawMcpSettings_()
+{
+    #ifndef MESHLIB_NO_MCP
+    drawSeparator_( _t( "MCP" ) );
+
+    Mcp::Server& server = Mcp::getDefaultServer();
+
+    bool enableNow = server.isRunning();
+    if ( UI::checkbox( _tr( "Enable in This Session" ), &enableNow ) )
+        server.setRunning( enableNow );
+
+    bool enableByDefault = McpSettings::getEnableByDefault();
+    if ( UI::checkbox( _tr( "Enable by Default" ), &enableByDefault ) )
+        McpSettings::setEnableByDefault( enableByDefault );
+
+    ImGui::SetNextItemWidth( ImGui::GetFrameHeight() * 3 );
+    if ( McpSettings::isPortLockedFromCmdLine() )
+    {
+        UI::readOnlyValue<NoUnit>( _tr( "Port" ), server.getParams().port );
+        UI::setTooltipIfHovered( _tr( "Port forced by -mcpPort command-line flag" ) );
+    }
+    else
+    {
+        int port = McpSettings::getPort();
+        if ( UI::input<NoUnit>( _tr( "Port" ), port, 1, 65535, {}, UI::defaultSliderFlags, 0, 0 ) )
+            McpSettings::setPort( port );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            McpSettings::applyToServer();
+    }
+    #endif
+}
+
 void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
 {
-    drawSeparator_( "MRU Inner Formats" );
+    drawSeparator_( _t( "MRU Inner Formats" ) );
 
     const std::vector<std::string> meshFormatNames = { "CTM", "PLY", "MRMESH" };
     const std::vector<std::string> pointsFormatNames = { meshFormatNames[0], meshFormatNames[1] };
     const std::vector<std::string> voxelsFormatNames = { "VDB", "RAW" };
 
-    const std::vector<std::string> meshFormatTooltips = { "Slowest, high memory consumption, but best compression (typically) format",
-                                                    "Fast and still relatively small format",
-                                                    "Largest by size, but fastest to load / save and without any losses" };
+    const std::vector<std::string> meshFormatTooltips = { _tr( "Slowest, high memory consumption, but best compression (typically) format" ),
+                                                    _tr( "Fast and still relatively small format" ),
+                                                    _tr( "Largest by size, but fastest to load / save and without any losses" ) };
     const std::vector<std::string> pointsFormatTooltips = { meshFormatTooltips[0], meshFormatTooltips[1] };
-    const std::vector<std::string> voxelsFormatTooltips = { "Fast and efficient format for sparse data",
-                                                            "Simplest but high disk space consumption format" };
+    const std::vector<std::string> voxelsFormatTooltips = { _tr( "Fast and efficient format for sparse data" ),
+                                                            _tr( "Simplest but high disk space consumption format" ) };
 
     std::string format = defaultSerializeMeshFormat();
     if ( format == ".ctm" )
@@ -1264,7 +1362,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     #endif
 
     ImGui::PushItemWidth( menuWidth * 0.5f );
-    if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, meshFormatTooltips ) )
+    if ( UI::combo( _tr( "Mesh Format" ), ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, meshFormatTooltips ) )
     {
         switch ( mruFormatParameters_.meshFormat )
         {
@@ -1282,7 +1380,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         setDefaultSerializeMeshFormat( format );
     }
 
-    if ( UI::combo( "Points Format", ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, pointsFormatTooltips ) )
+    if ( UI::combo( _tr( "Points Format" ), ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, pointsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.pointsFormat )
         {
@@ -1295,9 +1393,9 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             break;
         }
         setDefaultSerializePointsFormat( format );
-    } 
+    }
     #ifndef MRVIEWER_NO_VOXELS
-    if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
+    if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )
         {
@@ -1328,7 +1426,7 @@ void ViewerSettingsPlugin::drawCustomSettings_( const std::string& separatorName
     if ( numRequired == 0 )
         return;
     if ( needSeparator )
-        UI::separator( UI::SeparatorParams{ .label = separatorName, .extraScale = cSeparatorIndentMultiplier } );
+        UI::separator( UI::SeparatorParams{ .label = s_tr( separatorName), .extraScale = cSeparatorIndentMultiplier } );
     for ( auto& settings : comboSettings_[size_t( activeTab_ )] )
     {
         if ( settings->separatorName() == separatorName )
@@ -1339,7 +1437,7 @@ void ViewerSettingsPlugin::drawCustomSettings_( const std::string& separatorName
 
 void ViewerSettingsPlugin::drawSeparator_( const std::string& separatorName )
 {
-    UI::separator( UI::SeparatorParams{ .label = separatorName, .extraScale = cSeparatorIndentMultiplier } );
+    UI::separator( UI::SeparatorParams{ .label = s_tr( separatorName), .extraScale = cSeparatorIndentMultiplier } );
     drawCustomSettings_( separatorName, false );
 }
 

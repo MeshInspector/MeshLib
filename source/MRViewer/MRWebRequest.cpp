@@ -6,6 +6,7 @@
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -450,7 +451,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback, logName, url = urlP] ()
+        std::thread requestThread = std::thread( protectedFunc( [sendLambda, callback, logName, url = urlP] ()
         {
             spdlog::info( "WebRequest  {}: {}", logName.c_str(), url.c_str() );
             auto res = sendLambda();
@@ -477,7 +478,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
             {
                 callback( resJson );
             }, CommandLoop::StartPosition::AfterPluginInit );
-        } );
+        } ) );
         putIntoWaitingMap_( std::move( requestThread ) );
     }
 #else

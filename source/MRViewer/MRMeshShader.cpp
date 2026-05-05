@@ -80,7 +80,6 @@ std::string getMeshFragmentShaderArgumetsBlock()
   uniform vec4 selBackColor;   // (in from base) selection back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform bool invertNormals;        // (in from base) invert normals if true
   uniform bool mirrored;
   uniform highp sampler2DArray tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
@@ -137,13 +136,10 @@ std::string getMeshFragmentShaderColoringBlock()
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
 
-    bool invNorms = invertNormals;
     if ( mirrored )
-    {
         dot_prod = -dot_prod;
-        invNorms = !invNorms;
-    }
-    if ( gl_FrontFacing == invNorms )
+
+    if ( gl_FrontFacing == mirrored )
         if ( !selected )
             colorCpy = backColor;
         else

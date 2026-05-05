@@ -1,6 +1,8 @@
 #include "MRRibbonSchema.h"
+#include "MRI18n.h"
 #include "MRLambdaRibbonItem.h"
 #include "MRImGui.h"
+#include "MRLocale.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
 #include "MRSceneCache.h"
@@ -54,7 +56,7 @@ void RibbonSchema::updateCaptions()
         auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( item.item );
         if ( !statePlugin )
             continue;
-        statePlugin->setUIName( item.caption.empty() ? name : item.caption );
+        statePlugin->setUIName( Locale::translate( item.getCaption().c_str(), item.localeDomainId ) );
     }
 }
 
@@ -161,7 +163,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     // check item (calc difference from search item) and add item to raw results if difference less than threshold
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
     {
-        const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
+        const auto& caption = item.getCaption();
         const auto& tooltip = item.tooltip;
         std::pair<SearchResult, SearchResultWeight> itemRes;
         itemRes.first.tabIndex = t;
@@ -384,6 +386,12 @@ void RibbonSchemaLoader::loadSchema() const
     RibbonSchemaHolder::schema().eliminateEmptyGroups();
     RibbonSchemaHolder::schema().sortTabsByPriority();
     RibbonSchemaHolder::schema().updateCaptions();
+
+    [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [] ( const std::string& )
+    {
+        recalcItemSizes();
+        RibbonSchemaHolder::schema().updateCaptions();
+    } );
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
@@ -429,25 +437,17 @@ float sCalcSize( ImFont* font, float fontSize, const char* begin, const char* en
 SplitCaptionInfo sAutoSplit( const std::string& str, float fontSize, float maxWidth, ImFont* font, float baseSize )
 {
     if ( baseSize < maxWidth )
-        return { { str, baseSize } };
+        return { { str.size(), baseSize } };
+
+    if ( str.find( ' ' ) == std::string::npos )
+        return { { str.size(), baseSize } };
 
     std::vector<std::string_view> substr;
-
-    size_t begin = 0;
-    size_t end = str.find( ' ', begin );
-
-    if ( end == std::string::npos )
-        return { { str, baseSize } };
-
-    while ( end != std::string::npos )
+    split( str, " ", [&] ( std::string_view s )
     {
-        if ( begin < end )
-            substr.emplace_back( &str[begin], std::distance( &str[begin], &str[end] ) );
-        begin = end + 1;
-        end = str.find( ' ', begin );
-    }
-    if ( begin < str.length() - 1 )
-        substr.emplace_back( &str[begin], std::distance( str.begin() + begin, str.end() ) );
+        substr.emplace_back( s );
+        return false;
+    } );
 
     std::vector<float> substrWidth;
     for ( const auto& s : substr )
@@ -458,7 +458,7 @@ SplitCaptionInfo sAutoSplit( const std::string& str, float fontSize, float maxWi
     size_t index1 = 0;
     size_t index2 = substr.size() - 1;
 
-    SplitCaptionInfo res;
+    std::vector<std::pair<std::string_view, float>> res;
     res.resize( 2 );
     res[0].first = substr[index1];
     res[0].second = substrWidth[index1++];
@@ -484,7 +484,15 @@ SplitCaptionInfo sAutoSplit( const std::string& str, float fontSize, float maxWi
         }
     }
 
-    return res;
+    SplitCaptionInfo results;
+    [[maybe_unused]] size_t pos = 0;
+    for ( const auto& [sv, width] : res )
+    {
+        results.emplace_back( sv.size(), width );
+        pos += sv.size() + 1;
+    }
+    assert( pos == str.size() + 1 );
+    return results;
 }
 
 void RibbonSchemaLoader::recalcItemSizes()
@@ -502,14 +510,14 @@ void RibbonSchemaLoader::recalcItemSizes()
         4 * UI::scale();
 
     auto& schema = RibbonSchemaHolder::schema();
-    for ( auto& item : schema.items )
+    for ( auto& [_, item] : schema.items )
     {
-        if ( !item.second.item )
+        if ( !item.item )
             continue;
 
-        auto& sizes = item.second.captionSize;
+        auto& sizes = item.captionSize;
 
-        const auto& caption = item.second.caption.empty() ? item.second.item->name() : item.second.caption;
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
         sizes.baseSize = sCalcSize( font, fontSize, caption.data(), caption.data() + caption.size() );
         sizes.splitInfo = sAutoSplit( caption, fontSize, cMaxTextWidth, font, sizes.baseSize );
     }
@@ -564,11 +572,16 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
         assert( false );
         return;
     }
-    readItemsJson_( *itemsStructRes );
+    // cannot use `path.stem()` because of two segment extensions (.items.json)
+    const auto filename = utf8string( path.filename() );
+    const auto stem = filename.substr( 0, filename.find( '.' ) );
+    readItemsJson_( *itemsStructRes, stem );
 }
 
-void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
+void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const std::string& schemaName ) const
 {
+    const auto domainId = !schemaName.empty() ? Locale::addDomain( schemaName ) : LocaleDomainId{};
+
     auto items = itemsStruct["Items"];
     if ( !items.isArray() )
     {
@@ -591,6 +604,8 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
             continue;
         }
         auto& [_, menuItem] = *findIt;
+
+        menuItem.localeDomainId = domainId;
 
         auto& itemCaption = item["Caption"];
         if ( itemCaption.isString() )
@@ -652,10 +667,14 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         assert( false );
         return;
     }
-    readUIJson_( *itemsStructRes );
+    // cannot use `path.stem()` because of two segment extensions (.ui.json)
+    const auto filename = utf8string( path.filename() );
+    const auto stem = filename.substr( 0, filename.find( '.' ) );
+    const auto domainId = Locale::findDomain( stem );
+    readUIJson_( *itemsStructRes, domainId );
 }
 
-void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
+void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleDomainId domainId ) const
 {
     auto tabs = itemsStructure["Tabs"];
     if ( !tabs.isArray() )
@@ -733,7 +752,7 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
         auto& tabRef = RibbonSchemaHolder::schema().tabsMap[tabName.asString()];
         if ( tabRef.empty() )
         {
-            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority,experementalTab } );
+            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(), tabPriority, experementalTab, domainId } );
             tabRef = std::move( newGroupsVec );
         }
         else

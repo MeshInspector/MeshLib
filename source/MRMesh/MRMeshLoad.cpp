@@ -423,7 +423,16 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
         Pos3f coords[3];
         char attrs[2];
         // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
-        Vector3f vertex( int i ) const { return std::bit_cast<Vector3f>( coords[i] ); }
+        Vector3f vertex( int i ) const
+        {
+        #if __cpp_lib_bit_cast >= 201806L
+            return std::bit_cast<Vector3f>( coords[i] );
+        #else
+            Vector3f v;
+            std::memcpy( &v, &coords[i], sizeof( coords[i] ) );
+            return v;
+        #endif
+        }
     };
     static_assert( sizeof( StlTriangle ) == 50 );
     static_assert( alignof( StlTriangle ) <= 2 );
@@ -540,7 +549,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     {
         auto startLine = newlines[lineI];
         auto size = newlines[lineI + 1] - newlines[lineI];
-        if ( dataView.substr( startLine, size ).starts_with( "outer" ) )
+        if ( trimLeft( dataView.substr( startLine, size ) ).starts_with( "outer" ) )
             faceRepresentativeLines.set( lineI );
     }, subprogress( settings.callback, 0.15f, 0.3f ) );
 
@@ -549,7 +558,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
 
     auto numTris = faceRepresentativeLines.count();
     const auto itemsInBuffer = std::min( numTris, size_t( 32768 ) );
-    int numChunks = ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer );
+    const int numChunks = itemsInBuffer > 0 ? ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer ) : 0;
     std::vector<Triangle3f> chunk( itemsInBuffer );
     std::vector<Triangle3f> chunk2( itemsInBuffer );
 
@@ -572,7 +581,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
             {
                 if ( faceRepresentativeLines.test( lineI ) )
                     break;
-                auto lineView = dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] );
+                auto lineView = trimLeft( dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] ) );
                 if ( lineView.starts_with( "endloop" ) )
                     break;
                 if ( !lineView.starts_with( "vertex" ) )

@@ -15,13 +15,13 @@
 namespace MR
 {
 
-static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
+static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left, Turn turn )
 {
     std::function<EdgeId( EdgeId )> next;
     if ( left )
-        next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region ); };
+        next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region, turn ); };
     else
-        next = [&] ( EdgeId e ) { return topology.prevLeftBd( e.sym(), region ).sym(); };
+        next = [&] ( EdgeId e ) { return topology.prevLeftBd( e.sym(), region, turn ).sym(); };
 
     EdgeLoop res;
     auto e = e0;
@@ -34,14 +34,14 @@ static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, cons
     return res;
 }
 
-EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
+EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, Turn turn )
 {
-    return trackBoundaryLoop( topology, e0, region, true );
+    return trackBoundaryLoop( topology, e0, region, true, turn );
 }
 
-EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
+EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, Turn turn )
 {
-    return trackBoundaryLoop( topology, e0, region, false );
+    return trackBoundaryLoop( topology, e0, region, false, turn );
 }
 
 EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
@@ -74,6 +74,33 @@ EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, E
     }
 }
 
+EdgeId extractOppositePath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
+{
+    std::function<EdgeId( EdgeId )> prev;
+    if ( turn == Turn::Leftmost )
+        prev = [&] ( EdgeId e ) { return topology.next( e ); };
+    else
+        prev = [&] ( EdgeId e ) { return topology.prev( e ); };
+
+    for ( ;; )
+    {
+        // search for next edge in the path
+        for ( auto e1 = prev( e.sym() );; e1 = prev( e1 ) )
+        {
+            if ( e1 == e.sym() )
+                return e; // nothing found after full round
+
+            if ( edges.test_set( e1.sym(), false ) )
+            {
+                if ( outPath )
+                    outPath->push_back( e1 );
+                e = e1;
+                break;
+            }
+        }
+    }
+}
+
 std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet & edges, Turn turn )
 {
     MR_TIMER;
@@ -86,7 +113,7 @@ std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet 
         if ( !path.empty() && topology.org( path.front() ) == topology.dest( path.back() ) )
         {
             // a closed loop was extracted;
-            // do not move to keep allocated memory in path
+            // do not move to keep allocated memory in path, and res optimally packed
             res.push_back( path );
         }
         else
@@ -98,6 +125,35 @@ std::vector<EdgeLoop> extractAllLoops( const MeshTopology& topology, EdgeBitSet 
         path.clear();
     }
     edges = std::move( pathEdges );
+    return res;
+}
+
+std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet & edges, Turn turn )
+{
+    MR_TIMER;
+    EdgePath path, backPath;
+    std::vector<EdgeLoop> res;
+    for ( auto e : edges )
+    {
+        extractPath( topology, e, edges, &path, turn );
+        assert( !path.empty() );
+        assert( isEdgePath( topology, path ) );
+        if ( topology.org( path.front() ) != topology.dest( path.back() ) )
+        {
+            // not closed path was extracted, track backward as well
+            extractOppositePath( topology, e.sym(), edges, &backPath, turn );
+            assert( isEdgePath( topology, backPath ) );
+            assert ( backPath.empty() || topology.org( path.front() ) == topology.org( backPath.front() ) );
+            reverse( backPath );
+            path.insert( path.begin(), backPath.begin(), backPath.end() );
+            assert( isEdgePath( topology, path ) );
+        }
+        // do not move to keep allocated memory in path, and res optimally packed
+        res.push_back( path );
+        path.clear();
+        backPath.clear();
+    }
+    assert( edges.none() );
     return res;
 }
 
@@ -118,7 +174,7 @@ EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* r
     return bdEdges;
 }
 
-static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
+static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region, bool left, Turn turn )
 {
     MR_TIMER;
 
@@ -130,12 +186,12 @@ static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, c
     if ( left )
     {
         insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e ).second; };
-        track = [&] ( EdgeId e ) { return trackLeftBoundaryLoop( topology, e, region ); };
+        track = [&] ( EdgeId e ) { return trackLeftBoundaryLoop( topology, e, region, turn ); };
     }
     else
     {
         insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e.sym() ).second; };
-        track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region ); };
+        track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region, turn ); };
     }
 
     EdgeBitSet bdEdges = findAllLeftBdEdges( topology, region );
@@ -158,16 +214,18 @@ static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, c
 
 }
 
-std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
+std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region, Turn turn )
 {
-    return findRegionBoundary( topology, region, true );
+    return findRegionBoundary( topology, region, true, turn );
 }
 
 std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */, bool keepLoneHoles )
 {
     MR_TIMER;
 
-    auto bds = splitOnSimpleLoops( mesh.topology, findLeftBoundary( mesh.topology, region ) );
+    // Turn::Leftmost is to get same loops as inside fillHole function: a = mesh.topology.prev( a.sym() )
+    auto bds = splitOnSimpleLoops( mesh.topology, findLeftBoundary( mesh.topology, region, Turn::Leftmost ) );
+
     UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
     std::vector<EdgeLoop> filteredBds;
     filteredBds.reserve( bds.size() );
@@ -183,9 +241,9 @@ std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*
     return filteredBds;
 }
 
-std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
+std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region, Turn turn )
 {
-    return findRegionBoundary( topology, region, false );
+    return findRegionBoundary( topology, region, false, turn );
 }
 
 std::vector<EdgeLoop> findLeftBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region )

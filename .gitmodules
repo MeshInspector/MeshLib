@@ -76,3 +76,15 @@
 [submodule "thirdparty/OpenCTM-git"]
 	path = thirdparty/OpenCTM-git
 	url = https://github.com/MeshInspector/OpenCTM.git
+[submodule "thirdparty/fastmcpp"]
+	path = thirdparty/fastmcpp
+	url = https://github.com/MeshInspector/fastmcpp
+[submodule "thirdparty/nlohmann-json"]
+	path = thirdparty/nlohmann-json
+	url = https://github.com/nlohmann/json
+[submodule "thirdparty/cpp-httplib"]
+	path = thirdparty/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib
+[submodule "thirdparty/zlib-ng"]
+	path = thirdparty/zlib-ng
+	url = https://github.com/zlib-ng/zlib-ng.git

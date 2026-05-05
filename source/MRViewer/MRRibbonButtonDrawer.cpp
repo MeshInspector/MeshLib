@@ -11,6 +11,7 @@
 #include "MRUIStyle.h"
 #include "MRRibbonFontHolder.h"
 #include "imgui_internal.h"
+#include "MRI18n.h"
 
 namespace MR
 {
@@ -94,8 +95,8 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / UI::scale(),
                                            .rootType = DrawButtonParams::RootType::Toolbar } );
     ImGui::SameLine( 0.f, spacing );
-    std::string name = item.caption.empty() ? item.item->name() : item.caption;
-    ImGui::Text( "%s", name.c_str());
+    const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+    ImGui::Text( "%s", caption.c_str() );
     return res;
 }
 
@@ -281,7 +282,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         pushRibbonButtonColors( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
-    pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
+    pressed = UI::TestEngine::createButton(
+        item.item->name(),
+        { .disabledReason = requirements } ) || pressed; // Must not short-circuit.
     pressed = pressed || params.forcePressed;
 
     float fontScale = 1.f;
@@ -357,17 +360,20 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         else
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * UI::scale() );
 
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+        size_t pos = 0;
         for ( const auto& i : item.captionSize.splitInfo )
         {
             ImGui::SetCursorPosX( ( params.itemSize.x - i.second ) * 0.5f );
-            ImGui::TextUnformatted( &i.first.front(), &i.first.back() + 1 );
+            ImGui::TextUnformatted( caption.data() + pos, caption.data() + pos + i.first );
+            pos += i.first + 1;
         }
     }
     else if ( params.sizeType == DrawButtonParams::SizeType::SmallText )
     {
         ImGui::SameLine();
         ImGui::SetCursorPosY( ( params.itemSize.y - ImGui::GetTextLineHeight() ) * 0.5f );
-        const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
         ImGui::Text( "%s", caption.c_str() );
     }
 
@@ -596,9 +602,6 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
         {
             const auto& item = it->second;
 
-            if ( !item.caption.empty() )
-                caption = item.caption;
-
             const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * UI::scale();
             const auto width = calcItemWidth( item, DrawButtonParams::SizeType::SmallText );
 
@@ -630,9 +633,9 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * UI::scale(), cRibbonButtonWindowPaddingY * UI::scale() ) );
     std::string tooltip = item.item->getDynamicTooltip();
     if ( tooltip.empty() )
-        tooltip = item.tooltip;
+        tooltip = Locale::translate( item.tooltip.c_str(), item.localeDomainId );
 
-    const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
+    std::string caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
 
     std::string fullText;
     fullText = caption;

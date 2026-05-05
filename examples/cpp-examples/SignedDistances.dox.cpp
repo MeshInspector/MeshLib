@@ -19,7 +19,7 @@ int main()
     }
     // get object of VertScalars - set of distances between points of target mesh and reference mesh
     auto vertDistances = MR::findSignedDistances( *refMesh, *mesh );
-    auto minmax = std::minmax_element( MR::begin( vertDistances ), MR::end( vertDistances ) );
+    auto minmax = std::minmax_element( begin( vertDistances ), end( vertDistances ) );
     std::cout << "Distance between reference mesh and the closest point of target mesh is " << *minmax.first << "\n";
     std::cout << "Distance between reference mesh and the farthest point of target mesh is " << *minmax.second << "\n";
 

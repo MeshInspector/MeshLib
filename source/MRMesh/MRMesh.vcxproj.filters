@@ -100,6 +100,9 @@
     <Filter Include="Source Files\Algorithms">
       <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Nesting">
+      <UniqueIdentifier>{f891eaa8-8411-45b7-8b9d-38cece180034}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -921,6 +924,9 @@
     <ClInclude Include="MRZip.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRZlib.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshLoadSettings.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1391,6 +1397,27 @@
     </ClInclude>
     <ClInclude Include="MRMeshDivideWithPlane.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNestingStructures.h">
+      <Filter>Source Files\Nesting</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBoxNesting.h">
+      <Filter>Source Files\Nesting</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVersatileChangeMeshAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLoadedMeshData.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRProtectedRun.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshTotalAngle.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSegmentMesh.h">
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1961,6 +1988,9 @@
     <ClCompile Include="MRZip.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRZlib.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
     <ClCompile Include="MROffsetContours.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
@@ -2287,6 +2317,24 @@
     </ClCompile>
     <ClCompile Include="MRMeshDivideWithPlane.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBoxNesting.cpp">
+      <Filter>Source Files\Nesting</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVersatileChangeMeshAction.cpp">
+      <Filter>Source Files\History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRProtectedRun.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshTotalAngle.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSegmentMesh.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgePathsBuilder.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -203,6 +203,11 @@ AffineXf3d toXf( const gp_Trsf& transformation )
 struct StepLoader
 {
 public:
+    void setLoadSettings( const MeshLoad::StepLoadSettings& loadSettings )
+    {
+        loadSettings_ = loadSettings;
+    }
+
     [[nodiscard]] std::shared_ptr<Object> rootObject() const
     {
         return rootObj_;
@@ -505,7 +510,7 @@ private:
         return result;
     }
 
-    static TopoDS_Shape triangulateShape_( const TopoDS_Shape& shape )
+    [[nodiscard]] TopoDS_Shape triangulateShape_( const TopoDS_Shape& shape ) const
     {
         MR_TIMER;
 
@@ -514,9 +519,9 @@ private:
 #else
         BRepMesh_FastDiscret::Parameters parameters;
 #endif
-        parameters.Angle = 0.1;
-        parameters.Deflection = 0.5;
-        parameters.Relative = false;
+        parameters.Angle = loadSettings_.angularDeflection;
+        parameters.Deflection = loadSettings_.linearDeflection;
+        parameters.Relative = loadSettings_.relative;
         parameters.InParallel = true;
 
         BRepMesh_IncrementalMesh incMesh( shape, parameters );
@@ -615,6 +620,8 @@ private:
     }
 
 private:
+    MeshLoad::StepLoadSettings loadSettings_ = {};
+
 #if STEP_LOAD_COLORS
     Handle( XCAFDoc_ColorTool ) colorTool_;
 #endif
@@ -737,7 +744,7 @@ Expected<void> repairStepFile( STEPControl_Reader& reader )
 
 std::mutex cOpenCascadeMutex = {};
 
-Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings, const MeshLoad::StepLoadSettings& stepSettings )
 {
     MR_TIMER;
 
@@ -754,6 +761,7 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
         return unexpectedOperationCanceled();
 
     StepLoader loader;
+    loader.setLoadSettings( stepSettings );
     if ( auto exp = loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) ); !exp )
         return unexpected( std::move( exp.error() ) );
     loader.loadMeshes();
@@ -769,7 +777,7 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
 }
 
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings, const MeshLoad::StepLoadSettings& stepSettings )
 {
     MR_TIMER;
 
@@ -786,6 +794,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
         return unexpectedOperationCanceled();
 
     StepLoader loader;
+    loader.setLoadSettings( stepSettings );
     if ( auto exp = loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) ); !exp )
         return unexpected( std::move( exp.error() ) );
     loader.loadMeshes();
@@ -795,7 +804,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 #endif
 
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings, const MeshLoad::StepLoadSettings& stepSettings )
 {
     MR_TIMER;
 
@@ -832,6 +841,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
         return unexpectedOperationCanceled();
 
     StepLoader loader;
+    loader.setLoadSettings( stepSettings );
     loader.loadModelStructure( document );
     loader.loadMeshes();
 
@@ -847,7 +857,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 namespace MR::MeshLoad
 {
 
-Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings )
+Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromStepImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -856,10 +866,10 @@ Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettin
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings );
+    }, settings, stepSettings );
 }
 
-Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings )
+Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromStepImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -868,12 +878,21 @@ Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings )
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings );
+    }, settings, stepSettings );
 }
 
-MR_ADD_MESH_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), fromStep )
+MR_ON_INIT {
+    using namespace MR::MeshLoad;
+    setMeshLoader(
+        IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ),
+        {
+            [] ( const std::filesystem::path& path, const MeshLoadSettings& settings ) { return fromStep( path, settings ); },
+            [] ( std::istream& in, const MeshLoadSettings& settings ) { return fromStep( in, settings ); },
+        }
+    );
+};
 
-Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -882,7 +901,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings )
+    }, settings, stepSettings )
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
@@ -903,7 +922,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
     ;
 }
 
-Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -912,7 +931,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings )
+    }, settings, stepSettings )
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {

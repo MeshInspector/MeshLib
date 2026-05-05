@@ -1,9 +1,13 @@
 #include "MRStatePlugin.h"
-#include "MRMesh/MRString.h"
-#include "MRRibbonMenu.h"
-#include "MRMesh/MRSystem.h"
+
 #include "MRCommandLoop.h"
+#include "MRI18n.h"
+#include "MRRibbonMenu.h"
+
 #include "MRMesh/MRConfig.h"
+#include "MRMesh/MRString.h"
+#include "MRMesh/MRSystem.h"
+
 #include "imgui.h"
 #include "imgui_internal.h"
 
@@ -29,13 +33,15 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     CommandLoop::appendCommand( [this] ()
     {
         std::string name = this->name();
+        LocaleDomainId localeDomainId;
         auto item = RibbonSchemaHolder::schema().items.find( name );
         if ( item != RibbonSchemaHolder::schema().items.end() )
         {
             if ( !item->second.caption.empty() )
                 name = item->second.caption;
+            localeDomainId = item->second.localeDomainId;
         }
-        plugin_name = std::move( name );
+        plugin_name = Locale::translate( name.c_str(), localeDomainId );
         plugin_name += UINameSuffix();
     }, CommandLoop::StartPosition::AfterPluginInit );
     tab_ = tab;

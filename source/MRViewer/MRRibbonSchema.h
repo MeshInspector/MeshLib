@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRRibbonRegisterItem.h"
+#include "MRMesh/MRId.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRphmap.h"
 #include <json/forwards.h>
@@ -13,7 +14,7 @@ namespace MR
 {
 
 // needed for big buttons text aligning
-using SplitCaptionInfo = std::vector<std::pair<std::string_view, float>>;
+using SplitCaptionInfo = std::vector<std::pair<size_t, float>>;
 
 struct MenuItemCaptionSize
 {
@@ -29,6 +30,9 @@ struct MenuItemInfo
     std::string icon;
     MenuItemCaptionSize captionSize; // already scaled
     std::string helpLink; // link to help page
+    LocaleDomainId localeDomainId; // needed for translation
+
+    const std::string& getCaption() const { return !caption.empty() ? caption : item->name(); }
 };
 
 /// interface for plugins that should be notified when their information is loaded from the schema json file
@@ -52,6 +56,7 @@ struct RibbonTab
     std::string name;
     int priority{ 0 };
     bool experimental{ false };
+    LocaleDomainId localeDomainId; // domain that owns this tab's translation; set by the first .ui.json that creates it
 };
 
 // This structure describes UI schema of ribbon menu
@@ -148,10 +153,10 @@ protected:
     MRVIEWER_API void sortFilesByOrder_( std::vector<std::filesystem::path>& files ) const;
     // appends one menu items json info
     MRVIEWER_API void readItemsJson_( const std::filesystem::path& path ) const;
-    MRVIEWER_API void readItemsJson_( const Json::Value& root ) const;
+    MRVIEWER_API void readItemsJson_( const Json::Value& root, const std::string& schemaName = {} ) const;
     // appends one ui json info
     MRVIEWER_API void readUIJson_( const std::filesystem::path& path ) const;
-    MRVIEWER_API void readUIJson_( const Json::Value& root ) const;
+    MRVIEWER_API void readUIJson_( const Json::Value& root, LocaleDomainId domainId = {} ) const;
 };
 
 

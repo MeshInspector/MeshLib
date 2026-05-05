@@ -1,7 +1,68 @@
+# syntax=docker/dockerfile:1.6
+
+# Multi-stage build:
+#   builder: heavy thirdparty work for all three Emscripten variants.
+#   final:   runtime image containing only the installed artifacts.
+#
+# The builder stage is discarded at push time, so the MeshLib source tree
+# (COPY . .), thirdparty_build/ scratch, builder-only apt packages, and any
+# other incidental build residue never land in the pushed image. Only the
+# three /usr/local/lib/emscripten* install trees cross the stage boundary.
+#
+# Install paths are preserved, so build-test-emscripten.yml needs no changes.
+
+## ============================================================================
+## Stage 1: builder
+## ============================================================================
+FROM emscripten/emsdk:4.0.10-arm64 AS builder
+
+# Minimal apt set required by ./scripts/build_thirdparty.sh.
+# No firefox/xvfb/dbus here — those are test-runtime only, not build deps.
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list && \
+    apt-get update -qqy && \
+    apt-get install -qqy --no-install-recommends \
+        git pkg-config ninja-build gettext && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /home/MeshLib
+
+# Full source tree (including submodules checked out by actions/checkout) is
+# needed to run the thirdparty build scripts. This layer is only in the
+# builder stage and does NOT propagate to the final image.
+COPY . .
+
+ENV MR_STATE=DOCKER_BUILD
+ENV MR_EMSCRIPTEN=ON
+
+# Stage the three installs under /opt/meshlib-thirdparty so the COPY --from=
+# in the final stage is unambiguous about what to pick up.
+RUN ./scripts/build_thirdparty.sh && \
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten && \
+    rm -rf bin include lib share thirdparty_build
+
+ENV MR_EMSCRIPTEN_SINGLE=ON
+RUN ./scripts/build_thirdparty.sh && \
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single && \
+    rm -rf bin include lib share thirdparty_build
+
+ENV MR_EMSCRIPTEN_SINGLE=OFF
+ENV MR_EMSCRIPTEN_WASM64=ON
+RUN ./scripts/build_thirdparty.sh && \
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64 && \
+    rm -rf bin include lib share thirdparty_build
+
+
+## ============================================================================
+## Stage 2: final runtime image
+## ============================================================================
 FROM emscripten/emsdk:4.0.10-arm64
 
-# Update and install req
-# install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
+# Full runtime apt set. Same as pre-multi-stage master, except the x86_64
+# AWS CLI install was already dropped upstream.
+# yaru-theme-icon fixes `Icon 'dialog-warning' not present in theme Yaru:
+# 'glib warning'` during testing.
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
@@ -16,44 +77,15 @@ Pin-Priority: 1001\
 ' | tee /etc/apt/preferences.d/mozilla-firefox \
  && add-apt-repository -y ppa:mozillateam/ppa \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 \
+        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 gettext \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-## preprare thirdparty
-RUN mkdir /home/MeshLib
-WORKDIR "/home/MeshLib"
-
-#copy files
-COPY . .
-
-#build thirdparty
-ENV MR_STATE=DOCKER_BUILD
-ENV MR_EMSCRIPTEN=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten && \
-    rm -rf bin include lib share thirdparty_build
-
-ENV MR_EMSCRIPTEN_SINGLE=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-single && \
-    rm -rf bin include lib share thirdparty_build
-
-ENV MR_EMSCRIPTEN_SINGLE=OFF
-ENV MR_EMSCRIPTEN_WASM64=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-wasm64 && \
-    rm -rf bin include lib share thirdparty_build
-
-ENV MR_EMSCRIPTEN_WASM64=OFF
-
-# install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-
-WORKDIR "/home/"
-RUN rm -rf MeshLib
+# Pull only the compiled thirdparty trees from the builder. Target paths
+# match what build-test-emscripten.yml's matrix.thirdparty-dir already expects.
+COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
 # Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
 # https://github.com/actions/checkout/issues/1014

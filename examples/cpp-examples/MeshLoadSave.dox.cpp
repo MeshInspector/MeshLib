@@ -10,7 +10,7 @@ int main()
     // Load mesh
     std::filesystem::path inFilePath = "mesh.stl";
     auto loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
-    if ( loadRes.has_value() )
+    if ( !loadRes.has_value() )
     {
         std::cerr << loadRes.error() << std::endl;
         return 1;

@@ -52,6 +52,7 @@ COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/
 
 COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=build /home/MeshLib/share /usr/local/lib/meshlib-thirdparty-lib/share
 COPY --from=cuda /usr/local/cuda-12.6 /usr/local/cuda-12.6
 
 ENV MR_STATE=DOCKER_BUILD
@@ -64,7 +65,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
  && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh \

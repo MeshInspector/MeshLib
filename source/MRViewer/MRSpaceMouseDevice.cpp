@@ -28,12 +28,14 @@ void Device::updateDevice( VendorId vendorId, ProductId productId )
 
 bool Device::valid() const
 {
-    return bool( buttonsMapPtr_ );
+    return vId_ != 0 && pId_ != 0;
 }
 
 void Device::resetDevice()
 {
     buttonsMapPtr_ = nullptr;
+    vId_ = 0;
+    pId_ = 0;
     buttonsState_ = 0;
 }
 

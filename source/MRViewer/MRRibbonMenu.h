@@ -50,10 +50,14 @@ public:
 
     MRVIEWER_API virtual void shutdown() override;
 
+    virtual void drawViewerWindow() override {}
+
+    MRVIEWER_API  virtual void drawAdditionalWindows() override;
+
     /// open Toolbar Customize modal popup
     MRVIEWER_API void openToolbarCustomize();
 
-    MRVIEWER_API virtual void load_font( int font_size = 13 ) override;
+    MRVIEWER_API virtual void loadFonts( int font_size = 13 ) override;
 
     MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const override;
 
@@ -197,7 +201,7 @@ protected:
     MRVIEWER_API virtual void drawRibbonSceneInformation_( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
-    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
 
     MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
 
@@ -247,6 +251,8 @@ protected:
     MRVIEWER_API virtual void drawCollapseButton_();
     // header helper button link to help page
     MRVIEWER_API virtual void drawHelpButton_( const std::string& url );
+    // header helper button to change the UI language
+    MRVIEWER_API virtual void drawLanguageButton_();
 
     RibbonMenuSearch searcher_;
 

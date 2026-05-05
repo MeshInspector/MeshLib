@@ -14,6 +14,7 @@
 #include <MRMesh/MRSceneRoot.h>
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRI18n.h"
 
 namespace
 {
@@ -52,23 +53,23 @@ void OpenRawVoxelsPlugin::drawDialog( ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * UI::scale(), cDefaultItemSpacing * UI::scale() } );
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * UI::scale(), cCheckboxPadding * UI::scale() } );
-    UI::checkbox( "Auto parameters", &autoMode_ );
+    UI::checkbox( _tr( "Auto parameters" ), &autoMode_ );
     ImGui::PopStyleVar();
-    UI::setTooltipIfHovered( "Use this flag to parse RAW parameters from filename." );
+    UI::setTooltipIfHovered( _tr( "Use this flag to parse RAW parameters from filename." ) );
     ImGui::Separator();
 
     if ( !autoMode_ )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * UI::scale() } );
         ImGui::PushItemWidth( UI::scale() * 200.0f );
-        UI::drag<NoUnit>( "Dimensions", parameters_.dimensions, 1, 0, std::numeric_limits<int>::max() );
-        UI::drag<LengthUnit>( "Voxel size", parameters_.voxelSize, 1e-3f, 0.0f );
+        UI::drag<NoUnit>( _tr( "Dimensions" ), parameters_.dimensions, 1, 0, std::numeric_limits<int>::max() );
+        UI::drag<LengthUnit>( _tr( "Voxel size" ), parameters_.voxelSize, 1e-3f, 0.0f );
         ImGui::PopItemWidth();
         ImGui::Separator();
         ImGui::PopStyleVar();
-        UI::combo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
+        UI::combo( _tr( "Scalar Type" ), ( int* )&parameters_.scalarType, cScalarTypeNames );
     }
-    if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
+    if ( UI::button( _tr( "Open file" ), Vector2f( -1, 0 ) ) )
     {
         const auto cb = [this] ( const std::filesystem::path& path )
         {
@@ -130,7 +131,7 @@ void OpenRawVoxelsPlugin::drawDialog( ImGuiContext* )
 
                     return [object, path] ()
                     {
-                        AppendHistory<ChangeSceneAction>( "Open Voxels", object, ChangeSceneAction::Type::AddObject );
+                        AppendHistory<ChangeSceneAction>( _t( "Open Voxels" ), object, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( object );
                         std::filesystem::path scenePath = path;
                         getViewerInstance().onSceneSaved( scenePath, false );

@@ -1,12 +1,15 @@
-ARG VCPKG_VERSION=2026.01.16
+ARG VCPKG_VERSION=2026.03.18
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
 
 FROM rockylinux:8 AS build
 
+COPY scripts/retry.sh /usr/local/bin/retry.sh
+
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
-    dnf -y install epel-release && \
-    dnf -y install --enablerepo powertools \
+    $(: network may flake ) \
+    retry.sh -- dnf -y install epel-release && \
+    retry.sh -- dnf -y install --enablerepo powertools \
         git cmake gcc-toolset-11 ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
@@ -27,6 +30,11 @@ RUN python3.12 -m venv venv && \
     source venv/bin/activate && \
     pip install jinja2
 
+COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
+COPY thirdparty/vcpkg/ports MeshLib/ports
+COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY scripts/retry.sh /usr/local/bin/retry.sh
+
 ARG VCPKG_VERSION
 ENV VCPKG_VERSION=$VCPKG_VERSION
 RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
@@ -40,22 +48,20 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
     sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
 
 # build vcpkg packages
-COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
-COPY thirdparty/vcpkg/ports MeshLib/ports
-COPY thirdparty/vcpkg/triplets MeshLib/triplets
-
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN source /opt/rh/gcc-toolset-11/enable && \
     source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
-    ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
-RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
+    $(: network may flake ) \
+    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
+RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
 FROM nvidia/cuda:12.0.1-devel-rockylinux8 AS production
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
+COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
@@ -65,7 +71,8 @@ ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
-    dnf -y install --enablerepo powertools \
+    $(: network may flake ) \
+    retry.sh -- dnf -y install --enablerepo powertools \
         git cmake gcc-toolset-11 ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
@@ -74,14 +81,14 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         $(: mrbind requirements ) \
         lld llvm-devel python3.12-devel which zlib-devel \
         $(: CI environment ) \
-        time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers \
+        time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext \
         && \
     dnf clean all
 
 # install github-cli
-RUN dnf -y install 'dnf-command(config-manager)' && \
-    dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
-    dnf -y install gh && \
+RUN retry.sh -- dnf -y install 'dnf-command(config-manager)' && \
+    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
+    retry.sh -- dnf -y install gh && \
     dnf clean all
 
 # install aws cli

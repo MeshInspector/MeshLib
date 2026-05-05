@@ -47,6 +47,8 @@ Polyline<V>::Polyline( const std::vector<VertId> & comp2firstVert, Vector<V, Ver
 template<typename V>
 EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num, bool closed )
 {
+    if ( num == 0 )
+        return {};
     if ( !vs || num < 2 )
     {
         assert( false );
@@ -75,6 +77,8 @@ EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num, bool closed )
 template<typename V>
 EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num )
 {
+    if ( num == 0 )
+        return {};
     if ( !vs || num < 2 )
     {
         assert( false );

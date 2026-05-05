@@ -14,7 +14,7 @@ namespace MR
 MRIOEXTRAS_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback = {} );
 
 // saves scene to a glTF file
-MRIOEXTRAS_API Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const ObjectSave::Settings& settings );
+MRIOEXTRAS_API Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const SceneSave::Settings& settings );
 
 } // namespace MR
 #endif

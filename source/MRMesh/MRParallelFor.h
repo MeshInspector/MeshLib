@@ -16,6 +16,8 @@ namespace MR
 
 MRMESH_API void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t )> f );
 
+MRMESH_API void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t )> f, tbb::task_group_context& tgc );
+
 MRMESH_API void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> f, FunctionRef<void* ()> ctx );
 
 MRMESH_API bool parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> f, FunctionRef<void* ()> ctx,
@@ -44,6 +46,17 @@ inline auto ParallelFor( I begin, I end, F && f, Cb && ... cb )
             return nullptr;
         }, std::forward<Cb>( cb )... );
     }
+}
+
+/// executes given function f for each span element [begin, end);
+/// tbb::task_group_context can be used to interrupt execution prematurely
+template <typename I, typename F>
+inline void ParallelFor( I begin, I end, F && f, tbb::task_group_context& tgc )
+{
+    parallelFor( begin, end, [&] ( size_t i )
+    {
+        std::forward<F>( f )( I( i ) );
+    }, tgc );
 }
 
 /// executes given function f for each span element [begin, end)

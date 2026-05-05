@@ -1,9 +1,9 @@
 #include "MRToolPath.h"
+#include "MRFixUndercuts.h"
+#include "MROffset.h"
 
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSurfacePath.h"
-#include "MRFixUndercuts.h"
-#include "MROffset.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRSurfaceDistance.h"
@@ -23,6 +23,7 @@
 #include "MRMesh/MRFillContourByGraphCut.h"
 #include "MRMesh/MRInnerShell.h"
 #include "MRMesh/MRRingIterator.h"
+#include "MRMesh/MREdgeMetric.h"
 
 #include <sstream>
 #include <span>

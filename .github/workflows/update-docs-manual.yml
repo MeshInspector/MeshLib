@@ -46,12 +46,21 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
-          
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
       - name: Install mrbind
         run: scripts/mrbind/install_mrbind_ubuntu.sh
@@ -86,7 +95,7 @@ jobs:
         run: python3 ./scripts/wheel/create_stubs.py
 
       - name: Upload Python Stubs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
@@ -98,17 +107,19 @@ jobs:
         run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
 
       - name: Upload C bindings headers
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: CBindings
-          path: ./source/MeshLibC2/include
+          path: |
+            ./source/MeshLibC2/include
+            ./source/MeshLibC2Cuda/include
           retention-days: 1
 
       - name: Generate C# bindings # generate only sources
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
           path: ./source/MRDotNet2/src
@@ -129,12 +140,17 @@ jobs:
     continue-on-error: true
     steps:
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: PythonStubs
           failOnError: false
       - name: Delete C bindings headers
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CBindings
+          failOnError: false
+      - name: Delete Csharp bindings
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: CsharpBindings
           failOnError: false

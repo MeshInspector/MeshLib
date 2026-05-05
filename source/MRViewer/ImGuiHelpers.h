@@ -1,12 +1,4 @@
 #pragma once
-// This file is part of libigl, a simple c++ geometry processing library.
-//
-// Copyright (C) 2018 Jérémie Dumas <jeremie.dumas@ens-lyon.org>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public License
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can
-// obtain one at http://mozilla.org/MPL/2.0/.
-
 #include "MRMesh/MRFlagOperators.h"
 #include "exports.h"
 #include "MRMesh/MRVector2.h"
@@ -32,51 +24,56 @@ struct ImGuiWindow;
 namespace ImGui
 {
 
-static auto vector_getter = [] ( void* vec, int idx ) -> const char*
+static const char* getVectorValue( void* vec, int idx )
 {
-    auto& vector = *static_cast< std::vector<std::string>* >( vec );
+    auto& vector = *static_cast<std::vector<std::string>*>( vec );
     if ( idx < 0 || idx >= static_cast< int >( vector.size() ) )
     {
-        assert( false && "Combo: vector_getter invalid index" );
+        assert( false && "Combo: getVectorValue invalid index" );
         return "";
     }
     return vector.at( idx ).c_str();
+}
+
+[[deprecated]] static auto vector_getter = [] ( void* vec, int idx ) -> const char*
+{
+    return getVectorValue( vec, idx );
 };
 
-inline bool Combo(const char* label, int* idx, const std::vector<std::string>& values)
+[[deprecated]] inline bool Combo( const char* label, int* idx, const std::vector<std::string>& values )
 {
-  if (values.empty()) { return false; }
-  return Combo(label, idx, vector_getter,
-    const_cast<void *>( static_cast<const void*>(&values) ), (int)values.size());
+    if ( values.empty() )
+        return false;
+    return Combo( label, idx, getVectorValue, const_cast<void*>( static_cast<const void*>( &values ) ), (int) values.size() );
 }
 
-inline bool Combo(const char* label, int* idx, std::function<const char *(int)> getter, int items_count)
+inline bool Combo( const char* label, int* idx, std::function<const char*( int )> getter, int itemsCount )
 {
-  auto func = [](void* data, int i) -> const char*
-  {
-    auto &getter = *reinterpret_cast<std::function<const char *(int)> *>(data);
-    const char *s = getter(i);
-    if ( s )
-        return s;
-    else
+    auto func = [] ( void* data, int i ) -> const char*
     {
-        assert( false && "Combo: getter return nullptr" );
-        return "";
-    }
-  };
-  return Combo(label, idx, func, reinterpret_cast<void *>(&getter), items_count);
+        auto& getter = *reinterpret_cast< std::function<const char*( int )> * >( data );
+        const char* s = getter( i );
+        if ( s )
+            return s;
+        else
+        {
+            assert( false && "Combo: getter return nullptr" );
+            return "";
+        }
+    };
+    return Combo( label, idx, func, reinterpret_cast< void* >( &getter ), itemsCount );
 }
 
-inline bool ListBox(const char* label, int* idx, const std::vector<std::string>& values)
+[[deprecated]] inline bool ListBox( const char* label, int* idx, const std::vector<std::string>& values )
 {
-  if (values.empty()) { return false; }
-  return ListBox(label, idx, vector_getter,
-    const_cast<void *>( static_cast<const void*>(&values) ), (int)values.size());
+    if ( values.empty() )
+        return false;
+    return ListBox( label, idx, getVectorValue, const_cast<void*>( static_cast<const void*>( &values ) ), (int) values.size() );
 }
 
 inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
 {
-  return ImGui::InputText( label, &str, flags, callback, user_data );
+    return InputText( label, &str, flags, callback, user_data );
 }
 
 
@@ -143,13 +140,13 @@ MRVIEWER_API bool InputIntValid( const char* label, int* value, int min, int max
     int step = 1, int step_fast = 100, ImGuiInputTextFlags flags = 0 );
 
 // draw check-box that takes initial value from Getter and then saves the final value in Setter
-template<typename Getter, typename Setter>
-inline bool Checkbox(const char* label, Getter get, Setter set)
+template<typename GetValueFunc, typename SetValueFunc>
+inline bool Checkbox(const char* label, GetValueFunc getValue, SetValueFunc setValue)
 {
-    bool value = get();
-    bool ret = ImGui::Checkbox(label, &value);
-    set(value);
-    return ret;
+    bool value = getValue();
+    bool result = ImGui::Checkbox(label, &value);
+    setValue(value);
+    return result;
 }
 
 /// helper structure for PlotCustomHistogram describing background grid line and label

@@ -43,6 +43,16 @@ public:
     /// free all libraries loaded in setupExtendedLibraries()
     MRVIEWER_API virtual void unloadExtendedLibraries() const;
 
+    /// Launch the MCP server. Append this to the `CommandLoop` instead of calling immediately.
+    /// Returns false if the MCP support is not compiled in.
+    MRVIEWER_API virtual bool setupMcp() const;
+
+    /// Stop the MCP server and clear tool registrations. Called from `MRViewer.cpp` after
+    /// `viewer.launch()` returns, before `unloadExtendedLibraries()` — captured tool
+    /// callbacks live in plugin DLLs and dangle once those DLLs are unloaded.
+    /// Returns false if the MCP support is not compiled in.
+    MRVIEWER_API virtual bool shutdownMcp() const;
+
     // functor to setup custom log sink, i.e. sending logs to web
     std::function<void()> setupCustomLogSink;
 

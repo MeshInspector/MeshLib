@@ -20,7 +20,6 @@ namespace MR
 enum class MRMESH_CLASS VisualizeMaskType
 {
     Visibility,
-    InvertedNormals,
     Name,
     ClippedByPlane,
     DepthTest,
@@ -306,7 +305,6 @@ protected:
     ViewportMask clipByPlane_;
     ViewportMask showName_;
     ViewportMask pickable_ = ViewportMask::all(); ///< enable picking by gl
-    ViewportMask invertNormals_; ///< invert mesh normals
     ViewportMask depthTest_ = ViewportMask::all();
 
     float shininess_{35.0f}; ///< specular exponent

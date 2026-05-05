@@ -35,19 +35,20 @@ xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 #### Prerequisites
  1. **Git**
   - [Install Git](https://git-scm.com/) to manage repositories and submodules, which is also required to install `vcpkg`.
- 2. **Visual Studio 2019 or 2022**
-  - [Download and install either Visual Studio 2019 or 2022](https://visualstudio.microsoft.com/). During installation, make sure to:
+ 2. **Visual Studio 2019, 2022 or 2026**
+  - [Download and install either Visual Studio 2019, 2022 or 2026](https://visualstudio.microsoft.com/). During installation, make sure to:
    - Select the "Desktop development with C++" workload.
    - Include support for the C++ programming language.
    - Ensure the English language pack is installed (required for `vcpkg`).
  3. **CUDA Toolkit**
   - For **Visual Studio 2019**: Install [CUDA v11.4](https://developer.nvidia.com/cuda-11-4-0-download-archive)
   - For **Visual Studio 2022**: Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive)
+  - For **Visual Studio 2026**: Install [CUDA v13.2](https://developer.nvidia.com/cuda-13-2-0-download-archive)
  \n Choose the appropriate version based on your Visual Studio installation.
  4. **vcpkg**
   - To install `vcpkg`, follow these steps:
    1. **Open a command prompt (CMD) or PowerShell window**.
-   2. **Navigate to a directory where you want to install** `vcpkg`:
+   2. **Navigate to a directory where you want to install** `vcpkg` (please avoid using directories with special characters like `!` in full path):
 \code{.cmd}
 cd C:\path\to\your\desired\directory
 \endcode
@@ -60,9 +61,9 @@ git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
 git checkout 2024.10.21
 \endcode
-If you're using **Visual Studio 2022**, you can use the latest version of vcpkg:
+If you're using Visual Studio 2022 or 2026, you can use the latest version of vcpkg:
 \code{.cmd}
-git checkout 2026.01.16
+git checkout 2026.03.18
 \endcode
 The version `2024.10.21` is required only for compatibility with **Visual Studio 2019**.
    5. **Run the bootstrap script to build the** `vcpkg` **executable**:
@@ -129,7 +130,8 @@ MeshViewer
  2. **CMake**
   - Ensure [CMake](https://cmake.org/download/#latest) is installed for managing the build process.
  3. **CUDA Toolkit**
-  - Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive) from the official website. Follow the Linux installation instructions provided on the CUDA page.
+  - Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive)/[CUDA v12.6 (for Ubuntu 24.04)](https://developer.nvidia.com/cuda-12-6-3-download-archive) from the official website. Follow the Linux installation instructions provided on the CUDA page.
+\note You might need to execute `export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/mnt' | tr '\n' ':' | sed 's/:$//')` if you are on WSL to prevent interfearing with host machine CUDA Toolkit (this command will filter host machine paths from PATH enviroment)
 
 #### Installing the local build
  1. **Clone the MeshLib Repository**:

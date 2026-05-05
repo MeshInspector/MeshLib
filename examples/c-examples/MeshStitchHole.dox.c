@@ -44,7 +44,7 @@ int main( void )
     MR_std_vector_MR_EdgeId* edges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
     if ( MR_std_vector_MR_EdgeId_size( edges ) != 2 )
     {
-        fprintf( stderr, "Expected exactly 2 holes to stitch, but found %" PRIu64 "\n", MR_std_vector_MR_EdgeId_size( edges ) );
+        fprintf( stderr, "Expected exactly 2 holes to stitch, but found %zu\n", MR_std_vector_MR_EdgeId_size( edges ) );
         goto fail_not_two_holes;
     }
 
@@ -55,13 +55,13 @@ int main( void )
     MR_StitchHolesParams_Set_metric( params, MR_PassBy_Move, metric );
     MR_FillHoleMetric_Destroy( metric );
 
-    // We also have a version of this function (`MR_buildCylinderBetweenTwoHoles_2()`) that finds the two holes automatically.
+    // We also have a version of this function (`MR_stitchHoles_2()`) that finds the two holes automatically.
     // Here we've found them manually for demonstration purposes.
-    MR_buildCylinderBetweenTwoHoles_4( mesh, *MR_std_vector_MR_EdgeId_at( edges, 0 ), *MR_std_vector_MR_EdgeId_at( edges, 1 ), params );
+    MR_stitchHoles_4( mesh, *MR_std_vector_MR_EdgeId_at( edges, 0 ), *MR_std_vector_MR_EdgeId_at( edges, 1 ), params );
     MR_StitchHolesParams_Destroy( params );
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "MeshStitched.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "stitchedMesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

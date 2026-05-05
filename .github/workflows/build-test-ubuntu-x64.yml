@@ -72,12 +72,21 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/eigen thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
@@ -99,7 +108,7 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -132,7 +141,7 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Timing_Logs_${{matrix.os}}-x86_${{matrix.config}}_${{matrix.cxx-compiler}}
           path: time_log/
@@ -221,7 +230,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Distributives_${{matrix.os}}-x86
           path: meshlib_${{matrix.os}}-dev.deb

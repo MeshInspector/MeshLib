@@ -164,7 +164,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
 
         if ( settings.smoothCurvature )
         {
-            smoothFillingNicely( mesh, newVerts, newFaces, settings.triangulateParams.smoothBd, settings.smoothSeettings );
+            smoothFillingNicely( mesh, newVerts, newFaces, settings.triangulateParams.smoothBd, settings.smoothSettings );
         }
     }
 
@@ -200,7 +200,7 @@ FaceBitSet stitchHolesNicely( Mesh& mesh, EdgeId hole0Edge, EdgeId hole1Edge, co
 
         if ( settings.smoothCurvature )
         {
-            smoothFillingNicely( mesh, newVerts, newFaces, true, settings.smoothSeettings );
+            smoothFillingNicely( mesh, newVerts, newFaces, true, settings.smoothSettings );
         }
     }
 

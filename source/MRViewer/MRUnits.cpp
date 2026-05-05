@@ -1,6 +1,7 @@
 #include "MRUnits.h"
 #include "MRMesh/MRString.h"
 #include "MRPch/MRFmt.h"
+#include "MRI18n.h"
 #include <algorithm>
 
 namespace MR
@@ -221,11 +222,11 @@ std::string_view toString( DegreesMode mode )
     switch ( mode )
     {
     case DegreesMode::degrees:
-        return "Degrees";
+        return _t( "Degrees" );
     case DegreesMode::degreesMinutes:
-        return "Degrees, minutes";
+        return _t( "Degrees, minutes" );
     case DegreesMode::degreesMinutesSeconds:
-        return "Degrees, minutes, seconds";
+        return _t( "Degrees, minutes, seconds" );
     case DegreesMode::_count:
         break; // Nothing.
     }
@@ -284,9 +285,14 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
             str = '0' + std::move( str );
     };
 
-    std::string_view unitSuffix;
+    std::string unitSuffix;
     if ( params.unitSuffix )
-        unitSuffix = params.targetUnit ? getUnitInfo( *params.targetUnit ).unitSuffix : params.sourceUnit ? getUnitInfo( *params.sourceUnit ).unitSuffix : "";
+    {
+        if ( params.targetUnit )
+            unitSuffix = s_tr( getUnitInfo( *params.targetUnit ).unitSuffix );
+        else if ( params.sourceUnit )
+            unitSuffix = s_tr( getUnitInfo( *params.sourceUnit ).unitSuffix );
+    }
     std::string ret;
 
     // Handle arcseconds/arcminutes.
@@ -311,7 +317,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                 if ( negative )
                     wholeDegrees = -wholeDegrees;
 
-                ret = fmt::format( "{:.0f}{}", wholeDegrees, getUnitInfo( AngleUnit::degrees ).unitSuffix );
+                ret = fmt::format( "{:.0f}{}", wholeDegrees, _tr( getUnitInfo( AngleUnit::degrees ).unitSuffix.data() ) );
                 adjustMinusSign( ret );
 
                 if ( params.degreesMode == DegreesMode::degreesMinutesSeconds )

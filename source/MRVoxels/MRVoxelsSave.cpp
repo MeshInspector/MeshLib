@@ -172,6 +172,8 @@ Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::files
 Expected<void> gridToRawAutoname( const FloatGrid& grid, const Vector3i& dims, const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
+    if ( !grid )
+        return unexpected( "grid is null" );
 
     return openRawAutonameStream( dims, Vector3f::diagonal( 1.0f ), grid->getGridClass() == openvdb::GRID_LEVEL_SET, file ).and_then(
         [&] ( NamedOutFileStream&& s )
@@ -316,13 +318,13 @@ Expected<void> toVoxels( const Object& object, const std::filesystem::path& path
 {
     const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
     if ( objVoxels.empty() )
-        return voxelsSaver( {}, path, settings.progress );
+        return unexpected( "no ObjectVoxels found" );
     else if ( objVoxels.size() > 1 )
-        return unexpected( "Multiple voxel grids in the given object" );
+        return unexpected( "more than one ObjectVoxels found" );
 
     const auto& objVoxel = objVoxels.front();
     if ( !objVoxel )
-        return voxelsSaver( {}, path, settings.progress );
+        return unexpected( "null ObjectVoxels found" );
 
     return voxelsSaver( objVoxel->vdbVolume(), path, settings.progress );
 }

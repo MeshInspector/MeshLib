@@ -139,11 +139,33 @@ bool Config::getBool( const std::string& key, bool defaultValue ) const
     {
         return config_[key].asBool();
     }
-    if ( loggerHandle_ )
+    if ( loggerHandle_ && reportedMissingKeys_.insert( key ).second )
         loggerHandle_->debug( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
     return defaultValue;
 }
 void Config::setBool( const std::string& key, bool keyValue )
+{
+    config_[key] = keyValue;
+}
+
+bool Config::hasInt( const std::string& key ) const
+{
+    return config_.isMember( key ) && config_[key].isInt();
+}
+
+int Config::getInt( const std::string& key, int defaultValue ) const
+{
+    if ( !hasInt( key ) )
+    {
+        if ( loggerHandle_ && reportedMissingKeys_.insert( key ).second )
+            loggerHandle_->debug( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
+        return defaultValue;
+    }
+
+    return config_[key].asInt();
+}
+
+void Config::setInt( const std::string& key, int keyValue )
 {
     config_[key] = keyValue;
 }
@@ -163,7 +185,7 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
         deserializeFromJson( val, res );
         return res;
     }
-    if ( loggerHandle_ )
+    if ( loggerHandle_ && reportedMissingKeys_.insert( key ).second )
         loggerHandle_->debug( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key,
             defaultValue.r, defaultValue.g, defaultValue.b, defaultValue.a );
     return defaultValue;

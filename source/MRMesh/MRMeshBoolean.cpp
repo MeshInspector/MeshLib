@@ -24,6 +24,7 @@
 #include "MREdgePaths.h"
 #include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMeshFillHole.h"
 
 namespace MR
 {
@@ -98,34 +99,24 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     return boolean( meshA, meshB, operation, { .rigidB2A = rigidB2A, .mapper = mapper, .cb = cb } );
 }
 
-BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
-{
-    return boolean( meshA, meshB, operation, { .rigidB2A = rigidB2A, .mapper = mapper, .cb = cb } );
-}
-
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
-    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
-    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
+    Mesh maCpy, mbCpy;
     tbb::task_group taskGroup;
-    if ( needCutMeshA )
+    taskGroup.run( [&] ()
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        taskGroup.run( [&] ()
-        {
-            meshA.getAABBTree();
-        } );
-    }
-    if ( needCutMeshB )
-    {
-        // build tree for input mesh for the cloned mesh to copy the tree,
-        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        meshB.getAABBTree();
-    }
+        meshA.getAABBTree();
+        maCpy = meshA;
+    } );
+    // build tree for input mesh for the cloned mesh to copy the tree,
+    // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+    meshB.getAABBTree();
+    mbCpy = meshB;
     taskGroup.wait();
-    return booleanImpl( Mesh( meshA ), Mesh( meshB ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
+
+    return booleanImpl( std::move( maCpy ), std::move( mbCpy ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
@@ -251,6 +242,18 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
 }
 }
 
+BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& inParams /*= {} */ )
+{
+    auto params = inParams;
+    params.forceCut = true;
+    auto res = boolean( meshA, meshB, operation, params );
+    MeshBuilder::uniteCloseVertices( res.mesh, { .duplicateNonManifold = true } );
+    FillHoleParams fhp;
+    fhp.metric = getMinAreaMetric( res.mesh );
+    fillHoles( res.mesh, res.mesh.topology.findHoleRepresentiveEdges(), fhp );
+    return res;
+}
+
 Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
@@ -339,7 +342,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         intContours[f].closed = true;
     } );
 
-    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
+    // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
+    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt, nullptr, 0, false } );
     auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get() } );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );
@@ -643,6 +647,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         return {};
 
     intParams.optionalOutCut = params.outCutEdges;
+    intParams.graphCutSeparation = params.forceCut;
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 

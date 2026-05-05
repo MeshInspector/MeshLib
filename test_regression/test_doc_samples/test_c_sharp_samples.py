@@ -32,7 +32,7 @@ from pytest_check import check
                                           id="MeshBoolean"),
                             pytest.param({'sample': "MeshDecimateExample",
                                            'input_files': ['mesh.stl'],
-                                           'output_files': ['decimated_mesh.stl']
+                                           'output_files': ['decimated_mesh_cs.stl']
                                            },
                                           id="MeshDecimate"),
                             pytest.param({'sample': "MeshOffsetExample",
@@ -59,8 +59,8 @@ from pytest_check import check
                                           id="MeshExport"),
                             pytest.param({'sample': "MeshFixDegeneraciesExample",
                                            'input_files': ['mesh.ctm'],
-                                           'output_files': ['mesh_fixed_v3.ctm'],
-                                           'args': ['mesh.ctm', 'mesh_fixed_v3.ctm']
+                                           'output_files': ['mesh_fixed_v4.ctm'],
+                                           'args': ['mesh.ctm', 'mesh_fixed_v4.ctm']
                                            },
                                           id="MeshFixDegeneracies"),
                          ])

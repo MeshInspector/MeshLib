@@ -6,6 +6,7 @@ endif()
 
 # static builds require to find private dependencies
 if(EMSCRIPTEN)
+  find_dependency(Boost COMPONENTS locale)
   find_dependency(glad)
 endif()
 

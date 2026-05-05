@@ -21,16 +21,19 @@ path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdpar
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 
 def vcpkg_dir():
-	vcpkg_exe_dir = ""
+	vcpkg_triplet = "x64-windows-meshlib"
 	if len(sys.argv) > 2:
-		vcpkg_exe_dir = sys.argv[2]
+		vcpkg_triplet = sys.argv[2]
+	vcpkg_exe_dir = ""
+	if len(sys.argv) > 3:
+		vcpkg_exe_dir = sys.argv[3]
 	else:
 		vcpkg_exe_dir = os.popen("where vcpkg").read().strip()
 		if "vcpkg.exe" not in vcpkg_exe_dir:
 			vcpkg_exe_dir = "C:\\vcpkg"
 		else:
 			vcpkg_exe_dir = os.path.dirname( vcpkg_exe_dir )
-	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"),"x64-windows-meshlib")
+	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"), vcpkg_triplet)
 
 
 vcpkg_directory = vcpkg_dir()
@@ -40,8 +43,9 @@ def prepare_includes_list():
 	it.includes_src_dst.clear()
 	it.includes_src_dst_thirdparty.clear()
 	it.append_includes_list(os.path.join(vcpkg_directory,"include"), True)
-	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile('x64(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?')])
+	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile('x64(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?')])
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2/include"))
+	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2Cuda/include"))
 	it.append_includes_list(path_to_phmap, True,'parallel_hashmap')
 	it.append_includes_list(path_to_pybind11, True)
 	it.append_includes_list(path_to_imgui, True)

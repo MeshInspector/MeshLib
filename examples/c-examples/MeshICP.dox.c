@@ -45,7 +45,7 @@ int main( void )
 
     // Calculate transformation
     MR_MeshOrPoints* fltMop = MR_MeshOrPoints_Construct_MR_Mesh( meshFloating );
-    MR_MeshOrPoints* refMop = MR_MeshOrPoints_Construct_MR_Mesh( meshFloating );
+    MR_MeshOrPoints* refMop = MR_MeshOrPoints_Construct_MR_Mesh( meshReference );
     MR_MeshOrPointsXf* flt = MR_MeshOrPointsXf_ConstructFrom( fltMop, MR_AffineXf3f_DefaultConstruct() );
     MR_MeshOrPointsXf* ref = MR_MeshOrPointsXf_ConstructFrom( refMop, MR_AffineXf3f_DefaultConstruct() );
     MR_MeshOrPoints_Destroy( fltMop );

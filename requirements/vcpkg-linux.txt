@@ -2,6 +2,7 @@ boost-algorithm
 boost-dynamic-bitset
 boost-functional
 boost-integer
+boost-locale
 boost-move
 boost-multiprecision
 boost-program-options
@@ -14,6 +15,7 @@ clip
 cpr
 dbus
 eigen3
+fastmcpp
 freetype
 gdcm
 glad
@@ -36,3 +38,4 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng

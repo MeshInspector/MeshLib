@@ -16,7 +16,7 @@
     <ClCompile Include="MRTriangleIntersectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRZlib.cpp">
+    <ClCompile Include="MRZlibTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTrimWithPlane.cpp">
@@ -170,6 +170,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshMeshDistanceTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRReducePathTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDeloneTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFillHoleTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRZipCompressTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -44,6 +44,11 @@ struct SceneColors
         UnselectedMeasurementsZ,
         SelectedTemporaryMeasurements,
         UnselectedTemporaryMeasurements,
+        BrushAdd,
+        BrushRemove,
+        BrushSmooth,
+        BrushDeform,
+        BrushPatch,
         Count [[maybe_unused]],
     };
 

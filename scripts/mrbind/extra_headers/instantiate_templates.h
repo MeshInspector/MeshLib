@@ -101,6 +101,7 @@ FORCE_REGISTER_TYPE( std::vector<MR::Polyline3> );
 FORCE_REGISTER_TYPE( std::monostate );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<FloatGrid>>> );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<Vector<float, MR::VoxelId>>>> );
+FORCE_REGISTER_RETURN_TYPE( std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> ); // For `PointsToMeshParameters::createVolumeCallbackByParts`. Using `RETURN_TYPE` because this is a callback parameter, and in callback signatures "param" and "return" are swapped.
 FORCE_REGISTER_PARAM_TYPE( double * );
 // ---
 

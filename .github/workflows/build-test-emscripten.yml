@@ -103,20 +103,17 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Unit Tests
-        timeout-minutes: 5
+      - name: Stage MRTest bundle
         run: |
-          echo "check the \$HOME dir permissions in case of timeout issues"
-          echo ls -al \$HOME
-          ls -al $HOME
-          echo
+          mkdir mrtest-bundle
+          cp build/Release/bin/MRTest* /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
 
-          emrun \
-            --browser=/usr/bin/firefox \
-            --browser-args="--headless" \
-            --safe-firefox-profile \
-            --kill-exit \
-            ./build/Release/bin/MRTest.html
+      - name: Upload MRTest bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: MRTest_${{ matrix.package_name }}
+          path: mrtest-bundle
+          retention-days: 1
 
       - name: Create Package
         run: |
@@ -151,3 +148,33 @@ jobs:
           artifact_path: ${{ github.workspace }}
           artifact_glob: meshlib_${{ matrix.package_name }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+  emscripten-test:
+    needs: emscripten-build
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        package_name:
+          - emscripten-singlethreaded
+          - emscripten-multithreaded
+          - emscripten-multithreaded-64bit
+
+    steps:
+      - name: Download MRTest bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: MRTest_${{ matrix.package_name }}
+          path: mrtest-bundle
+
+      - name: Unit Tests
+        timeout-minutes: 5
+        working-directory: mrtest-bundle
+        run: |
+          python3 emrun.py \
+            --browser=/usr/bin/firefox \
+            --browser-args="--headless" \
+            --safe-firefox-profile \
+            --kill-exit \
+            ./MRTest.html

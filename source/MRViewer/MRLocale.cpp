@@ -7,6 +7,7 @@
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRWasm.h"
 
 #pragma warning( push )
@@ -69,6 +70,7 @@ const std::locale& Locale::set( const std::string& localeName )
     gLocaleName = localeName;
     MR_FINALLY {
         gLocaleNameChanged( gLocaleName );
+        TelemetrySignal( "Set Language " + gLocaleName );
     };
 
     gLocaleCanonicalName = localeName;

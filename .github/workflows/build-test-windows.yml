@@ -114,6 +114,12 @@ jobs:
           echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\bin
 
       - name: Install Visual Studio Integration
+        # CUDA's MSBuild integration files are only consumed by the MSBuild
+        # variant (source/MRCuda/MRCuda.vcxproj imports
+        # `$(VCTargetsPath)\BuildCustomizations\CUDA $(MRCudaVersion).props`).
+        # The CMake variants use `project(MRCuda CXX CUDA)` and call nvcc
+        # directly, so this step is a no-op for them.
+        if: ${{ matrix.build_system == 'MSBuild' }}
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'

@@ -60,8 +60,7 @@ TEST( MRViewer, CPRTestGet )
 
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        // cpr::SslOptions{} routes through Session::SetSslOptions, which OR's in CURLSSLOPT_NATIVE_CA.
-        // Required on Windows OpenSSL-backend builds that lack a CA bundle (vcpkg curl with no CAINFO).
+        // cpr::SslOptions{} triggers CURLSSLOPT_NATIVE_CA on Windows OpenSSL.
         const auto resp = cpr::Get( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, parameters, cpr::SslOptions{} );
         auto code = resp.status_code;
         if ( code == 200 )
@@ -94,7 +93,7 @@ TEST( MRViewer, CPRTestPost )
 
     for ( int i = 0; i < MAX_RETRIES; ++i )
     {
-        // See note in CPRTestGet: cpr::SslOptions{} triggers CURLSSLOPT_NATIVE_CA on Windows OpenSSL.
+        // cpr::SslOptions{} triggers CURLSSLOPT_NATIVE_CA on Windows OpenSSL.
         const auto resp = cpr::Post( cpr::Url{ baseUrl }, cpr::Timeout{ 3000 }, payload, cpr::SslOptions{} );
         auto code = resp.status_code;
         if ( code == 200 )

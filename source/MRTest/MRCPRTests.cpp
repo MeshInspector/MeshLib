@@ -23,6 +23,15 @@ TEST( MRViewer, CPRSslBackends )
     spdlog::info( "libcurl compiled-in CAPATH: {}", info->capath ? info->capath : "<none>" );
 #endif
 
+    if ( const char * v = std::getenv( "CURL_CA_BUNDLE" ) )
+        spdlog::info( "env CURL_CA_BUNDLE: {}", v );
+    else
+        spdlog::info( "env CURL_CA_BUNDLE: <unset>" );
+    if ( const char * v = std::getenv( "SSL_CERT_FILE" ) )
+        spdlog::info( "env SSL_CERT_FILE: {}", v );
+    else
+        spdlog::info( "env SSL_CERT_FILE: <unset>" );
+
     const curl_ssl_backend ** avail = nullptr;
     // Documented query idiom: CURLSSLBACKEND_NONE returns CURLSSLSET_UNKNOWN_BACKEND and fills `avail`.
     curl_global_sslset( CURLSSLBACKEND_NONE, nullptr, &avail );

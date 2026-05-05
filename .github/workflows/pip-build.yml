@@ -300,15 +300,21 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
-      - name: Install MSYS2 for MRBind
-        uses: ./.github/actions/install-msys2-mrbind
+      - name: Install MRBind toolchain into runner MSYS2
+        shell: pwsh
+        run: |
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "pacman -Sy --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-llvm mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-libc++"
 
       - name: Build MRBind
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate and build MRBind bindings
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1

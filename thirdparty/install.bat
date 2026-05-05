@@ -2,13 +2,13 @@
 setlocal enabledelayedexpansion
 
 REM options:
-REM   --write-s3                  push vcpkg binary cache to S3 (needs AWS credentials)
-REM   --use-s3-asset-provider     fetch vcpkg download assets via thirdparty\asset-provider-s3.bat (S3 then curl).
-REM                               Use only when pinned to an older vcpkg whose upstream download URLs are stale or broken;
-REM                               newer vcpkg ports usually do not need this.
-REM   --extra-requirements <file> append packages from <file> to the install list (one package per line, vcpkg syntax).
-REM                               May be passed multiple times. Lets downstream callers append their own packages
-REM                               onto the same vcpkg invocation, so all the env-var and overlay setup lives here.
+REM   --write-s3                      push vcpkg binary cache to S3 (needs AWS credentials)
+REM   --use-s3-asset-provider         fetch vcpkg download assets via thirdparty\asset-provider-s3.bat (S3 then curl).
+REM                                   Use only when pinned to an older vcpkg whose upstream download URLs are stale or broken;
+REM                                   newer vcpkg ports usually do not need this.
+REM   --extra-requirements <file>     append packages from <file> to the install list (one package per line, vcpkg syntax).
+REM                                   May be passed multiple times. Lets downstream callers append their own packages
+REM                                   onto the same vcpkg invocation, so all the env-var and overlay setup lives here.
 
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
@@ -101,13 +101,11 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
     set packages=!packages! %%i
 )
 
-REM Append packages from any --extra-requirements files (downstream repos)
 for %%f in (!extra_req_files!) do (
     if not exist "%%~f" (
         echo Error: --extra-requirements file not found: %%~f
         exit /b 1
     )
-    echo Appending packages from %%~f
     for /f "delims=" %%i in ('type "%%~f"') do (
         set packages=!packages! %%i
     )
@@ -121,9 +119,7 @@ if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" set "OVERL
 REM Install vcpkg core dependencies
 vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
 
-REM Install all required dependencies. --recurse lets vcpkg rebuild already-installed
-REM packages whose feature set changes (e.g. when --extra-requirements adds a feature
-REM like curl[openssl] to a package already pulled in transitively by another dep).
+REM Install all required dependencies
 vcpkg install !packages! --host-triplet %VCPKG_DEFAULT_TRIPLET% --overlay-triplets "%~dp0vcpkg\triplets" !OVERLAY_PORTS_FLAGS! --overlay-ports "%~dp0vcpkg\ports" --debug --x-abi-tools-use-exact-versions --recurse || goto :error
 
 endlocal

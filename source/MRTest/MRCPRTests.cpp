@@ -1,11 +1,50 @@
 #include "MRMesh/MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__)
 #include <cpr/cpr.h>
+#include <cpr/cprver.h>
+#include <curl/curl.h>
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRGTest.h"
 
 constexpr int MAX_RETRIES = 10;
 constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
+
+TEST( MRViewer, CPRSslBackends )
+{
+    spdlog::info( "cpr version: {}", CPR_VERSION );
+    spdlog::info( "libcurl version: {}", curl_version() );
+
+    const curl_version_info_data * info = curl_version_info( CURLVERSION_NOW );
+    ASSERT_NE( info, nullptr );
+    spdlog::info( "libcurl default SSL backend: {}", info->ssl_version ? info->ssl_version : "<none>" );
+
+#if LIBCURL_VERSION_NUM >= 0x075400 // 7.84.0: cainfo/capath fields added (CURLVERSION_TENTH)
+    spdlog::info( "libcurl compiled-in CAINFO: {}", info->cainfo ? info->cainfo : "<none>" );
+    spdlog::info( "libcurl compiled-in CAPATH: {}", info->capath ? info->capath : "<none>" );
+#endif
+
+    if ( const char * v = std::getenv( "CURL_CA_BUNDLE" ) )
+        spdlog::info( "env CURL_CA_BUNDLE: {}", v );
+    else
+        spdlog::info( "env CURL_CA_BUNDLE: <unset>" );
+    if ( const char * v = std::getenv( "SSL_CERT_FILE" ) )
+        spdlog::info( "env SSL_CERT_FILE: {}", v );
+    else
+        spdlog::info( "env SSL_CERT_FILE: <unset>" );
+
+    const curl_ssl_backend ** avail = nullptr;
+    // Documented query idiom: CURLSSLBACKEND_NONE returns CURLSSLSET_UNKNOWN_BACKEND and fills `avail`.
+    curl_global_sslset( CURLSSLBACKEND_NONE, nullptr, &avail );
+    if ( avail )
+    {
+        for ( int i = 0; avail[i]; ++i )
+            spdlog::info( "libcurl SSL backend [{}]: {} (id={})", i, avail[i]->name, (int)avail[i]->id );
+    }
+    else
+    {
+        spdlog::info( "libcurl reports a single SSL backend (no list available)" );
+    }
+}
 
 TEST( MRViewer, CPRTestGet )
 {

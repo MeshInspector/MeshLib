@@ -45,6 +45,11 @@ jobs:
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
       vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
       vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
+      disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
+      disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
+      disable_linux_vcpkg:        ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
+      disable_windows:            ${{ needs.config.outputs.build_enable_windows != 'true' }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -207,6 +212,8 @@ jobs:
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v7
+       env:
+         ACTIONS_STEP_DEBUG: true
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg

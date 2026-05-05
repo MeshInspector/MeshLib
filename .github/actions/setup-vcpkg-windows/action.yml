@@ -17,31 +17,45 @@ inputs:
     description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
     required: false
     default: 'false'
-  reuse-vcpkg:
-    description: 'String boolean ("true" or "false"). When "true", trust the existing C:\vcpkg state and skip git clean, git pull --rebase, bootstrap-vcpkg.bat, and the pre-cache "vcpkg integrate install". Used by callers that rely on a pre-warmed tree (e.g. update-win-version.yml).'
-    required: false
-    default: 'false'
 
 runs:
   using: 'composite'
   steps:
     - name: Clean Vcpkg Directory
-      if: ${{ inputs.reuse-vcpkg != 'true' }}
       shell: pwsh
       working-directory: C:\vcpkg
-      run: git clean -ffdx
+      run: git clean -ffdx --quiet
 
     - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
       shell: pwsh
       working-directory: C:\vcpkg
       run: |
-        git fetch
-        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') { git pull --rebase }
-        git checkout ${{ inputs.vcpkg-version }}
-        if ('${{ inputs.reuse-vcpkg }}' -ne 'true') {
-          ./bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
+        # Shallow-fetch only the requested ref. Skip if already present
+        # locally (the runner image ships a full vcpkg clone, so old tags
+        # like 2024.10.21 are usually there already).
+        git rev-parse --verify --quiet "${{ inputs.vcpkg-version }}^{commit}" *> $null
+        if ($LASTEXITCODE -ne 0) {
+          git fetch --depth=1 --quiet origin "+refs/tags/${{ inputs.vcpkg-version }}:refs/tags/${{ inputs.vcpkg-version }}"
         }
+        git checkout --quiet ${{ inputs.vcpkg-version }}
+        ./bootstrap-vcpkg.bat
+        vcpkg.exe integrate install
+
+    - name: Compute Vcpkg Cache Key
+      # Bust the cache when overlay ports, the active triplet file, the
+      # package list, or install.bat change — otherwise the cached
+      # C:\vcpkg\installed\ tree is served verbatim and overlays never
+      # take effect. The VS2019-only overlay glob is empty on triplets
+      # that don't use ports-vs19, so changes under ports-vs19/ don't
+      # invalidate other triplets' caches.
+      shell: bash
+      env:
+        VS19_PORTS_GLOB: ${{ (inputs.vcpkg-triplet == 'x64-windows-vs2019-meshlib' || inputs.vcpkg-triplet == 'x64-windows-meshlib-iterator-debug') && 'thirdparty/vcpkg/ports-vs19/**' || '' }}
+      run: |
+        triplet_file="thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
+        echo "Triplet file: $triplet_file"
+        test -f "$triplet_file" || { echo "::error::Triplet file not found: $triplet_file"; exit 1; }
+        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VS19_PORTS_GLOB, format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}" >> "$GITHUB_ENV"
 
     - name: Restore Vcpkg Cache
       uses: actions/cache@v5
@@ -49,7 +63,7 @@ runs:
       env:
         RUNNER_DEBUG: 1
       with:
-        key: vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}
+        key: ${{ env.VCPKG_CACHE_KEY }}
         path: |
           C:\vcpkg\*
 
@@ -60,7 +74,7 @@ runs:
         Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
         Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
         Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
-        Write-Host "key:        vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}"
+        Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
         Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
         if (Test-Path C:\vcpkg) {
           Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host

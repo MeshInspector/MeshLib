@@ -90,11 +90,6 @@ jobs:
           build_system: ${{ matrix.build_system }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
-      - name: Enable VS2019 toolset for vcpkg
-        if: ${{ matrix.cxx_compiler == 'msvc-2019' }}
-        run: |
-          (Get-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake) -Replace '^#vs2019toolset#', '' | Set-Content thirdparty\vcpkg\triplets\x64-windows-meshlib.cmake
-
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
@@ -119,6 +114,12 @@ jobs:
           echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\bin
 
       - name: Install Visual Studio Integration
+        # CUDA's MSBuild integration files are only consumed by the MSBuild
+        # variant (source/MRCuda/MRCuda.vcxproj imports
+        # `$(VCTargetsPath)\BuildCustomizations\CUDA $(MRCudaVersion).props`).
+        # The CMake variants use `project(MRCuda CXX CUDA)` and call nvcc
+        # directly, so this step is a no-op for them.
+        if: ${{ matrix.build_system == 'MSBuild' }}
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
@@ -184,7 +185,7 @@ jobs:
         env:
           GETTEXT_ROOT: C:\msys64\clang64
           VCPKG_ROOT: C:\vcpkg
-          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         # `|| exit /b 1` is used instead of `if errorlevel 1 exit 1`
         # because the latter can miss exit codes inside parenthesized IF
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
@@ -303,7 +304,7 @@ jobs:
         if: ${{ matrix.config == 'Release' }}  # debug builds not supported due to missing file 'tbb12_debug.lib'
         env:
           VCPKG_ROOT: C:\vcpkg
-          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         run: |
           & $env:CMAKE_EXE `
             -S examples/cpp-examples `
@@ -339,16 +340,12 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ env.job_upload_artifact == 'true' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-            path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
-            retention-days: 1
-            overwrite: true
+          name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
+          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+          retention-days: 1
+          overwrite: true
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build && env.job_upload_artifact == 'true' }}
@@ -361,16 +358,12 @@ jobs:
 
       - name: Upload MeshLibC2 headers archive
         if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: WindowsArchive_MeshLibC2Headers
-            path: MeshLibC2Headers.zip
-            retention-days: 1
-            overwrite: true
+          name: WindowsArchive_MeshLibC2Headers
+          path: MeshLibC2Headers.zip
+          retention-days: 1
+          overwrite: true
 
       - name: Create and fix fake Wheel for NuGet
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
@@ -382,28 +375,20 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: DotNetPatchArchiveWindows-x64
-            path: ./patched_content/*
-            retention-days: 1
-            overwrite: true
+          name: DotNetPatchArchiveWindows-x64
+          path: ./patched_content/*
+          retention-days: 1
+          overwrite: true
 
       - name: Upload NuGet library DLL and XML to Artifacts
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: DotNetDllXml
-            path: |
-              ./source/x64/Release/MRDotNet2.dll
-              ./source/x64/Release/MRDotNet2.xml
-            retention-days: 1
-            overwrite: true
+          name: DotNetDllXml
+          path: |
+            ./source/x64/Release/MRDotNet2.dll
+            ./source/x64/Release/MRDotNet2.xml
+          retention-days: 1
+          overwrite: true

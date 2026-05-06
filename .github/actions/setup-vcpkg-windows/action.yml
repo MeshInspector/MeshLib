@@ -92,6 +92,36 @@ runs:
       shell: pwsh
       run: ./thirdparty/install.bat ${{ inputs.install-flags }}
 
+    - name: Inventory & trim C:\vcpkg before cache save
+      # The cache save (post-action of "Restore Vcpkg Cache" above) runs at
+      # the end of the job. By the time install.bat returns, vcpkg has
+      # cleaned up buildtrees/ already, so the Remove-Item below is usually
+      # a no-op; the main value of this step is the diagnostic table that
+      # shows what is actually about to be cached.
+      if: always()
+      shell: pwsh
+      run: |
+        Write-Host "=== C:\vcpkg subfolder sizes (pre-trim) ==="
+        Get-ChildItem C:\vcpkg -Force -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              if ($_.PSIsContainer) {
+                $sizeMB = [int]((Get-ChildItem $_.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                                Measure-Object Length -Sum).Sum / 1MB)
+                [pscustomobject]@{ Path = $_.FullName; SizeMB = $sizeMB }
+              } else {
+                [pscustomobject]@{ Path = $_.FullName; SizeMB = [int]($_.Length / 1MB) }
+              }
+            } |
+            Sort-Object SizeMB -Descending |
+            Format-Table -AutoSize | Out-String | Write-Host
+
+        foreach ($d in 'C:\vcpkg\buildtrees') {
+          if (Test-Path $d) {
+            Write-Host "Removing $d"
+            Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+          }
+        }
+
     - name: Diagnostic — vcpkg installed tree
       if: always()
       shell: pwsh

@@ -101,6 +101,7 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
+    MR_TIMER;
     Mesh maCpy, mbCpy;
     tbb::task_group taskGroup;
     taskGroup.run( [&] ()

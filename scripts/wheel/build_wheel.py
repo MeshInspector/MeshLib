@@ -123,6 +123,11 @@ def build_wheel():
                 sys.executable, "-m", "auditwheel",
                 "repair",
                 "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
+                # Strip .symtab/.strtab/.debug_* from every bundled .so. ~15 MB
+                # uncompressed across the dep chain (libopenvdb, libxerces, OCCT,
+                # libMR*, etc.); compresses down well so net .whl saving is modest
+                # (~3-5 MB) but free.
+                "--strip",
                 wheel_file
             ]
         )

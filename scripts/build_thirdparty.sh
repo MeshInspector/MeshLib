@@ -153,17 +153,8 @@ else
 
   # build clip separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/clip.sh ${MESHLIB_THIRDPARTY_DIR}/clip
-
-  # Skip this on Mac, we use `add_subdirectory()` for those libraries there.
-  # This is because we can't use `find_package()` there to find our own libraries, because that breaks Python modules, as documented in the root `CMakeLists.txt`.
-  if [[ $OSTYPE != 'darwin'* ]]; then
-    # Build nlohmann-json separately. It is header-only, this just installs it. It is a dependency of fastmcpp.
-    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/nlohmann-json.sh "$MESHLIB_THIRDPARTY_DIR/nlohmann-json"
-    # Build cpp-httplib separately. It is header-only, this just installs it. It is a dependency of fastmcpp.
-    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/cpp-httplib.sh "$MESHLIB_THIRDPARTY_DIR/cpp-httplib"
-    # Build fastmcpp separately.
-    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/fastmcpp.sh "$MESHLIB_THIRDPARTY_DIR/fastmcpp" ./fastmcpp_build "${MESHLIB_THIRDPARTY_ROOT_DIR}"
-  fi
+  # build fastmcpp separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/fastmcpp.sh ${MESHLIB_THIRDPARTY_DIR}/fastmcpp
 fi
 popd
 

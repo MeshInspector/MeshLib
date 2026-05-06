@@ -7,6 +7,7 @@
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRWasm.h"
 
 #pragma warning( push )
@@ -69,6 +70,7 @@ const std::locale& Locale::set( const std::string& localeName )
     gLocaleName = localeName;
     MR_FINALLY {
         gLocaleNameChanged( gLocaleName );
+        TelemetrySignal( "Set Language " + gLocaleName );
     };
 
     gLocaleCanonicalName = localeName;
@@ -115,7 +117,10 @@ LocaleDomainId Locale::addDomain( const char* domainName )
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 
-    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
+    const auto id = findDomain( std::string{ domainName } );
+    if ( id )
+        gDomainCache[domainName] = id;
+    return id;
 }
 
 LocaleDomainId Locale::addDomain( const std::string& domainName )
@@ -131,7 +136,10 @@ LocaleDomainId Locale::findDomain( const char* domainName )
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
 
-    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
+    const auto id = findDomain( std::string{ domainName } );
+    if ( id )
+        gDomainCache[domainName] = id;
+    return id;
 }
 
 LocaleDomainId Locale::findDomain( const std::string& domainName )

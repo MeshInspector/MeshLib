@@ -15,6 +15,7 @@ clip
 cpr
 dbus
 eigen3
+fastmcpp
 freetype
 gdcm
 glad

@@ -94,15 +94,12 @@ jobs:
           apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
-        if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -112,14 +109,12 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
 
       - name: Ubuntu python test
-        if: ${{ always() }}
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
@@ -192,15 +187,12 @@ jobs:
         run: apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
-        if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -210,14 +202,12 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
 
       - name: Ubuntu python test
-        if: always()
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
@@ -245,15 +235,12 @@ jobs:
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
-        if: always()
         run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -263,7 +250,6 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
@@ -309,15 +295,15 @@ jobs:
           }
 
       - name: Run MeshViewer
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         run: meshconv.exe --help
 
       - name: Build C++ examples
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         working-directory: examples/cpp-examples
         env:
           DIST_DIR: C:\meshlib-built
@@ -330,7 +316,7 @@ jobs:
           .\build\${{ matrix.config }}\MeshModification.exe
 
       - name: Build C examples
-        if: ${{ always() && steps.unpack-dist.outputs.dist_found == 'true' }}
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
         working-directory: examples/c-examples
         env:
           DIST_DIR: C:\meshlib-built

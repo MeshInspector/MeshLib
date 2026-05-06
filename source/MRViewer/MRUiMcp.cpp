@@ -2,9 +2,11 @@
 
 #include "MRMcp/MRMcp.h"
 #include "MRMesh/MROnInit.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRProgressBar.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewer/MRUITestEngineControl.h"
 
 namespace MR::Mcp
@@ -75,6 +77,24 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
     return nlohmann::json::object( { { "result", ret } } );
 }
 
+// Drain any TestEngine status messages emitted during a just-dispatched UI action and surface
+// them as a tool error. Run on the GUI thread because TE state isn't thread-safe.
+// Non-static so MRToolsMcp.cpp's `tools.action` handler can reuse it across TUs.
+void surfaceTestEngineStatusMessages()
+{
+    std::vector<std::string> msgs;
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        msgs = UI::TestEngine::consumeStatusMessages();
+    } );
+    if ( msgs.empty() )
+        return;
+    std::string joined = msgs.front();
+    for ( size_t i = 1; i < msgs.size(); ++i )
+        joined += '\n' + msgs[i];
+    throw std::runtime_error( std::move( joined ) );
+}
+
 static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
 {
     const auto path = args.at( "path" ).get<std::vector<std::string>>();
@@ -88,7 +108,21 @@ static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
             throw std::runtime_error( fmt::format( "pressButton {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
     skipFramesAfterInput();
+    surfaceTestEngineStatusMessages();
 
+    return nlohmann::json::object();
+}
+
+static nlohmann::json mcpToolStageFileDialogPaths( const nlohmann::json& args )
+{
+    std::vector<std::filesystem::path> paths;
+    for ( const auto& p : args.at( "paths" ) )
+        paths.push_back( pathFromUtf8( p.get<std::string>() ) );
+
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        UI::TestEngine::stageFileDialogPaths( std::move( paths ) );
+    } );
     return nlohmann::json::object();
 }
 
@@ -134,6 +168,7 @@ static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
             throw std::runtime_error( fmt::format( "writeValue {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
     skipFramesAfterInput();
+    surfaceTestEngineStatusMessages();
 
     return nlohmann::json::object();
 }
@@ -160,12 +195,12 @@ static nlohmann::json mcpToolProgressStatus( const nlohmann::json& )
     if ( !MR::ProgressBar::isOrdered() || MR::ProgressBar::isFinished() )
     {
         out["active"] = false;
-        return nlohmann::json::object( { { "result", std::move( out ) } } );
+        return out;
     }
     out["active"]  = true;
     out["title"]   = MR::ProgressBar::getLastOperationTitle();
     out["percent"] = MR::ProgressBar::getProgress() * 100.f;
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 MR_ON_INIT{
@@ -205,8 +240,28 @@ MR_ON_INIT{
         /*name*/"Click UI button",
         /*desc*/withPreamble( "Click the button at `path` (must end in a `type == \"button\"` entry). Fails if `status` starts with `\"disabled\"`." ),
         /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpToolPressButton
+    );
+
+    server.addTool(
+        /*id*/"ui.stageFileDialogPaths",
+        /*name*/"Stage paths for next TestEngine-triggered file dialog",
+        /*desc*/
+            "Pre-load the path(s) that the next OS file/folder dialog opened by a "
+            "ui.pressButton-driven click will return. The dialog is skipped — no native "
+            "modal appears — and the caller (Open / Save / Browse...) receives the staged "
+            "paths. Single-shot: consumed by the next dialog. Use absolute paths in UTF-8. "
+            "Stage before calling ui.pressButton on a button that opens a file dialog; if no "
+            "paths are staged when such a button is pressed, ui.pressButton fails with a "
+            "status message asking you to stage first. Validation: number of paths must "
+            "match the dialog's multiselect mode; for open dialogs each path must exist with "
+            "the right type (file vs directory); for save dialogs existence is not required "
+            "but the path must not already exist as a directory. Real human clicks (not from "
+            "ui.pressButton) always show the native dialog and ignore staged paths.",
+        /*input_schema*/Schema::Object{}.addMember( "paths", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Object{},
+        /*func*/mcpToolStageFileDialogPaths
     );
 
     // (idSuffix, displayType) -- `idSuffix` is the CamelCase suffix on ui.readValue*/ui.writeValue*;
@@ -245,7 +300,7 @@ MR_ON_INIT{
             /*name*/"Write UI " + displayType + " value",
             /*desc*/withPreamble( writeDesc ),
             /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Schema::Base &&>( Schema::String{} ) : static_cast<Schema::Base &&>( Schema::Number{} ) ),
-            /*output_schema*/Schema::Empty{},
+            /*output_schema*/Schema::Object{},
             /*func*/mcpToolWriteValue<T>
         );
     };
@@ -263,7 +318,7 @@ MR_ON_INIT{
                 "to the underlying `ProgressBar::order(...)` (e.g. \"Boolean\", \"Loading\"). `percent` is 0-100. "
                 "Poll this while `ui.*` dispatch is blocked by a `'Progress'` modal — once `active: false` comes "
                 "back, the UI is responsive again.",
-        /*input_schema*/Schema::Empty{},
+        /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{}
             .addMember(    "active",  Schema::Bool{} )
             .addMemberOpt( "title",   Schema::String{} )

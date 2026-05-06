@@ -1,9 +1,11 @@
 #include "MRMcpSettings.h"
 
 #include "MRMesh/MRConfig.h"
+#include "MRMesh/MRStringConvert.h"
 
 #ifndef MESHLIB_NO_MCP
 #include "MRMcp/MRMcp.h"
+#include "MRViewer/MRViewer.h"
 #endif
 
 #include <utility>
@@ -59,6 +61,32 @@ void applyToServer()
     params.port = getPort();
     Mcp::getDefaultServer().setParams( std::move( params ) );
     #endif
+}
+
+bool isPortLockedFromCmdLine()
+{
+    #ifndef MESHLIB_NO_MCP
+    static const bool locked = []
+    {
+        return parseCmdLineOverrides( getViewerInstance().commandArgs ).port > 0;
+    }();
+    return locked;
+    #else
+    return false;
+    #endif
+}
+
+CmdLineOverrides parseCmdLineOverrides( const std::vector<std::string>& commandArgs )
+{
+    CmdLineOverrides out;
+    for ( size_t i = 0; i + 1 < commandArgs.size(); ++i )
+    {
+        if ( commandArgs[i] == "-mcpPort" )
+            out.port = std::atoi( commandArgs[i + 1].c_str() );
+        else if ( commandArgs[i] == "-mcpDumpFile" )
+            out.dumpFilePath = pathFromUtf8( commandArgs[i + 1] );
+    }
+    return out;
 }
 
 } // namespace MR::McpSettings

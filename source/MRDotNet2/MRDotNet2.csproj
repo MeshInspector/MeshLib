@@ -16,6 +16,18 @@
         1591 - Missing comments
     -->
     <NoWarn>CS0659;CS0661;1591</NoWarn>
+
+    <!-- Promoted to errors:
+        CS1570 - "XML comment has badly formed XML". Generated bindings should always emit well-formed XML doc comments;
+                 if this fires, the bug is in the C++ source comment or in mrbind's csharp generator and must be fixed.
+        CS1572 - "XML comment has a param tag for 'X', but there is no parameter by that name". Usually means a C++
+                 source comment carries a `<param name="X">` tag whose name no longer matches the generated C# parameter
+                 (e.g. mrbind renames `params` -> `params_` to dodge the C# keyword). Fix the source comment, or drop
+                 the XML tags so mrbind wraps the comment in its own `<summary>` instead.
+        CS1573 - "Parameter 'X' has no matching param tag in the XML comment ... (but other parameters do)". Same root
+                 cause as CS1572 — partial / misnamed `<param>` lists in a passed-through C++ comment.
+    -->
+    <WarningsAsErrors>CS1570;CS1572;CS1573</WarningsAsErrors>
   </PropertyGroup>
 
 </Project>

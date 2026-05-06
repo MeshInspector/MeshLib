@@ -1307,12 +1307,20 @@ void ViewerSettingsPlugin::drawMcpSettings_()
     if ( UI::checkbox( _tr( "Enable by Default" ), &enableByDefault ) )
         McpSettings::setEnableByDefault( enableByDefault );
 
-    int port = McpSettings::getPort();
     ImGui::SetNextItemWidth( ImGui::GetFrameHeight() * 3 );
-    if ( UI::input<NoUnit>( _tr( "Port" ), port, 1, 65535, {}, UI::defaultSliderFlags, 0, 0 ) )
-        McpSettings::setPort( port );
-    if ( ImGui::IsItemDeactivatedAfterEdit() )
-        McpSettings::applyToServer();
+    if ( McpSettings::isPortLockedFromCmdLine() )
+    {
+        UI::readOnlyValue<NoUnit>( _tr( "Port" ), server.getParams().port );
+        UI::setTooltipIfHovered( _tr( "Port forced by -mcpPort command-line flag" ) );
+    }
+    else
+    {
+        int port = McpSettings::getPort();
+        if ( UI::input<NoUnit>( _tr( "Port" ), port, 1, 65535, {}, UI::defaultSliderFlags, 0, 0 ) )
+            McpSettings::setPort( port );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            McpSettings::applyToServer();
+    }
     #endif
 }
 

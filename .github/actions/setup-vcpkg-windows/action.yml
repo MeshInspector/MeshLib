@@ -71,9 +71,18 @@ runs:
       if: always()
       shell: pwsh
       run: |
+        # Mirror cache-hit into VCPKG_CACHE_HIT env. Subsequent gating uses
+        # env.VCPKG_CACHE_HIT instead of steps.vcpkg-cache.outputs.cache-hit
+        # because the latter, when unset (true cache miss), misevaluates in
+        # `if:` expressions inside this composite action — observed in run
+        # 25429380355 / job 74591339675 where all three install steps were
+        # silently skipped despite the diagnostic showing cache-hit empty.
+        $hit = "${{ steps.vcpkg-cache.outputs.cache-hit }}"
+        if ([string]::IsNullOrEmpty($hit)) { $hit = 'false' }
+        "VCPKG_CACHE_HIT=$hit" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
         Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
         Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
-        Write-Host "cache-hit:  ${{ steps.vcpkg-cache.outputs.cache-hit }}"
+        Write-Host "cache-hit:  $hit"
         Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
         Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
         if (Test-Path C:\vcpkg) {
@@ -84,7 +93,7 @@ runs:
     # C:\vcpkg\* tree already contains everything install.bat would build,
     # and `--write-s3` has nothing new to upload when no port was rebuilt.
     - name: Configure AWS Credentials
-      if: ${{ inputs.internal-build == 'true' && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.internal-build == 'true' && env.VCPKG_CACHE_HIT != 'true' }}
       uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
       with:
         role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -92,7 +101,7 @@ runs:
         retry-max-attempts: 5
 
     - name: Update vcpkg packages
-      if: ${{ steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
       shell: pwsh
       run: ./thirdparty/install.bat ${{ inputs.install-flags }}
 
@@ -101,7 +110,7 @@ runs:
       # consuming installed/. Logs a per-subfolder size table first so the
       # actions/cache post-action save (at end of job) has visible accounting
       # of what is going into the cache.
-      if: ${{ steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
       shell: pwsh
       run: |
         Write-Host "=== C:\vcpkg subfolder sizes (pre-trim) ==="

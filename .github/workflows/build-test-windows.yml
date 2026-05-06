@@ -243,7 +243,6 @@ jobs:
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
-          MRBIND_DEBUG: 3
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests

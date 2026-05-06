@@ -2,40 +2,9 @@ import json
 import os
 import ssl
 import subprocess
-import sys
+import urllib.error
 import urllib.request
 
-
-def _resolve_ca_bundle():
-    """Return a path to a CA bundle, or None to use the stdlib default.
-
-    Brew Python on the self-hosted macos-x64 runner ships without a working
-    CA bundle, so urllib's default context fails the TLS handshake to
-    api.github.com with CERTIFICATE_VERIFY_FAILED. certifi provides one;
-    pip-install it on the fly if it isn't already there.
-    """
-    try:
-        import certifi
-        return certifi.where()
-    except ImportError:
-        pass
-    pip_install = [sys.executable, "-m", "pip", "install",
-                   "--quiet", "--disable-pip-version-check", "--user", "certifi"]
-    try:
-        subprocess.check_call(pip_install)
-    except subprocess.CalledProcessError:
-        try:
-            subprocess.check_call(pip_install + ["--break-system-packages"])
-        except subprocess.CalledProcessError:
-            return None
-    try:
-        import certifi
-        return certifi.where()
-    except ImportError:
-        return None
-
-
-_SSL_CONTEXT = ssl.create_default_context(cafile=_resolve_ca_bundle())
 
 GITHUB_HEADERS = {
     'Accept': 'application/vnd.github.v3+json',
@@ -43,13 +12,40 @@ GITHUB_HEADERS = {
     'X-GitHub-Api-Version': '2022-11-28',
 }
 
+
+def _fetch_jobs_urllib(repo: str, run_id: str):
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
+    req = urllib.request.Request(url, headers=GITHUB_HEADERS)
+    with urllib.request.urlopen(req) as resp:
+        return json.loads(resp.read().decode())
+
+
+def _fetch_jobs_gh_cli(repo: str, run_id: str):
+    # Fallback for runners whose Python has no working CA bundle
+    # (notably brew Python 3.14 on the macos-x64 self-hosted runner). gh
+    # ships its own certificates and uses GITHUB_TOKEN/GH_TOKEN automatically.
+    result = subprocess.run(
+        ["gh", "api", f"repos/{repo}/actions/runs/{run_id}/jobs?per_page=100"],
+        capture_output=True, text=True, check=True,
+    )
+    return json.loads(result.stdout)
+
+
 def fetch_jobs(repo: str, run_id: str):
     # TODO: pagination support
     # more info: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
-    req = urllib.request.Request(url, headers=GITHUB_HEADERS)
-    with urllib.request.urlopen(req, context=_SSL_CONTEXT) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        return _fetch_jobs_urllib(repo, run_id)
+    except (ssl.SSLError, urllib.error.URLError) as e:
+        # urllib's URLError wraps the underlying SSLError; only fall back
+        # for cert-verification problems, not for network/HTTP failures
+        # we'd rather see surfaced.
+        cause = getattr(e, "reason", e)
+        if not isinstance(cause, ssl.SSLError):
+            raise
+        print(f"urllib failed with {cause!r}; retrying via gh CLI")
+        return _fetch_jobs_gh_cli(repo, run_id)
+
 
 def filter_job(job, job_name, runner_name):
     return job['status'] == "in_progress" and job_name in job['name'] and runner_name in [job['runner_name'], f"GitHub-Actions-{job['runner_id']}"]

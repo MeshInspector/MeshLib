@@ -1,5 +1,5 @@
 name: 'Set up vcpkg for MeshLib (Windows)'
-description: 'Cleans C:\vcpkg, checks out the requested vcpkg ref, restores the build cache, optionally configures AWS credentials, and runs thirdparty\install.bat for MeshLib ports.'
+description: 'Looks up the vcpkg build cache and either restores it onto a clean C:\vcpkg or builds the tree from source. Always runs `vcpkg integrate install` at the end.'
 
 inputs:
   vcpkg-version:
@@ -21,24 +21,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Clean Vcpkg Directory
-      shell: pwsh
-      working-directory: C:\vcpkg
-      run: git clean -ffdx --quiet
-
-    - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
-      shell: pwsh
-      working-directory: C:\vcpkg
-      run: |
-        # Shallow-fetch only if the ref isn't already in the runner's vcpkg clone.
-        git rev-parse --verify --quiet "${{ inputs.vcpkg-version }}^{commit}" *> $null
-        if ($LASTEXITCODE -ne 0) {
-          git fetch --depth=1 --quiet origin "+refs/tags/${{ inputs.vcpkg-version }}:refs/tags/${{ inputs.vcpkg-version }}"
-        }
-        git checkout --quiet ${{ inputs.vcpkg-version }}
-        ./bootstrap-vcpkg.bat
-        vcpkg.exe integrate install
-
     - name: Compute Vcpkg Cache Key
       # Bust the cache when overlay ports, the active triplet, the package
       # list, or install.bat change. The VS2019 overlay glob is empty for
@@ -52,34 +34,67 @@ runs:
         test -f "$triplet_file" || { echo "::error::Triplet file not found: $triplet_file"; exit 1; }
         echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VS19_PORTS_GLOB, format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}-slim2" >> "$GITHUB_ENV"
 
+    - name: Look up Vcpkg Cache
+      id: lookup
+      uses: actions/cache/restore@v5
+      with:
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        path: |
+          C:\vcpkg\*
+        lookup-only: true
+
+    - name: Capture cache-hit
+      # Mirror cache-hit into VCPKG_CACHE_HIT for downstream `if:` gating;
+      # an unset steps.<id>.outputs.cache-hit can misevaluate inside a
+      # composite action's if-expression.
+      shell: pwsh
+      run: |
+        $hit = "${{ steps.lookup.outputs.cache-hit }}"
+        if ([string]::IsNullOrEmpty($hit)) { $hit = 'false' }
+        "VCPKG_CACHE_HIT=$hit" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+        Write-Host "cache-hit:  $hit"
+        Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
+
+    # ----- cache HIT path: rename runner's vcpkg out of the way, then download -----
+    - name: Stash runner's C:\vcpkg
+      # Atomic same-volume rename so the cache restore extracts onto an
+      # empty path with no leftover runner-image files. The stash is left
+      # for runner teardown (this is an ephemeral runner).
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      shell: pwsh
+      run: |
+        if (Test-Path C:\vcpkg) {
+          Move-Item C:\vcpkg "C:\vcpkg-stash-$(New-Guid)" -Force
+        }
+
     - name: Restore Vcpkg Cache
-      uses: actions/cache@v5
-      id: vcpkg-cache
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      uses: actions/cache/restore@v5
       with:
         key: ${{ env.VCPKG_CACHE_KEY }}
         path: |
           C:\vcpkg\*
 
-    - name: Diagnostic — Restore Vcpkg Cache result
-      if: always()
+    # ----- cache MISS path: clean + checkout + bootstrap + install + trim + save -----
+    - name: Clean Vcpkg Directory
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
       shell: pwsh
-      run: |
-        # Mirror cache-hit into VCPKG_CACHE_HIT for downstream `if:` gating;
-        # an unset steps.<id>.outputs.cache-hit can misevaluate inside a
-        # composite action's if-expression on a true cache miss.
-        $hit = "${{ steps.vcpkg-cache.outputs.cache-hit }}"
-        if ([string]::IsNullOrEmpty($hit)) { $hit = 'false' }
-        "VCPKG_CACHE_HIT=$hit" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
-        Write-Host "outcome:    ${{ steps.vcpkg-cache.outcome }}"
-        Write-Host "conclusion: ${{ steps.vcpkg-cache.conclusion }}"
-        Write-Host "cache-hit:  $hit"
-        Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
-        Write-Host "C:\vcpkg exists: $(Test-Path C:\vcpkg)"
-        if (Test-Path C:\vcpkg) {
-          Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
-        }
+      working-directory: C:\vcpkg
+      run: git clean -ffdx --quiet
 
-    # Skip install + AWS on a cache hit: the restored tree is complete.
+    - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: |
+        # Shallow-fetch only if the ref isn't already in the runner's vcpkg clone.
+        git rev-parse --verify --quiet "${{ inputs.vcpkg-version }}^{commit}" *> $null
+        if ($LASTEXITCODE -ne 0) {
+          git fetch --depth=1 --quiet origin "+refs/tags/${{ inputs.vcpkg-version }}:refs/tags/${{ inputs.vcpkg-version }}"
+        }
+        git checkout --quiet ${{ inputs.vcpkg-version }}
+        ./bootstrap-vcpkg.bat
+
     - name: Configure AWS Credentials
       if: ${{ inputs.internal-build == 'true' && env.VCPKG_CACHE_HIT != 'true' }}
       uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
@@ -120,6 +135,20 @@ runs:
             Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
           }
         }
+
+    - name: Save Vcpkg Cache
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      uses: actions/cache/save@v5
+      with:
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        path: |
+          C:\vcpkg\*
+
+    # ----- always: register MSBuild integration and dump installed tree -----
+    - name: Vcpkg integrate install
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: vcpkg.exe integrate install
 
     - name: Diagnostic — vcpkg installed tree
       if: always()

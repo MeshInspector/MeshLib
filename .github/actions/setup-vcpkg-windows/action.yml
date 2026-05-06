@@ -30,9 +30,7 @@ runs:
       shell: pwsh
       working-directory: C:\vcpkg
       run: |
-        # Shallow-fetch only the requested ref. Skip if already present
-        # locally (the runner image ships a full vcpkg clone, so old tags
-        # like 2024.10.21 are usually there already).
+        # Shallow-fetch only if the ref isn't already in the runner's vcpkg clone.
         git rev-parse --verify --quiet "${{ inputs.vcpkg-version }}^{commit}" *> $null
         if ($LASTEXITCODE -ne 0) {
           git fetch --depth=1 --quiet origin "+refs/tags/${{ inputs.vcpkg-version }}:refs/tags/${{ inputs.vcpkg-version }}"
@@ -42,12 +40,9 @@ runs:
         vcpkg.exe integrate install
 
     - name: Compute Vcpkg Cache Key
-      # Bust the cache when overlay ports, the active triplet file, the
-      # package list, or install.bat change — otherwise the cached
-      # C:\vcpkg\installed\ tree is served verbatim and overlays never
-      # take effect. The VS2019-only overlay glob is empty on triplets
-      # that don't use ports-vs19, so changes under ports-vs19/ don't
-      # invalidate other triplets' caches.
+      # Bust the cache when overlay ports, the active triplet, the package
+      # list, or install.bat change. The VS2019 overlay glob is empty for
+      # other triplets so it doesn't invalidate their caches.
       shell: bash
       env:
         VS19_PORTS_GLOB: ${{ (inputs.vcpkg-triplet == 'x64-windows-vs2019-meshlib' || inputs.vcpkg-triplet == 'x64-windows-meshlib-iterator-debug') && 'thirdparty/vcpkg/ports-vs19/**' || '' }}
@@ -55,7 +50,7 @@ runs:
         triplet_file="thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
         echo "Triplet file: $triplet_file"
         test -f "$triplet_file" || { echo "::error::Triplet file not found: $triplet_file"; exit 1; }
-        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VS19_PORTS_GLOB, format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}-slim" >> "$GITHUB_ENV"
+        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VS19_PORTS_GLOB, format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}-slim1" >> "$GITHUB_ENV"
 
     - name: Restore Vcpkg Cache
       uses: actions/cache@v5
@@ -69,12 +64,9 @@ runs:
       if: always()
       shell: pwsh
       run: |
-        # Mirror cache-hit into VCPKG_CACHE_HIT env. Subsequent gating uses
-        # env.VCPKG_CACHE_HIT instead of steps.vcpkg-cache.outputs.cache-hit
-        # because the latter, when unset (true cache miss), misevaluates in
-        # `if:` expressions inside this composite action — observed in run
-        # 25429380355 / job 74591339675 where all three install steps were
-        # silently skipped despite the diagnostic showing cache-hit empty.
+        # Mirror cache-hit into VCPKG_CACHE_HIT for downstream `if:` gating;
+        # an unset steps.<id>.outputs.cache-hit can misevaluate inside a
+        # composite action's if-expression on a true cache miss.
         $hit = "${{ steps.vcpkg-cache.outputs.cache-hit }}"
         if ([string]::IsNullOrEmpty($hit)) { $hit = 'false' }
         "VCPKG_CACHE_HIT=$hit" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
@@ -87,9 +79,7 @@ runs:
           Get-ChildItem C:\vcpkg | Select-Object Name, Mode | Format-Table | Out-String | Write-Host
         }
 
-    # Skip the install + AWS configuration on a cache hit: the restored
-    # C:\vcpkg\* tree already contains everything install.bat would build,
-    # and `--write-s3` has nothing new to upload when no port was rebuilt.
+    # Skip install + AWS on a cache hit: the restored tree is complete.
     - name: Configure AWS Credentials
       if: ${{ inputs.internal-build == 'true' && env.VCPKG_CACHE_HIT != 'true' }}
       uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
@@ -119,13 +109,26 @@ runs:
             Format-Table -AutoSize | Out-String | Write-Host
 
     - name: trim vcpkg
-      # Drops folders that are pure build scratch and not needed by anything
-      # consuming installed/. Per-subfolder sizes were already logged at the
-      # end of the previous step.
+      # Drops scratch folders before the cache save. .git is unused at
+      # restore time (the runner image ships its own vcpkg clone). The
+      # iterator-debug triplet is built Debug-only, so its Release dirs
+      # are dead weight.
       if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
       shell: pwsh
       run: |
-        foreach ($d in 'C:\vcpkg\buildtrees', 'C:\vcpkg\packages', 'C:\vcpkg\downloads') {
+        $toRemove = @(
+          'C:\vcpkg\buildtrees',
+          'C:\vcpkg\packages',
+          'C:\vcpkg\downloads',
+          'C:\vcpkg\.git'
+        )
+        if ('${{ inputs.vcpkg-triplet }}' -eq 'x64-windows-meshlib-iterator-debug') {
+          $toRemove += @(
+            'C:\vcpkg\installed\x64-windows-meshlib-iterator-debug\bin',
+            'C:\vcpkg\installed\x64-windows-meshlib-iterator-debug\lib'
+          )
+        }
+        foreach ($d in $toRemove) {
           if (Test-Path $d) {
             Write-Host "Removing $d"
             Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue

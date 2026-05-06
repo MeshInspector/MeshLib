@@ -170,6 +170,8 @@ def build_wheel():
             *(WHEEL_SRC_DIR / ".dylibs").glob("*.dylib"),
         ]
         for b in binaries_to_strip:
+            # Brew-sourced dylibs delocate copies in are often 0444; strip needs +w.
+            b.chmod(b.stat().st_mode | 0o200)
             subprocess.check_call(["strip", "-x", str(b)])
 
         os.chdir(SOURCE_DIR)

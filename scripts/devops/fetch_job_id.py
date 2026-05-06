@@ -1,6 +1,41 @@
 import json
 import os
+import ssl
+import subprocess
+import sys
 import urllib.request
+
+
+def _resolve_ca_bundle():
+    """Return a path to a CA bundle, or None to use the stdlib default.
+
+    Brew Python on the self-hosted macos-x64 runner ships without a working
+    CA bundle, so urllib's default context fails the TLS handshake to
+    api.github.com with CERTIFICATE_VERIFY_FAILED. certifi provides one;
+    pip-install it on the fly if it isn't already there.
+    """
+    try:
+        import certifi
+        return certifi.where()
+    except ImportError:
+        pass
+    pip_install = [sys.executable, "-m", "pip", "install",
+                   "--quiet", "--disable-pip-version-check", "--user", "certifi"]
+    try:
+        subprocess.check_call(pip_install)
+    except subprocess.CalledProcessError:
+        try:
+            subprocess.check_call(pip_install + ["--break-system-packages"])
+        except subprocess.CalledProcessError:
+            return None
+    try:
+        import certifi
+        return certifi.where()
+    except ImportError:
+        return None
+
+
+_SSL_CONTEXT = ssl.create_default_context(cafile=_resolve_ca_bundle())
 
 GITHUB_HEADERS = {
     'Accept': 'application/vnd.github.v3+json',
@@ -13,7 +48,7 @@ def fetch_jobs(repo: str, run_id: str):
     # more info: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api
     url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
     req = urllib.request.Request(url, headers=GITHUB_HEADERS)
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, context=_SSL_CONTEXT) as resp:
         return json.loads(resp.read().decode())
 
 def filter_job(job, job_name, runner_name):

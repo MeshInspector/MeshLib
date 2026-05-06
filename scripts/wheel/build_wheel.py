@@ -158,6 +158,20 @@ def build_wheel():
         subprocess.check_call(
             ["delocate-path", "meshlib"]
         )
+
+        # Strip non-extern symbols from every native binary in the wheel staging tree.
+        # macOS Mach-O retains all local symbols by default; without this step
+        # __LINKEDIT accounts for ~67% of mrmeshpy.so. `-x` keeps externs that dyld
+        # binds (PyInit_*, library entrypoints), so dynamic loading is unaffected.
+        # delocate-wheel below re-validates and re-signs after we touch the binaries.
+        binaries_to_strip = [
+            *WHEEL_SRC_DIR.glob("*.so"),
+            *WHEEL_SRC_DIR.glob("libpybind11nonlimitedapi_*.dylib"),
+            *(WHEEL_SRC_DIR / ".dylibs").glob("*.dylib"),
+        ]
+        for b in binaries_to_strip:
+            subprocess.check_call(["strip", "-x", str(b)])
+
         os.chdir(SOURCE_DIR)
         subprocess.check_call(
             ["delocate-wheel", "-w", ".", "-v", wheel_file]

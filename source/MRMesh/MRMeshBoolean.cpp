@@ -650,7 +650,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     intParams.optionalOutCut = params.outCutEdges;
     intParams.graphCutSeparation = params.forceCut;
     // do operation
-    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), std::move( cutA ), std::move( cutB ), 
+        operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 
     if ( mainCb && !mainCb( 1.0f ) )
         return { .errorString = stringOperationCanceled() };

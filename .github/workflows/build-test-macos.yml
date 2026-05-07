@@ -205,10 +205,70 @@ jobs:
         timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
+      - name: Python smoke import
+        if: ${{ inputs.mrbind }}
+        timeout-minutes: 1
+        working-directory: ./build/${{ matrix.config }}/bin
+        env:
+          PYTHONFAULTHANDLER: '1'
+          PYTHONUNBUFFERED: '1'
+        # Fast canary: if the freshly built bindings can't be imported, bail before
+        # pytest collection swallows the failure inside its subprocess.
+        run: |
+          python3 -X faulthandler -c "
+          import sys
+          sys.path.insert(0, '.')
+          import meshlib.mrmeshpy as m
+          import meshlib.mrmeshnumpy as n
+          print('mrmeshpy:', m.__file__)
+          print('mrmeshnumpy:', n.__file__)
+          "
+
       - name: Python Sanity Tests
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+
+      - name: Runner diagnostics on Python test failure
+        if: failure()
+        continue-on-error: true
+        run: |
+          set +e
+          echo "==== runner identity ===="
+          echo "RUNNER_NAME=${RUNNER_NAME:-unknown}"
+          echo "==== sw_vers / uptime ===="
+          sw_vers
+          uptime
+          echo "==== disk / memory ===="
+          df -h .
+          vm_stat
+          echo "==== relevant brew packages ===="
+          brew list --versions python@3.10 llvm@18 libomp openvdb tbb cmake ninja make 2>/dev/null
+          echo "==== which python3 ===="
+          which -a python3 python3.10
+          python3 --version
+          echo "==== recent DiagnosticReports (top 20) ===="
+          ls -lt ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -21
+          echo "==== latest python/pytest crash reports (max 3, last 80 lines each) ===="
+          for f in $(ls -t ~/Library/Logs/DiagnosticReports/python*.ips ~/Library/Logs/DiagnosticReports/pytest*.ips 2>/dev/null | head -3); do
+            echo "---- $f ----"
+            tail -80 "$f"
+          done
+          echo "==== orphan python/pytest processes ===="
+          ps -ax -o pid,pcpu,rss,etime,command | grep -E 'python|pytest' | grep -v grep
+          echo "==== diagnostic smoke import (force-resolve paths) ===="
+          cd ./build/${{ matrix.config }}/bin
+          PYTHONFAULTHANDLER=1 python3 -X faulthandler -c "
+          import sys, importlib
+          sys.path.insert(0, '.')
+          for name in ['meshlib.mrmeshpy', 'meshlib.mrmeshnumpy']:
+              try:
+                  m = importlib.import_module(name)
+                  print(name, 'OK', m.__file__)
+              except BaseException as e:
+                  print(name, 'FAIL', type(e).__name__, e)
+          "
+          true
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}

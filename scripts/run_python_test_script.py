@@ -1,11 +1,39 @@
 import argparse
 import os
 import re
+import signal
 import sys
 import platform
 import subprocess
 import shutil
 from pathlib import Path
+
+
+def run_pytest(cmd):
+    # os.system swallows signal info into a packed wait status, and Python parent-process
+    # buffering reorders prints past pytest's output — both made a recent CI crash
+    # appear as a silent "Some tests failed!" with no cause. Use subprocess + flush + faulthandler.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    env = os.environ.copy()
+    env.setdefault("PYTHONFAULTHANDLER", "1")
+    env.setdefault("PYTHONUNBUFFERED", "1")
+    rc = subprocess.run(cmd, shell=True, env=env).returncode
+    if rc < 0:  # POSIX: killed by signal
+        try:
+            signame = signal.Signals(-rc).name
+        except (ValueError, AttributeError):
+            signame = f"signal {-rc}"
+        print(f"!!! pytest terminated by {signame} (returncode {rc})", flush=True)
+    elif 128 <= rc < 256:  # POSIX shell convention: 128 + signum
+        try:
+            signame = signal.Signals(rc - 128).name
+            print(f"!!! pytest terminated by {signame} (shell exit {rc})", flush=True)
+        except (ValueError, AttributeError):
+            print(f"!!! pytest exited with code {rc}", flush=True)
+    elif rc != 0:
+        print(f"!!! pytest exited with code {rc}", flush=True)
+    return rc
 
 def get_vcpkg_root_from_where():
     try:
@@ -132,7 +160,7 @@ for py_cmd in python_cmds:
         py_cmd_fixed = py_cmd
 
     print(py_cmd_fixed + " " + pytest_cmd)
-    if os.system(py_cmd_fixed + " " + pytest_cmd) != 0:
+    if run_pytest(py_cmd_fixed + " " + pytest_cmd) != 0:
         failed = True
 
     if args.create_venv:

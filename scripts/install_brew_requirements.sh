@@ -12,6 +12,11 @@ brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 
 brew install --quiet pybind11
 
+# Strip dylibs we'll bundle (brew keeps full symbol tables for symbolication).
+BREW_PREFIX=$(brew --prefix)
+find "$BREW_PREFIX/lib" -type f -name '*.dylib' -not -type l \
+  -exec chmod u+w {} + -exec strip -x {} + 2>/dev/null || true
+
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade
 python3.10 -m pip install --upgrade pip

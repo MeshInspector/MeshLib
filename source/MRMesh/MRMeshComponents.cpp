@@ -517,48 +517,72 @@ static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, con
     MR_TIMER;
 
     const FaceBitSet& region = topology.getFaceIds( region0 );
-    const FaceBitSet* lastPassFaces = &region;
     const auto numFaces = region.find_last() + 1;
     res.reset( numFaces );
     const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
 
-    FaceBitSet bdFaces;
     if ( numThreads > 1 )
     {
-        bdFaces.resize( numFaces );
-        lastPassFaces = &bdFaces;
-
-        BitSetParallelForAllRanged( region, [&] ( FaceId f0, const auto & range )
+        auto inRange = [&] ( FaceId f, UndirectedEdgeId beg, UndirectedEdgeId end )->bool
         {
-            if ( !contains( region, f0 ) )
-                return;
-            EdgeId e[3];
-            topology.getTriEdges( f0, e );
-            for ( int i = 0; i < 3; ++i )
+            for ( auto e : leftRing( topology, f ) )
+                if ( e.undirected() < beg || e.undirected() >= end )
+                    return false;
+            return true;
+        };
+
+        const size_t undirSize = topology.undirectedEdgeSize();
+        UndirectedEdgeBitSet lastPassEdges( undirSize );
+        tbb::parallel_for( tbb::blocked_range( size_t( 0 ), lastPassEdges.num_blocks(), 64 ),
+            [&] ( const tbb::blocked_range<size_t>& blockRange )
+        {
+            auto beginBit = UndirectedEdgeId( blockRange.begin() * UndirectedEdgeBitSet::bits_per_block );
+            auto endBit = UndirectedEdgeId( blockRange.end() * UndirectedEdgeBitSet::bits_per_block );
+            for ( UndirectedEdgeId ue = beginBit; ue < endBit; ++ue )
             {
-                assert( topology.left( e[i] ) == f0 );
-                FaceId f1 = topology.right( e[i] );
-                if ( f0 < f1 && contains( region0, f1 ) )
-                {
-                    if ( f1 >= range.end )
-                        bdFaces.set( f0 ); // remember the face to unite later in a sequential region
-                    else if ( !isCompBd || !isCompBd->test( e[i].undirected() ) )
-                        res.unite( f0, f1 ); // our region
-                }
+                if ( ue >= undirSize )
+                    return;
+                if ( isCompBd && isCompBd->test( ue ) )
+                    continue;
+                auto l = topology.left( ue );
+                if ( !region.test( l ) )
+                    continue;
+                auto r = topology.right( ue );
+                if ( !region.test( r ) )
+                    continue;
+                if ( inRange( l, beginBit, endBit ) && inRange( r, beginBit, endBit ) )
+                    res.unite( l, r );
+                else
+                    lastPassEdges.set( ue );
             }
         } );
-    }
 
-    for ( auto f0 : *lastPassFaces )
-    {
-        EdgeId e[3];
-        topology.getTriEdges( f0, e );
-        for ( int i = 0; i < 3; ++i )
+        for ( auto ue : lastPassEdges )
         {
-            assert( topology.left( e[i] ) == f0 );
-            FaceId f1 = topology.right( e[i] );
-            if ( f0 < f1 && contains( region0, f1 ) && ( !isCompBd || !isCompBd->test( e[i].undirected() ) ) )
-                res.unite( f0, f1 );
+            if ( isCompBd && isCompBd->test( ue ) )
+                continue;
+            auto l = topology.left( ue );
+            if ( !region.test( l ) )
+                continue;
+            auto r = topology.right( ue );
+            if ( !region.test( r ) )
+                continue;
+            res.unite( l, r );
+        }
+    }
+    else
+    {
+        for ( auto ue : undirectedEdges( topology ) )
+        {
+            if ( isCompBd && isCompBd->test( ue ) )
+                continue;
+            auto l = topology.left( ue );
+            if ( !region.test( l ) )
+                continue;
+            auto r = topology.right( ue );
+            if ( !region.test( r ) )
+                continue;
+            res.unite( l, r );
         }
     }
 }

@@ -8,11 +8,21 @@ if [ -n "$MESHLIB_EXTRA_BREW_REQUIREMENTS" ] ; then
   MESHLIB_BREW_REQUIREMENTS=$MESHLIB_BREW_REQUIREMENTS$'\n'$MESHLIB_EXTRA_BREW_REQUIREMENTS
 fi
 
-# Build the four libs that link into the pip wheel from source so they pick up
-# CMAKE_OSX_DEPLOYMENT_TARGET=12.0; avoids ld64.lld skew at mrbind link.
-# (Default Sequoia bottles target macOS 14.)
+# Pin the libs that link into the pip wheel to monterey-tagged bottles so they
+# match CMAKE_OSX_DEPLOYMENT_TARGET=12.0 (default Sequoia bottles target 14).
+# brew install doesn't accept --bottle-tag, so we fetch the cross-tag bottle
+# into brew's cache and install from there.
+PINNED_FORMULAS="jsoncpp openvdb opencascade tbb"
+if [ "$(uname -m)" = "arm64" ]; then
+  BOTTLE_TAG="arm64_monterey"
+else
+  BOTTLE_TAG="monterey"
+fi
 export MACOSX_DEPLOYMENT_TARGET=12.0
-brew install --quiet --build-from-source jsoncpp openvdb opencascade tbb
+brew fetch --force-bottle --bottle-tag="$BOTTLE_TAG" $PINNED_FORMULAS
+for f in $PINNED_FORMULAS; do
+  brew install --quiet --force-bottle "$(brew --cache --bottle-tag="$BOTTLE_TAG" "$f")"
+done
 
 brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 

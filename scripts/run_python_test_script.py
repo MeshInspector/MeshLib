@@ -7,13 +7,32 @@ import subprocess
 import shutil
 from pathlib import Path
 
+def run_shell(cmd: str) -> int:
+    """Run a shell command, returning its exit code.
+
+    Uses subprocess.run + an explicit pre-flush instead of os.system so the
+    script's own print() output stays in chronological order with the
+    subprocess's output in CI logs. With os.system, Python's buffered
+    stdout (the script's own print calls) can flush only at exit and end up
+    *after* a subprocess's output that ran *before* it, producing
+    interleaved gibberish like `collecting ... Namespace(...)` (pytest's
+    "collecting" prefix concatenated with the script's earlier
+    `print(args)` from before the loop), and worse, the actual pytest test
+    results / failure summaries get truncated from the GitHub Actions log
+    so failures look like a generic "ERROR: Some tests failed!" with no
+    diagnostic.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+    return subprocess.run(cmd, shell=True, check=False).returncode
+
 def get_vcpkg_root_from_where():
     try:
         output = subprocess.check_output(["where", "vcpkg"], universal_newlines=True)
         first_line = output.strip().splitlines()[0]
         return Path(first_line).resolve().parent
     except Exception as e:
-        print(e)
+        print(e, flush=True)
         return None
 
 def detect_vcpkg_python_version(vcpkg_root, triplet="x64-windows-meshlib"):
@@ -37,7 +56,7 @@ parser.add_argument("-a", dest="pytest_args", type=str,
                     help='Args string to be added to pytest command', default='')
 
 args = parser.parse_args()
-print(args)
+print(args, flush=True)
 
 python_cmds = ["py -3.11"]
 platformSystem = platform.system()
@@ -90,10 +109,10 @@ directory = os.getcwd()
 try:
     directory = os.path.dirname(os.path.abspath(__file__))
 except NameError:  # embedded python exception
-    print("trying to resolve path manually...")
+    print("trying to resolve path manually...", flush=True)
     directory = os.path.join(directory, "../../../MeshLib/")
     directory = os.path.join(directory, "test_python")
-    print(directory)
+    print(directory, flush=True)
 
 if args.dir:
     directory = os.path.join(directory, args.dir)
@@ -119,31 +138,33 @@ for py_cmd in python_cmds:
         continue; # Skip if no such command. Some python versions are not supported on some macs.
 
     # remove meshlib package if installed to not shadow dynamically attached
-    os.system(py_cmd + " -m pip uninstall -y meshlib")
+    run_shell(py_cmd + " -m pip uninstall -y meshlib")
 
     if args.create_venv:
-        print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd)
-        if os.system(py_cmd + " -m venv venv_" + py_cmd) != 0:
+        print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd, flush=True)
+        if run_shell(py_cmd + " -m venv venv_" + py_cmd) != 0:
             venv_failed = True
-        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest pytest_check numpy"):
+        if run_shell(". venv_" + py_cmd + "/bin/activate && pip install pytest pytest_check numpy"):
             venv_failed = True
         py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
     else:
         py_cmd_fixed = py_cmd
 
-    print(py_cmd_fixed + " " + pytest_cmd)
-    if os.system(py_cmd_fixed + " " + pytest_cmd) != 0:
+    print(py_cmd_fixed + " " + pytest_cmd, flush=True)
+    rc = run_shell(py_cmd_fixed + " " + pytest_cmd)
+    if rc != 0:
+        print(f"^^^ pytest exited with code {rc}", flush=True)
         failed = True
 
     if args.create_venv:
         shutil.rmtree("venv_" + py_cmd);
-        print("] --- DELETING VENV")
+        print("] --- DELETING VENV", flush=True)
 
 if venv_failed:
-    print("ERROR: Couldn't create some of the venvs!")
+    print("ERROR: Couldn't create some of the venvs!", flush=True)
 
 if failed:
-    print("ERROR: Some tests failed!")
+    print("ERROR: Some tests failed!", flush=True)
 
 if failed or venv_failed:
     sys.exit(1)

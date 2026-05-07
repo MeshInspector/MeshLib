@@ -326,6 +326,43 @@ jobs:
           sys.path.insert(0, '.')
           import meshlib.mrmeshnumpy
           " 2>&1 | tail -120
+
+          # Test: is the kernel page-hash refusal sticky to the file currently on disk
+          # (so `pip install --force-reinstall` rewrites it and unsticks the kill),
+          # or is it a kernel-cache fault that survives a file rewrite?
+          # Unset VIRTUAL_ENV so pip writes to brew's python@3.10 site-packages
+          # (the 3.14 venv was activated earlier in the job and is irrelevant here).
+          unset VIRTUAL_ENV
+          PY310=/opt/homebrew/bin/python3.10
+          PY310_SITE=$("$PY310" -c "import site,sys; sys.stdout.write(site.getsitepackages()[0])" 2>/dev/null)
+          echo "==== python3.10 site-packages: $PY310_SITE ===="
+          echo "==== before: codesign -dvv + ls -la on numpy native modules ===="
+          for f in $(find "$PY310_SITE/numpy" -name '*.cpython-310-darwin.so' 2>/dev/null); do
+            echo "---- $f ----"
+            ls -la "$f"
+            codesign -dvv "$f" 2>&1 | head -15
+            codesign --verify --verbose=2 "$f" 2>&1
+          done
+          REQS="$GITHUB_WORKSPACE/requirements/python.txt"
+          echo "==== requirements/python.txt contents ===="
+          cat "$REQS"
+          echo "==== pip install --force-reinstall -r requirements/python.txt (python3.10) ===="
+          "$PY310" -m pip install --force-reinstall --no-deps -r "$REQS" 2>&1 | tail -60
+          echo "==== after: codesign -dvv + ls -la on numpy native modules ===="
+          for f in $(find "$PY310_SITE/numpy" -name '*.cpython-310-darwin.so' 2>/dev/null); do
+            echo "---- $f ----"
+            ls -la "$f"
+            codesign -dvv "$f" 2>&1 | head -15
+            codesign --verify --verbose=2 "$f" 2>&1
+          done
+          echo "==== retry mrmeshnumpy import (post-reinstall) ===="
+          PYTHONFAULTHANDLER=1 "$PY310" -X faulthandler -c "
+          import sys
+          sys.path.insert(0, '.')
+          import meshlib.mrmeshnumpy as n
+          print('mrmeshnumpy OK after reinstall:', n.__file__)
+          " 2>&1 || echo "still failing after reinstall"
+
           echo "==== diagnostic smoke import via venv python3 ===="
           PYTHONFAULTHANDLER=1 python3 -X faulthandler -c "
           import sys, importlib

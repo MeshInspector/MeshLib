@@ -151,16 +151,19 @@ jobs:
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: pwsh
         run: |
+          # Intentionally NOT pinning libc++ and libunwind: they're the C++
+          # runtime, and current cmake/ninja/curl link against the latest ABI.
+          # Downgrading them breaks cmake.exe at startup (exit 127). clang/
+          # llvm/lld 18 binaries were built against an older libc++ but a
+          # newer libc++ is backward-compatible, so they still load fine.
           $clang18 = @(
             'mingw-w64-clang-x86_64-clang-18.1.8-2',
             'mingw-w64-clang-x86_64-clang-libs-18.1.8-2',
             'mingw-w64-clang-x86_64-clang-tools-extra-18.1.8-2',
             'mingw-w64-clang-x86_64-llvm-18.1.8-2',
             'mingw-w64-clang-x86_64-llvm-libs-18.1.8-2',
-            'mingw-w64-clang-x86_64-libc++-18.1.8-2',
             'mingw-w64-clang-x86_64-compiler-rt-18.1.8-2',
-            'mingw-w64-clang-x86_64-lld-18.1.8-2',
-            'mingw-w64-clang-x86_64-libunwind-18.1.8-2'
+            'mingw-w64-clang-x86_64-lld-18.1.8-2'
           )
           # Stage under C:\msys64\tmp so MSYS sees the files at /tmp/clang18-pkgs/.
           $stage = 'C:\msys64\tmp\clang18-pkgs'
@@ -173,16 +176,10 @@ jobs:
           }
           # First-run init triggers MSYS2's skeleton copy.
           # `-Sy` refreshes DBs so `pacman -S` of build tools resolves cleanly.
-          # `pacman -U` (no --needed) downgrades any newer libc++/etc. that
-          # the build-tool deps may have pulled in, locking the clang stack
-          # at 18.1.8-2.
-          # `--assume-installed cc-libs=22.1.4-1` works around a dep-graph
-          # conflict: newer cmake/ninja/curl require the virtual package
-          # `mingw-w64-clang-x86_64-cc-libs`, which recent libc++ provides but
-          # libc++ 18.1.8-2 (predating cc-libs) does not. The flag tells pacman
-          # to treat cc-libs as still present after the downgrade — the actual
-          # runtime symbols (libc++.dll etc.) ship with libc++ 18.
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --assume-installed mingw-w64-clang-x86_64-cc-libs=22.1.4-1 /tmp/clang18-pkgs/*.pkg.tar.zst"
+          # `pacman -U --needed` of the clang 18 stack: --needed lets pacman
+          # skip already-installed packages (no version downgrade attempts on
+          # libc++/libunwind that would conflict with cc-libs deps).
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --needed /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}

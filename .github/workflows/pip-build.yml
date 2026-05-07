@@ -306,16 +306,15 @@ jobs:
         # to 18.1.8-2 from repo.msys2.org/mingw/clang64.
         shell: pwsh
         run: |
+          # See build-test-windows.yml for libc++/libunwind exclusion rationale.
           $clang18 = @(
             'mingw-w64-clang-x86_64-clang-18.1.8-2',
             'mingw-w64-clang-x86_64-clang-libs-18.1.8-2',
             'mingw-w64-clang-x86_64-clang-tools-extra-18.1.8-2',
             'mingw-w64-clang-x86_64-llvm-18.1.8-2',
             'mingw-w64-clang-x86_64-llvm-libs-18.1.8-2',
-            'mingw-w64-clang-x86_64-libc++-18.1.8-2',
             'mingw-w64-clang-x86_64-compiler-rt-18.1.8-2',
-            'mingw-w64-clang-x86_64-lld-18.1.8-2',
-            'mingw-w64-clang-x86_64-libunwind-18.1.8-2'
+            'mingw-w64-clang-x86_64-lld-18.1.8-2'
           )
           $stage = 'C:\msys64\tmp\clang18-pkgs'
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
@@ -325,7 +324,7 @@ jobs:
             Write-Host "Downloading $url"
             Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
           }
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --assume-installed mingw-w64-clang-x86_64-cc-libs=22.1.4-1 /tmp/clang18-pkgs/*.pkg.tar.zst"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --needed /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Build MRBind
         shell: cmd

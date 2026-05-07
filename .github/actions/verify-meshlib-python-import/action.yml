@@ -15,16 +15,85 @@ inputs:
 runs:
   using: composite
   steps:
+    # The mrbind pybind11 non-limited-api shim is suffixed with the exact
+    # Python X.Y the bindings were built for (pybind11nonlimitedapi_meshlib_3.12.dll
+    # / .so / .dylib). Loading mrmeshpy from the wrong Python version
+    # raises `Failed to load library pybind11nonlimitedapi_meshlib_<wrong>`
+    # at module-init time, which CPython then re-raises as the opaque
+    # "ImportError: initialization failed".
+    #
+    # Regular build-test-* workflows produce one shim (the build's single
+    # Python). The pip-build wheel jobs (FOR_WHEEL=1) produce a shim per
+    # version listed in scripts/mrbind-pybind11/python_versions.txt
+    # (currently 3.8 through 3.14). Verify against every shim found,
+    # invoking each via its matching interpreter. Skip versions whose
+    # interpreter isn't on the runner; fail if any *attempted* import
+    # fails.
+
     - name: Verify meshlib.mrmeshpy import (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       env:
         PYTHONPATH: ${{ inputs.build-bin-dir }}
-      run: py -3 "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+      run: |
+        $meshlib = Join-Path '${{ inputs.build-bin-dir }}' 'meshlib'
+        $shims = @(Get-ChildItem -Path $meshlib -Filter 'pybind11nonlimitedapi_meshlib_*.dll' -ErrorAction SilentlyContinue | Sort-Object Name)
+        if ($shims.Count -eq 0) {
+          Write-Host "No pybind11nonlimitedapi_meshlib_*.dll shim in $meshlib; running once with default py -3"
+          py -3 "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+          exit $LASTEXITCODE
+        }
+        $attempted = 0; $failed = 0; $skipped = @()
+        foreach ($shim in $shims) {
+          $ver = $shim.BaseName -replace '^pybind11nonlimitedapi_meshlib_', ''
+          Write-Host ""
+          Write-Host "===== verify with py -$ver  (shim: $($shim.Name)) ====="
+          py "-$ver" -c "import sys" 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "SKIP: py -$ver not available on runner"
+            $skipped += $ver
+            continue
+          }
+          $attempted++
+          py "-$ver" "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+          if ($LASTEXITCODE -ne 0) { $failed++ }
+        }
+        Write-Host ""
+        Write-Host "Summary: shims=$($shims.Count) attempted=$attempted failed=$failed skipped=$($skipped.Count) [$($skipped -join ', ')]"
+        if ($failed -gt 0) { exit 1 }
 
     - name: Verify meshlib.mrmeshpy import (Unix)
       if: runner.os != 'Windows'
       shell: bash
       env:
         PYTHONPATH: ${{ inputs.build-bin-dir }}
-      run: python3 "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+      run: |
+        meshlib="${{ inputs.build-bin-dir }}/meshlib"
+        shopt -s nullglob
+        shims=( "$meshlib"/libpybind11nonlimitedapi_meshlib_*.so "$meshlib"/libpybind11nonlimitedapi_meshlib_*.dylib )
+        shopt -u nullglob
+        if [ "${#shims[@]}" -eq 0 ]; then
+          echo "No libpybind11nonlimitedapi_meshlib_*.{so,dylib} shim in $meshlib; running once with default python3"
+          exec python3 "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+        fi
+        attempted=0
+        failed=0
+        skipped=()
+        for shim in "${shims[@]}"; do
+          ver=$(basename "$shim" | sed -E 's/^libpybind11nonlimitedapi_meshlib_([0-9]+\.[0-9]+)\.(so|dylib)$/\1/')
+          py_cmd="python${ver}"
+          echo
+          echo "===== verify with $py_cmd  (shim: $(basename "$shim")) ====="
+          if ! command -v "$py_cmd" >/dev/null 2>&1; then
+            echo "SKIP: $py_cmd not on PATH"
+            skipped+=( "$ver" )
+            continue
+          fi
+          attempted=$((attempted + 1))
+          if ! "$py_cmd" "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"; then
+            failed=$((failed + 1))
+          fi
+        done
+        echo
+        echo "Summary: shims=${#shims[@]} attempted=${attempted} failed=${failed} skipped=${#skipped[@]} [${skipped[*]}]"
+        [ "$failed" -eq 0 ]

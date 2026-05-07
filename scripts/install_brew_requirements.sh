@@ -36,8 +36,9 @@ brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 brew install --quiet pybind11
 
 # Strip dylibs we'll bundle (brew keeps full symbol tables for symbolication).
+# Walk Cellar/ directly because $BREW_PREFIX/lib contains only symlinks into it.
 BREW_PREFIX=$(brew --prefix)
-find "$BREW_PREFIX/lib" -type f -name '*.dylib' -not -type l \
+find "$BREW_PREFIX/Cellar" -type f -name '*.dylib' \
   -exec chmod u+w {} + -exec strip -x {} + 2>/dev/null || true
 
 # check and upgrade python3 pip

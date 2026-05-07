@@ -397,11 +397,10 @@ jobs:
       - name: Generate and build MRBind bindings
         env:
           PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
-        # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
-        # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
+        # Match the 12.0 floor in DefaultOptions.cmake (mrbind doesn't go through CMake).
         run: |
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.0
 
       - name: Unit Tests
         run: build/Release/bin/MRTest

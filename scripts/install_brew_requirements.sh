@@ -8,17 +8,15 @@ if [ -n "$MESHLIB_EXTRA_BREW_REQUIREMENTS" ] ; then
   MESHLIB_BREW_REQUIREMENTS=$MESHLIB_BREW_REQUIREMENTS$'\n'$MESHLIB_EXTRA_BREW_REQUIREMENTS
 fi
 
-# Match dylib minos to CMAKE_OSX_DEPLOYMENT_TARGET=12.0; avoids ld64.lld skew at mrbind link.
+# Build the four libs that link into the pip wheel from source so they pick up
+# CMAKE_OSX_DEPLOYMENT_TARGET=12.0; avoids ld64.lld skew at mrbind link.
+# (Default Sequoia bottles target macOS 14.)
 export MACOSX_DEPLOYMENT_TARGET=12.0
-if [ "$(uname -m)" = "arm64" ]; then
-  BOTTLE_TAG="arm64_monterey"
-else
-  BOTTLE_TAG="monterey"
-fi
+brew install --quiet --build-from-source jsoncpp openvdb opencascade tbb
 
-brew install --quiet --bottle-tag="$BOTTLE_TAG" $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
+brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 
-brew install --quiet --bottle-tag="$BOTTLE_TAG" pybind11
+brew install --quiet pybind11
 
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade

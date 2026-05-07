@@ -272,15 +272,48 @@ jobs:
           done
           echo "==== recent DiagnosticReports (top 20) ===="
           ls -lt ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -21
-          echo "==== latest python/pytest crash reports (max 3, last 80 lines each) ===="
-          for f in $(ls -t ~/Library/Logs/DiagnosticReports/python*.ips ~/Library/Logs/DiagnosticReports/pytest*.ips 2>/dev/null | head -3); do
+          echo "==== latest Python/pytest crash reports from today (max 3, full content) ===="
+          today=$(date +%Y-%m-%d)
+          shopt -s nocaseglob
+          for f in $(ls -t ~/Library/Logs/DiagnosticReports/Python*${today}*.ips ~/Library/Logs/DiagnosticReports/pytest*${today}*.ips 2>/dev/null | head -3); do
             echo "---- $f ----"
-            tail -80 "$f"
+            cat "$f"
+            echo "---- end $f ----"
           done
-          echo "==== orphan python/pytest processes ===="
-          ps -ax -o pid,pcpu,rss,etime,command | grep -E 'python|pytest' | grep -v grep
-          echo "==== diagnostic smoke import (force-resolve paths) ===="
+          shopt -u nocaseglob
+          echo "==== codesign on suspect dylibs in build/${{ matrix.config }}/bin ===="
           cd ./build/${{ matrix.config }}/bin
+          for d in meshlib/mrmeshpy.so \
+                   meshlib/mrmeshnumpy.so \
+                   meshlib/libpybind11nonlimitedapi_meshlib_3.10.dylib \
+                   meshlib/libpybind11nonlimitedapi_meshlib_3.14.dylib \
+                   libpybind11nonlimitedapi_stubs.dylib \
+                   libMRMesh.dylib \
+                   libMRPython.dylib \
+                   libMRViewer.dylib \
+                   libMRVoxels.dylib; do
+            if [ -e "$d" ]; then
+              echo "---- $d ----"
+              codesign -dvv "$d" 2>&1 | head -15
+              codesign --verify --verbose=2 "$d" 2>&1
+            else
+              echo "$d : MISSING"
+            fi
+          done
+          echo "==== signature on python3.10 itself ===="
+          codesign -dvv /opt/homebrew/bin/python3.10 2>&1 | head -10
+          codesign --verify --verbose=2 /opt/homebrew/bin/python3.10 2>&1
+          echo "==== dyld trace of failing import (dyld_info / DYLD_PRINT_LIBRARIES) ===="
+          # Try to capture which dylib triggered SIGKILL via dyld's verbose load logging.
+          # Apple Silicon SIGKILLs on signature failure tend to leave a crash report
+          # naming the offender — but the live load trace pinpoints the same file faster.
+          DYLD_PRINT_LIBRARIES=1 DYLD_PRINT_LIBRARY_PATH=1 \
+              python3.10 -X faulthandler -c "
+          import sys
+          sys.path.insert(0, '.')
+          import meshlib.mrmeshpy
+          " 2>&1 | tail -80
+          echo "==== diagnostic smoke import via venv python3 ===="
           PYTHONFAULTHANDLER=1 python3 -X faulthandler -c "
           import sys, importlib
           sys.path.insert(0, '.')

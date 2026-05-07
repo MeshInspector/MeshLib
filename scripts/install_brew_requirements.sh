@@ -12,47 +12,17 @@ brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 
 brew install --quiet pybind11
 
-# === DIAGNOSTIC: brew strip investigation ===
-# A previous attempt (#6063 v1) found that strip+codesign on brew Cellar
-# yielded byte-identical bundled dylibs in the wheel — the strip appeared
-# to be a silent no-op. Instrument here to confirm whether bytes change
-# on Cellar, and which exact files brew has installed.
+# Strip dylibs we'll bundle (brew keeps full symbol tables for symbolication).
+# Per-file loop, not `find -exec ... +`: strip prints a sig-invalidation warning
+# and exits 1 on signed dylibs, which would abort the whole batched invocation
+# and leave later files unstripped. codesign re-signs ad-hoc so dyld doesn't
+# SIGKILL on load.
 BREW_PREFIX=$(brew --prefix)
-SAMPLE_GLOB=("$BREW_PREFIX"/Cellar/openvdb/*/lib/libopenvdb.*.dylib)
-echo "::group::strip-diagnostic: pre-strip"
-echo "BREW_PREFIX=$BREW_PREFIX"
-echo "Cellar dylibs total count: $(find "$BREW_PREFIX/Cellar" -type f -name '*.dylib' | wc -l)"
-echo "Cellar dylibs total size: $(find "$BREW_PREFIX/Cellar" -type f -name '*.dylib' -exec du -b {} + | awk '{s+=$1} END {print s}') bytes"
-echo "Sample (libopenvdb*) before strip:"
-ls -la "${SAMPLE_GLOB[@]}" 2>&1 || true
-shasum -a 256 "${SAMPLE_GLOB[@]}" 2>&1 || true
-echo "  codesign verify on sample:"
-for f in "${SAMPLE_GLOB[@]}"; do
-  [ -f "$f" ] || continue
-  codesign --display --verbose=2 "$f" 2>&1 | head -5 || true
-done
-echo "::endgroup::"
-
-echo "::group::strip-diagnostic: running strip + codesign"
-# Verbose: each `-exec` separately (not combined) so we see strip's stderr per file
 find "$BREW_PREFIX/Cellar" -type f -name '*.dylib' -print0 | while IFS= read -r -d '' f; do
   chmod u+w "$f"
-  strip -x "$f" 2>&1 | grep -v '^$' | sed "s|^|  strip: |" || true
-  codesign --force --sign - "$f" 2>&1 | grep -v '^$' | sed "s|^|  codesign: |" || true
+  strip -x "$f" 2>/dev/null || true
+  codesign --force --sign - "$f" 2>/dev/null || true
 done
-echo "::endgroup::"
-
-echo "::group::strip-diagnostic: post-strip"
-echo "Cellar dylibs total size: $(find "$BREW_PREFIX/Cellar" -type f -name '*.dylib' -exec du -b {} + | awk '{s+=$1} END {print s}') bytes"
-echo "Sample (libopenvdb*) after strip:"
-ls -la "${SAMPLE_GLOB[@]}" 2>&1 || true
-shasum -a 256 "${SAMPLE_GLOB[@]}" 2>&1 || true
-echo "  codesign verify on sample:"
-for f in "${SAMPLE_GLOB[@]}"; do
-  [ -f "$f" ] || continue
-  codesign --display --verbose=2 "$f" 2>&1 | head -5 || true
-done
-echo "::endgroup::"
 
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade

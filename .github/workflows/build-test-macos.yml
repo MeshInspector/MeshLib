@@ -212,10 +212,11 @@ jobs:
         env:
           PYTHONFAULTHANDLER: '1'
           PYTHONUNBUFFERED: '1'
-        # Fast canary: if the freshly built bindings can't be imported, bail before
-        # pytest collection swallows the failure inside its subprocess.
+        # Use python3.10 to match the build target (PYTHON_PKGCONF_NAME=python-3.10-embed)
+        # and what `Python Sanity Tests` invokes — `python3` would pick the venv's
+        # python (3.14 today on these runners), which is a separate latent issue.
         run: |
-          python3 -X faulthandler -c "
+          python3.10 -X faulthandler -c "
           import sys
           sys.path.insert(0, '.')
           import meshlib.mrmeshpy as m

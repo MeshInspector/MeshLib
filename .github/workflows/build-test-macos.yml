@@ -247,6 +247,28 @@ jobs:
           echo "==== which python3 ===="
           which -a python3 python3.10
           python3 --version
+          echo "==== .venv state (mtime / pyvenv.cfg / python symlink) ===="
+          ls -lad .venv 2>/dev/null
+          ls -lad .venv/bin/python* 2>/dev/null
+          echo "---- .venv/pyvenv.cfg ----"
+          cat .venv/pyvenv.cfg 2>/dev/null
+          echo "==== candidate python3 binaries (existence / symlink target / version) ===="
+          for p in \
+              /Users/admin/anaconda3/bin/python3 \
+              /Users/admin/anaconda3/bin/python3.10 \
+              /Users/admin/anaconda3/bin/python3.14 \
+              /opt/homebrew/bin/python3 \
+              /opt/homebrew/bin/python3.10 \
+              /opt/homebrew/bin/python3.14 \
+              /usr/bin/python3; do
+            if [ -e "$p" ]; then
+              tgt=$(readlink "$p" 2>/dev/null)
+              ver=$("$p" --version 2>&1)
+              echo "$p -> ${tgt:-(not a symlink)} : $ver"
+            else
+              echo "$p : MISSING"
+            fi
+          done
           echo "==== recent DiagnosticReports (top 20) ===="
           ls -lt ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -21
           echo "==== latest python/pytest crash reports (max 3, last 80 lines each) ===="

@@ -153,10 +153,12 @@ jobs:
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+        timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}
+        timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests

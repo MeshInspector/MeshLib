@@ -231,14 +231,17 @@ jobs:
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+        timeout-minutes: 10
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests
         if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        timeout-minutes: 10
         run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
+        timeout-minutes: 10
         run: |
           dotnet build source\MRDotNet2Test -c ${{ matrix.config }}
           source\x64\${{ matrix.config }}\MRDotNet2Test.exe --result="_report_nunit.xml"

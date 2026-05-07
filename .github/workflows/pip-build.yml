@@ -165,6 +165,7 @@ jobs:
         run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
+        timeout-minutes: 10
         run: build/Release/bin/MRTest
 
       - name: Python Tests
@@ -318,6 +319,7 @@ jobs:
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Unit Tests
+        timeout-minutes: 10
         run: source\x64\Release\MRTest.exe
 
       - name: Python Tests
@@ -404,6 +406,7 @@ jobs:
           make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7
 
       - name: Unit Tests
+        timeout-minutes: 10
         run: build/Release/bin/MRTest
 
       - name: Python Tests

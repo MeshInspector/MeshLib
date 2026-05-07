@@ -19,10 +19,17 @@ else
   BOTTLE_TAG="monterey"
 fi
 export MACOSX_DEPLOYMENT_TARGET=12.0
-brew fetch --force-bottle --bottle-tag="$BOTTLE_TAG" $PINNED_FORMULAS
+# Fail fast if either the fetch or the install breaks; without `set -e`
+# previous iterations silently fell through to default Sequoia bottles.
+set -e
+brew fetch --bottle-tag="$BOTTLE_TAG" $PINNED_FORMULAS
 for f in $PINNED_FORMULAS; do
-  brew install --quiet --force-bottle "$(brew --cache --bottle-tag="$BOTTLE_TAG" "$f")"
+  CACHED=$(brew --cache --bottle-tag="$BOTTLE_TAG" "$f")
+  echo "Installing cross-tag bottle: $CACHED"
+  ls -la "$CACHED"
+  brew install --quiet "$CACHED"
 done
+set +e
 
 brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 

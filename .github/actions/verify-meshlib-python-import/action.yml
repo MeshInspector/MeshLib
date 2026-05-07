@@ -1,0 +1,30 @@
+name: 'Verify meshlib.mrmeshpy import'
+description: |
+  Run scripts/ci/verify_meshlib_import.py with PYTHONPATH pointing at the
+  given build directory so that `import meshlib.mrmeshpy` is exercised
+  before MRTest's embedded-python smoke test does. Fails the job with a
+  real Python traceback if the import doesn't work — clearer than
+  CPython's wrapped "ImportError: initialization failed" that MRTest
+  would otherwise emit.
+
+inputs:
+  build-bin-dir:
+    description: 'Directory containing the meshlib/ package (e.g. build/Release/bin on Linux/macOS, source\x64\Release on Windows)'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Verify meshlib.mrmeshpy import (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        PYTHONPATH: ${{ inputs.build-bin-dir }}
+      run: py -3 "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+
+    - name: Verify meshlib.mrmeshpy import (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        PYTHONPATH: ${{ inputs.build-bin-dir }}
+      run: python3 "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"

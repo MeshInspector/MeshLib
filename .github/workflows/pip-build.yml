@@ -302,29 +302,20 @@ jobs:
 
       - name: Install MRBind toolchain (clang 18.1.8 pinned) into runner MSYS2
         # See build-test-windows.yml's matching step for rationale.
-        # mrbind's bindings regress on clang >= ~22; pin the clang stack
-        # to 18.1.8-2 from repo.msys2.org/mingw/clang64.
+        # Pinned URL list lives in scripts/mrbind/msys2_package_urls_clang18.txt.
         shell: pwsh
         run: |
-          # See build-test-windows.yml for libc++/libunwind exclusion rationale.
-          $clang18 = @(
-            'mingw-w64-clang-x86_64-clang-18.1.8-2',
-            'mingw-w64-clang-x86_64-clang-libs-18.1.8-2',
-            'mingw-w64-clang-x86_64-clang-tools-extra-18.1.8-2',
-            'mingw-w64-clang-x86_64-llvm-18.1.8-2',
-            'mingw-w64-clang-x86_64-llvm-libs-18.1.8-2',
-            'mingw-w64-clang-x86_64-compiler-rt-18.1.8-2',
-            'mingw-w64-clang-x86_64-lld-18.1.8-2'
-          )
           $stage = 'C:\msys64\tmp\clang18-pkgs'
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          foreach ($pkg in $clang18) {
-            $url = "https://repo.msys2.org/mingw/clang64/$pkg-any.pkg.tar.zst"
-            $dest = Join-Path $stage "$pkg-any.pkg.tar.zst"
-            Write-Host "Downloading $url"
+          $urls = Get-Content scripts/mrbind/msys2_package_urls_clang18.txt | Where-Object { $_ -match '^https?://' }
+          Write-Host "Downloading $($urls.Count) packages from MSYS2 mirror..."
+          foreach ($url in $urls) {
+            $name = [System.IO.Path]::GetFileName($url)
+            $dest = Join-Path $stage $name
+            if (Test-Path $dest) { continue }
             Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
           }
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --needed /tmp/clang18-pkgs/*.pkg.tar.zst"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -U --noconfirm --needed --overwrite '*' /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Build MRBind
         shell: cmd

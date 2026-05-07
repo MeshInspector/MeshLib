@@ -115,7 +115,7 @@ struct BooleanInternalParameters
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
 MRMESH_API Expected<Mesh> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
-    const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
+    std::vector<EdgePath>&& cutEdgesA, std::vector<EdgePath>&& cutEdgesB,
     BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
     BooleanResultMapper* mapper = nullptr,
     bool mergeAllNonIntersectingComponents = false,

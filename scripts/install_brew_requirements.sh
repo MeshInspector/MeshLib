@@ -12,16 +12,6 @@ brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
 
 brew install --quiet pybind11
 
-# Strip dylibs we'll bundle (brew keeps full symbol tables for symbolication).
-# Walk Cellar/ because $BREW_PREFIX/lib has only symlinks. Re-sign after
-# strip — strip invalidates the ad-hoc signature and dyld then kills the
-# process with SIGKILL on Apple Silicon.
-BREW_PREFIX=$(brew --prefix)
-find "$BREW_PREFIX/Cellar" -type f -name '*.dylib' \
-  -exec chmod u+w {} + \
-  -exec strip -x {} + \
-  -exec codesign --force --sign - {} + 2>/dev/null || true
-
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade
 python3.10 -m pip install --upgrade pip

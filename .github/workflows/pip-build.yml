@@ -300,10 +300,32 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
-      - name: Install MRBind toolchain into runner MSYS2
+      - name: Install MRBind toolchain (clang 18.1.8 pinned) into runner MSYS2
+        # See build-test-windows.yml's matching step for rationale.
+        # mrbind's bindings regress on clang >= ~22; pin the clang stack
+        # to 18.1.8-2 from repo.msys2.org/mingw/clang64.
         shell: pwsh
         run: |
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "pacman -Sy --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-llvm mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-libc++"
+          $clang18 = @(
+            'mingw-w64-clang-x86_64-clang-18.1.8-2',
+            'mingw-w64-clang-x86_64-clang-libs-18.1.8-2',
+            'mingw-w64-clang-x86_64-clang-tools-extra-18.1.8-2',
+            'mingw-w64-clang-x86_64-llvm-18.1.8-2',
+            'mingw-w64-clang-x86_64-llvm-libs-18.1.8-2',
+            'mingw-w64-clang-x86_64-libc++-18.1.8-2',
+            'mingw-w64-clang-x86_64-compiler-rt-18.1.8-2',
+            'mingw-w64-clang-x86_64-lld-18.1.8-2',
+            'mingw-w64-clang-x86_64-libunwind-18.1.8-2'
+          )
+          $stage = 'C:\msys64\tmp\clang18-pkgs'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          foreach ($pkg in $clang18) {
+            $url = "https://repo.msys2.org/mingw/clang64/$pkg-any.pkg.tar.zst"
+            $dest = Join-Path $stage "$pkg-any.pkg.tar.zst"
+            Write-Host "Downloading $url"
+            Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
+          }
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Build MRBind
         shell: cmd

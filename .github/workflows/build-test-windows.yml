@@ -138,13 +138,45 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Install MRBind toolchain into runner MSYS2
+      - name: Install MRBind toolchain (clang 18.1.8 pinned) into runner MSYS2
+        # mrbind's bindings regressed when generated with clang >= ~22 (lost
+        # the std_vector_const_Mesh registration, surfaces as
+        # `ImportError: initialization failed` from MRTest's embedded-python
+        # smoke test). Pin the clang stack to 18.1.8-2 — the version the
+        # historical msys64_meshlib_mrbind.zip bundle shipped — by pacman -U
+        # of the .pkg.tar.zst files fetched directly from
+        # repo.msys2.org/mingw/clang64. Build tools (cmake/ninja/make) come
+        # from the current MSYS2 mirror; they don't affect bindings output
+        # and don't depend on clang.
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: pwsh
         run: |
-          # Use the MSYS2 preinstalled at C:\msys64 by the runner image.
-          # First invocation triggers MSYS2's one-time skeleton init; -Sy refreshes repos.
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "pacman -Sy --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-llvm mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-libc++"
+          $clang18 = @(
+            'mingw-w64-clang-x86_64-clang-18.1.8-2',
+            'mingw-w64-clang-x86_64-clang-libs-18.1.8-2',
+            'mingw-w64-clang-x86_64-clang-tools-extra-18.1.8-2',
+            'mingw-w64-clang-x86_64-llvm-18.1.8-2',
+            'mingw-w64-clang-x86_64-llvm-libs-18.1.8-2',
+            'mingw-w64-clang-x86_64-libc++-18.1.8-2',
+            'mingw-w64-clang-x86_64-compiler-rt-18.1.8-2',
+            'mingw-w64-clang-x86_64-lld-18.1.8-2',
+            'mingw-w64-clang-x86_64-libunwind-18.1.8-2'
+          )
+          # Stage under C:\msys64\tmp so MSYS sees the files at /tmp/clang18-pkgs/.
+          $stage = 'C:\msys64\tmp\clang18-pkgs'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          foreach ($pkg in $clang18) {
+            $url = "https://repo.msys2.org/mingw/clang64/$pkg-any.pkg.tar.zst"
+            $dest = Join-Path $stage "$pkg-any.pkg.tar.zst"
+            Write-Host "Downloading $url"
+            Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
+          }
+          # First-run init triggers MSYS2's skeleton copy.
+          # `-Sy` refreshes DBs so `pacman -S` of build tools resolves cleanly.
+          # `pacman -U` (no --needed) downgrades any newer libc++/etc. that
+          # the build-tool deps may have pulled in, locking the clang stack
+          # at 18.1.8-2.
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}

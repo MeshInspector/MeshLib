@@ -325,7 +325,7 @@ jobs:
             Write-Host "Downloading $url"
             Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
           }
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm /tmp/clang18-pkgs/*.pkg.tar.zst"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --assume-installed mingw-w64-clang-x86_64-cc-libs=22.1.4-1 /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Build MRBind
         shell: cmd

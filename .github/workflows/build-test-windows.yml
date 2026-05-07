@@ -176,7 +176,13 @@ jobs:
           # `pacman -U` (no --needed) downgrades any newer libc++/etc. that
           # the build-tool deps may have pulled in, locking the clang stack
           # at 18.1.8-2.
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm /tmp/clang18-pkgs/*.pkg.tar.zst"
+          # `--assume-installed cc-libs=22.1.4-1` works around a dep-graph
+          # conflict: newer cmake/ninja/curl require the virtual package
+          # `mingw-w64-clang-x86_64-cc-libs`, which recent libc++ provides but
+          # libc++ 18.1.8-2 (predating cc-libs) does not. The flag tells pacman
+          # to treat cc-libs as still present after the downgrade — the actual
+          # runtime symbols (libc++.dll etc.) ship with libc++ 18.
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja && pacman -U --noconfirm --assume-installed mingw-w64-clang-x86_64-cc-libs=22.1.4-1 /tmp/clang18-pkgs/*.pkg.tar.zst"
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}

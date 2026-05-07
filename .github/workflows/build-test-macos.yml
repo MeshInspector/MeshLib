@@ -205,23 +205,35 @@ jobs:
         timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
-      - name: Python smoke import
+      - name: Python smoke import (mrmeshpy only)
         if: ${{ inputs.mrbind }}
         timeout-minutes: 1
         working-directory: ./build/${{ matrix.config }}/bin
         env:
           PYTHONFAULTHANDLER: '1'
           PYTHONUNBUFFERED: '1'
-        # Use python3.10 to match the build target (PYTHON_PKGCONF_NAME=python-3.10-embed)
-        # and what `Python Sanity Tests` invokes — `python3` would pick the venv's
-        # python (3.14 today on these runners), which is a separate latent issue.
+        # Split mrmeshpy and mrmeshnumpy so the failing one is identified.
+        # Crash report from the prior unsplit step pointed inside PyInit_mrmeshnumpy.
         run: |
           python3.10 -X faulthandler -c "
           import sys
           sys.path.insert(0, '.')
           import meshlib.mrmeshpy as m
-          import meshlib.mrmeshnumpy as n
           print('mrmeshpy:', m.__file__)
+          "
+
+      - name: Python smoke import (mrmeshnumpy only)
+        if: ${{ inputs.mrbind }}
+        timeout-minutes: 1
+        working-directory: ./build/${{ matrix.config }}/bin
+        env:
+          PYTHONFAULTHANDLER: '1'
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python3.10 -X faulthandler -c "
+          import sys
+          sys.path.insert(0, '.')
+          import meshlib.mrmeshnumpy as n
           print('mrmeshnumpy:', n.__file__)
           "
 
@@ -303,16 +315,17 @@ jobs:
           echo "==== signature on python3.10 itself ===="
           codesign -dvv /opt/homebrew/bin/python3.10 2>&1 | head -10
           codesign --verify --verbose=2 /opt/homebrew/bin/python3.10 2>&1
-          echo "==== dyld trace of failing import (dyld_info / DYLD_PRINT_LIBRARIES) ===="
-          # Try to capture which dylib triggered SIGKILL via dyld's verbose load logging.
-          # Apple Silicon SIGKILLs on signature failure tend to leave a crash report
-          # naming the offender — but the live load trace pinpoints the same file faster.
+          echo "==== otool -L on mrmeshnumpy.so (dep chain) ===="
+          otool -L meshlib/mrmeshnumpy.so 2>&1 || true
+          echo "==== dyld trace of failing mrmeshnumpy import (DYLD_PRINT_LIBRARIES) ===="
+          # The SIGKILL is inside PyInit_mrmeshnumpy per the crash report; trace the
+          # dylib load order so the LAST line before kill names the offending file.
           DYLD_PRINT_LIBRARIES=1 DYLD_PRINT_LIBRARY_PATH=1 \
               python3.10 -X faulthandler -c "
           import sys
           sys.path.insert(0, '.')
-          import meshlib.mrmeshpy
-          " 2>&1 | tail -80
+          import meshlib.mrmeshnumpy
+          " 2>&1 | tail -120
           echo "==== diagnostic smoke import via venv python3 ===="
           PYTHONFAULTHANDLER=1 python3 -X faulthandler -c "
           import sys, importlib

@@ -27,8 +27,6 @@ ELSE() # if APPLE
   IF( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17 ) # ethier AppleClang or Clang
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
   ENDIF()
-  # Drop local Mach-O symbols in non-Debug builds (most of __LINKEDIT).
-  add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,-x>)
 ENDIF()
 
 # Warnings and misc compiler settings.

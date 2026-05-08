@@ -141,6 +141,60 @@ For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
   - MeshInspector: `C:\Program Files\MeshInspector\MeshInspector`, please note that you should use same version of MeshLib that is used in MeshInspector to avoid unexpected errors
 \note take `x64\Debug\` if you want to test it in MeshLib debug app folder: `install\app\Debug`
 
+### Linux
+
+1. Install MeshLib (`apt install meshlib`) or unpack the SDK archive next to your plugin source.
+2. Build:
+\code{.sh}
+cmake -S example_plugin -B example_plugin_build -D CMAKE_BUILD_TYPE=Release \
+      -D MeshLib_DIR=/usr/lib/cmake/meshlib                       # adjust to your install
+cmake --build example_plugin_build -j
+\endcode
+3. Deploy:
+\code{.sh}
+sudo cp example_plugin_build/libMyPlugin.so          /usr/lib/MeshInspector/
+sudo cp example_plugin/MyPlugin.items.json           /usr/share/MeshInspector/
+sudo cp example_plugin/MyPlugin.ui.json              /usr/share/MeshInspector/
+sudo cp -R example_plugin/resource                   /usr/share/MeshInspector/
+\endcode
+
+### macOS (arm64 / Intel)
+
+The MeshLib SDK ships as a framework at `/Library/Frameworks/MeshLib.framework`.
+
+1. Install Homebrew prerequisites listed in `requirements/macos.txt` (jsoncpp, fmt, spdlog, glfw, tbb, cpr, etc.).
+2. Build (the `INSTALL_RPATH` line tells the linker to look next to the host MeshInspector):
+\code{.sh}
+cmake -S example_plugin -B example_plugin_build -D CMAKE_BUILD_TYPE=Release \
+      -D MeshLib_DIR=/Library/Frameworks/MeshLib.framework/Versions/Current/Resources/cmake \
+      -D CMAKE_INSTALL_RPATH="@executable_path/../libs"
+cmake --build example_plugin_build -j
+\endcode
+3. Verify dependencies look portable:
+\code{.sh}
+otool -L example_plugin_build/libMyPlugin.dylib
+# Every line must be /usr/lib/..., @rpath/..., or @executable_path/../libs/...
+# If you still see /opt/homebrew/... paths, fix them with install_name_tool -change.
+\endcode
+4. Deploy. **Recommended (safer):** install into a writable clone of the host app — does not touch the system bundle and does not break its code signature.
+\code{.sh}
+mkdir -p ~/Apps
+cp -R /Applications/MeshInspector.app ~/Apps/MI-MyPlugin     # NB: drop the .app suffix
+
+cp example_plugin_build/libMyPlugin.dylib            ~/Apps/MI-MyPlugin/Contents/libs/
+cp example_plugin/MyPlugin.items.json                ~/Apps/MI-MyPlugin/Contents/Resources/
+cp example_plugin/MyPlugin.ui.json                   ~/Apps/MI-MyPlugin/Contents/Resources/
+cp -R example_plugin/resource                        ~/Apps/MI-MyPlugin/Contents/Resources/
+
+# SONAME symlink (only if the bundle does not already ship the short name your plugin needs):
+ln -sf libcpr.1.14.2.dylib ~/Apps/MI-MyPlugin/Contents/libs/libcpr.1.dylib
+
+# Launch:
+~/Apps/MI-MyPlugin/Contents/MacOS/MeshInspector
+\endcode
+
+The system-wide alternative (writes into the notarized `MeshInspector.app` bundle) is documented under \ref HowtoAddPluginOverview "How to Add Plugin" → macOS option B, including the signature trade-off.
+
 ### WebAssembly
 1. [Install and activate Emscripten SDK](https://emscripten.org/docs/tools_reference/emsdk.html#emsdk-howto)
 2. [Download and unpack MeshLib SDK](https://github.com/MeshInspector/MeshLib/releases)
@@ -151,5 +205,25 @@ cmake --build example_plugin_build --config Release
 \endcode
 4. Copy the result files from the `example_plugin_build/html` directory to your web server location.
 \note Make sure your web server enables [cross-origin isolation](https://web.dev/articles/coop-coep) for these files.
+
+## After install — quick sanity check
+
+Restart the host app and look at the log:
+- Windows: `%TEMP%\MeshInspector\Logs\MRLog_*.txt`
+- Linux: `/tmp/MeshInspector/Logs/MRLog_*.txt`
+- macOS: `$TMPDIR/MeshInspector/Logs/MRLog_*.txt`
+
+You should see two lines per plugin:
+\code{.unparsed}
+[info] Loading library MyPlugin with priority 999
+[info] Load library MyPlugin was successful
+\endcode
+
+If instead you get:
+\code{.unparsed}
+[error] dlopen(...): Library not loaded: ...
+[warning] Ribbon item "My Tool" is not registered
+\endcode
+the plugin's transitive dependencies didn't resolve from the host bundle (so the dylib never loaded, and therefore no items got registered). See \ref HowtoAddPluginOverview "How to Add Plugin" → "Verifying the install" for fix paths.
 
 */

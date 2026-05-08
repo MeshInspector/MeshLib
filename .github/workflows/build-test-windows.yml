@@ -265,9 +265,17 @@ jobs:
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd
 
+      - name: Verify meshlib.mrmeshpy import
+        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: source\x64\${{ matrix.config }}
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+        timeout-minutes: 10
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: Diagnostic — Python bindings post-Unit-Tests
@@ -367,10 +375,12 @@ jobs:
 
       - name: C Unit Tests
         if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        timeout-minutes: 10
         run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
+        timeout-minutes: 10
         run: |
           dotnet build source\MRDotNet2Test -c ${{ matrix.config }}
           source\x64\${{ matrix.config }}\MRDotNet2Test.exe --result="_report_nunit.xml"
@@ -384,7 +394,7 @@ jobs:
         if: ${{matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+        run: py -3 -u ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{inputs.internal_build && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}

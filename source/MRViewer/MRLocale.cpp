@@ -117,7 +117,10 @@ LocaleDomainId Locale::addDomain( const char* domainName )
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 
-    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
+    const auto id = findDomain( std::string{ domainName } );
+    if ( id )
+        gDomainCache[domainName] = id;
+    return id;
 }
 
 LocaleDomainId Locale::addDomain( const std::string& domainName )
@@ -133,7 +136,10 @@ LocaleDomainId Locale::findDomain( const char* domainName )
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
 
-    return ( gDomainCache[domainName] = findDomain( std::string{ domainName } ) );
+    const auto id = findDomain( std::string{ domainName } );
+    if ( id )
+        gDomainCache[domainName] = id;
+    return id;
 }
 
 LocaleDomainId Locale::findDomain( const std::string& domainName )

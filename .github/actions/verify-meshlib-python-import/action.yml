@@ -1,11 +1,7 @@
 name: 'Verify meshlib.mrmeshpy import'
 description: |
-  Run scripts/ci/verify_meshlib_import.py with PYTHONPATH pointing at the
-  given build directory so that `import meshlib.mrmeshpy` is exercised
-  before MRTest's embedded-python smoke test does. Fails the job with a
-  real Python traceback if the import doesn't work — clearer than
-  CPython's wrapped "ImportError: initialization failed" that MRTest
-  would otherwise emit.
+  Run scripts/ci/verify_meshlib_import.py against every Python shim in
+  the build dir, to surface import failures with a real traceback.
 
 inputs:
   build-bin-dir:
@@ -15,20 +11,10 @@ inputs:
 runs:
   using: composite
   steps:
-    # The mrbind pybind11 non-limited-api shim is suffixed with the exact
-    # Python X.Y the bindings were built for (pybind11nonlimitedapi_meshlib_3.12.dll
-    # / .so / .dylib). Loading mrmeshpy from the wrong Python version
-    # raises `Failed to load library pybind11nonlimitedapi_meshlib_<wrong>`
-    # at module-init time, which CPython then re-raises as the opaque
-    # "ImportError: initialization failed".
-    #
-    # Regular build-test-* workflows produce one shim (the build's single
-    # Python). The pip-build wheel jobs (FOR_WHEEL=1) produce a shim per
-    # version listed in scripts/mrbind-pybind11/python_versions.txt
-    # (currently 3.8 through 3.14). Verify against every shim found,
-    # invoking each via its matching interpreter. Skip versions whose
-    # interpreter isn't on the runner; fail if any *attempted* import
-    # fails.
+    # The pybind11 shim filename (pybind11nonlimitedapi_meshlib_X.Y.{dll,so,dylib})
+    # encodes the Python version the bindings target; pip-build jobs produce
+    # one shim per version. Run verify against each shim using the matching
+    # interpreter; skip versions whose interpreter isn't on the runner.
 
     - name: Verify meshlib.mrmeshpy import (Windows)
       if: runner.os == 'Windows'

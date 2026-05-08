@@ -1,33 +1,26 @@
 """
 Sanity-check that the freshly-built meshlib Python bindings load cleanly.
 
-Run this with PYTHONPATH pointing at the build's bin directory (so that the
-`meshlib/` package directory is discoverable). Exits non-zero with a real
-Python traceback if any of the targeted submodule imports fails — catches
-problems like missing PyInit_*, wrong libc++/libpython ABI,
-binding-generation regressions, etc. before pytest's collection (or
-MRTest's embedded-python smoke test) buries them under CPython's opaque
-"ImportError: initialization failed".
+Run with PYTHONPATH pointing at the build's bin directory. Exits non-zero
+with a real Python traceback if `import meshlib` or
+`import meshlib.mrmeshpy` fails — catches missing PyInit_*, wrong
+libc++/libpython ABI, and binding-generation regressions before pytest's
+collection (or MRTest's embedded-python smoke test) buries them under
+CPython's opaque "ImportError: initialization failed".
 
-The targeted submodule list mirrors what `test_python/helper/__init__.py`
-imports at module load — that helper module is pulled in by every test
-file, so its imports run during pytest collection, and a crash in any of
-those imports kills the collector before pytest can report it. Other
-submodules in the `meshlib/` package (e.g. `mrviewerpy`) are intentionally
-NOT exercised here: importing `mrviewerpy` and letting Python shut down
-trips a separate pre-existing assertion (CommandLoop destructor expecting
-a drained command queue), which is unrelated to the
-binding-load problem this script is meant to gate. If the helper file ever
-imports more submodules, mirror them here.
+Only `mrmeshpy` is checked here: it's the one whose load failure has
+been the silent failure mode we hit. Other submodules pull in external
+runtime deps (`mrmeshnumpy` requires `numpy`, which isn't installed in
+some CI envs like manylinux's bare system Python) or trigger
+pre-existing shutdown bugs (`mrviewerpy`'s CommandLoop destructor
+asserts on a non-empty queue), and exercising them here produces false
+positives. Their actual load is still covered downstream by pytest's
+test collection (which runs in an env with proper deps).
 """
 
-import importlib
 import os
 import sys
 import traceback
-
-# Keep in sync with test_python/helper/__init__.py.
-HELPER_SUBMODULES = ('mrmeshpy', 'mrmeshnumpy')
 
 
 def main() -> int:
@@ -45,25 +38,13 @@ def main() -> int:
         return 2
     print('OK: meshlib at', meshlib.__file__, flush=True)
 
-    print('Submodules to import:', list(HELPER_SUBMODULES), flush=True)
-
-    failed: list[str] = []
-    for name in HELPER_SUBMODULES:
-        full = f'meshlib.{name}'
-        try:
-            mod = importlib.import_module(full)
-        except BaseException:
-            print(f'FAIL: import {full}', flush=True)
-            traceback.print_exc()
-            failed.append(name)
-            continue
-        loc = getattr(mod, '__file__', '<built-in>')
-        print(f'OK:   {full} at {loc}', flush=True)
-
-    if failed:
-        print(f'\nSummary: {len(failed)}/{len(HELPER_SUBMODULES)} submodule imports failed: {failed}', flush=True)
+    try:
+        import meshlib.mrmeshpy as _mrmeshpy
+    except BaseException:
+        print('FAIL: import meshlib.mrmeshpy', flush=True)
+        traceback.print_exc()
         return 3
-    print(f'\nSummary: {len(HELPER_SUBMODULES)}/{len(HELPER_SUBMODULES)} submodules imported OK', flush=True)
+    print('OK: meshlib.mrmeshpy at', _mrmeshpy.__file__, flush=True)
     return 0
 
 

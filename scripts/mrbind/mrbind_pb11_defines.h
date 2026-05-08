@@ -15,6 +15,10 @@
 // to be the first one on the command line, and adding any other
 // `-include` would push it out of first position and silently disable
 // the PCH.
+//
+// The recipe wraps the `#include` in `#ifndef MR_PARSING_FOR_PB11_BINDINGS`
+// so the mrbind parser pass — which doesn't have `scripts/mrbind/` on
+// its include path and doesn't need this macro anyway — skips it.
 
 #pragma once
 

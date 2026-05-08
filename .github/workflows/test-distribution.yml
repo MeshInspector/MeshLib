@@ -263,7 +263,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - dist_pattern: "MeshLibDist_*[!-]*.zip"
+          - dist_pattern: "MeshLibDist_${{ inputs.release_tag }}.zip"
             config: Release
             app_subdir: Release
             idl: 0
@@ -278,7 +278,6 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        continue-on-error: true
         run: |
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}

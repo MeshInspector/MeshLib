@@ -12,3 +12,6 @@ set(VCPKG_CMAKE_SYSTEM_NAME Linux)
 set(VCPKG_BUILD_TYPE release)
 
 set(VCPKG_FIXUP_ELF_RPATH ON)
+
+# Strip .symtab/.strtab/.debug_* on release link (~15 MB across the dep chain).
+set(VCPKG_LINKER_FLAGS_RELEASE "${VCPKG_LINKER_FLAGS_RELEASE} -Wl,-s")

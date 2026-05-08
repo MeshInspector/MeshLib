@@ -532,6 +532,8 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
     }
 #ifndef __EMSCRIPTEN_PTHREADS__
+    // Sync XHR is unavailable on the main thread in pthreads-enabled builds,
+    // so this branch is compiled out there and a sync download silently falls back to async (see warning below).
     else if ( !async )
     {
         MAIN_THREAD_EM_ASM(
@@ -544,6 +546,10 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
 #endif
     else
     {
+#ifdef __EMSCRIPTEN_PTHREADS__
+        if ( !async )
+            spdlog::warn( "WebRequest {}: sync download is not supported in pthreads builds, falling back to async", logName.c_str() );
+#endif
         MAIN_THREAD_EM_ASM(
             web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
             urlP.c_str(),
@@ -576,16 +582,22 @@ void WebRequest::waitRemainingAsync()
 
 Expected<Json::Value> parseResponse( const Json::Value& response )
 {
-    if ( response["code"].asInt() == 0 )
-        return unexpected( "Bad internet connection." );
+    const auto code = response["code"].asInt();
+
+    std::string mayBeError;
     if ( response["error"].isString() )
-    {
-        auto error = response["error"].asString();
-        if ( !error.empty() && error != "OK" )
-            return unexpected( error );
-    }
-    if ( response["code"].asInt() == 403 )
+        mayBeError = response["error"].asString();
+
+    if ( code == 403 )
         return unexpected( "Connection to " + response["url"].asString() + " is forbidden." );
+
+    if ( ( code < 200 || code > 399 ) && !mayBeError.empty() )
+        return MR::unexpected( mayBeError );
+
+    if ( code == 0 )
+        return MR::unexpected( "Bad internet connection." );
+
+
     std::string text;
     if ( !response["text"].isString() )
         return unexpected( "Unknown error." );

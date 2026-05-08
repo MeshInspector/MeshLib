@@ -24,6 +24,12 @@ jobs:
       vs19_vcpkg_version: ${{ env.vs19_vcpkg_version }}
       vs22_vcpkg_version: ${{ env.vs22_vcpkg_version }}
     steps:
+      - name: Checkout matrix file
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/workflows/matrix/windows-finalize-release-config.json
+          sparse-checkout-cone-mode: false
+
       - name: Set release config
         id: set
         run: |

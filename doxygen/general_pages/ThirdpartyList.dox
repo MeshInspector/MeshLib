@@ -17,6 +17,8 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |MRVoxels|Volumetric|MRMesh|Yes|
 |MRCuda|GPU acceleration|MRMesh and MRVoxels|Yes|
 |MRViewer|Rendering and user interface|MRMesh, MRVoxels, MRSymbolMesh and MRIOExtras|Yes|
+|MRMcp|MCP server / REST API|MRMesh|Yes|
+|MRMCPGateway|stdio MCP proxy executable|-|Yes|
 
 ### MRMesh
 
@@ -32,7 +34,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |<a rel="nofollow" href="https://libtiff.gitlab.io/libtiff/">tiff</a>                   |provides support for the Tag Image File Format (TIFF)                        |MIT                            |
 |<a rel="nofollow" href="https://github.com/open-source-parsers/jsoncpp">jsoncpp</a>    |manipulating JSON values, including serialization and deserialization        |MIT                            |
 |<a rel="nofollow" href="https://libzip.org">libzip</a>                                 |libzip - reading, creating, and modifying zip archives                       |BSD-3-Clause                   |
-|<a rel="nofollow" href="https://www.zlib.net">zlib</a>                                 |A Massively Spiffy Yet Delicately Unobtrusive Compression Library            |zlib                           |
+|<a rel="nofollow" href="https://github.com/zlib-ng/zlib-ng">zlib-ng</a>                |zlib data compression library for the next generation systems                |zlib                           |
 |<a rel="nofollow" href="https://github.com/vilya/miniply">minply</a>                   |a simple and fast parser for PLY files                                       |MIT                            |
 |<a rel="nofollow" href="https://github.com/uxlfoundation/oneTBB">oneTBB</a>            |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
 |<a rel="nofollow" href="https://github.com/greg7mdp/parallel-hashmap">phmap</a>        |fast and memory-friendly hashmap and btree containers                        |Apache 2.0                     |
@@ -54,6 +56,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |<a rel="nofollow" href="https://github.com/hobuinc/laz-perf">LAZperf</a>            |alternative LAZ implementation for C++ and JavaScript                        |Apache 2.0                                 |
 |<a rel="nofollow" href="https://github.com/asmaloney/libE57Format">libe57format</a> |library for reading & writing the E57 file format                            |Boost Software License                     |
 |<a rel="nofollow" href="https://leethomason.github.io/tinyxml2/">tinyxml2</a>       |an efficient, C++ XML parser                                                 |zlib                                       |
+|<a rel="nofollow" href="https://github.com/nlohmann/json">nlohmann-json</a>       |JSON for Modern C++ — used by the glTF reader/writer                         |MIT                                        |
 
 ### MRSymbolMesh
 
@@ -105,6 +108,25 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |<a rel="nofollow" href="https://github.com/signal11/hidapi">hidapi</a>                 |is a Simple library for communicating with USB and Bluetooth HID devices on Linux, Mac, and Windows |HIDAPI, BSD-3-Clause, GPL-3.0|
 |<a rel="nofollow" href="https://fontawesome.com">Fontawesome</a>                       |is the Internet's icon library and toolkit, used by millions of designers, developers, and content creators |<a rel="nofollow" href="https://fontawesome.com/license/free">Fontawesome License</a>|
 |<a rel="nofollow" href="https://fonts.google.com/noto/specimen/Noto+Sans">NotoSans</a> |is a global font collection for writing in all modern and ancient languages                         |OPEN FONT|
+
+### MRMcp
+
+\b MRMcp exposes MeshLib functionality through the Model Context Protocol (HTTP + SSE) and a parallel REST API. It depends on MRMesh and:
+
+|Name                                                                                |Description                                                                  |License                                    |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://github.com/MeshInspector/fastmcpp">fastmcpp</a>     |a C++ implementation of the Model Context Protocol                           |Apache-2.0                                 |
+|<a rel="nofollow" href="https://github.com/yhirose/cpp-httplib">cpp-httplib</a>     |single-file C++ HTTP/HTTPS server and client library                         |MIT                                        |
+|<a rel="nofollow" href="https://github.com/nlohmann/json">nlohmann-json</a>         |JSON for Modern C++                                                          |MIT                                        |
+
+### MRMCPGateway
+
+\b MRMCPGateway is a small standalone executable (`McpGateway[.exe]`) that proxies stdio-based MCP clients onto the HTTP MCP server hosted by MeshInspector. It has no MeshLib dependencies and pulls in:
+
+|Name                                                                                |Description                                                                  |License                                    |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://github.com/MeshInspector/fastmcpp">fastmcpp</a>     |a C++ implementation of the Model Context Protocol                           |Apache-2.0                                 |
+|<a rel="nofollow" href="https://github.com/yhirose/cpp-httplib">cpp-httplib</a>     |single-file C++ HTTP/HTTPS server and client library                         |MIT                                        |
 
 */
 

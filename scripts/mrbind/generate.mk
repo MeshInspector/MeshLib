@@ -755,6 +755,8 @@ $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(foreach f,$($1__InputFiles),$$(file >>$$@,#include "$$f"$$(lf)))
 	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
 	$(if $(is_py),\
+		$(call,### Pull in defines for macros whose values contain backslashes [most notably `MB_PB11_ADJUST_NAMES`]: routing them through `-D` on the command line is fragile under MSYS2 because different bash/make versions strip a different number of backslashes between the PCH-build and the per-fragment-build recipes, leading to PCH/TU macro-mismatch errors. Defining them in C source dodges the shell-quoting layer entirely. Skipped during the mrbind parser pass [which doesn't have scripts/mrbind/ on its include path and doesn't need these macros anyway], same pattern as `<pybind11/pybind11.h>` below.)\
+		$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <mrbind_pb11_defines.h>$$(lf)#endif$$(lf))\
 		$$(if $($1_PyEnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <pybind11/pybind11.h>$$(lf)#endif))\
 		$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)\
 		$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))\

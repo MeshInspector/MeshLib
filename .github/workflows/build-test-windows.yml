@@ -141,10 +141,11 @@ jobs:
       - name: Cache pinned MSYS2 packages
         # Avoid re-downloading the ~700 MB of 47 .pkg.tar.zst files on every
         # run. Cache key tracks the lockfile so any URL/hash bump invalidates.
-        # The download script uses `wget -c`, so a cache hit lets it skip
-        # every file; the install script's sha256 verify is the safety net.
+        # The download script uses `wget -nc`, so a cache hit lets it skip
+        # every file without contacting the server; the install script's
+        # sha256 verify is the safety net.
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: scripts/mrbind/msys2_packages
           key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}

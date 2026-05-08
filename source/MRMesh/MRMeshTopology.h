@@ -273,14 +273,7 @@ public:
     /// 1) all the gives faces,
     /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
     /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
-    /// return bit sets of deleted elements
-    MRMESH_API VacantElements deleteFaces( FaceBitSet && fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
-
-    /// deletes from this topology:
-    /// 1) all the gives faces,
-    /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
-    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
-    /// return bit sets of deleted elements, except for VacantElements::faces, which is returned empty
+    /// return bit sets of all vacant elements in this topology after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// explicitly increases the size of faces vector

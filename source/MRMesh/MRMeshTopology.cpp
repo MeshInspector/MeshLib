@@ -987,24 +987,92 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
     }
 }
 
-auto MeshTopology::deleteFaces( FaceBitSet && fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
-{
-    MR_TIMER;
-    auto res = deleteFaces( fs, keepEdges );
-    assert( res.faces.empty() );
-    res.faces = std::move( fs );
-    return res;
-}
-
 auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
 {
     MR_TIMER;
-    VacantElements res;
+    VacantElements vacant;
 
-    for ( auto f : fs )
-        deleteFace( f, keepEdges );
+    UndirectedEdgeBitSet oldLoneEdge( undirectedEdgeSize() );
+    vacant.edges.resize( undirectedEdgeSize() );
+    BitSetParallelForAll( vacant.edges, [&]( UndirectedEdgeId ue )
+    {
+        if ( isLoneEdge( ue ) )
+        {
+            oldLoneEdge.set( ue );
+            vacant.edges.set( ue );
+            return;
+        }
+        if ( keepEdges && keepEdges->test( ue ) )
+            return;
+        if ( auto l = left( ue ); l && !fs.test( l ) )
+            return; // left face exists and will not be deleted
+        if ( auto r = right( ue ); r && !fs.test( r ) )
+            return; // right face exists and will not be deleted
+        vacant.edges.set( ue );
+    } );
 
-    return res;
+    assert( updateValids_ );
+
+    vacant.verts.resize( vertSize(), true );
+    vacant.verts -= validVerts_;
+    BitSetParallelFor( validVerts_, [&]( VertId v )
+    {
+        for ( auto e : orgRing( *this, v ) )
+            if ( !vacant.edges.test( e ) )
+            {
+                // at least one edge incident to this vertex is not deleted
+                if ( vacant.edges.test( edgePerVertex_[v] ) )
+                    edgePerVertex_[v] = e;
+                return;
+            }
+        validVerts_.reset( v );
+        vacant.verts.set( v );
+        edgePerVertex_[v] = EdgeId();
+    } );
+    numValidVerts_ = (int)validVerts_.count();
+
+    const auto fsValid = fs & validFaces_;
+    BitSetParallelFor( fsValid, [&]( FaceId f )
+    {
+        edgePerFace_[f] = EdgeId();
+    } );
+    validFaces_ -= fsValid;
+    numValidFaces_ = (int)validFaces_.count();
+    vacant.faces.resize( faceSize(), true );
+    vacant.faces -= validFaces_;
+
+    // pass 1: update edges that will remain
+    ParallelFor( edges_, [&]( EdgeId e )
+    {
+        if ( vacant.edges.test( e ) )
+            return;
+        assert( !oldLoneEdge.test( e ) );
+
+        HalfEdgeRecord he = edges_[e];
+        while ( vacant.edges.test( he.next ) )
+            he.next = next( he.next );
+        while ( vacant.edges.test( he.prev ) )
+            he.prev = prev( he.prev );
+        assert( !vacant.verts.test( he.org ) ); // all edges around deleted vertices must be made lone
+        if ( vacant.faces.test( he.left ) )
+            he.left = FaceId{};
+        edges_[e] = he;
+    } );
+
+    // pass 2: make new lone edges
+    ParallelFor( edges_, [&]( EdgeId e )
+    {
+        if ( !vacant.edges.test( e ) )
+            return;
+        if ( oldLoneEdge.test( e ) )
+            return; // quick path for the edges that were already lone before
+
+        HalfEdgeRecord he;
+        he.next = he.prev = e;
+        edges_[e] = he;
+    } );
+
+    return vacant;
 }
 
 template<typename FM, typename VM, typename WEM>

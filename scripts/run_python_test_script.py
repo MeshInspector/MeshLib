@@ -7,11 +7,6 @@ import subprocess
 import shutil
 from pathlib import Path
 
-# CI captures stdout via a pipe (block-buffered by default), which lets our
-# `print()` calls flush *after* a child process's output and reorder the log.
-sys.stdout.reconfigure(line_buffering=True)
-sys.stderr.reconfigure(line_buffering=True)
-
 def get_vcpkg_root_from_where():
     try:
         output = subprocess.check_output(["where", "vcpkg"], universal_newlines=True)

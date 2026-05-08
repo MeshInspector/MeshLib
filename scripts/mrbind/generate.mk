@@ -748,6 +748,8 @@ override define module_snippet_parse =
 $(call var,$1__CombinedHeaderOutput := $(TEMP_OUTPUT_DIR)/$1.combined.hpp)
 $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(file >$$@,#pragma once$$(lf))
+	$(call,### Pull in defines for macros whose values contain backslashes [most notably `MB_PB11_ADJUST_NAMES`]: routing them through `-D` on the command line is fragile under MSYS2 because different bash/make versions strip a different number of backslashes between the PCH-build and the per-fragment-build recipes, leading to PCH/TU macro-mismatch errors. Defining them in C source dodges the shell-quoting layer entirely.)
+	$$(file >>$$@,#include <mrbind_pb11_defines.h>$$(lf))
 	$(call,### Special-case iostream, because a lot of our operators `<<` and `>>` are defined in headers with only `iosfwd` included, to avoid having `iostream` in our headers.)
 	$(call,### While we could conditionally include iostream in every header that does this, with an ifdef to only enable it for bindings, it's easier to do this globally here.)
 	$$(file >>$$@,#include <iostream>$$(lf))

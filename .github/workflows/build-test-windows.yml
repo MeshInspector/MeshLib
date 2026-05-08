@@ -228,6 +228,13 @@ jobs:
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd
 
+      - name: Verify meshlib.mrmeshpy import
+        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: source\x64\${{ matrix.config }}
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
@@ -255,7 +262,7 @@ jobs:
         if: ${{matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+        run: py -3 -u ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{inputs.internal_build && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}

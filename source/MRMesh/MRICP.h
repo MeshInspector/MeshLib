@@ -169,6 +169,9 @@ struct ICPProperties
     /// A pair of points is activated only if both points in the pair are mutually closest (reciprocity test passed),
     /// some papers recommend this mode for filtering out wrong pairs, but it can be too aggressive and deactivate (almost) all pairs.
     bool mutualClosest = false;
+
+    /// if this flag is true and a source point finds its correspondence on a boundary of target object, then ignores such pair
+    bool ignoreBdTgts = true;
 };
 
 /// reset active bit if pair distance is further than maxDistSq
@@ -177,7 +180,7 @@ MRMESH_API size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
 /// in each pair updates the target data and performs basic filtering (activation)
 MRMESH_API void updatePointPairs( PointPairs& pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
-    float cosThreshold, float distThresholdSq, bool mutualClosest );
+    float cosThreshold, float distThresholdSq, bool mutualClosest, bool ignoreBdTgts );
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms

@@ -164,6 +164,12 @@ jobs:
       - name: Run Tests
         run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
+      - name: Verify meshlib.mrmeshpy import
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: ./build/Release/bin
+
       - name: Unit Tests
         timeout-minutes: 10
         run: build/Release/bin/MRTest
@@ -183,7 +189,7 @@ jobs:
               --python ${PYTHON_VER} \
               --with-requirements ${REQUIREMENTS_FILE} \
               --with pytest \
-              python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+              python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python'
           done
 
       - name: Create and fix Wheel
@@ -318,13 +324,19 @@ jobs:
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
+      - name: Verify meshlib.mrmeshpy import
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: source\x64\Release
+
       - name: Unit Tests
         timeout-minutes: 10
         run: source\x64\Release\MRTest.exe
 
       - name: Python Tests
         working-directory: source\x64\Release
-        run: py ..\..\..\scripts\run_python_test_script.py -multi-cmd
+        run: py -3 -u ..\..\..\scripts\run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
         run: |
@@ -405,13 +417,19 @@ jobs:
           make --version
           make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7
 
+      - name: Verify meshlib.mrmeshpy import
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: ./build/Release/bin
+
       - name: Unit Tests
         timeout-minutes: 10
         run: build/Release/bin/MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -multi-cmd -create-venv
+        run: python3 -u ./../../../scripts/run_python_test_script.py -multi-cmd -create-venv
 
       - name: Create and fix Wheel
         run: |

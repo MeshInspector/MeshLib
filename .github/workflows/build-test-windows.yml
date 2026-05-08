@@ -255,7 +255,7 @@ jobs:
         if: ${{matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+        run: py -3 -u ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{inputs.internal_build && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}

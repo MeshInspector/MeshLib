@@ -138,6 +138,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Cache pinned MSYS2 packages
+        # Avoid re-downloading the ~700 MB of 47 .pkg.tar.zst files on every
+        # run. Cache key tracks the lockfile so any URL/hash bump invalidates.
+        # The download script uses `wget -c`, so a cache hit lets it skip
+        # every file; the install script's sha256 verify is the safety net.
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
+        uses: actions/cache@v4
+        with:
+          path: scripts/mrbind/msys2_packages
+          key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
+
       - name: Install MRBind toolchain (clang 18.1.8 pinned) into runner MSYS2
         # mrbind's bindings regressed when generated with clang >= ~22 (lost
         # the std_vector_const_Mesh registration; surfaces as
@@ -157,9 +168,6 @@ jobs:
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: pwsh
         run: |
-          # First-run init + repo sync (msys2_install_packages.sh runs
-          # `pacman -U` which needs a populated local DB).
-          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && pacman -Sy --noconfirm"
           # Download the pinned 18-era set (47 packages) and pacman -U the
           # whole thing in one transaction so dep resolution is internally
           # consistent — none of these packages knows about the newer
@@ -168,7 +176,9 @@ jobs:
           # no version skews. The install script verifies sha256s before
           # invoking pacman. `-here` keeps the workflow's checkout dir as
           # the shell's cwd so the relative `scripts/mrbind/...` paths
-          # resolve.
+          # resolve. We don't `pacman -Sy` first: `pacman -U` operates on
+          # local files and only needs the runner's preinstalled DB to
+          # exist (it does, even unsynced).
           C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
 
       - name: Install gettext utilities

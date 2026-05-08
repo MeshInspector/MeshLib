@@ -151,32 +151,23 @@ jobs:
         # Pinning only the clang/llvm packages doesn't work: clang 18's
         # cc.exe fails to load (STATUS_DLL_NOT_FOUND, exit 127) when the
         # rest of the runtime is at current versions. The pinned URL list
-        # is in scripts/mrbind/msys2_package_urls_clang18.txt — bump it (or
-        # the script that consumes it) when MeshLib is ready to move off
-        # clang 18.
+        # is in scripts/mrbind/msys2_package_urls_clang18.txt with
+        # corresponding sha256s in msys2_package_hashes_clang18.txt — bump
+        # both when MeshLib is ready to move off clang 18.
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: pwsh
         run: |
-          # Stage under C:\msys64\tmp so MSYS sees the files at /tmp/clang18-pkgs/.
-          $stage = 'C:\msys64\tmp\clang18-pkgs'
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          $urls = Get-Content scripts/mrbind/msys2_package_urls_clang18.txt | Where-Object { $_ -match '^https?://' }
-          Write-Host "Downloading $($urls.Count) packages from MSYS2 mirror..."
-          foreach ($url in $urls) {
-            $name = [System.IO.Path]::GetFileName($url)
-            $dest = Join-Path $stage $name
-            if (Test-Path $dest) { continue }
-            Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
-          }
-          # `pacman -Sy --noconfirm` refreshes DBs so first-run skeleton init
-          # completes (otherwise `pacman -U` fails on a missing local DB).
-          # Single `pacman -U` on the entire 18-era set so dep resolution is
-          # internally consistent — none of these packages knows about the
-          # newer cc-libs marker, and all transitively pinned to matching
-          # libwinpthread-git/crt-git/headers-git revisions, so there are no
-          # version skews. --overwrite '*' tolerates files already laid down
-          # by the runner image's preinstalled MSYS2.
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -U --noconfirm --needed --overwrite '*' /tmp/clang18-pkgs/*.pkg.tar.zst"
+          # First-run init + repo sync (msys2_install_packages.sh runs
+          # `pacman -U` which needs a populated local DB).
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm"
+          # Download the pinned 18-era set (47 packages) and pacman -U the
+          # whole thing in one transaction so dep resolution is internally
+          # consistent — none of these packages knows about the newer
+          # cc-libs marker, and all transitively pinned to matching
+          # libwinpthread-git/crt-git/headers-git revisions, so there are
+          # no version skews. The install script verifies sha256s before
+          # invoking pacman.
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}

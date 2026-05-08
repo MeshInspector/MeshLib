@@ -302,20 +302,10 @@ jobs:
 
       - name: Install MRBind toolchain (clang 18.1.8 pinned) into runner MSYS2
         # See build-test-windows.yml's matching step for rationale.
-        # Pinned URL list lives in scripts/mrbind/msys2_package_urls_clang18.txt.
         shell: pwsh
         run: |
-          $stage = 'C:\msys64\tmp\clang18-pkgs'
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          $urls = Get-Content scripts/mrbind/msys2_package_urls_clang18.txt | Where-Object { $_ -match '^https?://' }
-          Write-Host "Downloading $($urls.Count) packages from MSYS2 mirror..."
-          foreach ($url in $urls) {
-            $name = [System.IO.Path]::GetFileName($url)
-            $dest = Join-Path $stage $name
-            if (Test-Path $dest) { continue }
-            Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRetryCount 5 -RetryIntervalSec 10 -UseBasicParsing
-          }
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm && pacman -U --noconfirm --needed --overwrite '*' /tmp/clang18-pkgs/*.pkg.tar.zst"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
 
       - name: Build MRBind
         shell: cmd

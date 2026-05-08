@@ -12,9 +12,13 @@ cd "$(dirname "$BASH_SOURCE")"
 SUFFIX="${1:-}"
 HASH_FILE="msys2_package_hashes${SUFFIX}.txt"
 
-sha256sum -c "${HASH_FILE}"
+# Strip CRs that git autocrlf may have introduced on Windows runners —
+# `sha256sum -c` doesn't tolerate filenames with a trailing \r.
+HASH_LINES="$(tr -d '\r' <"${HASH_FILE}")"
 
-mapfile -t ENTRIES <"${HASH_FILE}"
+sha256sum -c <(printf '%s\n' "${HASH_LINES}")
+
+mapfile -t ENTRIES < <(printf '%s\n' "${HASH_LINES}")
 
 FILES=()
 for ENTRY in "${ENTRIES[@]}"; do

@@ -28,23 +28,23 @@ def main() -> int:
     print('exe:       ', sys.executable)
     print('prefix:    ', sys.prefix)
     print('PYTHONPATH:', os.environ.get('PYTHONPATH', '<unset>'))
-    print('---', flush=True)
+    print('---')
 
     try:
         import meshlib  # noqa: F401
     except BaseException:
-        print('FAIL: import meshlib', flush=True)
+        print('FAIL: import meshlib')
         traceback.print_exc()
         return 2
-    print('OK: meshlib at', meshlib.__file__, flush=True)
+    print('OK: meshlib at', meshlib.__file__)
 
     try:
         import meshlib.mrmeshpy as _mrmeshpy
     except BaseException:
-        print('FAIL: import meshlib.mrmeshpy', flush=True)
+        print('FAIL: import meshlib.mrmeshpy')
         traceback.print_exc()
         return 3
-    print('OK: meshlib.mrmeshpy at', _mrmeshpy.__file__, flush=True)
+    print('OK: meshlib.mrmeshpy at', _mrmeshpy.__file__)
     return 0
 
 

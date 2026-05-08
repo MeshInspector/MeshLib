@@ -204,6 +204,7 @@ jobs:
 
       - name: Verify meshlib.mrmeshpy import
         if: ${{ inputs.mrbind }}
+        timeout-minutes: 3
         uses: ./.github/actions/verify-meshlib-python-import
         with:
           build-bin-dir: ./build/${{ matrix.config }}/bin

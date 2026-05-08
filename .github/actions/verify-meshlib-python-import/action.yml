@@ -40,7 +40,7 @@ runs:
         $shims = @(Get-ChildItem -Path $meshlib -Filter 'pybind11nonlimitedapi_meshlib_*.dll' -ErrorAction SilentlyContinue | Sort-Object Name)
         if ($shims.Count -eq 0) {
           Write-Host "No pybind11nonlimitedapi_meshlib_*.dll shim in $meshlib; running once with default py -3"
-          py -3 "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+          py -3 -u "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
           exit $LASTEXITCODE
         }
         $attempted = 0; $failed = 0; $skipped = @()
@@ -55,7 +55,7 @@ runs:
             continue
           }
           $attempted++
-          py "-$ver" "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+          py "-$ver" -u "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
           if ($LASTEXITCODE -ne 0) { $failed++ }
         }
         Write-Host ""
@@ -74,7 +74,7 @@ runs:
         shopt -u nullglob
         if [ "${#shims[@]}" -eq 0 ]; then
           echo "No libpybind11nonlimitedapi_meshlib_*.{so,dylib} shim in $meshlib; running once with default python3"
-          exec python3 "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+          exec python3 -u "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
         fi
         attempted=0
         failed=0
@@ -90,7 +90,7 @@ runs:
             continue
           fi
           attempted=$((attempted + 1))
-          if ! "$py_cmd" "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"; then
+          if ! "$py_cmd" -u "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"; then
             failed=$((failed + 1))
           fi
         done

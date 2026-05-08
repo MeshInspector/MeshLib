@@ -304,8 +304,8 @@ jobs:
         # See build-test-windows.yml's matching step for rationale.
         shell: pwsh
         run: |
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm"
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && pacman -Sy --noconfirm"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
 
       - name: Build MRBind
         shell: cmd

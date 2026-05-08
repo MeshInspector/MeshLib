@@ -159,15 +159,17 @@ jobs:
         run: |
           # First-run init + repo sync (msys2_install_packages.sh runs
           # `pacman -U` which needs a populated local DB).
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && pacman -Sy --noconfirm"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && pacman -Sy --noconfirm"
           # Download the pinned 18-era set (47 packages) and pacman -U the
           # whole thing in one transaction so dep resolution is internally
           # consistent — none of these packages knows about the newer
           # cc-libs marker, and all transitively pinned to matching
           # libwinpthread-git/crt-git/headers-git revisions, so there are
           # no version skews. The install script verifies sha256s before
-          # invoking pacman.
-          C:\msys64\msys2_shell.cmd -no-start -defterm -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
+          # invoking pacman. `-here` keeps the workflow's checkout dir as
+          # the shell's cwd so the relative `scripts/mrbind/...` paths
+          # resolve.
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
 
       - name: Install gettext utilities
         if: ${{ inputs.upload_artifacts }}

@@ -262,8 +262,26 @@ public:
     /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
-    /// deletes multiple given faces by calling \ref deleteFace for each
-    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    struct VacantElements
+    {
+        UndirectedEdgeBitSet edges;
+        VertBitSet verts;
+        FaceBitSet faces;
+    };
+
+    /// deletes from this topology:
+    /// 1) all the gives faces,
+    /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
+    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
+    /// return bit sets of deleted elements
+    MRMESH_API VacantElements deleteFaces( FaceBitSet && fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
+    /// deletes from this topology:
+    /// 1) all the gives faces,
+    /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
+    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
+    /// return bit sets of deleted elements, except for VacantElements::faces, which is returned empty
+    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// explicitly increases the size of faces vector
     MRMESH_API void faceResize( size_t newSize );

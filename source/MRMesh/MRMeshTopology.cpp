@@ -987,11 +987,24 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
     }
 }
 
-void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+auto MeshTopology::deleteFaces( FaceBitSet && fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
 {
     MR_TIMER;
+    auto res = deleteFaces( fs, keepEdges );
+    assert( res.faces.empty() );
+    res.faces = std::move( fs );
+    return res;
+}
+
+auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
+{
+    MR_TIMER;
+    VacantElements res;
+
     for ( auto f : fs )
         deleteFace( f, keepEdges );
+
+    return res;
 }
 
 template<typename FM, typename VM, typename WEM>

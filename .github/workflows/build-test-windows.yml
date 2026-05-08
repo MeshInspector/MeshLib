@@ -228,6 +228,13 @@ jobs:
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd
 
+      - name: Verify meshlib.mrmeshpy import
+        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: source\x64\${{ matrix.config }}
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'

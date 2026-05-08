@@ -164,6 +164,12 @@ jobs:
       - name: Run Tests
         run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
+      - name: Verify meshlib.mrmeshpy import
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: ./build/Release/bin
+
       - name: Unit Tests
         timeout-minutes: 10
         run: build/Release/bin/MRTest
@@ -318,6 +324,12 @@ jobs:
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
+      - name: Verify meshlib.mrmeshpy import
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: source\x64\Release
+
       - name: Unit Tests
         timeout-minutes: 10
         run: source\x64\Release\MRTest.exe
@@ -404,6 +416,12 @@ jobs:
         run: |
           make --version
           make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7
+
+      - name: Verify meshlib.mrmeshpy import
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: ./build/Release/bin
 
       - name: Unit Tests
         timeout-minutes: 10

@@ -268,8 +268,12 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "================ Tool versions ================"
-          # Tool versions inside the clang64 environment (matches what mrbind builds use).
-          C:\msys64\msys2_shell.cmd -no-start -defterm -here -clang64 -c "bash --version | head -2 ; echo --- ; make --version | head -2 ; echo --- ; uname -a ; echo --- ; clang++ --version | head -2"
+          # Use -full-path so Windows-side tools (e.g. Strawberry Perl's
+          # gmake, chocolatey's make) are also resolvable, exactly as
+          # they are during the actual build invocation. Print `which`
+          # next to each --version so we know which binary on PATH gave
+          # us that version.
+          C:\msys64\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "echo '== bash ==' ; which bash ; bash --version | head -1 ; echo ; echo '== make ==' ; which make ; make --version | head -1 ; echo ; echo '== clang++ ==' ; which clang++ ; clang++ --version | head -1 ; echo ; echo '== uname ==' ; uname -a ; echo ; echo '== pacman -Qi for runner-installed make/bash/coreutils/msys2-runtime ==' ; for p in make bash coreutils msys2-runtime ; do pacman -Qi `"`$p`" 2>/dev/null | grep -E '^(Name|Version)' || echo \"`$p: not from pacman\" ; done"
 
           $log = 'C:\diag\clang-argv.log'
           Write-Host ""

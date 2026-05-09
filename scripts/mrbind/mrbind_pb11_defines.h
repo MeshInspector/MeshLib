@@ -4,17 +4,19 @@
 // whose value `"s/\\bMR:::/g"` carries a regex word-boundary `\b`)
 // reach clang as C source rather than as a `-D` flag.
 //
-// Defining via `-D` triggers a clang quirk: clang's PCH validation
-// re-renders the `-D` macro value when comparing the PCH-stored form
-// against the new TU's command line, and the re-rendered form drops a
-// backslash, so identical bytes-on-the-wire produce a textual mismatch:
+// Routing such values through the make+bash recipe pipeline is fragile:
+// on some MSYS2 environments (confirmed: the runner's preinstalled
+// `C:\msys64`) the value reaches clang's PCH-build and per-fragment
+// compile inconsistently, producing
 //     error: definition of macro 'MB_PB11_ADJUST_NAMES' differs between
 //     the precompiled header ('"s/\bMR:://g"') and the command line
 //     ('"s/\\bMR:://g"')
-// (Verified by hex-dumping the build log: bash receives bytewise
-// identical `-D...='"s/\\bMR:::/g"'` on both PCH-build and per-fragment
-// compile, so neither make nor bash is the culprit — the asymmetry is
-// inside clang's PCH stringifier for `-D` macros.)
+// The same clang 18.1.8 + same `-D` flag works correctly on master's
+// frozen S3 MSYS2 snapshot, so the trigger is something in newer
+// bash/make/coreutils — the exact tool wasn't pinpointed (make's
+// `--trace` echoes identical bytes from both recipes, but those bytes
+// are evidently processed asymmetrically downstream before reaching
+// clang).
 //
 // Defining the macro inside the PCH source eliminates the round-trip:
 // clang stores and validates the same C-source spelling on both ends.

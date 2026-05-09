@@ -237,6 +237,76 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%${{ fromJSON('["", ";PlatformToolset=v142"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
           )
 
+      - name: PROBE — install diagnostic shims (clang++ argv logger, bash $SHELL logger)
+        if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
+        shell: pwsh
+        run: |
+          $diagBin = 'C:\diag\bin'
+          New-Item -ItemType Directory -Force -Path $diagBin, C:\diag | Out-Null
+          # Copy shim scripts under the names make/bash will look up.
+          Copy-Item -Force scripts\diag\clang-argv-shim.sh "$diagBin\clang++"
+          Copy-Item -Force scripts\diag\diag-bash-shim.sh  "$diagBin\diag-bash"
+          # Strip CRLF in case Git checked them out as CRLF (shebang
+          # parsing fails on `#!/bin/bash<CR>`).
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && for f in /c/diag/bin/clang++ /c/diag/bin/diag-bash; do tr -d '\r' < `"`$f`" > /tmp/shim && mv /tmp/shim `"`$f`" && chmod +x `"`$f`"; done && ls -la /c/diag/bin/"
+
+      - name: PROBE — Generate Python bindings under shims (expected to FAIL with macro mismatch)
+        if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
+        continue-on-error: true
+        # We bypass generate_win.bat so we can inject:
+        #   * /c/diag/bin first on PATH → make's recipes invoke our clang++ shim
+        #   * SHELL=/c/diag/bin/diag-bash → make uses our bash shim for every recipe
+        run: |
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call C:\msys64\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "export PATH=/c/diag/bin:$PATH && time make -f scripts/mrbind/generate.mk MODE=none -B --trace VS_MODE=${{matrix.config}} SHELL=/c/diag/bin/diag-bash"
+
+      - name: PROBE — dump tool versions and shim logs
+        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' && always() }}
+        shell: pwsh
+        run: |
+          Write-Host "================ Tool versions ================"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -c "bash --version | head -2 ; echo --- ; make --version | head -2 ; echo --- ; uname -a ; echo --- ; /c/msys64/clang64/bin/clang++.exe --version | head -2"
+
+          foreach ($pair in @(
+              @{ Name='clang argv';   Path='C:\diag\clang-argv.log' },
+              @{ Name='shell recipe'; Path='C:\diag\shell-recipes.log' }
+          )) {
+            Write-Host ""
+            Write-Host "================ $($pair.Name) log: $($pair.Path) ================"
+            if (-not (Test-Path $pair.Path)) {
+              Write-Host "  (not produced)"
+              continue
+            }
+            Write-Host "Size: $((Get-Item $pair.Path).Length) bytes"
+            Write-Host ""
+            Write-Host "---- INVOCATIONS that mention MB_PB11_ADJUST_NAMES ----"
+            # Show the surrounding context (entire INVOCATION block) for each match.
+            $log = Get-Content $pair.Path -Raw
+            $blocks = $log -split '====\r?\n'
+            foreach ($b in $blocks) {
+              if ($b -match 'MB_PB11_ADJUST_NAMES') {
+                # Filter to invocations that ALSO compile something interesting (PCH or fragment) to keep output focused.
+                if ($b -match 'combined_pch\.hpp|fragment\.[0-9]+\.o|aliases\.cpp|extra\.helpers') {
+                  Write-Host "===="
+                  # Print only lines mentioning MB_PB11_ADJUST_NAMES, the invocation header, and lines that name what's being compiled.
+                  $b -split "`n" | Where-Object {
+                    $_ -match 'INVOCATION|MB_PB11_ADJUST_NAMES|combined_pch\.hpp|fragment\.[0-9]+\.o|aliases\.cpp|extra\.helpers|-xc\+\+-header'
+                  } | ForEach-Object { Write-Host $_ }
+                }
+              }
+            }
+          }
+
+          Write-Host ""
+          Write-Host "================ Hex-byte side-by-side ================"
+          if (Test-Path 'C:\diag\clang-argv.log') {
+            Write-Host "---- All MB_PB11_ADJUST_NAMES_HEX lines from clang argv ----"
+            Select-String -Path 'C:\diag\clang-argv.log' -Pattern '_HEX' | Where-Object { $_.Line -match 'MB_PB11' -or ($_.LineNumber -ne $null -and ((Get-Content 'C:\diag\clang-argv.log')[$_.LineNumber - 2] -match 'MB_PB11_ADJUST_NAMES')) } | ForEach-Object { Write-Host $_.Line }
+          }
+
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         shell: cmd

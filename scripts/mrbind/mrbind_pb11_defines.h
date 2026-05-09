@@ -1,15 +1,23 @@
 // Pulled in from the generated `<module>.combined.hpp` (see the recipe
-// in `generate.mk`) so that preprocessor macros whose values contain
-// backslashes (most notably `MB_PB11_ADJUST_NAMES`) reach clang via C
-// source rather than via the shell. Routing the value through
-// `-D'"s/\\bMR:://g"'` is fragile: different MSYS2 bash/make versions
-// strip a different number of backslashes, leading to PCH ↔ fragment
-// macro-mismatch errors of the form
-//     definition of macro 'MB_PB11_ADJUST_NAMES' differs between the
-//     precompiled header ('"s/\bMR:://g"') and the command line
+// in `generate.mk`) so that preprocessor macros whose values are string
+// literals containing backslashes (most notably `MB_PB11_ADJUST_NAMES`,
+// whose value `"s/\\bMR:::/g"` carries a regex word-boundary `\b`)
+// reach clang as C source rather than as a `-D` flag.
+//
+// Defining via `-D` triggers a clang quirk: clang's PCH validation
+// re-renders the `-D` macro value when comparing the PCH-stored form
+// against the new TU's command line, and the re-rendered form drops a
+// backslash, so identical bytes-on-the-wire produce a textual mismatch:
+//     error: definition of macro 'MB_PB11_ADJUST_NAMES' differs between
+//     the precompiled header ('"s/\bMR:://g"') and the command line
 //     ('"s/\\bMR:://g"')
-// Defining the macro inside the PCH source eliminates the shell layer
-// entirely so the same string literal is seen on every TU.
+// (Verified by hex-dumping the build log: bash receives bytewise
+// identical `-D...='"s/\\bMR:::/g"'` on both PCH-build and per-fragment
+// compile, so neither make nor bash is the culprit — the asymmetry is
+// inside clang's PCH stringifier for `-D` macros.)
+//
+// Defining the macro inside the PCH source eliminates the round-trip:
+// clang stores and validates the same C-source spelling on both ends.
 //
 // Not routed via `-include`: clang requires the PCH-import `-include`
 // to be the first one on the command line, and adding any other

@@ -158,9 +158,13 @@ jobs:
           C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
 
       - name: Install gettext utilities
+        # `--assume-installed libc++=18.1.8-2` stops pacman from
+        # upgrading our pinned libc++ to satisfy the latest gettext-tools'
+        # transitive dep — the upgrade would yank libc++ 22 in alongside
+        # our clang 18 and the headers stop compiling.
         if: ${{ inputs.upload_artifacts }}
         run: |
-          C:\msys64\msys2_shell.cmd -clang64 -defterm -no-start -c "pacman -S --noconfirm --needed mingw-w64-clang-x86_64-gettext-tools"
+          C:\msys64\msys2_shell.cmd -clang64 -defterm -no-start -c "pacman -S --noconfirm --needed --assume-installed mingw-w64-clang-x86_64-libc++=18.1.8-2 mingw-w64-clang-x86_64-gettext-tools"
 
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}

@@ -196,12 +196,6 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
 
   * This seems to be a VS2022 bug that's triggered by trying to bind `operator<=>` (taking its address?). We work around this by banning all `operator<=>`s with `--ignore`, see `mrbind_flags.txt`.
 
-* **`ImportError: generic_type: cannot initialize type "...": an object with that name is already defined`**
-
-  * Likely an MRBind bug. Set env variable `MRBIND_DEBUG=3` before importing, and use the logs to determine which two C++ types compete for the same Python type name.
-
-    Then you probably need to fix the `ToPythonName()` function in MRBind to correctly disambiguate the names.
-
 ## 3.2. Generate C bindings
 
 Running our script generates the code for the bindings, at `source/MeshLibC2` and `source/MeshLibC2Cuda`.

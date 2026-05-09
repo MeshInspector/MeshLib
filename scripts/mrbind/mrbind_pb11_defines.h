@@ -4,33 +4,47 @@
 // whose value `"s/\\bMR:::/g"` carries a regex word-boundary `\b`)
 // reach clang as C source rather than as a `-D` flag.
 //
-// Routing such values through the make+bash recipe pipeline is fragile:
-// on some MSYS2 environments (confirmed: the runner's preinstalled
-// `C:\msys64` with bash 5.3.9 / GNU make 4.x) the value reaches clang's
-// PCH-build and per-fragment compile inconsistently, producing
+// Routing such values through the make+bash recipe pipeline is fragile.
+// On the GitHub `windows-2022` runner with the preinstalled `C:\msys64`,
+// the value reaches clang's PCH-build and per-fragment compile
+// inconsistently, producing
 //     error: definition of macro 'MB_PB11_ADJUST_NAMES' differs between
 //     the precompiled header ('"s/\bMR:://g"') and the command line
 //     ('"s/\\bMR:://g"')
 //
-// Pinned to GNU make by an instrumented probe: a `clang++` shim that
-// logged argv (text + hex) before exec'ing the real clang showed the
-// PCH-build invocation actually receives the value with ONE backslash
-// (`-DMB_PB11_ADJUST_NAMES="s/\bMR:://g"`), while the per-fragment
-// invocation receives it with TWO backslashes
+// Pinned to the make+bash recipe pipeline by an instrumented probe — a
+// `clang++` shim that logged argv (text + hex) before exec'ing the
+// real clang. The PCH-build invocation actually receives the value
+// with ONE backslash (`-DMB_PB11_ADJUST_NAMES="s/\bMR:://g"`), while
+// the per-fragment invocation receives it with TWO
 // (`-DMB_PB11_ADJUST_NAMES="s/\\bMR:://g"`) — even though make's
 // `--trace` echoes identical recipe text for both. Bash's `'…'`
 // quote-stripping is deterministic, so identical input → identical
-// argv; the asymmetric input must come from make. The PCH recipe is
-// nested inside `$(if $(is_py), …)` in a `define module_snippet_build_py`
-// block that goes through `$(eval)`, while the fragment recipe is a
-// top-level rule in the same block — the extra round of make-variable
-// expansion appears to consume one backslash on the PCH path that the
-// fragment path keeps.
+// argv; the asymmetric input must come from make.
 //
-// Master with its frozen S3 MSYS2 snapshot (older bash + older make)
-// doesn't trip this — the older make evidently constructs recipe text
-// without the extra backslash strip, so PCH and fragment invocations
-// receive identical bytes and clang's PCH validator is happy.
+// Tool-version comparison between the two MSYS2 environments where
+// the build works (master) vs. fails (this branch):
+//
+//   tool             master S3 zip                  runner C:\msys64
+//   ---------------  -----------------------------  -----------------------------
+//   GNU make         4.4.1-2 (MSYS2/cygwin build,   4.4.1     (mingw64 build,
+//                    /usr/bin/make)                  /c/mingw64/bin/make,
+//                                                    NOT pacman-managed)
+//   bash             5.2.037-1                      5.3.009-1
+//   coreutils        8.32-5                         8.32-5  (same)
+//   msys2-runtime    3.5.4-7                        3.6.9-1
+//
+// Same upstream make version (4.4.1) but very different builds:
+// master's make goes through cygwin's POSIX layer; the runner's make
+// is a Windows-native mingw64 binary that came from the runner image's
+// separate Windows-side MinGW install (the runner's MSYS2 base set
+// doesn't include make, so PATH lookup falls through to that). The
+// asymmetric backslash handling between PCH and fragment recipes is
+// most likely a side effect of the mingw64 make's Windows-style argv
+// quoting interacting with `$(if $(is_py), …)`/`$(eval)` differently
+// than the cygwin make does. The `bash` major bump (5.2 → 5.3) may
+// also contribute, but bash's `'…'` quoting is well-specified so the
+// make-build difference is the more likely root.
 //
 // Defining the macro inside the PCH source eliminates the round-trip:
 // clang stores and validates the same C-source spelling on both ends.

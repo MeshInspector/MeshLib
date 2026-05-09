@@ -169,7 +169,7 @@ jobs:
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: pwsh
         run: |
-          # Download the pinned 18-era set (47 packages) and pacman -U the
+          # Download the pinned 18-era set (48 packages) and pacman -U the
           # whole thing in one transaction so dep resolution is internally
           # consistent — none of these packages knows about the newer
           # cc-libs marker, and all transitively pinned to matching

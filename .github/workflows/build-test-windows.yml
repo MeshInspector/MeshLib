@@ -268,12 +268,11 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "================ Tool versions ================"
-          # Use -full-path so Windows-side tools (e.g. Strawberry Perl's
-          # gmake, chocolatey's make) are also resolvable, exactly as
-          # they are during the actual build invocation. Print `which`
-          # next to each --version so we know which binary on PATH gave
-          # us that version.
-          C:\msys64\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "echo '== bash ==' ; which bash ; bash --version | head -1 ; echo ; echo '== make ==' ; which make ; make --version | head -1 ; echo ; echo '== clang++ ==' ; which clang++ ; clang++ --version | head -1 ; echo ; echo '== uname ==' ; uname -a ; echo ; echo '== pacman -Qi for runner-installed make/bash/coreutils/msys2-runtime ==' ; for p in make bash coreutils msys2-runtime ; do pacman -Qi `"`$p`" 2>/dev/null | grep -E '^(Name|Version)' || echo \"`$p: not from pacman\" ; done"
+          # Use -full-path so Windows-side tools (Strawberry Perl's gmake,
+          # chocolatey's make, etc.) are also resolvable — same setup as
+          # the actual mrbind build. Inline bash got mangled by PowerShell
+          # escaping last attempt, so dispatch to a checked-in script.
+          C:\msys64\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "tr -d '\r' < scripts/diag/dump-toolchain-versions.sh > /tmp/dump.sh && bash /tmp/dump.sh"
 
           $log = 'C:\diag\clang-argv.log'
           Write-Host ""

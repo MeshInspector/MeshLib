@@ -148,10 +148,10 @@ jobs:
           key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
 
       - name: Install MSYS2 for MRBind
-        # Pin clang to 18.1.8 — newer clang (>=22) loses the
-        # std_vector_const_Mesh registration in mrbind's output. Pinning
-        # only clang/llvm causes `STATUS_DLL_NOT_FOUND` from cc.exe, so
-        # the lockfile carries the whole clang-18-era runtime stack.
+        # Pin clang to 18.1.8 — same version master's S3 zip ships.
+        # Pinning only clang/llvm causes `STATUS_DLL_NOT_FOUND` from
+        # cc.exe, so the lockfile carries the whole clang-18-era
+        # runtime stack.
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: pwsh
         run: |

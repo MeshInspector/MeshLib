@@ -11,13 +11,10 @@ on:
       release_tag:
         required: true
         type: string
-    secrets:
-      BUILD_MACHINE_TOKEN:
-        required: true
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 concurrency:
   group: unity-test
@@ -75,7 +72,7 @@ jobs:
       - name: Download nuget package
         shell: powershell
         env:
-          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
       

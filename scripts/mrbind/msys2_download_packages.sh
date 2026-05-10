@@ -1,12 +1,14 @@
 #!/bin/bash
-# Downloads packages listed in `msys2_package_hashes.txt`. URLs are
-# derived from each filename's package-type prefix (matching the writer
-# side in `msys2_remember_current_packages.sh`), so we don't need a
-# separate URLs lockfile in lockstep with the hashes one.
+# Usage: msys2_download_packages.sh [SUFFIX]
+# Downloads packages from `msys2_package_hashes<SUFFIX>.txt`. URLs are
+# derived from each filename's package-type prefix (matches the writer
+# side in `msys2_remember_current_packages.sh`).
 set -euo pipefail
 cd "$(dirname "$BASH_SOURCE")"
 
-HASH_FILE=msys2_package_hashes.txt
+SUFFIX="${1:-}"
+HASH_FILE="msys2_package_hashes${SUFFIX}.txt"
+
 mkdir -p msys2_packages
 
 url_prefix_for() {
@@ -30,4 +32,6 @@ while read -r _hash file ; do
 done < <(tr -d '\r' <"${HASH_FILE}")
 
 echo "Downloading packages listed in ${HASH_FILE}. This can take a while..."
-wget -P msys2_packages -i "$URL_LIST" -q --show-progress -c
+# `-nc` skips files already present locally without contacting the
+# server — sha256 verify in the install script catches partials.
+wget -P msys2_packages -i "$URL_LIST" -q --show-progress -nc

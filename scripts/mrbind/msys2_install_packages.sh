@@ -1,11 +1,17 @@
 #!/bin/bash
+# Usage: msys2_install_packages.sh [SUFFIX]
+# Verifies sha256s and `pacman -U`s the packages listed in
+# `msys2_package_hashes<SUFFIX>.txt`.
 set -euo pipefail
 
 cd "$(dirname "$BASH_SOURCE")"
 
+SUFFIX="${1:-}"
+HASH_FILE="msys2_package_hashes${SUFFIX}.txt"
+
 # Strip CRs git autocrlf may have introduced on Windows checkouts —
 # `sha256sum -c` doesn't tolerate filenames with a trailing \r.
-HASH_LINES="$(tr -d '\r' <msys2_package_hashes.txt)"
+HASH_LINES="$(tr -d '\r' <"${HASH_FILE}")"
 
 sha256sum -c <(printf '%s\n' "${HASH_LINES}")
 

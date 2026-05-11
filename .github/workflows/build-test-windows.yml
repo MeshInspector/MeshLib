@@ -138,24 +138,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Cache pinned MSYS2 packages
-        # Cache key tracks the lockfile; `wget -nc` makes cache-hit a no-op,
-        # and `sha256sum -c` in the install script is the integrity gate.
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        uses: actions/cache@v5
-        with:
-          path: scripts/mrbind/msys2_packages
-          key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
-
       - name: Install MSYS2 for MRBind
-        # Pin clang to 18.1.8 — same version master's S3 zip ships.
-        # Pinning only clang/llvm causes `STATUS_DLL_NOT_FOUND` from
-        # cc.exe, so the lockfile carries the whole clang-18-era
-        # runtime stack.
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        shell: pwsh
-        run: |
-          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
+        uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}

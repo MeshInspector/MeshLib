@@ -307,21 +307,8 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
-      - name: Cache pinned MSYS2 packages
-        # Cache key tracks the lockfile; `wget -nc` makes cache-hit a no-op,
-        # and `sha256sum -c` in the install script is the integrity gate.
-        # Same key/path as build-test-windows.yml — the two workflows share
-        # cache entries.
-        uses: actions/cache@v5
-        with:
-          path: scripts/mrbind/msys2_packages
-          key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
-
       - name: Install MSYS2 for MRBind
-        # See build-test-windows.yml's matching step for rationale.
-        shell: pwsh
-        run: |
-          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
+        uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
         shell: cmd

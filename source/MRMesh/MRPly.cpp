@@ -74,7 +74,7 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
     const float streamSize = float( posEnd - posStart );
 
     std::string signalString = "PLY";
-    for ( [[maybe_unused]] int i = 0; reader.has_element(); reader.next_element(), ++i )
+    for ( ; reader.has_element(); reader.next_element() )
     {
         if ( reader.element_is(miniply::kPLYVertexElement) && reader.load_element() )
         {

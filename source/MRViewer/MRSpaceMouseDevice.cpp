@@ -1,6 +1,8 @@
 #include "MRSpaceMouseDevice.h"
 #include "MRViewer.h"
 
+#include <climits>
+
 namespace MR::SpaceMouse
 {
 

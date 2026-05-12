@@ -68,6 +68,7 @@
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
 #include <functional>
+#include <cstdint>
 
 #ifdef _WIN32
 #   ifdef MRMesh_EXPORTS

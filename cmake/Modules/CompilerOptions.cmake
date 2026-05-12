@@ -194,7 +194,7 @@ ENDIF()
 # GCC 16 introduces a new diagnostic that leads to multiple hard-to-diagnose (oh, the irony) compile errors;
 # disable it for now and investigate these cases later
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-error=sfinae-incomplete")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
 # Apple Clang 17 conflicts with OpenVDB 12.1

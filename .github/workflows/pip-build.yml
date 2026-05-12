@@ -119,8 +119,9 @@ jobs:
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind
         with:
-          # Docker image (which provides the system clang) is the toolchain identifier.
-          cache-key-prefix: rocky-pip-${{ matrix.os }}-${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+          # Key matches the Docker image identifier exactly so this cache is shared
+          # with build-test-linux-vcpkg.yml, which uses the same image and script.
+          cache-key-prefix: ${{ matrix.os }}-${{ inputs.vcpkg_docker_image_tag || 'latest' }}
           build-script: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Print RAM

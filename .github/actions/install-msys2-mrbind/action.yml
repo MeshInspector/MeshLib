@@ -1,20 +1,35 @@
 name: Install MSYS2 for MRBind
 description: >
   Install the MRBind clang64 toolchain into the runner's preinstalled
-  MSYS2. Uses `pacman -S --needed` against current MSYS2 mirrors —
-  no version pinning, no GitHub Actions cache. Picks up whatever
-  clang/libc++/cmake/etc. is current.
+  MSYS2 via `pacman -S --needed` against current mirrors. No version
+  pinning — picks up whatever clang/libc++/cmake/etc. is current.
+  Pacman's package cache is preserved between runs.
 
 runs:
   using: composite
   steps:
+    - name: Cache MSYS2 package downloads
+      # Pacman caches downloaded .pkg.tar.zst archives under
+      # `C:\msys64\var\cache\pacman\pkg\`. Preserving it across runs
+      # lets `pacman -S --needed` reuse the local archives when the
+      # mirror version matches; on mirror updates pacman re-downloads
+      # just the diff. The key prefix `msys2-mrbind-latest-` is
+      # deliberately distinct from master's `msys2-mrbind-clang18-`
+      # cache (which is on a different path and a different mechanism)
+      # so the two caches never collide. The `hashFiles(action.yml)`
+      # part invalidates the cache whenever the explicit package list
+      # in this file changes.
+      uses: actions/cache@v5
+      with:
+        path: C:\msys64\var\cache\pacman\pkg
+        key: msys2-mrbind-latest-${{ runner.os }}-${{ hashFiles('.github/actions/install-msys2-mrbind/action.yml') }}
+        restore-keys: |
+          msys2-mrbind-latest-${{ runner.os }}-
+
     - name: Install MRBind toolchain (latest from MSYS2)
       # Minimal set — pacman resolves transitive deps. `--needed` skips
       # packages already at >= the available version (runner image
       # ships some clang64 prereqs preinstalled, e.g. libwinpthread).
-      # No cache step here on purpose: each run fetches the latest from
-      # the MSYS2 mirror so cache-key drift can't collide with master's
-      # clang-18-pinned cache.
       shell: pwsh
       run: |
         C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-llvm mingw-w64-clang-x86_64-lld mingw-w64-clang-x86_64-libc++ mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-gettext-tools"

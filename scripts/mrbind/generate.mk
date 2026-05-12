@@ -529,7 +529,12 @@ COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
-COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
+# `-fuse-ld=lld` is needed on compile invocations too: clang 22's driver
+# pre-validates linker compatibility whenever LTO flags are present, even when
+# only compiling (e.g. producing the PCH with `-flto=thin`). Earlier clang
+# versions silently accepted compile-only commands without it. Aligns with
+# `LINKER` below, which already carries `-fuse-ld=lld`.
+COMPILER := $(CXX_FOR_BINDINGS) -fuse-ld=lld $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
 # Need whitespace to handle `~` correctly.
 COMPILER_FLAGS += -I $(MRBIND_SOURCE)/include
 

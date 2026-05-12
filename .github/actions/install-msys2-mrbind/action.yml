@@ -1,25 +1,20 @@
 name: Install MSYS2 for MRBind
 description: >
-  Restore (or download) the clang-18 MSYS2 toolchain pinned by
-  `scripts/mrbind/msys2_package_hashes_clang18.txt`, sha256-verify
-  it, and `pacman -U` against the runner's preinstalled `C:\msys64`.
+  Install the MRBind clang64 toolchain into the runner's preinstalled
+  MSYS2. Uses `pacman -S --needed` against current MSYS2 mirrors —
+  no version pinning, no GitHub Actions cache. Picks up whatever
+  clang/libc++/cmake/etc. is current.
 
 runs:
   using: composite
   steps:
-    - name: Cache pinned MSYS2 packages
-      # Cache key tracks the lockfile; `wget -nc` makes cache-hit a no-op,
-      # and `sha256sum -c` in the install script is the integrity gate.
-      uses: actions/cache@v5
-      with:
-        path: scripts/mrbind/msys2_packages
-        key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
-
-    - name: Install MSYS2 for MRBind
-      # Pin clang to 18.1.8 — same version master's S3 zip ships.
-      # Pinning only clang/llvm causes `STATUS_DLL_NOT_FOUND` from
-      # cc.exe, so the lockfile carries the whole clang-18-era
-      # runtime stack.
+    - name: Install MRBind toolchain (latest from MSYS2)
+      # Minimal set — pacman resolves transitive deps. `--needed` skips
+      # packages already at >= the available version (runner image
+      # ships some clang64 prereqs preinstalled, e.g. libwinpthread).
+      # No cache step here on purpose: each run fetches the latest from
+      # the MSYS2 mirror so cache-key drift can't collide with master's
+      # clang-18-pinned cache.
       shell: pwsh
       run: |
-        C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
+        C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && pacman -Sy --noconfirm && pacman -S --noconfirm --needed make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-lld mingw-w64-clang-x86_64-libc++ mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-gettext-tools"

@@ -1,0 +1,62 @@
+name: Build MRBind
+description: >
+  Build the MRBind tool from `thirdparty/mrbind`, caching
+  `thirdparty/mrbind/build` keyed on the submodule SHA, the build
+  script's hash, and any extra key passed by the caller (toolchain
+  lockfile, clang version file, etc.). On cache hit, the build step is
+  skipped entirely.
+
+inputs:
+  cache-key-prefix:
+    required: true
+    description: >
+      Short platform/toolchain identifier (e.g. `windows-clang18`,
+      `ubuntu-clang`, `rocky-clang`, `macos-clang`). Determines the
+      cache namespace so different platforms don't collide.
+  build-script:
+    required: true
+    description: >
+      Path to the build script (relative to the repo root). Hashed
+      into the cache key and executed on cache miss.
+  shell:
+    required: false
+    default: bash
+    description: >
+      Shell to run the build script in. Use `cmd` on Windows for
+      `.bat` scripts; `bash` elsewhere.
+  build-command:
+    required: false
+    default: ''
+    description: >
+      Optional override for the command run on cache miss. Defaults to
+      executing `build-script` directly; set this to `call ./<script>`
+      for Windows `.bat` files.
+  extra-cache-key:
+    required: false
+    default: ''
+    description: >
+      Extra string to mix into the cache key (e.g. the output of
+      `hashFiles(...)` over a compiler lockfile or `clang_version.txt`).
+
+runs:
+  using: composite
+  steps:
+    - name: Get MRBind submodule SHA
+      id: mrbind-sha
+      shell: bash
+      run: echo "sha=$(git -C thirdparty/mrbind rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache MRBind build
+      id: cache
+      uses: actions/cache@v5
+      with:
+        path: thirdparty/mrbind/build
+        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
+
+    - name: Build MRBind
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: ${{ inputs.shell }}
+      env:
+        # Harmless on non-Windows shells; consumed by install_mrbind_windows_msys2.bat.
+        MSYS2_DIR: C:\msys64
+      run: ${{ inputs.build-command != '' && inputs.build-command || inputs.build-script }}

@@ -125,7 +125,11 @@ jobs:
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        run: scripts/mrbind/install_mrbind_rockylinux.sh
+        uses: ./.github/actions/build-mrbind
+        with:
+          # rockylinux uses the system clang from the Docker image, so the image tag is the toolchain identifier.
+          cache-key-prefix: rocky-${{ matrix.arch }}-${{ inputs.docker_image_tag }}
+          build-script: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
         run: |

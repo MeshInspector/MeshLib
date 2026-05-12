@@ -134,11 +134,17 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
           CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
 
-      - name: Install MRBind
+      - name: Install MRBind deps
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        run: |
-          ./scripts/mrbind/install_deps_macos.sh
-          ./scripts/mrbind/install_mrbind_macos.sh
+        run: ./scripts/mrbind/install_deps_macos.sh
+
+      - name: Build MRBind
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        uses: ./.github/actions/build-mrbind
+        with:
+          cache-key-prefix: macos-${{ runner.arch }}-clang
+          build-script: scripts/mrbind/install_mrbind_macos.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 
       - name: Create virtualenv
         run: |

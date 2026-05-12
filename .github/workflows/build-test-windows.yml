@@ -142,29 +142,15 @@ jobs:
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/install-msys2-mrbind
 
-      - name: Get MRBind submodule SHA
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        id: mrbind-sha
-        shell: bash
-        run: echo "sha=$(git -C thirdparty/mrbind rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache MRBind build
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        id: cache-mrbind-build
-        uses: actions/cache@v5
-        with:
-          path: thirdparty/mrbind/build
-          # Key tracks the only inputs that affect the artifacts: the mrbind
-          # submodule pin (source code), the MSYS2 clang toolchain lockfile
-          # (compiler), and the install script (CMake flags).
-          key: mrbind-build-clang18-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt', 'scripts/mrbind/install_mrbind_windows_msys2.bat') }}
-
       - name: Build MRBind
-        if: ${{ (inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true') && steps.cache-mrbind-build.outputs.cache-hit != 'true' }}
-        shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64
-        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
+        uses: ./.github/actions/build-mrbind
+        with:
+          cache-key-prefix: windows-clang18
+          build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
+          shell: cmd
+          build-command: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
 
       - name: Generate C bindings
         if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}

@@ -1,27 +1,25 @@
-name: 'Install MSYS2 for MRBind'
-description: 'Download the MeshLib MSYS2 archive from S3 with retry on transient failures and extract to C:\'
+name: Install MSYS2 for MRBind
+description: >
+  Restore (or download) the clang-18 MSYS2 toolchain pinned by
+  `scripts/mrbind/msys2_package_hashes_clang18.txt`, sha256-verify
+  it, and `pacman -U` against the runner's preinstalled `C:\msys64`.
+
 runs:
-  using: 'composite'
+  using: composite
   steps:
+    - name: Cache pinned MSYS2 packages
+      # Cache key tracks the lockfile; `wget -nc` makes cache-hit a no-op,
+      # and `sha256sum -c` in the install script is the integrity gate.
+      uses: actions/cache@v5
+      with:
+        path: scripts/mrbind/msys2_packages
+        key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
+
     - name: Install MSYS2 for MRBind
+      # Pin clang to 18.1.8 — same version master's S3 zip ships.
+      # Pinning only clang/llvm causes `STATUS_DLL_NOT_FOUND` from
+      # cc.exe, so the lockfile carries the whole clang-18-era
+      # runtime stack.
       shell: pwsh
       run: |
-        # Retry the S3 fetch -- transient 404 / connection blips have been
-        # observed against vcpkg-export.s3.us-east-1.amazonaws.com.
-        $url = "https://vcpkg-export.s3.us-east-1.amazonaws.com/msys64_meshlib_mrbind.zip"
-        $dest = "./msys64_meshlib_mrbind.zip"
-        $maxAttempts = 5
-        $delay = 10
-        for ($i = 1; $i -le $maxAttempts; $i++) {
-          try {
-            (New-Object Net.WebClient).DownloadFile($url, $dest)
-            break
-          } catch {
-            if ($i -eq $maxAttempts) { throw }
-            Write-Host "Download attempt $i failed: $($_.Exception.Message). Retrying in $delay s..."
-            Start-Sleep -Seconds $delay
-            $delay *= 2
-          }
-        }
-        [IO.Compression.ZipFile]::ExtractToDirectory($dest, "C:\")
-        rm $dest
+        C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"

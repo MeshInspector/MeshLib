@@ -142,19 +142,18 @@ jobs:
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/install-msys2-mrbind
 
-      - name: Install gettext utilities
-        if: ${{ inputs.upload_artifacts }}
-        run: |
-          C:\msys64_meshlib_mrbind\msys2_shell.cmd -clang64 -defterm -no-start -c "pacman -S --noconfirm --needed mingw-w64-clang-x86_64-gettext-tools"
-
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate C bindings
         if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
@@ -164,6 +163,8 @@ jobs:
       - name: Generate C# bindings
         if: ${{ env.BUILD_C_SHARP == 'true' }}
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
@@ -173,7 +174,7 @@ jobs:
       - name: Build
         shell: cmd
         env:
-          GETTEXT_ROOT: C:\msys64_meshlib_mrbind\clang64
+          GETTEXT_ROOT: C:\msys64\clang64
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         # `|| exit /b 1` is used instead of `if errorlevel 1 exit 1`
@@ -194,6 +195,8 @@ jobs:
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}

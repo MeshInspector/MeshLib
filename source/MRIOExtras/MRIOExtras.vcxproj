@@ -122,7 +122,7 @@ copy $(SolutionDir)$(Platform)\Release\laz-perf.dll $(TargetDir)laz-perf.dll
 copy $(SolutionDir)$(Platform)\Release\laz-perf.exp $(TargetDir)laz-perf.exp
 copy $(SolutionDir)$(Platform)\Release\laz-perf.lib $(TargetDir)laz-perf.lib
 copy $(SolutionDir)$(Platform)\Release\laz-perf.pdb $(TargetDir)laz-perf.pdb
-copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
+copy $(VcpkgCurrentInstalledDir)\bin\zlib-ng2.dll $(TargetDir)zlib-ng2.dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

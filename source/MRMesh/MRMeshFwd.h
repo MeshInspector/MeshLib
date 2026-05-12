@@ -52,7 +52,7 @@
 // #endif
 
 
-#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 15)
+#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 16)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Warray-bounds"
   #pragma GCC diagnostic ignored "-Wstringop-overflow"
@@ -60,7 +60,7 @@
 
 #include <array>
 
-#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 15)
+#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 16)
   #pragma GCC diagnostic pop
 #endif
 
@@ -68,6 +68,7 @@
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
 #include <functional>
+#include <cstdint>
 
 #ifdef _WIN32
 #   ifdef MRMesh_EXPORTS
@@ -86,6 +87,13 @@
 #   else
 #       define MRMESH_CLASS __attribute__((visibility("default")))
 #   endif
+#endif
+
+// GCC 16 introduces a new diagnostic that leads to multiple hard-to-diagnose (oh, the irony) compile errors
+// disable it for now and investigate these cases later
+#if defined( __GNUC__ ) && !defined( __clang__ ) && __GNUC__ == 16
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wsfinae-incomplete"
 #endif
 
 namespace MR
@@ -815,6 +823,10 @@ constexpr inline auto translate_noop( const char* ctx, const char* single, const
 } // namespace Locale
 
 } //namespace MR
+
+#if defined( __GNUC__ ) && !defined( __clang__ ) && __GNUC__ == 16
+  #pragma GCC diagnostic pop
+#endif
 
 #ifdef __cpp_lib_unreachable
 #   define MR_UNREACHABLE std::unreachable();

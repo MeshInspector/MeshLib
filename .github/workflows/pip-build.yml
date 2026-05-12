@@ -411,7 +411,10 @@ jobs:
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
-          cache-key-prefix: macos-pip-${{ runner.arch }}-clang
+          # matrix.instance (not runner.arch) discriminates runner images, so changing
+          # `instance:` later invalidates the cache and we don't share across runners
+          # with different homebrew prefixes (see comment in build-test-macos.yml).
+          cache-key-prefix: macos-pip-${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 

@@ -142,7 +142,10 @@ jobs:
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
         with:
-          cache-key-prefix: macos-${{ runner.arch }}-clang
+          # matrix.os (not runner.arch) is the discriminator -- the arm64 GitHub-hosted
+          # and self-hosted runners share runner.arch=ARM64 but have different homebrew
+          # prefixes baked into mrbind's rpath, so they must not share a cache.
+          cache-key-prefix: macos-${{ matrix.os }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 

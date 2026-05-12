@@ -51,19 +51,7 @@
 // #error MSVC users must enable the new standard-conformant preprocessor using `/Zc:preprocessor`!
 // #endif
 
-
-#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 16)
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Warray-bounds"
-  #pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
 #include <array>
-
-#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 16)
-  #pragma GCC diagnostic pop
-#endif
-
 #include <vector>
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>

@@ -257,7 +257,7 @@ jobs:
   
   windows-test:
     if: ${{ inputs.test_windows }}
-    runs-on: windows-2025
+    runs-on: windows-2022
     timeout-minutes: 30
     strategy:
       fail-fast: false

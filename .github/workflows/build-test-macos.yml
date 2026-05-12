@@ -53,13 +53,17 @@ jobs:
             c-compiler-template: /usr/bin/clang
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-15-intel # github hosted
+            instance: macos-15-intel
           - arch: arm64
             config: Debug
             os: github-arm
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
-            runner: macos-latest  # github hosted
+            # Pinned to the same image pip-build.yml uses so the mrbind cache is shared
+            # (was `macos-latest`, which currently resolves to macos-14 but is rolling).
+            runner: macos-14
+            instance: macos-14
           - arch: arm64
             config: Release
             os: arm
@@ -67,6 +71,7 @@ jobs:
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
             c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
+            instance: self-hosted-arm
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -142,10 +147,11 @@ jobs:
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
         with:
-          # matrix.os (not runner.arch) is the discriminator -- the arm64 GitHub-hosted
-          # and self-hosted runners share runner.arch=ARM64 but have different homebrew
-          # prefixes baked into mrbind's rpath, so they must not share a cache.
-          cache-key-prefix: macos-${{ matrix.os }}-clang
+          # Keyed on the runner image (matrix.instance) so the cache discriminates
+          # GitHub-hosted vs self-hosted (different homebrew prefixes baked into
+          # mrbind's rpath), and is shared with pip-build.yml's macOS section where
+          # matrix.instance matches.
+          cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 

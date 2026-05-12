@@ -30,12 +30,6 @@ namespace Schema
         [[nodiscard]] nlohmann::json&& asJson() && { return std::move( json ); }
     };
 
-    /// An empty schema.
-    struct Empty : Base
-    {
-        Empty() : Base( {} ) {}
-    };
-
     /// A schema describing a scalar.
     struct Number : Base
     {

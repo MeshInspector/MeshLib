@@ -99,34 +99,25 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     return boolean( meshA, meshB, operation, { .rigidB2A = rigidB2A, .mapper = mapper, .cb = cb } );
 }
 
-BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
-{
-    return boolean( meshA, meshB, operation, { .rigidB2A = rigidB2A, .mapper = mapper, .cb = cb } );
-}
-
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
-    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
-    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
+    MR_TIMER;
+    Mesh maCpy, mbCpy;
     tbb::task_group taskGroup;
-    if ( needCutMeshA )
+    taskGroup.run( [&] ()
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        taskGroup.run( [&] ()
-        {
-            meshA.getAABBTree();
-        } );
-    }
-    if ( needCutMeshB )
-    {
-        // build tree for input mesh for the cloned mesh to copy the tree,
-        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        meshB.getAABBTree();
-    }
+        meshA.getAABBTree();
+        maCpy = meshA;
+    } );
+    // build tree for input mesh for the cloned mesh to copy the tree,
+    // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+    meshB.getAABBTree();
+    mbCpy = meshB;
     taskGroup.wait();
-    return booleanImpl( Mesh( meshA ), Mesh( meshB ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
+
+    return booleanImpl( std::move( maCpy ), std::move( mbCpy ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
@@ -659,7 +650,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     intParams.optionalOutCut = params.outCutEdges;
     intParams.graphCutSeparation = params.forceCut;
     // do operation
-    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), std::move( cutA ), std::move( cutB ), 
+        operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 
     if ( mainCb && !mainCb( 1.0f ) )
         return { .errorString = stringOperationCanceled() };

@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - vcpkg_triplet: x64-windows-meshlib
+          - vcpkg_triplet: x64-windows-vs2019-meshlib
             extract_release: MREDist_Release.zip
             extract_debug: MREDist_Debug.zip
             output_zip: MeshLibDist.zip
@@ -29,30 +29,18 @@ jobs:
             artifact_name: DistributivesWin-IteratorDebug
     env:
       vs19_vcpkg_version: ${{ inputs.vs19_vcpkg_version }}
-      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-vs2019-meshlib' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           submodules: true
 
-      - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{env.vs19_vcpkg_version}}
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v5
-        id: vcpkg-cache
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
         with:
-          key: vcpkg-cache-${{ env.vs19_vcpkg_version }}-${{ matrix.vcpkg_triplet }}
-          path: |
-            C:\vcpkg\*
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat
+          vcpkg-version: ${{ env.vs19_vcpkg_version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet }}
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v8

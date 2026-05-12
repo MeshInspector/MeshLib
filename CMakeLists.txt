@@ -58,9 +58,6 @@ option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are a
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
-IF(MR_EMSCRIPTEN)
-  set(MESHLIB_BUILD_MCP OFF)
-ENDIF()
 IF(MR_EMSCRIPTEN OR APPLE)
   set(MESHLIB_BUILD_MRCUDA OFF)
 ENDIF()
@@ -76,6 +73,7 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
+  set(MESHLIB_BUILD_MCP OFF)
 ENDIF()
 
 # Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the

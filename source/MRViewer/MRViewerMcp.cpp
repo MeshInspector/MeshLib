@@ -170,7 +170,7 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
 {
-    const bool includeUi = args.value( "includeUi", false );
+    const bool includeUi = args.value( "includeUi", true );
     const int width = args.value( "width", 0 );
     const int height = args.value( "height", 0 );
     if ( width < 0 || height < 0 )
@@ -216,10 +216,11 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
             throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
         std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
         out["bytes"] = encode64( bytes.data(), bytes.size() );
+        out["contentType"] = "image/png";
     }
     out["width"] = img.resolution.x;
     out["height"] = img.resolution.y;
-    return nlohmann::json::object( { { "result", std::move( out ) } } );
+    return out;
 }
 
 static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
@@ -336,7 +337,7 @@ MR_ON_INIT{
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
             .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
             .addMemberOpt( "factor",    Schema::Number{} ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerFit
     );
 
@@ -350,15 +351,15 @@ MR_ON_INIT{
         /*input_schema*/Schema::Object{}
             .addMember( "forwardDir", Schema::Array( Schema::Number{} ) )
             .addMember( "upDir",      Schema::Array( Schema::Number{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSetupCamera
     );
 
     server.addTool(
         /*id*/  "viewer.captureScreenshot",
         /*name*/"Capture viewport screenshot",
-        /*desc*/"Render the viewer to a PNG. Default (`includeUi: false`) captures only the 3D viewport; set "
-                "`includeUi: true` to capture the whole window including panels, ribbon, and dialogs. "
+        /*desc*/"Render the viewer to a PNG. Default (`includeUi: true`) captures the whole window including panels, ribbon, and dialogs; set "
+                "`includeUi: false` to capture only the 3D viewport. "
                 "For the 3D-only mode, optional `width`/`height` request a specific resolution (zero or missing = "
                 "current viewport size) and `transparentBg` (default false) omits the background — these options "
                 "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "
@@ -372,10 +373,11 @@ MR_ON_INIT{
             .addMemberOpt( "transparentBg", Schema::Bool{} )
             .addMemberOpt( "filePath",      Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",   Schema::String{} )
-            .addMemberOpt( "bytes",  Schema::String{} )
-            .addMember(    "width",  Schema::Number{} )
-            .addMember(    "height", Schema::Number{} ),
+            .addMemberOpt( "path",        Schema::String{} )
+            .addMemberOpt( "bytes",       Schema::String{} )
+            .addMemberOpt( "contentType", Schema::String{} )
+            .addMember(    "width",       Schema::Number{} )
+            .addMember(    "height",      Schema::Number{} ),
         /*func*/mcpViewerCaptureScreenshot
     );
 
@@ -395,7 +397,7 @@ MR_ON_INIT{
             .addMemberOpt( "y",           Schema::Number{} )
             .addMemberOpt( "scrollDelta", Schema::Number{} )
             .addMemberOpt( "modifiers",   Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSendMouseEvent
     );
 
@@ -413,7 +415,7 @@ MR_ON_INIT{
             .addMember(    "type",      Schema::String{} )
             .addMember(    "key",       Schema::String{} )
             .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Empty{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSendKeyboardEvent
     );
 
@@ -422,9 +424,11 @@ MR_ON_INIT{
         /*name*/"Close MeshInspector",
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
-                "After this call the gateway's `launch` tool can bring MeshInspector back up.",
-        /*input_schema*/Schema::Empty{},
-        /*output_schema*/Schema::Empty{},
+                "After this call the gateway's `launch` tool can bring MeshInspector back up. "
+                "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
+                "check `ui.listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
+        /*input_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown
     );
 }; // MR_ON_INIT

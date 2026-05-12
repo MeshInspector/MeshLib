@@ -987,11 +987,92 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
     }
 }
 
-void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
 {
     MR_TIMER;
-    for ( auto f : fs )
-        deleteFace( f, keepEdges );
+    VacantElements vacant;
+
+    UndirectedEdgeBitSet oldLoneEdge( undirectedEdgeSize() );
+    vacant.edges.resize( undirectedEdgeSize() );
+    BitSetParallelForAll( vacant.edges, [&]( UndirectedEdgeId ue )
+    {
+        if ( isLoneEdge( ue ) )
+        {
+            oldLoneEdge.set( ue );
+            vacant.edges.set( ue );
+            return;
+        }
+        if ( keepEdges && keepEdges->test( ue ) )
+            return;
+        if ( auto l = left( ue ); l && !fs.test( l ) )
+            return; // left face exists and will not be deleted
+        if ( auto r = right( ue ); r && !fs.test( r ) )
+            return; // right face exists and will not be deleted
+        vacant.edges.set( ue );
+    } );
+
+    assert( updateValids_ );
+
+    vacant.verts.resize( vertSize(), true );
+    vacant.verts -= validVerts_;
+    BitSetParallelFor( validVerts_, [&]( VertId v )
+    {
+        for ( auto e : orgRing( *this, v ) )
+            if ( !vacant.edges.test( e ) )
+            {
+                // at least one edge incident to this vertex is not deleted
+                if ( vacant.edges.test( edgePerVertex_[v] ) )
+                    edgePerVertex_[v] = e;
+                return;
+            }
+        validVerts_.reset( v );
+        vacant.verts.set( v );
+        edgePerVertex_[v] = EdgeId();
+    } );
+    numValidVerts_ = (int)validVerts_.count();
+
+    const auto fsValid = fs & validFaces_;
+    BitSetParallelFor( fsValid, [&]( FaceId f )
+    {
+        edgePerFace_[f] = EdgeId();
+    } );
+    validFaces_ -= fsValid;
+    numValidFaces_ = (int)validFaces_.count();
+    vacant.faces.resize( faceSize(), true );
+    vacant.faces -= validFaces_;
+
+    // pass 1: update edges that will remain
+    ParallelFor( edges_, [&]( EdgeId e )
+    {
+        if ( vacant.edges.test( e ) )
+            return;
+        assert( !oldLoneEdge.test( e ) );
+
+        HalfEdgeRecord he = edges_[e];
+        while ( vacant.edges.test( he.next ) )
+            he.next = next( he.next );
+        while ( vacant.edges.test( he.prev ) )
+            he.prev = prev( he.prev );
+        assert( !vacant.verts.test( he.org ) ); // all edges around deleted vertices must be made lone
+        if ( vacant.faces.test( he.left ) )
+            he.left = FaceId{};
+        edges_[e] = he;
+    } );
+
+    // pass 2: make new lone edges
+    ParallelFor( edges_, [&]( EdgeId e )
+    {
+        if ( !vacant.edges.test( e ) )
+            return;
+        if ( oldLoneEdge.test( e ) )
+            return; // quick path for the edges that were already lone before
+
+        HalfEdgeRecord he;
+        he.next = he.prev = e;
+        edges_[e] = he;
+    } );
+
+    return vacant;
 }
 
 template<typename FM, typename VM, typename WEM>
@@ -1887,47 +1968,30 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
     UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
-    if ( fromFaces0 )
     {
-        fromCopiedVerts = fromMappedVerts;
-        fromCopiedEdges = fromMappedEdges;
-        for ( auto f : fromFaces )
-        {
-            auto efrom = from.edgePerFace_[f];
-            for ( auto e : leftRing( from, efrom ) )
-            {
-                const UndirectedEdgeId ue = e.undirected();
-                if ( !fromCopiedEdges.test_set( ue ) )
-                    copyEdge( ue );
-                if ( auto v = from.org( e ); v.valid() )
-                {
-                    if ( !fromCopiedVerts.test_set( v ) )
-                        copyVert( v );
-                }
-            }
-            copyFace( f );
-        }
-        fromCopiedVerts -= fromMappedVerts;
-        fromCopiedEdges -= fromMappedEdges;
-    }
-    else
-    {
-        // whole (from) mesh is copied
         tbb::task_group taskGroup;
         taskGroup.run( [&] ()
         {
-            fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+            if ( fromFaces0 )
+                fromCopiedVerts = getIncidentVerts( from, *fromFaces0 ) - fromMappedVerts;
+            else
+                fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+
             for ( auto v : fromCopiedVerts )
                 copyVert( v );
         } );
 
         taskGroup.run( [&] ()
         {
-            for ( auto f : from.getValidFaces() )
+            for ( auto f : fromFaces )
                 copyFace( f );
         } );
 
-        fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+        if ( fromFaces0 )
+            fromCopiedEdges = getIncidentEdges( from, *fromFaces0 ) - fromMappedEdges;
+        else
+            fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+
         for ( auto ue : fromCopiedEdges )
             copyEdge( ue );
 

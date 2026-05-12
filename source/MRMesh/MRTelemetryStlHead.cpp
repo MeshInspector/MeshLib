@@ -15,10 +15,10 @@ void telemetryStlHead( const char* prefix, std::string s )
     const char MATERIAL[] = "MATERIAL=";
     auto n = s.find( MATERIAL );
     const bool materialFound = n != std::string::npos;
-    if ( materialFound && n + sizeof( MATERIAL )-1 + 12 <= s.size() )
+    if ( materialFound )
     {
         n += sizeof( MATERIAL )-1;
-        for ( int i = 0; i < 12; ++i, ++n )
+        for ( int i = 0; i < 12 && n < s.size(); ++i, ++n )
             s[n] = '_';
     }
 
@@ -145,6 +145,11 @@ void telemetryStlHead( const char* prefix, std::string s )
     const char SURf2STL[] = "Created by surf2stl.m ";
     if ( s.starts_with( SURf2STL ) )
         s.resize( sizeof( SURf2STL ) - 1 );
+
+    // e.g. 'Guardian AI Hub Bottom Shell'
+    const char GuardianAI[] = "Guardian AI Hub ";
+    if ( s.starts_with( GuardianAI ) )
+        s.resize( sizeof( GuardianAI ) - 1 );
 
     // e.g. 'numpy-stl (3.0.0) 2026-01-05 14:46:07.404027 tmphpyx9npt.stl'
     const char NUMPY[] = "numpy-stl (";

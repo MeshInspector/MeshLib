@@ -202,20 +202,29 @@ jobs:
         timeout-minutes: 3
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
+      - name: Verify meshlib.mrmeshpy import
+        if: ${{ inputs.mrbind }}
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: ./build/${{ matrix.config }}/bin
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+        timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}
+        timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
         if: ${{ inputs.mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+        run: python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && inputs.mrbind }}

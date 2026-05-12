@@ -25,6 +25,16 @@ struct State
 
     // The stack for `pushTree()`, `popTree()`. Always has at least one element.
     std::vector<GroupEntry*> stack = { &root };
+
+    // True if a TE-driven action (simulated click or value override) ran this frame.
+    // Cleared at frame boundary in `checkForNewFrame()`.
+    bool frameTriggered = false;
+
+    // Paths staged for the next TE-triggered file dialog to return. Single-shot.
+    std::vector<std::filesystem::path> stagedFileDialogPaths;
+
+    // Status messages emitted during TE-driven actions; drained by MCP after each dispatch.
+    std::vector<std::string> statusMessages;
 };
 // Our global state. Stores the current tree of buttons and button groups.
 State state;
@@ -75,6 +85,7 @@ void checkForNewFrame()
     if ( ImGui::GetFrameCount() != state.curFrame )
     {
         state.curFrame = ImGui::GetFrameCount();
+        state.frameTriggered = false;
 
         // Make sure the tree stack is fine.
         assert(state.stack.size() == 1 && "Missing `UI::TestEngine::popTree()`.");
@@ -145,6 +156,8 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
         {
             ret = val->simulatedValue;
         }
+        if ( ret )
+            state.frameTriggered = true;
     }
     else
     {
@@ -210,7 +223,10 @@ bool createButton( std::string_view name, const EntryAttributes& attrs )
     // if ( button->simulateClick )
     //    spdlog::info( "Button {} click simulation", name );
 
-    return std::exchange( button->simulateClick, false );
+    const bool clicked = std::exchange( button->simulateClick, false );
+    if ( clicked )
+        state.frameTriggered = true;
+    return clicked;
     #else
     (void)attrs;
     return false;
@@ -265,6 +281,59 @@ std::string_view Entry::getKindName() const
 const GroupEntry& getRootEntry()
 {
     return state.root;
+}
+
+bool wasFrameTriggered()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return state.frameTriggered;
+    #else
+    return false;
+    #endif
+}
+
+void markFrameTriggered()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    checkForNewFrame();
+    state.frameTriggered = true;
+    #endif
+}
+
+void stageFileDialogPaths( std::vector<std::filesystem::path> paths )
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    state.stagedFileDialogPaths = std::move( paths );
+    #else
+    (void)paths;
+    #endif
+}
+
+std::vector<std::filesystem::path> consumeStagedFileDialogPaths()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return std::exchange( state.stagedFileDialogPaths, {} );
+    #else
+    return {};
+    #endif
+}
+
+void appendStatusMessage( std::string msg )
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    state.statusMessages.push_back( std::move( msg ) );
+    #else
+    (void)msg;
+    #endif
+}
+
+std::vector<std::string> consumeStatusMessages()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return std::exchange( state.statusMessages, {} );
+    #else
+    return {};
+    #endif
 }
 
 [[nodiscard]] MRVIEWER_API Unexpected<std::string> Entry::unexpected_( std::string_view selfName, std::string_view tKindName )

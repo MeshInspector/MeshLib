@@ -24,15 +24,17 @@ pushd .
 
 if not exist %MSYS2_DIR% (
     echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_deps_windows_msys2.bat` to install it.
-) else (
-    echo Found MSYS2 at `%MSYS2_DIR%`.
-
-    cd %MRBIND_DIR%
-
-    rem --- Build MRBind
-    rmdir /S /Q build
-    call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -clang64 -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build"
+    popd
+    exit /b 1
 )
+
+echo Found MSYS2 at `%MSYS2_DIR%`.
+
+cd %MRBIND_DIR%
+
+rem --- Build MRBind
+rmdir /S /Q build
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -clang64 -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build"
 
 rem Restore the original directory.
 popd

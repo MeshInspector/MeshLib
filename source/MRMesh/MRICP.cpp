@@ -114,8 +114,8 @@ void ICP::sampleRefPoints( float samplingVoxelSize )
 void ICP::updatePointPairs()
 {
     MR_TIMER;
-    MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
-    MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
     deactivatefarDistPairs_();
 }
 
@@ -146,7 +146,7 @@ std::string getICPStatusInfo( int iterations, ICPExitType exitType )
 
 void updatePointPairs( PointPairs & pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
-    float cosThreshold, float distThresholdSq, bool mutualClosest )
+    float cosThreshold, float distThresholdSq, bool mutualClosest, bool ignoreBdTgts )
 {
     MR_TIMER;
     const AffineXf3f src2tgtXf( AffineXf3d( tgt.xf ).inverse() * AffineXf3d( src.xf ) );
@@ -207,7 +207,7 @@ void updatePointPairs( PointPairs & pairs,
         vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
         vp.tgtOnBd = prj.isBd;
         res = vp;
-        if ( prj.isBd || vp.normalsAngleCos < cosThreshold || vp.distSq > distThresholdSq )
+        if ( ( ignoreBdTgts && prj.isBd ) || vp.normalsAngleCos < cosThreshold || vp.distSq > distThresholdSq )
         {
             pairs.active.reset( idx );
             return;

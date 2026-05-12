@@ -1,5 +1,6 @@
 boost
 cmake
+cpp-httplib
 cpr
 eigen
 fmt
@@ -14,6 +15,7 @@ libtiff
 libzip
 llvm@14
 ninja
+nlohmann-json
 opencascade
 openssl@3
 openvdb

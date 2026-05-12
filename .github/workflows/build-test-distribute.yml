@@ -16,7 +16,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
   # NOTE: all output values are strings
@@ -45,6 +45,11 @@ jobs:
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
       vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
       vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
+      disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
+      disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
+      disable_linux_vcpkg:        ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
+      disable_windows:            ${{ needs.config.outputs.build_enable_windows != 'true' }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -54,8 +59,6 @@ jobs:
       app_version:       ${{ needs.config.outputs.app_version }}
       release_tag:       ${{ needs.config.outputs.release_tag }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
@@ -207,6 +210,8 @@ jobs:
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v7
+       env:
+         ACTIONS_STEP_DEBUG: true
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg
@@ -258,11 +263,12 @@ jobs:
           done
 
       - name: Upload Distributives
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
           PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
-            echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
@@ -282,8 +288,6 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   test-distribution:
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
@@ -296,7 +300,7 @@ jobs:
       test_macos:        ${{ needs.config.outputs.build_enable_macos == 'true' }}
       test_windows:      ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     secrets:
-      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-dev-documentation:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
@@ -337,7 +341,7 @@ jobs:
           pattern: ArtifactStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      - uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
         id: aws-creds
         with:
           aws-region: us-east-1

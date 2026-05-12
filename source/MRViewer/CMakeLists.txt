@@ -107,7 +107,15 @@ IF(NOT MRVIEWER_NO_VOXELS)
 ENDIF()
 
 IF(NOT MRVIEWER_NO_LOCALE)
-  find_package(Boost COMPONENTS locale REQUIRED)
+  # Emscripten's Boost package doesn't contain CMake config files
+  IF(EMSCRIPTEN)
+    IF(POLICY CMP0167)
+      cmake_policy(SET CMP0167 OLD)
+    ENDIF()
+    find_package(Boost COMPONENTS locale REQUIRED)
+  ELSE()
+    find_package(Boost CONFIG COMPONENTS locale REQUIRED)
+  ENDIF()
   target_link_libraries(${PROJECT_NAME} PRIVATE Boost::locale)
 ENDIF()
 
@@ -117,13 +125,6 @@ ENDIF()
 
 IF(MESHLIB_BUILD_MCP)
   target_link_libraries(${PROJECT_NAME} PRIVATE MRMcp)
-
-  # If we're using fastmcpp from a subdirectory, we need to add this explicitly. Not the best way to do this, we should probably find a proper solution.
-  IF(MESHLIB_USE_VCPKG OR APPLE)
-    target_include_directories(${PROJECT_NAME} PRIVATE
-      ${MESHLIB_THIRDPARTY_DIR}/nlohmann-json/include
-    )
-  ENDIF()
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
 ENDIF()

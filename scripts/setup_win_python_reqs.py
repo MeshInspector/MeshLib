@@ -52,7 +52,8 @@ def run_python_setup(py_version: str):
 if platform.system() == "Windows":
     vcpkg_root = get_vcpkg_root_from_where()
     if vcpkg_root:
-        detected_version = detect_vcpkg_python_version(vcpkg_root)
+        triplet = os.environ.get("VCPKG_DEFAULT_TRIPLET") or "x64-windows-meshlib"
+        detected_version = detect_vcpkg_python_version(vcpkg_root, triplet=triplet)
         if detected_version:
             print(f"Using python version {detected_version}")
             choco_install_python(detected_version)

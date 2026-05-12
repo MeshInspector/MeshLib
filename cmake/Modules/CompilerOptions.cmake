@@ -1,7 +1,7 @@
 # this file must be included AFTER the `project' command because it relies on the detected compiler information
 
 set(MR_PCH_DEFAULT OFF)
-# for macOS, GCC, and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
+# for GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
 IF((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
   set(MR_PCH_DEFAULT ON)
 ELSEIF(MSVC)
@@ -189,6 +189,12 @@ ENDIF()
 # more info: https://bugs.openjdk.org/browse/JDK-8244653
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11 AND CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
+ENDIF()
+
+# GCC 16 introduces a new diagnostic that leads to multiple hard-to-diagnose (oh, the irony) compile errors;
+# disable it for now and investigate these cases later
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-error=sfinae-incomplete")
 ENDIF()
 
 # Apple Clang 17 conflicts with OpenVDB 12.1

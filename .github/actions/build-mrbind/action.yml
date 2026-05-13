@@ -16,21 +16,10 @@ inputs:
   build-script:
     required: true
     description: >
-      Path to the build script (relative to the repo root). Hashed
-      into the cache key and executed on cache miss.
-  shell:
-    required: false
-    default: bash
-    description: >
-      Shell to run the build script in. Use `cmd` on Windows for
-      `.bat` scripts; `bash` elsewhere.
-  build-command:
-    required: false
-    default: ''
-    description: >
-      Optional override for the command run on cache miss. Defaults to
-      executing `build-script` directly; set this to `call ./<script>`
-      for Windows `.bat` files.
+      Path to the build script (relative to the repo root). On Windows
+      it must be a `.bat` invoked via `call`; elsewhere a POSIX shell
+      script run directly. Hashed into the cache key and executed on
+      cache miss.
   extra-cache-key:
     required: false
     default: ''
@@ -66,15 +55,15 @@ runs:
       # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev) to
       # match where `install-msys2-mrbind` puts MSYS2 on the CI runner.
       if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows' }}
-      shell: ${{ inputs.shell }}
+      shell: cmd
       env:
         MSYS2_DIR: C:\msys64
-      run: ${{ inputs.build-command != '' && inputs.build-command || inputs.build-script }}
+      run: call ${{ inputs.build-script }}
 
     - name: Build MRBind (Unix)
       if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os != 'Windows' }}
-      shell: ${{ inputs.shell }}
-      run: ${{ inputs.build-command != '' && inputs.build-command || inputs.build-script }}
+      shell: bash
+      run: ${{ inputs.build-script }}
 
     - name: Trim MRBind build dir before cache save
       # Downstream steps only invoke the three executables (mrbind, mrbind_gen_c,
@@ -102,12 +91,12 @@ runs:
       # -S drops debug symbols but keeps the dynamic symbol table.
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'macOS' }}
       shell: bash
-      run: strip -S thirdparty/mrbind/build/mrbind thirdparty/mrbind/build/mrbind_gen_c thirdparty/mrbind/build/mrbind_gen_csharp
+      run: strip -S thirdparty/mrbind/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
 
     - name: Strip MRBind binaries (Linux)
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Linux' }}
       shell: bash
-      run: strip thirdparty/mrbind/build/mrbind thirdparty/mrbind/build/mrbind_gen_c thirdparty/mrbind/build/mrbind_gen_csharp
+      run: strip thirdparty/mrbind/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
 
     - name: Strip MRBind binaries (Windows)
       # The build uses MSYS2 clang64; reach for that strip directly since Git
@@ -115,7 +104,4 @@ runs:
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Windows' }}
       shell: bash
       run: |
-        "C:/msys64/clang64/bin/strip.exe" \
-          thirdparty/mrbind/build/mrbind.exe \
-          thirdparty/mrbind/build/mrbind_gen_c.exe \
-          thirdparty/mrbind/build/mrbind_gen_csharp.exe
+        "C:/msys64/clang64/bin/strip.exe" thirdparty/mrbind/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe

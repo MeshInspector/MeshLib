@@ -20,6 +20,7 @@ gdcm
 gtest
 hidapi
 jsoncpp
+laz-perf
 libe57format
 libharu
 libzip

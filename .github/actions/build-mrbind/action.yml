@@ -61,15 +61,19 @@ runs:
         path: thirdparty/mrbind/build
         key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
 
-    - name: Build MRBind
-      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+    - name: Build MRBind (Windows)
+      # Override `install_mrbind_windows_msys2.bat`'s default of
+      # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev) to
+      # match where `install-msys2-mrbind` puts MSYS2 on the CI runner.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows' }}
       shell: ${{ inputs.shell }}
       env:
-        # Override `install_mrbind_windows_msys2.bat`'s default of
-        # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev) to
-        # match where `install-msys2-mrbind` puts MSYS2 on the CI runner. Harmless
-        # on non-Windows shells.
         MSYS2_DIR: C:\msys64
+      run: ${{ inputs.build-command != '' && inputs.build-command || inputs.build-script }}
+
+    - name: Build MRBind (Unix)
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os != 'Windows' }}
+      shell: ${{ inputs.shell }}
       run: ${{ inputs.build-command != '' && inputs.build-command || inputs.build-script }}
 
     - name: Trim MRBind build dir before cache save
@@ -89,29 +93,29 @@ runs:
           ! -name 'mrbind_gen_csharp' ! -name 'mrbind_gen_csharp.exe' \
           -exec rm -rf {} +
 
-    - name: Strip debug info from MRBind binaries before cache save
-      # Shrinks the cache ~5x at the cost of useful stack traces from mrbind
-      # crashes. Opt out by passing `strip-binaries: 'false'` on a debugging
-      # branch; mrbind is built with `RelWithDebInfo + -fstandalone-debug`, so a
-      # fresh local build still gives a full-info binary.
-      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' }}
+    # Stripping shrinks the cache ~5x at the cost of useful stack traces from
+    # mrbind crashes. Opt out by passing `strip-binaries: 'false'` on a debugging
+    # branch; mrbind is built with `RelWithDebInfo + -fstandalone-debug`, so a
+    # fresh local build still gives a full-info binary.
+
+    - name: Strip MRBind binaries (macOS)
+      # -S drops debug symbols but keeps the dynamic symbol table.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'macOS' }}
+      shell: bash
+      run: strip -S thirdparty/mrbind/build/mrbind thirdparty/mrbind/build/mrbind_gen_c thirdparty/mrbind/build/mrbind_gen_csharp
+
+    - name: Strip MRBind binaries (Linux)
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Linux' }}
+      shell: bash
+      run: strip thirdparty/mrbind/build/mrbind thirdparty/mrbind/build/mrbind_gen_c thirdparty/mrbind/build/mrbind_gen_csharp
+
+    - name: Strip MRBind binaries (Windows)
+      # The build uses MSYS2 clang64; reach for that strip directly since Git
+      # Bash's PATH doesn't include it.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Windows' }}
       shell: bash
       run: |
-        set -eu
-        cd thirdparty/mrbind/build
-        case "$RUNNER_OS" in
-          macOS)
-            # -S drops debug symbols but keeps the dynamic symbol table.
-            strip -S mrbind mrbind_gen_c mrbind_gen_csharp
-            ;;
-          Windows)
-            # The build uses MSYS2 clang64; reach for that strip directly since
-            # Git Bash's PATH doesn't include it.
-            "C:/msys64/clang64/bin/strip.exe" mrbind.exe mrbind_gen_c.exe mrbind_gen_csharp.exe
-            ;;
-          *)
-            strip mrbind mrbind_gen_c mrbind_gen_csharp
-            ;;
-        esac
-        echo "Stripped build dir:"
-        ls -lh
+        "C:/msys64/clang64/bin/strip.exe" \
+          thirdparty/mrbind/build/mrbind.exe \
+          thirdparty/mrbind/build/mrbind_gen_c.exe \
+          thirdparty/mrbind/build/mrbind_gen_csharp.exe

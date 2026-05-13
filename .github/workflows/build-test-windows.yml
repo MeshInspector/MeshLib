@@ -65,7 +65,6 @@ jobs:
             thirdparty/parallel-hashmap \
             thirdparty/expected \
             thirdparty/OpenCTM-git \
-            thirdparty/laz-perf \
             thirdparty/fastmcpp \
             thirdparty/nlohmann-json \
             thirdparty/cpp-httplib \

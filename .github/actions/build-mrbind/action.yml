@@ -37,6 +37,14 @@ inputs:
     description: >
       Extra string to mix into the cache key (e.g. the output of
       `hashFiles(...)` over a compiler lockfile or `clang_version.txt`).
+  strip-binaries:
+    required: false
+    default: 'true'
+    description: >
+      Whether to `strip` debug info from the mrbind executables before
+      saving them to cache. Default `'true'` -- gives ~5x smaller
+      caches at the cost of useful stack traces if mrbind crashes.
+      Set to `'false'` on a debugging branch to retain symbols.
 
 runs:
   using: composite
@@ -57,7 +65,10 @@ runs:
       if: ${{ steps.cache.outputs.cache-hit != 'true' }}
       shell: ${{ inputs.shell }}
       env:
-        # Harmless on non-Windows shells; consumed by install_mrbind_windows_msys2.bat.
+        # Override `install_mrbind_windows_msys2.bat`'s default of
+        # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev) to
+        # match where `install-msys2-mrbind` puts MSYS2 on the CI runner. Harmless
+        # on non-Windows shells.
         MSYS2_DIR: C:\msys64
       run: ${{ inputs.build-command != '' && inputs.build-command || inputs.build-script }}
 
@@ -66,9 +77,7 @@ runs:
       # mrbind_gen_csharp -- see scripts/mrbind/generate.mk:191-193). Object files,
       # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
       # the cache (the build script wipes `build/` before rebuilding anyway, so we
-      # don't need incremental-rebuild state either). Stripping debug info from the
-      # executables themselves further shrinks the cache; if mrbind ever needs to be
-      # debugged, devs can rebuild locally to get a full RelWithDebInfo binary.
+      # don't need incremental-rebuild state either).
       if: ${{ steps.cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
@@ -79,6 +88,17 @@ runs:
           ! -name 'mrbind_gen_c'      ! -name 'mrbind_gen_c.exe' \
           ! -name 'mrbind_gen_csharp' ! -name 'mrbind_gen_csharp.exe' \
           -exec rm -rf {} +
+
+    - name: Strip debug info from MRBind binaries before cache save
+      # Shrinks the cache ~5x at the cost of useful stack traces from mrbind
+      # crashes. Opt out by passing `strip-binaries: 'false'` on a debugging
+      # branch; mrbind is built with `RelWithDebInfo + -fstandalone-debug`, so a
+      # fresh local build still gives a full-info binary.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' }}
+      shell: bash
+      run: |
+        set -eu
+        cd thirdparty/mrbind/build
         case "$RUNNER_OS" in
           macOS)
             # -S drops debug symbols but keeps the dynamic symbol table.
@@ -87,12 +107,11 @@ runs:
           Windows)
             # The build uses MSYS2 clang64; reach for that strip directly since
             # Git Bash's PATH doesn't include it.
-            STRIP="${MSYS2_DIR:-C:/msys64}/clang64/bin/strip.exe"
-            "$STRIP" mrbind.exe mrbind_gen_c.exe mrbind_gen_csharp.exe
+            "C:/msys64/clang64/bin/strip.exe" mrbind.exe mrbind_gen_c.exe mrbind_gen_csharp.exe
             ;;
           *)
             strip mrbind mrbind_gen_c mrbind_gen_csharp
             ;;
         esac
-        echo "Trimmed build dir:"
+        echo "Stripped build dir:"
         ls -lh

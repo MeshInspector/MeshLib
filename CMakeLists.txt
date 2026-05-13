@@ -286,7 +286,6 @@ IF(MESHLIB_PYTHON_SUPPORT)
 ENDIF()
 
 IF(MSVC)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/laz-perf)
   add_subdirectory(${PROJECT_SOURCE_DIR}/OpenCTM)
 ENDIF()
 

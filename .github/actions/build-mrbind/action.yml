@@ -1,10 +1,9 @@
 name: Build MRBind
 description: >
-  Build the MRBind tool from `thirdparty/mrbind`, caching
-  `thirdparty/mrbind/build` keyed on the submodule SHA, the build
-  script's hash, and any extra key passed by the caller (toolchain
-  lockfile, clang version file, etc.). On cache hit, the build step is
-  skipped entirely.
+  Build the MRBind tool from the `mrbind` submodule, caching its
+  `build/` dir keyed on the submodule SHA, the build script's hash, and
+  any extra key passed by the caller (toolchain lockfile, clang version
+  file, etc.). On cache hit, the build step is skipped entirely.
 
 inputs:
   cache-key-prefix:
@@ -20,6 +19,13 @@ inputs:
       it must be a `.bat` invoked via `call`; elsewhere a POSIX shell
       script run directly. Hashed into the cache key and executed on
       cache miss.
+  mrbind-dir:
+    required: false
+    default: thirdparty/mrbind
+    description: >
+      Path to the mrbind submodule relative to the repo root. Override
+      when the action is consumed from a repo where MeshLib itself is
+      a submodule (e.g. `MeshLib/thirdparty/mrbind`).
   extra-cache-key:
     required: false
     default: ''
@@ -34,6 +40,15 @@ inputs:
       saving them to cache. Default `'true'` -- gives ~5x smaller
       caches at the cost of useful stack traces if mrbind crashes.
       Set to `'false'` on a debugging branch to retain symbols.
+  msys2-dir:
+    required: false
+    default: 'C:\msys64'
+    description: >
+      Windows-only. Path to the MSYS2 install used by the build script
+      and the strip step. Defaults to `C:\msys64` (where
+      `install-msys2-mrbind` puts it). Override when MSYS2 is installed
+      elsewhere -- e.g. `C:\msys64_meshlib_mrbind` for runners pre-baked
+      with the bat script's default layout.
 
 runs:
   using: composite
@@ -41,23 +56,23 @@ runs:
     - name: Get MRBind submodule SHA
       id: mrbind-sha
       shell: bash
-      run: echo "sha=$(git -C thirdparty/mrbind rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      run: echo "sha=$(git -C '${{ inputs.mrbind-dir }}' rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Cache MRBind build
       id: cache
       uses: actions/cache@v5
       with:
-        path: thirdparty/mrbind/build
+        path: ${{ inputs.mrbind-dir }}/build
         key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
 
     - name: Build MRBind (Windows)
-      # Override `install_mrbind_windows_msys2.bat`'s default of
-      # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev) to
-      # match where `install-msys2-mrbind` puts MSYS2 on the CI runner.
+      # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to
+      # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev). Override
+      # via the `msys2-dir` input to match where MSYS2 actually lives on the runner.
       if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows' }}
       shell: cmd
       env:
-        MSYS2_DIR: C:\msys64
+        MSYS2_DIR: ${{ inputs.msys2-dir }}
       run: call ${{ inputs.build-script }}
 
     - name: Build MRBind (Unix)
@@ -75,7 +90,7 @@ runs:
       shell: bash
       run: |
         set -eu
-        cd thirdparty/mrbind/build
+        cd '${{ inputs.mrbind-dir }}/build'
         find . -mindepth 1 -maxdepth 1 \
           ! -name 'mrbind'            ! -name 'mrbind.exe' \
           ! -name 'mrbind_gen_c'      ! -name 'mrbind_gen_c.exe' \
@@ -91,17 +106,19 @@ runs:
       # -S drops debug symbols but keeps the dynamic symbol table.
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'macOS' }}
       shell: bash
-      run: strip -S thirdparty/mrbind/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
+      run: strip -S ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
 
     - name: Strip MRBind binaries (Linux)
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Linux' }}
       shell: bash
-      run: strip thirdparty/mrbind/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
+      run: strip ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
 
     - name: Strip MRBind binaries (Windows)
       # The build uses MSYS2 clang64; reach for that strip directly since Git
       # Bash's PATH doesn't include it.
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Windows' }}
       shell: bash
+      env:
+        MSYS2_DIR: ${{ inputs.msys2-dir }}
       run: |
-        "C:/msys64/clang64/bin/strip.exe" thirdparty/mrbind/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe
+        "$MSYS2_DIR/clang64/bin/strip.exe" ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe

@@ -63,7 +63,11 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
       - name: Install mrbind
-        run: scripts/mrbind/install_mrbind_ubuntu.sh
+        uses: ./.github/actions/build-mrbind
+        with:
+          cache-key-prefix: ubuntu-docs-clang
+          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 
       - name: Create virtualenv
         run: |

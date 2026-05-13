@@ -479,7 +479,7 @@ bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>&
 
         std::pair<bool, bool> realRes{ atLeastOneTrue, allTrue };
 
-        if ( UI::checkboxMixed( name.c_str(), &realRes.first, !realRes.second && realRes.first ) )
+        if ( UI::checkboxMixed( _tr( name, Locale::genericDomain ), &realRes.first, !realRes.second && realRes.first ) )
         {
             for ( auto& obj : selected )
             {

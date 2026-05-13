@@ -312,6 +312,7 @@ jobs:
           & $env:CMAKE_EXE `
             -S examples/cpp-examples `
             -B cpp-examples-build `
+            -G "Ninja Multi-Config" `
             -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/include;$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/include/eigen3" `
             -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/lib"
           & $env:CMAKE_EXE `

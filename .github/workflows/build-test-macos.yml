@@ -60,10 +60,13 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
-            # Pinned to the same image pip-build.yml uses so the mrbind cache is shared
-            # (was `macos-latest`, which currently resolves to macos-14 but is rolling).
-            runner: macos-14
-            instance: macos-14
+            # Pinned to macos-15 -- what `macos-latest` currently resolves to per
+            # https://github.blog/changelog/2025-07-11-upcoming-changes-to-macos-hosted-runners-macos-latest-migration-and-xcode-support-policy-updates/
+            # -- so the mrbind cache doesn't silently invalidate when the label rolls forward.
+            # Not shared with pip-build.yml's arm64 (which intentionally pins macos-14 for
+            # wheel-compat reasons), since differing macOS SDKs would cross-contaminate.
+            runner: macos-15
+            instance: macos-15
           - arch: arm64
             config: Release
             os: arm

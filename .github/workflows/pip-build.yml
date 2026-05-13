@@ -31,6 +31,18 @@ on:
         default: false
         required: false
         type: boolean
+      disable_ubuntu_x64:
+        default: false
+        required: false
+        type: boolean
+      disable_ubuntu_arm64:
+        default: false
+        required: false
+        type: boolean
+      disable_macos:
+        default: false
+        required: false
+        type: boolean
 
 env:
   VCPKG-VERSION: '2026.03.18'
@@ -57,6 +69,12 @@ jobs:
 
   manylinux-pip-build:
     needs: setup
+    # Skip per-platform when the caller passes the matching disable_* flag.
+    # `disable-build-ubuntu-x64` / `disable-build-ubuntu-arm64` PR labels in
+    # `build-test-distribute.yml` map to these inputs.
+    if: |
+      (matrix.platform == 'x86_64' && inputs.disable_ubuntu_x64 != true) ||
+      (matrix.platform == 'aarch64' && inputs.disable_ubuntu_arm64 != true)
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
@@ -358,6 +376,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
+    if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
     strategy:
@@ -448,6 +467,9 @@ jobs:
 
   manylinux-pip-test:
     needs: [manylinux-pip-build]
+    if: |
+      (matrix.platform == 'x86_64' && inputs.disable_ubuntu_x64 != true) ||
+      (matrix.platform == 'aarch64' && inputs.disable_ubuntu_arm64 != true)
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
     container:
@@ -571,6 +593,7 @@ jobs:
 
   macos-pip-test:
     needs: [macos-pip-build]
+    if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 40
     runs-on: ${{ matrix.instance }}
     strategy:

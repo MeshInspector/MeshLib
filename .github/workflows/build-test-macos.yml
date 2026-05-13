@@ -142,17 +142,28 @@ jobs:
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: ./scripts/mrbind/install_deps_macos.sh
 
+      # Hash the homebrew prefix so two self-hosted ARM runners that share the
+      # `[self-hosted, macos, arm64, build]` label set but have homebrew at
+      # different paths (e.g. `/Users/runner/.homebrew` vs `/opt/homebrew`) get
+      # distinct cache entries -- the prefix is baked into mrbind's rpath.
+      - name: Compute brew-prefix hash for MRBind cache key
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        id: brew-hash
+        shell: bash
+        env:
+          BREW_PREFIX: ${{ steps.setup.outputs.brew-prefix }}
+        run: echo "hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       - name: Build MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
         with:
-          # Keyed on the runner image (matrix.instance) so the cache discriminates
-          # GitHub-hosted vs self-hosted (different homebrew prefixes baked into
-          # mrbind's rpath), and is shared with pip-build.yml's macOS section where
-          # matrix.instance matches.
+          # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
+          # to discriminate between fleet members of the self-hosted ARM label set.
+          # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.brew-hash.outputs.hash }}
 
       - name: Create virtualenv
         run: |

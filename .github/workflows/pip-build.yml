@@ -407,6 +407,15 @@ jobs:
           ./scripts/build_thirdparty.sh
           ./scripts/mrbind/install_deps_macos.sh
 
+      # See comment in build-test-macos.yml -- the brew-prefix hash discriminates
+      # runners with the same instance label but different homebrew install paths.
+      - name: Compute brew-prefix hash for MRBind cache key
+        id: brew-hash
+        shell: bash
+        env:
+          BREW_PREFIX: ${{ matrix.brewpath }}
+        run: echo "hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
@@ -414,7 +423,7 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.brew-hash.outputs.hash }}
 
       - name: Build
         run: ./scripts/build_source.sh

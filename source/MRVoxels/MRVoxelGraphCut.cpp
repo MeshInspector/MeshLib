@@ -1018,12 +1018,12 @@ void VoxelGraphCut::adopt_( Context & context )
                 }
             }
         }
-        #if __GNUC__ == 14
+        #if defined( __GNUC__ ) && !defined( __clang__ ) && __GNUC__ >= 14
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wstringop-overflow"
         #endif
         std::sort( outCapacity.begin(), outCapacity.begin() + numOut );
-        #if __GNUC__ == 14
+        #if defined( __GNUC__ ) && !defined( __clang__ ) && __GNUC__ >= 14
         #pragma GCC diagnostic pop
         #endif
         for ( int j = 0; j < numOut; ++j )

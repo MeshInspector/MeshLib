@@ -69,12 +69,6 @@ jobs:
 
   manylinux-pip-build:
     needs: setup
-    # Skip per-platform when the caller passes the matching disable_* flag.
-    # `disable-build-ubuntu-x64` / `disable-build-ubuntu-arm64` PR labels in
-    # `build-test-distribute.yml` map to these inputs.
-    if: |
-      (matrix.platform == 'x86_64' && inputs.disable_ubuntu_x64 != true) ||
-      (matrix.platform == 'aarch64' && inputs.disable_ubuntu_arm64 != true)
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
@@ -95,6 +89,14 @@ jobs:
             container-options: " " # empty
             runner: ubuntu-24.04-arm
             compiler: /usr/bin/clang++
+        # Drop platforms when the caller passes the matching disable_* flag.
+        # `__never__` is a sentinel that never matches a real `platform` value,
+        # so the exclude has no effect when the corresponding input is false.
+        # Job-level `if:` can't reference `matrix.*` in a reusable workflow,
+        # hence the exclude-based approach.
+        exclude:
+          - platform: ${{ inputs.disable_ubuntu_x64 && 'x86_64' || '__never__' }}
+          - platform: ${{ inputs.disable_ubuntu_arm64 && 'aarch64' || '__never__' }}
 
     steps:
       - name: Work-around possible permission issues
@@ -467,9 +469,6 @@ jobs:
 
   manylinux-pip-test:
     needs: [manylinux-pip-build]
-    if: |
-      (matrix.platform == 'x86_64' && inputs.disable_ubuntu_x64 != true) ||
-      (matrix.platform == 'aarch64' && inputs.disable_ubuntu_arm64 != true)
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
     container:
@@ -504,6 +503,11 @@ jobs:
           # TODO: replace with a distro with default Python 3.14
           - py-version: "3.14"
             os: "ubuntu:25.10"
+        # Mirror the exclude on `manylinux-pip-build` so tests skip the same
+        # platforms. See the note there for the `__never__` sentinel.
+        exclude:
+          - platform: ${{ inputs.disable_ubuntu_x64 && 'x86_64' || '__never__' }}
+          - platform: ${{ inputs.disable_ubuntu_arm64 && 'aarch64' || '__never__' }}
     env:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:

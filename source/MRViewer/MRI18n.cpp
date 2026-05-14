@@ -36,6 +36,8 @@ std::string translate( std::string_view msg, LocaleDomainId domainId )
             if ( const auto str = translate( msg, genericDomainId ); str != translate_noop( asCStr( msg ) ) )
                 return str;
     }
+#else
+    (void)domainId;
 #endif
     return translate_noop( asCStr( msg ) );
 }
@@ -51,6 +53,8 @@ std::string translate( std::string_view context, std::string_view msg, LocaleDom
             if ( const auto str = translate( context, msg, genericDomainId ); str != translate_noop( asCStr( context ), asCStr( msg ) ) )
                 return str;
     }
+#else
+    (void)domainId;
 #endif
     return translate_noop( asCStr( context ), asCStr( msg ) );
 }
@@ -66,6 +70,8 @@ std::string translate( std::string_view single, std::string_view plural, Int64 n
             if ( const auto str = translate( single, plural, n, genericDomainId ); str != translate_noop( asCStr( single ), asCStr( plural ), n ) )
                 return str;
     }
+#else
+    (void)domainId;
 #endif
     return translate_noop( asCStr( single ), asCStr( plural ), n );
 }
@@ -81,6 +87,8 @@ std::string translate( std::string_view context, std::string_view single, std::s
             if ( const auto str = translate( context, single, plural, n, genericDomainId ); str != translate_noop( asCStr( context ), asCStr( single ), asCStr( plural ), n ) )
                 return str;
     }
+#else
+    (void)domainId;
 #endif
     return translate_noop( asCStr( context ), asCStr( single ), asCStr( plural ), n );
 }

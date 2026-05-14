@@ -172,7 +172,7 @@ jobs:
       # Bump the `v1-` prefix to manually invalidate.
       - name: Cache thirdparty build outputs
         id: thirdparty-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             lib

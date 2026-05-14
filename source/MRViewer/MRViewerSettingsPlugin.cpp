@@ -960,6 +960,9 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
     RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );
     ImGui::Text( "" );
     icons.popFont();
+#else
+    // GCC 11 doesn't allow to mark class fields with [[maybe_unused]]
+    (void)selectedLanguage_;
 #endif
 }
 

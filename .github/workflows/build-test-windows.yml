@@ -303,7 +303,13 @@ jobs:
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
           set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake --version || exit /b 1
-          cmake -S examples/cpp-examples -B cpp-examples-build -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_INCLUDE_DIRS="%CD%/source;%CD%/thirdparty/parallel-hashmap;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include/eigen3" -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
+          cmake ^
+            -S examples/cpp-examples ^
+            -B cpp-examples-build ^
+            -GNinja ^
+            -DCMAKE_BUILD_TYPE=${{matrix.config}} ^
+            -DMESHLIB_INCLUDE_DIRS="%CD%/source;%CD%/thirdparty/parallel-hashmap;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include/eigen3" ^
+            -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
           cmake --build cpp-examples-build -j || exit /b 1
 
       - name: Build C examples
@@ -312,7 +318,13 @@ jobs:
         run: |
           call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
           cmake --version || exit /b 1
-          cmake -S examples/c-examples -B c-examples-build -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_INCLUDE_DIRS="%CD%/source/MeshLibC2/include" -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}}" || exit /b 1
+          cmake ^
+            -S examples/c-examples ^
+            -B c-examples-build ^
+            -GNinja ^
+            -DCMAKE_BUILD_TYPE=${{matrix.config}} ^
+            -DMESHLIB_INCLUDE_DIRS="%CD%/source/MeshLibC2/include" ^
+            -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}}" || exit /b 1
           cmake --build c-examples-build -j || exit /b 1
 
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files

@@ -50,35 +50,28 @@ inputs:
       elsewhere -- e.g. `C:\msys64_meshlib_mrbind` for runners pre-baked
       with the bat script's default layout.
 
-# The Windows and Unix step pairs below exist because some self-hosted
-# Windows runners (e.g. MeshInspectorCode's AMI) don't have `bash` on PATH,
-# so `shell: bash` fails to launch. `pwsh` is the safe lowest-common-
-# denominator on Windows; bash is the safe one elsewhere.
-
 runs:
   using: composite
   steps:
-    - name: Get MRBind submodule SHA (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      id: mrbind-sha-win
-      shell: pwsh
+    - name: Get MRBind submodule SHA
+      id: mrbind-sha
+      shell: python {0}
+      env:
+        MRBIND_DIR: ${{ inputs.mrbind-dir }}
       run: |
-        $sha = git -C '${{ inputs.mrbind-dir }}' rev-parse HEAD
-        "sha=$sha" | Add-Content -Path $env:GITHUB_OUTPUT
-
-    - name: Get MRBind submodule SHA (Unix)
-      if: ${{ runner.os != 'Windows' }}
-      id: mrbind-sha-unix
-      shell: bash
-      run: echo "sha=$(git -C '${{ inputs.mrbind-dir }}' rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        import os, subprocess
+        sha = subprocess.check_output(
+            ['git', '-C', os.environ['MRBIND_DIR'], 'rev-parse', 'HEAD'],
+            text=True).strip()
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'sha={sha}\n')
 
     - name: Cache MRBind build
       id: cache
       uses: actions/cache@v5
       with:
         path: ${{ inputs.mrbind-dir }}/build
-        # Exactly one of the two SHA steps ran, so concatenation yields the SHA.
-        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha-win.outputs.sha }}${{ steps.mrbind-sha-unix.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
+        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
 
     - name: Build MRBind (Windows)
       # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to
@@ -95,55 +88,49 @@ runs:
       shell: bash
       run: ${{ inputs.build-script }}
 
-    # Downstream steps only invoke the three executables (mrbind, mrbind_gen_c,
-    # mrbind_gen_csharp -- see scripts/mrbind/generate.mk:191-193). Object files,
-    # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
-    # the cache (the build script wipes `build/` before rebuilding anyway, so we
-    # don't need incremental-rebuild state either).
-
-    - name: Trim MRBind build dir before cache save (Windows)
-      if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows' }}
-      shell: pwsh
+    - name: Trim MRBind build dir before cache save
+      # Downstream steps only invoke the three executables (mrbind, mrbind_gen_c,
+      # mrbind_gen_csharp -- see scripts/mrbind/generate.mk:191-193). Object files,
+      # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
+      # the cache (the build script wipes `build/` before rebuilding anyway, so we
+      # don't need incremental-rebuild state either).
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: python {0}
+      env:
+        MRBIND_DIR: ${{ inputs.mrbind-dir }}
       run: |
-        $keep = @('mrbind.exe', 'mrbind_gen_c.exe', 'mrbind_gen_csharp.exe')
-        Get-ChildItem -LiteralPath '${{ inputs.mrbind-dir }}/build' |
-          Where-Object { $keep -notcontains $_.Name } |
-          Remove-Item -Recurse -Force
+        import os, shutil
+        build = os.path.join(os.environ['MRBIND_DIR'], 'build')
+        keep = {'mrbind', 'mrbind.exe',
+                'mrbind_gen_c', 'mrbind_gen_c.exe',
+                'mrbind_gen_csharp', 'mrbind_gen_csharp.exe'}
+        for entry in os.listdir(build):
+            if entry in keep:
+                continue
+            path = os.path.join(build, entry)
+            (shutil.rmtree if os.path.isdir(path) else os.remove)(path)
 
-    - name: Trim MRBind build dir before cache save (Unix)
-      if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os != 'Windows' }}
-      shell: bash
+    - name: Strip MRBind binaries
+      # Strip shrinks the cache ~5x at the cost of useful stack traces from mrbind
+      # crashes. Opt out by passing `strip-binaries: 'false'` on a debugging branch;
+      # mrbind is built with `RelWithDebInfo + -fstandalone-debug`, so a fresh local
+      # build still gives a full-info binary.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' }}
+      shell: python {0}
+      env:
+        MRBIND_DIR: ${{ inputs.mrbind-dir }}
+        MSYS2_DIR: ${{ inputs.msys2-dir }}
       run: |
-        set -eu
-        cd '${{ inputs.mrbind-dir }}/build'
-        find . -mindepth 1 -maxdepth 1 \
-          ! -name 'mrbind'            ! -name 'mrbind.exe' \
-          ! -name 'mrbind_gen_c'      ! -name 'mrbind_gen_c.exe' \
-          ! -name 'mrbind_gen_csharp' ! -name 'mrbind_gen_csharp.exe' \
-          -exec rm -rf {} +
-
-    # Stripping shrinks the cache ~5x at the cost of useful stack traces from
-    # mrbind crashes. Opt out by passing `strip-binaries: 'false'` on a debugging
-    # branch; mrbind is built with `RelWithDebInfo + -fstandalone-debug`, so a
-    # fresh local build still gives a full-info binary.
-
-    - name: Strip MRBind binaries (macOS)
-      # -S drops debug symbols but keeps the dynamic symbol table.
-      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'macOS' }}
-      shell: bash
-      run: strip -S ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
-
-    - name: Strip MRBind binaries (Linux)
-      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Linux' }}
-      shell: bash
-      run: strip ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
-
-    - name: Strip MRBind binaries (Windows)
-      # The build uses MSYS2 clang64; reach for that strip directly since neither
-      # Git Bash nor the runner's PATH typically include it.
-      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Windows' }}
-      shell: pwsh
-      run: |
-        $strip = '${{ inputs.msys2-dir }}\clang64\bin\strip.exe'
-        $base  = '${{ inputs.mrbind-dir }}/build'
-        & $strip "$base/mrbind.exe" "$base/mrbind_gen_c.exe" "$base/mrbind_gen_csharp.exe"
+        import os, platform, subprocess
+        base = os.path.join(os.environ['MRBIND_DIR'], 'build')
+        names = ['mrbind', 'mrbind_gen_c', 'mrbind_gen_csharp']
+        system = platform.system()
+        if system == 'Darwin':
+            # -S drops debug symbols but keeps the dynamic symbol table.
+            cmd, ext = ['strip', '-S'], ''
+        elif system == 'Windows':
+            # MSYS2 clang64's strip; not on PATH on most runners.
+            cmd, ext = [os.path.join(os.environ['MSYS2_DIR'], 'clang64', 'bin', 'strip.exe')], '.exe'
+        else:
+            cmd, ext = ['strip'], ''
+        subprocess.check_call(cmd + [os.path.join(base, n + ext) for n in names])

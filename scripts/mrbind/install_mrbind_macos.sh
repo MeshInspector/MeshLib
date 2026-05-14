@@ -28,5 +28,9 @@ export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
 # Guess the number of build threads.
 [[ ${JOBS:=} ]] || JOBS=$(sysctl -n hw.ncpu)
 
-CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD
+# Homebrew's llvm@N is built with LLVM_LINK_LLVM_DYLIB=ON, so we can safely
+# link mrbind against libclang-cpp.dylib + libLLVM.dylib instead of pulling
+# clangTooling in statically. Shrinks the resulting mrbind binary ~6x, which
+# also shrinks the CI cache footprint by the same factor.
+CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD -DMRBIND_LINK_CLANG_CPP_DYLIB=ON
 cmake --build build -j$JOBS

@@ -43,6 +43,14 @@ else
   echo "Unsupported system. Installing dependencies is your responsibility."
 fi
 
+# CI: reuse cached ./lib and ./include from a previous run. Brew install above
+# still runs so dyld can resolve runtime deps.
+if [[ "${MESHLIB_THIRDPARTY_SKIP_BUILD:-}" == "1" ]]; then
+  echo "MESHLIB_THIRDPARTY_SKIP_BUILD=1; reusing existing ./lib and ./include."
+  printf "\rThirdparty build script skipped (cached outputs reused).\n\n"
+  exit 0
+fi
+
 # FIXME: make it optional
 rm -rf "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 mkdir -p "${MESHLIB_THIRDPARTY_BUILD_DIR}"

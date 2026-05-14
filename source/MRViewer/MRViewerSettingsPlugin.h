@@ -111,7 +111,7 @@ private:
 
     Vector4f backgroundColor_;
 
-    int selectedLanguage_{ -1 };
+    [[maybe_unused]] int selectedLanguage_{ -1 };
 
     int selectedUserPreset_{ 0 };
     std::vector<std::string> userThemesPresets_;

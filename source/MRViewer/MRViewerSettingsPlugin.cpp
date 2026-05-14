@@ -931,6 +931,7 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float )
 
 void ViewerSettingsPlugin::drawLanguageSelector_()
 {
+#ifndef MRVIEWER_NO_LOCALE
     static const auto sLanguages = Locale::getAvailableLocales();
     static const auto sLanguageNames = [] ( const auto& languages )
     {
@@ -959,6 +960,7 @@ void ViewerSettingsPlugin::drawLanguageSelector_()
     RibbonFontHolder icons( RibbonFontManager::FontType::Icons, cMiddleIconSize / cBigIconSize );
     ImGui::Text( "" );
     icons.popFont();
+#endif
 }
 
 void ViewerSettingsPlugin::drawThemeSelector_()

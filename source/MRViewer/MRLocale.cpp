@@ -1,5 +1,5 @@
 #include "MRLocale.h"
-
+#ifndef MRVIEWER_NO_LOCALE
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRId.h"
@@ -293,3 +293,4 @@ MR_ON_INIT
 };
 
 } // namespace MR
+#endif

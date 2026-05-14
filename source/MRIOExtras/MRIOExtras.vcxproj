@@ -17,9 +17,6 @@
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\OpenCTM\OpenCTM.vcxproj">
-      <Project>{2b2a22c0-f6a7-473b-8849-e1d9cb2b5793}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
@@ -99,7 +96,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(MeshLibDir)thirdparty\OpenCTM-git\lib\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -111,11 +108,7 @@
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)$(Platform)\Release\OpenCTM.dll $(TargetDir)OpenCTM.dll
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
-copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
+      <Command>copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -130,7 +123,7 @@ copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(MeshLibDir)thirdparty\OpenCTM-git\lib\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>

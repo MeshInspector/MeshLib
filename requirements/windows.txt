@@ -25,6 +25,7 @@ libe57format
 libharu
 libzip
 opencascade
+openctm
 openvdb
 python3
 spdlog

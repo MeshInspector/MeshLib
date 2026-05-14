@@ -84,14 +84,20 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        # Drop platforms when the caller passes the matching disable_* flag.
-        # `__never__` is a sentinel that never matches a real `platform`
-        # value, so the exclude has no effect when the input is false.
-        # Job-level `if:` can't reference `matrix.*` in a reusable workflow,
-        # hence the exclude-based approach.
+        # Synthetic axes carrying the disable_* inputs as one-element values,
+        # so `exclude` can constrain on them. When the input is false, the
+        # exclude rule (which requires true) never matches and nothing is
+        # dropped; when true, the matching platform leg drops out. Same
+        # pattern as `full_config_build` in build-test-linux-vcpkg.yml.
+        disable_ubuntu_x64:
+          - ${{ inputs.disable_ubuntu_x64 }}
+        disable_ubuntu_arm64:
+          - ${{ inputs.disable_ubuntu_arm64 }}
         exclude:
-          - platform: ${{ inputs.disable_ubuntu_x64 && 'x86_64' || '__never__' }}
-          - platform: ${{ inputs.disable_ubuntu_arm64 && 'aarch64' || '__never__' }}
+          - disable_ubuntu_x64: true
+            platform: x86_64
+          - disable_ubuntu_arm64: true
+            platform: aarch64
 
     steps:
       - name: Work-around possible permission issues
@@ -498,11 +504,17 @@ jobs:
           # TODO: replace with a distro with default Python 3.14
           - py-version: "3.14"
             os: "ubuntu:25.10"
-        # Mirror the exclude on `manylinux-pip-build` so tests skip the same
-        # platforms. See the note there for the `__never__` sentinel.
+        # Mirror the synthetic-axis exclude on `manylinux-pip-build` so
+        # tests skip the same platforms.
+        disable_ubuntu_x64:
+          - ${{ inputs.disable_ubuntu_x64 }}
+        disable_ubuntu_arm64:
+          - ${{ inputs.disable_ubuntu_arm64 }}
         exclude:
-          - platform: ${{ inputs.disable_ubuntu_x64 && 'x86_64' || '__never__' }}
-          - platform: ${{ inputs.disable_ubuntu_arm64 && 'aarch64' || '__never__' }}
+          - disable_ubuntu_x64: true
+            platform: x86_64
+          - disable_ubuntu_arm64: true
+            platform: aarch64
     env:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:

@@ -43,11 +43,6 @@ IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
   # By default only the `python311[_d].dll` gets copied, but we also need `python3.dll` and the non-debug `python311.dll` in Debug mode as said above.
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-  # Need a Release build of Zlib too. In Release mode it usually gets copied with something else, but in Debug we must copy manually.
-  # Might as well copy unconditionally here.
-  # vcpkg's zlib port is now satisfied by zlib-ng's compat mode, so the DLL is named `zlib-ng2.dll` (was `zlib1.dll` before vcpkg 2026.04.27).
-  file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib-ng2.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 ENDIF()
 
 IF(WIN32)

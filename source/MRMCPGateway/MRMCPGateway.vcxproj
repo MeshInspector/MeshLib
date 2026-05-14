@@ -26,11 +26,6 @@
     <ClCompile Include="MRMCPGatewaySpawn.cpp" />
     <ClCompile Include="MRMCPGatewayUtf8.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\fastmcpp\fastmcpp.vcxproj">
-      <Project>{7853aec9-a364-4587-89ae-faa9a463e6ed}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{72A99975-E95E-40E1-9BCC-516018381BA8}</ProjectGuid>

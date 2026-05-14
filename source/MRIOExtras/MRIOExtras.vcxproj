@@ -17,12 +17,6 @@
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">
-      <Project>{daa055af-38ed-4836-a553-7539216bb64f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\OpenCTM\OpenCTM.vcxproj">
-      <Project>{2b2a22c0-f6a7-473b-8849-e1d9cb2b5793}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
@@ -102,7 +96,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\;$(MeshLibDir)thirdparty\OpenCTM-git\lib\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -113,17 +107,6 @@
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>copy $(SolutionDir)$(Platform)\Release\OpenCTM.dll $(TargetDir)OpenCTM.dll
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
-copy $(SolutionDir)$(Platform)\Release\laz-perf.dll $(TargetDir)laz-perf.dll
-copy $(SolutionDir)$(Platform)\Release\laz-perf.exp $(TargetDir)laz-perf.exp
-copy $(SolutionDir)$(Platform)\Release\laz-perf.lib $(TargetDir)laz-perf.lib
-copy $(SolutionDir)$(Platform)\Release\laz-perf.pdb $(TargetDir)laz-perf.pdb
-copy $(VcpkgCurrentInstalledDir)\bin\zlib-ng2.dll $(TargetDir)zlib-ng2.dll</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -137,7 +120,7 @@ copy $(VcpkgCurrentInstalledDir)\bin\zlib-ng2.dll $(TargetDir)zlib-ng2.dll</Comm
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\;$(MeshLibDir)thirdparty\OpenCTM-git\lib\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>

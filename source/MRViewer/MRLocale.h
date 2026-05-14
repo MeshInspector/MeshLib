@@ -38,12 +38,14 @@ MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// \brief Adds a new domain.
 /// The active locale is reloaded on every call.
 /// \note This overload is meant to be used with string literals for faster lookups.
+/// \param generic - whether the domain is generic, i.e. should be used for cross-domain translations (false by default).
 /// \returns The id of the added domain.
-MRVIEWER_API LocaleDomainId addDomain( const char* domainName );
+MRVIEWER_API LocaleDomainId addDomain( const char* domainName, bool generic = false );
 /// \brief Adds a new domain.
 /// The active locale is reloaded on every call.
+/// \param generic - whether the domain is generic, i.e. should be used for cross-domain translations (false by default).
 /// \returns The id of the added domain.
-MRVIEWER_API LocaleDomainId addDomain( const std::string& domainName );
+MRVIEWER_API LocaleDomainId addDomain( const std::string& domainName, bool generic = false );
 /// \brief Find an id for the given domain that can be passed to the `translate` functions.
 /// \returns The domain id if the domain is previously added and invalid id otherwise.
 /// \note This overload is meant to be used with string literals for faster lookups.
@@ -53,6 +55,9 @@ MRVIEWER_API LocaleDomainId findDomain( const char* domainName );
 /// \returns The domain id if the domain is previously added and invalid id otherwise.
 /// \ref translate
 MRVIEWER_API LocaleDomainId findDomain( const std::string& domainName );
+/// \brief Returns the list of domains used for cross-domain translations.
+/// Cross-domain translations are used for extensions from external plugins, e.g. custom check boxes for RibbonMenu.
+MRVIEWER_API const std::vector<LocaleDomainId>& getGenericDomains();
 
 /// \brief Returns a display name for the given locale.
 /// \returns

@@ -90,7 +90,12 @@ jobs:
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        run: scripts/mrbind/install_mrbind_ubuntu.sh
+        uses: ./.github/actions/build-mrbind
+        with:
+          # Include the Docker image tag (e.g. glibc, clang install) and clang version file in the cache key.
+          cache-key-prefix: ubuntu-x64-${{ matrix.os }}-${{ inputs.docker_image_tag }}
+          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 
       - name: Create virtualenv
         run: |

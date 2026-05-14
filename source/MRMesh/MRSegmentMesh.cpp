@@ -294,7 +294,7 @@ UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
             root2Color[f] = palette.colors[nextColor];
             nextColor = ( nextColor + HexPalette::STEP ) % palette.colors.size();
         }
-        BitSetParallelForAll( topology.getValidFaces(), [&]( FaceId& f )
+        BitSetParallelFor( topology.getValidFaces(), [&]( FaceId& f )
         {
             auto it = root2Color.find( roots[f] );
             assert( it != root2Color.end() );

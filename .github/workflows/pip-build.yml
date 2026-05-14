@@ -70,10 +70,20 @@ jobs:
   manylinux-pip-build:
     needs: setup
     timeout-minutes: 80
-    runs-on: ${{ matrix.runner }}
+    # Per-platform values are computed inline from `matrix.platform`. A
+    # per-platform `include` entry would orphan after `exclude` strips the
+    # corresponding base row: GitHub processes matrix as base -> exclude ->
+    # include, so an include constrained on a now-empty platform value is
+    # spawned as a fresh combo that bypasses exclude. Inlining keeps the
+    # exclude semantics clean.
+    runs-on: ${{ matrix.platform == 'x86_64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.vcpkg_docker_image_tag || 'latest'}}
-      options: ${{ matrix.container-options }}
+      image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.platform == 'x86_64' && 'x64' || 'arm64' }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      options: ${{ matrix.platform == 'x86_64' && '--user root' || ' ' }}
+    env:
+      # Compiler is the same on both platforms, kept as an env var so the
+      # steps don't repeat the literal three times.
+      COMPILER: /usr/bin/clang++
     strategy:
       fail-fast: false
       matrix:
@@ -87,17 +97,6 @@ jobs:
           - ${{ inputs.disable_ubuntu_x64 }}
         disable_ubuntu_arm64:
           - ${{ inputs.disable_ubuntu_arm64 }}
-        include:
-          - platform: "x86_64"
-            os: rockylinux8-vcpkg-x64
-            container-options: "--user root"
-            runner: ubuntu-latest
-            compiler: /usr/bin/clang++
-          - platform: "aarch64"
-            os: rockylinux8-vcpkg-arm64
-            container-options: " " # empty
-            runner: ubuntu-24.04-arm
-            compiler: /usr/bin/clang++
         exclude:
           - disable_ubuntu_x64: true
             platform: x86_64
@@ -153,7 +152,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: ${{ matrix.compiler }}
+          CMAKE_CXX_COMPILER: ${{ env.COMPILER }}
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
@@ -163,8 +162,8 @@ jobs:
         run: |
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
-            CXX_FOR_ABI=${{ matrix.compiler }} \
-            CXX_FOR_BINDINGS=${{ matrix.compiler }} \
+            CXX_FOR_ABI=${{ env.COMPILER }} \
+            CXX_FOR_BINDINGS=${{ env.COMPILER }} \
             DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
 
       # install helper utility for Python version management
@@ -181,8 +180,8 @@ jobs:
 
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \
-              CXX_FOR_ABI=${{ matrix.compiler }} \
-              CXX_FOR_BINDINGS=${{ matrix.compiler }} \
+              CXX_FOR_ABI=${{ env.COMPILER }} \
+              CXX_FOR_BINDINGS=${{ env.COMPILER }} \
               DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET} \
               PYTHON_VERSIONS=${PYTHON_VER}
           done
@@ -237,8 +236,8 @@ jobs:
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace \
-            CXX_FOR_ABI=${{ matrix.compiler }} \
-            CXX_FOR_BINDINGS=${{ matrix.compiler }} \
+            CXX_FOR_ABI=${{ env.COMPILER }} \
+            CXX_FOR_BINDINGS=${{ env.COMPILER }} \
             DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
 
       - name: Upload C bindings headers
@@ -476,10 +475,15 @@ jobs:
   manylinux-pip-test:
     needs: [manylinux-pip-build]
     timeout-minutes: 20
-    runs-on: ${{ matrix.runner }}
+    # See note on `manylinux-pip-build`: per-platform values are inlined off
+    # `matrix.platform` to avoid the post-exclude include-orphan. Per-platform
+    # branches must both be truthy (`format('arm64v8/{0}', matrix.os)` rather
+    # than the literal `''` prefix) because GitHub Actions treats empty
+    # string as falsy in `<cond> && X || Y`.
+    runs-on: ${{ matrix.platform == 'x86_64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
     container:
-      image: ${{matrix.container-prefix}}${{matrix.os}}
-      options: ${{ matrix.container-options }}
+      image: ${{ matrix.platform == 'x86_64' && matrix.os || format('arm64v8/{0}', matrix.os) }}
+      options: ${{ matrix.platform == 'x86_64' && '--user root' || ' ' }}
     strategy:
       fail-fast: false
       matrix:
@@ -491,15 +495,9 @@ jobs:
           - ${{ inputs.disable_ubuntu_x64 }}
         disable_ubuntu_arm64:
           - ${{ inputs.disable_ubuntu_arm64 }}
+        # The py-version include entries are safe: they match a base-axis
+        # value, so they extend existing combos rather than create orphans.
         include:
-          - platform: "x86_64"
-            runner: ubuntu-latest
-            container-options: "--user root"
-            container-prefix: " "
-          - platform: "aarch64"
-            runner: ubuntu-24.04-arm
-            container-options: " " # empty
-            container-prefix: "arm64v8/"
           - py-version: "3.8"
             os: "rockylinux:8"
           - py-version: "3.9"

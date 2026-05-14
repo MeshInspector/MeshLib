@@ -107,6 +107,15 @@ def has_rpath(p: Path, rpath: str) -> bool:
     return False
 
 
+def _resolve_homebrew_basename(name: str) -> Path | None:
+    """Fallback lookup for a basename under known Homebrew lib dirs."""
+    for pref in HOMEBREW_PREFIXES:
+        cand = Path(pref) / "lib" / name
+        if cand.exists():
+            return cand.resolve()
+    return None
+
+
 def bundle(framework_dir: Path) -> None:
     bin_dir = framework_dir / "bin"
     lib_dir = framework_dir / "lib"
@@ -115,42 +124,66 @@ def bundle(framework_dir: Path) -> None:
     seeds = collect_machos(bin_dir) + collect_machos(lib_dir)
     log(f"seed mach-o files: {len(seeds)}")
 
-    # BFS: copy every Homebrew dep transitively into lib_dir
+    # BFS: copy every Homebrew dep transitively into lib_dir.
     queue: list[Path] = list(seeds)
-    bundled: dict[str, Path] = {}
+    bundled: dict[str, Path] = {}        # basename -> dst path
+    source_of: dict[Path, Path] = {}     # dst path -> original source dir
     visited: set[Path] = set()
+
+    def bundle_from(src: Path) -> Path | None:
+        name = src.name
+        if name in bundled:
+            return bundled[name]
+        if not src.exists():
+            return None
+        dst = lib_dir / name
+        log(f"copy {src} -> {dst}")
+        shutil.copy2(src, dst, follow_symlinks=True)
+        make_writable(dst)
+        bundled[name] = dst
+        source_of[dst] = src.parent
+        return dst
+
     while queue:
         cur = queue.pop(0)
         if cur in visited:
             continue
         visited.add(cur)
+        cur_src_dir = source_of.get(cur)
         for dep in otool_L(cur):
-            if not should_bundle(dep):
-                continue
-            name = Path(dep).name
-            if name in bundled:
-                continue
-            src = Path(dep).resolve()
-            if not src.exists():
-                # The very problem we're guarding against: link-time path no
-                # longer exists in the current bottle. Try the basename via
-                # /usr/local/lib or /opt/homebrew/lib as a last resort.
-                fallback = None
-                for pref in HOMEBREW_PREFIXES:
-                    cand = Path(pref) / "lib" / name
-                    if cand.exists():
-                        fallback = cand.resolve()
-                        break
-                if fallback is None:
-                    log(f"WARN: cannot resolve {dep}; skipping")
-                    continue
-                src = fallback
-            dst = lib_dir / name
-            log(f"copy {src} -> {dst}")
-            shutil.copy2(src, dst, follow_symlinks=True)
-            make_writable(dst)
-            bundled[name] = dst
-            queue.append(dst)
+            target: Path | None = None
+            if should_bundle(dep):
+                src = Path(dep)
+                try:
+                    src = src.resolve()
+                except OSError:
+                    pass
+                if not src.exists():
+                    # Original link-time path is gone from the current bottle
+                    # (the very drift we're guarding against). Fall back to
+                    # the basename under the standard Homebrew lib dir.
+                    fallback = _resolve_homebrew_basename(Path(dep).name)
+                    if fallback is None:
+                        log(f"WARN: cannot resolve {dep}; skipping")
+                        continue
+                    src = fallback
+                target = bundle_from(src)
+            elif cur_src_dir is not None and dep.startswith(("@rpath/", "@loader_path/")):
+                # Self-referential deps inside a Homebrew bottle we just
+                # bundled (e.g. gdcm's @rpath/libsocketxx.1.2.dylib pointing
+                # at a sibling in its Cellar lib dir). Try the original
+                # source directory first; fall back to the standard
+                # Homebrew lib dir for cross-package @rpath references.
+                name = dep.split("/", 1)[1]
+                cand = cur_src_dir / name
+                if cand.exists():
+                    target = bundle_from(cand.resolve())
+                else:
+                    fb = _resolve_homebrew_basename(name)
+                    if fb is not None:
+                        target = bundle_from(fb)
+            if target is not None and target not in visited:
+                queue.append(target)
 
     # Rewrite ids, load commands, and add rpaths on every Mach-O we ship
     all_files = collect_machos(bin_dir) + collect_machos(lib_dir)

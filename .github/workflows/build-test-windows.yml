@@ -305,33 +305,20 @@ jobs:
 
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}  # debug builds not supported due to missing file 'tbb12_debug.lib'
+        shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+        # `|| exit /b 1` matches the main Build step's error-propagation pattern.
         run: |
-          # The Ninja generator searches PATH for cl.exe; earlier steps put MSYS2 clang
-          # on PATH, so we must activate the MSVC dev environment in this step.
-          # VsDevCmd.bat also sets VCPKG_ROOT to the VS-bundled vcpkg; preserve the
-          # values from the step's env: block so MESHLIB_INCLUDE_DIRS stays correct.
-          $savedVcpkgRoot = $env:VCPKG_ROOT
-          $savedVcpkgTriplet = $env:VCPKG_TARGET_TRIPLET
-          $installationPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-          & "${env:COMSPEC}" /s /c "`"$installationPath\Common7\Tools\vsdevcmd.bat`" -arch=amd64 -no_logo && set" | foreach-object {
-            $name, $value = $_ -split '=', 2
-            set-content env:\"$name" $value
-          }
-          $env:VCPKG_ROOT = $savedVcpkgRoot
-          $env:VCPKG_TARGET_TRIPLET = $savedVcpkgTriplet
-          & $env:CMAKE_EXE `
-            -S examples/cpp-examples `
-            -B cpp-examples-build `
-            -G "Ninja Multi-Config" `
-            -D MESHLIB_INCLUDE_DIRS="$pwd/source;$pwd/thirdparty/parallel-hashmap;$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/include;$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/include/eigen3" `
-            -D MESHLIB_LIB_DIRS="$pwd/source/x64/${{ matrix.config }};$env:VCPKG_ROOT/installed/$env:VCPKG_TARGET_TRIPLET/lib"
-          & $env:CMAKE_EXE `
-            --build cpp-examples-build `
-            --config ${{ matrix.config }} `
-            --parallel $env:NUMBER_OF_PROCESSORS
+          rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the
+          rem step env: value so MESHLIB_INCLUDE_DIRS resolves to the project vcpkg.
+          set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
+          set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
+          cmake --version || exit /b 1
+          cmake -S examples/cpp-examples -B cpp-examples-build -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_INCLUDE_DIRS="%CD%/source;%CD%/thirdparty/parallel-hashmap;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include/eigen3" -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
+          cmake --build cpp-examples-build -j || exit /b 1
 
       - name: Build C examples
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

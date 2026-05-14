@@ -53,8 +53,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Get MRBind submodule SHA
-      id: mrbind-sha
+    - name: Get MRBind submodule SHA (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      id: mrbind-sha-win
+      shell: pwsh
+      run: |
+        $sha = git -C '${{ inputs.mrbind-dir }}' rev-parse HEAD
+        "sha=$sha" | Add-Content -Path $env:GITHUB_OUTPUT
+
+    - name: Get MRBind submodule SHA (Unix)
+      if: ${{ runner.os != 'Windows' }}
+      id: mrbind-sha-unix
       shell: bash
       run: echo "sha=$(git -C '${{ inputs.mrbind-dir }}' rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -63,7 +72,8 @@ runs:
       uses: actions/cache@v5
       with:
         path: ${{ inputs.mrbind-dir }}/build
-        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
+        # Exactly one of the two SHA steps ran, so concatenation yields the SHA.
+        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha-win.outputs.sha }}${{ steps.mrbind-sha-unix.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
 
     - name: Build MRBind (Windows)
       # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to
@@ -80,21 +90,29 @@ runs:
       shell: bash
       run: ${{ inputs.build-script }}
 
-    - name: Trim MRBind build dir before cache save
-      # Downstream steps only invoke the three executables (mrbind, mrbind_gen_c,
-      # mrbind_gen_csharp -- see scripts/mrbind/generate.mk:191-193). Object files,
-      # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
-      # the cache (the build script wipes `build/` before rebuilding anyway, so we
-      # don't need incremental-rebuild state either).
-      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+    # Downstream steps only invoke the three executables (mrbind, mrbind_gen_c,
+    # mrbind_gen_csharp -- see scripts/mrbind/generate.mk:191-193). Object files,
+    # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
+    # the cache (the build script wipes `build/` before rebuilding anyway, so we
+    # don't need incremental-rebuild state either).
+
+    - name: Trim MRBind build dir before cache save (Windows)
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        $keep = @('mrbind.exe', 'mrbind_gen_c.exe', 'mrbind_gen_csharp.exe')
+        Get-ChildItem -LiteralPath '${{ inputs.mrbind-dir }}/build' |
+          Where-Object { $keep -notcontains $_.Name } |
+          Remove-Item -Recurse -Force
+
+    - name: Trim MRBind build dir before cache save (Unix)
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os != 'Windows' }}
       shell: bash
       run: |
         set -eu
         cd '${{ inputs.mrbind-dir }}/build'
         find . -mindepth 1 -maxdepth 1 \
-          ! -name 'mrbind'            ! -name 'mrbind.exe' \
-          ! -name 'mrbind_gen_c'      ! -name 'mrbind_gen_c.exe' \
-          ! -name 'mrbind_gen_csharp' ! -name 'mrbind_gen_csharp.exe' \
+          ! -name 'mrbind' ! -name 'mrbind_gen_c' ! -name 'mrbind_gen_csharp' \
           -exec rm -rf {} +
 
     # Stripping shrinks the cache ~5x at the cost of useful stack traces from
@@ -114,11 +132,10 @@ runs:
       run: strip ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}
 
     - name: Strip MRBind binaries (Windows)
-      # The build uses MSYS2 clang64; reach for that strip directly since Git
-      # Bash's PATH doesn't include it.
       if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' && runner.os == 'Windows' }}
-      shell: bash
-      env:
-        MSYS2_DIR: ${{ inputs.msys2-dir }}
+      shell: pwsh
       run: |
-        "$MSYS2_DIR/clang64/bin/strip.exe" ${{ inputs.mrbind-dir }}/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe
+        & '${{ inputs.msys2-dir }}\clang64\bin\strip.exe' `
+          '${{ inputs.mrbind-dir }}/build/mrbind.exe' `
+          '${{ inputs.mrbind-dir }}/build/mrbind_gen_c.exe' `
+          '${{ inputs.mrbind-dir }}/build/mrbind_gen_csharp.exe'

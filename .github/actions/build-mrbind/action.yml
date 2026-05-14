@@ -53,17 +53,6 @@ inputs:
 runs:
   using: composite
   steps:
-    # actions/cache invokes `tar -z` to save the cache, which delegates
-    # compression to gzip. Git for Windows ships gzip in
-    # `C:\Program Files\Git\usr\bin`, but some self-hosted Windows runner
-    # images don't put that directory on PATH -- so cache save fails with
-    # `/bin/sh: gzip: command not found`. Prepend it here; no-op on
-    # GitHub-hosted Windows runners (gzip is already on PATH there).
-    - name: Add Git/usr/bin to PATH (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      shell: pwsh
-      run: Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files\Git\usr\bin'
-
     - name: Get MRBind submodule SHA
       id: mrbind-sha
       shell: python {0}

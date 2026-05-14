@@ -311,11 +311,17 @@ jobs:
         run: |
           # The Ninja generator searches PATH for cl.exe; earlier steps put MSYS2 clang
           # on PATH, so we must activate the MSVC dev environment in this step.
+          # VsDevCmd.bat also sets VCPKG_ROOT to the VS-bundled vcpkg; preserve the
+          # values from the step's env: block so MESHLIB_INCLUDE_DIRS stays correct.
+          $savedVcpkgRoot = $env:VCPKG_ROOT
+          $savedVcpkgTriplet = $env:VCPKG_TARGET_TRIPLET
           $installationPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
           & "${env:COMSPEC}" /s /c "`"$installationPath\Common7\Tools\vsdevcmd.bat`" -arch=amd64 -no_logo && set" | foreach-object {
             $name, $value = $_ -split '=', 2
             set-content env:\"$name" $value
           }
+          $env:VCPKG_ROOT = $savedVcpkgRoot
+          $env:VCPKG_TARGET_TRIPLET = $savedVcpkgTriplet
           & $env:CMAKE_EXE `
             -S examples/cpp-examples `
             -B cpp-examples-build `

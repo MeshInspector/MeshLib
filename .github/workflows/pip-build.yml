@@ -70,16 +70,10 @@ jobs:
   manylinux-pip-build:
     needs: setup
     timeout-minutes: 80
-    # Per-platform values are derived from `matrix.platform` rather than fed
-    # in via `include` entries: the previous approach (base `platform: [...]`
-    # axis + per-platform include) created an orphan combo when `exclude`
-    # removed a platform, because GitHub processes matrix in the order
-    # base -> exclude -> include and the platform include entry had no base
-    # row to attach to, so it created a fresh combo that bypassed exclude.
-    runs-on: ${{ matrix.platform == 'x86_64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
+    runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.platform == 'x86_64' && 'x64' || 'arm64' }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
-      options: ${{ matrix.platform == 'x86_64' && '--user root' || ' ' }}
+      image: meshlib/meshlib-${{matrix.os}}:${{inputs.vcpkg_docker_image_tag || 'latest'}}
+      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
@@ -93,6 +87,17 @@ jobs:
           - ${{ inputs.disable_ubuntu_x64 }}
         disable_ubuntu_arm64:
           - ${{ inputs.disable_ubuntu_arm64 }}
+        include:
+          - platform: "x86_64"
+            os: rockylinux8-vcpkg-x64
+            container-options: "--user root"
+            runner: ubuntu-latest
+            compiler: /usr/bin/clang++
+          - platform: "aarch64"
+            os: rockylinux8-vcpkg-arm64
+            container-options: " " # empty
+            runner: ubuntu-24.04-arm
+            compiler: /usr/bin/clang++
         exclude:
           - disable_ubuntu_x64: true
             platform: x86_64
@@ -148,7 +153,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: /usr/bin/clang++
+          CMAKE_CXX_COMPILER: ${{ matrix.compiler }}
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
@@ -158,8 +163,8 @@ jobs:
         run: |
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
-            CXX_FOR_ABI=/usr/bin/clang++ \
-            CXX_FOR_BINDINGS=/usr/bin/clang++ \
+            CXX_FOR_ABI=${{ matrix.compiler }} \
+            CXX_FOR_BINDINGS=${{ matrix.compiler }} \
             DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
 
       # install helper utility for Python version management
@@ -176,8 +181,8 @@ jobs:
 
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \
-              CXX_FOR_ABI=/usr/bin/clang++ \
-              CXX_FOR_BINDINGS=/usr/bin/clang++ \
+              CXX_FOR_ABI=${{ matrix.compiler }} \
+              CXX_FOR_BINDINGS=${{ matrix.compiler }} \
               DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET} \
               PYTHON_VERSIONS=${PYTHON_VER}
           done
@@ -232,8 +237,8 @@ jobs:
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace \
-            CXX_FOR_ABI=/usr/bin/clang++ \
-            CXX_FOR_BINDINGS=/usr/bin/clang++ \
+            CXX_FOR_ABI=${{ matrix.compiler }} \
+            CXX_FOR_BINDINGS=${{ matrix.compiler }} \
             DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
 
       - name: Upload C bindings headers
@@ -471,24 +476,30 @@ jobs:
   manylinux-pip-test:
     needs: [manylinux-pip-build]
     timeout-minutes: 20
-    # See note on `manylinux-pip-build`: per-platform values are inlined off
-    # `matrix.platform` so `exclude` doesn't orphan an include entry.
-    runs-on: ${{ matrix.platform == 'x86_64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
+    runs-on: ${{ matrix.runner }}
     container:
-      # Cannot use `<cond> && '' || 'arm64v8/'` here because the empty
-      # string is falsy in GitHub Actions, so `||` would flip it to the
-      # arm64v8 prefix even on x86_64. Pick the full image name on each
-      # side instead so both operands of `&&` are truthy.
-      image: ${{ matrix.platform == 'x86_64' && matrix.os || format('arm64v8/{0}', matrix.os) }}
-      options: ${{ matrix.platform == 'x86_64' && '--user root' || ' ' }}
+      image: ${{matrix.container-prefix}}${{matrix.os}}
+      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-        # The py-version include entries are safe: they match a base-axis
-        # value, so they extend existing combos rather than create orphans.
+        # Mirror the synthetic-axis exclude on `manylinux-pip-build` so
+        # tests skip the same platforms.
+        disable_ubuntu_x64:
+          - ${{ inputs.disable_ubuntu_x64 }}
+        disable_ubuntu_arm64:
+          - ${{ inputs.disable_ubuntu_arm64 }}
         include:
+          - platform: "x86_64"
+            runner: ubuntu-latest
+            container-options: "--user root"
+            container-prefix: " "
+          - platform: "aarch64"
+            runner: ubuntu-24.04-arm
+            container-options: " " # empty
+            container-prefix: "arm64v8/"
           - py-version: "3.8"
             os: "rockylinux:8"
           - py-version: "3.9"
@@ -504,12 +515,6 @@ jobs:
           # TODO: replace with a distro with default Python 3.14
           - py-version: "3.14"
             os: "ubuntu:25.10"
-        # Mirror the synthetic-axis exclude on `manylinux-pip-build` so
-        # tests skip the same platforms.
-        disable_ubuntu_x64:
-          - ${{ inputs.disable_ubuntu_x64 }}
-        disable_ubuntu_arm64:
-          - ${{ inputs.disable_ubuntu_arm64 }}
         exclude:
           - disable_ubuntu_x64: true
             platform: x86_64

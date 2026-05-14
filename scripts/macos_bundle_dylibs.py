@@ -108,12 +108,31 @@ def has_rpath(p: Path, rpath: str) -> bool:
 
 
 def _resolve_homebrew_basename(name: str) -> Path | None:
-    """Fallback lookup for a basename under known Homebrew lib dirs."""
+    """Find a dylib by basename in any Homebrew lib dir (cached glob)."""
+    if SKIP_BASENAME_RE.match(name):
+        return None
+    cached = _resolve_homebrew_basename._cache  # type: ignore[attr-defined]
+    if name in cached:
+        return cached[name]
+    result: Path | None = None
     for pref in HOMEBREW_PREFIXES:
-        cand = Path(pref) / "lib" / name
-        if cand.exists():
-            return cand.resolve()
-    return None
+        for sub in ("lib", "opt/*/lib", "Cellar/*/*/lib"):
+            for cand in Path(pref).glob(f"{sub}/{name}"):
+                if cand.exists():
+                    try:
+                        result = cand.resolve()
+                    except OSError:
+                        continue
+                    break
+            if result is not None:
+                break
+        if result is not None:
+            break
+    cached[name] = result
+    return result
+
+
+_resolve_homebrew_basename._cache = {}  # type: ignore[attr-defined]
 
 
 def bundle(framework_dir: Path) -> None:
@@ -123,6 +142,11 @@ def bundle(framework_dir: Path) -> None:
 
     seeds = collect_machos(bin_dir) + collect_machos(lib_dir)
     log(f"seed mach-o files: {len(seeds)}")
+
+    # Pre-index Mach-O basenames already present in the framework's lib tree
+    # (MeshLib's own libs + thirdparty-built libs copied in by
+    # distribution_apple.sh) so we don't re-bundle them from Homebrew.
+    own_libnames: set[str] = {p.name for p in collect_machos(lib_dir)}
 
     # BFS: copy every Homebrew dep transitively into lib_dir.
     queue: list[Path] = list(seeds)
@@ -168,20 +192,28 @@ def bundle(framework_dir: Path) -> None:
                         continue
                     src = fallback
                 target = bundle_from(src)
-            elif cur_src_dir is not None and dep.startswith(("@rpath/", "@loader_path/")):
-                # Self-referential deps inside a Homebrew bottle we just
-                # bundled (e.g. gdcm's @rpath/libsocketxx.1.2.dylib pointing
-                # at a sibling in its Cellar lib dir). Try the original
-                # source directory first; fall back to the standard
-                # Homebrew lib dir for cross-package @rpath references.
+            elif dep.startswith(("@rpath/", "@loader_path/")):
+                # Modern Homebrew bottles install with @rpath/<basename>, so
+                # any MeshLib binary linked against them references the dep
+                # by @rpath too -- not by an absolute /usr/local/... path. We
+                # still need to bundle it. Skip libs MeshLib already ships
+                # (its own dylibs / thirdparty libs put in lib/ by
+                # distribution_apple.sh).
                 name = dep.split("/", 1)[1]
-                cand = cur_src_dir / name
-                if cand.exists():
-                    target = bundle_from(cand.resolve())
+                if name in own_libnames or name in bundled:
+                    pass  # nothing to do; MeshLib provides it
                 else:
-                    fb = _resolve_homebrew_basename(name)
-                    if fb is not None:
-                        target = bundle_from(fb)
+                    # Inside a Homebrew bottle we already bundled, sibling
+                    # deps live next to the source (e.g. gdcm's internal
+                    # @rpath/libsocketxx.1.2.dylib at @loader_path/.).
+                    if cur_src_dir is not None:
+                        cand = cur_src_dir / name
+                        if cand.exists():
+                            target = bundle_from(cand.resolve())
+                    if target is None:
+                        fb = _resolve_homebrew_basename(name)
+                        if fb is not None:
+                            target = bundle_from(fb)
             if target is not None and target not in visited:
                 queue.append(target)
 

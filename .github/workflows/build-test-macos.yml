@@ -121,14 +121,18 @@ jobs:
           echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
           echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
 
-      # Inputs for the thirdparty + MRBind cache keys.
-      # - brew-hash: discriminates self-hosted ARM fleet members that share the
+      # Cache key inputs:
+      # - brew-hash: hash of the homebrew prefix, used by Build MRBind below to
+      #   discriminate self-hosted ARM fleet members that share the
       #   `[self-hosted, macos, arm64, build]` label set but have homebrew at
       #   different paths (e.g. `/Users/runner/.homebrew` vs `/opt/homebrew`);
-      #   the prefix is baked into thirdparty rpaths and into mrbind's rpath.
-      # - thirdparty-src-hash: SHAs of the source-built submodules pinned in
-      #   HEAD. `git ls-tree` reads the gitlink entries from the index, so it
-      #   works whether or not the submodules are checked out.
+      #   the prefix is baked into mrbind's rpath.
+      # - thirdparty-hash: unified hash of everything that influences the
+      #   thirdparty ./lib + ./include outputs -- brew prefix (baked into the
+      #   rpaths of the produced .dylibs), submodule SHAs pinned in HEAD (the
+      #   source we compile), and the build-relevant scripts + CMakeLists +
+      #   brew-requirements list. `git ls-tree` reads gitlink entries from the
+      #   index, so it works whether or not the submodules are checked out.
       - name: Compute cache key inputs
         id: cache-keys
         shell: bash
@@ -136,18 +140,27 @@ jobs:
           BREW_PREFIX: ${{ steps.setup.outputs.brew-prefix }}
         run: |
           echo "brew-hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
-          echo "thirdparty-src-hash=$(git ls-tree HEAD \
-            thirdparty/googletest \
-            thirdparty/OpenCTM-git \
-            thirdparty/parallel-hashmap \
-            thirdparty/libE57Format \
-            thirdparty/glad \
-            thirdparty/mrbind-pybind11 \
-            thirdparty/tinygltf \
-            thirdparty/laz-perf \
-            thirdparty/clip \
-            thirdparty/fastmcpp \
-            | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+          echo "thirdparty-hash=$( {
+            printf '%s\n' "$BREW_PREFIX"
+            git ls-tree HEAD \
+              thirdparty/googletest \
+              thirdparty/OpenCTM-git \
+              thirdparty/parallel-hashmap \
+              thirdparty/libE57Format \
+              thirdparty/glad \
+              thirdparty/mrbind-pybind11 \
+              thirdparty/tinygltf \
+              thirdparty/laz-perf \
+              thirdparty/clip \
+              thirdparty/fastmcpp
+            shasum -a 256 \
+              scripts/build_thirdparty.sh \
+              scripts/install_brew_requirements.sh \
+              scripts/thirdparty/clip.sh \
+              scripts/thirdparty/fastmcpp.sh \
+              thirdparty/CMakeLists.txt \
+              requirements/macos.txt
+          } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -171,7 +184,7 @@ jobs:
           path: |
             lib
             include
-          key: v1-thirdparty-${{ matrix.instance }}-${{ matrix.compiler }}-${{ steps.cache-keys.outputs.brew-hash }}-${{ steps.cache-keys.outputs.thirdparty-src-hash }}-${{ hashFiles('scripts/build_thirdparty.sh', 'scripts/install_brew_requirements.sh', 'scripts/thirdparty/clip.sh', 'scripts/thirdparty/fastmcpp.sh', 'thirdparty/CMakeLists.txt', 'requirements/macos.txt') }}
+          key: v1-thirdparty-${{ matrix.instance }}-${{ matrix.compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
 
       # Always run: cached thirdparty .dylibs link against brew libs at runtime,
       # so brew packages must be installed on hosted runners even on cache hit.

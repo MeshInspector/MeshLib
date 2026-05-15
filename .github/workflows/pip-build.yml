@@ -95,17 +95,40 @@ jobs:
           ]'
 
           # Drop disabled platforms.
-          KEEP=$(jq -nc --argjson plats "$PLATS" --argjson dx "$DISABLE_X64" --argjson da "$DISABLE_ARM64" \
-            '$plats | map(select((.platform=="x86_64" and ($dx|not)) or (.platform=="aarch64" and ($da|not))))')
+          KEEP=$(jq -nc \
+            --argjson plats "$PLATS" \
+            --argjson dx "$DISABLE_X64" \
+            --argjson da "$DISABLE_ARM64" \
+            '
+              $plats
+              | map(select(
+                  (.platform == "x86_64"  and ($dx | not))
+                  or (.platform == "aarch64" and ($da | not))
+                ))
+            ')
 
           # Build matrix: rename os-vcpkg -> os for the build job's container.image.
-          BUILD=$(jq -nc --argjson kept "$KEEP" '$kept | map(. + {os: ."os-vcpkg"} | del(."os-vcpkg"))')
+          BUILD=$(jq -nc \
+            --argjson kept "$KEEP" \
+            '
+              $kept
+              | map(. + {os: ."os-vcpkg"} | del(."os-vcpkg"))
+            ')
           echo "build=$BUILD" >> "$GITHUB_OUTPUT"
 
           # Test matrix: cartesian product (kept platforms) x (py-versions).
           # Each test combo carries os = the py-version's distro tag.
-          TEST=$(jq -nc --argjson kept "$KEEP" --argjson pys "$PYS" \
-            '[ $kept[] as $p | $pys[] | ($p | del(."os-vcpkg")) + {"py-version": .["py-version"], os: .os} ]')
+          TEST=$(jq -nc \
+            --argjson kept "$KEEP" \
+            --argjson pys "$PYS" \
+            '
+              [
+                $kept[] as $p
+                | $pys[]
+                | ($p | del(."os-vcpkg"))
+                  + {"py-version": .["py-version"], os: .os}
+              ]
+            ')
           echo "test=$TEST" >> "$GITHUB_OUTPUT"
 
   manylinux-pip-build:

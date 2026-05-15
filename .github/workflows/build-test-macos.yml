@@ -53,13 +53,16 @@ jobs:
             c-compiler-template: /usr/bin/clang
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-15-intel # github hosted
+            instance: macos-15-intel
           - arch: arm64
             config: Debug
             os: github-arm
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
-            runner: macos-latest  # github hosted
+            # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
+            runner: macos-14
+            instance: macos-14
           - arch: arm64
             config: Release
             os: arm
@@ -67,6 +70,7 @@ jobs:
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
             c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
+            instance: self-hosted-arm
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -117,6 +121,47 @@ jobs:
           echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
           echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
 
+      # Cache key inputs:
+      # - brew-hash: hash of the homebrew prefix, used by Build MRBind below to
+      #   discriminate self-hosted ARM fleet members that share the
+      #   `[self-hosted, macos, arm64, build]` label set but have homebrew at
+      #   different paths (e.g. `/Users/runner/.homebrew` vs `/opt/homebrew`);
+      #   the prefix is baked into mrbind's rpath.
+      # - thirdparty-hash: unified hash of everything that influences the
+      #   thirdparty ./lib + ./include outputs -- brew prefix (baked into the
+      #   rpaths of the produced .dylibs), submodule SHAs pinned in HEAD (the
+      #   source we compile), and the build-relevant scripts + CMakeLists +
+      #   brew-requirements list. `git ls-tree` reads gitlink entries from the
+      #   index, so it works whether or not the submodules are checked out.
+      - name: Compute cache key inputs
+        id: cache-keys
+        shell: bash
+        env:
+          BREW_PREFIX: ${{ steps.setup.outputs.brew-prefix }}
+        run: |
+          echo "brew-hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+          echo "thirdparty-hash=$( {
+            printf '%s\n' "$BREW_PREFIX"
+            git ls-tree HEAD \
+              thirdparty/googletest \
+              thirdparty/OpenCTM-git \
+              thirdparty/parallel-hashmap \
+              thirdparty/libE57Format \
+              thirdparty/glad \
+              thirdparty/mrbind-pybind11 \
+              thirdparty/tinygltf \
+              thirdparty/laz-perf \
+              thirdparty/clip \
+              thirdparty/fastmcpp
+            shasum -a 256 \
+              scripts/build_thirdparty.sh \
+              scripts/install_brew_requirements.sh \
+              scripts/thirdparty/clip.sh \
+              scripts/thirdparty/fastmcpp.sh \
+              thirdparty/CMakeLists.txt \
+              requirements/macos.txt
+          } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         id: collect-runner-stats
@@ -128,17 +173,45 @@ jobs:
           cxx_compiler: ${{ steps.setup.outputs.cxx-compiler }}
           build_config: ${{ matrix.config }}
 
-      - name: Install thirdparty libs
+      # Cache only the final outputs (./lib + ./include). Intermediates like
+      # ./thirdparty_build (which holds *.o, CMake metadata, etc.) are NOT
+      # cached -- they get rebuilt on a miss and discarded on a hit.
+      # Bump the `v1-` prefix to manually invalidate.
+      - name: Cache thirdparty build outputs
+        id: thirdparty-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            lib
+            include
+          key: v1-thirdparty-${{ matrix.instance }}-${{ matrix.compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
+
+      # Always run: cached thirdparty .dylibs link against brew libs at runtime,
+      # so brew packages must be installed on hosted runners even on cache hit.
+      - name: Install brew requirements
+        run: ./scripts/install_brew_requirements.sh
+
+      - name: Build thirdparty libs
+        if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
         run: ./scripts/build_thirdparty.sh
         env:
           CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
           CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
 
-      - name: Install MRBind
+      - name: Install MRBind deps
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        run: |
-          ./scripts/mrbind/install_deps_macos.sh
-          ./scripts/mrbind/install_mrbind_macos.sh
+        run: ./scripts/mrbind/install_deps_macos.sh
+
+      - name: Build MRBind
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        uses: ./.github/actions/build-mrbind
+        with:
+          # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
+          # to discriminate between fleet members of the self-hosted ARM label set.
+          # Shared with pip-build.yml's macOS section where the two also match.
+          cache-key-prefix: ${{ matrix.instance }}-clang
+          build-script: scripts/mrbind/install_mrbind_macos.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.cache-keys.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |

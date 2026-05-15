@@ -125,7 +125,12 @@ jobs:
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        run: scripts/mrbind/install_mrbind_rockylinux.sh
+        uses: ./.github/actions/build-mrbind
+        with:
+          # Key matches the Docker image identifier exactly so this cache is shared
+          # with pip-build.yml's rocky section, which uses the same image and script.
+          cache-key-prefix: rockylinux8-vcpkg-${{ matrix.arch }}-${{ inputs.docker_image_tag }}
+          build-script: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
         run: |

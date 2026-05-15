@@ -1,5 +1,5 @@
 #include "MRLocale.h"
-
+#ifndef MRVIEWER_NO_LOCALE
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRId.h"
@@ -41,6 +41,7 @@ std::string gLocaleCanonicalName = "en.UTF-8";
 boost::signals2::signal<void ( const std::string& )> gLocaleNameChanged = {};
 boost::locale::generator gLocaleGen = {};
 std::vector<std::filesystem::path> gLocaleDirs = {};
+std::vector<LocaleDomainId> gGenericDomains = {};
 
 std::filesystem::path getLocaleDir()
 {
@@ -109,7 +110,7 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
     gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 }
 
-LocaleDomainId Locale::addDomain( const char* domainName )
+LocaleDomainId Locale::addDomain( const char* domainName, bool generic )
 {
     if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
         return it->second;
@@ -119,16 +120,23 @@ LocaleDomainId Locale::addDomain( const char* domainName )
 
     const auto id = findDomain( std::string{ domainName } );
     if ( id )
+    {
         gDomainCache[domainName] = id;
+        if ( generic )
+            gGenericDomains.emplace_back( id );
+    }
     return id;
 }
 
-LocaleDomainId Locale::addDomain( const std::string& domainName )
+LocaleDomainId Locale::addDomain( const std::string& domainName, bool generic )
 {
     gLocaleGen.add_messages_domain( domainName );
     gLocale = gLocaleGen.generate( gLocaleCanonicalName );
 
-    return findDomain( domainName );
+    const auto id = findDomain( domainName );
+    if ( id && generic )
+        gGenericDomains.emplace_back( id );
+    return id;
 }
 
 LocaleDomainId Locale::findDomain( const char* domainName )
@@ -148,6 +156,11 @@ LocaleDomainId Locale::findDomain( const std::string& domainName )
     assert( std::has_facet<facet_type>( gLocale ) );
     const auto id = std::use_facet<facet_type>( gLocale ).domain( domainName );
     return id != 0 ? LocaleDomainId{ id } : LocaleDomainId{};
+}
+
+const std::vector<LocaleDomainId>& Locale::getGenericDomains()
+{
+    return gGenericDomains;
 }
 
 std::string Locale::getDisplayName( const std::string& localeName )
@@ -275,6 +288,9 @@ MR_ON_INIT
     // set MeshLib domain by default
     Locale::addDomain( "MeshLib" );
     Locale::addCatalogPath( getLocaleDir() );
+    // explicitly add MeshLib domain to generic domains
+    gGenericDomains.emplace_back( 0 );
 };
 
 } // namespace MR
+#endif

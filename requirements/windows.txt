@@ -20,10 +20,12 @@ gdcm
 gtest
 hidapi
 jsoncpp
+laz-perf
 libe57format
 libharu
 libzip
 opencascade
+openctm
 openvdb
 python3
 spdlog

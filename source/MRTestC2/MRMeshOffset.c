@@ -106,7 +106,7 @@ void testThickenMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_GeneralOffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000000.f));
+    MR_BaseShellParameters_Set_voxelSize(MR_GeneralOffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
     MR_GeneralOffsetParameters_Set_mode(params, MR_OffsetMode_Standard);
     float offset = 0.1f;
     MR_PartMapping* map = MR_PartMapping_DefaultConstruct();

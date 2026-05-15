@@ -285,11 +285,6 @@ IF(MESHLIB_PYTHON_SUPPORT)
   add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/source/non_limited_api ./meshlib)
 ENDIF()
 
-IF(MSVC)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/laz-perf)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/OpenCTM)
-ENDIF()
-
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_BUILD_MESHCONV)
     add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)

@@ -142,6 +142,26 @@ jobs:
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: ./scripts/mrbind/install_deps_macos.sh
 
+      # Diagnostic: dump Homebrew llvm@N's lib directory so we can see which
+      # clang/LLVM archives vs dylibs are present on each runner -- relevant
+      # because mrbind links against libclang-cpp.dylib + libLLVM.dylib here.
+      - name: List installed clang/LLVM libraries
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        shell: bash
+        env:
+          BREW_PREFIX: ${{ steps.setup.outputs.brew-prefix }}
+        run: |
+          CLANG_VER="$(cat scripts/mrbind/clang_version.txt | xargs)"
+          LLVM_LIB_DIR="$BREW_PREFIX/opt/llvm@$CLANG_VER/lib"
+          echo "=== llvm@$CLANG_VER lib dir: $LLVM_LIB_DIR ==="
+          ls -lh "$LLVM_LIB_DIR" || true
+          echo
+          echo "=== Static archives (libclang*.a, libLLVM*.a) ==="
+          find "$LLVM_LIB_DIR" -maxdepth 2 \( -name 'libclang*.a' -o -name 'libLLVM*.a' \) -exec ls -lh {} + 2>/dev/null || true
+          echo
+          echo "=== Dynamic libs (libclang*.dylib, libLLVM*.dylib) ==="
+          find "$LLVM_LIB_DIR" -maxdepth 2 \( -name 'libclang*.dylib' -o -name 'libLLVM*.dylib' \) -exec ls -lh {} + 2>/dev/null || true
+
       # Hash the homebrew prefix so two self-hosted ARM runners that share the
       # `[self-hosted, macos, arm64, build]` label set but have homebrew at
       # different paths (e.g. `/Users/runner/.homebrew` vs `/opt/homebrew`) get

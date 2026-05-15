@@ -213,10 +213,20 @@ jobs:
         working-directory: test_python
         run: python3 -m pytest -s -v
 
-  macos-x64-test:
+  macos-test:
     if: ${{ inputs.test_macos }}
-    runs-on: macos-15-intel
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-15-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: arm64
+            runner: macos-latest  # github-hosted Apple Silicon
+            pkg_pattern: '*arm.pkg'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -226,11 +236,11 @@ jobs:
       - name: Download Distributive
         run: |
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }}
 
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*x64.pkg  -target /
+          sudo installer -pkg meshlib_*.pkg -target /
           xargs brew install --quiet < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format
@@ -254,49 +264,6 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
-
-  macos-arm64-test:
-    if: ${{ inputs.test_macos }}
-    runs-on: macos-latest  # github-hosted Apple Silicon
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{needs.setup.outputs.version_tag}}
-
-      - name: Download Distributive
-        run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "*arm.pkg" --repo ${{ github.repository }}
-
-      - name: Install Pkg
-        run: |
-          sudo installer -pkg meshlib_*arm.pkg  -target /
-          xargs brew install --quiet < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
-
-      # [error] NSGL: Failed to find a suitable pixel format
-      - name: Run MeshViewer
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
-
-      - name: Show meshconv help
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
-
-      - name: Build C++ examples
-        working-directory: examples/cpp-examples
-        run: |
-          mkdir build && \
-          cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
-          cmake --build . && \
-          ./MeshModification
-
-      - name: Build C examples
-        working-directory: examples/c-examples
-        run: |
-          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
-          cmake --build build
-
 
   windows-test:
     if: ${{ inputs.test_windows }}

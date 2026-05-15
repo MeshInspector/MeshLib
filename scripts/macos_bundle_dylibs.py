@@ -14,6 +14,24 @@ external references.
 This makes the produced .pkg robust against Homebrew bottle SONAME drift
 (e.g. jsoncpp dropping libjsoncpp.27.dylib alias) without forcing version pins
 on every dep in requirements/macos.txt.
+
+Why not dylibbundler / CMake BundleUtilities:
+  - The dst basename must match the *referrer's* load-command name, not the
+    realpath after symlink resolution. e.g. binaries reference
+    @rpath/libglfw.3.dylib while the Cellar's real file is libglfw.3.4.dylib
+    -- dylibbundler stores the realpath's basename, breaking dyld lookup.
+    Same shape for fmt / tbb / spdlog / openvdb / opencascade libTK*.
+  - The active Homebrew prefix is detected at runtime via `brew --prefix`
+    (the arm64 self-hosted runner installs Homebrew at /Users/runner/.homebrew,
+    not /usr/local or /opt/homebrew); off-the-shelf tools hardcode the two
+    standard prefixes and silently bundle nothing on that runner.
+  - Intra-bottle @rpath siblings (e.g. gdcm's libgdcmMEXD ->
+    @rpath/libsocketxx.1.2.dylib at @loader_path/.) are resolved against the
+    *source* directory of the lib that just got bundled, so we don't depend on
+    Homebrew's rpath embedding to keep working.
+  - No new build-time tool to install on every macOS runner; otool /
+    install_name_tool / codesign ship with Xcode CLT, which is already
+    required for the existing build.
 """
 from __future__ import annotations
 
@@ -83,7 +101,7 @@ def collect_machos(root: Path) -> list[Path]:
     return sorted(p for p in root.rglob("*") if is_macho(p))
 
 
-def otool_L(p: Path) -> list[str]:
+def get_load_dylibs(p: Path) -> list[str]:
     out = subprocess.check_output(["otool", "-L", str(p)], text=True)
     deps: list[str] = []
     for line in out.splitlines()[1:]:
@@ -138,22 +156,19 @@ def _resolve_homebrew_basename(name: str) -> Path | None:
     cached = _resolve_homebrew_basename._cache  # type: ignore[attr-defined]
     if name in cached:
         return cached[name]
-    result: Path | None = None
     for pref in HOMEBREW_PREFIXES:
         for sub in ("lib", "opt/*/lib", "Cellar/*/*/lib"):
             for cand in Path(pref).glob(f"{sub}/{name}"):
-                if cand.exists():
-                    try:
-                        result = cand.resolve()
-                    except OSError:
-                        continue
-                    break
-            if result is not None:
-                break
-        if result is not None:
-            break
-    cached[name] = result
-    return result
+                if not cand.exists():
+                    continue
+                try:
+                    result = cand.resolve()
+                except OSError:
+                    continue
+                cached[name] = result
+                return result
+    cached[name] = None
+    return None
 
 
 _resolve_homebrew_basename._cache = {}  # type: ignore[attr-defined]
@@ -204,7 +219,7 @@ def bundle(framework_dir: Path) -> None:
             continue
         visited.add(cur)
         cur_src_dir = source_of.get(cur)
-        for dep in otool_L(cur):
+        for dep in get_load_dylibs(cur):
             target: Path | None = None
             if should_bundle(dep):
                 req_name = Path(dep).name
@@ -256,7 +271,7 @@ def bundle(framework_dir: Path) -> None:
         if is_dylib:
             install_name_tool("-id", f"@rpath/{p.name}", str(p))
 
-        for dep in otool_L(p):
+        for dep in get_load_dylibs(p):
             if not should_bundle(dep):
                 continue
             install_name_tool(

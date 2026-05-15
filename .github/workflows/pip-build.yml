@@ -31,6 +31,18 @@ on:
         default: false
         required: false
         type: boolean
+      disable_ubuntu_x64:
+        default: false
+        required: false
+        type: boolean
+      disable_ubuntu_arm64:
+        default: false
+        required: false
+        type: boolean
+      disable_macos:
+        default: false
+        required: false
+        type: boolean
 
 env:
   VCPKG-VERSION: '2026.03.18'
@@ -44,7 +56,9 @@ jobs:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+      version_tag:  ${{ steps.get-latest-tag.outputs.tag }}
+      build-matrix: ${{ steps.matrix.outputs.build }}
+      test-matrix:  ${{ steps.matrix.outputs.test }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -55,28 +69,84 @@ jobs:
         if: ${{ github.event_name == 'release' || inputs.publish }}
         id: get-latest-tag
 
+      # Compute the manylinux build / test matrices in one place rather than
+      # mixing `include` / `exclude` / synthetic axes in the consumer jobs.
+      # `PLATS` is the full per-platform data (the "include" part); the jq
+      # filter drops disabled platforms (the "exclude" part); for the test
+      # job we then cross-product the surviving platforms with the supported
+      # Python versions.
+      - id: matrix
+        env:
+          DISABLE_X64:   ${{ inputs.disable_ubuntu_x64 || false }}
+          DISABLE_ARM64: ${{ inputs.disable_ubuntu_arm64 || false }}
+        run: |
+          PLATS='[
+            {"platform":"x86_64", "os-vcpkg":"rockylinux8-vcpkg-x64",  "container-options":"--user root", "runner":"ubuntu-latest",    "compiler":"/usr/bin/clang++", "container-prefix":""},
+            {"platform":"aarch64","os-vcpkg":"rockylinux8-vcpkg-arm64","container-options":" ",           "runner":"ubuntu-24.04-arm", "compiler":"/usr/bin/clang++", "container-prefix":"arm64v8/"}
+          ]'
+          PYS='[
+            {"py-version":"3.8",  "os":"rockylinux:8"},
+            {"py-version":"3.9",  "os":"debian:11-slim"},
+            {"py-version":"3.10", "os":"ubuntu:22.04"},
+            {"py-version":"3.11", "os":"fedora:37"},
+            {"py-version":"3.12", "os":"fedora:39"},
+            {"py-version":"3.13", "os":"fedora:42"},
+            {"py-version":"3.14", "os":"ubuntu:25.10"}
+          ]'
+
+          # Drop disabled platforms.
+          KEEP=$(jq -nc \
+            --argjson plats "$PLATS" \
+            --argjson dx "$DISABLE_X64" \
+            --argjson da "$DISABLE_ARM64" \
+            '
+              $plats
+              | map(select(
+                  (.platform == "x86_64"  and ($dx | not))
+                  or (.platform == "aarch64" and ($da | not))
+                ))
+            ')
+
+          # Build matrix: rename os-vcpkg -> os for the build job's container.image.
+          BUILD=$(jq -nc \
+            --argjson kept "$KEEP" \
+            '
+              $kept
+              | map(. + {os: ."os-vcpkg"} | del(."os-vcpkg"))
+            ')
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+
+          # Test matrix: cartesian product (kept platforms) x (py-versions).
+          # Each test combo carries os = the py-version's distro tag.
+          TEST=$(jq -nc \
+            --argjson kept "$KEEP" \
+            --argjson pys "$PYS" \
+            '
+              [
+                $kept[] as $p
+                | $pys[]
+                | ($p | del(."os-vcpkg"))
+                  + {"py-version": .["py-version"], os: .os}
+              ]
+            ')
+          echo "test=$TEST" >> "$GITHUB_OUTPUT"
+
   manylinux-pip-build:
     needs: setup
+    # Skip entirely when both platforms are disabled (empty matrix would
+    # otherwise error out on GitHub Actions).
+    if: ${{ needs.setup.outputs.build-matrix != '[]' }}
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.vcpkg_docker_image_tag || 'latest'}}
+      image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
+      # `include` enumerates the per-platform combos, surviving platforms
+      # only. See `setup.matrix` step for the include/exclude logic.
       matrix:
-        platform: ["x86_64", "aarch64"]
-        include:
-          - platform: "x86_64"
-            os: rockylinux8-vcpkg-x64
-            container-options: "--user root"
-            runner: ubuntu-latest
-            compiler: /usr/bin/clang++
-          - platform: "aarch64"
-            os: rockylinux8-vcpkg-arm64
-            container-options: " " # empty
-            runner: ubuntu-24.04-arm
-            compiler: /usr/bin/clang++
+        include: ${{ fromJSON(needs.setup.outputs.build-matrix) }}
 
     steps:
       - name: Work-around possible permission issues
@@ -365,6 +435,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
+    if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
     strategy:
@@ -471,41 +542,19 @@ jobs:
           retention-days: 1
 
   manylinux-pip-test:
-    needs: [manylinux-pip-build]
+    needs: [setup, manylinux-pip-build]
+    if: ${{ needs.setup.outputs.test-matrix != '[]' }}
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{matrix.container-prefix}}${{matrix.os}}
+      image: ${{ matrix.container-prefix }}${{ matrix.os }}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
+      # `include` is the cartesian product (surviving platforms x
+      # py-versions) computed in `setup.matrix`.
       matrix:
-        platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-        include:
-          - platform: "x86_64"
-            runner: ubuntu-latest
-            container-options: "--user root"
-            container-prefix: " "
-          - platform: "aarch64"
-            runner: ubuntu-24.04-arm
-            container-options: " " # empty
-            container-prefix: "arm64v8/"
-          - py-version: "3.8"
-            os: "rockylinux:8"
-          - py-version: "3.9"
-            os: "debian:11-slim"
-          - py-version: "3.10"
-            os: "ubuntu:22.04"
-          - py-version: "3.11"
-            os: "fedora:37"
-          - py-version: "3.12"
-            os: "fedora:39"
-          - py-version: "3.13"
-            os: "fedora:42"
-          # TODO: replace with a distro with default Python 3.14
-          - py-version: "3.14"
-            os: "ubuntu:25.10"
+        include: ${{ fromJSON(needs.setup.outputs.test-matrix) }}
     env:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:
@@ -595,6 +644,7 @@ jobs:
 
   macos-pip-test:
     needs: [macos-pip-build]
+    if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 40
     runs-on: ${{ matrix.instance }}
     strategy:

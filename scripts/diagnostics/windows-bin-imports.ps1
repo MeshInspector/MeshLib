@@ -56,7 +56,7 @@ if ($dumpbin) {
     $missingTotal = 0
     foreach ($bin in $binaries) {
         $imports = & $dumpbin /dependents $bin.FullName 2>$null |
-                   Where-Object { $_ -match '\.dll$' } |
+                   Where-Object { $_ -match '^\s+[A-Za-z0-9_+.-]+\.dll\s*$' } |
                    ForEach-Object { $_.Trim() }
         $missing = @()
         foreach ($imp in $imports) {

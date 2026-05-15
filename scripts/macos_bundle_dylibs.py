@@ -25,7 +25,31 @@ import subprocess
 import sys
 from pathlib import Path
 
-HOMEBREW_PREFIXES = ("/usr/local/", "/opt/homebrew/")
+def _detect_homebrew_prefixes() -> tuple[str, ...]:
+    """Standard locations + whatever `brew --prefix` reports.
+
+    Self-hosted runners may install Homebrew under a custom prefix
+    (e.g. /Users/runner/.homebrew on the arm64 build runner). Hardcoding
+    only /usr/local and /opt/homebrew silently disables bundling there.
+    """
+    defaults = ("/usr/local/", "/opt/homebrew/")
+    try:
+        out = subprocess.check_output(
+            ["brew", "--prefix"], text=True, stderr=subprocess.DEVNULL,
+        ).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError, OSError):
+        return defaults
+    if not out.startswith("/"):
+        return defaults
+    detected = out.rstrip("/") + "/"
+    if detected in defaults:
+        return defaults
+    # Put detected prefix first so resolution prefers libs from the active
+    # Homebrew install for this build.
+    return (detected, *defaults)
+
+
+HOMEBREW_PREFIXES = _detect_homebrew_prefixes()
 SYSTEM_PREFIXES = ("/usr/lib/", "/System/")
 RELATIVE_PREFIXES = ("@rpath/", "@loader_path/", "@executable_path/")
 # Leave these to the host system / Homebrew

@@ -154,8 +154,14 @@ def bundle(framework_dir: Path) -> None:
     source_of: dict[Path, Path] = {}     # dst path -> original source dir
     visited: set[Path] = set()
 
-    def bundle_from(src: Path) -> Path | None:
-        name = src.name
+    def bundle_from(src: Path, name: str | None = None) -> Path | None:
+        # `name` is the basename the *referrer* asks for (e.g. the load
+        # command's @rpath/<name> or the absolute path's basename). We
+        # preserve it so dyld's name lookup matches even when the real file
+        # behind a SOMAJOR symlink has a different version-tagged name
+        # (e.g. libglfw.3.dylib -> libglfw.3.4.dylib in the bottle).
+        if name is None:
+            name = src.name
         if name in bundled:
             return bundled[name]
         if not src.exists():
@@ -177,6 +183,7 @@ def bundle(framework_dir: Path) -> None:
         for dep in otool_L(cur):
             target: Path | None = None
             if should_bundle(dep):
+                req_name = Path(dep).name
                 src = Path(dep)
                 try:
                     src = src.resolve()
@@ -186,12 +193,12 @@ def bundle(framework_dir: Path) -> None:
                     # Original link-time path is gone from the current bottle
                     # (the very drift we're guarding against). Fall back to
                     # the basename under the standard Homebrew lib dir.
-                    fallback = _resolve_homebrew_basename(Path(dep).name)
+                    fallback = _resolve_homebrew_basename(req_name)
                     if fallback is None:
                         log(f"WARN: cannot resolve {dep}; skipping")
                         continue
                     src = fallback
-                target = bundle_from(src)
+                target = bundle_from(src, req_name)
             elif dep.startswith(("@rpath/", "@loader_path/")):
                 # Modern Homebrew bottles install with @rpath/<basename>, so
                 # any MeshLib binary linked against them references the dep
@@ -209,11 +216,11 @@ def bundle(framework_dir: Path) -> None:
                     if cur_src_dir is not None:
                         cand = cur_src_dir / name
                         if cand.exists():
-                            target = bundle_from(cand.resolve())
+                            target = bundle_from(cand.resolve(), name)
                     if target is None:
                         fb = _resolve_homebrew_basename(name)
                         if fb is not None:
-                            target = bundle_from(fb)
+                            target = bundle_from(fb, name)
             if target is not None and target not in visited:
                 queue.append(target)
 

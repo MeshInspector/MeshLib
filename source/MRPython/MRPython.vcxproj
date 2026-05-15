@@ -99,7 +99,7 @@
       <!-- Release `python3XY.dll` we just deployed. Copy it explicitly so `Py_Initialize` doesn't fail silently in MRTest.exe. -->
       <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
       copy $(PythonStableDllPath) $(TargetDir)python3.dll
-      copy $(VcpkgCurrentInstalledDir)\bin\z.dll $(TargetDir)z.dll
+      if exist "$(VcpkgCurrentInstalledDir)\bin\z.dll" copy "$(VcpkgCurrentInstalledDir)\bin\z.dll" "$(TargetDir)z.dll"
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

@@ -55,6 +55,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from delocate.tools import (
+        add_rpath,
+        get_install_names,
+        get_rpaths,
+        set_install_id,
+        set_install_name,
+    )
+except ImportError:
+    sys.exit(
+        "scripts/macos_bundle_dylibs.py requires the 'delocate' Python "
+        "package. Install with: pip install delocate==0.10.7"
+    )
+
 def _detect_homebrew_prefixes() -> tuple[str, ...]:
     """Standard locations + whatever `brew --prefix` reports.
 
@@ -113,16 +127,6 @@ def collect_machos(root: Path) -> list[Path]:
     return sorted(p for p in root.rglob("*") if is_macho(p))
 
 
-def get_load_dylibs(p: Path) -> list[str]:
-    out = subprocess.check_output(["otool", "-L", str(p)], text=True)
-    deps: list[str] = []
-    for line in out.splitlines()[1:]:
-        m = re.match(r"\s+(\S+) \(", line)
-        if m:
-            deps.append(m.group(1))
-    return deps
-
-
 def should_bundle(load_path: str) -> bool:
     if load_path.startswith(RELATIVE_PREFIXES):
         return False
@@ -139,26 +143,16 @@ def make_writable(p: Path) -> None:
     p.chmod(p.stat().st_mode | stat.S_IWUSR)
 
 
-def install_name_tool(*args: str) -> None:
-    subprocess.check_call(["install_name_tool", *args])
-
-
 def codesign_adhoc(p: Path) -> None:
+    # delocate.tools's helpers ad-hoc sign as a side effect, but they don't
+    # carry over entitlements / runtime flags. After all rewrites, do one
+    # final --preserve-metadata sign per file so any flags the linker
+    # embedded (e.g. hardened runtime on arm64) survive.
     subprocess.check_call([
         "codesign", "--force", "--sign", "-",
         "--preserve-metadata=entitlements,requirements,flags,runtime",
         str(p),
     ])
-
-
-def has_rpath(p: Path, rpath: str) -> bool:
-    out = subprocess.check_output(["otool", "-l", str(p)], text=True)
-    # Lines look like:    path @executable_path/../lib (offset 12)
-    for line in out.splitlines():
-        s = line.strip()
-        if s.startswith("path ") and s[5:].startswith(rpath + " "):
-            return True
-    return False
 
 
 def _resolve_homebrew_basename(name: str) -> Path | None:
@@ -231,7 +225,7 @@ def bundle(framework_dir: Path) -> None:
             continue
         visited.add(cur)
         cur_src_dir = source_of.get(cur)
-        for dep in get_load_dylibs(cur):
+        for dep in get_install_names(str(cur)):
             target: Path | None = None
             if should_bundle(dep):
                 req_name = Path(dep).name
@@ -275,24 +269,28 @@ def bundle(framework_dir: Path) -> None:
             if target is not None and target not in visited:
                 queue.append(target)
 
-    # Rewrite ids, load commands, and add rpaths on every Mach-O we ship
+    # Rewrite ids, load commands, and add rpaths on every Mach-O we ship.
+    # delocate.tools.* helpers wrap install_name_tool and ad-hoc sign after
+    # each call; the final codesign_adhoc preserves entitlements/flags that
+    # delocate's default signing would drop.
     all_files = collect_machos(bin_dir) + collect_machos(lib_dir)
     for p in all_files:
         make_writable(p)
+        sp = str(p)
         is_dylib = p.suffix == ".dylib" or p.is_relative_to(lib_dir)
         if is_dylib:
-            install_name_tool("-id", f"@rpath/{p.name}", str(p))
+            set_install_id(sp, f"@rpath/{p.name}", ad_hoc_sign=False)
 
-        for dep in get_load_dylibs(p):
+        for dep in get_install_names(sp):
             if not should_bundle(dep):
                 continue
-            install_name_tool(
-                "-change", dep, f"@rpath/{Path(dep).name}", str(p),
+            set_install_name(
+                sp, dep, f"@rpath/{Path(dep).name}", ad_hoc_sign=False,
             )
 
         rpath = "@executable_path/../lib" if p.is_relative_to(bin_dir) else "@loader_path/."
-        if not has_rpath(p, rpath):
-            install_name_tool("-add_rpath", rpath, str(p))
+        if rpath not in get_rpaths(sp):
+            add_rpath(sp, rpath, ad_hoc_sign=False)
 
         codesign_adhoc(p)
 

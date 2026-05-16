@@ -224,6 +224,9 @@ jobs:
           curl -sS https://bootstrap.pypa.io/get-pip.py | python3
           python3 -m pip install -r ./requirements/python.txt
           python3 -m pip install pytest
+          # Used by scripts/macos_bundle_dylibs.py during the .pkg build
+          # step. Pinned to the same version the NuGet-patch path uses.
+          python3 -m pip install delocate==0.10.7
 
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}

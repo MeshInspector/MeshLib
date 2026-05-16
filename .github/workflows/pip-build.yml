@@ -204,10 +204,12 @@ jobs:
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind
         with:
-          # Key matches the Docker image identifier exactly so this cache is shared
-          # with build-test-linux-vcpkg.yml, which uses the same image and script.
-          cache-key-prefix: ${{ matrix.os }}-${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+          # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
+          # image and script. The Dockerfile hash in extra-cache-key busts the cache
+          # whenever the toolchain inside the image changes (e.g. clang upgrade).
+          cache-key-prefix: ${{ matrix.os }}
           build-script: scripts/mrbind/install_mrbind_rockylinux.sh
+          extra-cache-key: ${{ hashFiles('docker/rockylinux8-vcpkgDockerfile') }}
 
       - name: Print RAM
         # If there's not enough RAM, building MRBind bindings can fail. Not running this in the mrbind step itself, because OOM fails can erase logs from the current step.

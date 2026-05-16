@@ -15,23 +15,35 @@ This makes the produced .pkg robust against Homebrew bottle SONAME drift
 (e.g. jsoncpp dropping libjsoncpp.27.dylib alias) without forcing version pins
 on every dep in requirements/macos.txt.
 
-Why not dylibbundler / CMake BundleUtilities:
-  - The dst basename must match the *referrer's* load-command name, not the
-    realpath after symlink resolution. e.g. binaries reference
-    @rpath/libglfw.3.dylib while the Cellar's real file is libglfw.3.4.dylib
-    -- dylibbundler stores the realpath's basename, breaking dyld lookup.
-    Same shape for fmt / tbb / spdlog / openvdb / opencascade libTK*.
-  - The active Homebrew prefix is detected at runtime via `brew --prefix`
-    (the arm64 self-hosted runner installs Homebrew at /Users/runner/.homebrew,
-    not /usr/local or /opt/homebrew); off-the-shelf tools hardcode the two
-    standard prefixes and silently bundle nothing on that runner.
-  - Intra-bottle @rpath siblings (e.g. gdcm's libgdcmMEXD ->
-    @rpath/libsocketxx.1.2.dylib at @loader_path/.) are resolved against the
-    *source* directory of the lib that just got bundled, so we don't depend on
-    Homebrew's rpath embedding to keep working.
-  - No new build-time tool to install on every macOS runner; otool /
-    install_name_tool / codesign ship with Xcode CLT, which is already
-    required for the existing build.
+Why not dylibbundler / CMake BundleUtilities (`fixup_bundle`):
+
+Decisive reason -- load-command shape under dual load context:
+  Both tools rewrite LC_LOAD_DYLIB entries to @executable_path-relative
+  paths (fixup_bundle writes "@executable_path/../Frameworks/libfoo.dylib";
+  dylibbundler writes "@rpath/libfoo.dylib" resolved through a fixed rpath
+  that itself points at "@executable_path/../libs/"). Either form works
+  for a .app where every load is initiated by a binary inside the bundle,
+  so @executable_path always points at the bundle.
+
+  MeshLib's lib/ is also loaded by external python3 (when a user does
+  `import meshlib` from a regular interpreter), in which case
+  @executable_path is e.g. /usr/local/bin/python3 -- and an
+  "@executable_path/../lib/libfoo.dylib" load would resolve to
+  /usr/local/lib/libfoo.dylib, outside the framework. To keep both load
+  contexts working we need bare @rpath/<name> load commands plus *two*
+  rpath entries -- @executable_path/../lib for binaries in bin/ and
+  @loader_path/. for dylibs in lib/. fixup_bundle's single-embedded_path
+  model doesn't express that.
+
+Secondary points:
+  - dylibbundler 1.0.5 (the version Homebrew ships) hardcodes /usr/local
+    and /opt/homebrew as the only search prefixes; the arm64 self-hosted
+    build runner installs Homebrew at /Users/runner/.homebrew. This
+    script calls `brew --prefix` at startup. (fixup_bundle accepts DIRS
+    so it could resolve that, but the load-command shape above still
+    rules it out.)
+  - otool / install_name_tool / codesign ship with Xcode CLT, already a
+    build requirement, so no new build-time tool to install either way.
 """
 from __future__ import annotations
 

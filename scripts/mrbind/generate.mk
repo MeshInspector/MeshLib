@@ -610,6 +610,17 @@ endif # Windows
 # Linux.
 ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
+# Make each PT_LOAD segment occupy its own file block / memory page. Without
+# this, lld packs the program-header table tight against `.note.gnu.build-id`
+# and `.init` in the first PT_LOAD; when a downstream packager (e.g. patchelf
+# inside linuxdeploy) later extends the PHT to add an entry (e.g. for a new
+# `$ORIGIN` in RUNPATH), the new entry overwrites `.init`, but `DT_INIT` is
+# left pointing at the now-clobbered `_init` address, so `_dl_init` jumps into
+# garbage at module-load time. Observed as SIGSEGV-on-dlopen of the bindings
+# shim on x86_64 Clang 21 inside AppImages produced by linuxdeploy.
+# `-z separate-loadable-segments` gives patchelf room to grow the PHT without
+# trampling executable code.
+LINKER_FLAGS += -Wl,-z,separate-loadable-segments
 endif
 
 # MacOS.

@@ -25,6 +25,21 @@ project(MeshLib CXX)
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
+# Make each PT_LOAD segment occupy its own file block / memory page on Linux.
+# Without this, lld packs the program-header table tight against
+# `.note.gnu.build-id` and `.init` in the first PT_LOAD; when a downstream
+# packager (e.g. `patchelf` inside `linuxdeploy`) later extends the PHT to add
+# an entry (e.g. for a new `$ORIGIN` in RUNPATH), the new entry overwrites
+# `.init`, but `DT_INIT` is left pointing at the now-clobbered `_init`
+# address, so `_dl_init` jumps into garbage at module-load time. Observed as
+# SIGSEGV-on-dlopen of `libpybind11nonlimitedapi_meshlib_3.12.so` on x86_64
+# Clang 21 inside AppImages produced by `linuxdeploy`. The flag gives the PHT
+# headroom so patchelf can grow it without trampling executable code.
+# Applies to executables and shared libraries; static libraries are unaffected.
+IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN)
+  add_link_options("LINKER:-z,separate-loadable-segments")
+ENDIF()
+
 include(CompilerOptions)
 IF(EMSCRIPTEN)
   include(ConfigureEmscripten)

@@ -35,8 +35,17 @@ add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 # SIGSEGV-on-dlopen of `libpybind11nonlimitedapi_meshlib_3.12.so` on x86_64
 # Clang 21 inside AppImages produced by `linuxdeploy`. The flag gives the PHT
 # headroom so patchelf can grow it without trampling executable code.
+#
+# `-z separate-loadable-segments` is an lld extension — `ld.bfd` warns and
+# ignores it. Clang's default linker on RHEL/Rocky is `ld.bfd` from
+# gcc-toolset, so we also force `-fuse-ld=lld` for Clang builds. (The MR
+# bindings makefile already does this; this just brings the CMake-driven
+# targets in line.)
 # Applies to executables and shared libraries; static libraries are unaffected.
 IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN)
+  IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_link_options("-fuse-ld=lld")
+  ENDIF()
   add_link_options("LINKER:-z,separate-loadable-segments")
 ENDIF()
 

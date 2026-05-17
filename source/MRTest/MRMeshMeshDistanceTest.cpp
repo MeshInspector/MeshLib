@@ -38,6 +38,13 @@ TEST( MRMesh, findSignedDistanceTest )
     dist = findSignedDistance( a, b, &xf );
     EXPECT_TRUE( dist.signedDist > 0.0f );
     EXPECT_TRUE( dist.status == MeshMeshCollisionStatus::BothOutside );
+
+    // upDistLimitSq smaller than the real distSq: must short-circuit to BothOutside
+    // with signedDist == sqrt(upDistLimitSq), not run collision checks on the sentinel result
+    const float upDistLimitSq = 0.001f; // xf.b.z = 1.6f gives real distSq = 0.01
+    dist = findSignedDistance( a, b, &xf, upDistLimitSq );
+    EXPECT_TRUE( dist.status == MeshMeshCollisionStatus::BothOutside );
+    EXPECT_NEAR( dist.signedDist, std::sqrt( upDistLimitSq ), 1e-6f );
 }
 
 } //namespace MR

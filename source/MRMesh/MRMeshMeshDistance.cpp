@@ -215,6 +215,9 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     MR_TIMER;
     // If meshes has no collision no need to find signed distance
     auto res = findDistance( a, b, rigidB2A, upDistLimitSq );
+    if ( res.distSq == upDistLimitSq )
+        // findDistance returns the limit sentinel when nothing closer was found; skip collision checks on the bogus result
+        return { res.a, res.b, MeshMeshCollisionStatus::BothOutside, std::sqrt( res.distSq ) };
     std::vector<FaceFace> collisions;
     auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
     if ( status == MeshMeshCollisionStatus::Touching )

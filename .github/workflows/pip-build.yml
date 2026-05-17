@@ -57,8 +57,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version_tag:  ${{ steps.get-latest-tag.outputs.tag }}
-      build-matrix: ${{ steps.matrix.outputs.build }}
-      test-matrix:  ${{ steps.matrix.outputs.test }}
+      build-matrix: ${{ steps.build-matrix.outputs.matrix }}
+      test-matrix:  ${{ steps.test-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -69,67 +69,82 @@ jobs:
         if: ${{ github.event_name == 'release' || inputs.publish }}
         id: get-latest-tag
 
-      # Compute the manylinux build / test matrices in one place rather than
-      # mixing `include` / `exclude` / synthetic axes in the consumer jobs.
-      # `PLATS` is the full per-platform data (the "include" part); the jq
-      # filter drops disabled platforms (the "exclude" part); for the test
-      # job we then cross-product the surviving platforms with the supported
-      # Python versions.
-      - id: matrix
-        env:
-          DISABLE_X64:   ${{ inputs.disable_ubuntu_x64 || false }}
-          DISABLE_ARM64: ${{ inputs.disable_ubuntu_arm64 || false }}
-        run: |
-          PLATS='[
-            {"platform":"x86_64", "os-vcpkg":"rockylinux8-vcpkg-x64",  "container-options":"--user root", "runner":"ubuntu-latest",    "compiler":"/usr/bin/clang++", "container-prefix":""},
-            {"platform":"aarch64","os-vcpkg":"rockylinux8-vcpkg-arm64","container-options":" ",           "runner":"ubuntu-24.04-arm", "compiler":"/usr/bin/clang++", "container-prefix":"arm64v8/"}
-          ]'
-          PYS='[
-            {"py-version":"3.8",  "os":"rockylinux:8"},
-            {"py-version":"3.9",  "os":"debian:11-slim"},
-            {"py-version":"3.10", "os":"ubuntu:22.04"},
-            {"py-version":"3.11", "os":"fedora:37"},
-            {"py-version":"3.12", "os":"fedora:39"},
-            {"py-version":"3.13", "os":"fedora:42"},
-            {"py-version":"3.14", "os":"ubuntu:25.10"}
-          ]'
+      - id: build-matrix
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix: |
+            platform:
+              - x86_64
+              - aarch64
+          rules: |
+            - extend:
+                - platform: x86_64
+                  os: rockylinux8-vcpkg-x64
+                  container-options: "--user root"
+                  runner: ubuntu-latest
+                  compiler: /usr/bin/clang++
+                  container-prefix: ""
+                - platform: aarch64
+                  os: rockylinux8-vcpkg-arm64
+                  container-options: " "
+                  runner: ubuntu-24.04-arm
+                  compiler: /usr/bin/clang++
+                  container-prefix: arm64v8/
+            - if: ${{ inputs.disable_ubuntu_x64 }}
+              exclude:
+                platform: x86_64
+            - if: ${{ inputs.disable_ubuntu_arm64 }}
+              exclude:
+                platform: aarch64
 
-          # Drop disabled platforms.
-          KEEP=$(jq -nc \
-            --argjson plats "$PLATS" \
-            --argjson dx "$DISABLE_X64" \
-            --argjson da "$DISABLE_ARM64" \
-            '
-              $plats
-              | map(select(
-                  (.platform == "x86_64"  and ($dx | not))
-                  or (.platform == "aarch64" and ($da | not))
-                ))
-            ')
-
-          # Build matrix: rename os-vcpkg -> os for the build job's container.image.
-          BUILD=$(jq -nc \
-            --argjson kept "$KEEP" \
-            '
-              $kept
-              | map(. + {os: ."os-vcpkg"} | del(."os-vcpkg"))
-            ')
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-
-          # Test matrix: cartesian product (kept platforms) x (py-versions).
-          # Each test combo carries os = the py-version's distro tag.
-          TEST=$(jq -nc \
-            --argjson kept "$KEEP" \
-            --argjson pys "$PYS" \
-            '
-              [
-                $kept[] as $p
-                | $pys[]
-                | ($p | del(."os-vcpkg"))
-                  + {"py-version": .["py-version"], os: .os}
-              ]
-            ')
-          echo "test=$TEST" >> "$GITHUB_OUTPUT"
+      - id: test-matrix
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix: |
+            platform:
+              - x86_64
+              - aarch64
+            py-version:
+              - "3.8"
+              - "3.9"
+              - "3.10"
+              - "3.11"
+              - "3.12"
+              - "3.13"
+              - "3.14"
+          rules: |
+            - extend:
+                - platform: x86_64
+                  container-options: "--user root"
+                  runner: ubuntu-latest
+                  compiler: /usr/bin/clang++
+                  container-prefix: ""
+                - platform: aarch64
+                  container-options: " "
+                  runner: ubuntu-24.04-arm
+                  compiler: /usr/bin/clang++
+                  container-prefix: arm64v8/
+            - extend:
+                - py-version: "3.8"
+                  os: "rockylinux:8"
+                - py-version: "3.9"
+                  os: "debian:11-slim"
+                - py-version: "3.10"
+                  os: "ubuntu:22.04"
+                - py-version: "3.11"
+                  os: "fedora:37"
+                - py-version: "3.12"
+                  os: "fedora:39"
+                - py-version: "3.13"
+                  os: "fedora:42"
+                - py-version: "3.14"
+                  os: "ubuntu:25.10"
+            - if: ${{ inputs.disable_ubuntu_x64 }}
+              exclude:
+                platform: x86_64
+            - if: ${{ inputs.disable_ubuntu_arm64 }}
+              exclude:
+                platform: aarch64
 
   manylinux-pip-build:
     needs: setup
@@ -189,10 +204,12 @@ jobs:
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind
         with:
-          # Key matches the Docker image identifier exactly so this cache is shared
-          # with build-test-linux-vcpkg.yml, which uses the same image and script.
-          cache-key-prefix: ${{ matrix.os }}-${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+          # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
+          # image and script. The Dockerfile hash in extra-cache-key busts the cache
+          # whenever the toolchain inside the image changes (e.g. clang upgrade).
+          cache-key-prefix: ${{ matrix.os }}
           build-script: scripts/mrbind/install_mrbind_rockylinux.sh
+          extra-cache-key: ${{ hashFiles('docker/rockylinux8-vcpkgDockerfile') }}
 
       - name: Print RAM
         # If there's not enough RAM, building MRBind bindings can fail. Not running this in the mrbind step itself, because OOM fails can erase logs from the current step.

@@ -38,15 +38,19 @@ add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 #
 # `-z separate-loadable-segments` is an lld extension — `ld.bfd` warns and
 # ignores it. Clang's default linker on RHEL/Rocky is `ld.bfd` from
-# gcc-toolset, so we also force `-fuse-ld=lld` for Clang builds. (The MR
-# bindings makefile already does this; this just brings the CMake-driven
-# targets in line.)
+# gcc-toolset, so we also force `-fuse-ld=lld`. Apply only on Clang builds
+# where lld is actually installed; some of our Linux images (e.g. the older
+# ubuntu22 Clang 14 image) don't ship it, so we probe first and skip if it
+# isn't available — those builds aren't AppImage-packaged anyway, so they
+# don't need this fix.
 # Applies to executables and shared libraries; static libraries are unaffected.
-IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN)
-  IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  include(CheckLinkerFlag)
+  check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
+  IF(MESHLIB_HAVE_LLD)
     add_link_options("-fuse-ld=lld")
+    add_link_options("LINKER:-z,separate-loadable-segments")
   ENDIF()
-  add_link_options("LINKER:-z,separate-loadable-segments")
 ENDIF()
 
 include(CompilerOptions)

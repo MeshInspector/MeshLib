@@ -15,35 +15,33 @@ This makes the produced .pkg robust against Homebrew bottle SONAME drift
 (e.g. jsoncpp dropping libjsoncpp.27.dylib alias) without forcing version pins
 on every dep in requirements/macos.txt.
 
-Why not dylibbundler / CMake BundleUtilities (`fixup_bundle`):
+Why a script rather than dylibbundler / CMake BundleUtilities
+(`fixup_bundle`):
 
-Decisive reason -- load-command shape under dual load context:
-  Both tools rewrite LC_LOAD_DYLIB entries to @executable_path-relative
-  paths (fixup_bundle writes "@executable_path/../Frameworks/libfoo.dylib";
-  dylibbundler writes "@rpath/libfoo.dylib" resolved through a fixed rpath
-  that itself points at "@executable_path/../libs/"). Either form works
-  for a .app where every load is initiated by a binary inside the bundle,
-  so @executable_path always points at the bundle.
-
-  MeshLib's lib/ is also loaded by external python3 (when a user does
-  `import meshlib` from a regular interpreter), in which case
-  @executable_path is e.g. /usr/local/bin/python3 -- and an
-  "@executable_path/../lib/libfoo.dylib" load would resolve to
-  /usr/local/lib/libfoo.dylib, outside the framework. To keep both load
-  contexts working we need bare @rpath/<name> load commands plus *two*
-  rpath entries -- @executable_path/../lib for binaries in bin/ and
-  @loader_path/. for dylibs in lib/. fixup_bundle's single-embedded_path
-  model doesn't express that.
-
-Secondary points:
   - dylibbundler 1.0.5 (the version Homebrew ships) hardcodes /usr/local
     and /opt/homebrew as the only search prefixes; the arm64 self-hosted
     build runner installs Homebrew at /Users/runner/.homebrew. This
     script calls `brew --prefix` at startup. (fixup_bundle accepts DIRS
-    so it could resolve that, but the load-command shape above still
-    rules it out.)
-  - otool / install_name_tool / codesign ship with Xcode CLT, already a
-    build requirement, so no new build-time tool to install either way.
+    so it sidesteps this.)
+  - fixup_bundle is designed for .app bundles with a single primary
+    executable and an embedded-path location like
+    @executable_path/../Frameworks. MeshLib's framework is a non-standard
+    layout: multiple executables in bin/, MeshLib's own dylibs in lib/,
+    thirdparty-built libs in lib/lib/, and Python .so modules under
+    lib/lib/meshlib/. Driving fixup_bundle on it needs a custom
+    gp_item_default_embedded_path_override (to send bundled libs to
+    @executable_path/../lib instead of /Contents/Frameworks), every
+    framework Mach-O enumerated as LIBS (so fixup_bundle doesn't try to
+    re-copy items already inside the framework), and IGNORE_ITEM Python /
+    libpython3.10.dylib to skip the embedded-Python framework. That
+    plumbing is comparable in size to this script.
+  - Primitive install_name_tool / otool calls are made via
+    delocate.tools (already a build-time dep used by the NuGet-patch
+    pipeline). The remaining code is the algorithm: BFS over Mach-O
+    deps, referrer-basename preservation when a SOMAJOR alias points
+    at a longer-versioned realpath (libglfw.3.dylib -> libglfw.3.4.dylib),
+    intra-bottle @rpath sibling resolution via the source dir, and the
+    Homebrew-prefix detection above.
 """
 from __future__ import annotations
 

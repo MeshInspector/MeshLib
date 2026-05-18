@@ -28,11 +28,7 @@ cp ./requirements/macos.txt "${FRAMEWORK_DIR}/requirements/"
 # bottle SONAME drift (e.g. jsoncpp dropping libjsoncpp.27.dylib). System libs
 # and libpython are left as external references on purpose. Uses CMake's
 # BundleUtilities::fixup_bundle() via scripts/fixup_bundle_macos.cmake.
-#
-# fixup_bundle's file(RELATIVE_PATH) call requires absolute paths for both
-# APP and every LIBS entry, so resolve them via $(pwd) up front.
-FW_ABS="$(pwd)/${FRAMEWORK_DIR#./}"
-APP="${FW_ABS}/bin/MeshViewer"
+APP="$(pwd)/${FRAMEWORK_DIR#./}/bin/MeshViewer"
 
 # Enumerate every other Mach-O already shipped in the framework. They get
 # passed to fixup_bundle via LIBS so it treats them as in-bundle items
@@ -45,7 +41,7 @@ while IFS= read -r f ; do
   if file -b "$f" | grep -qi "Mach-O" ; then
     [ "$f" = "$APP" ] || LIBS_LIST+=("$f")
   fi
-done < <(find "${FW_ABS}/bin" "${FW_ABS}/lib" -type f)
+done < <(find "${FRAMEWORK_DIR}/bin" "${FRAMEWORK_DIR}/lib" -type f)
 LIBS_SEMI="$(IFS=';' ; echo "${LIBS_LIST[*]}")"
 
 # Search dirs for resolving @rpath/... prereqs. Built from the active
@@ -77,7 +73,7 @@ while IFS= read -r f ; do
     codesign --force --sign - \
       --preserve-metadata=entitlements,requirements,flags,runtime "$f"
   fi
-done < <(find "${FW_ABS}/bin" "${FW_ABS}/lib" -type f)
+done < <(find "${FRAMEWORK_DIR}/bin" "${FRAMEWORK_DIR}/lib" -type f)
 
 # FIXME: this breaks CMake config
 #pushd "${FRAMEWORK_BASE_DIR}"

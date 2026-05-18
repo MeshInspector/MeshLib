@@ -712,7 +712,10 @@ jobs:
         # The skip is scoped to the GitHub macos-15-intel image, which ships
         # python 3.11 already and trips on `brew install python@3.11`.
         if: ${{ !(matrix.runner-tier == 'github' && matrix.platform == 'x86' && matrix.py-version == '3.11') }}
-        run: brew install --overwrite --quiet python@${{matrix.py-version}}
+        # `--quiet` dropped: it suppresses post-install stderr, which hid the
+        # real error behind a generic "post-install step did not complete"
+        # summary line on self-hosted macOS hosts.
+        run: brew install --overwrite python@${{matrix.py-version}}
 
       - name: Create virtualenv
         run: |

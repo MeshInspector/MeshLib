@@ -26,8 +26,54 @@ cp ./requirements/macos.txt "${FRAMEWORK_DIR}/requirements/"
 
 # Bundle Homebrew dylib deps into the framework so the .pkg is robust against
 # bottle SONAME drift (e.g. jsoncpp dropping libjsoncpp.27.dylib). System libs
-# and libpython are left as external references on purpose.
-python3 ./scripts/macos_bundle_dylibs.py "${FRAMEWORK_DIR}"
+# and libpython are left as external references on purpose. Uses CMake's
+# BundleUtilities::fixup_bundle() via scripts/fixup_bundle_macos.cmake.
+APP="$(pwd)/${FRAMEWORK_DIR#./}/bin/MeshViewer"
+
+# Enumerate every other Mach-O already shipped in the framework. They get
+# passed to fixup_bundle via LIBS so it treats them as in-bundle items
+# (and walks their prereqs) instead of trying to re-copy them. Mach-O
+# detection via `file -b` matches both executables (Mach-O ... executable)
+# and dynamic libs / Python .so bundles (Mach-O ... dynamically linked
+# shared library / bundle).
+LIBS_LIST=()
+while IFS= read -r f ; do
+  if file -b "$f" | grep -qi "Mach-O" ; then
+    [ "$f" = "$APP" ] || LIBS_LIST+=("$f")
+  fi
+done < <(find "${FRAMEWORK_DIR}/bin" "${FRAMEWORK_DIR}/lib" -type f)
+LIBS_SEMI="$(IFS=';' ; echo "${LIBS_LIST[*]}")"
+
+# Search dirs for resolving @rpath/... prereqs. Built from the active
+# Homebrew prefix (`brew --prefix`) so the arm64 self-hosted runner whose
+# prefix is /Users/runner/.homebrew works alongside the github-hosted
+# /usr/local install.
+BREW_PREFIX="$(brew --prefix)"
+DIRS_LIST=("${BREW_PREFIX}/lib")
+for d in "${BREW_PREFIX}/opt"/*/lib ; do
+  [ -d "$d" ] && DIRS_LIST+=("$d")
+done
+for d in "${BREW_PREFIX}/Cellar"/*/*/lib ; do
+  [ -d "$d" ] && DIRS_LIST+=("$d")
+done
+DIRS_SEMI="$(IFS=';' ; echo "${DIRS_LIST[*]}")"
+
+cmake \
+  -DAPP="${APP}" \
+  -DLIBS="${LIBS_SEMI}" \
+  -DDIRS="${DIRS_SEMI}" \
+  -P scripts/fixup_bundle_macos.cmake
+
+# install_name_tool invalidates the linker-embedded ad-hoc signatures
+# fixup_bundle relies on; arm64 macOS SIGKILLs any such binary on launch.
+# Re-sign every Mach-O ad-hoc, preserving entitlements / runtime flags
+# the linker put there. Proper release signing (if any) happens later.
+while IFS= read -r f ; do
+  if file -b "$f" | grep -qi "Mach-O" ; then
+    codesign --force --sign - \
+      --preserve-metadata=entitlements,requirements,flags,runtime "$f"
+  fi
+done < <(find "${FRAMEWORK_DIR}/bin" "${FRAMEWORK_DIR}/lib" -type f)
 
 # FIXME: this breaks CMake config
 #pushd "${FRAMEWORK_BASE_DIR}"

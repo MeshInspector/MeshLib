@@ -18,30 +18,35 @@ on every dep in requirements/macos.txt.
 Why a script rather than dylibbundler / CMake BundleUtilities
 (`fixup_bundle`):
 
+  - fixup_bundle's containment check requires every bundled item's
+    filesystem path to be string-prefixed by the bundle's "dotapp_dir"
+    (the closest .app ancestor of APP, or the directory containing APP
+    if no .app exists above it). For a .app, "everything under
+    Contents/" is one tree and the check is fine; MeshLib's framework
+    has bin/ and lib/ as parallel siblings under
+    Versions/<ver>/, so any embedded_path is either *inside* bin/
+    (works for the containment check but stops covering the items in
+    lib/ that also need their @rpath/... refs rewritten) or *outside*
+    it (fails the check). Passing APP=bin/MeshViewer with
+    gp_item_default_embedded_path_override -> @executable_path/../lib
+    aborted in CI with `cannot fixup an item that is not in the
+    bundle... exe_dotapp_dir=<...>/bin/ item=<...>/lib/...` -- see
+    BundleUtilities.cmake:1128. The check string-compares paths and
+    can't be satisfied via symlinks or @-tokens without restructuring
+    the framework, which would break consumers that expect the
+    /Library/Frameworks/MeshLib.framework/Versions/<ver>/{bin,lib,...}
+    layout.
   - dylibbundler 1.0.5 (the version Homebrew ships) hardcodes /usr/local
     and /opt/homebrew as the only search prefixes; the arm64 self-hosted
     build runner installs Homebrew at /Users/runner/.homebrew. This
-    script calls `brew --prefix` at startup. (fixup_bundle accepts DIRS
-    so it sidesteps this.)
-  - fixup_bundle is designed for .app bundles with a single primary
-    executable and an embedded-path location like
-    @executable_path/../Frameworks. MeshLib's framework is a non-standard
-    layout: multiple executables in bin/, MeshLib's own dylibs in lib/,
-    thirdparty-built libs in lib/lib/, and Python .so modules under
-    lib/lib/meshlib/. Driving fixup_bundle on it needs a custom
-    gp_item_default_embedded_path_override (to send bundled libs to
-    @executable_path/../lib instead of /Contents/Frameworks), every
-    framework Mach-O enumerated as LIBS (so fixup_bundle doesn't try to
-    re-copy items already inside the framework), and IGNORE_ITEM Python /
-    libpython3.10.dylib to skip the embedded-Python framework. That
-    plumbing is comparable in size to this script.
+    script calls `brew --prefix` at startup.
   - Primitive install_name_tool / otool calls are made via
     delocate.tools (already a build-time dep used by the NuGet-patch
-    pipeline). The remaining code is the algorithm: BFS over Mach-O
-    deps, referrer-basename preservation when a SOMAJOR alias points
-    at a longer-versioned realpath (libglfw.3.dylib -> libglfw.3.4.dylib),
-    intra-bottle @rpath sibling resolution via the source dir, and the
-    Homebrew-prefix detection above.
+    pipeline). The remaining bespoke code is the algorithm: BFS over
+    Mach-O deps, referrer-basename preservation when a SOMAJOR alias
+    points at a longer-versioned realpath (libglfw.3.dylib ->
+    libglfw.3.4.dylib), intra-bottle @rpath sibling resolution via the
+    source dir, and the Homebrew-prefix detection above.
 """
 from __future__ import annotations
 

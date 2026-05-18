@@ -44,9 +44,17 @@ IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-  # Need a Release build of Zlib too. In Release mode it usually gets copied with something else, but in Debug we must copy manually.
-  # Might as well copy unconditionally here.
-  file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  # Release Python links to the Release zlib alias. In Release builds applocal
+  # finds it via the consumer chain, but Debug builds only ask for Debug zlib
+  # (zd.dll / zlib-ngd2.dll), so the Release `z.dll` never lands next to the
+  # Release `python312.dll` we just copied above. Copy it manually so
+  # `python312.dll`'s load-time `z.dll` import resolves and `Py_Initialize`
+  # doesn't fail silently inside MRTest.exe. Older vcpkg snapshots (e.g.
+  # 2024.10.21 used by msvc-2019) ship a standalone zlib port that doesn't
+  # produce this file and doesn't need it, so only copy if it actually exists.
+  if(EXISTS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll")
+    file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  endif()
 ENDIF()
 
 IF(WIN32)

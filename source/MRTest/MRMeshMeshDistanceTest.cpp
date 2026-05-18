@@ -44,6 +44,8 @@ TEST( MRMesh, findSignedDistanceTest )
     const float upDistLimitSq = 0.001f; // xf.b.z = 1.6f gives real distSq = 0.01
     dist = findSignedDistance( a, b, &xf, upDistLimitSq );
     EXPECT_TRUE( dist.status == MeshMeshCollisionStatus::NotColliding );
+    EXPECT_FALSE( dist.a );
+    EXPECT_FALSE( dist.b );
     EXPECT_NEAR( dist.signedDist, std::sqrt( upDistLimitSq ), 1e-6f );
 }
 

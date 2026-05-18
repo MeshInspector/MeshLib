@@ -25,30 +25,21 @@ project(MeshLib CXX)
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
-# Make each PT_LOAD segment occupy its own file block / memory page on Linux.
-# Without this, lld packs the program-header table tight against
-# `.note.gnu.build-id` and `.init` in the first PT_LOAD; when a downstream
-# packager (e.g. `patchelf` inside `linuxdeploy`) later extends the PHT to add
-# an entry (e.g. for a new `$ORIGIN` in RUNPATH), the new entry overwrites
-# `.init`, but `DT_INIT` is left pointing at the now-clobbered `_init`
-# address, so `_dl_init` jumps into garbage at module-load time. Observed as
-# SIGSEGV-on-dlopen of `libpybind11nonlimitedapi_meshlib_3.12.so` on x86_64
-# Clang 21 inside AppImages produced by `linuxdeploy`. The flag gives the PHT
-# headroom so patchelf can grow it without trampling executable code.
-#
-# `-z separate-loadable-segments` is an lld extension — `ld.bfd` warns and
-# ignores it. Clang's default linker on RHEL/Rocky is `ld.bfd` from
-# gcc-toolset, so we also force `-fuse-ld=lld`. Apply only on Clang builds
-# where lld is actually installed; some of our Linux images (e.g. the older
-# ubuntu22 Clang 14 image) don't ship it, so we probe first and skip if it
-# isn't available — those builds aren't AppImage-packaged anyway, so they
-# don't need this fix.
-# Applies to executables and shared libraries; static libraries are unaffected.
+# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
+# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
+# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
+# AppImage-packaged anyway).
 IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
   IF(MESHLIB_HAVE_LLD)
-    add_link_options("-fuse-ld=lld")
+    # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
+    # older CMakes (our minimum is 3.18).
+    IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
+      set(CMAKE_LINKER_TYPE LLD)
+    ELSE()
+      add_link_options("-fuse-ld=lld")
+    ENDIF()
     add_link_options("LINKER:-z,separate-loadable-segments")
   ENDIF()
 ENDIF()

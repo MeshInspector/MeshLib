@@ -28,7 +28,8 @@ enum class MeshMeshCollisionStatus
     AInside,
     BInside,
     Colliding,
-    Touching
+    Touching,
+    NotColliding ///< the meshes do not touch or collide one another, but inside/outside relation cannot be determined
 };
 
 struct MeshMeshSignedDistanceResult
@@ -54,7 +55,7 @@ MRMESH_API MeshMeshDistanceResult findDistance( const MeshPart & a, const MeshPa
 /**
  * \brief computes minimal distance between two meshes
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param upDistLimitSq upper limit on the positive distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid points
+ * \param upDistLimitSq upper limit on the squared distance in question, if the real distance is larger then the function exists returning +sqrt(upDistLimitSq) and no valid points
  * \note if one mesh is fully inside the other one - closest points are returned
  */
 MRMESH_API MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b,

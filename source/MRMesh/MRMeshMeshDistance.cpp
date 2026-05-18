@@ -213,8 +213,13 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
 MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b, const AffineXf3f* rigidB2A, float upDistLimitSq )
 {
     MR_TIMER;
-    // If meshes has no collision no need to find signed distance
     auto res = findDistance( a, b, rigidB2A, upDistLimitSq );
+    if ( !res.a || !res.b )
+    {   // findDistance returns the limit sentinel when nothing closer was found
+        assert( res.distSq == upDistLimitSq );
+        return { res.a, res.b, MeshMeshCollisionStatus::NotColliding, std::sqrt( res.distSq ) };
+    }
+    assert( res.distSq < upDistLimitSq );
     std::vector<FaceFace> collisions;
     auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
     if ( status == MeshMeshCollisionStatus::Touching )

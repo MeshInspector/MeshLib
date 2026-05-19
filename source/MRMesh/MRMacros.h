@@ -28,11 +28,9 @@
 #if __cpp_concepts && __has_include(<concepts>) && !(defined(__clang__) && __clang_major__ <= 14) && !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 12)
 #   define MR_HAS_REQUIRES 1
 #   define MR_REQUIRES_IF_SUPPORTED(...) requires(__VA_ARGS__)
-#   define MR_SAME_TYPE_TEMPLATE_PARAM(target_, name_) std::same_as<target_> name_ = target_
 #else
 #   define MR_HAS_REQUIRES 0
 #   define MR_REQUIRES_IF_SUPPORTED(...)
-#   define MR_SAME_TYPE_TEMPLATE_PARAM(target_, name_) typename name_ = target_
 #endif
 
 

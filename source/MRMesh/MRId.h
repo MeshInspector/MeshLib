@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRMacros.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
@@ -27,15 +28,12 @@ public:
     //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `UndirectedEdgeId x = EdgeId{};` compiles with this approach,
     //   but `UndirectedEdgeId x(EdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
     // The `= int` is there only to make the bindings emit this constructor, I don't think it affects anything else.
-    template <typename U = int
-    // The condition is there for the binding generator. Firstly, removing the second template argument produces better function names in C,
-    //   and secondly `--buggy-substitute-default-template-args` seems to duplicate this constructor when `enable_if_t` is present.
-    #if MR_HAS_REQUIRES
-    > requires std::is_integral_v<U>
-    #else
-    , std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
+    template <typename U = int, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
+    MR_BIND_IGNORE explicit constexpr Id( U i ) noexcept : id_( ValueType( i ) ) { }
+    #ifdef MR_PARSING_FOR_ANY_BINDINGS
+    // For the parser, pretend it's not templated. Instantiating the template above in the parser is difficult.
+    explicit constexpr Id( int i ) noexcept : id_( ValueType( i ) ) {}
     #endif
-    explicit constexpr Id( U i ) noexcept : id_( ValueType( i ) ) { }
 
     constexpr operator ValueType() const { return id_; }
     constexpr bool valid() const { return id_ >= 0; }

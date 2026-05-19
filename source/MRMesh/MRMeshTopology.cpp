@@ -1983,14 +1983,28 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             ++numValidVerts_;
     };
 
-    const FaceId firstNewFace = edgePerFace_.endId();
-    FaceId nextNewFace = firstNewFace;
+    auto * vacantFaces = vacant ? &vacant->faces : nullptr;
+    FaceId lastNewFace = vacant ? FaceId{} : edgePerFace_.endId() - 1;
     auto copyFace = [&]( FaceId fromF )
     {
-        auto nf = nextNewFace++;
+        if ( vacantFaces )
+        {
+            lastNewFace = vacantFaces->find_next( lastNewFace );
+            if ( lastNewFace )
+                vacantFaces->reset( lastNewFace );
+            else
+            {
+                vacantFaces = nullptr;
+                lastNewFace = edgePerFace_.endId();
+            }
+        }
+        else
+            ++lastNewFace;
         if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->pushBack( nf, fromF );
-        setAt( fmap, fromF, nf );
+            map.tgt2srcFaces ->pushBack( lastNewFace, fromF );
+        setAt( fmap, fromF, lastNewFace );
+        if ( updateValids_ )
+            ++numValidFaces_;
     };
 
     // fill all maps
@@ -2133,12 +2147,12 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate face records
-    if ( updateValids_ )
+    if ( edgePerFace_.size() < lastNewFace + 1 )
     {
-        validFaces_.autoResizeSet( firstNewFace, nextNewFace - firstNewFace, true );
-        numValidFaces_ += nextNewFace - firstNewFace;
+        if ( updateValids_ )
+            validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
+        edgePerFace_.resizeNoInit( lastNewFace + 1 );
     }
-    edgePerFace_.resizeNoInit( nextNewFace );
     BitSetParallelFor( fromFaces, [&]( FaceId f )
     {
         for ( auto fromE : leftRing( from, f ) )

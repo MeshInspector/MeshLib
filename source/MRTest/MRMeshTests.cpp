@@ -166,6 +166,18 @@ TEST(MRMesh, AddPartByMaskOnVacantElements)
     EXPECT_EQ( vacant.faces, fs );
     EXPECT_EQ( vacant.edges.count(), cube.topology.computeNotLoneUndirectedEdges() );
     EXPECT_EQ( vacant.verts.count(), cube.topology.numValidVerts() );
+
+    Mesh mesh3 = mesh2;
+    EXPECT_EQ( mesh3, mesh2 );
+    mesh3.addMeshPart( { mesh1, &fs } );
+    EXPECT_NE( mesh3, mesh1 );
+    EXPECT_EQ( mesh3.topology.numValidFaces(), mesh1.topology.numValidFaces() );
+
+    mesh2.addMeshPart( { mesh1, &fs }, {}, &vacant );
+    EXPECT_EQ( mesh2, mesh1 );
+    EXPECT_EQ( vacant.edges.count(), 0 );
+    EXPECT_EQ( vacant.verts.count(), 0 );
+    EXPECT_EQ( vacant.faces.count(), 0 );
 }
 
 TEST(MRMesh, AddPartByMaskAndStitch) 

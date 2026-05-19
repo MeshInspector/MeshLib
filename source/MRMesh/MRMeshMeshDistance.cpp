@@ -250,7 +250,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     for ( VertId id : zoneAndDistancesAB.vertBS )
     {
         const auto& [proj, dist] = zoneAndDistancesAB.projectons[id];
-        if ( dist < signedRes.signedDist )
+        if ( proj.valid() && dist < signedRes.signedDist )
         {
             signedRes.a = { getTriByVert( a.mesh.topology,id ), a.mesh.points[id] };
             signedRes.b = proj;
@@ -261,7 +261,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     for ( VertId id : zoneAndDistancesBA.vertBS )
     {
         const auto& [proj, dist] = zoneAndDistancesBA.projectons[id];
-        if ( dist < signedRes.signedDist )
+        if ( proj.valid() && dist < signedRes.signedDist )
         {
             signedRes.a = proj;
             signedRes.b = { getTriByVert( b.mesh.topology,id ), b.mesh.points[id] };

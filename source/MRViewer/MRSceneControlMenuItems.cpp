@@ -11,6 +11,7 @@
 #include "MRProgressBar.h"
 #include "ImGuiHelpers.h"
 #include "MRLambdaRibbonItem.h"
+#include "MRI18n.h"
 #include "MRPch/MRSpdlog.h"
 #include <array>
 
@@ -69,7 +70,7 @@ std::string UndoMenuItem::getDynamicTooltip() const
 {
     std::string res;
     if ( const auto& history = Viewer::instanceRef().getGlobalHistoryStore() )
-        res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Undo ) );
+        res = Locale::translate( trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Undo ) ), Locale::genericDomain );
     return res;
 }
 
@@ -93,13 +94,12 @@ void UndoMenuItem::updateUndoListCache_( const HistoryStore& store, HistoryStore
     dropList_.resize( lastUndos.size() );
     for ( int i = 0; i < lastUndos.size(); ++i )
     {
-        dropList_[i] = std::make_shared<LambdaRibbonItem>( lastUndos[i] + "##" + std::to_string( i ),
-            [history = Viewer::instanceRef().getGlobalHistoryStore(), i] ()
+        const auto itemName = fmt::format( "{}##{}", Locale::translate( lastUndos[i], Locale::genericDomain ), i );
+        dropList_[i] = std::make_shared<LambdaRibbonItem>( itemName, [i]
         {
-            if ( !history )
-                return;
-            for ( int j = 0; j <= i; ++j )
-                history->undo();
+            if ( auto* history = HistoryStore::getViewerInstance() )
+                for ( int j = 0; j <= i; ++j )
+                    history->undo();
         } );
     }
 }
@@ -141,7 +141,7 @@ std::string RedoMenuItem::getDynamicTooltip() const
 {
     std::string res;
     if ( auto history = HistoryStore::getViewerInstance() )
-        res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Redo ) );
+        res = Locale::translate( trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Redo ) ), Locale::genericDomain );
     return res;
 }
 
@@ -165,13 +165,12 @@ void RedoMenuItem::updateRedoListCache_( const HistoryStore& store, HistoryStore
     dropList_.resize( lastRedos.size() );
     for ( int i = 0; i < lastRedos.size(); ++i )
     {
-        dropList_[i] = std::make_shared<LambdaRibbonItem>( lastRedos[i] + "##" + std::to_string( i ),
-            [i] ()
+        const auto itemName = fmt::format( "{}##{}", Locale::translate( lastRedos[i], Locale::genericDomain ), i );
+        dropList_[i] = std::make_shared<LambdaRibbonItem>( itemName, [i]
         {
-            if ( !HistoryStore::getViewerInstance() )
-                return;
-            for ( int j = 0; j <= i; ++j )
-                HistoryStore::getViewerInstance()->redo();
+            if ( auto* history = HistoryStore::getViewerInstance() )
+                for ( int j = 0; j <= i; ++j )
+                    history->redo();
         } );
     }
 }

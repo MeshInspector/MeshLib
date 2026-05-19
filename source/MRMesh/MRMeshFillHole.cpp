@@ -8,6 +8,7 @@
 #include "MRMeshDelone.h"
 #include "MRMarkedContour.h"
 #include "MRParallelFor.h"
+#include "MRFillContours2D.h"
 #include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
 #include <queue>
@@ -792,6 +793,18 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 
 HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
 {
+    size_t holeSize = 0;
+    for ( auto he : leftRing( mesh.topology, e ) )
+        ++holeSize;
+
+    if ( holeSize > 200 ) // 200 here us pure guessing, require testing to find actual effective size
+    {
+        // only use this for large holes
+        auto exRes = fillContours2DPlan( mesh, e );
+        if ( exRes.has_value() )
+            return *exRes;
+    }
+
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );

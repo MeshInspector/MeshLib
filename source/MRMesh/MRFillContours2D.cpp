@@ -186,11 +186,11 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     MR_TIMER;
 
     auto projInput = projectHoles( mesh, holeRepresentativeEdges );
-    if ( projInput.has_value() )
+    if ( !projInput.has_value() )
         return unexpected( std::move( projInput.error() ) );
 
     auto fillRes = fillProjected( mesh.topology, *projInput );
-    if ( fillRes.has_value() )
+    if ( !fillRes.has_value() )
         return unexpected( std::move( fillRes.error() ) );
 
     // move patch surface border points to original position (according original mesh)
@@ -214,38 +214,53 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
 Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
 {
     auto projInput = projectHoles( mesh, { holeEdgeId } );
-    if ( projInput.has_value() )
+    if ( !projInput.has_value() )
         return unexpected( std::move( projInput.error() ) );
 
     auto fillRes = fillProjected( mesh.topology, *projInput );
-    if ( fillRes.has_value() )
+    if ( !fillRes.has_value() )
         return unexpected( std::move( fillRes.error() ) );
 
     assert( fillRes->paths.size() == 1 ); // should be validated in fillProjected
 
     const auto& pTp = fillRes->mesh.topology;
     const auto& ip = projInput->paths[0];
-    const auto& np = fillRes->paths[0];
+    auto& np = fillRes->paths[0];
     HoleFillPlan res;
     res.numTris = pTp.numValidFaces();
     if ( res.numTris == 1 )
         return res;
     auto size = int( np.size() );
-    res.items.reserve( pTp.undirectedEdgeSize() - np.size() );
-    EdgeId e0 = pTp.next( np.front() );
-    auto e = e0;
-    while ( e )
-    {
-        auto org = int( pTp.org( e ) );
-        res.items.push_back( { ip[org],ip[pTp.dest( e )] } );
-        bool leftBorder = pTp.dest( pTp.next( e ) ) == pTp.org( np[( org + size - 1 ) % size] );
-        if ( pTp.dest( pTp.next( e ) ) == pTp.org( np[( org + size - 1 ) % size] ) )
-        {
+    assert( size > 3 );
+    res.items.reserve( size - 3 );
 
+    for ( ;;)
+    {
+        for ( int i0 = 0; i0 < np.size(); ++i0 )
+        {
+            auto e0 = np[i0];
+            if ( !e0 )
+                continue; // skip unused/encoded 
+            auto i1 = int( pTp.dest( np[i0] ) );
+            auto e1 = np[i1];
+            auto ne = pTp.next( e0 );
+            auto dest = pTp.dest( ne );
+            if ( dest != pTp.dest( e1 ) )
+                continue;
+            FillHoleItem fhi;
+            int i01 = ( i0 + 1 ) % size;
+            fhi.edgeCode1 = i1 == i01 ? ip[i0] : int( np[i01] );
+            i1 = dest;
+            e1 = np[i1];
+            int i11 = ( i1 + 1 ) % size;
+            fhi.edgeCode2 = ( pTp.dest( e1 ) == i11 ) ? ip[i1] : int( np[i11] );
+            res.items.push_back( std::move( fhi ) );
+            if ( res.items.size() == size - 3 )
+                return res;
+            np[i0] = ne;
+            np[i01] = EdgeId( -int( res.items.size() ) ); // encode newly created plan edge in free slot
         }
     }
-
-
 }
 
 Expected<void> fillPlanarHole( ObjectMeshData& data, std::vector<EdgeLoop>& holeContours )

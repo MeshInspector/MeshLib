@@ -151,6 +151,23 @@ TEST(MRMesh, AddPartByMask)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), 21_e ); // 11*2 = 22 half-edges in total
 }
 
+TEST(MRMesh, AddPartByMaskOnVacantElements)
+{
+    auto cube = makeCube();
+
+    Mesh mesh1;
+    mesh1.addMesh( cube );
+    FaceBitSet fs = mesh1.topology.getValidFaces();
+    mesh1.addMesh( cube );
+
+    Mesh mesh2 = mesh1;
+    EXPECT_EQ( mesh1, mesh2 );
+    auto vacant = mesh2.deleteFaces( fs );
+    EXPECT_EQ( vacant.faces, fs );
+    EXPECT_EQ( vacant.edges.count(), cube.topology.computeNotLoneUndirectedEdges() );
+    EXPECT_EQ( vacant.verts.count(), cube.topology.numValidVerts() );
+}
+
 TEST(MRMesh, AddPartByMaskAndStitch) 
 {
     Triangulation t{ { 0_v, 1_v, 2_v } };

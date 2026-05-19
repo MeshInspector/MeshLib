@@ -496,12 +496,11 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
     return map;
 }
 
-void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+VacantElements Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
-    if ( fs.none() )
-        return;
-    topology.deleteFaces( fs, keepEdges );
-    invalidateCaches(); // some points can be deleted as well
+    if ( fs.any() )
+        invalidateCaches(); // some points can be deleted as well
+    return topology.deleteFaces( fs, keepEdges );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

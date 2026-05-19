@@ -370,24 +370,14 @@ PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 # Also guess the number of CPU cores.
 ifneq ($(IS_MACOS),)
 ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
-# Physical cores only -- SMT siblings hurt compile parallelism more than they
-# help (two threads on one physical core contend for execution resources).
+# Physical cores only -- on macOS x86 the VM disables SMT (so logical == physical
+# already), and Apple Silicon has no SMT, so this just matches what's available.
 ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
 # `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
 ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
-ifneq ($(IS_WINDOWS),)
-# `nproc` (and `NUMBER_OF_PROCESSORS`) report logical CPUs on Windows. The
-# GitHub-hosted Windows runners (and effectively every Windows host we build on)
-# are x86 with SMT-2, so halving the logical count approximates the physical
-# core count without depending on `wmic`/`powershell` from the make shell.
-ASSUME_NPROC := $(shell bash -c 'echo $$(( $(shell nproc) / 2 ))')
-else
-# Linux: count unique (Core,Socket) pairs reported by lscpu == physical cores.
-# The literal comma in `-p=Core,Socket` has to go through $(comma), otherwise
-# $(call) splits the argument on it and only `lscpu -p=Core` reaches the shell.
-ASSUME_NPROC := $(call safe_shell,lscpu -p=Core$(comma)Socket | grep -v '^\#' | sort -u | wc -l)
-endif
+# Diagnostic only on Linux/Windows; JOBS is pinned to 4 below.
+ASSUME_NPROC := $(call safe_shell,nproc)
 endif
 
 # We clamp the nproc to this value, because when you have more cores, our heuristics fall apart (and you might run out of ram).
@@ -400,13 +390,21 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-# Fixed defaults on every platform: split the bindings into 64 translation units
-# (small enough to keep per-fragment RAM modest) and use as many parallel jobs as
-# the machine reports cores (capped by MAX_NPROC above).
+# Split the bindings into 64 translation units (small enough to keep per-fragment
+# RAM modest) and pick JOBS per platform:
+#   - macOS: scale to physical cores (CAPPED_NPROC).
+#   - Linux/Windows: pin to 4. On the standard 4-vCPU GitHub-hosted runners
+#     (2-physical+HT x86 or 4-physical no-SMT ARM) this saturates the box; on
+#     x86 with HT, slight over-subscription (4 jobs on 2 physical) keeps the
+#     pipeline full when individual compile jobs stall on memory.
 # Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
 override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
 NUM_FRAGMENTS := 64
+ifneq ($(IS_MACOS),)
 JOBS := $(CAPPED_NPROC)
+else
+JOBS := 4
+endif
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
 $(info Build machine: $(nproc_string), $(ram_string); defaulting to NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))

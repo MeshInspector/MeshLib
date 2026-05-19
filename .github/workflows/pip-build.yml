@@ -496,18 +496,18 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Install thirdparty libs
-        run: |
-          ./scripts/build_thirdparty.sh
-          ./scripts/mrbind/install_deps_macos.sh
+        id: thirdparty
+        uses: ./.github/actions/install-macos-thirdparty
+        with:
+          # `cache-instance` and `cache-compiler` must match the values used by
+          # build-test-macos.yml on the same runner image (`AppleClang` here matches
+          # build-test-macos.yml's x64-Release and arm64-Debug matrix entries), so
+          # the thirdparty ./lib + ./include cache is shared across the two workflows.
+          cache-instance: ${{ matrix.instance }}
+          cache-compiler: AppleClang
 
-      # See comment in build-test-macos.yml -- the brew-prefix hash discriminates
-      # runners with the same instance label but different homebrew install paths.
-      - name: Compute brew-prefix hash for MRBind cache key
-        id: brew-hash
-        shell: bash
-        env:
-          BREW_PREFIX: ${{ matrix.brewpath }}
-        run: echo "hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Install MRBind deps
+        run: ./scripts/mrbind/install_deps_macos.sh
 
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
@@ -516,7 +516,7 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.brew-hash.outputs.hash }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -691,13 +691,25 @@ jobs:
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
+      # `runner-tier` exercises both the GitHub-hosted images that built the
+      # wheels and our self-hosted fleet (different macOS versions / brew
+      # prefixes), so we catch wheels that only run on a fresh hosted image.
       matrix:
         platform: ["arm64", "x86"]
+        runner-tier: ["github", "self-hosted"]
         include:
           - platform: "x86"
+            runner-tier: "github"
             instance: macos-15-intel
+          - platform: "x86"
+            runner-tier: "self-hosted"
+            instance: macos-x64-build
           - platform: "arm64"
+            runner-tier: "github"
             instance: macos-14
+          - platform: "arm64"
+            runner-tier: "self-hosted"
+            instance: macos-arm-build-12
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -712,25 +724,27 @@ jobs:
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
-      # shared `test_wheel_macos.sh` script.
+      # shared `test_wheel_macos.sh` script. `runner-tier` is forwarded so
+      # the script can scope the macos-15-intel 3.11 brew-skip to the
+      # GitHub-hosted runner only (self-hosted x86 does need the install).
       # python 3.8 disabled on macOS since 2024-10-14
       - name: Test wheel against Python 3.9
-        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.10
-        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.11
-        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.12
-        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.13
-        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.14
-        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
   upload-to-release:
     if: ${{ github.event_name == 'release' || inputs.publish }}

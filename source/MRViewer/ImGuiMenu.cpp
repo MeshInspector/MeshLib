@@ -942,7 +942,7 @@ void ImGuiMenu::draw_helpers()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
         if ( UI::button( _tr( "Ok" ), Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
-            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object from modal dialog", obj ) );
+            AppendHistory( std::make_shared<ChangeNameAction>( _t( "Rename object from modal dialog" ), obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
@@ -1535,7 +1535,7 @@ float ImGuiMenu::drawSelectionInformation_()
         }
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object from information", pObj ) );
+            AppendHistory( std::make_shared<ChangeNameAction>( _t( "Rename object from information" ), pObj ) );
             pObj->setName( renameBuffer_ );
             lastRenameObj_.reset();
         }
@@ -1558,7 +1558,7 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
             {
                 pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
-                AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
+                AppendHistory( std::make_shared<ChangeLabelAction>( _t( "Change label" ), pObjLabel ) );
                 pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
                 oldLabelParams_.lastLabel = oldLabelParams_.labelBuffer;
             }

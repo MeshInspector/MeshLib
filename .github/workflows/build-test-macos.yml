@@ -103,64 +103,14 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
-      - name: Setup Homebrew prefix and resolve compiler paths
-        id: setup
-        run: |
-          BREW_PREFIX=$(brew --prefix)
-          echo "Brew prefix: $BREW_PREFIX"
-          echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
-          echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
-
-          # Substitute BREW_PREFIX in templates and set actual compiler paths
-          CXX_COMPILER=$(echo "${{ matrix.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
-          C_COMPILER=$(echo "${{ matrix.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
-
-          echo "CXX compiler: $CXX_COMPILER"
-          echo "C compiler: $C_COMPILER"
-
-          echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
-          echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
-
-      # Cache key inputs:
-      # - brew-hash: hash of the homebrew prefix, used by Build MRBind below to
-      #   discriminate self-hosted ARM fleet members that share the
-      #   `[self-hosted, macos, arm64, build]` label set but have homebrew at
-      #   different paths (e.g. `/Users/runner/.homebrew` vs `/opt/homebrew`);
-      #   the prefix is baked into mrbind's rpath.
-      # - thirdparty-hash: unified hash of everything that influences the
-      #   thirdparty ./lib + ./include outputs -- brew prefix (baked into the
-      #   rpaths of the produced .dylibs), submodule SHAs pinned in HEAD (the
-      #   source we compile), and the build-relevant scripts + CMakeLists +
-      #   brew-requirements list. `git ls-tree` reads gitlink entries from the
-      #   index, so it works whether or not the submodules are checked out.
-      - name: Compute cache key inputs
-        id: cache-keys
-        shell: bash
-        env:
-          BREW_PREFIX: ${{ steps.setup.outputs.brew-prefix }}
-        run: |
-          echo "brew-hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
-          echo "thirdparty-hash=$( {
-            printf '%s\n' "$BREW_PREFIX"
-            git ls-tree HEAD \
-              thirdparty/googletest \
-              thirdparty/OpenCTM-git \
-              thirdparty/parallel-hashmap \
-              thirdparty/libE57Format \
-              thirdparty/glad \
-              thirdparty/mrbind-pybind11 \
-              thirdparty/tinygltf \
-              thirdparty/laz-perf \
-              thirdparty/clip \
-              thirdparty/fastmcpp
-            shasum -a 256 \
-              scripts/build_thirdparty.sh \
-              scripts/install_brew_requirements.sh \
-              scripts/thirdparty/clip.sh \
-              scripts/thirdparty/fastmcpp.sh \
-              thirdparty/CMakeLists.txt \
-              requirements/macos.txt
-          } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Install thirdparty libs
+        id: thirdparty
+        uses: ./.github/actions/install-macos-thirdparty
+        with:
+          cache-instance: ${{ matrix.instance }}
+          cache-compiler: ${{ matrix.compiler }}
+          cxx-compiler-template: ${{ matrix.cxx-compiler-template }}
+          c-compiler-template: ${{ matrix.c-compiler-template }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -170,33 +120,8 @@ jobs:
         with:
           target_os: macos
           target_arch: ${{ matrix.arch }}
-          cxx_compiler: ${{ steps.setup.outputs.cxx-compiler }}
+          cxx_compiler: ${{ steps.thirdparty.outputs.cxx-compiler }}
           build_config: ${{ matrix.config }}
-
-      # Cache only the final outputs (./lib + ./include). Intermediates like
-      # ./thirdparty_build (which holds *.o, CMake metadata, etc.) are NOT
-      # cached -- they get rebuilt on a miss and discarded on a hit.
-      # Bump the `v1-` prefix to manually invalidate.
-      - name: Cache thirdparty build outputs
-        id: thirdparty-cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            lib
-            include
-          key: v1-thirdparty-${{ matrix.instance }}-${{ matrix.compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
-
-      # Always run: cached thirdparty .dylibs link against brew libs at runtime,
-      # so brew packages must be installed on hosted runners even on cache hit.
-      - name: Install brew requirements
-        run: ./scripts/install_brew_requirements.sh
-
-      - name: Build thirdparty libs
-        if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
-        run: ./scripts/build_thirdparty.sh
-        env:
-          CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
-          CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
 
       - name: Install MRBind deps
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
@@ -211,7 +136,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.cache-keys.outputs.brew-hash }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -228,8 +153,8 @@ jobs:
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
         env:
-          PATH: ${{ steps.setup.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.setup.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
-          CXX: ${{ steps.setup.outputs.cxx-compiler }}
+          PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           make --version
           make -f scripts/mrbind/generate.mk -B --trace TARGET=c
@@ -239,7 +164,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
+          CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_CMAKE_OPTIONS: >
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
@@ -254,8 +179,8 @@ jobs:
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
-          PATH: ${{ steps.setup.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.setup.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
-          CXX: ${{ steps.setup.outputs.cxx-compiler }}
+          PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           make --version
           make -f scripts/mrbind/generate.mk \
@@ -324,7 +249,7 @@ jobs:
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}
         env:
-          CXX: ${{ steps.setup.outputs.cxx-compiler }}
+          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -337,7 +262,7 @@ jobs:
       - name: Build C examples
         if: ${{ matrix.config == 'Release' }}
         env:
-          CC: ${{ steps.setup.outputs.c-compiler }}
+          CC: ${{ steps.thirdparty.outputs.c-compiler }}
         run: |
           cmake \
             -S examples/c-examples \

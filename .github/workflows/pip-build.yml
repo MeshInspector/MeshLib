@@ -653,30 +653,36 @@ jobs:
             3.13
             3.14
 
-      - name: Test wheel against all Python versions
+      # One step per Python ABI so the GitHub Actions UI shows per-version
+      # status / timing / logs. Each step is a thin wrapper around the
+      # shared `test_wheel_windows.ps1` script.
+      - name: Test wheel against Python 3.8
         shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $versions = '3.8','3.9','3.10','3.11','3.12','3.13','3.14'
-          $wheel_file = Get-ChildItem -Filter meshlib*win*.whl
-          foreach ($v in $versions) {
-            Write-Host "===== Python $v ====="
-            py -$v -m pip install --upgrade pip
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            py -$v -m pip uninstall -y meshlib
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            py -$v -m pip install --upgrade -r ./requirements/python.txt
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            py -$v -m pip install pytest
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            py -$v -m pip install $wheel_file
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            Push-Location test_python
-            py -$v -m pytest -s -v
-            $rc = $LASTEXITCODE
-            Pop-Location
-            if ($rc -ne 0) { exit $rc }
-          }
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.8
+
+      - name: Test wheel against Python 3.9
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.9
+
+      - name: Test wheel against Python 3.10
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.10
+
+      - name: Test wheel against Python 3.11
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.11
+
+      - name: Test wheel against Python 3.12
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.12
+
+      - name: Test wheel against Python 3.13
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.13
+
+      - name: Test wheel against Python 3.14
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.14
 
   macos-pip-test:
     needs: [macos-pip-build]
@@ -704,31 +710,27 @@ jobs:
           name: Macos-${{matrix.platform}}
           merge-multiple: true
 
-      - name: Test wheel against all Python versions
-        # python 3.8 disabled on macOS since 2024-10-14
-        run: |
-          # Remove from PATH anything with the word `anaconda` in it.
-          # Even if Anaconda's Python works, it's probably a good idea to avoid it for consistency (because without this line only one specific Python version gets taken from Anaconda.)
-          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
-          WHEEL=$(ls ./meshlib-*${{matrix.platform}}*.whl | head -n 1)
-          for PY_VER in 3.9 3.10 3.11 3.12 3.13 3.14 ; do
-            echo "===== Python ${PY_VER} ====="
-            # python 3.11 is pre-installed on macos-15-intel; brew install fails there
-            if [ "${{matrix.platform}}" != "x86" ] || [ "${PY_VER}" != "3.11" ]; then
-              brew install --overwrite --quiet python@${PY_VER}
-            fi
-            PY_CMD="python${PY_VER}"
-            VENV=".venv-${PY_VER}"
-            rm -rf "${VENV}"
-            ${PY_CMD} -m venv "${VENV}"
-            . "${VENV}/bin/activate"
-            python -m pip install --upgrade pip
-            python -m pip install --upgrade -r ./requirements/python.txt
-            python -m pip install pytest
-            python -m pip install "${WHEEL}"
-            ( cd test_python && python -m pytest -s -v )
-            deactivate
-          done
+      # One step per Python ABI so the GitHub Actions UI shows per-version
+      # status / timing / logs. Each step is a thin wrapper around the
+      # shared `test_wheel_macos.sh` script.
+      # python 3.8 disabled on macOS since 2024-10-14
+      - name: Test wheel against Python 3.9
+        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.10
+        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.11
+        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.12
+        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.13
+        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.14
+        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }}
 
   upload-to-release:
     if: ${{ github.event_name == 'release' || inputs.publish }}

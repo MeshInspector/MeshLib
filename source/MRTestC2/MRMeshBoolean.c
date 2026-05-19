@@ -139,7 +139,7 @@ void testBooleanMultipleEdgePropogationSort( void )
         const MR_FaceBitSet* meshASupFaces = MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( meshASup ) );
 
         MR_MeshPart *mp = MR_MeshPart_Construct( meshASup, meshASupFaces );
-        MR_Mesh_addMeshPart_5( meshA, mp, &(bool){true}, borderVec, borderVec, NULL );
+        MR_Mesh_addMeshPart_6( meshA, mp, &(bool){true}, borderVec, borderVec, NULL, NULL );
         MR_MeshPart_Destroy( mp );
 
         MR_std_vector_std_vector_MR_EdgeId_Destroy( borderVec );

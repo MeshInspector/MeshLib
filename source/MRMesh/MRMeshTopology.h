@@ -14,6 +14,13 @@
 namespace MR
 {
 
+struct VacantElements
+{
+    UndirectedEdgeBitSet edges;
+    VertBitSet verts;
+    FaceBitSet faces;
+};
+
 /// Mesh Topology
 /// \ingroup MeshGroup
 class MeshTopology
@@ -262,13 +269,6 @@ public:
     /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
-    struct VacantElements
-    {
-        UndirectedEdgeBitSet edges;
-        VertBitSet verts;
-        FaceBitSet faces;
-    };
-
     /// deletes from this topology:
     /// 1) all the gives faces,
     /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
@@ -472,24 +472,27 @@ public:
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, ///< returns mappings: from.id -> this.id
         bool rearrangeTriangles = false );
 
-    /// the same but copies only portion of (from) specified by fromFaces,
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {} );
+    /// appends the portion of (from) specified by fromFaces in addition to the current topology: creates new edges, faces, verts;
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {}, VacantElements * vacant = {} );
+
     /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
-    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} )
-        { addPartByMask( from, &fromFaces, map ); }
+    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {}, VacantElements * vacant = {} )
+        { addPartByMask( from, &fromFaces, map, vacant ); }
 
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} );
+        const PartMapping & map = {}, VacantElements * vacant = {} );
 
     /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
     MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map ); }
+        const PartMapping & map = {}, VacantElements * vacant = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map, vacant ); }
 
     /// for each triangle selects edgeWithLeft with minimal origin vertex
     MRMESH_API void rotateTriangles();

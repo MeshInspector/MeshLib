@@ -473,10 +473,10 @@ public:
         bool rearrangeTriangles = false );
 
     /// the same but copies only portion of (from) specified by fromFaces,
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {} );
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {}, VacantElements * vacant = {} );
     /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
-    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} )
-        { addPartByMask( from, &fromFaces, map ); }
+    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {}, VacantElements * vacant = {} )
+        { addPartByMask( from, &fromFaces, map, vacant ); }
 
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding
@@ -484,7 +484,7 @@ public:
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} );
+        const PartMapping & map = {}, VacantElements * vacant = {} );
 
     /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
     MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,

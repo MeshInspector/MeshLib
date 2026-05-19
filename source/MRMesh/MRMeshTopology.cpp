@@ -1852,15 +1852,17 @@ void MeshTopology::computeAllFromEdges_()
     }
 }
 
-void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map )
+void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map, VacantElements * vacant )
 {
-    addPartByMask( from, fromFaces, false, {}, {}, map );
+    addPartByMask( from, fromFaces, false, {}, {}, map, vacant );
 }
 
 void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces0, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
-    const PartMapping & map )
+    const PartMapping & map,
+    VacantElements * vacant
+    )
 {
     MR_TIMER;
     const auto szContours = thisContours.size();
@@ -1933,15 +1935,27 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
-    const EdgeId firstNewEdge = edges_.endId();
-    EdgeId nextNewEdge = firstNewEdge;
+    auto * vacantEdges = vacant ? &vacant->edges : nullptr;
+    EdgeId lastNewEdge = vacant ? EdgeId{} : edges_.endId() - 2;
     auto copyEdge = [&]( UndirectedEdgeId fromUe )
     {
         assert( !getAt( emap, fromUe ) );
-        setAt( emap, fromUe, nextNewEdge );
+        if ( vacantEdges )
+        {
+            lastNewEdge = vacantEdges->find_next( lastNewEdge );
+            if ( lastNewEdge )
+                vacantEdges->reset( lastNewEdge );
+            else
+            {
+                vacantEdges = nullptr;
+                lastNewEdge = edges_.endId();
+            }
+        }
+        else
+            lastNewEdge += 2;
+        setAt( emap, fromUe, lastNewEdge );
         if ( map.tgt2srcEdges )
-            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ nextNewEdge }, EdgeId{ fromUe } );
-        nextNewEdge += 2;
+            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
     };
 
     const VertId firstNewVert = edgePerVertex_.endId();
@@ -2072,7 +2086,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     // translate edge records
-    edges_.resizeNoInit( nextNewEdge );
+    if ( edges_.size() < lastNewEdge + 2 )
+        edges_.resizeNoInit( lastNewEdge + 2 );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
         auto e0 = from.edges_[EdgeId{ fromUe }];

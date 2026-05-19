@@ -43,6 +43,10 @@ on:
         default: false
         required: false
         type: boolean
+      disable_windows:
+        default: false
+        required: false
+        type: boolean
 
 env:
   VCPKG-VERSION: '2026.04.27'
@@ -350,6 +354,7 @@ jobs:
 
   windows-pip-build:
     needs: setup
+    if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
     runs-on:  [windows-2022]
     strategy:
@@ -621,6 +626,7 @@ jobs:
 
   windows-pip-test:
     needs: [windows-pip-build]
+    if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
     runs-on: windows-latest
     steps:

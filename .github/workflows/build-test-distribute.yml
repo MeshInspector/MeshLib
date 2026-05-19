@@ -321,6 +321,7 @@ jobs:
       disable_ubuntu_x64:   ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
       disable_ubuntu_arm64: ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
+      disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
 
   collect-stats:
     timeout-minutes: 5

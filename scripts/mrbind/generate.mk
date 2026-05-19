@@ -390,17 +390,15 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-# Split the bindings into 64 translation units (small enough to keep per-fragment
-# RAM modest) and pick JOBS per platform:
-#   - macOS: scale to physical cores (CAPPED_NPROC).
-#   - Linux/Windows: pin to 4. On the standard 4-vCPU GitHub-hosted runners
-#     (2-physical+HT x86 or 4-physical no-SMT ARM) this saturates the box; on
-#     x86 with HT, slight over-subscription (4 jobs on 2 physical) keeps the
-#     pipeline full when individual compile jobs stall on memory.
+# Split the bindings into 32 translation units and pin JOBS = min(4, cores).
+# 4 matches the 4-vCPU shape of GitHub-hosted Linux/Windows runners (and is
+# enough to saturate the 4-physical macOS Intel and 10-physical self-hosted
+# ARM boxes for this workload); on the 3-core macOS ARM GitHub runners
+# (macos-14/macos-15) it drops to 3 so we don't over-subscribe a no-SMT box.
 # Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
 override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
-NUM_FRAGMENTS := 64
-ifneq ($(IS_MACOS),)
+NUM_FRAGMENTS := 32
+ifeq ($(call safe_shell,echo $$(( $(CAPPED_NPROC) < 4 ))),1)
 JOBS := $(CAPPED_NPROC)
 else
 JOBS := 4

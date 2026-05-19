@@ -691,13 +691,25 @@ jobs:
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
+      # `runner-tier` exercises both the GitHub-hosted images that built the
+      # wheels and our self-hosted fleet (different macOS versions / brew
+      # prefixes), so we catch wheels that only run on a fresh hosted image.
       matrix:
         platform: ["arm64", "x86"]
+        runner-tier: ["github", "self-hosted"]
         include:
           - platform: "x86"
+            runner-tier: "github"
             instance: macos-15-intel
+          - platform: "x86"
+            runner-tier: "self-hosted"
+            instance: macos-x64-build
           - platform: "arm64"
+            runner-tier: "github"
             instance: macos-14
+          - platform: "arm64"
+            runner-tier: "self-hosted"
+            instance: macos-arm-build-12
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -712,25 +724,27 @@ jobs:
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
-      # shared `test_wheel_macos.sh` script.
+      # shared `test_wheel_macos.sh` script. `runner-tier` is forwarded so
+      # the script can scope the macos-15-intel 3.11 brew-skip to the
+      # GitHub-hosted runner only (self-hosted x86 does need the install).
       # python 3.8 disabled on macOS since 2024-10-14
       - name: Test wheel against Python 3.9
-        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.10
-        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.11
-        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.12
-        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.13
-        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
       - name: Test wheel against Python 3.14
-        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }}
+        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
   upload-to-release:
     if: ${{ github.event_name == 'release' || inputs.publish }}

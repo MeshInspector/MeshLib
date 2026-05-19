@@ -18,7 +18,7 @@ namespace MR
 
 /// affine transformation: y = A*x + b, where A in VxV, and b in V
 /// \ingroup MathGroup
-template <typename V> MR_REQUIRES_IF_SUPPORTED( detail::AffineXf3f::ValidTemplateArg<V> )
+template <typename V> MR_REQUIRES_IF_SUPPORTED( detail::AffineXf3f::IsValidTemplateArg<V> )
 struct AffineXf
 {
     using T = typename V::ValueType;

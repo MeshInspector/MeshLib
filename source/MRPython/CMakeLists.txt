@@ -49,11 +49,13 @@ IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
   # (zd.dll / zlib-ngd2.dll), so the Release `z.dll` never lands next to the
   # Release `python312.dll` we just copied above. Copy it manually so
   # `python312.dll`'s load-time `z.dll` import resolves and `Py_Initialize`
-  # doesn't fail silently inside MRTest.exe. Older vcpkg snapshots (e.g.
-  # 2024.10.21 used by msvc-2019) ship a standalone zlib port that doesn't
-  # produce this file and doesn't need it, so only copy if it actually exists.
-  if(EXISTS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll")
+  # doesn't fail silently inside MRTest.exe. 
+  if (EXISTS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll")
     file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  endif()
+  # for older vcpkg 2024.10.21 used by msvc-2019, which ship a standalone zlib port
+  if (EXISTS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll")
+    file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   endif()
 ENDIF()
 

@@ -24,6 +24,15 @@ cp ./LICENSE ./macos/Resources
 mkdir "${FRAMEWORK_DIR}/requirements/"
 cp ./requirements/macos.txt "${FRAMEWORK_DIR}/requirements/"
 
+# Bundle Homebrew dylib deps into the framework so the .pkg is robust against
+# bottle SONAME drift (e.g. jsoncpp dropping libjsoncpp.27.dylib). System libs
+# and libpython are left as external references on purpose.
+# delocate is installed here (rather than in the workflow's "Setup python
+# requirements" step) so this script is self-contained for local
+# .pkg builds. Pinned to the same version the NuGet-patch path uses.
+python3 -m pip install --quiet delocate==0.10.7
+python3 ./scripts/macos_bundle_dylibs.py "${FRAMEWORK_DIR}"
+
 # FIXME: this breaks CMake config
 #pushd "${FRAMEWORK_BASE_DIR}"
 #  ln -s "Versions/${VERSION}/Resources" Resources

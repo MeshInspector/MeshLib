@@ -395,10 +395,12 @@ struct [[nodiscard]] Mesh
         FaceMap * outFmap, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// appends whole or part of another mesh as separate connected component(s) to this
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant = {} );
 
     /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
@@ -423,6 +425,7 @@ struct [[nodiscard]] Mesh
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
     /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
+    /// return bit sets of all vacant elements in this mesh after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;

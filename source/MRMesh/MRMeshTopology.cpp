@@ -1944,7 +1944,10 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         {
             lastNewEdge = vacantEdges->find_next( lastNewEdge );
             if ( lastNewEdge )
+            {
+                assert( isLoneEdge( lastNewEdge ) );
                 vacantEdges->reset( lastNewEdge );
+            }
             else
             {
                 vacantEdges = nullptr;
@@ -1969,8 +1972,12 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             if ( lastNewVert )
             {
                 vacantVerts->reset( lastNewVert );
+                assert( lastNewVert < edgePerVertex_.size() );
                 if ( updateValids_ )
+                {
+                    assert( !validVerts_.test( lastNewVert ) );
                     validVerts_.set( lastNewVert );
+                }
             }
             else
             {
@@ -1997,8 +2004,12 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             if ( lastNewFace )
             {
                 vacantFaces->reset( lastNewFace );
+                assert( lastNewFace < edgePerFace_.size() );
                 if ( updateValids_ )
+                {
+                    assert( !validFaces_.test( lastNewFace ) );
                     validFaces_.set( lastNewFace );
+                }
             }
             else
             {

@@ -387,7 +387,15 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-ifneq ($(ASSUME_RAM),)
+ifneq ($(IS_MACOS),)
+# macOS GitHub-hosted runners sit at ~15 GB RAM and fall into the lowest "oof" tier,
+# which hard-codes JOBS=4 regardless of core count. Skip the heuristic on macOS and
+# scale jobs to the actual core count; keep NUM_FRAGMENTS=64 so per-fragment RAM
+# stays modest.
+override ram_string := $(ASSUME_RAM)G RAM (macOS override)
+NUM_FRAGMENTS := 64
+JOBS := $(CAPPED_NPROC)
+else ifneq ($(ASSUME_RAM),)
 ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)
 override ram_string := >=64G RAM
 # The default number of jobs. Override with `-jN` or `JOBS=N`, both work fine.

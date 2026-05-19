@@ -1958,15 +1958,29 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
     };
 
-    const VertId firstNewVert = edgePerVertex_.endId();
-    VertId nextNewVert = firstNewVert;
+    auto * vacantVerts = vacant ? &vacant->verts : nullptr;
+    VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
     auto copyVert = [&]( VertId fromV )
     {
-        auto nv = nextNewVert++;
         assert( !getAt( vmap, fromV ) );
-        setAt( vmap, fromV, nv );
+        if ( vacantVerts )
+        {
+            lastNewVert = vacantVerts->find_next( lastNewVert );
+            if ( lastNewVert )
+                vacantVerts->reset( lastNewVert );
+            else
+            {
+                vacantVerts = nullptr;
+                lastNewVert = edgePerVertex_.endId();
+            }
+        }
+        else
+            ++lastNewVert;
+        setAt( vmap, fromV, lastNewVert );
         if ( map.tgt2srcVerts )
-            map.tgt2srcVerts->pushBack( nv, fromV );
+            map.tgt2srcVerts->pushBack( lastNewVert, fromV );
+        if ( updateValids_ )
+            ++numValidVerts_;
     };
 
     const FaceId firstNewFace = edgePerFace_.endId();
@@ -2101,12 +2115,12 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate vertex records
-    if ( updateValids_ )
+    if ( edgePerVertex_.size() < lastNewVert + 1 )
     {
-        validVerts_.autoResizeSet( firstNewVert, nextNewVert - firstNewVert, true );
-        numValidVerts_ += nextNewVert - firstNewVert;
+        if ( updateValids_ )
+            validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
+        edgePerVertex_.resizeNoInit( lastNewVert + 1 );
     }
-    edgePerVertex_.resizeNoInit( nextNewVert );
     BitSetParallelFor( fromCopiedVerts, [&]( VertId v )
     {
         for ( auto fromE : orgRing( from, v ) )

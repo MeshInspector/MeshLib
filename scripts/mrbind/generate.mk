@@ -389,11 +389,12 @@ endif
 
 ifneq ($(IS_MACOS),)
 # macOS GitHub-hosted runners sit at ~15 GB RAM and fall into the lowest "oof" tier,
-# which hard-codes JOBS=4 regardless of core count. Skip the heuristic on macOS and
-# scale jobs to the actual core count; keep NUM_FRAGMENTS=64 so per-fragment RAM
-# stays modest.
+# which hard-codes NUM_FRAGMENTS=64 and JOBS=4 regardless of core count. Skip the
+# heuristic on macOS: scale jobs to the actual core count and halve the fragment
+# count to 32 so each translation unit batches more work (fewer redundant template
+# instantiations) while keeping per-fragment RAM well within the runner budget.
 override ram_string := $(ASSUME_RAM)G RAM (macOS override)
-NUM_FRAGMENTS := 64
+NUM_FRAGMENTS := 32
 JOBS := $(CAPPED_NPROC)
 else ifneq ($(ASSUME_RAM),)
 ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)

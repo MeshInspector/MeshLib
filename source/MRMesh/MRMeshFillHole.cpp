@@ -794,7 +794,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
 {
     size_t holeSize = 0;
-    for ( auto he : leftRing( mesh.topology, e ) )
+    for ( auto _ : leftRing( mesh.topology, e ) )
         ++holeSize;
 
     if ( holeSize > 200 ) // 200 here us pure guessing, require testing to find actual effective size

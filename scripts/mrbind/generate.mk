@@ -370,11 +370,22 @@ PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 # Also guess the number of CPU cores.
 ifneq ($(IS_MACOS),)
 ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
-ASSUME_NPROC := $(call safe_shell,sysctl -n hw.ncpu)
+# Physical cores only -- SMT siblings hurt compile parallelism more than they
+# help (two threads on one physical core contend for execution resources).
+ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
 # `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
 ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
-ASSUME_NPROC := $(call safe_shell,nproc)
+ifneq ($(IS_WINDOWS),)
+# `nproc` (and `NUMBER_OF_PROCESSORS`) report logical CPUs on Windows. The
+# GitHub-hosted Windows runners (and effectively every Windows host we build on)
+# are x86 with SMT-2, so halving the logical count approximates the physical
+# core count without depending on `wmic`/`powershell` from the make shell.
+ASSUME_NPROC := $(shell bash -c 'echo $$(( $(shell nproc) / 2 ))')
+else
+# Linux: count unique (Core,Socket) pairs reported by lscpu == physical cores.
+ASSUME_NPROC := $(call safe_shell,lscpu -p=Core,Socket | grep -v '^\#' | sort -u | wc -l)
+endif
 endif
 
 # We clamp the nproc to this value, because when you have more cores, our heuristics fall apart (and you might run out of ram).

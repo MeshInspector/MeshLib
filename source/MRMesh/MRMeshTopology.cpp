@@ -1936,7 +1936,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     auto * vacantEdges = vacant ? &vacant->edges : nullptr;
-    EdgeId lastNewEdge = vacant ? EdgeId{} : edges_.endId() - 2;
+    UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
     auto copyEdge = [&]( UndirectedEdgeId fromUe )
     {
         assert( !getAt( emap, fromUe ) );
@@ -1952,8 +1952,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             }
         }
         else
-            lastNewEdge += 2;
-        setAt( emap, fromUe, lastNewEdge );
+            ++lastNewEdge;
+        setAt( emap, fromUe, EdgeId( lastNewEdge ) );
         if ( map.tgt2srcEdges )
             map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
     };
@@ -1967,7 +1967,11 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         {
             lastNewVert = vacantVerts->find_next( lastNewVert );
             if ( lastNewVert )
+            {
                 vacantVerts->reset( lastNewVert );
+                if ( updateValids_ )
+                    validVerts_.set( lastNewVert );
+            }
             else
             {
                 vacantVerts = nullptr;
@@ -1991,7 +1995,11 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         {
             lastNewFace = vacantFaces->find_next( lastNewFace );
             if ( lastNewFace )
+            {
                 vacantFaces->reset( lastNewFace );
+                if ( updateValids_ )
+                    validFaces_.set( lastNewFace );
+            }
             else
             {
                 vacantFaces = nullptr;
@@ -2114,8 +2122,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     // translate edge records
-    if ( edges_.size() < lastNewEdge + 2 )
-        edges_.resizeNoInit( lastNewEdge + 2 );
+    if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
+        edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
         auto e0 = from.edges_[EdgeId{ fromUe }];

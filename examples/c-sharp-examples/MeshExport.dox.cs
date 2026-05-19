@@ -8,7 +8,7 @@
             Console.WriteLine("Vertices coordinates:");
             for (ulong i = 0; i < mesh.points.size(); ++i)
             {
-                var p = mesh.points[new MR.VertId(i)];
+                var p = mesh.points[new MR.VertId((int)i)];
                 Console.WriteLine("Vertex {0} coordinates: {1}; {2}; {3}", i, p.x, p.y, p.z);
             }
 
@@ -16,7 +16,7 @@
 
             for (ulong i = 0; i < tri.size(); ++i)
             {
-                var t = tri[new MR.FaceId(i)];
+                var t = tri[new MR.FaceId((int)i)];
                 Console.WriteLine("Triangle {0} vertices: {1}; {2}; {3}", i, t.elems._0.id, t.elems._1.id, t.elems._2.id);
             }
         }

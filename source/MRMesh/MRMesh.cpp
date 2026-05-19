@@ -183,16 +183,6 @@ float Mesh::signedDistance( const Vector3f & pt, const MeshProjectionResult & pr
         return -std::sqrt( proj.distSq );
 }
 
-float Mesh::signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region ) const
-{
-    const auto projPt = triPoint( proj );
-    const float d = ( pt - projPt ).length();
-    if ( dot( projPt - pt, pseudonormal( proj, region ) ) <= 0 )
-        return d;
-    else
-        return -d;
-}
-
 float Mesh::signedDistance( const Vector3f & pt ) const
 {
     auto res = signedDistance( pt, FLT_MAX );
@@ -374,15 +364,15 @@ void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles 
     map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
-void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map )
+void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant )
 {
-    addMeshPart( from, false, {}, {}, map );
+    addMeshPart( from, false, {}, {}, map, vacant );
 }
 
 void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
-    PartMapping map )
+    PartMapping map, VacantElements * vacant )
 {
     MR_TIMER;
     invalidateCaches();
@@ -390,7 +380,7 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     auto localVmap = VertMapOrHashMap::createHashMap();
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map );
+    topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map, vacant );
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );

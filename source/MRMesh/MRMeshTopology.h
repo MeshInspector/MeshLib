@@ -14,6 +14,13 @@
 namespace MR
 {
 
+struct VacantElements
+{
+    UndirectedEdgeBitSet edges;
+    VertBitSet verts;
+    FaceBitSet faces;
+};
+
 /// Mesh Topology
 /// \ingroup MeshGroup
 class MeshTopology
@@ -261,13 +268,6 @@ public:
 
     /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
-
-    struct VacantElements
-    {
-        UndirectedEdgeBitSet edges;
-        VertBitSet verts;
-        FaceBitSet faces;
-    };
 
     /// deletes from this topology:
     /// 1) all the gives faces,

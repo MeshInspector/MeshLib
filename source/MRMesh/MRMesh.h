@@ -237,7 +237,6 @@ struct [[nodiscard]] Mesh
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
     /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
     [[nodiscard]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region = nullptr ) const;
-    [[deprecated]] MRMESH_API MR_BIND_IGNORE float signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region = nullptr ) const;
 
     /// given a point (pt) in 3D, computes the closest point on mesh, and
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
@@ -394,12 +393,9 @@ struct [[nodiscard]] Mesh
     MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
-    [[deprecated]] MR_BIND_IGNORE void addPart( const Mesh & from, FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false )
-        { addMesh( from, outFmap, outVmap, outEmap, rearrangeTriangles ); }
 
     /// appends whole or part of another mesh as separate connected component(s) to this
-    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map );
-    [[deprecated]] MR_BIND_IGNORE void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map ) { addMeshPart( { from, &fromFaces }, map ); }
+    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant = {} );
 
     /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
@@ -407,10 +403,7 @@ struct [[nodiscard]] Mesh
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
-        PartMapping map = {} );
-    [[deprecated]] MR_BIND_IGNORE void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
-        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {}, const PartMapping & map = {} )
-        { addMeshPart( { from, &fromFaces }, flipOrientation, thisContours, fromContours, map ); }
+        PartMapping map = {}, VacantElements * vacant = {} );
 
     /// creates new mesh from given triangles of this mesh
     MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;

@@ -387,42 +387,13 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-ifneq ($(IS_MACOS),)
-# macOS GitHub-hosted runners sit at ~15 GB RAM and fall into the lowest "oof" tier,
-# which hard-codes NUM_FRAGMENTS=64 and JOBS=4 regardless of core count. Skip the
-# heuristic on macOS: scale jobs to the actual core count and halve the fragment
-# count to 32 so each translation unit batches more work (fewer redundant template
-# instantiations) while keeping per-fragment RAM well within the runner budget.
-override ram_string := $(ASSUME_RAM)G RAM (macOS override)
-NUM_FRAGMENTS := 32
-JOBS := $(CAPPED_NPROC)
-else ifneq ($(ASSUME_RAM),)
-ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)
-override ram_string := >=64G RAM
-# The default number of jobs. Override with `-jN` or `JOBS=N`, both work fine.
-JOBS := $(CAPPED_NPROC)
-# How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
-# When changing this, update the default value for `-j` above.
-NUM_FRAGMENTS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 32))),1)
-override ram_string := ~32G RAM
-NUM_FRAGMENTS := $(call safe_shell,echo $$(($(CAPPED_NPROC) * 2)))# = CAPPED_NPROC * 2
-JOBS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 16))),1)
-# At this point we have so little RAM that we ignore nproc completely (or would need to clamp it to something like ~8, but who even has less cores than that?).
-override ram_string := ~16G RAM
+# Fixed defaults on every platform: split the bindings into 64 translation units
+# (small enough to keep per-fragment RAM modest) and use as many parallel jobs as
+# the machine reports cores (capped by MAX_NPROC above).
+# Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
+override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
 NUM_FRAGMENTS := 64
-JOBS := 8
-else
-override ram_string := ~8G RAM (oof)
-NUM_FRAGMENTS := 64
-JOBS := 4
-endif
-else
-override ram_string := unknown, assuming ~16G
-NUM_FRAGMENTS := 64
-JOBS := 8
-endif
+JOBS := $(CAPPED_NPROC)
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
 $(info Build machine: $(nproc_string), $(ram_string); defaulting to NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))

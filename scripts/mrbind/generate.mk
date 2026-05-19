@@ -384,7 +384,9 @@ ifneq ($(IS_WINDOWS),)
 ASSUME_NPROC := $(shell bash -c 'echo $$(( $(shell nproc) / 2 ))')
 else
 # Linux: count unique (Core,Socket) pairs reported by lscpu == physical cores.
-ASSUME_NPROC := $(call safe_shell,lscpu -p=Core,Socket | grep -v '^\#' | sort -u | wc -l)
+# The literal comma in `-p=Core,Socket` has to go through $(comma), otherwise
+# $(call) splits the argument on it and only `lscpu -p=Core` reaches the shell.
+ASSUME_NPROC := $(call safe_shell,lscpu -p=Core$(comma)Socket | grep -v '^\#' | sort -u | wc -l)
 endif
 endif
 

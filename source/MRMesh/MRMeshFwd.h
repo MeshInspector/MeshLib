@@ -307,7 +307,7 @@ using SymMatrix4ll [[deprecated("Use `SymMatrix4i64` instead.")]] = SymMatrix4<l
 namespace detail::AffineXf3f
 {
     template <typename T> struct VectorElemType {};
-    template <template <typename T> typename T, typename U> struct VectorElemType<T<U>> { using type = U; };
+    template <template <typename> typename T, typename U> struct VectorElemType<T<U>> { using type = U; };
 
     template <typename T>
     concept ValidTemplateArg = std::is_floating_point_v<typename VectorElemType<T>::type>;

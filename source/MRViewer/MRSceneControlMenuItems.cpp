@@ -70,7 +70,7 @@ std::string UndoMenuItem::getDynamicTooltip() const
 {
     std::string res;
     if ( const auto& history = Viewer::instanceRef().getGlobalHistoryStore() )
-        res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Undo ) );
+        res = Locale::translate( trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Undo ) ), Locale::genericDomain );
     return res;
 }
 
@@ -141,7 +141,7 @@ std::string RedoMenuItem::getDynamicTooltip() const
 {
     std::string res;
     if ( auto history = HistoryStore::getViewerInstance() )
-        res = trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Redo ) );
+        res = Locale::translate( trimHashHashSuffix( history->getLastActionName( HistoryAction::Type::Redo ) ), Locale::genericDomain );
     return res;
 }
 

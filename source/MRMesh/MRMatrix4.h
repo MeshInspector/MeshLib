@@ -47,8 +47,7 @@ struct Matrix4
 
     // Currently `AffineXf3<long long>` doesn't seem to compile, so we disable this constructor for `Matrix4<long long>`, because otherwise
     // mrbind instantiates the entire `AffineXf3<long long>` and chokes on it.
-    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)>
-    constexpr Matrix4( const AffineXf3<TT>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
+    constexpr Matrix4( const AffineXf3OrPlaceholder<T>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
 
     // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
     //   when generating the bindings, and results in duplicate functions in C#.
@@ -99,8 +98,7 @@ struct Matrix4
     constexpr T* data() { return (T*) (&x); };
     constexpr const T* data() const { return (T*) (&x); };
 
-    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)>
-    operator AffineXf3<TT>() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
+    operator AffineXf3OrPlaceholder<T>() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         assert( std::abs( w.x )     < std::numeric_limits<T>::epsilon() * 1000 );
         assert( std::abs( w.y )     < std::numeric_limits<T>::epsilon() * 1000 );

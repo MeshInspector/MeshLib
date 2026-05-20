@@ -1961,39 +1961,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
     };
 
-    auto * vacantVerts = vacant ? &vacant->verts : nullptr;
-    VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
-    auto copyVert = [&]( VertId fromV )
-    {
-        assert( !getAt( vmap, fromV ) );
-        if ( vacantVerts )
-        {
-            lastNewVert = vacantVerts->find_next( lastNewVert );
-            if ( lastNewVert )
-            {
-                vacantVerts->reset( lastNewVert );
-                assert( lastNewVert < edgePerVertex_.size() );
-                if ( updateValids_ )
-                {
-                    assert( !validVerts_.test( lastNewVert ) );
-                    validVerts_.set( lastNewVert );
-                }
-            }
-            else
-            {
-                vacantVerts = nullptr;
-                lastNewVert = edgePerVertex_.endId();
-            }
-        }
-        else
-            ++lastNewVert;
-        setAt( vmap, fromV, lastNewVert );
-        if ( map.tgt2srcVerts )
-            map.tgt2srcVerts->pushBack( lastNewVert, fromV );
-        if ( updateValids_ )
-            ++numValidVerts_;
-    };
-
     auto * vacantFaces = vacant ? &vacant->faces : nullptr;
     FaceId lastNewFace = vacant ? FaceId{} : edgePerFace_.endId() - 1;
     auto copyFace = [&]( FaceId fromF )
@@ -2033,13 +2000,53 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         tbb::task_group taskGroup;
         taskGroup.run( [&] ()
         {
+            // copy vertices
             if ( fromFaces0 )
                 fromCopiedVerts = getIncidentVerts( from, *fromFaces0 ) - fromMappedVerts;
             else
                 fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
 
-            for ( auto v : fromCopiedVerts )
-                copyVert( v );
+            auto * vacantVerts = vacant ? &vacant->verts : nullptr;
+            VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
+            int verticesCopied = 0;
+            for ( auto fromV : fromCopiedVerts )
+            {
+                assert( !getAt( vmap, fromV ) );
+                if ( vacantVerts )
+                {
+                    lastNewVert = vacantVerts->find_next( lastNewVert );
+                    if ( lastNewVert )
+                    {
+                        vacantVerts->reset( lastNewVert );
+                        assert( lastNewVert < edgePerVertex_.size() );
+                        if ( updateValids_ )
+                        {
+                            assert( !validVerts_.test( lastNewVert ) );
+                            validVerts_.set( lastNewVert );
+                        }
+                    }
+                    else
+                    {
+                        vacantVerts = nullptr;
+                        lastNewVert = edgePerVertex_.endId();
+                    }
+                }
+                else
+                    ++lastNewVert;
+                setAt( vmap, fromV, lastNewVert );
+                if ( map.tgt2srcVerts )
+                    map.tgt2srcVerts->pushBack( lastNewVert, fromV );
+                ++verticesCopied;
+            };
+            if ( updateValids_ )
+                numValidVerts_ += verticesCopied;
+
+            if ( edgePerVertex_.size() < lastNewVert + 1 )
+            {
+                if ( updateValids_ )
+                    validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
+                edgePerVertex_.resizeNoInit( lastNewVert + 1 );
+            }
         } );
 
         taskGroup.run( [&] ()
@@ -2148,12 +2155,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate vertex records
-    if ( edgePerVertex_.size() < lastNewVert + 1 )
-    {
-        if ( updateValids_ )
-            validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
-        edgePerVertex_.resizeNoInit( lastNewVert + 1 );
-    }
     BitSetParallelFor( fromCopiedVerts, [&]( VertId v )
     {
         for ( auto fromE : orgRing( from, v ) )

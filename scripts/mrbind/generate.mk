@@ -376,7 +376,6 @@ ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
 # `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
 ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
-# Diagnostic only on Linux/Windows; JOBS is pinned to 4 below.
 ASSUME_NPROC := $(call safe_shell,nproc)
 endif
 
@@ -390,18 +389,25 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-# Split the bindings into 32 translation units and pin JOBS = min(4, cores).
-# 4 matches the 4-vCPU shape of GitHub-hosted Linux/Windows runners (and is
-# enough to saturate the 4-physical macOS Intel and 10-physical self-hosted
-# ARM boxes for this workload); on the 3-core macOS ARM GitHub runners
-# (macos-14/macos-15) it drops to 3 so we don't over-subscribe a no-SMT box.
+# Pick NUM_FRAGMENTS and JOBS by machine size:
+#   < 7 cores                           -> JOBS=cores, NUM_FRAGMENTS=32 (small TUs to keep RAM in check on small boxes)
+#   >= 7 cores, RAM < 32G (or unknown)  -> JOBS=cores, NUM_FRAGMENTS=64
+#   RAM >= 64G                          -> JOBS=cores, NUM_FRAGMENTS=cores (few big fragments)
+#   32G <= RAM < 64G                    -> JOBS=cores, NUM_FRAGMENTS=cores*2
 # Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
 override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
+ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
 NUM_FRAGMENTS := 32
-ifeq ($(call safe_shell,echo $$(( $(CAPPED_NPROC) < 4 ))),1)
+JOBS := $(CAPPED_NPROC)
+else ifeq ($(call safe_shell,echo $$(( 0$(ASSUME_RAM) < 32 ))),1)
+NUM_FRAGMENTS := 64
+JOBS := $(CAPPED_NPROC)
+else ifeq ($(call safe_shell,echo $$(( $(ASSUME_RAM) >= 64 ))),1)
+NUM_FRAGMENTS := $(CAPPED_NPROC)
 JOBS := $(CAPPED_NPROC)
 else
-JOBS := 4
+NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(CAPPED_NPROC) * 2 )))
+JOBS := $(CAPPED_NPROC)
 endif
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)

@@ -110,7 +110,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
 // cutPaths - cut edges of origin mesh, it is modified to new indexes after preparing mesh part
 // needInsidePart - part of origin that is inside otherMesh is needed
 // needFlip - normals of needed part should be flipped
-bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths,
+bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths, VacantElements& outVacant,
     const Mesh& otherMesh, bool needInsidePart, bool needFlip, bool originIsA,
     const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
@@ -122,7 +122,7 @@ bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths,
         return false;
 
     auto rightPart = mesh.topology.getValidFaces() - *maybeLeftPart;
-    mesh.deleteFaces( rightPart );
+    outVacant = mesh.deleteFaces( rightPart );
     if ( needFlip )
         mesh.topology.flipOrientation();
 
@@ -197,6 +197,7 @@ Expected<MR::Mesh> doBooleanOperation(
 {
     MR_TIMER;
     Mesh res;
+    VacantElements vacant;
 
     bool dividableA{true};
     bool dividableB{true};
@@ -223,14 +224,19 @@ Expected<MR::Mesh> doBooleanOperation(
         {
             bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
             dividableB = bool( bPart );
+            return;
         }
-        else
-            dividableB = preparePart( meshBCut, cutEdgesB, res, meshACut, needInsideB, needFlipB, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents, intParams );
+
+        res = std::move( meshBCut );
+        dividableB = preparePart( res, cutEdgesB, vacant, meshACut, needInsideB, needFlipB, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents, intParams );
     } );
     // aPart
     BooleanResultMapper::Maps* mapsAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )] : nullptr;
     if ( !onlyCutB )
-        dividableA = preparePart( meshACut, cutEdgesA, res, meshBCut, needInsideA, needFlipA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents, intParams );
+    {
+        res = std::move( meshACut );
+        dividableA = preparePart( res, cutEdgesA, vacant, meshBCut, needInsideA, needFlipA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents, intParams );
+    }
     taskGroup.wait();
 
     if ( ( onlyCutA && !dividableA ) || 

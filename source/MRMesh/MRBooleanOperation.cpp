@@ -107,9 +107,10 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     return res;
 }
 
-// cutPaths - cut edges of origin mesh, it is modified to new indexes after preparing mesh part
-// needInsidePart - part of origin that is inside otherMesh is needed
-// needFlip - normals of needed part should be flipped
+/// deletes unnecessary part from the mesh
+/// \param cutPaths cut edges of origin mesh
+/// \param needInsidePart part of origin that is inside otherMesh is needed
+/// \param needFlip normals of needed part should be flipped
 bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths, VacantElements& outVacant,
     const Mesh& otherMesh, bool needInsidePart, bool needFlip, bool originIsA,
     const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps,
@@ -132,22 +133,19 @@ bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths, VacantEleme
         if ( fmap.size() < mesh.topology.faceSize() )
             fmap.resize( mesh.topology.faceSize() );
         for ( auto f : mesh.topology.getValidFaces() )
-            if ( !fmap[f] )
-                fmap[f] = f;
+            fmap[f] = f;
 
         auto& vmap = maps->old2newVerts;
         if ( vmap.size() < mesh.topology.vertSize() )
             vmap.resize( mesh.topology.vertSize() );
         for ( auto v : mesh.topology.getValidVerts() )
-            if ( !vmap[v] )
-                vmap[v] = v;
+            vmap[v] = v;
 
         auto& emap = maps->old2newEdges;
         if ( emap.size() < mesh.topology.undirectedEdgeSize() )
             emap.resize( mesh.topology.undirectedEdgeSize() );
         for ( auto ue : undirectedEdges( mesh.topology ) )
-            if ( !emap[ue] )
-                emap[ue] = ue;
+            emap[ue] = ue;
     }
 
     return true;
@@ -158,7 +156,7 @@ bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths, VacantEleme
 // updates mapper
 void connectPreparedParts( Mesh& res, Mesh& partB, const FaceBitSet* bRegion, bool flipB,
                            const std::vector<EdgePath>& pathsA, const std::vector<EdgePath>& pathsB,
-                           const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool graphCut )
+                           const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool graphCut, VacantElements& vacant )
 {
     MR_TIMER;
 
@@ -176,11 +174,11 @@ void connectPreparedParts( Mesh& res, Mesh& partB, const FaceBitSet* bRegion, bo
 
     if ( !graphCut )
     {
-        res.addMeshPart( { partB,bRegion }, flipB, pathsA, pathsB, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
+        res.addMeshPart( { partB,bRegion }, flipB, pathsA, pathsB, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ), &vacant );
     }
     else
     {
-        res.addMeshPart( { partB,bRegion }, flipB, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
+        res.addMeshPart( { partB,bRegion }, flipB, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ), &vacant );
     }
 }
 
@@ -272,7 +270,7 @@ Expected<MR::Mesh> doBooleanOperation(
     }
     else
     {
-        connectPreparedParts( res, meshBCut, &*bPart, needFlipB, cutEdgesA, cutEdgesB, rigidB2A, mapper, intParams.graphCutSeparation );
+        connectPreparedParts( res, meshBCut, &*bPart, needFlipB, cutEdgesA, cutEdgesB, rigidB2A, mapper, intParams.graphCutSeparation, vacant );
     }
 
     if ( intParams.optionalOutCut )

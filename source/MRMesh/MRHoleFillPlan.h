@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
 
+namespace MR
+{
+
 struct FillHoleItem
 {
     // if not-negative number then it is edgeid;
@@ -14,3 +17,5 @@ struct HoleFillPlan
     std::vector<FillHoleItem> items;
     int numTris = 0; // the number of triangles in the filling
 };
+
+}

@@ -13,7 +13,6 @@ libharu
 libpng
 libtiff
 libzip
-llvm@14
 ninja
 nlohmann-json
 opencascade

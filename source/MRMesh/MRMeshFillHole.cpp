@@ -14,6 +14,12 @@
 #include <queue>
 #include <functional>
 
+namespace
+{
+// cMinSweptHoleSize: empirical is result of benchmarking on different hole sizes and threads nubmer
+constexpr int cMinSweptHoleSize = 12;
+}
+
 namespace MR
 {
 
@@ -615,8 +621,8 @@ class HoleFillPlanner
 {
 public:
     HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
-    HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e );
-
+    HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
+    unsigned concurrentSmallHoleSize = 0; ///< if hole size is smaller than this value preffer concurrent processing, sometimes it better than isolated parallelism overhead
 private:
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
@@ -695,10 +701,19 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
             getOptimalSteps( optimalSteps, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
             getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, params.smoothBd, optimalSteps, current ); // find better among steps
         };
-        ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalSteps )
+        if ( loopEdgesCounter < concurrentSmallHoleSize ) // avoid parallelism for small holes since it is not worth overhead
         {
-            work( i, optimalSteps );
-        } );
+            auto& os = optimalStepsCache_.local();
+            for ( unsigned i( 0 ); i < loopEdgesCounter; ++i )
+                work( i, os );
+        }
+        else
+        {
+            ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalSteps )
+            {
+                work( i, optimalSteps );
+            } );
+        }
     }
     // find minimum triangulation
     savedMapPatch_.clear();
@@ -791,18 +806,22 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     return res;
 }
 
-HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
+HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine )
 {
-    size_t holeSize = 0;
-    for ( [[maybe_unused]] auto _ : leftRing( mesh.topology, e ) )
-        ++holeSize;
-
-    if ( holeSize > 200 ) // 200 here us pure guessing, require testing to find actual effective size
+    if ( allowSweptLine )
     {
-        // only use this for large holes
-        auto exRes = fillContours2DPlan( mesh, e );
-        if ( exRes.has_value() )
-            return *exRes;
+        int holeSize = 0;
+        for ( [[maybe_unused]] auto _ : leftRing( mesh.topology, e ) )
+            if ( ++holeSize >= cMinSweptHoleSize )
+                break; // fast break when we OK with hole size
+
+        if ( holeSize >= cMinSweptHoleSize )
+        {
+            // only use this for large holes
+            auto exRes = fillContours2DPlan( mesh, e, 0 );
+            if ( exRes.has_value() )
+                return *exRes;
+        }
     }
 
     bool stopOnBad{ false };
@@ -829,6 +848,7 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
         // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
+        planner.concurrentSmallHoleSize = cMinSweptHoleSize;
         tbb::this_task_arena::isolate( [&]
         {
             fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
@@ -837,9 +857,9 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     return fillPlans;
 }
 
-HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
+HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e, bool allowSwept )
 {
-    return HoleFillPlanner{}.runPlanar( mesh, e );
+    return HoleFillPlanner{}.runPlanar( mesh, e, allowSwept );
 }
 
 std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
@@ -850,6 +870,7 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
         // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
+        planner.concurrentSmallHoleSize = cMinSweptHoleSize;
         tbb::this_task_arena::isolate( [&]
         {
             fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );

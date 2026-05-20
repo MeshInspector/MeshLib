@@ -135,7 +135,7 @@ struct ProjectedFillMesh
     std::vector<EdgeLoop> paths;
 };
 
-Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const ProjectFillInput& input )
+Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const ProjectFillInput& input, int deloneIters = 300 )
 {
     MR_TIMER;
     ProjectedFillMesh res;
@@ -143,7 +143,7 @@ Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const Project
     auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
         PlanarTriangulation::findHoleVertIdsByHoleEdges( tp, input.paths ) );
 
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( input.holes2d, holeVertIds.get(), &res.paths );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( input.holes2d, { holeVertIds.get(), &res.paths, deloneIters } );
     holeVertIds.reset();
     if ( !fillResult )
         return unexpected( "Cannot triangulate contours with self-intersections" );
@@ -211,13 +211,13 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, int deloneIters )
 {
     auto projInput = projectHoles( mesh, { holeEdgeId } );
     if ( !projInput.has_value() )
         return unexpected( std::move( projInput.error() ) );
 
-    auto fillRes = fillProjected( mesh.topology, *projInput );
+    auto fillRes = fillProjected( mesh.topology, *projInput, deloneIters );
     if ( !fillRes.has_value() )
         return unexpected( std::move( fillRes.error() ) );
 

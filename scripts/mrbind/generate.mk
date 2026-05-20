@@ -399,7 +399,7 @@ override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
 ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
 NUM_FRAGMENTS := 32
 JOBS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(( 0$(ASSUME_RAM) < 32 ))),1)
+else ifeq ($(call safe_shell,echo $$(( $(or $(ASSUME_RAM),0) < 32 ))),1)
 NUM_FRAGMENTS := 64
 JOBS := $(CAPPED_NPROC)
 else ifeq ($(call safe_shell,echo $$(( $(ASSUME_RAM) >= 64 ))),1)

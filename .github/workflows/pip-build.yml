@@ -274,7 +274,7 @@ jobs:
       - name: Python Tests
         run: |
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
-          REQUIREMENTS_FILE=${PWD}/requirements/python.txt
+          REQUIREMENTS_FILE=${PWD}/requirements/python/requirements.txt
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
           cd build/Release/bin
@@ -608,7 +608,7 @@ jobs:
         run: |
           ${{ env.PYTHON_CMD }} -m pip install --upgrade pip
           ${{ env.PYTHON_CMD }} -m pip uninstall -y meshlib
-          ${{ env.PYTHON_CMD }} -m pip install --upgrade -r ./requirements/python.txt
+          ${{ env.PYTHON_CMD }} -m pip install --upgrade -r ./requirements/python/requirements.txt
           ${{ env.PYTHON_CMD }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact

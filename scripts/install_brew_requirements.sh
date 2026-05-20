@@ -29,6 +29,6 @@ python3.10 -m ensurepip --upgrade
 python3.10 -m pip install --upgrade pip
 
 # install requirements for python libs
-python3.10 -m pip install -r requirements/python.txt
+python3.10 -m pip install -r requirements/python/requirements.txt
 
 exit 0

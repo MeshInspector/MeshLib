@@ -37,7 +37,7 @@ rm -rf "${VENV}"
 . "${VENV}/bin/activate"
 
 python -m pip install --upgrade pip
-python -m pip install --upgrade -r ./requirements/python.txt
+python -m pip install --upgrade -r ./requirements/python/requirements.txt
 python -m pip install pytest
 python -m pip install "${WHEEL}"
 

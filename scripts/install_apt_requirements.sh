@@ -50,7 +50,7 @@ python3 -m ensurepip --upgrade
 python3 -m pip install --upgrade pip
 
 # install requirements for python libs
-python3 -m pip install -r requirements/python.txt
+python3 -m pip install -r requirements/python/requirements.txt
 
 # invalidate sudo credentials
 if [ "${RUN_AS_ROOT}" = "NO" ]; then

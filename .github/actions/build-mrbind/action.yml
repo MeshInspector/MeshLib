@@ -70,6 +70,10 @@ runs:
     - name: Cache MRBind build
       id: cache
       uses: actions/cache@v5
+      # Cache-service errors (silent restore crashes, save upload failures) must
+      # not abort the build -- on miss we rebuild from scratch anyway, and the
+      # build script wipes `build/` first, so falling through is always safe.
+      continue-on-error: true
       with:
         path: ${{ inputs.mrbind-dir }}/build
         # Exactly one of the two SHA steps ran, so concatenation yields the SHA.

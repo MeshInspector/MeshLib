@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-19 11:48+0200\n"
+"POT-Creation-Date: 2026-05-19 18:56+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1959,12 +1959,28 @@ msgstr ""
 msgid "Select to prefer in selection convex/concave angles or neither"
 msgstr ""
 
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:304
+msgid "Brush: Add"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:306
+msgid "Brush: Remove"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:308
+msgid "Brush: Smooth"
+msgstr ""
+
 #: source/MRViewer/MRSurfaceManipulationWidget.cpp:352
 msgid "Subdivide Ridges/Grooves"
 msgstr ""
 
 #: source/MRViewer/MRSurfaceManipulationWidget.cpp:395
 msgid "Brush: Patch"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:857
+msgid "Brush: Deform"
 msgstr ""
 
 #: source/MRViewer/MRToolbar.cpp:241

@@ -47,6 +47,8 @@ if __name__ == "__main__":
             subprocess.run([
                 msgmerge,
                 "--update",
+                "--backup=none",
+                "--no-fuzzy-matching",
                 po_file,
                 pot_file,
             ], check=True)

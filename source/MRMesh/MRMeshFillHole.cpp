@@ -8,6 +8,7 @@
 #include "MRMeshDelone.h"
 #include "MRMarkedContour.h"
 #include "MRParallelFor.h"
+#include "MRFillContours2D.h"
 #include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
 #include <queue>
@@ -616,8 +617,6 @@ public:
     HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
     HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e );
 
-    bool parallelProcessing = true;
-
 private:
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
@@ -696,20 +695,10 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
             getOptimalSteps( optimalSteps, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
             getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, params.smoothBd, optimalSteps, current ); // find better among steps
         };
-        if ( parallelProcessing )
+        ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalSteps )
         {
-            ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalSteps )
-            {
-                work( i, optimalSteps );
-            } );
-        }
-        else
-        {
-            auto & optimalSteps = optimalStepsCache_.local();
-            for ( unsigned i = 0; i < loopEdgesCounter; ++i )
-                work( i, optimalSteps );
-        }
-
+            work( i, optimalSteps );
+        } );
     }
     // find minimum triangulation
     savedMapPatch_.clear();
@@ -804,6 +793,18 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 
 HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
 {
+    size_t holeSize = 0;
+    for ( [[maybe_unused]] auto _ : leftRing( mesh.topology, e ) )
+        ++holeSize;
+
+    if ( holeSize > 200 ) // 200 here us pure guessing, require testing to find actual effective size
+    {
+        // only use this for large holes
+        auto exRes = fillContours2DPlan( mesh, e );
+        if ( exRes.has_value() )
+            return *exRes;
+    }
+
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );
@@ -827,8 +828,11 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        planner.parallelProcessing = false; // to prevent run() from calling this lambda for a different i-index
-        fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
+        // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
+        tbb::this_task_arena::isolate( [&]
+        {
+            fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
+        } );
     } );
     return fillPlans;
 }
@@ -845,8 +849,11 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        planner.parallelProcessing = false; // to prevent run() from calling this lambda for a different i-index
-        fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
+        // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
+        tbb::this_task_arena::isolate( [&]
+        {
+            fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
+        } );
     } );
     return fillPlans;
 }

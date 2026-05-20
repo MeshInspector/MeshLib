@@ -239,22 +239,22 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
         SCOPED_HISTORY( _t( "MCP setObjectState" ) );
         if ( args.contains( "name" ) )
         {
-            AppendHistory<ChangeNameAction>( _t( "rename" ), obj );
+            AppendHistory<ChangeNameAction>( "rename", obj );
             obj->setName( args["name"].get<std::string>() );
         }
         if ( args.contains( "visible" ) )
         {
-            AppendHistory<ChangeObjectVisibilityAction>( _t( "visibility" ), obj );
+            AppendHistory<ChangeObjectVisibilityAction>( "visibility", obj );
             obj->setVisible( args["visible"].get<bool>(), ViewportMask::all() );
         }
         if ( args.contains( "selected" ) )
         {
-            AppendHistory<ChangeObjectSelectedAction>( _t( "selection" ), obj );
+            AppendHistory<ChangeObjectSelectedAction>( "selection", obj );
             obj->select( args["selected"].get<bool>() );
         }
         if ( args.contains( "transform" ) )
         {
-            AppendHistory<ChangeXfAction>( _t( "transform" ), obj );
+            AppendHistory<ChangeXfAction>( "transform", obj );
             obj->setXf( composeXf( parseTransform( args["transform"] ) ) );
         }
         if ( args.contains( "visualization" ) )
@@ -270,13 +270,13 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
             if ( viz.contains( "selectedColor" ) )
             {
                 const Color c = parseColor( viz["selectedColor"], "selectedColor" );
-                AppendHistory<ChangeObjectColorAction>( _t( "selected color" ), visObj, ChangeObjectColorAction::Type::Selected );
+                AppendHistory<ChangeObjectColorAction>( "selected color", visObj, ChangeObjectColorAction::Type::Selected );
                 visObj->setFrontColorsForAllViewports( ViewportProperty<Color>{ c }, true );
             }
             if ( viz.contains( "unselectedColor" ) )
             {
                 const Color c = parseColor( viz["unselectedColor"], "unselectedColor" );
-                AppendHistory<ChangeObjectColorAction>( _t( "unselected color" ), visObj, ChangeObjectColorAction::Type::Unselected );
+                AppendHistory<ChangeObjectColorAction>( "unselected color", visObj, ChangeObjectColorAction::Type::Unselected );
                 visObj->setFrontColorsForAllViewports( ViewportProperty<Color>{ c }, false );
             }
             if ( viz.contains( "globalAlpha" ) )
@@ -297,7 +297,7 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
                 if ( !meshHolder )
                     throw std::runtime_error( "`flatShading` is only available on mesh objects." );
                 const bool v = viz["flatShading"].get<bool>();
-                AppendHistory<ChangeVisualizePropertyAction>( _t( "flat shading" ), meshHolder, AnyVisualizeMaskEnum{ MeshVisualizePropertyType::FlatShading } );
+                AppendHistory<ChangeVisualizePropertyAction>( "flat shading", meshHolder, AnyVisualizeMaskEnum{ MeshVisualizePropertyType::FlatShading } );
                 meshHolder->setVisualizeProperty( v, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
             }
             if ( viz.contains( "showEdges" ) )
@@ -305,7 +305,7 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
                 if ( !meshHolder )
                     throw std::runtime_error( "`showEdges` is only available on mesh objects." );
                 const bool v = viz["showEdges"].get<bool>();
-                AppendHistory<ChangeVisualizePropertyAction>( _t( "show edges" ), meshHolder, AnyVisualizeMaskEnum{ MeshVisualizePropertyType::Edges } );
+                AppendHistory<ChangeVisualizePropertyAction>( "show edges", meshHolder, AnyVisualizeMaskEnum{ MeshVisualizePropertyType::Edges } );
                 meshHolder->setVisualizeProperty( v, MeshVisualizePropertyType::Edges, ViewportMask::all() );
             }
             if ( viz.contains( "edgeWidth" ) )
@@ -448,7 +448,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
         {
             if ( overrideName )
                 obj->setName( *overrideName );
-            AppendHistory<ChangeSceneAction>( _t( "add" ), obj, ChangeSceneAction::Type::AddObject );
+            AppendHistory<ChangeSceneAction>( "add", obj, ChangeSceneAction::Type::AddObject );
             parent->addChild( obj );
             addedIds.push_back( idOf( obj.get() ) );
         }

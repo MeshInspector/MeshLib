@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-15 10:20+0200\n"
+"POT-Creation-Date: 2026-05-19 18:56+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
 #: source/MRCommonPlugins/Basic/MRCameraOrientationPlugin.cpp:26
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:467
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:477
 msgid "Current viewport"
 msgstr ""
 
@@ -217,12 +217,12 @@ msgid "ImGui preset:"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRAddCustomTheme.cpp:76
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:129
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:136
 msgid "Dark"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRAddCustomTheme.cpp:78
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:130
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:137
 msgid "Light"
 msgstr ""
 
@@ -266,7 +266,7 @@ msgstr ""
 #: source/MRViewer/MRProgressBar.cpp:228
 #: source/MRViewer/MRUISaveChangesPopup.cpp:91
 #: source/MRViewer/MRUISaveChangesPopup.h:24
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1009
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1036
 msgid "Cancel"
 msgstr ""
 
@@ -399,6 +399,10 @@ msgid ""
 "objects are rotated, each around its center."
 msgstr ""
 
+#: source/MRCommonPlugins/ViewerButtons/MRRotatorPlugin.cpp:115
+msgid "Rotator"
+msgstr ""
+
 #: source/MRCommonPlugins/ViewerButtons/MRSceneControlMenuItems.cpp:98
 msgid "New Scene"
 msgstr ""
@@ -524,7 +528,7 @@ msgid "Operation"
 msgstr ""
 
 #: source/MRCommonPlugins/Voxels/MRBinaryOperationsPlugin.cpp:102
-#: source/MRViewer/MRRibbonMenu.cpp:2016
+#: source/MRViewer/MRRibbonMenu.cpp:2116
 msgid "Apply"
 msgstr ""
 
@@ -1009,7 +1013,7 @@ msgid "Normal"
 msgstr ""
 
 #: source/MRViewer/ImGuiHelpers.cpp:1514
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:897
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:919
 msgid "Shift"
 msgstr ""
 
@@ -1097,8 +1101,8 @@ msgstr ""
 msgid "FPS"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:902 source/MRViewer/MRRibbonMenu.cpp:2023
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1003
+#: source/MRViewer/ImGuiMenu.cpp:902 source/MRViewer/MRRibbonMenu.cpp:2123
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1030
 msgid "Reset"
 msgstr ""
 
@@ -1118,6 +1122,10 @@ msgstr ""
 
 #: source/MRViewer/ImGuiMenu.cpp:943
 msgid "Ok"
+msgstr ""
+
+#: source/MRViewer/ImGuiMenu.cpp:945
+msgid "Rename object from modal dialog"
 msgstr ""
 
 #: source/MRViewer/ImGuiMenu.cpp:967
@@ -1176,8 +1184,16 @@ msgstr ""
 msgid "Object Name"
 msgstr ""
 
+#: source/MRViewer/ImGuiMenu.cpp:1538
+msgid "Rename object from information"
+msgstr ""
+
 #: source/MRViewer/ImGuiMenu.cpp:1556
 msgid "Label"
+msgstr ""
+
+#: source/MRViewer/ImGuiMenu.cpp:1561
+msgid "Change label"
 msgstr ""
 
 #: source/MRViewer/ImGuiMenu.cpp:1625
@@ -1382,7 +1398,7 @@ msgstr ""
 
 #: source/MRViewer/ImGuiMenu.cpp:2004 source/MRViewer/ImGuiMenu.cpp:2075
 #: source/MRViewer/ImGuiMenu.cpp:2201 source/MRViewer/ImGuiMenu.cpp:2212
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:776
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:786
 msgid "Point size"
 msgstr ""
 
@@ -1407,7 +1423,7 @@ msgid "Visual Sampling"
 msgstr ""
 
 #: source/MRViewer/ImGuiMenu.cpp:2078 source/MRViewer/ImGuiMenu.cpp:2194
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:784
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:794
 msgid "Line width"
 msgstr ""
 
@@ -1600,44 +1616,41 @@ msgstr ""
 msgid "Type to add new tag..."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2772
+#: source/MRViewer/ImGuiMenu.cpp:2840
 msgid "Uni-scale"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2774
+#: source/MRViewer/ImGuiMenu.cpp:2842
 msgid "Selects between uniform scaling or separate scaling along each axis"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2778
+#: source/MRViewer/ImGuiMenu.cpp:2847 source/MRViewer/ImGuiMenu.cpp:2852
 msgid "Rotation XYZ"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2780
+#: source/MRViewer/ImGuiMenu.cpp:2854
 msgid "Rotation round [X, Y, Z] axes respectively."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2786
+#: source/MRViewer/ImGuiMenu.cpp:2860
 msgid "Sequential intrinsic rotations around Oz, Oy and Ox axes."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2818 source/MRViewer/MRMouse.h:34
+#: source/MRViewer/ImGuiMenu.cpp:2887 source/MRViewer/ImGuiMenu.cpp:2899
+#: source/MRViewer/MRMouse.h:34
 msgid "Translation"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2829
+#: source/MRViewer/ImGuiMenu.cpp:2912
 msgid "Manual Change Transform"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2856 source/MRViewer/MRRibbonMenu.cpp:1823
+#: source/MRViewer/ImGuiMenu.cpp:2934 source/MRViewer/MRRibbonMenu.cpp:1903
 msgid "Transform"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:3078
+#: source/MRViewer/ImGuiMenu.cpp:3156
 msgid "Hot Key List"
-msgstr ""
-
-#: source/MRViewer/MRMeshBoundarySelectionWidget.cpp:83
-msgid "Change Boundary Selection"
 msgstr ""
 
 #: source/MRViewer/MRMeshBoundarySelectionWidget.cpp:127
@@ -1648,8 +1661,8 @@ msgstr ""
 msgid "Do not show this message again"
 msgstr ""
 
-#: source/MRViewer/MRMouse.h:32 source/MRViewer/MRViewerSettingsPlugin.cpp:626
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1102
+#: source/MRViewer/MRMouse.h:32 source/MRViewer/MRViewerSettingsPlugin.cpp:636
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1129
 msgid "None"
 msgstr ""
 
@@ -1685,196 +1698,200 @@ msgstr ""
 msgid "Operation is in progress, please wait..."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:317
+#: source/MRViewer/MRRibbonMenu.cpp:319
 msgid "Unpin"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:330
+#: source/MRViewer/MRRibbonMenu.cpp:332
 msgid "Pin"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:387
+#: source/MRViewer/MRRibbonMenu.cpp:389
 msgid "Open help page"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:882
+#: source/MRViewer/MRRibbonMenu.cpp:414
+msgid "Change the language"
+msgstr ""
+
+#: source/MRViewer/MRRibbonMenu.cpp:960
 msgid "Focus"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:903
+#: source/MRViewer/MRRibbonMenu.cpp:981
 #: source/MRViewer/MRUISaveChangesPopup.h:18
 msgid "Close"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:964 source/MRViewer/MRRibbonMenu.cpp:971
+#: source/MRViewer/MRRibbonMenu.cpp:1042 source/MRViewer/MRRibbonMenu.cpp:1049
 msgid "Group"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:998 source/MRViewer/MRRibbonMenu.cpp:1006
+#: source/MRViewer/MRRibbonMenu.cpp:1076 source/MRViewer/MRRibbonMenu.cpp:1084
 msgid "Ungroup"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1036 source/MRViewer/MRRibbonMenu.cpp:1105
+#: source/MRViewer/MRRibbonMenu.cpp:1114 source/MRViewer/MRRibbonMenu.cpp:1183
 msgid "Clone"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1071 source/MRViewer/MRRibbonMenu.cpp:1163
+#: source/MRViewer/MRRibbonMenu.cpp:1149 source/MRViewer/MRRibbonMenu.cpp:1241
 msgid "Clone Selection"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1125
+#: source/MRViewer/MRRibbonMenu.cpp:1203
 msgid "Select Subtree"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1193 source/MRViewer/MRRibbonMenu.cpp:1196
+#: source/MRViewer/MRRibbonMenu.cpp:1271 source/MRViewer/MRRibbonMenu.cpp:1274
 msgid "Combine Subtree"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1472
+#: source/MRViewer/MRRibbonMenu.cpp:1550
 msgid "Unable to close this plugin"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1495 source/MRViewer/MRRibbonMenu.cpp:1517
+#: source/MRViewer/MRRibbonMenu.cpp:1573 source/MRViewer/MRRibbonMenu.cpp:1595
 msgid "Open Settings"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1496
+#: source/MRViewer/MRRibbonMenu.cpp:1574
 msgid ""
 "Unable to activate this tool because another blocking tool is already "
 "active.\n"
 "It can be changed in the Settings."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1518
+#: source/MRViewer/MRRibbonMenu.cpp:1596
 msgid ""
 "That tool was closed due to other tool start.\n"
 "It can be changed in the Settings."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1542
+#: source/MRViewer/MRRibbonMenu.cpp:1620
 msgid ""
 "Camera operations that are controlled by left mouse button may not work "
 "while this tool is active"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1544
+#: source/MRViewer/MRRibbonMenu.cpp:1622
 #, c++-format
 msgid "Hold {} additionally to control camera"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1848
+#: source/MRViewer/MRRibbonMenu.cpp:1928
 msgid "Open Transform Data context menu."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1861
+#: source/MRViewer/MRRibbonMenu.cpp:1944
 msgid "Reset Transform"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1865 source/MRViewer/MRRibbonMenu.cpp:2029
+#: source/MRViewer/MRRibbonMenu.cpp:1948 source/MRViewer/MRRibbonMenu.cpp:2128
 msgid "Resets transform value to identity."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1881 source/MRViewer/MRRibbonMenu.cpp:2021
+#: source/MRViewer/MRRibbonMenu.cpp:1964 source/MRViewer/MRRibbonMenu.cpp:2121
 msgid "Transforms object and resets transform value to identity."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1921
+#: source/MRViewer/MRRibbonMenu.cpp:2024
 msgid "Transform Data"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1926
+#: source/MRViewer/MRRibbonMenu.cpp:2028
 msgid "Copy"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1950
+#: source/MRViewer/MRRibbonMenu.cpp:2052
 msgid "Paste"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1952
+#: source/MRViewer/MRRibbonMenu.cpp:2054
 msgid "Paste Transform"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1961
+#: source/MRViewer/MRRibbonMenu.cpp:2062
 msgid "Save to file"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1982
+#: source/MRViewer/MRRibbonMenu.cpp:2083
 msgid "Load from file"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1992
+#: source/MRViewer/MRRibbonMenu.cpp:2093
 msgid "Load Transform from File"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:1998 source/MRViewer/MRRibbonMenu.cpp:2003
+#: source/MRViewer/MRRibbonMenu.cpp:2098 source/MRViewer/MRRibbonMenu.cpp:2103
 msgid "Cannot parse transform"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2025
+#: source/MRViewer/MRRibbonMenu.cpp:2125
 msgid "Reset Transform (context menu)"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2068
+#: source/MRViewer/MRRibbonMenu.cpp:2167
 msgid "Toggle selected objects visibility"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2085
+#: source/MRViewer/MRRibbonMenu.cpp:2184
 msgid "Show this help with hot keys"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2089
+#: source/MRViewer/MRRibbonMenu.cpp:2188
 msgid "Toggle statistics window"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2093
+#: source/MRViewer/MRRibbonMenu.cpp:2192
 msgid "Toggle shading of selected objects"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2101
+#: source/MRViewer/MRRibbonMenu.cpp:2200
 msgid "Search plugin by name or description"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2106
+#: source/MRViewer/MRRibbonMenu.cpp:2205
 msgid "Toggle edges on selected meshes"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2114
+#: source/MRViewer/MRRibbonMenu.cpp:2213
 msgid "Toggle Orthographic/Perspective View"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2119
+#: source/MRViewer/MRRibbonMenu.cpp:2218
 msgid "Toggle faces on selected meshes"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2129
+#: source/MRViewer/MRRibbonMenu.cpp:2228
 msgid "Select next object"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2133
+#: source/MRViewer/MRRibbonMenu.cpp:2232
 msgid "Add next object to selection"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2137
+#: source/MRViewer/MRRibbonMenu.cpp:2236
 msgid "Select previous object"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2141
+#: source/MRViewer/MRRibbonMenu.cpp:2240
 msgid "Add previous object to selection"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2145
+#: source/MRViewer/MRRibbonMenu.cpp:2244
 msgid "Ribbon Scene Select all"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2149
+#: source/MRViewer/MRRibbonMenu.cpp:2248
 msgid "Ribbon Scene Show only previous"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2153
+#: source/MRViewer/MRRibbonMenu.cpp:2252
 msgid "Ribbon Scene Show only next"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2241
+#: source/MRViewer/MRRibbonMenu.cpp:2340
 msgid "Hotkeys"
 msgstr ""
 
@@ -1894,18 +1911,20 @@ msgstr ""
 msgid "Do not close the application"
 msgstr ""
 
+#: source/MRViewer/MRSceneMcp.cpp:239
+msgid "MCP setObjectState"
+msgstr ""
+
+#: source/MRViewer/MRSceneMcp.cpp:349
+msgid "MCP removeObject"
+msgstr ""
+
+#: source/MRViewer/MRSceneMcp.cpp:446
+msgid "MCP addObject"
+msgstr ""
+
 #: source/MRViewer/MRSceneObjectsListDrawer.cpp:615
 msgid "Cannot perform such reorder"
-msgstr ""
-
-#: source/MRViewer/MRSceneOperations.cpp:116
-#: source/MRViewer/MRSceneOperations.cpp:133
-#: source/MRViewer/MRSceneOperations.cpp:172
-msgid "Add Object"
-msgstr ""
-
-#: source/MRViewer/MRSceneOperations.cpp:179
-msgid "Remove Object"
 msgstr ""
 
 #: source/MRViewer/MRSelectCurvaturePreference.cpp:15
@@ -1940,12 +1959,28 @@ msgstr ""
 msgid "Select to prefer in selection convex/concave angles or neither"
 msgstr ""
 
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:304
+msgid "Brush: Add"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:306
+msgid "Brush: Remove"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:308
+msgid "Brush: Smooth"
+msgstr ""
+
 #: source/MRViewer/MRSurfaceManipulationWidget.cpp:352
 msgid "Subdivide Ridges/Grooves"
 msgstr ""
 
 #: source/MRViewer/MRSurfaceManipulationWidget.cpp:395
 msgid "Brush: Patch"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:857
+msgid "Brush: Deform"
 msgstr ""
 
 #: source/MRViewer/MRToolbar.cpp:241
@@ -2041,618 +2076,640 @@ msgstr ""
 msgid "Degrees, minutes, seconds"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:50
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:54
 msgid "Quick"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:51
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:55
 msgid "Application"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:52
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:56
 msgid "Control"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:53
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:57
 msgid "3D View"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:54
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:711
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:58
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:721
 msgid "Units"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:55
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:59
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1303
+msgid "MCP"
+msgstr ""
+
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:60
 msgid "Features"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:115
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:122
 msgid "Tools"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:247
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:257
 msgid "General"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:262
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:320
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:272
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:330
 msgid "Toolbar Customize"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:265
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:450
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:275
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:460
 msgid "Show Hotkeys"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:273
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:283
 msgid "Global"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:275
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:285
 msgid "Reset Settings"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:286
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:296
 msgid "Interface"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:295
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:305
 msgid "UI Scale"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:304
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:314
 msgid "Save Tool Window Positions"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:305
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:315
 msgid ""
 "If checked then enables using of saved positions of tool windows in the "
 "config file"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:315
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:325
 msgid "Enable multi-windows"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:317
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:327
 msgid ""
 "Allow tool windows to be moved outside the main window. To apply the "
 "changes, need to restart the application."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:323
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:333
 msgid "Behavior"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:331
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:341
 msgid "Make Visible on Select"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:334
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:344
 msgid "Deselect on Hide"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:340
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:350
 msgid "Close Context Menu on Click"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:343
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:353
 msgid "Close scene context menu on any change or click outside"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:347
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:357
 msgid "Auto Close Previous Tool"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:350
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:360
 msgid ""
 "Automatically close blocking tool when another blocking tool is activated"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:352
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:362
 msgid "Sort Dropped Files"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:355
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:365
 msgid ""
 "Whether to sort the filenames received from Drag&Drop in lexicographical "
 "order before adding them in scene"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:357
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:367
 msgid "Show Experimental Features"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:358
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:368
 msgid "Show experimental or diagnostic tools and controls"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:365
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:375
 msgid "Notifications"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:367
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:377
 msgid "Time Reports"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:377
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:387
 msgid "Show duration of last operation of the application."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:379
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:389
 msgid "Recommendations"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:389
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:399
 msgid "Show notifications with recommended actions."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:391
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:401
 msgid "Implicit Changes"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:401
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:411
 msgid ""
 "Notify when some changes were made implicitly by the application. (mostly "
 "appear on import of non-manifold models)"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:403
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:413
 msgid "Important"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:413
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:423
 msgid "Show important messages about errors or warnings that could happen."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:420
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:430
 msgid "Files and Folders"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:426
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:436
 msgid "Logs folder"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:446
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:456
 msgid "Keyboard"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:464
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:474
 msgid "Viewport"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:475
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:485
 msgid "Rotation Mode"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:475
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:485
 msgid "Scene Center"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:475
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:485
 msgid "Pick / Scene Center"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:475
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:485
 msgid "Pick"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:482
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:492
 msgid "Show Axes"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:488
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:498
 msgid "Show Global Basis"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:493
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:503
 msgid "Grid"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:501
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:506
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:511
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:516
 msgid "Global Basis Scale"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:512
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:522
 msgid "Auto"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:522
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:532
 msgid "Show Rotation Center"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:537
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:547
 msgid "Selected Highlight Modifier"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:542
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:552
 msgid "Ambient light brightness multiplication factor for selected objects"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:546
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:556
 msgid "Clipping Plane"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:563
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:573
 msgid "Show"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:569
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:579
 msgid "Options"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:574
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:584
 msgid "Picker Radius"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:577
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:587
 msgid "Radius of area under cursor to pick objects in scene."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:579
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:589
 msgid "Defaults"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:584
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:594
 msgid "Render"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:597
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:607
 msgid "Common"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:603
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:613
 msgid "Leading zero"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:605
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:615
 msgid "If disabled, remove the lone zeroes before the decimal point."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:617
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:627
 msgid "Thousands Separator"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:619
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:629
 msgid ""
 "A symbol used to separate groups of thousands in large numbers to make them "
 "easier to read."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:628
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:638
 msgid "Space"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:641
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:651
 msgid "Linear"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:661
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:671
 msgid "No Units"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:662
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:672
 msgid "UI Units"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:670
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:680
 msgid ""
 "It selects length units to be show in the user interface. If model units are "
 "different, then stored values will be automatically converted when shown in "
 "UI."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:673
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:683
 msgid "Same as UI Units"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:674
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:684
 msgid "Model Units"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:682
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:692
 msgid ""
 "It selects length units of model's actual values (e.g. coordinates of points "
 "stored in memory). And it affects on importing and exporting of data."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:686
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:723
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:741
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:696
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:733
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:751
 msgid "Precision"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:688
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:698
 msgid ""
 "The number of digits to be shown after decimal point for length measurements."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:696
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:706
 msgid "Angular"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:714
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:724
 msgid "It selects angular units to be show in the user interface."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:725
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:735
 msgid ""
 "The number of digits to be shown after decimal point for angular "
 "measurements."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:734
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:744
 msgid "Scale and Ratios"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:743
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:753
 msgid ""
 "The number of digits to be shown after decimal point for dimensionless "
 "measurements."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:753
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:763
 msgid "Reset Unit Settings"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:755
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:765
 msgid "Set all settings here to their default values."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:769
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:779
 msgid "Visuals"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:772
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:782
 msgid "Surface opacity"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:780
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:790
 msgid "Point size (subfeatures)"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:788
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:798
 msgid "Line width (subfeatures)"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:801
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:823
 msgid "Alpha Sort"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:809
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:814
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:831
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:836
 msgid "Depth Peeling Passes"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:825
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:847
 msgid "Multisample anti-aliasing (MSAA):"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:826
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:848
 msgid ""
 "The number of samples per pixel: more samples - better render quality but "
 "worse performance."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:836
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:858
 msgid "Off"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:855
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:877
 msgid "GPU multisampling settings override application value."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:857
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:879
 msgid "Application requires restart to apply this change"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:869
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:891
 msgid "Shadows"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:877
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:899
 msgid "Enabled"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:887
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:909
 msgid "Shadow Color"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:898
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:920
 msgid "X = shift to the left, Y = shift upwards"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:899
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:921
 msgid "Blur Radius"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:900
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:922
 msgid "Quality"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:903
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:925
 msgid "Blur texture downscaling coefficient"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:933
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:956
 msgid "Language"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:949
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:976
 msgid "Color Theme"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:969
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:996
 msgid "This theme is not valid."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:977
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1004
 msgid "Add"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:989
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1016
 msgid "Settings reset"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:993
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1020
 msgid "Reset all application settings?"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1021
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1048
 msgid "Auto Detect"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1021
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1048
 msgid "Smooth"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1021
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1048
 msgid "Flat"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1025
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1052
 msgid "Shading Mode"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1025
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1052
 msgid "Default Shading Mode"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1027
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1054
 msgid ""
 "Shading mode for mesh objects imported from files\n"
 "Detection depends on source format and mesh shape\n"
 "This setting also affects some tools"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1039
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1066
 msgid "Orthographic"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1039
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1066
 msgid "Perspective"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1042
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1069
 msgid "Projection Mode"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1070
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1097
 msgid "Background Color"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1086
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1113
 msgid "Mouse"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1090
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1117
 msgid "Zoom Gain"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1092
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1119
 msgid "Sensitivity for mouse wheel rotation affecting the speed of zooming."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1151
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1178
 msgid "Set other"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1156
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1183
 msgid ""
 "Click here with preferred mouse button \n"
 "with/without modifier"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1193
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1220
 #, c-format
 msgid "Camera controls can also be used with %s"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1200
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1227
 msgid "Spacemouse"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1212
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1239
 msgid "Inverse"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1220
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1247
 msgid "Translation Sensitivity"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1232
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1259
 msgid "Rotation Sensitivity"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1241
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1268
 msgid "Suppress Zoom by Mouse Scroll"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1242
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1269
 msgid ""
 "This mode is recommended if you have 3Dconnexion driver installed, which "
 "sends fake mouse scroll events resulting in double reaction on SpaceMouse "
 "movement and camera tremble."
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1252
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1279
 msgid "Touchpad"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1254
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1281
 msgid "Swipe Rotates Camera"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1254
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1281
 msgid "Swipe Moves Camera"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1259
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1286
 msgid "Ignore Kinetic Movements"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1261
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1288
 msgid "Allow System to Interrupt Gestures"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1266
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1293
 msgid "Swipe Mode"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1275
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1308
+msgid "Enable in This Session"
+msgstr ""
+
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1312
+msgid "Enable by Default"
+msgstr ""
+
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1318
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1324
+msgid "Port"
+msgstr ""
+
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1319
+msgid "Port forced by -mcpPort command-line flag"
+msgstr ""
+
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1334
 msgid "MRU Inner Formats"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1281
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1340
 msgid ""
 "Slowest, high memory consumption, but best compression (typically) format"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1282
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1341
 msgid "Fast and still relatively small format"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1283
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1342
 msgid "Largest by size, but fastest to load / save and without any losses"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1285
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1344
 msgid "Fast and efficient format for sparse data"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1286
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1345
 msgid "Simplest but high disk space consumption format"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1311
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1370
 msgid "Mesh Format"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1329
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1388
 msgid "Points Format"
 msgstr ""
 
-#: source/MRViewer/MRViewerSettingsPlugin.cpp:1344
+#: source/MRViewer/MRViewerSettingsPlugin.cpp:1403
 msgid "Voxels Format"
 msgstr ""

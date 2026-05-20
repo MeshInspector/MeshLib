@@ -114,7 +114,7 @@ void PointTask::renderPass()
             if ( params_.tolerance )
             {
                 passOrFail = true;
-                pass = deviation >= params_.tolerance->negative && deviation <= params_.tolerance->positive;
+                pass = deviation <= params_.tolerance->positive;
             }
         }
         else
@@ -123,7 +123,7 @@ void PointTask::renderPass()
             if ( params_.tolerance )
             {
                 passOrFail = true;
-                pass = deviation <= params_.tolerance->positive;
+                pass = deviation >= params_.tolerance->negative && deviation <= params_.tolerance->positive;
             }
         }
     }

@@ -215,8 +215,18 @@ jobs:
 
   macos-test:
     if: ${{ inputs.test_macos }}
-    runs-on: macos-15-intel
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-15-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: arm64
+            runner: macos-latest  # github-hosted Apple Silicon
+            pkg_pattern: '*arm.pkg'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -226,11 +236,11 @@ jobs:
       - name: Download Distributive
         run: |
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }}
 
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*x64.pkg  -target /
+          sudo installer -pkg meshlib_*.pkg -target /
           xargs brew install --quiet < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format
@@ -254,7 +264,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
-  
+
   windows-test:
     if: ${{ inputs.test_windows }}
     runs-on: windows-2022

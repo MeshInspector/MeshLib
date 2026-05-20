@@ -1,7 +1,7 @@
 {
   "name": "openctm",
   "version-string": "1.0.3",
-  "port-version": 0,
+  "port-version": 1,
   "homepage": "https://github.com/MeshInspector/OpenCTM",
   "description": "OpenCTM is a file format, a software library and a tool set for compression of 3D triangle meshes.",
   "license": "Zlib",

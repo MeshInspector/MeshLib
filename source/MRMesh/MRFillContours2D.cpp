@@ -72,10 +72,16 @@ AffineXf3f getXfFromOxyPlane( const Contours3f& contours )
     return AffineXf3f( c.getXf() );
 }
 
-Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+struct ProjectFillInput
+{
+    std::vector<EdgeLoop> paths;
+    AffineXf3f fromPlaneXf;
+    Contours2f holes2d;
+};
+
+Expected<ProjectFillInput> projectHoles( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER;
-    // check input
     assert( !holeRepresentativeEdges.empty() );
     if ( holeRepresentativeEdges.empty() )
         return unexpected( "No hole edges are given" );
@@ -95,89 +101,166 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     if ( badEdge )
         return unexpected( "Some hole edges have left face" );
 
+    ProjectFillInput res;
     // make border rings
-    std::vector<EdgeLoop> paths( holeRepresentativeEdges.size() );
-    for ( int i = 0; i < paths.size(); ++i )
-        paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
+    res.paths.resize( holeRepresentativeEdges.size() );
+    for ( int i = 0; i < res.paths.size(); ++i )
+        res.paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
 
     // find transformation from world to plane space and back
-    const auto planeXf = getXfFromOxyPlane( mesh, paths );
-    const auto planeXfInv = planeXf.inverse();
+    res.fromPlaneXf = getXfFromOxyPlane( mesh, res.paths );
+    const auto toPlane = res.fromPlaneXf.inverse();
 
     // make contours2D (on plane) from border rings (in world)
-    Contours2f contours2f;
-    contours2f.reserve( paths.size() );
-    for ( const auto& path : paths )
+    res.holes2d.reserve( res.paths.size() );
+    for ( const auto& path : res.paths )
     {
-        contours2f.emplace_back();
-        auto& contour = contours2f.back();
+        res.holes2d.emplace_back();
+        auto& contour = res.holes2d.back();
         contour.reserve( path.size() + 1 );
         for ( const auto& edge : path )
         {
-            const auto localPoint = planeXfInv( mesh.orgPnt( edge ) );
+            const auto localPoint = toPlane( mesh.orgPnt( edge ) );
             contour.emplace_back( Vector2f( localPoint.x, localPoint.y ) );
         }
         contour.emplace_back( contour.front() );
     }
 
-    auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
-        PlanarTriangulation::findHoleVertIdsByHoleEdges( mesh.topology, paths ) );
+    return res;
+}
 
-    std::vector<EdgePath> newPaths;
-    // make patch surface
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get(), &newPaths );
+struct ProjectedFillMesh
+{
+    Mesh mesh;
+    std::vector<EdgeLoop> paths;
+};
+
+Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const ProjectFillInput& input )
+{
+    MR_TIMER;
+    ProjectedFillMesh res;
+
+    auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
+        PlanarTriangulation::findHoleVertIdsByHoleEdges( tp, input.paths ) );
+
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( input.holes2d, holeVertIds.get(), &res.paths );
     holeVertIds.reset();
     if ( !fillResult )
         return unexpected( "Cannot triangulate contours with self-intersections" );
-    Mesh& patchMesh = *fillResult;
 
-    // transform patch surface from plane to world space
-    auto& patchMeshPoints = patchMesh.points;
-    for ( auto& point : patchMeshPoints )
-        point = planeXf( point );
+    res.mesh = std::move( *fillResult );
 
-    if ( paths.size() != newPaths.size() )
+
+    if ( input.paths.size() != res.paths.size() )
         return unexpected( "Patch surface borders size different from original mesh borders size" );
 
     std::vector<EdgePath> invertedHoles;
-    invertedHoles.reserve( newPaths.size() );
-    for ( int i = 0; i < paths.size(); ++i )
+    invertedHoles.reserve( res.paths.size() );
+    for ( int i = 0; i < res.paths.size(); ++i )
     {
-        if ( paths[i].size() != newPaths[i].size() )
+        if ( input.paths[i].size() != res.paths[i].size() )
             return unexpected( "Patch surface borders size different from original mesh borders size" );
 
         // degenerate holes might invert sometimes (it is expected as far as planar triangulation does not now about input topology)
-        if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
-            if ( !newPaths[i].empty() )
-                MR::reverse( invertedHoles.emplace_back( newPaths[i] ) );
+        if ( res.paths[i].empty() || res.mesh.topology.right( res.paths[i].front() ) )
+            if ( !res.paths[i].empty() )
+                MR::reverse( invertedHoles.emplace_back( res.paths[i] ) );
     }
     if ( !invertedHoles.empty() )
     {
-        auto invertedParts = fillContourLeft( patchMesh.topology, invertedHoles );
-        auto invertedEdges = getIncidentEdges( patchMesh.topology, invertedParts );
-        patchMesh.topology.flipOrientation( &invertedEdges );
+        auto invertedParts = fillContourLeft( res.mesh.topology, invertedHoles );
+        auto invertedEdges = getIncidentEdges( res.mesh.topology, invertedParts );
+        res.mesh.topology.flipOrientation( &invertedEdges );
 
         // validate one more time
-        for ( int i = 0; i < paths.size(); ++i )
-            if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
-                if ( !newPaths[i].empty() )
+        for ( int i = 0; i < res.paths.size(); ++i )
+            if ( res.paths[i].empty() || res.mesh.topology.right( res.paths[i].front() ) )
+                if ( !res.paths[i].empty() )
                     return unexpected( "Patch surface borders are incompatible with mesh borders" );
     }
+    return res;
+}
+
+Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+{
+    MR_TIMER;
+
+    auto projInput = projectHoles( mesh, holeRepresentativeEdges );
+    if ( !projInput.has_value() )
+        return unexpected( std::move( projInput.error() ) );
+
+    auto fillRes = fillProjected( mesh.topology, *projInput );
+    if ( !fillRes.has_value() )
+        return unexpected( std::move( fillRes.error() ) );
 
     // move patch surface border points to original position (according original mesh)
-    auto& patchMeshTopology = patchMesh.topology;
+    auto& patchMeshPoints = fillRes->mesh.points;
+    auto& patchMeshTopology = fillRes->mesh.topology;
     auto& meshPoints = mesh.points;
-    for ( int i = 0; i < paths.size(); ++i )
+    auto& meshTopology = mesh.topology;
+    for ( int i = 0; i < projInput->paths.size(); ++i )
     {
-        auto& path = paths[i];
-        auto& newPath = newPaths[i];
+        auto& path = projInput->paths[i];
+        auto& newPath = fillRes->paths[i];
         for ( int j = 0; j < path.size(); ++j )
             patchMeshPoints[patchMeshTopology.org( newPath[j] )] = meshPoints[meshTopology.org( path[j] )];
     }
 
     // add patch surface to original mesh
-    mesh.addMeshPart( patchMesh, false, paths, newPaths );
+    mesh.addMeshPart( fillRes->mesh, false, projInput->paths, fillRes->paths );
     return {};
+}
+
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+{
+    auto projInput = projectHoles( mesh, { holeEdgeId } );
+    if ( !projInput.has_value() )
+        return unexpected( std::move( projInput.error() ) );
+
+    auto fillRes = fillProjected( mesh.topology, *projInput );
+    if ( !fillRes.has_value() )
+        return unexpected( std::move( fillRes.error() ) );
+
+    assert( fillRes->paths.size() == 1 ); // should be validated in fillProjected
+
+    const auto& pTp = fillRes->mesh.topology;
+    const auto& ip = projInput->paths[0];
+    auto& np = fillRes->paths[0];
+    HoleFillPlan res;
+    res.numTris = pTp.numValidFaces();
+    if ( res.numTris == 1 )
+        return res;
+    auto size = int( np.size() );
+    assert( size > 3 );
+    res.items.reserve( size - 3 );
+
+    for ( ;;)
+    {
+        for ( int i0 = 0; i0 < np.size(); ++i0 )
+        {
+            auto e0 = np[i0];
+            if ( !e0 )
+                continue; // skip unused/encoded 
+            auto i1 = int( pTp.dest( np[i0] ) );
+            auto e1 = np[i1];
+            auto ne = pTp.next( e0 );
+            auto dest = pTp.dest( ne );
+            if ( dest != pTp.dest( e1 ) )
+                continue;
+            FillHoleItem fhi;
+            int i01 = ( i0 + 1 ) % size;
+            fhi.edgeCode1 = i1 == i01 ? ip[i0] : int( np[i01] );
+            i1 = dest;
+            e1 = np[i1];
+            int i11 = ( i1 + 1 ) % size;
+            fhi.edgeCode2 = ( pTp.dest( e1 ) == i11 ) ? ip[i1] : int( np[i11] );
+            res.items.push_back( std::move( fhi ) );
+            if ( res.items.size() == size - 3 )
+                return res;
+            np[i0] = ne;
+            np[i01] = EdgeId( -int( res.items.size() ) ); // encode newly created plan edge in free slot
+        }
+    }
 }
 
 Expected<void> fillPlanarHole( ObjectMeshData& data, std::vector<EdgeLoop>& holeContours )

@@ -57,7 +57,7 @@ public class GlobalRegistrationExample
             {
                 MR.ObjId id = new(i);
                 var xf = xfs[id];
-                for (ulong j = 0; j < inputs[id].obj.points().size(); j++)
+                for (int j = 0; j < (int)inputs[id].obj.points().size(); j++)
                     output.addPoint(xf.call(inputs[id].obj.points()[new MR.VertId(j)]));
             }
 

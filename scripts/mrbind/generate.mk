@@ -370,7 +370,9 @@ PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 # Also guess the number of CPU cores.
 ifneq ($(IS_MACOS),)
 ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
-ASSUME_NPROC := $(call safe_shell,sysctl -n hw.ncpu)
+# Physical cores only -- on macOS x86 the VM disables SMT (so logical == physical
+# already), and Apple Silicon has no SMT, so this just matches what's available.
+ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
 # `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
 ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
@@ -387,32 +389,25 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-ifneq ($(ASSUME_RAM),)
-ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)
-override ram_string := >=64G RAM
-# The default number of jobs. Override with `-jN` or `JOBS=N`, both work fine.
+# Pick NUM_FRAGMENTS and JOBS by machine size:
+#   < 7 cores                           -> JOBS=cores, NUM_FRAGMENTS=32 (small TUs to keep RAM in check on small boxes)
+#   >= 7 cores, RAM < 32G (or unknown)  -> JOBS=cores, NUM_FRAGMENTS=64
+#   RAM >= 64G                          -> JOBS=cores, NUM_FRAGMENTS=cores (few big fragments)
+#   32G <= RAM < 64G                    -> JOBS=cores, NUM_FRAGMENTS=cores*2
+# Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
+override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
+ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
+NUM_FRAGMENTS := 32
 JOBS := $(CAPPED_NPROC)
-# How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
-# When changing this, update the default value for `-j` above.
+else ifeq ($(call safe_shell,echo $$(( $(or $(ASSUME_RAM),0) < 32 ))),1)
+NUM_FRAGMENTS := 64
+JOBS := $(CAPPED_NPROC)
+else ifeq ($(call safe_shell,echo $$(( $(ASSUME_RAM) >= 64 ))),1)
 NUM_FRAGMENTS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 32))),1)
-override ram_string := ~32G RAM
-NUM_FRAGMENTS := $(call safe_shell,echo $$(($(CAPPED_NPROC) * 2)))# = CAPPED_NPROC * 2
 JOBS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 16))),1)
-# At this point we have so little RAM that we ignore nproc completely (or would need to clamp it to something like ~8, but who even has less cores than that?).
-override ram_string := ~16G RAM
-NUM_FRAGMENTS := 64
-JOBS := 8
 else
-override ram_string := ~8G RAM (oof)
-NUM_FRAGMENTS := 64
-JOBS := 4
-endif
-else
-override ram_string := unknown, assuming ~16G
-NUM_FRAGMENTS := 64
-JOBS := 8
+NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(CAPPED_NPROC) * 2 )))
+JOBS := $(CAPPED_NPROC)
 endif
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
@@ -610,6 +605,8 @@ endif # Windows
 # Linux.
 ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
+# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
+LINKER_FLAGS += -Wl,-z,separate-loadable-segments
 endif
 
 # MacOS.

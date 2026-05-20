@@ -93,8 +93,14 @@
     </Link>
     <PostBuildEvent>
       <!-- Here we copy both python3.dll and python3XY.dll. The former seems to be just a tiny shim for the latter. -->
+      <!-- Release python3XY.dll imports the Release zlib alias `z.dll` directly (was `zlib1.dll` before vcpkg 2026.04.27, -->
+      <!-- which now wraps zlib-ng's compat mode). In Release builds applocal carries it in via the consumer chain, but -->
+      <!-- Debug builds only ask for the Debug zlib (`zd.dll` / `zlib-ngd2.dll`), so `z.dll` never lands next to the -->
+      <!-- Release `python3XY.dll` we just deployed. Copy it explicitly so `Py_Initialize` doesn't fail silently in MRTest.exe. -->
       <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
       copy $(PythonStableDllPath) $(TargetDir)python3.dll
+      if exist "$(VcpkgCurrentInstalledDir)\bin\z.dll"     copy "$(VcpkgCurrentInstalledDir)\bin\z.dll"     "$(TargetDir)z.dll"
+      if exist "$(VcpkgCurrentInstalledDir)\bin\zlib1.dll" copy "$(VcpkgCurrentInstalledDir)\bin\zlib1.dll" "$(TargetDir)zlib1.dll"
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

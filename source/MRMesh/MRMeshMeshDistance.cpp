@@ -213,8 +213,13 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
 MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b, const AffineXf3f* rigidB2A, float upDistLimitSq )
 {
     MR_TIMER;
-    // If meshes has no collision no need to find signed distance
     auto res = findDistance( a, b, rigidB2A, upDistLimitSq );
+    if ( !res.a || !res.b )
+    {   // findDistance returns the limit sentinel when nothing closer was found
+        assert( res.distSq == upDistLimitSq );
+        return { res.a, res.b, MeshMeshCollisionStatus::NotColliding, std::sqrt( res.distSq ) };
+    }
+    assert( res.distSq < upDistLimitSq );
     std::vector<FaceFace> collisions;
     auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
     if ( status == MeshMeshCollisionStatus::Touching )
@@ -245,7 +250,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     for ( VertId id : zoneAndDistancesAB.vertBS )
     {
         const auto& [proj, dist] = zoneAndDistancesAB.projectons[id];
-        if ( dist < signedRes.signedDist )
+        if ( proj.valid() && dist < signedRes.signedDist )
         {
             signedRes.a = { getTriByVert( a.mesh.topology,id ), a.mesh.points[id] };
             signedRes.b = proj;
@@ -256,7 +261,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     for ( VertId id : zoneAndDistancesBA.vertBS )
     {
         const auto& [proj, dist] = zoneAndDistancesBA.projectons[id];
-        if ( dist < signedRes.signedDist )
+        if ( proj.valid() && dist < signedRes.signedDist )
         {
             signedRes.a = proj;
             signedRes.b = { getTriByVert( b.mesh.topology,id ), b.mesh.points[id] };

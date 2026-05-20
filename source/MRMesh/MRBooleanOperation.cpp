@@ -13,6 +13,7 @@
 #include "MRFillContourByGraphCut.h"
 #include "MREdgeMetric.h"
 #include "MRRegionBoundary.h"
+#include "MREdgeIterator.h"
 
 namespace MR
 {
@@ -109,31 +110,45 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
 // cutPaths - cut edges of origin mesh, it is modified to new indexes after preparing mesh part
 // needInsidePart - part of origin that is inside otherMesh is needed
 // needFlip - normals of needed part should be flipped
-bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& outMesh,
+bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths,
     const Mesh& otherMesh, bool needInsidePart, bool needFlip, bool originIsA,
-    const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps, 
+    const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
 
-    // use dense-maps inside addMeshPart instead of default hash-maps for better performance
-    FaceMap fmap;
-    WholeEdgeMap emap;
-    VertMap vmap;
-
-    FaceMap* fMapPtr = maps ? &maps->cut2newFaces : &fmap;
-    WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &emap;
-    VertMap* vMapPtr = maps ? &maps->old2newVerts : &vmap;
-
-    auto maybeLeftPart = findMeshPart( origin, cutPaths, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+    auto maybeLeftPart = findMeshPart( mesh, cutPaths, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     if ( !maybeLeftPart )
         return false;
 
-    outMesh.addMeshPart( { origin, &*maybeLeftPart }, needFlip, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
+    auto rightPart = mesh.topology.getValidFaces() - *maybeLeftPart;
+    mesh.deleteFaces( rightPart );
+    if ( needFlip )
+        mesh.topology.flipOrientation();
 
-    for ( auto& path : cutPaths )
-        for ( auto& e : path )
-            e = mapEdge( *eMapPtr, e );
+    if ( maps )
+    {
+        auto& fmap = maps->cut2newFaces;
+        if ( fmap.size() < mesh.topology.faceSize() )
+            fmap.resize( mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+            if ( !fmap[f] )
+                fmap[f] = f;
+
+        auto& vmap = maps->old2newVerts;
+        if ( vmap.size() < mesh.topology.vertSize() )
+            vmap.resize( mesh.topology.vertSize() );
+        for ( auto v : mesh.topology.getValidVerts() )
+            if ( !vmap[v] )
+                vmap[v] = v;
+
+        auto& emap = maps->old2newEdges;
+        if ( emap.size() < mesh.topology.undirectedEdgeSize() )
+            emap.resize( mesh.topology.undirectedEdgeSize() );
+        for ( auto ue : undirectedEdges( mesh.topology ) )
+            if ( !emap[ue] )
+                emap[ue] = ue;
+    }
 
     return true;
 }

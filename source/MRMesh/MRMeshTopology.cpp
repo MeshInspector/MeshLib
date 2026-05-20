@@ -1935,97 +1935,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
-    auto * vacantEdges = vacant ? &vacant->edges : nullptr;
-    UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
-    auto copyEdge = [&]( UndirectedEdgeId fromUe )
-    {
-        assert( !getAt( emap, fromUe ) );
-        if ( vacantEdges )
-        {
-            lastNewEdge = vacantEdges->find_next( lastNewEdge );
-            if ( lastNewEdge )
-            {
-                assert( isLoneEdge( lastNewEdge ) );
-                vacantEdges->reset( lastNewEdge );
-            }
-            else
-            {
-                vacantEdges = nullptr;
-                lastNewEdge = edges_.endId();
-            }
-        }
-        else
-            ++lastNewEdge;
-        setAt( emap, fromUe, EdgeId( lastNewEdge ) );
-        if ( map.tgt2srcEdges )
-            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
-    };
-
-    auto * vacantVerts = vacant ? &vacant->verts : nullptr;
-    VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
-    auto copyVert = [&]( VertId fromV )
-    {
-        assert( !getAt( vmap, fromV ) );
-        if ( vacantVerts )
-        {
-            lastNewVert = vacantVerts->find_next( lastNewVert );
-            if ( lastNewVert )
-            {
-                vacantVerts->reset( lastNewVert );
-                assert( lastNewVert < edgePerVertex_.size() );
-                if ( updateValids_ )
-                {
-                    assert( !validVerts_.test( lastNewVert ) );
-                    validVerts_.set( lastNewVert );
-                }
-            }
-            else
-            {
-                vacantVerts = nullptr;
-                lastNewVert = edgePerVertex_.endId();
-            }
-        }
-        else
-            ++lastNewVert;
-        setAt( vmap, fromV, lastNewVert );
-        if ( map.tgt2srcVerts )
-            map.tgt2srcVerts->pushBack( lastNewVert, fromV );
-        if ( updateValids_ )
-            ++numValidVerts_;
-    };
-
-    auto * vacantFaces = vacant ? &vacant->faces : nullptr;
-    FaceId lastNewFace = vacant ? FaceId{} : edgePerFace_.endId() - 1;
-    auto copyFace = [&]( FaceId fromF )
-    {
-        if ( vacantFaces )
-        {
-            lastNewFace = vacantFaces->find_next( lastNewFace );
-            if ( lastNewFace )
-            {
-                vacantFaces->reset( lastNewFace );
-                assert( lastNewFace < edgePerFace_.size() );
-                if ( updateValids_ )
-                {
-                    assert( !validFaces_.test( lastNewFace ) );
-                    validFaces_.set( lastNewFace );
-                }
-            }
-            else
-            {
-                vacantFaces = nullptr;
-                lastNewFace = edgePerFace_.endId();
-            }
-        }
-        else
-            ++lastNewFace;
-        if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->pushBack( lastNewFace, fromF );
-        setAt( fmap, fromF, lastNewFace );
-        if ( updateValids_ )
-            ++numValidFaces_;
-    };
-
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
     UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
@@ -2033,28 +1942,133 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         tbb::task_group taskGroup;
         taskGroup.run( [&] ()
         {
+            // copy vertices
             if ( fromFaces0 )
                 fromCopiedVerts = getIncidentVerts( from, *fromFaces0 ) - fromMappedVerts;
             else
                 fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
 
-            for ( auto v : fromCopiedVerts )
-                copyVert( v );
+            auto * vacantVerts = vacant ? &vacant->verts : nullptr;
+            VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
+            int verticesCopied = 0;
+            for ( auto fromV : fromCopiedVerts )
+            {
+                assert( !getAt( vmap, fromV ) );
+                if ( vacantVerts )
+                {
+                    lastNewVert = vacantVerts->find_next( lastNewVert );
+                    if ( lastNewVert )
+                    {
+                        vacantVerts->reset( lastNewVert );
+                        assert( lastNewVert < edgePerVertex_.size() );
+                        if ( updateValids_ )
+                        {
+                            assert( !validVerts_.test( lastNewVert ) );
+                            validVerts_.set( lastNewVert );
+                        }
+                    }
+                    else
+                    {
+                        vacantVerts = nullptr;
+                        lastNewVert = edgePerVertex_.endId();
+                    }
+                }
+                else
+                    ++lastNewVert;
+                setAt( vmap, fromV, lastNewVert );
+                if ( map.tgt2srcVerts )
+                    map.tgt2srcVerts->pushBack( lastNewVert, fromV );
+                ++verticesCopied;
+            };
+            if ( updateValids_ )
+                numValidVerts_ += verticesCopied;
+
+            if ( edgePerVertex_.size() < lastNewVert + 1 )
+            {
+                if ( updateValids_ )
+                    validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
+                edgePerVertex_.resizeNoInit( lastNewVert + 1 );
+            }
         } );
 
         taskGroup.run( [&] ()
         {
-            for ( auto f : fromFaces )
-                copyFace( f );
+            // copy faces
+            auto * vacantFaces = vacant ? &vacant->faces : nullptr;
+            FaceId lastNewFace = vacant ? FaceId{} : edgePerFace_.endId() - 1;
+            int facesCopied = 0;
+            for ( auto fromF : fromFaces )
+            {
+                if ( vacantFaces )
+                {
+                    lastNewFace = vacantFaces->find_next( lastNewFace );
+                    if ( lastNewFace )
+                    {
+                        vacantFaces->reset( lastNewFace );
+                        assert( lastNewFace < edgePerFace_.size() );
+                        if ( updateValids_ )
+                        {
+                            assert( !validFaces_.test( lastNewFace ) );
+                            validFaces_.set( lastNewFace );
+                        }
+                    }
+                    else
+                    {
+                        vacantFaces = nullptr;
+                        lastNewFace = edgePerFace_.endId();
+                    }
+                }
+                else
+                    ++lastNewFace;
+                if ( map.tgt2srcFaces )
+                    map.tgt2srcFaces ->pushBack( lastNewFace, fromF );
+                setAt( fmap, fromF, lastNewFace );
+                ++facesCopied;
+            };
+            if ( updateValids_ )
+                numValidFaces_ += facesCopied;
+
+            if ( edgePerFace_.size() < lastNewFace + 1 )
+            {
+                if ( updateValids_ )
+                    validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
+                edgePerFace_.resizeNoInit( lastNewFace + 1 );
+            }
         } );
 
+        // copy edges
         if ( fromFaces0 )
             fromCopiedEdges = getIncidentEdges( from, *fromFaces0 ) - fromMappedEdges;
         else
             fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
 
-        for ( auto ue : fromCopiedEdges )
-            copyEdge( ue );
+        auto * vacantEdges = vacant ? &vacant->edges : nullptr;
+        UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
+        for ( auto fromUe : fromCopiedEdges )
+        {
+            assert( !getAt( emap, fromUe ) );
+            if ( vacantEdges )
+            {
+                lastNewEdge = vacantEdges->find_next( lastNewEdge );
+                if ( lastNewEdge )
+                {
+                    assert( isLoneEdge( lastNewEdge ) );
+                    vacantEdges->reset( lastNewEdge );
+                }
+                else
+                {
+                    vacantEdges = nullptr;
+                    lastNewEdge = edges_.endId();
+                }
+            }
+            else
+                ++lastNewEdge;
+            setAt( emap, fromUe, EdgeId( lastNewEdge ) );
+            if ( map.tgt2srcEdges )
+                map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
+        };
+        if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
+            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
 
         taskGroup.wait();
     }
@@ -2133,8 +2147,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     // translate edge records
-    if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
-        edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
         auto e0 = from.edges_[EdgeId{ fromUe }];
@@ -2148,12 +2160,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate vertex records
-    if ( edgePerVertex_.size() < lastNewVert + 1 )
-    {
-        if ( updateValids_ )
-            validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
-        edgePerVertex_.resizeNoInit( lastNewVert + 1 );
-    }
     BitSetParallelFor( fromCopiedVerts, [&]( VertId v )
     {
         for ( auto fromE : orgRing( from, v ) )
@@ -2166,12 +2172,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate face records
-    if ( edgePerFace_.size() < lastNewFace + 1 )
-    {
-        if ( updateValids_ )
-            validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
-        edgePerFace_.resizeNoInit( lastNewFace + 1 );
-    }
     BitSetParallelFor( fromFaces, [&]( FaceId f )
     {
         for ( auto fromE : leftRing( from, f ) )

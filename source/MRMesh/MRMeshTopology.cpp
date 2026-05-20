@@ -1935,32 +1935,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
-    auto * vacantEdges = vacant ? &vacant->edges : nullptr;
-    UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
-    auto copyEdge = [&]( UndirectedEdgeId fromUe )
-    {
-        assert( !getAt( emap, fromUe ) );
-        if ( vacantEdges )
-        {
-            lastNewEdge = vacantEdges->find_next( lastNewEdge );
-            if ( lastNewEdge )
-            {
-                assert( isLoneEdge( lastNewEdge ) );
-                vacantEdges->reset( lastNewEdge );
-            }
-            else
-            {
-                vacantEdges = nullptr;
-                lastNewEdge = edges_.endId();
-            }
-        }
-        else
-            ++lastNewEdge;
-        setAt( emap, fromUe, EdgeId( lastNewEdge ) );
-        if ( map.tgt2srcEdges )
-            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
-    };
-
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
     UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
@@ -2062,13 +2036,39 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             }
         } );
 
+        // copy edges
         if ( fromFaces0 )
             fromCopiedEdges = getIncidentEdges( from, *fromFaces0 ) - fromMappedEdges;
         else
             fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
 
-        for ( auto ue : fromCopiedEdges )
-            copyEdge( ue );
+        auto * vacantEdges = vacant ? &vacant->edges : nullptr;
+        UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
+        for ( auto fromUe : fromCopiedEdges )
+        {
+            assert( !getAt( emap, fromUe ) );
+            if ( vacantEdges )
+            {
+                lastNewEdge = vacantEdges->find_next( lastNewEdge );
+                if ( lastNewEdge )
+                {
+                    assert( isLoneEdge( lastNewEdge ) );
+                    vacantEdges->reset( lastNewEdge );
+                }
+                else
+                {
+                    vacantEdges = nullptr;
+                    lastNewEdge = edges_.endId();
+                }
+            }
+            else
+                ++lastNewEdge;
+            setAt( emap, fromUe, EdgeId( lastNewEdge ) );
+            if ( map.tgt2srcEdges )
+                map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
+        };
+        if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
+            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
 
         taskGroup.wait();
     }
@@ -2147,8 +2147,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     // translate edge records
-    if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
-        edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
         auto e0 = from.edges_[EdgeId{ fromUe }];

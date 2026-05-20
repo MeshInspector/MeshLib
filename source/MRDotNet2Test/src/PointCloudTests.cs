@@ -121,7 +121,7 @@ namespace MRTest
 
             var readColors = loadSettings.colors;
             Assert.That(colors.size() == readColors.size());
-            for (ulong i = 0; i < colors.size(); i++)
+            for (int i = 0; i < (int)colors.size(); i++)
             {
                 Assert.That(colors[new VertId(i)] == readColors[new VertId(i)]);
             }

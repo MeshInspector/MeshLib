@@ -22,7 +22,7 @@ namespace MRTest
 
             // TODO: iteration
             float resMax = 0f;
-            for (ulong i = 0; i < res.size(); i++)
+            for (int i = 0; i < (int)res.size(); i++)
             {
                 resMax = Math.Max(resMax, res[new VertId(i)]);
             }

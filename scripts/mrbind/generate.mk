@@ -793,7 +793,7 @@ $(if $($1_PyEnablePch),\
   $(call var,$1__BakedPch := $(TEMP_OUTPUT_DIR)/$1.combined_pch.hpp.gch)\
   $(call var,$1__PchImportFlag := -include$($1__BakedPch:.gch=))\
   \
-  $($1__BakedPch): $($1__CombinedHeaderOutput) ; @echo $(call quote,[$1] [Compiling PCH] $($1__BakedPch)) && $(COMPILER) -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
+  $($1__BakedPch): $($1__CombinedHeaderOutput) ; @echo $(call quote,[$1] [Compiling PCH] $($1__BakedPch)) && $(COMPILER) -c -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
 )
 # PCH object file, if enabled.
 # We strip the include directories from the flags here, because Clang warns that those are unused.

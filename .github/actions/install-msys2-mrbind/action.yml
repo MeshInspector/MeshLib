@@ -1,7 +1,7 @@
 name: Install MSYS2 for MRBind
 description: >
-  Restore (or download) the clang-18 MSYS2 toolchain pinned by
-  `scripts/mrbind/msys2_package_hashes_clang18.txt`, sha256-verify
+  Restore (or download) the clang-22 MSYS2 toolchain pinned by
+  `scripts/mrbind/msys2_package_hashes_clang22.txt`, sha256-verify
   it, and `pacman -U` against the runner's preinstalled `C:\msys64`.
 
 runs:
@@ -13,13 +13,13 @@ runs:
       uses: actions/cache@v5
       with:
         path: scripts/mrbind/msys2_packages
-        key: msys2-mrbind-clang18-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
+        key: msys2-mrbind-clang22-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
 
     - name: Install MSYS2 for MRBind
-      # Pin clang to 18.1.8 — same version master's S3 zip ships.
-      # Pinning only clang/llvm causes `STATUS_DLL_NOT_FOUND` from
-      # cc.exe, so the lockfile carries the whole clang-18-era
-      # runtime stack.
+      # Pin clang to the version listed in msys2_package_hashes_clang22.txt
+      # (currently 22.1.4-3). Pinning only the clang/llvm packages fails
+      # with STATUS_DLL_NOT_FOUND from cc.exe; the lockfile carries the
+      # whole runtime stack.
       shell: pwsh
       run: |
-        C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang18 && bash scripts/mrbind/msys2_install_packages.sh _clang18"
+        C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang22 && bash scripts/mrbind/msys2_install_packages.sh _clang22"

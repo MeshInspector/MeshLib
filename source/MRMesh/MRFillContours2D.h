@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRHoleFillPlan.h"
 #include "MRExpected.h"
 
 namespace MR
@@ -14,6 +15,15 @@ namespace MR
  * @return Expected with has_value()=true if holes filled, otherwise - string error
  */
 MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+
+/**
+ * @brief prepare filling plan for hole with border in same plane (i.e. after cut by plane)
+ * @param mesh - mesh with hole
+ * @param holeEdgeId - the edge here represents a hole borders that should be filled
+ * edge should have invalid left face (FaceId == -1)
+ * @return Expected with has_value()=true if hole plan is prepared, otherwise - string error
+ */
+MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId );
 
 /// computes the transformation that maps
 /// O into center mass of contours' points

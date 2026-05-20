@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRMeshMetrics.h"
 #include "MRId.h"
+#include "MRHoleFillPlan.h"
 #include <functional>
 #include <memory>
 
@@ -156,20 +157,6 @@ MRMESH_API void fillHoles( Mesh& mesh, const std::vector<EdgeId> & as, const Fil
 /// * next/prev edges in the loop are related as follows: next = topology.prev( prev.sym() )
 /// if the function returns true, then any edge from the loop passed to \ref fillHole will fill the same hole
 [[nodiscard]] MRMESH_API bool isHoleBd( const MeshTopology & topology, const EdgeLoop & loop );
-
-struct FillHoleItem
-{
-    // if not-negative number then it is edgeid;
-    // otherwise it refers to the edge created recently
-    int edgeCode1, edgeCode2;
-};
-
-/// concise representation of proposed hole triangulation
-struct HoleFillPlan
-{
-    std::vector<FillHoleItem> items;
-    int numTris = 0; // the number of triangles in the filling
-};
 
 /// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),
 /// several getHoleFillPlan can work in parallel

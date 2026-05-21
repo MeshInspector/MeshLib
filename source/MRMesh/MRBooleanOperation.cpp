@@ -108,22 +108,13 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
 }
 
 /// deletes unnecessary part from the mesh
-/// \param cutPaths cut edges of origin mesh
-/// \param needInsidePart part of origin that is inside otherMesh is needed
-/// \param needFlip normals of needed part should be flipped
-bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths, VacantElements& outVacant,
-    const Mesh& otherMesh, bool needInsidePart, bool needFlip, bool originIsA,
-    const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps,
-    bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
+VacantElements preparePart( Mesh& mesh, const FaceBitSet& leftPart,
+    bool needFlip, BooleanResultMapper::Maps* maps )
 {
     MR_TIMER;
 
-    auto maybeLeftPart = findMeshPart( mesh, cutPaths, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
-    if ( !maybeLeftPart )
-        return false;
-
-    auto rightPart = mesh.topology.getValidFaces() - *maybeLeftPart;
-    outVacant = mesh.deleteFaces( rightPart );
+    auto rightPart = mesh.topology.getValidFaces() - leftPart;
+    auto res = mesh.deleteFaces( rightPart );
     if ( needFlip )
         mesh.topology.flipOrientation();
 
@@ -147,8 +138,7 @@ bool preparePart( Mesh& mesh, const std::vector<EdgePath>& cutPaths, VacantEleme
         for ( auto ue : undirectedEdges( mesh.topology ) )
             emap[ue] = ue;
     }
-
-    return true;
+    return res;
 }
 
 // transforms partB if needed and adds it to partA
@@ -194,11 +184,8 @@ Expected<MR::Mesh> doBooleanOperation(
     const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
-    Mesh res;
-    VacantElements vacant;
 
-    bool dividableA{true};
-    bool dividableB{true};
+    std::optional<FaceBitSet> aPart;
     std::optional<FaceBitSet> bPart;
 
     bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
@@ -212,47 +199,48 @@ Expected<MR::Mesh> doBooleanOperation(
         assert( cutEdgesA.size() == cutEdgesB.size() );
 
     // bPart
-    BooleanResultMapper::Maps* mapsBPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )] : nullptr;
     tbb::task_group taskGroup;
     taskGroup.run( [&] ()
     {
         if ( onlyCutA )
             return;
-        if ( !onlyCutB )
-        {
-            bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
-            dividableB = bool( bPart );
-            return;
-        }
-
-        res = std::move( meshBCut );
-        dividableB = preparePart( res, cutEdgesB, vacant, meshACut, needInsideB, needFlipB, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents, intParams );
+        bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     } );
     // aPart
-    BooleanResultMapper::Maps* mapsAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )] : nullptr;
     if ( !onlyCutB )
-    {
-        res = std::move( meshACut );
-        dividableA = preparePart( res, cutEdgesA, vacant, meshBCut, needInsideA, needFlipA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents, intParams );
-    }
+        aPart = findMeshPart( meshACut, cutEdgesA, meshBCut, needInsideA, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     taskGroup.wait();
 
-    if ( ( onlyCutA && !dividableA ) || 
-         ( onlyCutB && !dividableB ) ||
-         ( ( needStitch ) && ( !dividableB || !dividableA ) ) )
+    if ( ( onlyCutA && !aPart ) ||
+         ( onlyCutB && !bPart ) ||
+         ( ( needStitch ) && ( !bPart || !aPart ) ) )
     {
         std::string s;
-        if ( !dividableA )
+        if ( !aPart )
             s += "Cannot separate mesh A to inside and outside parts, probably contours on mesh A are not closed or are not consistent.";
-        if ( !dividableB )
+        if ( !bPart )
         {
-            if ( !dividableA )
+            if ( !aPart )
                 s += " ";
             s += "Cannot separate mesh B to inside and outside parts, probably contours on mesh B are not closed or are not consistent.";
         }
 
         return unexpected( s );
     }
+
+    // no need update maps since we will update it during stitch
+    BooleanResultMapper::Maps* mapsBPtr = ( onlyCutB && mapper ) ? &mapper->maps[int( BooleanResultMapper::MapObject::B )] : nullptr;
+    taskGroup.run( [&] ()
+    {
+        if ( onlyCutA )
+            return;
+        preparePart( meshBCut, *bPart, false, mapsBPtr );
+    } );
+    BooleanResultMapper::Maps* mapsAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )] : nullptr;
+    VacantElements vacant;
+    if ( !onlyCutB )
+        vacant = preparePart( meshACut, *aPart, needFlipA, mapsAPtr );
+    taskGroup.wait();
 
     if ( needStitch && operation == BooleanOperation::Intersection )
     {
@@ -263,6 +251,9 @@ Expected<MR::Mesh> doBooleanOperation(
         MR::reverse( cutEdgesB );
         taskGroup.wait();
     }
+
+    auto& res = onlyCutB ? meshBCut : meshACut;
+
     if ( !needStitch )
     {
         if ( onlyCutB && rigidB2A )

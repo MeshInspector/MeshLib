@@ -17,7 +17,7 @@
 namespace
 {
 // cMinSweptHoleSize: empirical is result of benchmarking on different hole sizes and threads nubmer
-constexpr int cMinSweptHoleSize = 12;
+constexpr int cMinSweptHoleSize = 14;
 }
 
 namespace MR

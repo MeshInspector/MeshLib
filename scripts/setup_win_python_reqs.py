@@ -40,7 +40,7 @@ def run_python_setup(py_version: str):
         subprocess.run(f"{py_cmd} -m ensurepip --upgrade", shell=True, check=True)
         subprocess.run(f"{py_cmd} -m pip install --upgrade pip", shell=True, check=True)
 
-        requirements_file = Path(__file__).resolve().parents[1] / "requirements" / "python.txt"
+        requirements_file = Path(__file__).resolve().parents[1] / "requirements" / "python" / "requirements.txt"
         if requirements_file.exists():
             subprocess.run(f"{py_cmd} -m pip install -r {requirements_file}", shell=True, check=True)
         else:

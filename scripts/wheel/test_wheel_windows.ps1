@@ -14,7 +14,7 @@ py -$Version -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 py -$Version -m pip uninstall -y meshlib
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-py -$Version -m pip install --upgrade -r ./requirements/python.txt
+py -$Version -m pip install --upgrade -r ./requirements/python/requirements.txt
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 py -$Version -m pip install pytest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

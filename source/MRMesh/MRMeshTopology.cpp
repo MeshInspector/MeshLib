@@ -1959,16 +1959,14 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                     lastNewVert = vacantVerts->find_next( lastNewVert );
                     if ( lastNewVert )
                     {
-                        vacantVerts->reset( lastNewVert );
                         assert( lastNewVert < edgePerVertex_.size() );
-                        if ( updateValids_ )
-                        {
-                            assert( !validVerts_.test( lastNewVert ) );
-                            validVerts_.set( lastNewVert );
-                        }
+                        assert( !updateValids_ || !validVerts_.test( lastNewVert ) );
                     }
                     else
                     {
+                        if ( updateValids_ )
+                            validVerts_ |= *vacantVerts;
+                        vacantVerts->reset();
                         vacantVerts = nullptr;
                         lastNewVert = edgePerVertex_.endId();
                     }
@@ -1980,6 +1978,14 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                     map.tgt2srcVerts->pushBack( lastNewVert, fromV );
                 ++verticesCopied;
             };
+            if ( vacantVerts )
+            {
+                if ( updateValids_ )
+                    validVerts_ ^= *vacantVerts;
+                vacantVerts->reset( 0_v, lastNewVert + 1 );
+                if ( updateValids_ )
+                    validVerts_ ^= *vacantVerts;
+            }
             if ( updateValids_ )
                 numValidVerts_ += verticesCopied;
 
@@ -2004,16 +2010,14 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                     lastNewFace = vacantFaces->find_next( lastNewFace );
                     if ( lastNewFace )
                     {
-                        vacantFaces->reset( lastNewFace );
                         assert( lastNewFace < edgePerFace_.size() );
-                        if ( updateValids_ )
-                        {
-                            assert( !validFaces_.test( lastNewFace ) );
-                            validFaces_.set( lastNewFace );
-                        }
+                        assert( !updateValids_ || !validFaces_.test( lastNewFace ) );
                     }
                     else
                     {
+                        if ( updateValids_ )
+                            validFaces_ |= *vacantFaces;
+                        vacantFaces->reset();
                         vacantFaces = nullptr;
                         lastNewFace = edgePerFace_.endId();
                     }
@@ -2025,6 +2029,14 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 setAt( fmap, fromF, lastNewFace );
                 ++facesCopied;
             };
+            if ( vacantFaces )
+            {
+                if ( updateValids_ )
+                    validFaces_ ^= *vacantFaces;
+                vacantFaces->reset( 0_f, lastNewFace + 1 );
+                if ( updateValids_ )
+                    validFaces_ ^= *vacantFaces;
+            }
             if ( updateValids_ )
                 numValidFaces_ += facesCopied;
 
@@ -2053,10 +2065,10 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 if ( lastNewEdge )
                 {
                     assert( isLoneEdge( lastNewEdge ) );
-                    vacantEdges->reset( lastNewEdge );
                 }
                 else
                 {
+                    vacantEdges->reset();
                     vacantEdges = nullptr;
                     lastNewEdge = edges_.endId();
                 }
@@ -2067,6 +2079,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             if ( map.tgt2srcEdges )
                 map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
         };
+        if ( vacantEdges )
+            vacantEdges->reset( 0_ue, lastNewEdge + 1 );
         if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
             edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
 

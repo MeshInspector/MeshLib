@@ -252,7 +252,7 @@ Expected<MR::Mesh> doBooleanOperation(
         taskGroup.wait();
     }
 
-    auto& res = onlyCutB ? meshBCut : meshACut;
+    auto&& res = onlyCutB ? meshBCut : meshACut;
 
     if ( !needStitch )
     {
@@ -272,7 +272,7 @@ Expected<MR::Mesh> doBooleanOperation(
             *intParams.optionalOutCut = onlyCutA ? std::move( cutEdgesA ) : std::move( cutEdgesB );
     }
 
-    return res;
+    return std::move( res );
 }
 
 FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) const

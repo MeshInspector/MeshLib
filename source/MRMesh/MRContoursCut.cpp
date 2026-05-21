@@ -159,6 +159,26 @@ EdgeId iterateRemovedFacesInfoToFindLeftEdge( const MeshTopology& topology, cons
 PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
 {
     MR_TIMER;
+
+    int numVerts = 0;
+    int numEdges = 0;
+    for ( const auto& cont : contours )
+    {
+        auto size = int( cont.intersections.size() );
+        numVerts += size;
+        numEdges += 2 * size;
+        for ( const auto& in : cont.intersections )
+            if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
+                numEdges += 2;
+        if ( cont.closed )
+            --numVerts;
+    }
+    const auto totalExpectedVerts = mesh.topology.vertSize() + numVerts;
+    const auto totalExpectedEdges = mesh.topology.edgeSize() + numEdges;
+
+    mesh.topology.vertReserve( totalExpectedVerts );
+    mesh.topology.edgeReserve( totalExpectedEdges );
+
     PreCutResult res;
     res.paths.resize( contours.size() );
     res.oldEdgesInfo.resize( contours.size() );
@@ -310,6 +330,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
                 auto& edgeData = res.edgeData[thisEdge.undirected()];
+                edgeData.reserve( 5 ); // reseve small ammount to avoid overhead on reallocating for in most common scenarios
                 edgeData.emplace_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( intersectionId )},
                     .newVert = newVertId,
@@ -1150,11 +1171,17 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     // fill contours
     t.restart( "run TriangulateContourPlans" );
     int numTris = 0;
-    for ( const auto & plan : fillPlans )
+    int numEdges = 0;
+    for ( const auto& plan : fillPlans )
+    {
         numTris += plan.numTris;
+        numEdges += 2 * int( plan.items.size() );
+    }
     const auto expectedTotalTris = mesh.topology.faceSize() + numTris;
+    const auto expectedTotalEdges = mesh.topology.edgeSize() + numEdges;
 
     mesh.topology.faceReserve( expectedTotalTris );
+    mesh.topology.edgeReserve( expectedTotalEdges );
     if ( params.new2OldMap )
         params.new2OldMap->reserve( expectedTotalTris );
 
@@ -1163,7 +1190,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         // regenerate fill plan, if the execution of the old one (prepared before filling of other holes)
         // leads to the appearance of multiple edges
         if ( !isFillingMultipleEdgeFree( mesh.topology, fillPlans[i] ) )
-            fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i] );
+            fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i], false );
 
         executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i],
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );

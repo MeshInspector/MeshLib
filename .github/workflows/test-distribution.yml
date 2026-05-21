@@ -256,17 +256,30 @@ jobs:
           echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }}
 
+      # Self-hosted runners have no passwordless sudo, so they install into
+      # ~/Library via `-target CurrentUserHomeDirectory` (enabled by the
+      # `<domains enable_currentUserHome="true">` in macos/Distribution.xml).
+      # GitHub-hosted runners keep the production sudo-into-/Library path so
+      # the end-user install scenario is still exercised.
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*.pkg -target /
-          xargs brew install --quiet < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+          if [ "${{ runner.environment }}" = "github-hosted" ]; then
+            sudo installer -pkg meshlib_*.pkg -target /
+            MESHLIB_FW=/Library/Frameworks/MeshLib.framework/Versions/Current
+          else
+            installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
+            MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
+          fi
+          xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
+          echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
+          echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
+        run: MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
+        run: meshconv --help
 
       - name: Build C++ examples
         working-directory: examples/cpp-examples

@@ -7,6 +7,9 @@
     <conclusion file="Conclusion.rtf" mime-type="text/richtext"/>
     <pkg-ref id="com.MeshInspector.MeshLib"/>
     <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <!-- Allow `installer -target CurrentUserHomeDirectory` (no sudo) in
+         addition to the default system-wide /Library install. -->
+    <domains enable_currentUserHome="true" enable_localSystem="true"/>
     <choices-outline>
         <line choice="default">
             <line choice="com.MeshInspector.MeshLib"/>

@@ -625,6 +625,9 @@ endif # have MACOS_MIN_VER
 ifeq ($(TARGET),python)
 LINKER_FLAGS += -L$(HOMEBREW_DIR)/lib
 LINKER_FLAGS += -ltbb
+# Apple's `/usr/lib/libc++.1.dylib` does not re-export typeinfo for `__int128` (`__ZTIn`) / `unsigned __int128` (`__ZTIo`),
+# which live in `libc++abi.dylib`. Without this, importing the wheel fails with `Symbol not found: __ZTIn` on macOS.
+LINKER_FLAGS += -lc++abi
 # This fixes an error during wheel creation:
 #   /Library/Developer/CommandLineTools/usr/bin/install_name_tool: changing install names or rpaths can't be redone for: /private/var/folders/c2/_t7lgq_s3zb_r01vy_1qd6nh0000gs/T/tmpatczljnu/wheel/meshlib/mrmeshpy.so (for architecture arm64) because larger updated load commands do not fit (the program must be relinked, and you may need to use -headerpad or -headerpad_max_install_names)
 # Apparently there's not enough space in the binary to fit longer library paths, and this pads it to have to up MAXPATHLEN space for each path.

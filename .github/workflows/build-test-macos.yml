@@ -55,7 +55,7 @@ jobs:
             runner: macos-15-intel # github hosted
             instance: macos-15-intel
           - arch: arm64
-            config: Debug
+            config: Release
             os: github-arm
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
@@ -64,7 +64,7 @@ jobs:
             runner: macos-14
             instance: macos-14
           - arch: arm64
-            config: Release
+            config: Debug
             os: arm
             compiler: brew-llvm18
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++

@@ -126,7 +126,12 @@ std::vector<std::string> HistoryStore::getNActions( unsigned n, HistoryAction::T
         else if ( type == HistoryAction::Type::Redo )
             action = stack_[firstRedoIndex_ + i];
         if ( action )
-            res[i] = action->name();
+        {
+            if ( auto dynName = getDynamicName( action ) )
+                res[i] = *dynName;
+            else
+                res[i] = action->name();
+        }
     }
     return res;
 }

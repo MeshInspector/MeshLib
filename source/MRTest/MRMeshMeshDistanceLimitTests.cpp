@@ -246,7 +246,7 @@ TEST( MRMesh, MeshMeshDistance_TouchPoint )
 
         const auto sd = findSignedDistance( a, b, &xf, kZeroLimitSq );
         EXPECT_FLOAT_EQ( sd.signedDist, 0.0f );
-        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Touching );
+        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Touching ); // <-- PROBLEM 1
     }
 }
 
@@ -304,7 +304,7 @@ TEST( MRMesh, MeshMeshDistance_TouchArea )
 
         const auto sd = findSignedDistance( a, b, &xf, kZeroLimitSq );
         EXPECT_FLOAT_EQ( sd.signedDist, 0.0f );
-        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Touching );
+        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Touching ); // <-- PROBLEM 2
     }
 }
 
@@ -362,8 +362,8 @@ TEST( MRMesh, MeshMeshDistance_ShallowIntersect )
         EXPECT_FLOAT_EQ( d.distSq, 0.0f );
 
         const auto sd = findSignedDistance( a, b, &xf, kZeroLimitSq );
-        EXPECT_NEAR( sd.signedDist, -penetration, 1e-3f );
-        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Colliding );
+        EXPECT_NEAR( sd.signedDist, -penetration, 1e-3f ); // <-- PROBLEM 3
+        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Colliding ); // <-- PROBLEM 4
     }
 }
 
@@ -426,8 +426,8 @@ TEST( MRMesh, MeshMeshDistance_DeepIntersect )
         EXPECT_FLOAT_EQ( d.distSq, 0.0f );
 
         const auto sd = findSignedDistance( a, b, &xf, kZeroLimitSq );
-        EXPECT_NEAR( sd.signedDist, -penetration, 1e-3f );
-        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Colliding );
+        EXPECT_NEAR( sd.signedDist, -penetration, 1e-3f ); // <-- PROBLEM 5
+        EXPECT_EQ( sd.status, MeshMeshCollisionStatus::Colliding ); // <-- PROBLEM 6
     }
 }
 

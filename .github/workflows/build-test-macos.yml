@@ -47,7 +47,6 @@ jobs:
         include:
           - arch: x64
             config: Release
-            os: x64
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
@@ -56,7 +55,6 @@ jobs:
             instance: macos-15-intel
           - arch: arm64
             config: Release
-            os: github-arm
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
@@ -65,7 +63,6 @@ jobs:
             instance: macos-14
           - arch: arm64
             config: Debug
-            os: arm
             compiler: brew-llvm18
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
             c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
@@ -223,7 +220,7 @@ jobs:
         with:
           build_config: ${{ matrix.config }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
-          test_artifacts_path: macos/${{ matrix.os }}
+          test_artifacts_path: macos/${{ matrix.arch }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Generate Test Performance Report
@@ -236,13 +233,13 @@ jobs:
         if: ${{ matrix.config == 'Release' }}
         run: |
           ./scripts/distribution_apple.sh ${{ inputs.app_version }}
-          mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
+          mv MeshLib_.pkg meshlib_${{matrix.arch}}.pkg
 
       - name: Extract Pkg
         if: ${{ matrix.config == 'Release' }}
         run: |
           # https://gist.github.com/ugultopu/1adf8e08acb87be649d69419cf7aca3c
-          pkgutil --expand meshlib_${{ matrix.os }}.pkg ./meshlib_install
+          pkgutil --expand meshlib_${{ matrix.arch }}.pkg ./meshlib_install
           cd ./meshlib_install/MeshLib.pkg
           cat Payload | gunzip | cpio -i
 
@@ -282,8 +279,8 @@ jobs:
           attempt_limit: 3
           attempt_delay: 30000 # milliseconds
           with: |
-            name: Distributives_macos-${{matrix.os}}
-            path: meshlib_${{matrix.os}}.pkg
+            name: Distributives_macos-${{matrix.arch}}
+            path: meshlib_${{matrix.arch}}.pkg
             retention-days: 1
             overwrite: true
 
@@ -293,7 +290,7 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: meshlib_${{matrix.os}}.pkg
+          artifact_glob: meshlib_${{matrix.arch}}.pkg
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet

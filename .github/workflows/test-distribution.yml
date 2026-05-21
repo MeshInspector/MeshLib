@@ -226,7 +226,7 @@ jobs:
             pkg_pattern: '*x64.pkg'
           - arch: arm64
             runner: macos-latest  # github-hosted Apple Silicon
-            pkg_pattern: '*arm.pkg'
+            pkg_pattern: '*arm64.pkg'
     steps:
       - name: Checkout
         uses: actions/checkout@v6

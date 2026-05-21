@@ -30,5 +30,5 @@ outputs:
     description: JSON-encoded array of the resulting matrix combinations.
 
 runs:
-  using: node20
+  using: node24
   main: dist/index.js

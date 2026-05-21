@@ -87,7 +87,7 @@ jobs:
       - name: Install Python requirements
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python/requirements.txt
 
       - name: Install supported compiler
         run: |
@@ -181,7 +181,7 @@ jobs:
       - name: Install Python requirements
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python/requirements.txt
 
       - name: Install supported compiler
         run: apt-get -y install ${{ matrix.compiler }}

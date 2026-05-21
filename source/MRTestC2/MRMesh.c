@@ -87,7 +87,7 @@ void testIncidentFacesFromEdges( void )
     MR_Mesh* mesh = MR_makeCube( &size, &base );
 
     MR_UndirectedEdgeBitSet* edges = MR_UndirectedEdgeBitSet_DefaultConstruct();
-    MR_UndirectedEdgeBitSet_resize( edges, (MR_UndirectedEdgeId){12}, &(bool){false} );
+    MR_UndirectedEdgeBitSet_resize( edges, 12, &(bool){false} );
     MR_UndirectedEdgeBitSet_set_2( edges, (MR_UndirectedEdgeId){0}, &(bool){true} );
 
     MR_FaceBitSet* faces = MR_getIncidentFaces_MR_UndirectedEdgeBitSet( MR_Mesh_Get_topology( mesh ), edges );

@@ -72,8 +72,8 @@ void testLargeRegions( void )
     MR_std_pair_MR_FaceBitSet_int* regions = MR_MeshComponents_getLargeByAreaRegions( m.part, MR_std_pair_MR_Face2RegionMap_int_first( map ), *MR_std_pair_MR_Face2RegionMap_int_second( map ), 0.1f );
 
     TEST_ASSERT( *MR_std_pair_MR_FaceBitSet_int_second( regions ) == 1 );
-    TEST_ASSERT( MR_FaceBitSet_test( MR_std_pair_MR_FaceBitSet_int_firstregions ) ), 0 );
-    TEST_ASSERT( !MR_FaceBitSet_test( MR_std_pair_MR_FaceBitSet_int_firstregions ) ), 12 );
+    TEST_ASSERT( MR_FaceBitSet_test( regions ) ), 0 );
+    TEST_ASSERT( !MR_FaceBitSet_test( regions ) ), 12 );
 
     MR_std_pair_MR_Face2RegionMap_int_Destroy( map );
 
@@ -85,8 +85,8 @@ void testLargeComponents( void )
     CreatedMesh m = createMesh();
 
     MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents_3( m.part, 0.1f, NULL );
-    TEST_ASSERT( MR_FaceBitSet_test( components, 0 );
-    TEST_ASSERT( !MR_FaceBitSet_test( components, 12 );
+    TEST_ASSERT( MR_FaceBitSet_test( components, 0 ) );
+    TEST_ASSERT( !MR_FaceBitSet_test( components, 12 ) );
 
     MR_FaceBitSet_Destroy( components );
 

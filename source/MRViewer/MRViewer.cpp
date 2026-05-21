@@ -316,9 +316,6 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
 {
-    if ( count == 0 )
-        return;
-
     std::vector<std::filesystem::path> paths( count );
     for ( int i = 0; i < count; ++i )
     {

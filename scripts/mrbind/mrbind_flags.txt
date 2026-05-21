@@ -20,4 +20,3 @@
 --skip-mentions-of '/std::initializer_list<.*>/'
 --adjust-comments 's@(^|(^///\s*)? )\\([{}]|(def|in|addto)group\s+).*@@g'
 --infer-lifetime-constructors
---verbose

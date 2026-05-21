@@ -83,7 +83,6 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |Name                                                                                      |Description                                                                  |License             |
 |------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
 |<a rel="nofollow" href="https://github.com/AcademySoftwareFoundation/openvdb">OpenVDB</a> |efficient manipulation of sparse, time-varying, volumetric data discretized  |Apache-2.0          |
-|<a rel="nofollow" href="https://github.com/Blosc/c-blosc">c-blosc</a>                              |a blocking, shuffling and lossless compression library (transitive dep of OpenVDB) |BSD-3-Clause  |
 |<a rel="nofollow" href="https://sourceforge.net/projects/gdcm/">gdcm</a>                             |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
 
 ### MRCuda

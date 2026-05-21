@@ -34,6 +34,7 @@
     <ClCompile Include="MRICPTests.cpp" />
     <ClCompile Include="MRLaplacianTests.cpp" />
     <ClCompile Include="MRMarchingCubesTests.cpp" />
+    <ClCompile Include="MRMeshBooleanTests.cpp" />
     <ClCompile Include="MRMeshComponentsTests.cpp" />
     <ClCompile Include="MRMeshDecimateTests.cpp" />
     <ClCompile Include="MRMeshIntersectTests.cpp" />

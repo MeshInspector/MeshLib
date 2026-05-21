@@ -818,7 +818,7 @@ HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowS
         if ( holeSize >= cMinSweptHoleSize )
         {
             // only use this for large holes
-            auto exRes = fillContours2DPlan( mesh, e, 0 );
+            auto exRes = fillContours2DPlan( mesh, e );
             if ( exRes.has_value() )
                 return *exRes;
         }

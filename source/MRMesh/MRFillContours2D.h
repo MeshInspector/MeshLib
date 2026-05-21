@@ -23,7 +23,7 @@ MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>&
  * edge should have invalid left face (FaceId == -1)
  * @return Expected with has_value()=true if hole plan is prepared, otherwise - string error
  */
-MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, int deloneIters = 300 );
+MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId );
 
 /// computes the transformation that maps
 /// O into center mass of contours' points

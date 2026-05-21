@@ -122,8 +122,7 @@ public:
         WindingMode mode = WindingMode::NonZero,
         bool needOutline = false, // if set do not do real triangulation, just marks inside faces as present
         bool allowMerge = true, // one can disable merge for identical vertices, merge is useful on symbol contours
-        std::vector<EdgePath>* outBoundaries = nullptr, // optional out EdgePaths that corresponds to initial contours
-        int deloneIters = 300
+        std::vector<EdgePath>* outBoundaries = nullptr // optional out EdgePaths that corresponds to initial contours
         );
 
     size_t vertSize() const { return tp_.vertSize(); }
@@ -195,7 +194,6 @@ private:
 
     void calculateWinding_();
 
-    int deloneIters_{ 300 };
     std::vector<int> reflexChainCache_;
     void triangulateMonotoneBlock_( EdgeId holeEdgeId );
 
@@ -286,14 +284,12 @@ SweepLineQueue::SweepLineQueue(
     WindingMode mode,
     bool needOutline,
     bool allowMerge,
-    std::vector<EdgePath>* outBoundaries, 
-    int deloneIters ) :
+    std::vector<EdgePath>* outBoundaries ) :
     needOutline_{ needOutline },
     allowMerge_{ allowMerge },
     abortWhenIntersect_{ abortWhenIntersect },
     outBoundaries_{ outBoundaries },
-    windingMode_{ mode },
-    deloneIters_{ deloneIters }
+    windingMode_{ mode }
 {
     Box3f box;
     for ( const auto& cont : contours )
@@ -487,7 +483,7 @@ Mesh SweepLineQueue::triangulate()
     } );
     if ( !needOutline_ )
     {
-        makeDeloneEdgeFlips( mesh, {}, deloneIters_ );
+        makeDeloneEdgeFlips( mesh, {}, 300 );
     }
     return mesh;
 }
@@ -1363,26 +1359,16 @@ Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVe
 
 std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
 {
-    return triangulateDisjointContours( contours, { .holeVertsIds = holeVertsIds,.outBoundaries = outBoundaries } );
+    if ( contours.empty() )
+        return Mesh();
+    SweepLineQueue triangulator( contours, holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries );
+    return triangulator.run();
 }
 
 std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
 {
-    return triangulateDisjointContours( contours, { .holeVertsIds = holeVertsIds,.outBoundaries = outBoundaries } );
-}
-
-std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const DisjointContoursTriangulationParams& params )
-{
     const auto contsf = convertContours<Contours2f>( contours );
-    return triangulateDisjointContours( contsf, params );
-}
-
-std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const DisjointContoursTriangulationParams& params )
-{
-    if ( contours.empty() )
-        return Mesh();
-    SweepLineQueue triangulator( contours, params.holeVertsIds, true, WindingMode::NonZero, false, true, params.outBoundaries, params.deloneIters );
-    return triangulator.run();
+    return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
 }
 
 }

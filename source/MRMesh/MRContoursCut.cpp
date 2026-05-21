@@ -174,7 +174,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             --numVerts;
     }
     const auto totalExpectedVerts = mesh.topology.vertSize() + numVerts;
-    const auto totalExpectedEdges = mesh.topology.edgeSize() + numVerts;
+    const auto totalExpectedEdges = mesh.topology.edgeSize() + numEdges;
 
     mesh.topology.vertReserve( totalExpectedVerts );
     mesh.topology.edgeReserve( totalExpectedEdges );
@@ -330,6 +330,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
                 auto& edgeData = res.edgeData[thisEdge.undirected()];
+                edgeData.reserve( 5 ); // reseve small ammount to avoid overhead on reallocating for in most common scenarios
                 edgeData.emplace_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( intersectionId )},
                     .newVert = newVertId,

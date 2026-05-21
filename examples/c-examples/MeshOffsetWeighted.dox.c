@@ -42,12 +42,11 @@ int main( void )
 
     MR_WeightedShell_ParametersMetric* params = MR_WeightedShell_ParametersMetric_DefaultConstruct();
     // Algorithm is voxel based, voxel size affects performance and form of result mesh
-    MR_WeightedShell_ParametersBase* base = MR_WeightedShell_ParametersMetric_MutableUpcastTo_MR_WeightedShell_ParametersBase( params );
     MR_MeshPart* mp = MR_MeshPart_Construct( mesh, NULL );
-    MR_WeightedShell_ParametersBase_Set_voxelSize( base, MR_suggestVoxelSize( mp, 1000.0f ) );
+    MR_WeightedShell_ParametersMetric_Set_voxelSize( params, MR_suggestVoxelSize( mp, 1000.0f ) );
     // common basic offset applied for all point
     // Vertex-specific weighted offsets applied after the basic one
-    MR_WeightedShell_ParametersBase_Set_offset( base, 0.2f );
+    MR_WeightedShell_ParametersMetric_Set_offset( params, 0.2f );
     MR_DistanceFromWeightedPointsParams* dist = MR_WeightedShell_ParametersMetric_GetMutable_dist( params );
     MR_DistanceFromWeightedPointsParams_Set_maxWeight( dist, maxWeight );
 

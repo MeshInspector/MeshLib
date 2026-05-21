@@ -35,10 +35,10 @@ int main( void )
     MR_VertId ancV1 = MR_VertBitSet_find_last( verts );
     // Mark the anchor points in the free area
     MR_VertBitSet* freeVerts = MR_VertBitSet_DefaultConstruct();
-    MR_BitSet_resize( MR_VertBitSet_MutableUpcastTo_MR_BitSet( freeVerts ), MR_BitSet_size( MR_VertBitSet_UpcastTo_MR_BitSet( verts ) ), NULL );
+    MR_VertBitSet_resize( freeVerts, MR_VertBitSet_size( verts ), NULL );
 
-    MR_BitSet_set_2( MR_VertBitSet_MutableUpcastTo_MR_BitSet( freeVerts ), ancV0.id_, true );
-    MR_BitSet_set_2( MR_VertBitSet_MutableUpcastTo_MR_BitSet( freeVerts ), ancV1.id_, true );
+    MR_VertBitSet_set_2( freeVerts, ancV0.id_, true );
+    MR_VertBitSet_set_2( freeVerts, ancV1.id_, true );
     // Expand the free area
     MR_expand_MR_VertBitSet( MR_Mesh_Get_topology( mesh ), freeVerts, &(int){5} );
 

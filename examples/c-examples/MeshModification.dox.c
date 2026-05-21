@@ -14,8 +14,7 @@ int main( void )
 
     // Relax mesh (5 iterations)
     MR_MeshRelaxParams* meshRelaxParams = MR_MeshRelaxParams_DefaultConstruct();
-    MR_RelaxParams* relaxParams = MR_MeshRelaxParams_MutableUpcastTo_MR_RelaxParams( meshRelaxParams );
-    MR_RelaxParams_Set_iterations( relaxParams, 5 );
+    MR_MeshRelaxParams_Set_iterations( meshRelaxParams, 5 );
     MR_relax_3_MR_Mesh( mesh, meshRelaxParams, NULL );
     MR_MeshRelaxParams_Destroy( meshRelaxParams );
 

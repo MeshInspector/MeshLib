@@ -29,7 +29,7 @@ int main( void )
     // Setup parameters
     MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
     // calculate voxel size depending on desired accuracy and/or memory consumption
-    MR_BaseShellParameters_Set_voxelSize( MR_GeneralOffsetParameters_MutableUpcastTo_MR_BaseShellParameters( params ), MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
+    MR_GeneralOffsetParameters_Set_voxelSize( params, MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
     MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
     float offset = MR_Box3f_diagonal( &bbox ) * 0.1f;
 

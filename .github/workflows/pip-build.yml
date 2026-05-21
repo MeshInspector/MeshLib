@@ -471,7 +471,7 @@ jobs:
             brewpath: /usr/local
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            instance: macos-14
+            instance: macos-15
             brewpath: /opt/homebrew
     steps:
       - name: Checkout
@@ -702,11 +702,20 @@ jobs:
             runner-tier: "github"
             instance: macos-15-intel
           - platform: "x86"
+            runner-tier: "github"
+            instance: macos-26-intel
+          - platform: "x86"
             runner-tier: "self-hosted"
             instance: macos-x64-build
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-14
+          - platform: "arm64"
+            runner-tier: "github"
+            instance: macos-15
+          - platform: "arm64"
+            runner-tier: "github"
+            instance: macos-26
           - platform: "arm64"
             runner-tier: "self-hosted"
             instance: macos-arm-build-12

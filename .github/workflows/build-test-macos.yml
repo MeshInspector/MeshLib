@@ -61,8 +61,8 @@ jobs:
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
             # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
-            runner: macos-14
-            instance: macos-14
+            runner: macos-15
+            instance: macos-15
           - arch: arm64
             config: Release
             os: arm

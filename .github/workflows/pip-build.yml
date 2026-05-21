@@ -702,20 +702,11 @@ jobs:
             runner-tier: "github"
             instance: macos-15-intel
           - platform: "x86"
-            runner-tier: "github"
-            instance: macos-26-intel
-          - platform: "x86"
             runner-tier: "self-hosted"
             instance: macos-x64-build
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-14
-          - platform: "arm64"
-            runner-tier: "github"
-            instance: macos-15
-          - platform: "arm64"
-            runner-tier: "github"
-            instance: macos-26
           - platform: "arm64"
             runner-tier: "self-hosted"
             instance: macos-arm-build-12

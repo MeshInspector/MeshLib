@@ -219,14 +219,32 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
+      # Matches the GitHub-hosted + self-hosted macOS coverage used by
+      # `macos-pip-test` in pip-build.yml (see #6137), so .pkg installs
+      # exercise the same image set as the wheels.
       matrix:
         include:
+          - arch: arm64
+            runner: macos-14
+            pkg_pattern: '*arm.pkg'
+          - arch: arm64
+            runner: macos-15
+            pkg_pattern: '*arm.pkg'
+          - arch: arm64
+            runner: macos-26
+            pkg_pattern: '*arm.pkg'
+          - arch: arm64
+            runner: macos-arm-build-12
+            pkg_pattern: '*arm.pkg'
           - arch: x64
             runner: macos-15-intel
             pkg_pattern: '*x64.pkg'
-          - arch: arm64
-            runner: macos-latest  # github-hosted Apple Silicon
-            pkg_pattern: '*arm.pkg'
+          - arch: x64
+            runner: macos-26-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
+            runner: macos-x64-build
+            pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout
         uses: actions/checkout@v6

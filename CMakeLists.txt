@@ -18,6 +18,14 @@ IF(APPLE)
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+    # Pin LC_BUILD_VERSION minos so dylibs stay loadable on older macOS
+    # releases regardless of the build host's SDK. 12.7 matches the
+    # MACOS_MIN_VER passed by scripts/mrbind/generate.mk and the
+    # macosx_12_0_* wheel filenames. Caller's -D or env wins.
+    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET AND NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET})
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "12.7" CACHE STRING "Minimum macOS version to target for deployment")
+    endif()
 ENDIF()
 
 project(MeshLib CXX)

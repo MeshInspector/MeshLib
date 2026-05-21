@@ -71,6 +71,7 @@
     <ClCompile Include="MRBendTextAlongCurveTests.cpp" />
     <ClCompile Include="MRFormatTests.cpp" />
     <ClCompile Include="MRMeshMeshDistanceTest.cpp" />
+    <ClCompile Include="MRMeshMeshDistanceLimitTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

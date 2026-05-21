@@ -25,7 +25,7 @@ void testArea( void )
     MR_FaceBitSet_resize( faces, 12, &(bool){true} );
 
     for ( int i = 6; i < 12; ++i )
-        MR_FaceBitSet_set_2( faces, i, false );
+        MR_FaceBitSet_set_2( faces, (MR_FaceId){i}, false );
 
     area = MR_Mesh_area_const_MR_FaceBitSet_ptr( mesh, faces );
     TEST_ASSERT( area > 2.999f && area < 3.001f );
@@ -69,7 +69,7 @@ void testIncidentFacesFromVerts( void )
 
     MR_VertBitSet* verts = MR_VertBitSet_DefaultConstruct();
     MR_VertBitSet_resize( verts, 8, &(bool){false} );
-    MR_VertBitSet_set_2( verts, 0, true );
+    MR_VertBitSet_set_2( verts, (MR_VertId){0}, true );
 
     MR_FaceBitSet* faces = MR_getIncidentFaces_MR_VertBitSet( MR_Mesh_Get_topology(mesh), verts );
     size_t num = MR_FaceBitSet_count( faces );
@@ -87,8 +87,8 @@ void testIncidentFacesFromEdges( void )
     MR_Mesh* mesh = MR_makeCube( &size, &base );
 
     MR_UndirectedEdgeBitSet* edges = MR_UndirectedEdgeBitSet_DefaultConstruct();
-    MR_UndirectedEdgeBitSet_resize( edges, 12, &(bool){false} );
-    MR_UndirectedEdgeBitSet_set_2( edges, 0, &(bool){true} );
+    MR_UndirectedEdgeBitSet_resize( edges, (MR_UndirectedEdgeId){12}, &(bool){false} );
+    MR_UndirectedEdgeBitSet_set_2( edges, (MR_UndirectedEdgeId){0}, &(bool){true} );
 
     MR_FaceBitSet* faces = MR_getIncidentFaces_MR_UndirectedEdgeBitSet( MR_Mesh_Get_topology( mesh ), edges );
     size_t num = MR_FaceBitSet_count( faces );

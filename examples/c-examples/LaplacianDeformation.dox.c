@@ -37,8 +37,8 @@ int main( void )
     MR_VertBitSet* freeVerts = MR_VertBitSet_DefaultConstruct();
     MR_VertBitSet_resize( freeVerts, MR_VertBitSet_size( verts ), NULL );
 
-    MR_VertBitSet_set_2( freeVerts, ancV0.id_, true );
-    MR_VertBitSet_set_2( freeVerts, ancV1.id_, true );
+    MR_VertBitSet_set_2( freeVerts, ancV0, true );
+    MR_VertBitSet_set_2( freeVerts, ancV1, true );
     // Expand the free area
     MR_expand_MR_VertBitSet( MR_Mesh_Get_topology( mesh ), freeVerts, &(int){5} );
 

@@ -36,7 +36,6 @@ def test_boolean_exposing():
         pos3,
     )
 
-    assert bResMesh.topology.getValidVerts().size() == 14
     assert bResMesh.topology.getValidVerts().count() == 14
     assert bResMesh.topology.findHoleRepresentiveEdges().size() == 0
 

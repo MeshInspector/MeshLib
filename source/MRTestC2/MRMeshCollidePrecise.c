@@ -48,8 +48,10 @@ void testMeshCollidePrecise( void )
     const MR_MeshTopology* meshBTop = MR_Mesh_Get_topology( meshB );
     MR_std_vector_std_vector_MR_VarEdgeTri* contours = MR_orderIntersectionContours( meshATop, meshBTop, intersections );
     TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_std_vector_MR_VarEdgeTri_size( contours ), 4 )
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 0 ) ), 71 )
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 1 ) ), 7 )
+    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 0 ) ) == 69 || // Apple Debug
+                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 0 ) ) == 71 )
+    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 1 ) ) == 9  || // Apple Debug
+                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 1 ) ) == 7 )
     TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 2 ) ) == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
                  MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 2 ) ) == 71 ); // with FMA instruction (modern compilers for ARM)
     TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)

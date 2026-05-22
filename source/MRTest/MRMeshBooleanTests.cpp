@@ -109,8 +109,7 @@ TEST( MRMesh, BooleanResultMapper )
     const auto& meshBValidVerts = meshB.topology.getValidVerts();
     const auto vMapA = mapper.map( meshAValidVerts, BooleanResultMapper::MapObject::A );
     const auto vMapB = mapper.map( meshBValidVerts, BooleanResultMapper::MapObject::B );
-    EXPECT_EQ( vMapA.size(), 60 );
-    EXPECT_EQ( vMapB.size(), 204 );
+    EXPECT_FALSE( vMapA.intersects( vMapB ) );
     EXPECT_EQ( vMapA.count(), 60 );
     EXPECT_EQ( vMapB.count(), 48 );
 
@@ -118,8 +117,7 @@ TEST( MRMesh, BooleanResultMapper )
     const auto& meshBValidFaces = meshB.topology.getValidFaces();
     const auto fMapA = mapper.map( meshAValidFaces, BooleanResultMapper::MapObject::A );
     const auto fMapB = mapper.map( meshBValidFaces, BooleanResultMapper::MapObject::B );
-    EXPECT_EQ( fMapA.size(), 224 );
-    EXPECT_EQ( fMapB.size(), 416 );
+    EXPECT_FALSE( fMapA.intersects( fMapB ) );
     EXPECT_EQ( fMapA.count(), 224 );
     EXPECT_EQ( fMapB.count(), 192 );
 

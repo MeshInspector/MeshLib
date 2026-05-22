@@ -162,16 +162,23 @@ runs:
         set -o pipefail
         brew tap-new --no-git local/patched 2>/dev/null || true
         TAP_FORMULA="$(brew --repository local/patched)/Formula/cpr.rb"
+        # `brew cat cpr` may differ in indentation / line endings between
+        # API-cached and tapped formulas, so match `def install` loosely
+        # and inject exactly once.
         brew cat cpr | awk '
-          /^  def install$/ {
+          !done && /def install/ {
             print
             print "    ENV.append \"CXXFLAGS\", \"-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0\""
+            done = 1
             next
           }
           { print }
         ' > "${TAP_FORMULA}"
-        grep -n INIT_PRIMARY_EXCEPTION "${TAP_FORMULA}" \
-          || { echo "Formula patch did not land"; exit 1; }
+        if ! grep -q INIT_PRIMARY_EXCEPTION "${TAP_FORMULA}"; then
+          echo "::error::Formula patch did not land. Dumping first 60 lines of brew cat cpr:"
+          brew cat cpr | head -60 | cat -A
+          exit 1
+        fi
         # Make room for the local/patched cpr at the canonical brew path.
         brew uninstall --ignore-dependencies cpr 2>/dev/null || true
         brew install --build-from-source --verbose local/patched/cpr 2>&1 | tee /tmp/cpr-build.log

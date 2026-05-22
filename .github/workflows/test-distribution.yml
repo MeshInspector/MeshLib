@@ -222,6 +222,9 @@ jobs:
       matrix:
         include:
           - arch: arm64
+            runner: [ self-hosted, macos, arm64, build, macos-13 ]
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
             runner: macos-14
             pkg_pattern: '*arm64.pkg'
           - arch: arm64

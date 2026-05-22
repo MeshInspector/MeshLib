@@ -152,12 +152,30 @@ runs:
     # emit the troublesome reference, so it loads on macos-12+ as-is. A
     # from-source rebuild on a current macos-15-intel runner would
     # *re*introduce the symbol via newer Xcode's libc++.
+    # Option A experiment: try to push the libc++ feature-test override
+    # through brew's superenv via CXXFLAGS/CPPFLAGS. The build log is grepped
+    # afterwards for the define landing on an actual compile invocation, so
+    # we get a clear "DEFINE REACHED THE COMPILER" / "STRIPPED" signal even
+    # before testing the resulting dylib on macos-14.
     - name: Build cpr from source for older macOS target (arm64 only)
       if: runner.arch == 'ARM64'
       shell: bash
       env:
         MACOSX_DEPLOYMENT_TARGET: "12.7"
-      run: brew reinstall --build-from-source --quiet cpr
+        CXXFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
+        CPPFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
+        HOMEBREW_CFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
+        HOMEBREW_CXXFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
+      run: |
+        set -o pipefail
+        brew reinstall --build-from-source --verbose cpr 2>&1 | tee /tmp/cpr-build.log
+        echo "--- option A verification ---"
+        if grep -q -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log; then
+          echo "DEFINE REACHED THE COMPILER"
+          grep -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log | head -5
+        else
+          echo "DEFINE STRIPPED BY SUPERENV (option A failed; consider option B/C)"
+        fi
 
     - name: Build thirdparty libs
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}

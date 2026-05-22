@@ -8,9 +8,9 @@ SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
 [[ ${MRBIND_DIR:=} ]] || MRBIND_DIR="$SCRIPT_DIR/../../thirdparty/mrbind"
 
-# Read the Clang version from `clang_version.txt`. `xargs` trims the whitespace.
+# Read the Clang version from `clang_version_macos.txt`. `xargs` trims the whitespace.
 # Some versions of MacOS seem to lack `realpath`, so not using it here.
-CLANG_VER="$(cat "$SCRIPT_DIR/clang_version.txt" | xargs)"
+CLANG_VER="$(cat "$SCRIPT_DIR/clang_version_macos.txt" | xargs)"
 [[ ${CLANG_VER:=} ]] || (echo "Not sure what version of Clang to use." && false)
 
 cd "$MRBIND_DIR"

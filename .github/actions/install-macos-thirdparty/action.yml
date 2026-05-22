@@ -143,16 +143,17 @@ runs:
       shell: bash
       run: ./scripts/install_brew_requirements.sh
 
-    # Build cpr from source against an older deployment target so the
-    # bundled libcpr.1.dylib has LC_BUILD_VERSION minos <= 12.7 regardless
-    # of build host OS. Brew's prebuilt arm64_sequoia bottle has minos=15
-    # and references libc++ symbols like __from_native_exception_pointer
-    # that are absent from /usr/lib/libc++.1.dylib on macOS < 15, breaking
-    # .pkg loads on macos-14 runners. Compiling from source under a 12.7
-    # target makes the libc++ availability gates drop those references.
-    # `HOMEBREW_MACOS_VERSION=14.0` was tried first; current brew ignores
-    # it for bottle selection (still poured arm64_sequoia).
-    - name: Build cpr from source for older macOS target
+    # arm64 only: brew ships an `arm64_sequoia` cpr bottle (minos=15) that
+    # references libc++ symbols absent from /usr/lib/libc++.1.dylib on macOS
+    # < 15, breaking .pkg loads on macos-14. Compiling from source under a
+    # 12.7 deployment target produces a clean libcpr.1.dylib.
+    # x86_64 keeps the brew `sonoma` cpr bottle (the only Intel bottle
+    # Homebrew ships) -- it was built on an older Xcode whose libc++ doesn't
+    # emit the troublesome reference, so it loads on macos-12+ as-is. A
+    # from-source rebuild on a current macos-15-intel runner would
+    # *re*introduce the symbol via newer Xcode's libc++.
+    - name: Build cpr from source for older macOS target (arm64 only)
+      if: runner.arch == 'ARM64'
       shell: bash
       env:
         MACOSX_DEPLOYMENT_TARGET: "12.7"

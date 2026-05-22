@@ -195,32 +195,43 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
         } );
     }
 
-    nlohmann::json out = nlohmann::json::object();
+    nlohmann::json structured = nlohmann::json::object();
+    structured["width"]  = img.resolution.x;
+    structured["height"] = img.resolution.y;
+
     if ( args.contains( "filePath" ) )
     {
         const auto path = pathFromUtf8( args["filePath"].get<std::string>() );
         auto saved = ImageSave::toAnySupportedFormat( img, path );
         if ( !saved )
             throw std::runtime_error( saved.error() );
-        out["path"] = utf8string( path );
+        structured["path"] = utf8string( path );
+        return structured;
     }
-    else
-    {
-        UniqueTemporaryFolder tmp{};
-        const std::filesystem::path path = tmp / "screenshot.png";
-        auto saved = ImageSave::toAnySupportedFormat( img, path );
-        if ( !saved )
-            throw std::runtime_error( saved.error() );
-        std::ifstream in( path, std::ios::binary );
-        if ( !in )
-            throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
-        std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
-        out["bytes"] = encode64( bytes.data(), bytes.size() );
-        out["contentType"] = "image/png";
-    }
-    out["width"] = img.resolution.x;
-    out["height"] = img.resolution.y;
-    return out;
+
+    UniqueTemporaryFolder tmp{};
+    const std::filesystem::path path = tmp / "screenshot.png";
+    auto saved = ImageSave::toAnySupportedFormat( img, path );
+    if ( !saved )
+        throw std::runtime_error( saved.error() );
+    std::ifstream in( path, std::ios::binary );
+    if ( !in )
+        throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
+    std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+
+    // MCP-spec image content block: host renders it natively; the base64 payload never enters
+    // the model's text context. Keep width/height in structuredContent for callers that want the
+    // metadata.
+    return nlohmann::json{
+        { "content", nlohmann::json::array( {
+            {
+                { "type", "image" },
+                { "data", encode64( bytes.data(), bytes.size() ) },
+                { "mimeType", "image/png" },
+            },
+        } ) },
+        { "structuredContent", structured },
+    };
 }
 
 static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
@@ -364,8 +375,8 @@ MR_ON_INIT{
                 "current viewport size) and `transparentBg` (default false) omits the background — these options "
                 "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "
                 "normal background). "
-                "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to get "
-                "an inline base64 PNG; response is `{bytes, width, height}`.",
+                "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to "
+                "receive the PNG inline as an MCP image content block; `structuredContent` carries `{width, height}`.",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "includeUi",     Schema::Bool{} )
             .addMemberOpt( "width",         Schema::Number{} )
@@ -373,11 +384,9 @@ MR_ON_INIT{
             .addMemberOpt( "transparentBg", Schema::Bool{} )
             .addMemberOpt( "filePath",      Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",        Schema::String{} )
-            .addMemberOpt( "bytes",       Schema::String{} )
-            .addMemberOpt( "contentType", Schema::String{} )
-            .addMember(    "width",       Schema::Number{} )
-            .addMember(    "height",      Schema::Number{} ),
+            .addMemberOpt( "path",   Schema::String{} )
+            .addMember(    "width",  Schema::Number{} )
+            .addMember(    "height", Schema::Number{} ),
         /*func*/mcpViewerCaptureScreenshot
     );
 

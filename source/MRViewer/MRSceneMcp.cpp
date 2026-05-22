@@ -394,6 +394,10 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
             // model's text context. The `uri` is required by the spec; we synthesize one
             // from the in-memory file name. `application/octet-stream` is the safe default
             // for mesh formats — most lack a registered IANA media type.
+            //
+            // The gateway forwards this response raw (bypassing fastmcpp's `ContentBlock`
+            // parser, which uses an off-spec flat shape for `resource`), so MI emits the
+            // spec-correct nested form here and Claude Code's Zod validator accepts it.
             out = nlohmann::json{
                 { "content", nlohmann::json::array( {
                     {

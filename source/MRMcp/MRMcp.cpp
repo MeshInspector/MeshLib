@@ -172,8 +172,11 @@ struct BinaryOutput
 //   1. Legacy `{bytes, contentType}` (and `{"result": {...}}` one-level wrap).
 //   2. MCP image content block: `{"content": [{"type": "image", "data": <b64>,
 //      "mimeType": "..."}]}` (single-block).
-//   3. MCP embedded-resource content block: `{"content": [{"type": "resource",
-//      "resource": {"blob": <b64>, "mimeType": "..."}}]}` (single-block).
+//   3. MCP-spec embedded-resource content block: `{"content": [{"type":
+//      "resource", "resource": {"uri": ..., "mimeType": ..., "blob": <b64>}}]}`
+//      (single-block). The `/api/` route runs server-side on MI's own response,
+//      so we see the spec-correct nested form here (the gateway's flat-shape
+//      proxy quirk is only an issue on the gateway's outbound side).
 //
 // Returns the extracted payload, or `std::nullopt` when none match (the caller
 // falls back to JSON-dumping the result).

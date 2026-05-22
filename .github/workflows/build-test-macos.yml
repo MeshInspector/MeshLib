@@ -39,11 +39,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ x64, arm64 ]
-        config: [ Debug, Release ]
-        exclude:
-          - arch: x64
-            config: Debug
         include:
           - arch: x64
             config: Release

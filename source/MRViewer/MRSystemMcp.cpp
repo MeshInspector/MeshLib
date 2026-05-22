@@ -74,7 +74,7 @@ MR_ON_INIT{
     Server& server = getDefaultServer();
 
     server.addTool(
-        /*id*/  "system.log",
+        /*id*/  "system_log",
         /*name*/"Read tail of MeshInspector log",
         /*desc*/"Return the last `maxLines` lines (default 100, capped at 1000) from MeshInspector's spdlog file. "
                 "Each entry is a raw, pre-formatted line, e.g. `\"[27/04/26 16:18:53.767] [info] MCP server started "
@@ -86,7 +86,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "system.info",
+        /*id*/  "system_info",
         /*name*/"Build and host environment info",
         /*desc*/"Snapshot of MeshInspector / host metadata used by the About dialog: `version`, `OS`, `CPU`, plus "
                 "GPU / CUDA / framebuffer / monitor info when available. The `version` string is prefixed with "

@@ -134,7 +134,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         for ( const Vector3f& pt : points )
             box.include( pt );
         if ( !box.valid() )
-            throw std::runtime_error( "viewer.fit: the given objects and points contribute no bounding volume." );
+            throw std::runtime_error( "viewer_fit: the given objects and points contribute no bounding volume." );
         vp.preciseFitBoxToScreenBorder( { box, factor } );
     } );
     skipFramesAfterInput();
@@ -326,10 +326,10 @@ MR_ON_INIT{
     Server& server = getDefaultServer();
 
     server.addTool(
-        /*id*/  "viewer.fit",
+        /*id*/  "viewer_fit",
         /*name*/"Fit camera to scene or a subset",
         /*desc*/"Frame a set of objects and/or world-space points in the active viewport. Pass `objectIds` (scene-object "
-                "ids from `scene.listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
+                "ids from `scene_listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
                 "their bounding volumes are unioned. If neither is given, fits the whole scene (same as the UI's "
                 "\"Fit\" action). `factor` (default 1.0) controls framing margin — higher means more screen coverage. "
                 "The camera angle is preserved (no canonical-view snapping).",
@@ -342,7 +342,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.setupCamera",
+        /*id*/  "viewer_setupCamera",
         /*name*/"Set camera forward and up directions",
         /*desc*/"Point the camera along `forwardDir` (a world-space direction vector pointing from the camera toward "
                 "the subject). `upDir` sets the screen-up direction; it is automatically orthogonalized against "
@@ -356,7 +356,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.captureScreenshot",
+        /*id*/  "viewer_captureScreenshot",
         /*name*/"Capture viewport screenshot",
         /*desc*/"Render the viewer to a PNG. Default (`includeUi: true`) captures the whole window including panels, ribbon, and dialogs; set "
                 "`includeUi: false` to capture only the 3D viewport. "
@@ -382,7 +382,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.sendMouseEvent",
+        /*id*/  "viewer_sendMouseEvent",
         /*name*/"Inject a mouse event",
         /*desc*/"Queue a mouse event on the viewer's event loop. `type` is one of `down`, `up`, `click`, `move`, `scroll`. "
                 "`button` is `left`/`right`/`middle` (required for `down`/`up`/`click`). `x`/`y` are window pixels, "
@@ -402,7 +402,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.sendKeyboardEvent",
+        /*id*/  "viewer_sendKeyboardEvent",
         /*name*/"Inject a keyboard event",
         /*desc*/"Queue a keyboard event on the viewer's event loop. `type` is one of `down`, `up`, `press`, `repeat`. "
                 "`key` is either a single printable character (e.g. `\"a\"`, `\"A\"`, `\"5\"`) or a named key "
@@ -420,13 +420,13 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.shutdown",
+        /*id*/  "viewer_shutdown",
         /*name*/"Close MeshInspector",
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
                 "After this call the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
-                "check `ui.listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
+                "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown

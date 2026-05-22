@@ -613,6 +613,12 @@ endif
 ifneq ($(IS_MACOS),)
 # Our dependencies are here.
 COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
+# Point libclang at the macOS SDK so it can find libc++ headers (<iostream> etc.)
+# when parsing with brew llvm@N. With llvm@18 the keg's own libc++ was auto-discovered
+# relative to the resource-dir; on llvm@22 that no longer works and the parse pass
+# fails with `'iostream' file not found`. Using Apple's SDK libc++ is also closer
+# to what the project itself compiles against.
+COMPILER_FLAGS += -isysroot $(call safe_shell,xcrun --show-sdk-path)
 # Boost.stacktrace complains otherwise.
 COMPILER_FLAGS += -D_GNU_SOURCE
 

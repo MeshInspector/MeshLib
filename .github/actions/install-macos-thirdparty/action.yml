@@ -160,15 +160,16 @@ runs:
         MACOSX_DEPLOYMENT_TARGET: "12.7"
       run: |
         set -o pipefail
-        brew tap-new --no-git local/patched 2>/dev/null || true
+        # Remove any stale local/patched from a prior failed run on this
+        # self-hosted host -- a leftover empty Formula/cpr.rb there would
+        # otherwise shadow homebrew/core when brew resolves "cpr".
+        brew untap local/patched 2>/dev/null || true
+        brew tap-new --no-git local/patched
         TAP_FORMULA="$(brew --repository local/patched)/Formula/cpr.rb"
-        # Source the formula by file path rather than `brew cat`: on hosts
-        # with API mode on, `brew cat` may produce a stripped/serialised
-        # variant that doesn't include the literal `def install` line.
-        SOURCE_FORMULA="$(brew formula cpr)"
-        echo "Sourcing cpr formula from: ${SOURCE_FORMULA}"
-        # `def install` matched loosely with a !done guard so we inject once.
-        awk '
+        # Disambiguate to homebrew/core/cpr so brew doesn't resolve to the
+        # local tap we just created. `brew cat homebrew/core/cpr` works in
+        # API mode and returns the canonical Ruby source.
+        brew cat homebrew/core/cpr | awk '
           !done && /def install/ {
             print
             print "    ENV.append \"CXXFLAGS\", \"-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0\""
@@ -176,12 +177,10 @@ runs:
             next
           }
           { print }
-        ' "${SOURCE_FORMULA}" > "${TAP_FORMULA}"
+        ' > "${TAP_FORMULA}"
         if ! grep -q INIT_PRIMARY_EXCEPTION "${TAP_FORMULA}"; then
-          echo "::error::Formula patch did not land. Dumping head of source formula (cat -v):"
-          head -60 "${SOURCE_FORMULA}" | cat -v
-          echo "::error::Also dumping head of brew cat cpr (cat -v):"
-          brew cat cpr | head -60 | cat -v
+          echo "::error::Formula patch did not land. Dumping first 60 lines of brew cat homebrew/core/cpr (cat -v):"
+          brew cat homebrew/core/cpr | head -60 | cat -v
           exit 1
         fi
         # Make room for the local/patched cpr at the canonical brew path.

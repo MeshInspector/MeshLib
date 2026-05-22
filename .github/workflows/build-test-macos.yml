@@ -40,36 +40,42 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x64
+          - instance: macos-15-intel
+            arch: x64
             config: Release
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
-            # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
-            runner: macos-15-intel # github hosted
-            instance: macos-15-intel
-          - arch: arm64
+            runner: macos-15-intel
+          - instance: macos-15
+            arch: arm64
             config: Release
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
+            runner: macos-15
+          - instance: macos-14
+            arch: arm64
+            config: Debug
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
             # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
             runner: macos-14
-            instance: macos-14
-          - arch: arm64
+          - instance: self-hosted-arm15
+            arch: arm64
             config: Debug
             compiler: brew-llvm18
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
             c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
             runner: [ self-hosted, macos, arm64, build, macos-15 ]
-            instance: self-hosted-arm15
-          - arch: arm64
+          - instance: self-hosted-arm14
+            arch: arm64
             config: Debug
             compiler: brew-llvm18
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
             c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
-            runner: [ self-hosted, macos, arm64, build, macos-12 ]
-            instance: self-hosted-arm12
+            runner: [ self-hosted, macos, arm64, build, macos-14 ]
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

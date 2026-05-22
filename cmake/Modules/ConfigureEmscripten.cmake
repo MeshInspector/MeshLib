@@ -5,6 +5,13 @@ string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS
   "--use-port=libpng" # TODO: make optional
   "--use-port=zlib" # TODO: make optional
 )
+
+option(MR_EMSCRIPTEN_SIMD "Enable WebAssembly SIMD (-msimd128) for Emscripten builds" ON)
+IF(MR_EMSCRIPTEN_SIMD)
+  string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}
+    "-msimd128"
+  )
+ENDIF()
 string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS
   "-s EXPORTED_RUNTIME_METHODS=[ccall]"
   "-s ALLOW_MEMORY_GROWTH=1"

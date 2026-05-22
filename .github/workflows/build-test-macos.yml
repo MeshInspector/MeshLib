@@ -66,7 +66,7 @@ jobs:
             compiler: brew-llvm18
             cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
             c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
-            runner: [ self-hosted, macos, arm64, build ] #  any macos version
+            runner: [ self-hosted, macos, arm64, build, macos-15 ] #  any macos version
             instance: self-hosted-arm
     permissions:
       id-token: write # This is required for requesting the JWT

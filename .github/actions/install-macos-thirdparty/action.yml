@@ -143,6 +143,19 @@ runs:
       shell: bash
       run: ./scripts/install_brew_requirements.sh
 
+    # Force cpr to the macOS 14 bottle so the bundled libcpr.1.dylib has
+    # LC_BUILD_VERSION minos <= 14 regardless of build host OS. Newer cpr
+    # bottles (e.g. arm64_sequoia at minos=15) reference libc++ symbols
+    # like __from_native_exception_pointer that are absent from
+    # /usr/lib/libc++.1.dylib on macOS < 15, breaking .pkg loads on
+    # macos-14 runners. HOMEBREW_MACOS_VERSION is an undocumented brew
+    # internal -- if it stops working, swap for --build-from-source.
+    - name: Pin cpr to macOS 14 bottle
+      shell: bash
+      env:
+        HOMEBREW_MACOS_VERSION: "14.0"
+      run: brew reinstall --quiet cpr
+
     - name: Build thirdparty libs
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
       shell: bash

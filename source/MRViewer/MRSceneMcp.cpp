@@ -379,7 +379,8 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
                 ext.insert( ext.begin(), '.' );
 
             UniqueTemporaryFolder tmp{};
-            const std::filesystem::path path = tmp / pathFromUtf8( obj->name() + ext );
+            const std::string fileName = obj->name() + ext;
+            const std::filesystem::path path = tmp / pathFromUtf8( fileName );
             auto saved = ObjectSave::toAnySupportedFormat( *obj, path );
             if ( !saved )
                 throw std::runtime_error( saved.error() );
@@ -387,7 +388,24 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
             if ( !in )
                 throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
             std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
-            out["bytes"] = encode64( bytes.data(), bytes.size() );
+
+            // MCP-spec embedded-resource content block: hosts that honor `resource` content
+            // surface this as a downloadable file rather than dumping the base64 into the
+            // model's text context. The `uri` is required by the spec; we synthesize one
+            // from the in-memory file name. `application/octet-stream` is the safe default
+            // for mesh formats — most lack a registered IANA media type.
+            out = nlohmann::json{
+                { "content", nlohmann::json::array( {
+                    {
+                        { "type", "resource" },
+                        { "resource", {
+                            { "uri",      "mcp://scene_getObject/" + fileName },
+                            { "mimeType", "application/octet-stream" },
+                            { "blob",     encode64( bytes.data(), bytes.size() ) },
+                        } },
+                    },
+                } ) },
+            };
             return;
         }
         throw std::runtime_error( "scene_getObject requires either `filePath` or `extension`." );
@@ -563,18 +581,18 @@ MR_ON_INIT{
 
     server.addTool(
         /*id*/  "scene_getObject",
-        /*name*/"Serialize scene object (to file or inline bytes)",
+        /*name*/"Serialize scene object (to file or inline resource)",
         /*desc*/std::string( kSceneIdSemantics ) +
-                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass either `filePath` (server-side path; "
-                "format selected by extension) — response is `{path: <written-path>}`; or `extension` (e.g. `\"stl\"`) — "
-                "response is `{bytes: <base64 payload>}`.",
+                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass `filePath` (server-side path; format "
+                "selected by extension) — response is `{path: <written-path>}`. Or pass `extension` (e.g. `\"stl\"`) "
+                "to receive the bytes inline as an MCP embedded-resource content block "
+                "(`content[0].resource.blob` is the base64 payload, `mimeType` is `application/octet-stream`).",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "filePath",  Schema::String{} )
             .addMemberOpt( "extension", Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",  Schema::String{} )
-            .addMemberOpt( "bytes", Schema::String{} ),
+            .addMemberOpt( "path", Schema::String{} ),
         /*func*/mcpSceneGetObject
     );
 

@@ -12,6 +12,8 @@
 #include "MRViewer/MRViewer.h"
 
 #include <fstream>
+#include <optional>
+#include <string>
 #include <type_traits>
 
 
@@ -155,24 +157,61 @@ void writeJsonError( httplib::Response& res, int httpStatus, std::string message
     }.dump(), "application/json" );
 }
 
-// Inspect a tool's raw output for the file-output convention `{bytes, contentType}`,
-// transparently unwrapping one level of `{"result": {...}}` (the existing wrap used
-// by tools in MRViewerMcp / MRUiMcp / MRSystemMcp / MRSceneMcp).
-//
-// Returns a pointer to the inner object that has both `bytes` and `contentType`,
-// or `nullptr` if the convention isn't matched.
-const nlohmann::json* matchFileOutput( const nlohmann::json& result )
+// Extracted binary payload for the `/api/tools/call/<id>` raw-bytes response.
+// Strings are copied (not viewed) so the caller can outlive the source JSON without
+// lifetime gymnastics.
+struct BinaryOutput
 {
-    auto isFileShape = []( const nlohmann::json& j ) {
-        return j.is_object()
+    std::string data;     // base64-encoded
+    std::string mimeType;
+};
+
+// Detect a binary payload in a tool's raw output for the `/api/` HTTP path to
+// surface as a raw-bytes HTTP response instead of JSON. Recognized shapes:
+//
+//   1. Legacy `{bytes, contentType}` (and `{"result": {...}}` one-level wrap).
+//   2. MCP image content block: `{"content": [{"type": "image", "data": <b64>,
+//      "mimeType": "..."}]}` (single-block).
+//   3. MCP embedded-resource content block: `{"content": [{"type": "resource",
+//      "resource": {"blob": <b64>, "mimeType": "..."}}]}` (single-block).
+//
+// Returns the extracted payload, or `std::nullopt` when none match (the caller
+// falls back to JSON-dumping the result).
+std::optional<BinaryOutput> extractBinaryOutput( const nlohmann::json& result )
+{
+    auto matchLegacy = []( const nlohmann::json& j ) -> std::optional<BinaryOutput> {
+        if ( j.is_object()
             && j.contains( "bytes" )       && j["bytes"].is_string()
-            && j.contains( "contentType" ) && j["contentType"].is_string();
+            && j.contains( "contentType" ) && j["contentType"].is_string() )
+            return BinaryOutput{ j["bytes"].get<std::string>(), j["contentType"].get<std::string>() };
+        return std::nullopt;
     };
-    if ( isFileShape( result ) )
-        return &result;
-    if ( result.is_object() && result.contains( "result" ) && isFileShape( result["result"] ) )
-        return &result["result"];
-    return nullptr;
+    if ( auto m = matchLegacy( result ); m )
+        return m;
+    if ( result.is_object() && result.contains( "result" ) )
+        if ( auto m = matchLegacy( result["result"] ); m )
+            return m;
+
+    // Single-block image or embedded-resource content array.
+    if ( !( result.is_object() && result.contains( "content" ) && result["content"].is_array() && result["content"].size() == 1 ) )
+        return std::nullopt;
+    const auto& block = result["content"][0];
+    if ( !( block.is_object() && block.contains( "type" ) && block["type"].is_string() ) )
+        return std::nullopt;
+    const auto& type = block["type"].get_ref<const std::string&>();
+    if ( type == "image"
+        && block.contains( "data" )     && block["data"].is_string()
+        && block.contains( "mimeType" ) && block["mimeType"].is_string() )
+        return BinaryOutput{ block["data"].get<std::string>(), block["mimeType"].get<std::string>() };
+    if ( type == "resource"
+        && block.contains( "resource" ) && block["resource"].is_object() )
+    {
+        const auto& r = block["resource"];
+        if ( r.contains( "blob" )     && r["blob"].is_string()
+            && r.contains( "mimeType" ) && r["mimeType"].is_string() )
+            return BinaryOutput{ r["blob"].get<std::string>(), r["mimeType"].get<std::string>() };
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -253,14 +292,13 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         return;
     }
 
-    if ( const auto* file = matchFileOutput( result ); file )
+    if ( auto bin = extractBinaryOutput( result ); bin )
     {
-        auto bytes = decode64( ( *file )["bytes"].get<std::string>() );
-        const auto& contentType = ( *file )["contentType"].get_ref<const std::string&>();
+        auto bytes = decode64( bin->data );
         res.status = 200;
         res.set_content(
             std::string( reinterpret_cast<const char*>( bytes.data() ), bytes.size() ),
-            contentType.c_str() );
+            bin->mimeType.c_str() );
         return;
     }
 

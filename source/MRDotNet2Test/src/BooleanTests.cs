@@ -69,18 +69,15 @@ namespace MRTest
             var vMapA = parameters.mapper.map(validPointsA, BooleanResultMapper.MapObject.A);
             var vMapB = parameters.mapper.map(validPointsB, BooleanResultMapper.MapObject.B);
 
-            Assert.That(vMapA.size(), Is.EqualTo(60) );
+            Assert.That(!vMapA.intersects(vMapB));
             Assert.That(vMapA.count(), Is.EqualTo(60));
-            Assert.That(vMapB.size(), Is.EqualTo(204) );
             Assert.That(vMapB.count(), Is.EqualTo(48));
-
 
             var fMapA = parameters.mapper.map(validFacesA, BooleanResultMapper.MapObject.A);
             var fMapB = parameters.mapper.map(validFacesB, BooleanResultMapper.MapObject.B);
 
-            Assert.That(fMapA.size(), Is.EqualTo(224) );
+            Assert.That(!fMapA.intersects(fMapB));
             Assert.That(fMapA.count(), Is.EqualTo(224));
-            Assert.That(fMapB.size(), Is.EqualTo(416) );
             Assert.That(fMapB.count(), Is.EqualTo(192));
 
             var newFaces = parameters.mapper.newFaces();

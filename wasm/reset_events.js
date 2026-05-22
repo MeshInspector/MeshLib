@@ -83,8 +83,17 @@ var preventFunc = function (event) {
 }
 
 var drop_files_or_dir = function (event) {
+    var callDropFunc = function (length, filenamesPtr) {
+        if (typeof (dynCall_viii) == 'function')
+            dynCall_viii(GLFW.active.dropFunc, GLFW.active.id, length, filenamesPtr);
+        else if (typeof (dynCall_vjij) == 'function')
+            dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), length, BigInt(filenamesPtr));
+        else
+            getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), length, filenamesPtr);
+    };
+
     if (!GLFW.active || !GLFW.active.dropFunc) return;
-    if (!event.dataTransfer || !event.dataTransfer.files || event.dataTransfer.files.length == 0) return;
+    if (!event.dataTransfer || !event.dataTransfer.files || event.dataTransfer.files.length == 0) return callDropFunc(0, 0);
     event.preventDefault();
 
     var drop_dir = ".glfw_dropped_files";
@@ -118,12 +127,7 @@ var drop_files_or_dir = function (event) {
             var data = e.target.result;
             FS.writeFile(path, new Uint8Array(data));
             if (++written === numfiles) {
-                if (typeof (dynCall_viii) == 'function')
-                    dynCall_viii(GLFW.active.dropFunc, GLFW.active.id, filenamesArray.length, filenames);
-                else if (typeof (dynCall_vjij) == 'function')
-                    dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), filenamesArray.length, BigInt(filenames));
-                else
-                    getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), filenamesArray.length, filenames);
+                callDropFunc(filenamesArray.length, filenames);
                 for (var i = 0; i < filenamesArray.length; ++i) {
                     _free(filenamesArray[i]);
                 }

@@ -73,7 +73,7 @@ class ScopeHistory
 {
 public:
     /// creates new CombinedHistoryAction, and setups global history store to append all new actions there during this object lifetime
-    MRVIEWER_API ScopeHistory( const std::string& name );
+    MRVIEWER_API ScopeHistory( const std::string& name, const std::function<std::string ()>& dynamicNameFunc = {} );
 
     /// created before CombinedHistoryAction if not empty is appended (with all sub-actions) in the global history store
     MRVIEWER_API ~ScopeHistory();
@@ -87,6 +87,6 @@ private:
     HistoryActionsVector* parentScopePtr_{ nullptr };
 };
 
-#define SCOPED_HISTORY(name) MR::ScopeHistory __startScopedHistoryMode(name)
+#define SCOPED_HISTORY( ... ) MR::ScopeHistory __startScopedHistoryMode( __VA_ARGS__ )
 
 }

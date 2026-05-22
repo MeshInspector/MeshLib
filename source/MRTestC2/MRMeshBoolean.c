@@ -206,8 +206,9 @@ void testBooleanMapper( void )
     const MR_VertBitSet* meshBValidPoints = MR_MeshTopology_getValidVerts( MR_Mesh_Get_topology( meshB ) );
     MR_VertBitSet* vMapA = MR_BooleanResultMapper_map_MR_VertBitSet( mapper, meshAValidPoints, MR_BooleanResultMapper_MapObject_A );
     MR_VertBitSet* vMapB = MR_BooleanResultMapper_map_MR_VertBitSet( mapper, meshBValidPoints, MR_BooleanResultMapper_MapObject_B );
-    TEST_ASSERT( MR_BitSet_size( MR_VertBitSet_UpcastTo_MR_BitSet( vMapA ) ) == 60 )
-    TEST_ASSERT( MR_BitSet_size( MR_VertBitSet_UpcastTo_MR_BitSet( vMapB ) ) == 204 )
+    TEST_ASSERT( !MR_BitSet_intersects(
+        MR_VertBitSet_UpcastTo_MR_BitSet( vMapA ),
+        MR_VertBitSet_UpcastTo_MR_BitSet( vMapB ) ) )
     TEST_ASSERT( MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( vMapA ) ) == 60 )
     TEST_ASSERT( MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( vMapB ) ) == 48 )
 
@@ -215,8 +216,9 @@ void testBooleanMapper( void )
     const MR_FaceBitSet* meshBValidFaces = MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( meshB ) );
     MR_FaceBitSet* fMapA = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, meshAValidFaces, MR_BooleanResultMapper_MapObject_A );
     MR_FaceBitSet* fMapB = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, meshBValidFaces, MR_BooleanResultMapper_MapObject_B );
-    TEST_ASSERT( MR_BitSet_size( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapA ) ) == 224 )
-    TEST_ASSERT( MR_BitSet_size( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapB ) ) == 416 )
+    TEST_ASSERT( !MR_BitSet_intersects(
+        MR_FaceBitSet_UpcastTo_MR_BitSet( fMapA ),
+        MR_FaceBitSet_UpcastTo_MR_BitSet( fMapB ) ) )
     TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapA ) ) == 224 )
     TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapB ) ) == 192 )
 

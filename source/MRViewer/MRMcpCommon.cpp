@@ -26,7 +26,7 @@ Expected<std::shared_ptr<Object>> resolveId( uint64_t id )
         if ( obj.get() == asPtr )
             return obj;
     }
-    return unexpected( fmt::format( "No object with id {}. Call scene.listObjectTree to enumerate.", id ) );
+    return unexpected( fmt::format( "No object with id {}. Call scene_listObjectTree to enumerate.", id ) );
 }
 
 } // namespace MR::Mcp

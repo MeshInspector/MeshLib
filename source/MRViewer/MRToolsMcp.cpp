@@ -141,11 +141,11 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
             const auto& selected = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
             auto reason = item->isAvailable( selected );
             if ( !reason.empty() )
-                throw std::runtime_error( fmt::format( "tools.action {}: {}", id, reason ) );
+                throw std::runtime_error( fmt::format( "tools_action {}: {}", id, reason ) );
         }
         // Mark the frame as TE-driven so any TE-gated hook the action triggers
         // (file-dialog bypass via stageFileDialogPaths, etc.) sees the flag set.
-        // tools.action calls item->action() directly without going through
+        // tools_action calls item->action() directly without going through
         // TestEngine::createButton, which is the other code path that sets it.
         UI::TestEngine::markFrameTriggered();
         item->action();
@@ -160,30 +160,30 @@ MR_ON_INIT{
     Server& server = getDefaultServer();
 
     server.addTool(
-        /*id*/"tools.listAll",
+        /*id*/"tools_listAll",
         /*name*/"List all tool ids",
         /*desc*/"Sorted array of every registered tool/plugin id, regardless of which ribbon tab is currently rendered. "
-                "Pass interesting ids to `tools.getInfo` for caption / tab / type / status / tooltip, or to "
-                "`tools.action` to open or fire the tool. Same id space as the ribbon `ui.pressButton` entries.",
+                "Pass interesting ids to `tools_getInfo` for caption / tab / type / status / tooltip, or to "
+                "`tools_action` to open or fire the tool. Same id space as the ribbon `ui_pressButton` entries.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Array( Schema::String{} ),
         /*func*/mcpToolsListAll
     );
 
     server.addTool(
-        /*id*/"tools.listActive",
+        /*id*/"tools_listActive",
         /*name*/"List active tool ids",
         /*desc*/"Sorted array of currently-active tool ids — state plugins whose dialog is open. Empty when no tool is "
-                "open. Subset of `tools.listAll`.",
+                "open. Subset of `tools_listAll`.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Array( Schema::String{} ),
         /*func*/mcpToolsListActive
     );
 
     server.addTool(
-        /*id*/"tools.getInfo",
+        /*id*/"tools_getInfo",
         /*name*/"Get tool metadata (batch)",
-        /*desc*/"Look up metadata for one or more tool ids (from `tools.listAll`). "
+        /*desc*/"Look up metadata for one or more tool ids (from `tools_listAll`). "
                 "`type`: `\"button\"` (one-shot) | `\"stateBlocking\"` (modal-style dialog) | `\"stateNonBlocking\"`. "
                 "`status`: `\"available\"` | `\"disabled: <reason>\"` (active state plugins are always reported "
                 "available so they can be toggled off). `tab` is the ribbon tab name or `\"\"` for non-tabbed items "
@@ -207,11 +207,11 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/"tools.action",
+        /*id*/"tools_action",
         /*name*/"Toggle/fire tool by id",
         /*desc*/"Equivalent to clicking the tool's ribbon button. State plugins toggle open/closed; one-shot buttons "
-                "run their action. Errors if the id isn't in `tools.listAll`, or if the tool is currently disabled "
-                "(message has the same shape as `ui.pressButton` disabled errors). Returns `{active}` — the tool's "
+                "run their action. Errors if the id isn't in `tools_listAll`, or if the tool is currently disabled "
+                "(message has the same shape as `ui_pressButton` disabled errors). Returns `{active}` — the tool's "
                 "post-call active state (always `false` for one-shot buttons).",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::String{} ),
         /*output_schema*/Schema::Object{}.addMember( "active", Schema::Bool{} ),

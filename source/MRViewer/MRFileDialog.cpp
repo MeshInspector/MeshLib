@@ -440,7 +440,7 @@ std::vector<std::filesystem::path> runDialog( const MR::FileDialog::Parameters& 
         {
             MR::UI::TestEngine::appendStatusMessage( fmt::format(
                 "TestEngine-triggered file dialog: {}. "
-                "Call ui.stageFileDialogPaths(...) with the right path(s) before pressing the button.",
+                "Call ui_stageFileDialogPaths(...) with the right path(s) before pressing the button.",
                 ex.error() ) );
             return {};
         }

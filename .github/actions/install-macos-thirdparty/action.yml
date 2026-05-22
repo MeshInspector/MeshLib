@@ -145,36 +145,43 @@ runs:
 
     # arm64 only: brew ships an `arm64_sequoia` cpr bottle (minos=15) that
     # references libc++ symbols absent from /usr/lib/libc++.1.dylib on macOS
-    # < 15, breaking .pkg loads on macos-14. Compiling from source under a
-    # 12.7 deployment target produces a clean libcpr.1.dylib.
+    # < 15, breaking .pkg loads on macos-14. To suppress that reference we
+    # need to force `_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0` into
+    # cpr's compile. Brew's superenv scrubs user-set CXXFLAGS, so the env
+    # carrier doesn't work; the formula DSL's `ENV.append` does. Patch the
+    # cpr formula in a local tap and install from there.
     # x86_64 keeps the brew `sonoma` cpr bottle (the only Intel bottle
     # Homebrew ships) -- it was built on an older Xcode whose libc++ doesn't
-    # emit the troublesome reference, so it loads on macos-12+ as-is. A
-    # from-source rebuild on a current macos-15-intel runner would
-    # *re*introduce the symbol via newer Xcode's libc++.
-    # Option A experiment: try to push the libc++ feature-test override
-    # through brew's superenv via CXXFLAGS/CPPFLAGS. The build log is grepped
-    # afterwards for the define landing on an actual compile invocation, so
-    # we get a clear "DEFINE REACHED THE COMPILER" / "STRIPPED" signal even
-    # before testing the resulting dylib on macos-14.
-    - name: Build cpr from source for older macOS target (arm64 only)
+    # emit the troublesome reference, so it loads on macos-12+ as-is.
+    - name: Build cpr from a patched local-tap formula (arm64 only)
       if: runner.arch == 'ARM64'
       shell: bash
       env:
         MACOSX_DEPLOYMENT_TARGET: "12.7"
-        CXXFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
-        CPPFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
-        HOMEBREW_CFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
-        HOMEBREW_CXXFLAGS: "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0"
       run: |
         set -o pipefail
-        brew reinstall --build-from-source --verbose cpr 2>&1 | tee /tmp/cpr-build.log
-        echo "--- option A verification ---"
+        brew tap-new --no-git local/patched 2>/dev/null || true
+        TAP_FORMULA="$(brew --repository local/patched)/Formula/cpr.rb"
+        brew cat cpr | awk '
+          /^  def install$/ {
+            print
+            print "    ENV.append \"CXXFLAGS\", \"-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0\""
+            next
+          }
+          { print }
+        ' > "${TAP_FORMULA}"
+        grep -n INIT_PRIMARY_EXCEPTION "${TAP_FORMULA}" \
+          || { echo "Formula patch did not land"; exit 1; }
+        # Make room for the local/patched cpr at the canonical brew path.
+        brew uninstall --ignore-dependencies cpr 2>/dev/null || true
+        brew install --build-from-source --verbose local/patched/cpr 2>&1 | tee /tmp/cpr-build.log
+        echo "--- option B verification ---"
         if grep -q -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log; then
           echo "DEFINE REACHED THE COMPILER"
-          grep -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log | head -5
+          grep -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log | head -3
         else
-          echo "DEFINE STRIPPED BY SUPERENV (option A failed; consider option B/C)"
+          echo "DEFINE STILL STRIPPED (option B failed; need option C)"
+          exit 1
         fi
 
     - name: Build thirdparty libs

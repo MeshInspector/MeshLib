@@ -13,6 +13,7 @@
 #include "MRFillContourByGraphCut.h"
 #include "MREdgeMetric.h"
 #include "MRRegionBoundary.h"
+#include "MREdgeIterator.h"
 
 namespace MR
 {
@@ -106,36 +107,38 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     return res;
 }
 
-// cutPaths - cut edges of origin mesh, it is modified to new indexes after preparing mesh part
-// needInsidePart - part of origin that is inside otherMesh is needed
-// needFlip - normals of needed part should be flipped
-bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& outMesh,
-    const Mesh& otherMesh, bool needInsidePart, bool needFlip, bool originIsA,
-    const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps, 
-    bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
+/// deletes unnecessary part from the mesh
+VacantElements preparePart( Mesh& mesh, const FaceBitSet& leftPart,
+    bool needFlip, BooleanResultMapper::Maps* maps )
 {
     MR_TIMER;
 
-    // use dense-maps inside addMeshPart instead of default hash-maps for better performance
-    FaceMap fmap;
-    WholeEdgeMap emap;
-    VertMap vmap;
+    auto rightPart = mesh.topology.getValidFaces() - leftPart;
+    auto res = mesh.deleteFaces( rightPart );
+    if ( needFlip )
+        mesh.topology.flipOrientation();
 
-    FaceMap* fMapPtr = maps ? &maps->cut2newFaces : &fmap;
-    WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &emap;
-    VertMap* vMapPtr = maps ? &maps->old2newVerts : &vmap;
+    if ( maps )
+    {
+        auto& fmap = maps->cut2newFaces;
+        if ( fmap.size() < mesh.topology.faceSize() )
+            fmap.resize( mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+            fmap[f] = f;
 
-    auto maybeLeftPart = findMeshPart( origin, cutPaths, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
-    if ( !maybeLeftPart )
-        return false;
+        auto& vmap = maps->old2newVerts;
+        if ( vmap.size() < mesh.topology.vertSize() )
+            vmap.resize( mesh.topology.vertSize() );
+        for ( auto v : mesh.topology.getValidVerts() )
+            vmap[v] = v;
 
-    outMesh.addMeshPart( { origin, &*maybeLeftPart }, needFlip, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
-
-    for ( auto& path : cutPaths )
-        for ( auto& e : path )
-            e = mapEdge( *eMapPtr, e );
-
-    return true;
+        auto& emap = maps->old2newEdges;
+        if ( emap.size() < mesh.topology.undirectedEdgeSize() )
+            emap.resize( mesh.topology.undirectedEdgeSize() );
+        for ( auto ue : undirectedEdges( mesh.topology ) )
+            emap[ue] = ue;
+    }
+    return res;
 }
 
 // transforms partB if needed and adds it to partA
@@ -143,7 +146,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
 // updates mapper
 void connectPreparedParts( Mesh& res, Mesh& partB, const FaceBitSet* bRegion, bool flipB,
                            const std::vector<EdgePath>& pathsA, const std::vector<EdgePath>& pathsB,
-                           const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool graphCut )
+                           const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool graphCut, VacantElements& vacant )
 {
     MR_TIMER;
 
@@ -161,11 +164,11 @@ void connectPreparedParts( Mesh& res, Mesh& partB, const FaceBitSet* bRegion, bo
 
     if ( !graphCut )
     {
-        res.addMeshPart( { partB,bRegion }, flipB, pathsA, pathsB, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
+        res.addMeshPart( { partB,bRegion }, flipB, pathsA, pathsB, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ), &vacant );
     }
     else
     {
-        res.addMeshPart( { partB,bRegion }, flipB, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
+        res.addMeshPart( { partB,bRegion }, flipB, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ), &vacant );
     }
 }
 
@@ -181,10 +184,8 @@ Expected<MR::Mesh> doBooleanOperation(
     const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
-    Mesh res;
 
-    bool dividableA{true};
-    bool dividableB{true};
+    std::optional<FaceBitSet> aPart;
     std::optional<FaceBitSet> bPart;
 
     bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
@@ -198,42 +199,48 @@ Expected<MR::Mesh> doBooleanOperation(
         assert( cutEdgesA.size() == cutEdgesB.size() );
 
     // bPart
-    BooleanResultMapper::Maps* mapsBPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )] : nullptr;
     tbb::task_group taskGroup;
     taskGroup.run( [&] ()
     {
         if ( onlyCutA )
             return;
-        if ( !onlyCutB )
-        {
-            bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
-            dividableB = bool( bPart );
-        }
-        else
-            dividableB = preparePart( meshBCut, cutEdgesB, res, meshACut, needInsideB, needFlipB, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents, intParams );
+        bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     } );
     // aPart
-    BooleanResultMapper::Maps* mapsAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )] : nullptr;
     if ( !onlyCutB )
-        dividableA = preparePart( meshACut, cutEdgesA, res, meshBCut, needInsideA, needFlipA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents, intParams );
+        aPart = findMeshPart( meshACut, cutEdgesA, meshBCut, needInsideA, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     taskGroup.wait();
 
-    if ( ( onlyCutA && !dividableA ) || 
-         ( onlyCutB && !dividableB ) ||
-         ( ( needStitch ) && ( !dividableB || !dividableA ) ) )
+    if ( ( onlyCutA && !aPart ) ||
+         ( onlyCutB && !bPart ) ||
+         ( ( needStitch ) && ( !bPart || !aPart ) ) )
     {
         std::string s;
-        if ( !dividableA )
+        if ( !aPart )
             s += "Cannot separate mesh A to inside and outside parts, probably contours on mesh A are not closed or are not consistent.";
-        if ( !dividableB )
+        if ( !bPart )
         {
-            if ( !dividableA )
+            if ( !aPart )
                 s += " ";
             s += "Cannot separate mesh B to inside and outside parts, probably contours on mesh B are not closed or are not consistent.";
         }
 
         return unexpected( s );
     }
+
+    // no need update maps since we will update it during stitch
+    BooleanResultMapper::Maps* mapsBPtr = ( onlyCutB && mapper ) ? &mapper->maps[int( BooleanResultMapper::MapObject::B )] : nullptr;
+    taskGroup.run( [&] ()
+    {
+        if ( onlyCutA )
+            return;
+        preparePart( meshBCut, *bPart, false, mapsBPtr );
+    } );
+    BooleanResultMapper::Maps* mapsAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )] : nullptr;
+    VacantElements vacant;
+    if ( !onlyCutB )
+        vacant = preparePart( meshACut, *aPart, needFlipA, mapsAPtr );
+    taskGroup.wait();
 
     if ( needStitch && operation == BooleanOperation::Intersection )
     {
@@ -244,6 +251,9 @@ Expected<MR::Mesh> doBooleanOperation(
         MR::reverse( cutEdgesB );
         taskGroup.wait();
     }
+
+    auto&& res = onlyCutB ? meshBCut : meshACut;
+
     if ( !needStitch )
     {
         if ( onlyCutB && rigidB2A )
@@ -251,7 +261,7 @@ Expected<MR::Mesh> doBooleanOperation(
     }
     else
     {
-        connectPreparedParts( res, meshBCut, &*bPart, needFlipB, cutEdgesA, cutEdgesB, rigidB2A, mapper, intParams.graphCutSeparation );
+        connectPreparedParts( res, meshBCut, &*bPart, needFlipB, cutEdgesA, cutEdgesB, rigidB2A, mapper, intParams.graphCutSeparation, vacant );
     }
 
     if ( intParams.optionalOutCut )
@@ -262,7 +272,7 @@ Expected<MR::Mesh> doBooleanOperation(
             *intParams.optionalOutCut = onlyCutA ? std::move( cutEdgesA ) : std::move( cutEdgesB );
     }
 
-    return res;
+    return std::move( res );
 }
 
 FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) const

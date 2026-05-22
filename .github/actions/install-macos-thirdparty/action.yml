@@ -196,7 +196,10 @@ runs:
         echo "--- option B verification ---"
         if grep -q -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log; then
           echo "DEFINE REACHED THE COMPILER"
-          grep -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log | head -3
+          # `grep -m 3` (stop after 3 matches) instead of `grep | head -3`
+          # so pipefail doesn't fire on SIGPIPE when head closes its stdin
+          # while grep still has more matches to write.
+          grep -m 3 -- "-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION" /tmp/cpr-build.log
         else
           echo "DEFINE STILL STRIPPED (option B failed; need option C)"
           exit 1

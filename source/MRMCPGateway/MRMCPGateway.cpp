@@ -233,10 +233,7 @@ int main( int argc, char** argv )
     // joining its listener thread.
     auto transport = std::make_unique<MLClientTransport>(
         cfg.targetUrl, cfg.ssePath, cfg.messagesPath );
-    // Raw pointer retained for the proxied-`tools/call` bypass below. `templateClient`
-    // takes ownership of the unique_ptr but keeps the underlying object alive for
-    // main()'s duration, so the raw pointer remains valid.
-    MLClientTransport* transportPtr = transport.get();
+    MLClientTransport* transportPtr = transport.get(); // retained for raw `tools/call` forwarding
     fastmcpp::client::Client templateClient( std::move( transport ) );
 
     fastmcpp::ProxyApp proxy(
@@ -273,14 +270,9 @@ int main( int argc, char** argv )
             };
         }
 
-        // Bypass fastmcpp's `ProxyApp` round-trip for forwarded `tools/call`
-        // requests: fastmcpp's `client::EmbeddedResourceContent` is flat (uri/blob/
-        // mimeType siblings of `type`) and its proxy re-emit echoes that flat shape,
-        // which spec-compliant MCP clients (e.g., Claude Code's Zod validator)
-        // reject. Forwarding the raw JSON-RPC through the transport preserves MI's
-        // spec-correct nested `{type: resource, resource: {...}}` shape end-to-end.
-        // Local tools (`launch`, `status`) still go through `inner` so their
-        // gateway-side handlers fire.
+        // Forward proxied tools/call raw so MCP-spec content shapes survive
+        // (fastmcpp's ProxyApp reshapes resource blocks off-spec). Local
+        // tools stay on `inner`.
         if ( method == "tools/call" && req.is_object() && req.contains( "params" )
              && req["params"].is_object() )
         {

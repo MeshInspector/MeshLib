@@ -157,29 +157,17 @@ void writeJsonError( httplib::Response& res, int httpStatus, std::string message
     }.dump(), "application/json" );
 }
 
-// Extracted binary payload for the `/api/tools/call/<id>` raw-bytes response.
-// Strings are copied (not viewed) so the caller can outlive the source JSON without
-// lifetime gymnastics.
 struct BinaryOutput
 {
-    std::string data;     // base64-encoded
+    std::string data;     // base64
     std::string mimeType;
 };
 
-// Detect a binary payload in a tool's raw output for the `/api/` HTTP path to
-// surface as a raw-bytes HTTP response instead of JSON. Recognized shapes:
-//
-//   1. Legacy `{bytes, contentType}` (and `{"result": {...}}` one-level wrap).
-//   2. MCP image content block: `{"content": [{"type": "image", "data": <b64>,
-//      "mimeType": "..."}]}` (single-block).
-//   3. MCP-spec embedded-resource content block: `{"content": [{"type":
-//      "resource", "resource": {"uri": ..., "mimeType": ..., "blob": <b64>}}]}`
-//      (single-block). The `/api/` route runs server-side on MI's own response,
-//      so we see the spec-correct nested form here (the gateway's flat-shape
-//      proxy quirk is only an issue on the gateway's outbound side).
-//
-// Returns the extracted payload, or `std::nullopt` when none match (the caller
-// falls back to JSON-dumping the result).
+// Match a binary payload in a tool result for the `/api/` raw-bytes response.
+// Accepts `{bytes, contentType}` (optionally wrapped in `{result: ...}`), a
+// single-block image content `{content: [{type:image, data, mimeType}]}`, or
+// a single-block resource content `{content: [{type:resource, resource:{blob,
+// mimeType, ...}}]}`. Returns nullopt otherwise; caller falls back to JSON.
 std::optional<BinaryOutput> extractBinaryOutput( const nlohmann::json& result )
 {
     auto matchLegacy = []( const nlohmann::json& j ) -> std::optional<BinaryOutput> {

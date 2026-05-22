@@ -389,15 +389,8 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
                 throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
             std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
 
-            // MCP-spec embedded-resource content block: hosts that honor `resource` content
-            // surface this as a downloadable file rather than dumping the base64 into the
-            // model's text context. The `uri` is required by the spec; we synthesize one
-            // from the in-memory file name. `application/octet-stream` is the safe default
-            // for mesh formats — most lack a registered IANA media type.
-            //
-            // The gateway forwards this response raw (bypassing fastmcpp's `ContentBlock`
-            // parser, which uses an off-spec flat shape for `resource`), so MI emits the
-            // spec-correct nested form here and Claude Code's Zod validator accepts it.
+            // MCP-spec embedded-resource block. application/octet-stream because mesh
+            // formats lack a registered media type.
             out = nlohmann::json{
                 { "content", nlohmann::json::array( {
                     {

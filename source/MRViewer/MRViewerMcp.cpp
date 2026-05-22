@@ -219,9 +219,7 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
         throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
     std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
 
-    // MCP-spec image content block: host renders it natively; the base64 payload never enters
-    // the model's text context. Keep width/height in structuredContent for callers that want the
-    // metadata.
+    // MCP image content block + structured {width, height}.
     return nlohmann::json{
         { "content", nlohmann::json::array( {
             {

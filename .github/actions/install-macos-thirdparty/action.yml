@@ -162,7 +162,9 @@ runs:
         set -o pipefail
         # Wipe any stale local/patched from a prior failed run; otherwise an
         # empty Formula/cpr.rb there could shadow homebrew/core for `cpr`.
-        brew untap local/patched 2>/dev/null || true
+        # `rm -rf` rather than `brew untap` -- the latter fails on taps created
+        # by `tap-new --no-git` (no git repo to untap from).
+        rm -rf "$(brew --repository local/patched)"
         # Read upstream cpr source via the brew API *before* the local tap
         # exists. Qualified `homebrew/core/cpr` needs the core tap cloned to
         # disk (not the case in API mode); unqualified `cpr` works through

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-19 18:56+0200\n"
+"POT-Creation-Date: 2026-05-20 22:49+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -280,6 +280,11 @@ msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:287
 msgid "Another operation in progress."
+msgstr ""
+
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:294
+#, c++-format
+msgid "Drop {}"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:351
@@ -1653,6 +1658,11 @@ msgstr ""
 msgid "Hot Key List"
 msgstr ""
 
+#: source/MRViewer/MRFileLoadOptions.h:13
+#, c++-format
+msgid "Open {}"
+msgstr ""
+
 #: source/MRViewer/MRMeshBoundarySelectionWidget.cpp:127
 msgid "Select Mesh Boundary"
 msgstr ""
@@ -2074,6 +2084,12 @@ msgstr ""
 
 #: source/MRViewer/MRUnits.cpp:229
 msgid "Degrees, minutes, seconds"
+msgstr ""
+
+#. TRANSLATORS: example string: Open .SVG as Polyline
+#: source/MRViewer/MRViewer.cpp:1287 source/MRViewer/MRViewer.cpp:1293
+#, c++-format
+msgid "{} as {}"
 msgstr ""
 
 #: source/MRViewer/MRViewerSettingsPlugin.cpp:54

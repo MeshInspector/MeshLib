@@ -10,7 +10,7 @@ using FilesLoadedCallback = std::function<void( const std::vector<std::shared_pt
 struct FileLoadOptions
 {
     /// first part of undo name
-    const char* undoPrefix = "Open ";
+    const char* undoPrefix = _t( "Open {}" );
 
     enum class ReplaceMode
     {

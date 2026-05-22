@@ -100,6 +100,10 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
+      - name: Install MRBind deps
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        run: ./scripts/mrbind/install_deps_macos.sh
+
       - name: Install thirdparty libs
         id: thirdparty
         uses: ./.github/actions/install-macos-thirdparty
@@ -119,10 +123,6 @@ jobs:
           target_arch: ${{ matrix.arch }}
           cxx_compiler: ${{ steps.thirdparty.outputs.cxx-compiler }}
           build_config: ${{ matrix.config }}
-
-      - name: Install MRBind deps
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        run: ./scripts/mrbind/install_deps_macos.sh
 
       - name: Build MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}

@@ -11,4 +11,4 @@ CLANG_VER="$(cat $SCRIPT_DIR/clang_version_macos.txt | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 brew update
-brew install --quiet make grep llvm@$CLANG_VER
+brew install --quiet make grep lld llvm@$CLANG_VER

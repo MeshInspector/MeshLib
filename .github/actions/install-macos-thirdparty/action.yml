@@ -16,7 +16,7 @@ inputs:
     required: true
     description: >
       Compiler identifier baked into the cache key (e.g. `AppleClang`,
-      `brew-llvm18`). Different compilers produce incompatible thirdparty
+      `brew-llvm22`). Different compilers produce incompatible thirdparty
       .dylibs, so this discriminates their caches.
   cxx-compiler-template:
     required: false

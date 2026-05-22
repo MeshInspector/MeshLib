@@ -63,9 +63,9 @@ jobs:
             instance: macos-14
           - arch: arm64
             config: Debug
-            compiler: brew-llvm18
-            cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
-            c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
+            compiler: brew-llvm22
+            cxx-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang++
+            c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
@@ -170,7 +170,7 @@ jobs:
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(brew --prefix llvm@18)/bin:$PATH"
+          export PATH="$(brew --prefix llvm@22)/bin:$PATH"
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings

@@ -162,10 +162,13 @@ runs:
         set -o pipefail
         brew tap-new --no-git local/patched 2>/dev/null || true
         TAP_FORMULA="$(brew --repository local/patched)/Formula/cpr.rb"
-        # `brew cat cpr` may differ in indentation / line endings between
-        # API-cached and tapped formulas, so match `def install` loosely
-        # and inject exactly once.
-        brew cat cpr | awk '
+        # Source the formula by file path rather than `brew cat`: on hosts
+        # with API mode on, `brew cat` may produce a stripped/serialised
+        # variant that doesn't include the literal `def install` line.
+        SOURCE_FORMULA="$(brew formula cpr)"
+        echo "Sourcing cpr formula from: ${SOURCE_FORMULA}"
+        # `def install` matched loosely with a !done guard so we inject once.
+        awk '
           !done && /def install/ {
             print
             print "    ENV.append \"CXXFLAGS\", \"-D_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION=0\""
@@ -173,10 +176,12 @@ runs:
             next
           }
           { print }
-        ' > "${TAP_FORMULA}"
+        ' "${SOURCE_FORMULA}" > "${TAP_FORMULA}"
         if ! grep -q INIT_PRIMARY_EXCEPTION "${TAP_FORMULA}"; then
-          echo "::error::Formula patch did not land. Dumping first 60 lines of brew cat cpr:"
-          brew cat cpr | head -60 | cat -A
+          echo "::error::Formula patch did not land. Dumping head of source formula (cat -v):"
+          head -60 "${SOURCE_FORMULA}" | cat -v
+          echo "::error::Also dumping head of brew cat cpr (cat -v):"
+          brew cat cpr | head -60 | cat -v
           exit 1
         fi
         # Make room for the local/patched cpr at the canonical brew path.

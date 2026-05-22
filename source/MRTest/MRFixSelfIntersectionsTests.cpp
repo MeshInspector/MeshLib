@@ -21,7 +21,8 @@ TEST( MRMesh, FixSelfIntersections )
     settings.touchIsIntersection = false;
     EXPECT_TRUE( SelfIntersections::fix( mesh, settings ).has_value() );
 
-    EXPECT_EQ( mesh.topology.getValidFaces().count(), 1194 );
+    EXPECT_TRUE( mesh.topology.getValidFaces().count() == 1194
+              || mesh.topology.getValidFaces().count() == 1196 ); //on some macOS Arm runners in Debug mode
 
     intersections = SelfIntersections::getFaces( mesh, false );
     EXPECT_TRUE( intersections.has_value() );

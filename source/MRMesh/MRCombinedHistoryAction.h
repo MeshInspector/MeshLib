@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRHistoryAction.h"
 #include <memory>
+#include <optional>
 
 namespace MR
 {

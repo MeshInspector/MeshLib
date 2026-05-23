@@ -267,19 +267,14 @@ jobs:
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
             MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
           fi
-          # Some self-hosted runners still carry a `local/patched/cpr` keg
-          # left over from earlier experiments. `xargs brew install cpr`
-          # would then abort with "Formulae with the same name from different
-          # taps cannot be installed at the same time." The .pkg bundles its
-          # own libcpr.1.dylib, so the test side doesn't need a brew cpr --
-          # drop the bare `cpr` line from the requirements when the patched
-          # variant is present.
-          REQS="${MESHLIB_FW}/requirements/macos.txt"
-          if brew list local/patched/cpr &>/dev/null; then
-            grep -v '^cpr$' "${REQS}" | xargs brew install --quiet
-          else
-            xargs brew install --quiet < "${REQS}"
-          fi
+          # Remove any `local/patched/cpr` keg / tap left over from earlier
+          # experiments on this self-hosted runner. Without this, the next
+          # `xargs brew install` aborts with "Formulae with the same name
+          # from different taps cannot be installed at the same time."
+          # `|| true` so a host that never carried this state isn't a fail.
+          brew uninstall --ignore-dependencies local/patched/cpr 2>/dev/null || true
+          rm -rf "$(brew --repository local/patched)" 2>/dev/null || true
+          xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 

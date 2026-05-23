@@ -267,7 +267,19 @@ jobs:
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
             MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
           fi
-          xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
+          # Some self-hosted runners still carry a `local/patched/cpr` keg
+          # left over from earlier experiments. `xargs brew install cpr`
+          # would then abort with "Formulae with the same name from different
+          # taps cannot be installed at the same time." The .pkg bundles its
+          # own libcpr.1.dylib, so the test side doesn't need a brew cpr --
+          # drop the bare `cpr` line from the requirements when the patched
+          # variant is present.
+          REQS="${MESHLIB_FW}/requirements/macos.txt"
+          if brew list local/patched/cpr &>/dev/null; then
+            grep -v '^cpr$' "${REQS}" | xargs brew install --quiet
+          else
+            xargs brew install --quiet < "${REQS}"
+          fi
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 

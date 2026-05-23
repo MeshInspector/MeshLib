@@ -222,10 +222,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: [ self-hosted, macos, arm64, build, macos-13 ]
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
-            runner: [ self-hosted, macos, arm64, build, macos-15 ]
+            runner: macos-13
             pkg_pattern: '*arm64.pkg'
           - arch: arm64
             runner: macos-14
@@ -237,13 +234,13 @@ jobs:
             runner: macos-26
             pkg_pattern: '*arm64.pkg'
           - arch: x64
+            runner: macos-12-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
             runner: macos-15-intel
             pkg_pattern: '*x64.pkg'
           - arch: x64
             runner: macos-26-intel
-            pkg_pattern: '*x64.pkg'
-          - arch: x64
-            runner: macos-x64-build
             pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout
@@ -270,13 +267,6 @@ jobs:
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
             MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
           fi
-          # Remove any `local/patched/cpr` keg / tap left over from earlier
-          # experiments on this self-hosted runner. Without this, the next
-          # `xargs brew install` aborts with "Formulae with the same name
-          # from different taps cannot be installed at the same time."
-          # `|| true` so a host that never carried this state isn't a fail.
-          brew uninstall --ignore-dependencies local/patched/cpr 2>/dev/null || true
-          rm -rf "$(brew --repository local/patched)" 2>/dev/null || true
           xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"

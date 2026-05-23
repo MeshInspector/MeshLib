@@ -12,7 +12,7 @@ IF(MSVC)
   #   warning C4804: '+=': unsafe use of type 'bool' in operation
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4297 /wd4305 /wd4804")
 ELSE()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context -Wdeprecated-declarations")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context -Wno-deprecated-declarations")
 ENDIF()
 
 IF(MSVC)

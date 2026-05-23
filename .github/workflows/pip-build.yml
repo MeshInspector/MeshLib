@@ -700,6 +700,9 @@ jobs:
       matrix:
         include:
           - platform: "arm64"
+            runner-tier: "self-hosted"
+            instance: macos-13
+          - platform: "arm64"
             runner-tier: "github"
             instance: macos-14
           - platform: "arm64"
@@ -708,18 +711,15 @@ jobs:
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-26
-          - platform: "arm64"
+          - platform: "x86"
             runner-tier: "self-hosted"
-            instance: macos-arm-build-12
+            instance: macos-12-intel
           - platform: "x86"
             runner-tier: "github"
             instance: macos-15-intel
           - platform: "x86"
             runner-tier: "github"
             instance: macos-26-intel
-          - platform: "x86"
-            runner-tier: "self-hosted"
-            instance: macos-x64-build
     steps:
       - name: Checkout
         uses: actions/checkout@v6

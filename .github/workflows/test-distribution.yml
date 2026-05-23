@@ -222,6 +222,9 @@ jobs:
       matrix:
         include:
           - arch: arm64
+            runner: macos-13
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
             runner: macos-14
             pkg_pattern: '*arm64.pkg'
           - arch: arm64
@@ -231,13 +234,13 @@ jobs:
             runner: macos-26
             pkg_pattern: '*arm64.pkg'
           - arch: x64
+            runner: macos-12-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
             runner: macos-15-intel
             pkg_pattern: '*x64.pkg'
           - arch: x64
             runner: macos-26-intel
-            pkg_pattern: '*x64.pkg'
-          - arch: x64
-            runner: macos-x64-build
             pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout

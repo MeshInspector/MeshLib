@@ -31,6 +31,8 @@
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRMcpCommon.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -353,6 +355,23 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
+// Registered mesh-format media types, with `application/octet-stream` for the
+// rest. Used when emitting an embedded-resource content block for a serialized
+// scene object.
+static std::string mimeForExt( std::string_view ext )
+{
+    std::string e( ext );
+    if ( !e.empty() && e.front() == '.' )
+        e.erase( e.begin() );
+    std::transform( e.begin(), e.end(), e.begin(), []( unsigned char c ){ return char( std::tolower( c ) ); } );
+    if ( e == "stl"  ) return "model/stl";
+    if ( e == "obj"  ) return "model/obj";
+    if ( e == "ply"  ) return "model/ply";
+    if ( e == "gltf" ) return "model/gltf+json";
+    if ( e == "glb"  ) return "model/gltf-binary";
+    return "application/octet-stream";
+}
+
 static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 {
     nlohmann::json out = nlohmann::json::object();
@@ -379,7 +398,8 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
                 ext.insert( ext.begin(), '.' );
 
             UniqueTemporaryFolder tmp{};
-            const std::filesystem::path path = tmp / pathFromUtf8( obj->name() + ext );
+            const std::string fileName = obj->name() + ext;
+            const std::filesystem::path path = tmp / pathFromUtf8( fileName );
             auto saved = ObjectSave::toAnySupportedFormat( *obj, path );
             if ( !saved )
                 throw std::runtime_error( saved.error() );
@@ -387,7 +407,26 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
             if ( !in )
                 throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
             std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
-            out["bytes"] = encode64( bytes.data(), bytes.size() );
+
+            // MCP-spec embedded-resource block. URN form because the resource is
+            // ephemeral (regenerated per call) — the URI is an identity label, not
+            // a fetchable location. Media type is the registered model/* for known
+            // mesh formats, `application/octet-stream` otherwise.
+            const std::string normExt = ext.front() == '.' ? ext.substr( 1 ) : ext;
+            const std::string urn = fmt::format( "urn:meshinspector:object:{}:{}",
+                args.at( "id" ).get<uint64_t>(), normExt );
+            out = nlohmann::json{
+                { "content", nlohmann::json::array( {
+                    {
+                        { "type", "resource" },
+                        { "resource", {
+                            { "uri",      urn },
+                            { "mimeType", mimeForExt( ext ) },
+                            { "blob",     encode64( bytes.data(), bytes.size() ) },
+                        } },
+                    },
+                } ) },
+            };
             return;
         }
         throw std::runtime_error( "scene_getObject requires either `filePath` or `extension`." );
@@ -563,18 +602,19 @@ MR_ON_INIT{
 
     server.addTool(
         /*id*/  "scene_getObject",
-        /*name*/"Serialize scene object (to file or inline bytes)",
+        /*name*/"Serialize scene object (to file or inline resource)",
         /*desc*/std::string( kSceneIdSemantics ) +
-                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass either `filePath` (server-side path; "
-                "format selected by extension) — response is `{path: <written-path>}`; or `extension` (e.g. `\"stl\"`) — "
-                "response is `{bytes: <base64 payload>}`.",
+                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass `filePath` (server-side path; format "
+                "selected by extension) — response is `{path: <written-path>}`. Or pass `extension` (e.g. `\"stl\"`) "
+                "to receive the bytes inline as an MCP embedded-resource content block "
+                "(`content[0].resource.blob` is the base64 payload; `mimeType` is the registered model/* "
+                "media type for known mesh formats, `application/octet-stream` otherwise).",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "filePath",  Schema::String{} )
             .addMemberOpt( "extension", Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",  Schema::String{} )
-            .addMemberOpt( "bytes", Schema::String{} ),
+            .addMemberOpt( "path", Schema::String{} ),
         /*func*/mcpSceneGetObject
     );
 

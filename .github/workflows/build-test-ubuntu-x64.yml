@@ -253,7 +253,13 @@ jobs:
           retention-days: 1
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        # Mirror `Upload Ubuntu Developer Distribution`'s gate -- otherwise
+        # matrix entries that don't produce a .deb (Debug, Clang, or
+        # `upload_release == 'OFF'`) invoke this step with no matching file
+        # and the action fails (with `continue-on-error: true` the job still
+        # succeeds, but a confusing `failure`-level annotation is surfaced
+        # on the run summary).
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:

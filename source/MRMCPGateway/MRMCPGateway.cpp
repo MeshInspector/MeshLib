@@ -233,6 +233,7 @@ int main( int argc, char** argv )
     // joining its listener thread.
     auto transport = std::make_unique<MLClientTransport>(
         cfg.targetUrl, cfg.ssePath, cfg.messagesPath );
+    MLClientTransport* transportPtr = transport.get(); // retained for raw `tools/call` forwarding
     fastmcpp::client::Client templateClient( std::move( transport ) );
 
     fastmcpp::ProxyApp proxy(
@@ -252,7 +253,7 @@ int main( int argc, char** argv )
     //  2. Avoid fastmcpp's initialize handler calling `proxy.list_all_resources/templates/prompts`,
     //     which each invoke our client factory and probe the backend — making `initialize` slow
     //     enough to trip `claude mcp list`'s health-check timeout when the backend is offline.
-    auto handler = [inner]( const fastmcpp::Json& req ) -> fastmcpp::Json
+    auto handler = [inner, transportPtr]( const fastmcpp::Json& req ) -> fastmcpp::Json
     {
         const std::string method = req.is_object() ? req.value( "method", std::string{} ) : std::string{};
         if ( method == "initialize" )
@@ -267,6 +268,33 @@ int main( int argc, char** argv )
                     { "serverInfo", { { "name", "MRMCPGateway" }, { "version", "0.1" } } },
                 } },
             };
+        }
+
+        // Forward proxied tools/call raw so MCP-spec content shapes survive
+        // (fastmcpp's ProxyApp reshapes resource blocks off-spec). Local
+        // tools stay on `inner`.
+        if ( method == "tools/call" && req.is_object() && req.contains( "params" )
+             && req["params"].is_object() )
+        {
+            const auto& params = req["params"];
+            const std::string toolName = params.value( "name", std::string{} );
+            static const std::set<std::string> kLocalTools = { "launch", "status" };
+            if ( !toolName.empty() && !kLocalTools.count( toolName ) )
+            {
+                const auto id = req.contains( "id" ) ? req.at( "id" ) : fastmcpp::Json();
+                try
+                {
+                    fastmcpp::Json result = transportPtr->request( "tools/call", params );
+                    return fastmcpp::Json{ { "jsonrpc", "2.0" }, { "id", id }, { "result", std::move( result ) } };
+                }
+                catch ( const std::exception& e )
+                {
+                    return fastmcpp::Json{
+                        { "jsonrpc", "2.0" }, { "id", id },
+                        { "error", { { "code", -32603 }, { "message", e.what() } } },
+                    };
+                }
+            }
         }
 
         fastmcpp::Json resp = inner( req );

@@ -285,7 +285,11 @@ jobs:
             overwrite: true
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        # Mirror `Upload Macos Distribution`'s gate -- otherwise Debug jobs
+        # invoke this step with no matching .pkg and the action fails (with
+        # `continue-on-error: true` the job still succeeds, but a confusing
+        # `failure`-level annotation is surfaced on the run summary).
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:

@@ -10,7 +10,10 @@ runs:
     - name: Cache pinned MSYS2 packages
       # Cache key tracks the lockfile; `wget -nc` makes cache-hit a no-op,
       # and `sha256sum -c` in the install script is the integrity gate.
+      # Tolerate transient cache-service failures — the install step will
+      # redownload from scratch if nothing was restored.
       uses: actions/cache@v5
+      continue-on-error: true
       with:
         path: scripts/mrbind/msys2_packages
         key: msys2-mrbind-clang22-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}

@@ -87,8 +87,14 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
 
 # install minimal CUDA toolkit (nvcc + cudart) from NVIDIA's RHEL8 repo
 # replaces nvidia/cuda:devel base image, dropping ~3.5 GB of unused CUDA libs / nsight / devel tooling
+# NVIDIA uses different repo paths per arch: x86_64 -> x86_64, aarch64 -> sbsa
 RUN retry.sh -- dnf -y install 'dnf-command(config-manager)' && \
-    retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && \
+    case "$(uname -m)" in \
+        x86_64)  CUDA_REPO_ARCH=x86_64 ;; \
+        aarch64) CUDA_REPO_ARCH=sbsa ;; \
+        *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;; \
+    esac && \
+    retry.sh -- dnf config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo" && \
     retry.sh -- dnf -y install \
         cuda-nvcc-12-0 \
         cuda-cudart-12-0 \

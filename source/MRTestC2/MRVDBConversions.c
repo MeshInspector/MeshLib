@@ -53,7 +53,7 @@ void testVDBConversions( void )
     MR_GridToMeshSettings_Set_voxelSize( gridToMeshSettings, MR_Vector3f_diagonal( 0.1f ) );
     MR_GridToMeshSettings_Set_isoValue( gridToMeshSettings, 1 );
 
-    MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VoxelsVolume_MR_FloatGrid_Get_data( baseVolume ), gridToMeshSettings );
+    MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VoxelsVolume_MR_FloatGrid_Get_data( volume ), gridToMeshSettings );
     const MR_Mesh* restored = MR_expected_MR_Mesh_std_string_value( restoredEx );
     MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( restored, NULL );
     TEST_ASSERT( bbox.min.x > 0.199f && bbox.min.x < 0.201f );

@@ -52,7 +52,7 @@ void testMeshFillHole( void )
     MR_fillHoles( mesh, oldBdEdges, params );
     MR_FillHoleParams_Destroy( params );
 
-    TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) ) == 3 )
+    TEST_ASSERT( MR_FaceBitSet_count( newFaces ) == 3 )
 
     MR_std_vector_MR_EdgeId* newBdEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
     TEST_ASSERT( MR_std_vector_MR_EdgeId_size( newBdEdges ) == 0 );
@@ -74,7 +74,7 @@ void testMeshFillHoleNicely( void )
     MR_FaceBitSet* patch = MR_fillHoleNicely( mesh, *MR_std_vector_MR_EdgeId_front( oldBdEdges ), params );
     MR_FillHoleNicelySettings_Destroy( params );
 
-    size_t patchCount = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( patch ) );
+    size_t patchCount = MR_FaceBitSet_count( patch );
     TEST_ASSERT( patchCount == 1887 );
 
     MR_std_vector_MR_EdgeId* newBdEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
@@ -106,7 +106,7 @@ void testFindHoleComplicatingFaces( void )
 {
     MR_Mesh* mesh = createMeshWithHoles();
     MR_FaceBitSet* faces = MR_findHoleComplicatingFaces( mesh );
-    const size_t facesCount = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( faces ) );
+    const size_t facesCount = MR_FaceBitSet_count( faces );
     TEST_ASSERT( facesCount == 0 );
     MR_FaceBitSet_Destroy( faces );
     MR_Mesh_Destroy( mesh );

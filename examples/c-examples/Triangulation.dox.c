@@ -39,7 +39,7 @@ int main( void )
     MR_PointCloud* pc = MR_PointCloud_DefaultConstruct();
     MR_PointCloud_Set_points( pc, MR_PassBy_Move, points );
     // Fill the bitset of valid points in `pc` to all ones.
-    MR_BitSet_resize( MR_VertBitSet_MutableUpcastTo_MR_BitSet( MR_PointCloud_GetMutable_validPoints( pc ) ), 10000, &(bool){true} );
+    MR_VertBitSet_resize( MR_PointCloud_GetMutable_validPoints( pc ), 10000, &(bool){true} );
     MR_VertCoords_Destroy( points );
 
     // Remove duplicate points
@@ -75,7 +75,7 @@ int main( void )
     // Fix possible issues
     MR_OffsetParameters* offsetParams = MR_OffsetParameters_DefaultConstruct();
     MR_MeshPart* mp = MR_MeshPart_Construct( triangulated, NULL );
-    MR_BaseShellParameters_Set_voxelSize( MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters( offsetParams ), MR_suggestVoxelSize( mp, 5e+6f ) );
+    MR_OffsetParameters_Set_voxelSize( offsetParams, MR_suggestVoxelSize( mp, 5e+6f ) );
     MR_expected_MR_Mesh_std_string *meshEx = MR_offsetMesh( mp, 0.f, offsetParams );
     MR_MeshPart_Destroy( mp );
     MR_std_optional_MR_Mesh_Destroy( triangulatedOpt );

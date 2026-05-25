@@ -125,11 +125,9 @@ void testGetComponent( void )
 
     MR_FaceBitSet* component = MR_MeshComponents_getComponent( m.part, face, NULL, NULL );
 
-    MR_FaceId face;
+    TEST_ASSERT( MR_FaceBitSet_test( component, face ) );
     face.id_ = 0;
     TEST_ASSERT( !MR_FaceBitSet_test( component, face ) );
-    face.id_ = 12;
-    TEST_ASSERT( MR_FaceBitSet_test( component, face ) );
     MR_FaceBitSet_Destroy( component );
 
     destroyMesh( m );

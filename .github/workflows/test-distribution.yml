@@ -256,14 +256,18 @@ jobs:
         # GitHub's official guidance is to retry after a short delay.
         # `--clobber` lets a retry overwrite a partial download from the
         # previous attempt.
+        # The token is passed via RELEASE_GH_TOKEN rather than GH_TOKEN so
+        # that `gh auth login --with-token` actually consumes it from stdin;
+        # if $GH_TOKEN is set in the environment, gh refuses --with-token
+        # and the auth step always fails.
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          RELEASE_GH_TOKEN: ${{ secrets.GH_TOKEN }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           PKG_PATTERN: ${{ matrix.pkg_pattern }}
           REPO: ${{ github.repository }}
         run: |
           scripts/retry.sh -- bash -c '
-            echo "$GH_TOKEN" | gh auth login --with-token &&
+            echo "$RELEASE_GH_TOKEN" | gh auth login --with-token &&
             gh release download "$RELEASE_TAG" \
               --pattern "$PKG_PATTERN" \
               --repo "$REPO" \

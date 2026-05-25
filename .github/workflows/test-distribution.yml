@@ -254,23 +254,13 @@ jobs:
         # ("Bad credentials") even for a perfectly valid token -- a known
         # transient on GitHub's side. See community discussion #101661;
         # GitHub's official guidance is to retry after a short delay.
-        # Without this loop, a single 401 takes out one matrix cell and
-        # forces a manual re-run of the post-merge run.
+        # Auth and download are wrapped in independent retry loops so a
+        # flake in one does not force the other to re-run. `--clobber`
+        # lets a download retry overwrite a partial file from a previous
+        # attempt.
         run: |
-          for attempt in 1 2 3; do
-            if echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token \
-               && gh release download ${{ inputs.release_tag }} \
-                    --pattern "${{ matrix.pkg_pattern }}" \
-                    --repo ${{ github.repository }} \
-                    --clobber; then
-              exit 0
-            fi
-            delay=$(( attempt * 10 ))
-            echo "Download Distributive: attempt ${attempt} failed; retrying in ${delay}s..."
-            sleep "${delay}"
-          done
-          echo "Download Distributive: all 3 attempts failed" >&2
-          exit 1
+          scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
       # Self-hosted runners have no passwordless sudo, so they install into
       # ~/Library via `-target CurrentUserHomeDirectory` (enabled by the

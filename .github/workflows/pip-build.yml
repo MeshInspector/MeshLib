@@ -516,7 +516,7 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh

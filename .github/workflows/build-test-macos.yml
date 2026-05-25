@@ -63,9 +63,9 @@ jobs:
             instance: macos-14
           - arch: arm64
             config: Debug
-            compiler: brew-llvm18
-            cxx-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang++
-            c-compiler-template: BREW_PREFIX/opt/llvm@18/bin/clang
+            compiler: brew-llvm22
+            cxx-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang++
+            c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
@@ -133,7 +133,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -170,7 +170,7 @@ jobs:
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(brew --prefix llvm@18)/bin:$PATH"
+          export PATH="$(brew --prefix llvm@22)/bin:$PATH"
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings

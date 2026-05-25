@@ -71,7 +71,7 @@ void testSharpOffsetMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_SharpOffsetParameters* params = MR_SharpOffsetParameters_DefaultConstruct();
-    MR_SharpOffsetParameters_Set_voxelSize(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
+    MR_SharpOffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     float offset = 0.1f;
     MR_expected_MR_Mesh_std_string* outputMesh = MR_sharpOffsetMesh(inputMeshPart, offset, params);
     MR_SharpOffsetParameters_Destroy(params);

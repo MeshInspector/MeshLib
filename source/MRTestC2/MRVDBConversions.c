@@ -100,7 +100,7 @@ void testResampling( void )
     MR_VdbVolume* resampledVolume = MR_floatGridToVdbVolume( MR_PassBy_Move, resampledGrid );
     MR_FloatGrid_Destroy( resampledGrid );
 
-    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( baseResampledVolume );
+    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( resampledVolume );
 
     TEST_ASSERT( dims->x == 13 );
     TEST_ASSERT( dims->y == 27 );

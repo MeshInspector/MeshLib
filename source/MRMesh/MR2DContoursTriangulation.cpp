@@ -116,7 +116,7 @@ public:
     // if holesVertId is null - merge all vertices with same coordinates
     // otherwise only merge the ones with same initial vertId
     SweepLineQueue(
-        const Contours2d& contours,
+        const Contours2f& contours,
         const HolesVertIds* holesVertId = nullptr,
         bool abortWhenIntersect = false,
         WindingMode mode = WindingMode::NonZero,
@@ -151,7 +151,7 @@ private:
     // optional out EdgePaths that corresponds to initial contours
     std::vector<EdgePath>* outBoundaries_ = nullptr;
     // make base mesh only containing input contours as edge loops
-    void initMeshByContours_( const Contours2d& contours );
+    void initMeshByContours_( const Contours2f& contours );
     // merge same points on base mesh
     void mergeSamePoints_( const HolesVertIds* holesVertId );
     void mergeSinglePare_( VertId unique, VertId same );
@@ -278,7 +278,7 @@ private:
 };
 
 SweepLineQueue::SweepLineQueue(
-    const Contours2d& contours,
+    const Contours2f& contours,
     const HolesVertIds* holesVertId,
     bool abortWhenIntersect,
     WindingMode mode,
@@ -291,16 +291,16 @@ SweepLineQueue::SweepLineQueue(
     outBoundaries_{ outBoundaries },
     windingMode_{ mode }
 {
-    Box3d box;
+    Box3f box;
     for ( const auto& cont : contours )
         for ( const auto& p : cont )
             box.include( to3dim( p ) );
 
-    converters_.toInt = [conv = getToIntConverter( box )] ( const Vector2f& coord )
+    converters_.toInt = [conv = getToIntConverter( Box3d( box ) )] ( const Vector2f& coord )
     {
         return to2dim( conv( to3dim( coord ) ) );
     };
-    converters_.toFloat = [conv = getToFloatConverter( box )] ( const Vector2i& coord )
+    converters_.toFloat = [conv = getToFloatConverter( Box3d( box ) )] ( const Vector2i& coord )
     {
         return to2dim( conv( to3dim( coord ) ) );
     };
@@ -882,7 +882,7 @@ void SweepLineQueue::checkIntersection_( int i )
     activeSweepEdges_[i + 1].lowerInfo.interVertId = interInfo.vId;
 }
 
-void SweepLineQueue::initMeshByContours_( const Contours2d& contours )
+void SweepLineQueue::initMeshByContours_( const Contours2f& contours )
 {
     MR_TIMER;
     int pointsSize = 0;
@@ -902,7 +902,7 @@ void SweepLineQueue::initMeshByContours_( const Contours2d& contours )
             for ( int i = 0; i + 1 < c.size(); ++i )
             {
                 VertId v = tp_.addVertId();
-                pts_.autoResizeSet( v, to3dim( converters_.toInt( Vector2f( c[i] ) ) ) );
+                pts_.autoResizeSet( v, to3dim( converters_.toInt( c[i] ) ) );
             }
         }
     }
@@ -986,7 +986,9 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
     if ( holesVertId ) // sort with correct indices in case of other way sort before
         std::sort( sortedVerts_.begin(), sortedVerts_.end(), [&] ( VertId l, VertId r ) { return less_( l, r ); } );
 
-    removeMultipleAfterMerge_();
+    windingInfo_.resize( tp_.undirectedEdgeSize() );
+    if ( !abortWhenIntersect_ || !holesVertId )
+        removeMultipleAfterMerge_();
 }
 
 void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
@@ -1047,7 +1049,6 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
 void SweepLineQueue::removeMultipleAfterMerge_()
 {
     MR_TIMER;
-    windingInfo_.resize( tp_.undirectedEdgeSize() );
     auto multiples = findMultipleEdges( tp_ ).value();
     for ( const auto& multiple : multiples )
     {
@@ -1268,7 +1269,7 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
     return res;
 }
 
-Mesh getOutlineMesh( const Contours2d& contsd, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
+Mesh getOutlineMesh( const Contours2f& contsd, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
     SweepLineQueue triangulator( contsd, nullptr, false, params.innerType, true, params.allowMerge );
 
@@ -1283,10 +1284,10 @@ Mesh getOutlineMesh( const Contours2d& contsd, IntersectionsMap* interMap /*= nu
     return *mesh;
 }
 
-Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
+Mesh getOutlineMesh( const Contours2d& contours, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
-    const auto contsd = convertContours<Contours2d>( contours );
-    return getOutlineMesh( contsd, interMap, params );
+    const auto contsf = convertContours<Contours2f>( contours );
+    return getOutlineMesh( contsf, interMap, params );
 }
 
 Contours2f getOutline( const Contours2d& contours, const OutlineParameters& params )
@@ -1337,7 +1338,7 @@ Contours2f getOutline( const Contours2f& contours, const OutlineParameters& para
     return getOutline( contsd, params );
 }
 
-Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
     if ( contours.empty() )
         return {};
@@ -1350,13 +1351,13 @@ Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVe
         return Mesh();
 }
 
-Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
-    const auto contsd = convertContours<Contours2d>( contours );
-    return triangulateContours( contsd, holeVertsIds );
+    const auto contsf = convertContours<Contours2f>( contours );
+    return triangulateContours( contsf, holeVertsIds );
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
 {
     if ( contours.empty() )
         return Mesh();
@@ -1364,10 +1365,10 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
     return triangulator.run();
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
 {
-    const auto contsd = convertContours<Contours2d>( contours );
-    return triangulateDisjointContours( contsd, holeVertsIds, outBoundaries );
+    const auto contsf = convertContours<Contours2f>( contours );
+    return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
 }
 
 }

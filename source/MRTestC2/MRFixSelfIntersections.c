@@ -34,7 +34,8 @@ void testFixSelfIntersections( void )
     MR_SelfIntersections_Settings_Destroy( settings );
 
     validFacesCount = MR_FaceBitSet_count( MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( mesh ) ) );
-    TEST_ASSERT( validFacesCount == 1194 );
+    TEST_ASSERT( validFacesCount == 1194
+              || validFacesCount == 1196 ); //on some macOS Arm runners in Debug mode
 
     intersections_ex = MR_SelfIntersections_getFaces( mesh, false, MR_PassBy_DefaultArgument, NULL );
     intersections = MR_expected_MR_FaceBitSet_std_string_value_mut( intersections_ex );

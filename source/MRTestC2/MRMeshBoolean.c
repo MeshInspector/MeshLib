@@ -208,6 +208,9 @@ void testBooleanMapper( void )
     MR_VertBitSet* vMapB = MR_BooleanResultMapper_map_MR_VertBitSet( mapper, meshBValidPoints, MR_BooleanResultMapper_MapObject_B );
     TEST_ASSERT( MR_VertBitSet_size( vMapA ) == 60 )
     TEST_ASSERT( MR_VertBitSet_size( vMapB ) == 204 )
+    TEST_ASSERT( !MR_BitSet_intersects(
+        MR_VertBitSet_UpcastTo_MR_BitSet( vMapA ),
+        MR_VertBitSet_UpcastTo_MR_BitSet( vMapB ) ) )
     TEST_ASSERT( MR_VertBitSet_count( vMapA ) == 60 )
     TEST_ASSERT( MR_VertBitSet_count( vMapB ) == 48 )
 
@@ -217,6 +220,9 @@ void testBooleanMapper( void )
     MR_FaceBitSet* fMapB = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, meshBValidFaces, MR_BooleanResultMapper_MapObject_B );
     TEST_ASSERT( MR_FaceBitSet_size( fMapA ) == 224 )
     TEST_ASSERT( MR_FaceBitSet_size( fMapB ) == 416 )
+    TEST_ASSERT( !MR_BitSet_intersects(
+        MR_FaceBitSet_UpcastTo_MR_BitSet( fMapA ),
+        MR_FaceBitSet_UpcastTo_MR_BitSet( fMapB ) ) )
     TEST_ASSERT( MR_FaceBitSet_count( fMapA ) == 224 )
     TEST_ASSERT( MR_FaceBitSet_count( fMapB ) == 192 )
 

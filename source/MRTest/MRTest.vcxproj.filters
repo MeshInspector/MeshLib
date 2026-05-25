@@ -175,6 +175,9 @@
     <ClCompile Include="MRMeshMeshDistanceTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshMeshDistanceLimitTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRReducePathTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -188,6 +191,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBooleanTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFixSelfIntersectionsTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

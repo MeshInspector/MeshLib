@@ -40,6 +40,7 @@
 #include "MRWebRequest.h"
 #include "MRUnitSettings.h"
 #include "MROpenObjects.h"
+#include "MRI18n.h"
 #include "MRVoxels/MRDicom.h"
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
@@ -316,9 +317,6 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
 {
-    if ( count == 0 )
-        return;
-
     std::vector<std::filesystem::path> paths( count );
     for ( int i = 0; i < count; ++i )
     {
@@ -1276,9 +1274,22 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             const bool wasEmptyScene = SceneRoot::get().children().empty();
             const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
 
-            std::string undoName = options.undoPrefix + commonFilesName( result.loadedFiles );
-            if ( auto cn = commonClassName( result.scene->children() ) )
-                undoName += " as " + *cn;
+            const auto undoPrefix = options.undoPrefix;
+            const auto fileName = commonFilesName( result.loadedFiles );
+            const auto className = commonClassName( result.scene->children() );
+            auto undoName = fmt::format( fmt::runtime( undoPrefix ), fileName );
+            if ( className )
+                undoName = fmt::format( "{} as {}", undoName, *className );
+            const auto dynamicUndoName = [undoPrefix, fileName, className]
+            {
+                auto result = fmt::format( f_tr( undoPrefix ), fileName );
+                if ( className )
+                {
+                    // TRANSLATORS: example string: Open .SVG as Polyline
+                    result = fmt::format( f_tr( "{} as {}" ), result, _tr( *className ) );
+                }
+                return result;
+            };
 
             bool singleSceneFile = result.loadedFiles.size() == 1 && !result.isSceneConstructed;
             bool forceReplace = options.replaceMode == FileLoadOptions::ReplaceMode::ForceReplace;
@@ -1287,8 +1298,10 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             if ( forceReplace || wasEmptyScene || ( !forceAdd && singleSceneFile ) )
             {
                 {
+                    SCOPED_HISTORY( undoName, dynamicUndoName );
+
                     // the scene is taken as is from a single file, replace the current scene with it
-                    AppendHistory<SwapRootAction>( undoName );
+                    AppendHistory<SwapRootAction>( "swap root" );
                     auto newRoot = result.scene;
                     std::swap( newRoot, SceneRoot::getSharedPtr() );
                     setSceneDirty();
@@ -1305,7 +1318,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                     recentFilesStore().storeFile( file );
                 const auto children = result.scene->children();
                 {
-                    SCOPED_HISTORY( undoName );
+                    SCOPED_HISTORY( undoName, dynamicUndoName );
 
                     result.scene->removeAllChildren();
                     for ( const auto& obj : children )

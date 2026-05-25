@@ -218,7 +218,7 @@ private:
 
 // Explicitly mark the current frame as TestEngine-driven. Use from MCP tool
 // handlers that fire plugin actions on a path that does NOT go through
-// `createButton()` (e.g. `tools.action`) but should still trigger TE-gated
+// `createButton()` (e.g. `tools_action`) but should still trigger TE-gated
 // hooks (file-dialog bypass, etc.). Call from the GUI thread before invoking
 // the action.
 MRVIEWER_API void markFrameTriggered();

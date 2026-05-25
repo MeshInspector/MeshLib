@@ -291,7 +291,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( !checkPaths( paths, filters_ ) )
         return false;
 
-    FileLoadOptions options{ .undoPrefix = "Drop " };
+    FileLoadOptions options{ .undoPrefix = _t( "Drop {}" ) };
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();

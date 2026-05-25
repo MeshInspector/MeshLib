@@ -79,7 +79,7 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
 
 // Drain any TestEngine status messages emitted during a just-dispatched UI action and surface
 // them as a tool error. Run on the GUI thread because TE state isn't thread-safe.
-// Non-static so MRToolsMcp.cpp's `tools.action` handler can reuse it across TUs.
+// Non-static so MRToolsMcp.cpp's `tools_action` handler can reuse it across TUs.
 void surfaceTestEngineStatusMessages()
 {
     std::vector<std::string> msgs;
@@ -178,7 +178,7 @@ static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
 static constexpr std::string_view kPathSemantics =
     "`path`: array of entry names from the root (empty = root). Whitespace-sensitive. "
     "Names may contain `##<suffix>` — a hidden ImGui uniqueness marker; pass the name VERBATIM "
-    "as returned by `ui.listEntries` / `ui.listAllEntries`, do not strip `##<suffix>`.\n"
+    "as returned by `ui_listEntries` / `ui_listAllEntries`, do not strip `##<suffix>`.\n"
     "`type`: `button` | `group` | `int` | `uint` | `float` | `string`.\n"
     "`status`: `\"available\"` | `\"disabled: <reason>\"` (widget greyed out) | "
     "`\"disabled: blocked by modal '<name>'\"` (dismiss the modal first).\n\n";
@@ -207,9 +207,9 @@ MR_ON_INIT{
     Server& server = getDefaultServer();
 
     server.addTool(
-        /*id*/"ui.listEntries",
+        /*id*/"ui_listEntries",
         /*name*/"List UI entries (one level)",
-        /*desc*/withPreamble( "List the direct children of `path`. Use `ui.listAllEntries` to get the entire subtree in one call." ),
+        /*desc*/withPreamble( "List the direct children of `path`. Use `ui_listAllEntries` to get the entire subtree in one call." ),
         /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
         /*output_schema*/Schema::Array(
             Schema::Object{}
@@ -221,9 +221,9 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/"ui.listAllEntries",
+        /*id*/"ui_listAllEntries",
         /*name*/"List UI entries (full subtree)",
-        /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui.listEntries` for a single level after a state change." ),
+        /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui_listEntries` for a single level after a state change." ),
         /*input_schema*/Schema::Object{}.addMemberOpt( "path", Schema::Array( Schema::String{} ) ),
         /*output_schema*/Schema::Array(
             Schema::Object{}
@@ -236,7 +236,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/"ui.pressButton",
+        /*id*/"ui_pressButton",
         /*name*/"Click UI button",
         /*desc*/withPreamble( "Click the button at `path` (must end in a `type == \"button\"` entry). Fails if `status` starts with `\"disabled\"`." ),
         /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
@@ -245,39 +245,39 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/"ui.stageFileDialogPaths",
+        /*id*/"ui_stageFileDialogPaths",
         /*name*/"Stage paths for next TestEngine-triggered file dialog",
         /*desc*/
             "Pre-load the path(s) that the next OS file/folder dialog opened by a "
-            "ui.pressButton-driven click will return. The dialog is skipped — no native "
+            "ui_pressButton-driven click will return. The dialog is skipped — no native "
             "modal appears — and the caller (Open / Save / Browse...) receives the staged "
             "paths. Single-shot: consumed by the next dialog. Use absolute paths in UTF-8. "
-            "Stage before calling ui.pressButton on a button that opens a file dialog; if no "
-            "paths are staged when such a button is pressed, ui.pressButton fails with a "
+            "Stage before calling ui_pressButton on a button that opens a file dialog; if no "
+            "paths are staged when such a button is pressed, ui_pressButton fails with a "
             "status message asking you to stage first. Validation: number of paths must "
             "match the dialog's multiselect mode; for open dialogs each path must exist with "
             "the right type (file vs directory); for save dialogs existence is not required "
             "but the path must not already exist as a directory. Real human clicks (not from "
-            "ui.pressButton) always show the native dialog and ignore staged paths.",
+            "ui_pressButton) always show the native dialog and ignore staged paths.",
         /*input_schema*/Schema::Object{}.addMember( "paths", Schema::Array( Schema::String{} ) ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpToolStageFileDialogPaths
     );
 
-    // (idSuffix, displayType) -- `idSuffix` is the CamelCase suffix on ui.readValue*/ui.writeValue*;
+    // (idSuffix, displayType) -- `idSuffix` is the CamelCase suffix on ui_readValue*/ui_writeValue*;
     // `displayType` matches the `type` field in listEntries output.
     auto handleValueType = [&]<typename T>( const std::string& idSuffix, const std::string& displayType )
     {
         const std::string readDesc = std::is_same_v<T, std::string>
-            ? "Read the string value at `path`. If the response contains `allowedValues`, `ui.writeValue" + idSuffix + "` must pass one of those strings."
-            : "Read the " + displayType + " value at `path`. Bounds `min`/`max` are inclusive for `ui.writeValue" + idSuffix + "`.";
+            ? "Read the string value at `path`. If the response contains `allowedValues`, `ui_writeValue" + idSuffix + "` must pass one of those strings."
+            : "Read the " + displayType + " value at `path`. Bounds `min`/`max` are inclusive for `ui_writeValue" + idSuffix + "`.";
 
         const std::string writeDesc = std::is_same_v<T, std::string>
-            ? "Set the string value at `path`. Must match `allowedValues` (from `ui.readValue" + idSuffix + "`) when present. Fails if `status` starts with `\"disabled\"`."
-            : "Set the " + displayType + " value at `path`. Must be within the inclusive `[min, max]` from `ui.readValue" + idSuffix + "`. Fails if `status` starts with `\"disabled\"`.";
+            ? "Set the string value at `path`. Must match `allowedValues` (from `ui_readValue" + idSuffix + "`) when present. Fails if `status` starts with `\"disabled\"`."
+            : "Set the " + displayType + " value at `path`. Must be within the inclusive `[min, max]` from `ui_readValue" + idSuffix + "`. Fails if `status` starts with `\"disabled\"`.";
 
         server.addTool(
-            /*id*/"ui.readValue" + idSuffix,
+            /*id*/"ui_readValue" + idSuffix,
             /*name*/"Read UI " + displayType + " value",
             /*desc*/withPreamble( readDesc ),
             /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ),
@@ -296,7 +296,7 @@ MR_ON_INIT{
         );
 
         server.addTool(
-            /*id*/"ui.writeValue" + idSuffix,
+            /*id*/"ui_writeValue" + idSuffix,
             /*name*/"Write UI " + displayType + " value",
             /*desc*/withPreamble( writeDesc ),
             /*input_schema*/Schema::Object{}.addMember( "path", Schema::Array( Schema::String{} ) ).addMember( "value", std::is_same_v<T, std::string> ? static_cast<Schema::Base &&>( Schema::String{} ) : static_cast<Schema::Base &&>( Schema::Number{} ) ),
@@ -311,12 +311,12 @@ MR_ON_INIT{
     handleValueType.operator()<std::string  >( "String", "string" );
 
     server.addTool(
-        /*id*/"ui.progressStatus",
+        /*id*/"ui_progressStatus",
         /*name*/"Read progress bar state",
         /*desc*/"Snapshot of the global progress bar. Returns `{active: false}` if no long-running operation is in "
                 "flight, else `{active: true, title: string, percent: number}`. `title` is the operation name passed "
                 "to the underlying `ProgressBar::order(...)` (e.g. \"Boolean\", \"Loading\"). `percent` is 0-100. "
-                "Poll this while `ui.*` dispatch is blocked by a `'Progress'` modal — once `active: false` comes "
+                "Poll this while `ui_*` dispatch is blocked by a `'Progress'` modal — once `active: false` comes "
                 "back, the UI is responsive again.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{}

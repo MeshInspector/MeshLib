@@ -134,7 +134,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         for ( const Vector3f& pt : points )
             box.include( pt );
         if ( !box.valid() )
-            throw std::runtime_error( "viewer.fit: the given objects and points contribute no bounding volume." );
+            throw std::runtime_error( "viewer_fit: the given objects and points contribute no bounding volume." );
         vp.preciseFitBoxToScreenBorder( { box, factor } );
     } );
     skipFramesAfterInput();
@@ -195,32 +195,41 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
         } );
     }
 
-    nlohmann::json out = nlohmann::json::object();
+    nlohmann::json structured = nlohmann::json::object();
+    structured["width"]  = img.resolution.x;
+    structured["height"] = img.resolution.y;
+
     if ( args.contains( "filePath" ) )
     {
         const auto path = pathFromUtf8( args["filePath"].get<std::string>() );
         auto saved = ImageSave::toAnySupportedFormat( img, path );
         if ( !saved )
             throw std::runtime_error( saved.error() );
-        out["path"] = utf8string( path );
+        structured["path"] = utf8string( path );
+        return structured;
     }
-    else
-    {
-        UniqueTemporaryFolder tmp{};
-        const std::filesystem::path path = tmp / "screenshot.png";
-        auto saved = ImageSave::toAnySupportedFormat( img, path );
-        if ( !saved )
-            throw std::runtime_error( saved.error() );
-        std::ifstream in( path, std::ios::binary );
-        if ( !in )
-            throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
-        std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
-        out["bytes"] = encode64( bytes.data(), bytes.size() );
-        out["contentType"] = "image/png";
-    }
-    out["width"] = img.resolution.x;
-    out["height"] = img.resolution.y;
-    return out;
+
+    UniqueTemporaryFolder tmp{};
+    const std::filesystem::path path = tmp / "screenshot.png";
+    auto saved = ImageSave::toAnySupportedFormat( img, path );
+    if ( !saved )
+        throw std::runtime_error( saved.error() );
+    std::ifstream in( path, std::ios::binary );
+    if ( !in )
+        throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
+    std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+
+    // MCP image content block + structured {width, height}.
+    return nlohmann::json{
+        { "content", nlohmann::json::array( {
+            {
+                { "type", "image" },
+                { "data", encode64( bytes.data(), bytes.size() ) },
+                { "mimeType", "image/png" },
+            },
+        } ) },
+        { "structuredContent", structured },
+    };
 }
 
 static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
@@ -326,10 +335,10 @@ MR_ON_INIT{
     Server& server = getDefaultServer();
 
     server.addTool(
-        /*id*/  "viewer.fit",
+        /*id*/  "viewer_fit",
         /*name*/"Fit camera to scene or a subset",
         /*desc*/"Frame a set of objects and/or world-space points in the active viewport. Pass `objectIds` (scene-object "
-                "ids from `scene.listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
+                "ids from `scene_listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
                 "their bounding volumes are unioned. If neither is given, fits the whole scene (same as the UI's "
                 "\"Fit\" action). `factor` (default 1.0) controls framing margin — higher means more screen coverage. "
                 "The camera angle is preserved (no canonical-view snapping).",
@@ -342,7 +351,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.setupCamera",
+        /*id*/  "viewer_setupCamera",
         /*name*/"Set camera forward and up directions",
         /*desc*/"Point the camera along `forwardDir` (a world-space direction vector pointing from the camera toward "
                 "the subject). `upDir` sets the screen-up direction; it is automatically orthogonalized against "
@@ -356,7 +365,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.captureScreenshot",
+        /*id*/  "viewer_captureScreenshot",
         /*name*/"Capture viewport screenshot",
         /*desc*/"Render the viewer to a PNG. Default (`includeUi: true`) captures the whole window including panels, ribbon, and dialogs; set "
                 "`includeUi: false` to capture only the 3D viewport. "
@@ -364,8 +373,8 @@ MR_ON_INIT{
                 "current viewport size) and `transparentBg` (default false) omits the background — these options "
                 "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "
                 "normal background). "
-                "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to get "
-                "an inline base64 PNG; response is `{bytes, width, height}`.",
+                "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to "
+                "receive the PNG inline as an MCP image content block; `structuredContent` carries `{width, height}`.",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "includeUi",     Schema::Bool{} )
             .addMemberOpt( "width",         Schema::Number{} )
@@ -373,16 +382,14 @@ MR_ON_INIT{
             .addMemberOpt( "transparentBg", Schema::Bool{} )
             .addMemberOpt( "filePath",      Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",        Schema::String{} )
-            .addMemberOpt( "bytes",       Schema::String{} )
-            .addMemberOpt( "contentType", Schema::String{} )
-            .addMember(    "width",       Schema::Number{} )
-            .addMember(    "height",      Schema::Number{} ),
+            .addMemberOpt( "path",   Schema::String{} )
+            .addMember(    "width",  Schema::Number{} )
+            .addMember(    "height", Schema::Number{} ),
         /*func*/mcpViewerCaptureScreenshot
     );
 
     server.addTool(
-        /*id*/  "viewer.sendMouseEvent",
+        /*id*/  "viewer_sendMouseEvent",
         /*name*/"Inject a mouse event",
         /*desc*/"Queue a mouse event on the viewer's event loop. `type` is one of `down`, `up`, `click`, `move`, `scroll`. "
                 "`button` is `left`/`right`/`middle` (required for `down`/`up`/`click`). `x`/`y` are window pixels, "
@@ -402,7 +409,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.sendKeyboardEvent",
+        /*id*/  "viewer_sendKeyboardEvent",
         /*name*/"Inject a keyboard event",
         /*desc*/"Queue a keyboard event on the viewer's event loop. `type` is one of `down`, `up`, `press`, `repeat`. "
                 "`key` is either a single printable character (e.g. `\"a\"`, `\"A\"`, `\"5\"`) or a named key "
@@ -420,13 +427,13 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "viewer.shutdown",
+        /*id*/  "viewer_shutdown",
         /*name*/"Close MeshInspector",
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
                 "After this call the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
-                "check `ui.listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
+                "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown

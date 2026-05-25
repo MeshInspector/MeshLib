@@ -31,6 +31,8 @@
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRMcpCommon.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -50,7 +52,7 @@ static Expected<Object*> pickRoot( const nlohmann::json& args )
     return resolved->get();
 }
 
-// Same translation/rotation/scale shape that `scene.setObjectState` accepts. Rotation is XYZ-Euler
+// Same translation/rotation/scale shape that `scene_setObjectState` accepts. Rotation is XYZ-Euler
 // in degrees. Agents can read-modify-write without matrix math.
 struct DecomposedXf { Vector3f translation, rotationDeg, scale; };
 
@@ -74,7 +76,7 @@ static AffineXf3f composeXf( const DecomposedXf& d )
     return xf;
 }
 
-// Parse the `transform` subobject accepted by scene.setObjectState. Every field is optional;
+// Parse the `transform` subobject accepted by scene_setObjectState. Every field is optional;
 // omitted components fall back to identity (translation=0, rotation=0, scale=1). `scale` may be
 // a scalar (applies uniformly) or a 3-element array.
 static DecomposedXf parseTransform( const nlohmann::json& t )
@@ -353,6 +355,23 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
+// Registered mesh-format media types, with `application/octet-stream` for the
+// rest. Used when emitting an embedded-resource content block for a serialized
+// scene object.
+static std::string mimeForExt( std::string_view ext )
+{
+    std::string e( ext );
+    if ( !e.empty() && e.front() == '.' )
+        e.erase( e.begin() );
+    std::transform( e.begin(), e.end(), e.begin(), []( unsigned char c ){ return char( std::tolower( c ) ); } );
+    if ( e == "stl"  ) return "model/stl";
+    if ( e == "obj"  ) return "model/obj";
+    if ( e == "ply"  ) return "model/ply";
+    if ( e == "gltf" ) return "model/gltf+json";
+    if ( e == "glb"  ) return "model/gltf-binary";
+    return "application/octet-stream";
+}
+
 static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 {
     nlohmann::json out = nlohmann::json::object();
@@ -379,7 +398,8 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
                 ext.insert( ext.begin(), '.' );
 
             UniqueTemporaryFolder tmp{};
-            const std::filesystem::path path = tmp / pathFromUtf8( obj->name() + ext );
+            const std::string fileName = obj->name() + ext;
+            const std::filesystem::path path = tmp / pathFromUtf8( fileName );
             auto saved = ObjectSave::toAnySupportedFormat( *obj, path );
             if ( !saved )
                 throw std::runtime_error( saved.error() );
@@ -387,10 +407,29 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
             if ( !in )
                 throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
             std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
-            out["bytes"] = encode64( bytes.data(), bytes.size() );
+
+            // MCP-spec embedded-resource block. URN form because the resource is
+            // ephemeral (regenerated per call) — the URI is an identity label, not
+            // a fetchable location. Media type is the registered model/* for known
+            // mesh formats, `application/octet-stream` otherwise.
+            const std::string normExt = ext.front() == '.' ? ext.substr( 1 ) : ext;
+            const std::string urn = fmt::format( "urn:meshinspector:object:{}:{}",
+                args.at( "id" ).get<uint64_t>(), normExt );
+            out = nlohmann::json{
+                { "content", nlohmann::json::array( {
+                    {
+                        { "type", "resource" },
+                        { "resource", {
+                            { "uri",      urn },
+                            { "mimeType", mimeForExt( ext ) },
+                            { "blob",     encode64( bytes.data(), bytes.size() ) },
+                        } },
+                    },
+                } ) },
+            };
             return;
         }
-        throw std::runtime_error( "scene.getObject requires either `filePath` or `extension`." );
+        throw std::runtime_error( "scene_getObject requires either `filePath` or `extension`." );
     } );
     return out;
 }
@@ -436,7 +475,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
         }
         else
         {
-            throw std::runtime_error( "scene.addObject requires either `filePath` or `bytes`+`extension`+`name`." );
+            throw std::runtime_error( "scene_addObject requires either `filePath` or `bytes`+`extension`+`name`." );
         }
 
         auto loaded = loadObjectFromFile( path );
@@ -458,8 +497,8 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 }
 
 static constexpr std::string_view kSceneIdSemantics =
-    "`id`: opaque uint64 from `scene.listObjectTree` / `scene.getObjectInfo`. Same integer appears as the `##<id>` "
-    "suffix in ImGui labels for the object, so it's usable across `scene.*` and `ui.*`. "
+    "`id`: opaque uint64 from `scene_listObjectTree` / `scene_getObjectInfo`. Same integer appears as the `##<id>` "
+    "suffix in ImGui labels for the object, so it's usable across `scene_*` and `ui_*`. "
     "Invalidated when the object is removed; subsequent calls with a stale id return a typed error.\n\n";
 
 MR_ON_INIT{
@@ -485,13 +524,13 @@ MR_ON_INIT{
     };
 
     server.addTool(
-        /*id*/  "scene.listObjectTree",
+        /*id*/  "scene_listObjectTree",
         /*name*/"List scene objects (subtree)",
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Flat depth-first list of every descendant of `rootId` (root itself excluded; pass `rootId = 0` or "
                 "omit to walk from the scene root). Each row carries its own `parentId`, so the tree structure is "
                 "recoverable. `transform` decomposes the object's xf into `{translation:[x,y,z], rotation:[rx,ry,rz], "
-                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees) — same shape `scene.setObjectState` accepts. "
+                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees) — same shape `scene_setObjectState` accepts. "
                 "`type` values include `\"Mesh\"`, `\"Point Cloud\"`, `\"Polyline\"`, `\"Voxel Volume\"`.",
         /*input_schema*/Schema::Object{}.addMemberOpt( "rootId", Schema::Number{} ),
         /*output_schema*/Schema::Array( entrySchema() ),
@@ -499,13 +538,13 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "scene.getObjectInfo",
+        /*id*/  "scene_getObjectInfo",
         /*name*/"Get scene object info",
         /*desc*/std::string( kSceneIdSemantics ) +
-                "Return a single object's row (same shape as `scene.listObjectTree` entries) plus `childIds` (direct "
+                "Return a single object's row (same shape as `scene_listObjectTree` entries) plus `childIds` (direct "
                 "children), `worldBox` (axis-aligned world-space bounding box), `info` (human-readable property "
                 "lines - e.g. vertex/face counts, area - from the UI's info panel), and `visualization` (current "
-                "render-time properties — colors, alpha, size, flags; see `scene.setObjectState` for field semantics; "
+                "render-time properties — colors, alpha, size, flags; see `scene_setObjectState` for field semantics; "
                 "fields that don't apply to this object's type are omitted).",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
         /*output_schema*/entrySchema()
@@ -519,7 +558,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "scene.setObjectState",
+        /*id*/  "scene_setObjectState",
         /*name*/"Set scene object state",
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Mutate an existing object. Every field other than `id` is optional; absent fields leave state alone. "
@@ -552,7 +591,7 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "scene.removeObject",
+        /*id*/  "scene_removeObject",
         /*name*/"Remove scene object",
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Detach the object from its parent (recursive — removing a group removes its subtree). Undoable.",
@@ -562,24 +601,25 @@ MR_ON_INIT{
     );
 
     server.addTool(
-        /*id*/  "scene.getObject",
-        /*name*/"Serialize scene object (to file or inline bytes)",
+        /*id*/  "scene_getObject",
+        /*name*/"Serialize scene object (to file or inline resource)",
         /*desc*/std::string( kSceneIdSemantics ) +
-                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass either `filePath` (server-side path; "
-                "format selected by extension) — response is `{path: <written-path>}`; or `extension` (e.g. `\"stl\"`) — "
-                "response is `{bytes: <base64 payload>}`.",
+                "Serialize an object to an STL/OBJ/PLY/etc. format. Pass `filePath` (server-side path; format "
+                "selected by extension) — response is `{path: <written-path>}`. Or pass `extension` (e.g. `\"stl\"`) "
+                "to receive the bytes inline as an MCP embedded-resource content block "
+                "(`content[0].resource.blob` is the base64 payload; `mimeType` is the registered model/* "
+                "media type for known mesh formats, `application/octet-stream` otherwise).",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "filePath",  Schema::String{} )
             .addMemberOpt( "extension", Schema::String{} ),
         /*output_schema*/Schema::Object{}
-            .addMemberOpt( "path",  Schema::String{} )
-            .addMemberOpt( "bytes", Schema::String{} ),
+            .addMemberOpt( "path", Schema::String{} ),
         /*func*/mcpSceneGetObject
     );
 
     server.addTool(
-        /*id*/  "scene.addObject",
+        /*id*/  "scene_addObject",
         /*name*/"Add scene object from file or bytes",
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Load one or more objects into the scene. Pass either `filePath` (server-side path to an STL/OBJ/PLY/etc. "

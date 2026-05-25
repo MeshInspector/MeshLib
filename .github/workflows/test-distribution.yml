@@ -254,11 +254,13 @@ jobs:
         # ("Bad credentials") even for a perfectly valid token -- a known
         # transient on GitHub's side. See community discussion #101661;
         # GitHub's official guidance is to retry after a short delay.
-        # Only the auth step is retried; once it succeeds, `gh release
-        # download` runs once normally.
+        # Auth and download are wrapped in independent retry loops so a
+        # flake in one does not force the other to re-run. `--clobber`
+        # lets a download retry overwrite a partial file from a previous
+        # attempt.
         run: |
           scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
-          gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }}
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
       # Self-hosted runners have no passwordless sudo, so they install into
       # ~/Library via `-target CurrentUserHomeDirectory` (enabled by the

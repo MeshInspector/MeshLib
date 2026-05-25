@@ -58,7 +58,7 @@ RUN source /opt/rh/gcc-toolset-11/enable && \
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
-FROM nvidia/cuda:12.0.1-devel-rockylinux8 AS production
+FROM rockylinux:8 AS production
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
 COPY scripts/retry.sh /usr/local/bin/retry.sh
@@ -85,9 +85,22 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         && \
     dnf clean all
 
-# install github-cli
+# install minimal CUDA toolkit (nvcc + cudart) from NVIDIA's RHEL8 repo
+# replaces nvidia/cuda:devel base image, dropping ~3.5 GB of unused CUDA libs / nsight / devel tooling
 RUN retry.sh -- dnf -y install 'dnf-command(config-manager)' && \
-    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
+    retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && \
+    retry.sh -- dnf -y install \
+        cuda-nvcc-12-0 \
+        cuda-cudart-12-0 \
+        cuda-cudart-devel-12-0 \
+        cuda-driver-devel-12-0 \
+        cuda-cuxxfilt-12-0 \
+        && \
+    dnf clean all
+ENV PATH=/usr/local/cuda/bin:$PATH
+
+# install github-cli
+RUN retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
     retry.sh -- dnf -y install gh && \
     dnf clean all
 

@@ -177,7 +177,7 @@ MACOS_MIN_VER :=
 ifneq ($(IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)
-CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version.txt))/bin/clang++
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
 CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))
@@ -613,6 +613,12 @@ endif
 ifneq ($(IS_MACOS),)
 # Our dependencies are here.
 COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
+# Point libclang at the macOS SDK so it can find libc++ headers (<iostream> etc.)
+# when parsing with brew llvm@N. With llvm@18 the keg's own libc++ was auto-discovered
+# relative to the resource-dir; on llvm@22 that no longer works and the parse pass
+# fails with `'iostream' file not found`. Using Apple's SDK libc++ is also closer
+# to what the project itself compiles against.
+COMPILER_FLAGS += -isysroot $(call safe_shell,xcrun --show-sdk-path)
 # Boost.stacktrace complains otherwise.
 COMPILER_FLAGS += -D_GNU_SOURCE
 

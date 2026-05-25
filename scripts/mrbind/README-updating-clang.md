@@ -1,6 +1,6 @@
 # How to update Clang for the bindings
 
-Update the number in `scripts/mrbind/clang_version.txt`. This affects Mac and Linux.
+Update the number in `scripts/mrbind/clang_version.txt` for Linux and in `scripts/mrbind/clang_version_macos.txt` for macOS.
 
 On Windows (MSYS2), you can only lock the latest Clang version they offer.
 

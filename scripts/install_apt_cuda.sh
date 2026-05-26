@@ -14,10 +14,6 @@ case "$(uname -m)" in
     "x86_64")
         ARCH="x86_64" ;;
     "aarch64")
-        # NVIDIA splits aarch64 packages between two repo paths:
-        #   arm64 — Tegra/Jetson (embedded GPU systems)
-        #   sbsa  — Server Base System Architecture (AWS Graviton, etc.)
-        # ubuntu2404 ships cuda-minimal-build-12-6 only under sbsa.
         ARCH="sbsa" ;;
     *)
         echo "Unsupported arch: $(uname -m)"

@@ -17,8 +17,7 @@ void testExpandShrink( void )
 
     const MR_MeshTopology* top = MR_Mesh_Get_topology( mesh );
 
-    MR_FaceId face; face.id_ = 0;
-    MR_FaceBitSet* region = MR_expand_MR_FaceId( top, face, 3 );
+    MR_FaceBitSet* region = MR_expand_MR_FaceId( top, (MR_FaceId){0}, 3 );
 
     int num = (int)MR_FaceBitSet_count( region );
     TEST_ASSERT_INT_EQUAL( num, 75 );
@@ -47,8 +46,7 @@ void testExpandShrinkVerts( void )
 
     const MR_MeshTopology* top = MR_Mesh_Get_topology( mesh );
 
-    MR_VertId vert; vert.id_ = 0;
-    MR_VertBitSet* region = MR_expand_MR_VertId( top, vert, 3 );
+    MR_VertBitSet* region = MR_expand_MR_VertId( top, (MR_VertId){0}, 3 );
 
     size_t num = MR_VertBitSet_count( region );
     TEST_ASSERT( num == 37 );

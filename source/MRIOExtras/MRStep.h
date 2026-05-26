@@ -22,6 +22,9 @@ struct StepLoadSettings
     double linearDeflection = 0.5;
     /// whether the deflection values are related to the size of edges
     bool relative = false;
+    /// assign distinct per-component colors so the scene is visually inspectable;
+    /// has no effect if the source STEP file contains any color information
+    bool autoColorize = true;
 };
 
 /// load mesh data from STEP file using OpenCASCADE

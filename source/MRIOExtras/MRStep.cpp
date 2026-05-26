@@ -1,6 +1,7 @@
 #include "MRStep.h"
 #ifndef MRIOEXTRAS_NO_STEP
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRHexPalette.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
@@ -374,6 +375,28 @@ public:
                 objMesh->setFacesColorMap( std::move( faceColors ) );
             }
         } );
+
+        if ( loadSettings_.autoColorize && meshTriangulationContexts_.size() > 1 )
+        {
+            bool anyColorPresent = false;
+            for ( const auto& ctx : meshTriangulationContexts_ )
+            {
+                if ( ctx.faceColor.has_value() )
+                {
+                    anyColorPresent = true;
+                    break;
+                }
+            }
+            if ( !anyColorPresent )
+            {
+                int i = 0;
+                for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( rootObj_.get() ) )
+                {
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), true );
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), false );
+                }
+            }
+        }
     }
 
 private:

@@ -1419,6 +1419,9 @@
     <ClInclude Include="MRSegmentMesh.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRHexPalette.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRHoleFillPlan.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -2334,6 +2337,9 @@
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRSegmentMesh.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRHexPalette.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MREdgePathsBuilder.cpp">

@@ -376,7 +376,7 @@ public:
             }
         } );
 
-        if ( loadSettings_.autoColorize )
+        if ( loadSettings_.autoColorize && meshTriangulationContexts_.size() > 1 )
         {
             bool anyColorPresent = false;
             for ( const auto& ctx : meshTriangulationContexts_ )
@@ -391,7 +391,10 @@ public:
             {
                 int i = 0;
                 for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( rootObj_.get() ) )
+                {
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), true );
                     objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), false );
+                }
             }
         }
     }

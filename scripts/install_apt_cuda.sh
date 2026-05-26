@@ -14,7 +14,7 @@ case "$(uname -m)" in
     "x86_64")
         ARCH="x86_64" ;;
     "aarch64")
-        ARCH="arm64" ;;
+        ARCH="sbsa" ;;
     *)
         echo "Unsupported arch: $(uname -m)"
         exit 1 ;;

@@ -1,36 +1,39 @@
 #include "MRHexPalette.h"
 #include "MRVector3.h"
 
-#include <cassert>
-
 namespace MR
 {
 
-HexPalette::HexPalette()
+namespace
 {
-    static constexpr int CORNER_COLORS = 6;
-    static constexpr int SIDE_COLORS = 5; // num colors between two corner colors + 1
+
+constexpr std::array<Color, HexPalette::N> makeHexPalette()
+{
     // for any color c: dot( c, [1,1,1] ) = 1
-    static const Vector3f cornerColors[CORNER_COLORS + 1] =
+    constexpr Vector3f cornerColors[HexPalette::CORNER_COLORS + 1] =
     {
-        { 1.0, 0.0, 0.0 },
-        { 0.5, 0.5, 0.0 },
-        { 0.0, 1.0, 0.0 },
-        { 0.0, 0.5, 0.5 },
-        { 0.0, 0.0, 1.0 },
-        { 0.5, 0.0, 0.5 },
-        { 1.0, 0.0, 0.0 }
+        { 1.0f, 0.0f, 0.0f },
+        { 0.5f, 0.5f, 0.0f },
+        { 0.0f, 1.0f, 0.0f },
+        { 0.0f, 0.5f, 0.5f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.5f, 0.0f, 0.5f },
+        { 1.0f, 0.0f, 0.0f }
     };
-    colors.reserve( CORNER_COLORS * SIDE_COLORS );
-    for ( int corner = 0; corner < CORNER_COLORS; ++corner )
+    std::array<Color, HexPalette::N> arr{};
+    for ( int corner = 0; corner < HexPalette::CORNER_COLORS; ++corner )
     {
-        for ( int i = 0; i < SIDE_COLORS; ++i )
+        for ( int i = 0; i < HexPalette::SIDE_COLORS; ++i )
         {
-            auto v = lerp( cornerColors[corner], cornerColors[corner+1], float(i) / SIDE_COLORS );
-            colors.emplace_back( v );
+            arr[corner * HexPalette::SIDE_COLORS + i] =
+                Color( lerp( cornerColors[corner], cornerColors[corner + 1], float( i ) / HexPalette::SIDE_COLORS ) );
         }
     }
-    assert( colors.size() == CORNER_COLORS * SIDE_COLORS );
+    return arr;
 }
+
+} // namespace
+
+const std::array<Color, HexPalette::N> HexPalette::colors = makeHexPalette();
 
 } // namespace MR

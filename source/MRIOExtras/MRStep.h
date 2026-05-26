@@ -22,10 +22,9 @@ struct StepLoadSettings
     double linearDeflection = 0.5;
     /// whether the deflection values are related to the size of edges
     bool relative = false;
-    /// if the source STEP file contains no color information for any component, assign distinct
-    /// per-component colors from the categorical HexPalette so the scene is visually inspectable
-    /// instead of a single-color blob; never overrides colors that came from the file
-    bool autoColorizeIfNoColors = true;
+    /// assign distinct per-component colors so the scene is visually inspectable;
+    /// has no effect if the source STEP file contains any color information
+    bool autoColorize = true;
 };
 
 /// load mesh data from STEP file using OpenCASCADE

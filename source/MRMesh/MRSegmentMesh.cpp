@@ -245,16 +245,13 @@ UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,
     {
         outFaceColors->resizeNoInit( topology.faceSize() );
         HashMap<FaceId, Color> root2Color;
-        HexPalette palette;
-
         // give colors to segments ignoring the contrast on their boundaries
         int nextColor = 0;
         for ( auto f : topology.getValidFaces() )
         {
             if ( roots[f] != f )
                 continue;
-            root2Color[f] = palette.colors[nextColor];
-            nextColor = ( nextColor + HexPalette::STEP ) % palette.colors.size();
+            root2Color[f] = HexPalette::colorAtStep( nextColor++ );
         }
         BitSetParallelFor( topology.getValidFaces(), [&]( FaceId& f )
         {

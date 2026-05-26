@@ -376,10 +376,7 @@ public:
             }
         } );
 
-        // Without this, a STEP file containing zero color data leaves every component at the same
-        // default front color, indistinguishable visually. Gate is tree-wide (not per-mesh) so
-        // partially-colored files keep what they have instead of being half-overridden.
-        if ( loadSettings_.autoColorizeIfNoColors )
+        if ( loadSettings_.autoColorize )
         {
             bool anyColorPresent = false;
             for ( const auto& ctx : meshTriangulationContexts_ )
@@ -392,13 +389,9 @@ public:
             }
             if ( !anyColorPresent )
             {
-                HexPalette palette;
-                int nextColor = 0;
+                int i = 0;
                 for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( rootObj_.get() ) )
-                {
-                    objMesh->setFrontColor( palette.colors[nextColor], false );
-                    nextColor = ( nextColor + HexPalette::STEP ) % int( palette.colors.size() );
-                }
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), false );
             }
         }
     }

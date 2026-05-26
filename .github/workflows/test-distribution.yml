@@ -287,17 +287,21 @@ jobs:
       - name: Show meshconv help
         run: meshconv --help
 
-      # MACOSX_DEPLOYMENT_TARGET below matches the value baked into the
-      # framework dylibs (see CMAKE_OSX_DEPLOYMENT_TARGET in top-level
-      # CMakeLists.txt). Without it, the macos-12 SDK on the self-hosted
-      # macos-12-intel runner defaults the examples to min-macOS 12.0,
-      # producing "dylib was built for newer macOS version (12.7) than
-      # being linked (12.0)" warnings against every MeshLib dylib.
+      # On macOS-12 hosts (where the SDK still defaults min-macOS to 12.0)
+      # bump the examples' deployment target to 12.7 to match the value
+      # baked into the framework dylibs by CMAKE_OSX_DEPLOYMENT_TARGET in
+      # top-level CMakeLists.txt; otherwise ld warns "dylib was built for
+      # newer macOS version (12.7) than being linked (12.0)" against every
+      # MeshLib dylib. Do *not* set it on macOS-13+ hosts: there the SDK
+      # default already covers MeshLib's 12.7, and forcing 12.7 makes ld
+      # complain in the other direction about brew bottles built at the
+      # host's macOS version.
       - name: Build C++ examples
         working-directory: examples/cpp-examples
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "12.7"
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           mkdir build && \
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
@@ -306,9 +310,10 @@ jobs:
 
       - name: Build C examples
         working-directory: examples/c-examples
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "12.7"
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
 

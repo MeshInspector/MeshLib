@@ -212,6 +212,11 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     {
         ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( 0, 0, 0, 0 ) );
         ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( 0, 0, 0, 0 ) );
+        // Leaf tree nodes (ImGuiTreeNodeFlags_Bullet) render a bullet glyph using ImGuiCol_Text;
+        // a transparent text color hides the glyph while keeping the leaf-indent layout that
+        // ImGui derives from the _Bullet flag. The visible name is rendered separately in
+        // drawObjectLine_ after collapsingHeader_ returns, so it is unaffected.
+        ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0, 0, 0, 0 ) );
     }
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
@@ -230,7 +235,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );
     window->WorkRect.Max.x = storedWorkRectMaxX;
 
-    ImGui::PopStyleColor( leaf ? 3 : 1 );
+    ImGui::PopStyleColor( leaf ? 4 : 1 );
     ImGui::PopStyleVar();
 
     // draw hierarchy lines

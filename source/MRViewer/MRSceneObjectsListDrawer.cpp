@@ -480,12 +480,26 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     if ( openCommandIt != sceneOpenCommands_.end() )
         ImGui::SetNextItemOpen( openCommandIt->second );
 
+    int numColorsPushed = 0;
     if ( !isSelected )
+    {
         ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
+        ++numColorsPushed;
+    }
     else
     {
         ImGui::PushStyleColor( ImGuiCol_Header, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectText ).getUInt32() );
+        numColorsPushed += 2;
+    }
+
+    if ( !hasRealChildren )
+    {
+        // Leaf tree nodes (ImGuiTreeNodeFlags_Bullet) render a bullet glyph using ImGuiCol_Text;
+        // a transparent text color hides the glyph while preserving the leaf-indent layout that
+        // ImGui derives from the _Bullet flag.
+        ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0, 0, 0, 0 ) );
+        ++numColorsPushed;
     }
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
@@ -498,7 +512,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
 
     const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );
 
-    ImGui::PopStyleColor( isSelected ? 2 : 1 );
+    ImGui::PopStyleColor( numColorsPushed );
     ImGui::PopStyleVar();
 
     makeDragDropSource_( selected );

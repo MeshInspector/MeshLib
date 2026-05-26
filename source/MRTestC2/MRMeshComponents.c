@@ -72,8 +72,8 @@ void testLargeRegions( void )
     MR_std_pair_MR_FaceBitSet_int* regions = MR_MeshComponents_getLargeByAreaRegions( m.part, MR_std_pair_MR_Face2RegionMap_int_first( map ), *MR_std_pair_MR_Face2RegionMap_int_second( map ), 0.1f );
 
     TEST_ASSERT( *MR_std_pair_MR_FaceBitSet_int_second( regions ) == 1 );
-    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int_first( regions ) ), 0 ) );
-    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int_first( regions ) ), 12 ) );
+    TEST_ASSERT( MR_FaceBitSet_test( MR_std_pair_MR_FaceBitSet_int_first( regions ), (MR_FaceId){0} ) );
+    TEST_ASSERT( !MR_FaceBitSet_test( MR_std_pair_MR_FaceBitSet_int_first( regions ), (MR_FaceId){12} ) );
 
     MR_std_pair_MR_Face2RegionMap_int_Destroy( map );
 
@@ -85,8 +85,8 @@ void testLargeComponents( void )
     CreatedMesh m = createMesh();
 
     MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents_3( m.part, 0.1f, NULL );
-    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( components ), 0 ) );
-    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( components ), 12 ) );
+    TEST_ASSERT( MR_FaceBitSet_test( components, (MR_FaceId){0} ) );
+    TEST_ASSERT( !MR_FaceBitSet_test( components, (MR_FaceId){12} ) );
 
     MR_FaceBitSet_Destroy( components );
 
@@ -99,8 +99,8 @@ void testLargestComponent( void )
 
     int smallerComponents = 0;
     MR_FaceBitSet* largestComponent = MR_MeshComponents_getLargestComponent( m.part, NULL, NULL, &(float){0.1f}, &smallerComponents );
-    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( largestComponent ), 0 ) );
-    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( largestComponent ), 12 ) );
+    TEST_ASSERT( MR_FaceBitSet_test( largestComponent, (MR_FaceId){0} ) );
+    TEST_ASSERT( !MR_FaceBitSet_test( largestComponent, (MR_FaceId){12} ) );
     TEST_ASSERT( smallerComponents == 1 );
 
     MR_FaceBitSet_Destroy( largestComponent );
@@ -111,13 +111,11 @@ void testLargestComponent( void )
 void testGetComponent( void )
 {
     CreatedMesh m = createMesh();
-    MR_FaceId face;
-    face.id_ = 12;
 
-    MR_FaceBitSet* component = MR_MeshComponents_getComponent( m.part, face, NULL, NULL );
+    MR_FaceBitSet* component = MR_MeshComponents_getComponent( m.part, (MR_FaceId){12}, NULL, NULL );
 
-    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( component ), 0 ) );
-    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( component ), 12 ) );
+    TEST_ASSERT( MR_FaceBitSet_test( component, (MR_FaceId){12} ) );
+    TEST_ASSERT( !MR_FaceBitSet_test( component, (MR_FaceId){0} ) );
     MR_FaceBitSet_Destroy( component );
 
     destroyMesh( m );

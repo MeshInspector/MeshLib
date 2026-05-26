@@ -618,7 +618,18 @@ COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
 # relative to the resource-dir; on llvm@22 that no longer works and the parse pass
 # fails with `'iostream' file not found`. Using Apple's SDK libc++ is also closer
 # to what the project itself compiles against.
-COMPILER_FLAGS += -isysroot $(call safe_shell,xcrun --show-sdk-path)
+#
+# Same flag also needs to go on the link line: clang's Darwin driver normally
+# auto-forwards `-syslibroot <sdk>` to the linker by sniffing `xcrun` /
+# `DEVELOPER_DIR` / `xcode-select`, but with brew `llvm@22` + LLD that
+# autodetect doesn't fire on every self-hosted runner (host-dependent --
+# /opt/homebrew + full Xcode works, /Users/runner/.homebrew + CLT-only does
+# not). Without `-syslibroot`, lld can't find `/usr/lib/libSystem.tbd`,
+# `libc++.dylib`, `libc++abi.dylib` and the link fails. Pass it explicitly
+# so the behaviour is host-independent.
+override macos_sdk_path := $(call safe_shell,xcrun --show-sdk-path)
+COMPILER_FLAGS += -isysroot $(macos_sdk_path)
+LINKER_FLAGS   += -isysroot $(macos_sdk_path)
 # Boost.stacktrace complains otherwise.
 COMPILER_FLAGS += -D_GNU_SOURCE
 

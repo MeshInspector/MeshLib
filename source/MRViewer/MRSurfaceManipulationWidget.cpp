@@ -392,7 +392,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         const auto delFaces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
         if ( delFaces.any() )
         {
-            SCOPED_HISTORY( _t( "Brush: Patch" ) );
+            SCOPED_HISTORY( _t( "Brush: Fix" ) );
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
             FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;

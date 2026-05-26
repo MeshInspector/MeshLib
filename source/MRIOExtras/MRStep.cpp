@@ -1,6 +1,7 @@
 #include "MRStep.h"
 #ifndef MRIOEXTRAS_NO_STEP
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRHexPalette.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
@@ -374,6 +375,32 @@ public:
                 objMesh->setFacesColorMap( std::move( faceColors ) );
             }
         } );
+
+        // Without this, a STEP file containing zero color data leaves every component at the same
+        // default front color, indistinguishable visually. Gate is tree-wide (not per-mesh) so
+        // partially-colored files keep what they have instead of being half-overridden.
+        if ( loadSettings_.autoColorizeIfNoColors )
+        {
+            bool anyColorPresent = false;
+            for ( const auto& ctx : meshTriangulationContexts_ )
+            {
+                if ( ctx.faceColor.has_value() )
+                {
+                    anyColorPresent = true;
+                    break;
+                }
+            }
+            if ( !anyColorPresent )
+            {
+                HexPalette palette;
+                int nextColor = 0;
+                for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( rootObj_.get() ) )
+                {
+                    objMesh->setFrontColor( palette.colors[nextColor], false );
+                    nextColor = ( nextColor + HexPalette::STEP ) % int( palette.colors.size() );
+                }
+            }
+        }
     }
 
 private:

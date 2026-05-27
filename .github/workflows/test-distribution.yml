@@ -287,9 +287,15 @@ jobs:
       - name: Show meshconv help
         run: meshconv --help
 
+      # Match the framework dylibs' 12.7 target on the macOS-12 SDK (which
+      # otherwise defaults to 12.0); skip on 13+ where forcing 12.7 would
+      # instead warn against brew bottles built for the host's macOS.
       - name: Build C++ examples
         working-directory: examples/cpp-examples
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           mkdir build && \
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
@@ -299,6 +305,9 @@ jobs:
       - name: Build C examples
         working-directory: examples/c-examples
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
 

@@ -24,6 +24,7 @@ laz-perf
 libe57format
 libharu
 libzip
+mimalloc[override]
 opencascade
 openctm
 openvdb

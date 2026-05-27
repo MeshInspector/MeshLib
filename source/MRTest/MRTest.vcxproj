@@ -156,6 +156,9 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <!-- mimalloc EXE-level redirect: force-keep mi_version so mimalloc.dll loads early enough for mimalloc-redirect.dll to take over the CRT allocator -->
+      <AdditionalDependencies>mimalloc-debug.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -179,6 +182,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <!-- mimalloc EXE-level redirect: force-keep mi_version so mimalloc.dll loads early enough for mimalloc-redirect.dll to take over the CRT allocator -->
+      <AdditionalDependencies>mimalloc.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

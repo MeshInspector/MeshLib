@@ -301,6 +301,9 @@
     <ClCompile Include="MRPolylineTopologyTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRQuadraticFormTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRRectIndexerTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

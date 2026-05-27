@@ -21,4 +21,8 @@ TEST(MRMesh, BestFitParabola)
     EXPECT_NEAR( std::abs( p.c - p1.c ), 0., eps );
 }
 
+// verifies that template can be instantiated with typical parameters
+template class BestFitParabola<float>;
+template class BestFitParabola<double>;
+
 } //namespace MR

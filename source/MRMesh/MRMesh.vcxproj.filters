@@ -1445,9 +1445,6 @@
     <ClCompile Include="MRBitSet.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRAffineXf3.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRCylinder.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
@@ -1589,9 +1586,6 @@
     <ClCompile Include="MRIOFormatsRegistry.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRAABBTreePolyline3.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1643,15 +1637,6 @@
     <ClCompile Include="MRImageLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRAABBTreePolyline2.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRAffineXf2.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="MRTupleBindings.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRString.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
@@ -1670,9 +1655,6 @@
     <ClCompile Include="MRBestFitQuadric.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
-    <ClCompile Include="MRIntersection.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
@@ -1687,9 +1669,6 @@
     </ClCompile>
     <ClCompile Include="MRRectIndexer.cpp">
       <Filter>Source Files\DistanceMap</Filter>
-    </ClCompile>
-    <ClCompile Include="MRLine3.cpp">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRComputeBoundingBox.cpp">
       <Filter>Source Files\Math</Filter>
@@ -1874,9 +1853,6 @@
     <ClCompile Include="MRNormalDenoising.cpp">
       <Filter>Source Files\LinearSystem</Filter>
     </ClCompile>
-    <ClCompile Include="MRId.cpp">
-      <Filter>Source Files\Basic</Filter>
-    </ClCompile>
     <ClCompile Include="MRPartMapping.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
@@ -1932,9 +1908,6 @@
       <Filter>Source Files\System</Filter>
     </ClCompile>
     <ClCompile Include="MRExpected.cpp">
-      <Filter>Source Files\Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="MRViewportId.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
     <ClCompile Include="MRMovementBuildBody.cpp">
@@ -2114,9 +2087,6 @@
     <ClCompile Include="MRMultiwayICP.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
-    <ClCompile Include="MRFinally.cpp">
-      <Filter>Source Files\Basic</Filter>
-    </ClCompile>
     <ClCompile Include="MRMultiwayAligningTransform.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
@@ -2140,9 +2110,6 @@
     </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBestFitParabola.cpp">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudDistance.cpp">
       <Filter>Source Files\PointCloud</Filter>

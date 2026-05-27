@@ -96,4 +96,8 @@ TEST(MRMesh, AffineXf3)
     ASSERT_NEAR( ( r - rr ).norm(), 0, 1e-12 );
 }
 
+// verifies that template can be instantiated with typical parameters
+template struct AffineXf<Vector3<float>>;
+template struct AffineXf<Vector3<double>>;
+
 } //namespace MR

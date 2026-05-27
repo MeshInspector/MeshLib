@@ -109,6 +109,7 @@
     <ClCompile Include="MRPolylineDecimateTests.cpp" />
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />
     <ClCompile Include="MRPolylineTopologyTests.cpp" />
+    <ClCompile Include="MRQuadraticFormTests.cpp" />
     <ClCompile Include="MRRectIndexerTests.cpp" />
     <ClCompile Include="MRRegionBoundaryTests.cpp" />
     <ClCompile Include="MRRegularGridMeshTests.cpp" />

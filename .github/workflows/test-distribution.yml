@@ -287,15 +287,9 @@ jobs:
       - name: Show meshconv help
         run: meshconv --help
 
-      # On macOS-12 hosts (where the SDK still defaults min-macOS to 12.0)
-      # bump the examples' deployment target to 12.7 to match the value
-      # baked into the framework dylibs by CMAKE_OSX_DEPLOYMENT_TARGET in
-      # top-level CMakeLists.txt; otherwise ld warns "dylib was built for
-      # newer macOS version (12.7) than being linked (12.0)" against every
-      # MeshLib dylib. Do *not* set it on macOS-13+ hosts: there the SDK
-      # default already covers MeshLib's 12.7, and forcing 12.7 makes ld
-      # complain in the other direction about brew bottles built at the
-      # host's macOS version.
+      # Match the framework dylibs' 12.7 target on the macOS-12 SDK (which
+      # otherwise defaults to 12.0); skip on 13+ where forcing 12.7 would
+      # instead warn against brew bottles built for the host's macOS.
       - name: Build C++ examples
         working-directory: examples/cpp-examples
         run: |

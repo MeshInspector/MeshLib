@@ -20,6 +20,11 @@ ELSE()
   )
 ENDIF()
 
+if(WIN32)
+  include(MimallocRedirect)
+  mr_win32_enable_mimalloc_redirect(${PROJECT_NAME})
+endif()
+
 install(
   TARGETS ${PROJECT_NAME}
   DESTINATION "${MR_BIN_DIR}"

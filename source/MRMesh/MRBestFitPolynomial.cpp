@@ -3,6 +3,7 @@
 #include <MRPch/MREigenCore.h>
 #include <Eigen/LU>
 
+#include <cassert>
 #include <cmath>
 #include <complex>
 

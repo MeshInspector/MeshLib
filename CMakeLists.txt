@@ -146,7 +146,7 @@ IF(APPLE)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
   IF(BUILD_TESTING)
-    set(GTest_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/GTest)
+    set(GTest_DIR ${HOMEBREW_PREFIX}/lib/cmake/GTest)
     find_package(GTest REQUIRED CONFIG)
     include_directories(${GTEST_INCLUDE_DIRS})
   ENDIF()

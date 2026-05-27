@@ -1,7 +1,7 @@
 #include <MRMesh/MRMarkedContour.h>
 #include <MRMesh/MRContour.h>
 #include <MRMesh/MRVector3.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

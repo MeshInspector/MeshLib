@@ -119,9 +119,6 @@
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MRGTest.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
       <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
     </ProjectReference>

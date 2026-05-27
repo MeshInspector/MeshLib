@@ -5,7 +5,7 @@
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRConstants.h"
 #include <MRMesh/MRAffineXf3.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

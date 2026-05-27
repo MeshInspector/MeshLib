@@ -1,4 +1,4 @@
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRTBB.h>
 #include <atomic>

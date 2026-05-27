@@ -2,7 +2,7 @@
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRVector4.h>
 #include <MRMesh/MRBitSet.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

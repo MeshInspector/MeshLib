@@ -1,7 +1,7 @@
 #include <MRMesh/MRMeshDelete.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRCube.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

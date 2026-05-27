@@ -1,6 +1,6 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRObject.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

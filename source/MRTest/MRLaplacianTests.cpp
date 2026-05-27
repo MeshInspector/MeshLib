@@ -1,6 +1,6 @@
 #include <MRMesh/MRLaplacian.h>
 #include <MRMesh/MRMakeSphereMesh.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

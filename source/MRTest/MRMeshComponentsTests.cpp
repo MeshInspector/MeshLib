@@ -1,5 +1,5 @@
 #include <MRMesh/MRMeshComponents.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRCube.h>

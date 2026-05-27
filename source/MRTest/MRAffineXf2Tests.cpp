@@ -2,7 +2,7 @@
 #include <MRMesh/MRMatrix2.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRConstants.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

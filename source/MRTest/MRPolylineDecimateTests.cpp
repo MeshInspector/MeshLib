@@ -1,7 +1,7 @@
 #include <MRMesh/MRPolylineDecimate.h>
 #include <MRMesh/MRPolyline.h>
 #include <MRMesh/MRVector2.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

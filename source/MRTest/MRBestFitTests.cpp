@@ -1,7 +1,7 @@
 #include <MRMesh/MRBestFit.h>
 #include <MRMesh/MRLine3.h>
 #include <MRMesh/MRPlane3.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

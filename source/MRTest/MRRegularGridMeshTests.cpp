@@ -1,7 +1,7 @@
 #include <MRMesh/MRRegularGridMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRVector3.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

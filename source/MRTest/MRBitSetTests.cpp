@@ -1,5 +1,5 @@
 #include <MRMesh/MRBitSet.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

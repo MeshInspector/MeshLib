@@ -1,4 +1,4 @@
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include "MRMesh/MRIsNaN.h"
 
 namespace MR

@@ -2,7 +2,7 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRMesh/MRBitSetParallelFor.h>
 #include <MRMesh/MRPartMappingAdapters.h>
 

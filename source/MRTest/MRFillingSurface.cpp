@@ -1,6 +1,6 @@
 #ifndef MESHLIB_NO_VOXELS
 
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRBox.h>

@@ -3,7 +3,7 @@
 #include <MRMesh/MRAABBTreeMaker.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRVector2.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

@@ -3,7 +3,7 @@
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRAffineXf.h"
 #include "MRMesh/MRMatrix3.h"
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

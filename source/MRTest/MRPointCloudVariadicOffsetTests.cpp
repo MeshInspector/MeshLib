@@ -1,7 +1,7 @@
 #include <MRMesh/MRClosestWeightedPoint.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMeshDecimate.h>
 #include <MRVoxels/MRWeightedPointsShell.h>

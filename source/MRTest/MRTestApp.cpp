@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRLog.h"
-#include "MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRSystem.h"

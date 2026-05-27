@@ -4,7 +4,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRId.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

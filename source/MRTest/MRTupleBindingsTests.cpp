@@ -8,7 +8,7 @@
 #include <MRMesh/MRAffineXf.h>
 #include <MRMesh/MRId.h>
 #include <MRMesh/MRColor.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

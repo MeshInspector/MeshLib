@@ -1,7 +1,7 @@
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRTriangleIntersection.h>
 #include <MRMesh/MRTriDist.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 
 namespace MR

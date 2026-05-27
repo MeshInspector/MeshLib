@@ -1,7 +1,7 @@
 #include <MRSymbolMesh/MRAlignTextToMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMakeSphereMesh.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRMesh/MRSystemPath.h>
 #include <MRMesh/MRSurfacePath.h>
 

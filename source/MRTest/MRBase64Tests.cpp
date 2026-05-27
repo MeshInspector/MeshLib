@@ -1,5 +1,5 @@
 #include <MRMesh/MRBase64.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

@@ -1,5 +1,5 @@
 #include <MRMesh/MRBox.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <sstream>
 
 #include "MRMesh/MRVector2.h"

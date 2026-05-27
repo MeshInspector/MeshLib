@@ -1,6 +1,6 @@
 #include <MRMesh/MRPolylineTopology.h>
 #include <MRMesh/MRId.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

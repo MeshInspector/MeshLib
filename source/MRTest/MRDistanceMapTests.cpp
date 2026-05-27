@@ -1,6 +1,6 @@
 #include <MRMesh/MRDistanceMap.h>
 #include <MRMesh/MRDistanceMapParams.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRTimer.h>

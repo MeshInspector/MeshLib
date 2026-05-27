@@ -1,6 +1,6 @@
 #include <MRMesh/MRFeatures.h>
 #include <MRMesh/MRLineSegm3.h>
-#include "MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR::Features
 {

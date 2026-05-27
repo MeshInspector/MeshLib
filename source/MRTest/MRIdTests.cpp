@@ -1,10 +1,10 @@
-#include "MRId.h"
-#include "MRGTest.h"
+#include <MRMesh/MRId.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {
 
-TEST(MRMesh, Id) 
+TEST(MRMesh, Id)
 {
     EdgeId e(1);
     FaceId f(2);

@@ -1,6 +1,6 @@
 #include <MRMesh/MRTriMath.h>
 #include <MRMesh/MRPlane3.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRClosestPointInTriangle.h>
 
 namespace MR

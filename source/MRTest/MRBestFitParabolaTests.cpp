@@ -1,12 +1,9 @@
-#include "MRBestFitParabola.h"
-#include "MRGTest.h"
+#include <MRMesh/MRBestFitParabola.h>
+#include <MRMesh/MRParabola.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {
-
-// verifies that template can be instantiated with typical parameters
-template class BestFitParabola<float>;
-template class BestFitParabola<double>;
 
 TEST(MRMesh, BestFitParabola)
 {
@@ -23,5 +20,9 @@ TEST(MRMesh, BestFitParabola)
     EXPECT_NEAR( std::abs( p.b - p1.b ), 0., eps );
     EXPECT_NEAR( std::abs( p.c - p1.c ), 0., eps );
 }
+
+// verifies that template can be instantiated with typical parameters
+template class BestFitParabola<float>;
+template class BestFitParabola<double>;
 
 } //namespace MR

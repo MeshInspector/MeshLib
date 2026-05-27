@@ -1,5 +1,4 @@
 #include "MRBitSet.h"
-#include "MRGTest.h"
 #include <bit>
 #include <iostream>
 

@@ -133,7 +133,6 @@
     <ClInclude Include="MRGcodeLoad.h" />
     <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
-    <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
@@ -483,14 +482,10 @@
     <ClCompile Include="MRAABBTreeObjects.cpp" />
     <ClCompile Include="MRAABBTreePoints.cpp" />
     <ClCompile Include="MRAABBTreePolyline.cpp" />
-    <ClCompile Include="MRAABBTreePolyline3.cpp" />
-    <ClCompile Include="MRAABBTreePolyline2.cpp" />
     <ClCompile Include="MRAddNoise.cpp" />
-    <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
-    <ClCompile Include="MRBestFitParabola.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
@@ -512,7 +507,6 @@
     <ClCompile Include="MRDipole.cpp" />
     <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
-    <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBase64.cpp" />
@@ -521,7 +515,6 @@
     <ClCompile Include="MRDistanceMapLoad.cpp" />
     <ClCompile Include="MRDistanceMapParams.cpp" />
     <ClCompile Include="MRDistanceMapSave.cpp" />
-    <ClCompile Include="MRDistanceMapTests.cpp" />
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
@@ -538,7 +531,6 @@
     <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFillHoleNicely.cpp" />
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
-    <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
@@ -557,13 +549,11 @@
     <ClCompile Include="MRImageSave.cpp" />
     <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
-    <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRInTreePathBuilder.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIOParsing.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
-    <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLineObject.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
@@ -640,7 +630,6 @@
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRHistogram.cpp" />
     <ClCompile Include="MRICP.cpp" />
-    <ClCompile Include="MRId.cpp" />
     <ClCompile Include="MRLaplacian.cpp" />
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
@@ -687,7 +676,6 @@
     <ClCompile Include="MRSurroundingContour.cpp" />
     <ClCompile Include="MRTerrainTriangulation.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
-    <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRTwoLineSegmDist.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
@@ -700,7 +688,6 @@
     <ClCompile Include="MRUnitInfo.cpp" />
     <ClCompile Include="MRVersatileChangeMeshAction.cpp" />
     <ClCompile Include="MRVertCoordsDiff.cpp" />
-    <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
     <ClCompile Include="MRObjectLines.cpp" />
     <ClCompile Include="MRMeshDiff.cpp" />
@@ -712,7 +699,6 @@
     <ClCompile Include="MRVisualObject.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoundary.cpp" />
-    <ClCompile Include="MRMeshBuildDeleteTest.cpp" />
     <ClCompile Include="MRMeshDelete.cpp" />
     <ClCompile Include="MRMeshDelone.cpp" />
     <ClCompile Include="MRMeshEigen.cpp" />

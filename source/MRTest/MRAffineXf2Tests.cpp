@@ -1,15 +1,13 @@
-#include "MRAffineXf2.h"
-#include "MRConstants.h"
-#include "MRGTest.h"
+#include <MRMesh/MRAffineXf2.h>
+#include <MRMesh/MRMatrix2.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRConstants.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {
 
-// verifies that template can be instantiated with typical parameters
-template struct AffineXf<Vector2<float>>;
-template struct AffineXf<Vector2<double>>;
-
-TEST(MRMesh, AffineXf2) 
+TEST(MRMesh, AffineXf2)
 {
     ASSERT_EQ( Vector2f::plusX() + Vector2f::minusX(), Vector2f() );
     ASSERT_EQ( Vector2f::plusY() + Vector2f::minusY(), Vector2f() );
@@ -55,5 +53,9 @@ TEST(MRMesh, AffineXf2)
         ASSERT_NEAR( ( xfrom - to ).length(), 0., 1e-15 );
     }
 }
+
+// verifies that template can be instantiated with typical parameters
+template struct AffineXf<Vector2<float>>;
+template struct AffineXf<Vector2<double>>;
 
 } //namespace MR

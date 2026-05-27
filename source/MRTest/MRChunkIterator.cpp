@@ -1,6 +1,6 @@
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRMesh/MRGTest.h"
+#include <gtest/gtest.h>
 
 namespace MR
 {

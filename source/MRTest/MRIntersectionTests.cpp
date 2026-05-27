@@ -1,5 +1,11 @@
-#include "MRIntersection.h"
-#include "MRGTest.h"
+#include <MRMesh/MRIntersection.h>
+#include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRLine3.h>
+#include <MRMesh/MRVector3.h>
+#include <MRMesh/MRSphere.h>
+#include <MRMesh/MRBox.h>
+#include <MRMesh/MRLineSegm.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {
@@ -30,7 +36,7 @@ TEST( MRMesh, IntersectPlanePlane )
 
 }
 
-TEST(MRMesh, IntersectPlaneLine) 
+TEST(MRMesh, IntersectPlaneLine)
 {
     Plane3d plane( Vector3d( 1, 0, 0 ), 1 );
     Line3d line( Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 1 ).normalized() );

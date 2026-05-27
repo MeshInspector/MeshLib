@@ -1,13 +1,13 @@
-#include "MRDistanceMap.h"
-#include "MRDistanceMapParams.h"
-#include "MRGTest.h"
-#include "MRVector2.h"
-#include "MRMakeSphereMesh.h"
-#include "MRTimer.h"
-#include "MRPolyline.h"
-#include "MRVector.h"
-#include "MRMeshIntersect.h"
-#include "MRLine3.h"
+#include <MRMesh/MRDistanceMap.h>
+#include <MRMesh/MRDistanceMapParams.h>
+#include <gtest/gtest.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRTimer.h>
+#include <MRMesh/MRPolyline.h>
+#include <MRMesh/MRVector.h>
+#include <MRMesh/MRMeshIntersect.h>
+#include <MRMesh/MRLine3.h>
 
 namespace MR
 {

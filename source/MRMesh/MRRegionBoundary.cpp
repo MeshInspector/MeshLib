@@ -7,10 +7,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include <algorithm>
-// test
 #include "MRMesh.h"
-#include "MRMakeSphereMesh.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -646,40 +643,6 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBit
 
     //TODO: if there are many set edges, find incident vertices of the complement edges and invert
     return getInnerVerts_( topology, edges );
-}
-
-TEST(MRMesh, findLeftBoundary)
-{
-    Mesh sphere = makeUVSphere( 1, 8, 8 );
-    FaceBitSet faces;
-    faces.autoResizeSet( 0_f );
-    auto paths = findLeftBoundary( sphere.topology, faces );
-    EXPECT_EQ( paths.size(), 1 );
-    for ( const auto & path : paths )
-    {
-        for ( auto e : path )
-        {
-            EXPECT_EQ( sphere.topology.left( e ), 0_f );
-            EXPECT_NE( sphere.topology.right( e ), 0_f );
-        }
-    }
-}
-
-TEST( MRMesh, findRightBoundary )
-{
-    Mesh sphere = makeUVSphere( 1, 8, 8 );
-    FaceBitSet faces;
-    faces.autoResizeSet( 0_f );
-    auto paths = findRightBoundary( sphere.topology, faces );
-    EXPECT_EQ( paths.size(), 1 );
-    for ( const auto& path : paths )
-    {
-        for ( auto e : path )
-        {
-            EXPECT_EQ( sphere.topology.right( e ), 0_f );
-            EXPECT_NE( sphere.topology.left( e ), 0_f );
-        }
-    }
 }
 
 } //namespace MR

@@ -1,18 +1,16 @@
-#include "MRAffineXf3.h"
-#include "MRConstants.h"
-#include "MRGTest.h"
-#include "MRQuaternion.h"
-#include "MRPlane3.h"
-#include "MRLine3.h"
+#include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRMatrix3.h>
+#include <MRMesh/MRVector3.h>
+#include <MRMesh/MRConstants.h>
+#include <MRMesh/MRQuaternion.h>
+#include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRLine3.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {
 
-// verifies that template can be instantiated with typical parameters
-template struct AffineXf<Vector3<float>>;
-template struct AffineXf<Vector3<double>>;
-
-TEST(MRMesh, AffineXf3) 
+TEST(MRMesh, AffineXf3)
 {
     ASSERT_EQ( Vector3f::plusX() + Vector3f::minusX(), Vector3f() );
     ASSERT_EQ( Vector3f::plusY() + Vector3f::minusY(), Vector3f() );
@@ -97,5 +95,9 @@ TEST(MRMesh, AffineXf3)
     ASSERT_NEAR( ( q - Matrix3d::identity() ).norm(), 0, 1e-12 );
     ASSERT_NEAR( ( r - rr ).norm(), 0, 1e-12 );
 }
+
+// verifies that template can be instantiated with typical parameters
+template struct AffineXf<Vector3<float>>;
+template struct AffineXf<Vector3<double>>;
 
 } //namespace MR

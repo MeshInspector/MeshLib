@@ -1,7 +1,9 @@
-#include "MRAABBTreePolyline.h"
-#include "MRPolyline.h"
-#include "MRAABBTreeMaker.h"
-#include "MRGTest.h"
+#include <MRMesh/MRAABBTreePolyline.h>
+#include <MRMesh/MRPolyline.h>
+#include <MRMesh/MRAABBTreeMaker.h>
+#include <MRMesh/MRBox.h>
+#include <MRMesh/MRVector2.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {

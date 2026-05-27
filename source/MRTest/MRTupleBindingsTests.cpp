@@ -1,11 +1,20 @@
-#include "MRTupleBindings.h"
-#include "MRGTest.h"
+#include <MRMesh/MRTupleBindings.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRVector3.h>
+#include <MRMesh/MRVector4.h>
+#include <MRMesh/MRMatrix2.h>
+#include <MRMesh/MRMatrix3.h>
+#include <MRMesh/MRMatrix4.h>
+#include <MRMesh/MRAffineXf.h>
+#include <MRMesh/MRId.h>
+#include <MRMesh/MRColor.h>
+#include <gtest/gtest.h>
 
 namespace MR
 {
 
 TEST( MRMesh, TupleBindings )
-{    
+{
     // Vector element type
     static_assert( std::is_same_v< std::tuple_element<0, Vector2f>::type, float> );
     static_assert( std::is_same_v< std::tuple_element<1, Vector2f>::type, float> );
@@ -208,4 +217,4 @@ TEST( MRMesh, TupleBindings )
     EXPECT_EQ( &ca, &color.a );
 }
 
-}
+} //namespace MR

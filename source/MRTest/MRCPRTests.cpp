@@ -4,7 +4,7 @@
 #include <cpr/cprver.h>
 #include <curl/curl.h>
 #include "MRPch/MRSpdlog.h"
-#include "MRMesh/MRGTest.h"
+#include <gtest/gtest.h>
 
 constexpr int MAX_RETRIES = 10;
 constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };

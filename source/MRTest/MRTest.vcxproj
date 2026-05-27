@@ -56,6 +56,7 @@
     <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
+    <ClCompile Include="MRSurfaceDistanceBuilderTests.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />

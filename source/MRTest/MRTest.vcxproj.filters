@@ -64,6 +64,9 @@
     <ClCompile Include="MRTriMathTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRSurfaceDistanceBuilderTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRSurfacePathTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

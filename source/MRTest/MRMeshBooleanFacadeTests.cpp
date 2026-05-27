@@ -3,7 +3,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMakeSphereMesh.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

@@ -1,7 +1,7 @@
 #include <MRMesh/MRVolumeIndexer.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRVector3.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

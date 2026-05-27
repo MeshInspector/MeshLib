@@ -2,7 +2,7 @@
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

@@ -2,7 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRBitSet.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

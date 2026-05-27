@@ -5,7 +5,7 @@
 #include <MRMesh/MRConeApproximator.h>
 #include <MRMesh/MRCone3.h>
 #include <MRMesh/MRConstants.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

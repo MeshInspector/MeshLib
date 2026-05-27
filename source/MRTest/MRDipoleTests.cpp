@@ -3,7 +3,7 @@
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRConstants.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

@@ -3,7 +3,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRExpandShrink.h>
 #include <MRMesh/MRRegionBoundary.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

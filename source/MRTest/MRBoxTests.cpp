@@ -1,7 +1,7 @@
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRVector3.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

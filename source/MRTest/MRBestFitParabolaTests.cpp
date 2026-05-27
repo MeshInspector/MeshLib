@@ -1,6 +1,6 @@
 #include <MRMesh/MRBestFitParabola.h>
 #include <MRMesh/MRParabola.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

@@ -1,6 +1,6 @@
 #include <MRMesh/MRFinally.h>
 
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 TEST( MRFinally, Normal )
 {

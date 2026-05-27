@@ -6,7 +6,6 @@
 #include "MRBuffer.h"
 #include "MRTimer.h"
 #include "MRParallelFor.h"
-#include "MRGTest.h"
 
 namespace MR
 {

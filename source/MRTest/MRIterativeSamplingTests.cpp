@@ -3,7 +3,7 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshToPointCloud.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

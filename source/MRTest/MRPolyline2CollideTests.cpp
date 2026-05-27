@@ -2,7 +2,7 @@
 #include <MRMesh/MRPolyline.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MREdgePoint.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

@@ -1,5 +1,5 @@
 #include <MRMesh/MRViewportId.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

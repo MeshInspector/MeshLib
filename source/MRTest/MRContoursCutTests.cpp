@@ -1,6 +1,6 @@
 #include <MRMesh/MRContoursCut.h>
 #include <MRMesh/MRMesh.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRRingIterator.h>

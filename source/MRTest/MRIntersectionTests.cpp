@@ -5,7 +5,7 @@
 #include <MRMesh/MRSphere.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRLineSegm.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

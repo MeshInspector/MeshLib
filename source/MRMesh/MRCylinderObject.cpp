@@ -7,7 +7,6 @@
 #include "MRCylinderApproximator.h"
 #include "MRMeshNormals.h"
 #include "MRLine.h"
-#include "MRGTest.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 #include <iostream>

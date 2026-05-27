@@ -2,7 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRRingIterator.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

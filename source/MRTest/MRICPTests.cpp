@@ -2,7 +2,7 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <iostream>
 
 namespace MR

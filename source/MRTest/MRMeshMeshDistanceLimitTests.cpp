@@ -20,7 +20,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRAffineXf3.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 #include <cfloat>
 

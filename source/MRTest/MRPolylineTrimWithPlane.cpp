@@ -1,4 +1,4 @@
-#include "MRMesh/MRGTest.h"
+#include "MRGTest.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRPolylineTrimWithPlane.h"
 #include "MRMesh/MRPolyline.h"

@@ -1,6 +1,6 @@
 #include <MRMesh/MRGridSampling.h>
 #include <MRMesh/MRMakeSphereMesh.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

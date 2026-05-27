@@ -1,5 +1,5 @@
 #include <MRMesh/MRBestFitPolynomial.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 #include <algorithm>
 #include <vector>

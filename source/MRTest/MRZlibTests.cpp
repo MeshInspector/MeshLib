@@ -1,4 +1,4 @@
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <MRMesh/MRZlib.h>
 
 #include <cstdint>

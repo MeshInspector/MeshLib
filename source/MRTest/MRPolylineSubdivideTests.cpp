@@ -1,7 +1,7 @@
 #include <MRMesh/MRPolylineSubdivide.h>
 #include <MRMesh/MRPolyline.h>
 #include <MRMesh/MRVector2.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

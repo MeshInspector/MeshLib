@@ -1,4 +1,4 @@
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectMesh.h>

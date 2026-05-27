@@ -1,7 +1,7 @@
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRAABBTreeMaker.h>
 #include <MRMesh/MRMakeSphereMesh.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <MRPch/MRTBB.h>
 
 namespace MR

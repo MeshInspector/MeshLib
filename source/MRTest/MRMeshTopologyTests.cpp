@@ -1,5 +1,5 @@
 #include <MRMesh/MRMeshTopology.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

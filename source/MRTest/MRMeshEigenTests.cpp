@@ -1,6 +1,6 @@
 #include <MRMesh/MRMeshEigen.h>
 #include <MRMesh/MRMesh.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 #include <MRPch/MREigenCore.h>
 

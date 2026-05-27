@@ -4,7 +4,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMeshTrimWithPlane.h>
 #include <MRMesh/MRPlane3.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <limits>
 
 namespace MR

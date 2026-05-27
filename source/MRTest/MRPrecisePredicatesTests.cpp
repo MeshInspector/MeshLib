@@ -1,7 +1,7 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <MRMesh/MRBox.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 #include <algorithm>
 #include <climits>
 

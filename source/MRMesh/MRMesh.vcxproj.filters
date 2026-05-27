@@ -1269,9 +1269,6 @@
     <ClInclude Include="MRChunkIterator.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRGTest.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
     <ClInclude Include="MRBezier.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>

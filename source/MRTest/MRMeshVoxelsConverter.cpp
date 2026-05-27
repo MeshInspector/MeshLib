@@ -3,7 +3,7 @@
 #include "MRVoxels/MRBoolean.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRGTest.h"
+#include "MRGTest.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <openvdb/version.h>

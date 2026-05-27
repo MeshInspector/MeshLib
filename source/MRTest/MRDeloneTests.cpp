@@ -1,6 +1,6 @@
 #include "MRMesh/MRMeshDelone.h"
 #include "MRMesh/MRVector3.h"
-#include "MRMesh/MRGTest.h"
+#include "MRGTest.h"
 
 namespace MR
 {

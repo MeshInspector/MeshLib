@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include <MRMesh/config.h>
 
 #ifdef MRMESH_NO_GTEST
 

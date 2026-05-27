@@ -5,7 +5,7 @@
 #include <MRMesh/MRQuaternion.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRLine3.h>
-#include <MRMesh/MRGTest.h>
+#include "MRGTest.h"
 
 namespace MR
 {

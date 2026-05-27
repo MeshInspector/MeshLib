@@ -30,6 +30,9 @@ ELSE()
   )
 ENDIF()
 
+include(MimallocRedirect)
+mr_enable_mimalloc_redirect(${PROJECT_NAME})
+
 add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}

@@ -20,6 +20,9 @@ ELSE()
   )
 ENDIF()
 
+include(MimallocRedirect)
+mr_enable_mimalloc_redirect(${PROJECT_NAME})
+
 install(
   TARGETS ${PROJECT_NAME}
   DESTINATION "${MR_BIN_DIR}"

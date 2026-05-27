@@ -199,8 +199,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <!-- mimalloc EXE-level redirect: force-keep mi_version so mimalloc.dll loads early enough for mimalloc-redirect.dll to take over the CRT allocator -->
-      <AdditionalDependencies>mimalloc-debug.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- mimalloc EXE-level redirect: mimalloc is already auto-linked via vcpkg's lib\*.lib, so don't name its import lib (the name varies by version: 2.x mimalloc.lib, 3.x mimalloc.dll.lib). Just force-keep mi_version so mimalloc.dll loads early enough for mimalloc-redirect.dll to take over the CRT allocator. -->
       <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -225,8 +224,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <!-- mimalloc EXE-level redirect: force-keep mi_version so mimalloc.dll loads early enough for mimalloc-redirect.dll to take over the CRT allocator -->
-      <AdditionalDependencies>mimalloc.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- mimalloc EXE-level redirect: mimalloc is already auto-linked via vcpkg's lib\*.lib, so don't name its import lib (the name varies by version: 2.x mimalloc.lib, 3.x mimalloc.dll.lib). Just force-keep mi_version so mimalloc.dll loads early enough for mimalloc-redirect.dll to take over the CRT allocator. -->
       <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>

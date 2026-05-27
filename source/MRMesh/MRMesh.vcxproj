@@ -521,7 +521,6 @@
     <ClCompile Include="MRDistanceMapLoad.cpp" />
     <ClCompile Include="MRDistanceMapParams.cpp" />
     <ClCompile Include="MRDistanceMapSave.cpp" />
-    <ClCompile Include="MRDistanceMapTests.cpp" />
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
@@ -712,7 +711,6 @@
     <ClCompile Include="MRVisualObject.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoundary.cpp" />
-    <ClCompile Include="MRMeshBuildDeleteTest.cpp" />
     <ClCompile Include="MRMeshDelete.cpp" />
     <ClCompile Include="MRMeshDelone.cpp" />
     <ClCompile Include="MRMeshEigen.cpp" />

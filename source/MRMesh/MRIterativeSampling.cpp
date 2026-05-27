@@ -7,11 +7,6 @@
 #include "MRTimer.h"
 #include <cfloat>
 
-#include "MRGTest.h"
-#include "MRTorus.h"
-#include "MRMesh.h"
-#include "MRMeshToPointCloud.h"
-
 namespace MR
 {
 
@@ -127,14 +122,6 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     if ( !reportProgress( cb, 1.0f ) )
         return {};
     return res;
-}
-
-TEST( MRMesh, IterativeSampling )
-{
-    auto cloud = meshToPointCloud( makeTorus() );
-    auto numSamples = (int)cloud.validPoints.count() / 2;
-    auto optSamples = pointIterativeSampling( cloud, numSamples );
-    EXPECT_EQ( numSamples, optSamples->count() );
 }
 
 } //namespace MR

@@ -1637,9 +1637,6 @@
     <ClCompile Include="MRDistanceMapParams.cpp">
       <Filter>Source Files\DistanceMap</Filter>
     </ClCompile>
-    <ClCompile Include="MRDistanceMapTests.cpp">
-      <Filter>Source Files\DistanceMap</Filter>
-    </ClCompile>
     <ClCompile Include="MRDistanceMap.cpp">
       <Filter>Source Files\DistanceMap</Filter>
     </ClCompile>
@@ -1731,9 +1728,6 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuilder.cpp">
-      <Filter>Source Files\MeshBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshBuildDeleteTest.cpp">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRIdentifyVertices.cpp">

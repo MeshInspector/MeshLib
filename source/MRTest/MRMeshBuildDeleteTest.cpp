@@ -1,9 +1,9 @@
-#include "MRMeshBuilder.h"
-#include "MRMeshTopology.h"
-#include "MRBitSet.h"
-#include "MRExpandShrink.h"
-#include "MRRegionBoundary.h"
-#include "MRGTest.h"
+#include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRMeshTopology.h>
+#include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRExpandShrink.h>
+#include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRGTest.h>
 
 namespace MR
 {

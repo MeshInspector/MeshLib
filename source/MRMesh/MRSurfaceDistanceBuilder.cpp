@@ -9,10 +9,7 @@
 namespace MR
 {
 
-// consider triangle 0bc, where a linear scalar field is defined in two points: v(0) = 0, v(b) = b;
-// computes the field in c-point;
-// returns false if field gradient enters c-point not from inside of the triangle
-static bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
+bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
 {
     assert( vb >= 0 );
     const float dot_bc = dot( b, c );

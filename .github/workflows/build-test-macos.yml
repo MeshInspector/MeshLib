@@ -85,7 +85,6 @@ jobs:
             thirdparty/eigen \
             thirdparty/parallel-hashmap \
             thirdparty/expected \
-            thirdparty/googletest \
             thirdparty/OpenCTM-git \
             thirdparty/libE57Format \
             thirdparty/glad \

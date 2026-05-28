@@ -144,12 +144,6 @@ IF(APPLE)
   # TODO: revise
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
-  IF(BUILD_TESTING)
-    set(GTest_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/GTest)
-    find_package(GTest REQUIRED CONFIG)
-    include_directories(${GTEST_INCLUDE_DIRS})
-  ENDIF()
 ENDIF()
 
 include(DetectPlatform)

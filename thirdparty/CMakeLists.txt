@@ -38,9 +38,10 @@ IF(MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
-# On Apple GTest comes from Homebrew (see requirements/macos.txt); build it
-# from the submodule everywhere else.
-IF(NOT APPLE)
+# GTest is provided by Homebrew on Apple (see requirements/macos.txt) and by
+# apt on Linux (see requirements/ubuntu.txt -- libgtest-dev); build it from
+# the submodule everywhere else.
+IF(NOT APPLE AND NOT (CMAKE_SYSTEM_NAME STREQUAL "Linux"))
   set(INSTALL_GTEST ON)
   IF(EMSCRIPTEN)
     add_compile_definitions(GTEST_HAS_CXXABI_H_=0)

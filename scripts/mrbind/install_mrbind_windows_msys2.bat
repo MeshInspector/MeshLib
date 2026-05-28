@@ -23,9 +23,13 @@ rem Preserve the current directory. We'll do `popd` at the end...
 pushd .
 
 if not exist %MSYS2_DIR% (
-    echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_deps_windows_msys2.bat` to install it.
-    popd
-    exit /b 1
+    echo MSYS2 was NOT found at `%MSYS2_DIR%`. Running `install_deps_windows_msys2.bat` to install it.
+    call "%~dp0\install_deps_windows_msys2.bat"
+    if errorlevel 1 (
+        echo `install_deps_windows_msys2.bat` failed.
+        popd
+        exit /b 1
+    )
 )
 
 echo Found MSYS2 at `%MSYS2_DIR%`.

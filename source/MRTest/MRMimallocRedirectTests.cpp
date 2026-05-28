@@ -5,8 +5,12 @@
 #include <cstdlib>
 #include <string_view>
 
-extern "C" int mi_is_redirected( void );
-extern "C" int mi_is_in_heap_region( const void* p );
+// mimalloc.h declares these as `bool`. Matching the actual return type is
+// critical: MSVC returns `bool` in the low byte of EAX, so reading the call
+// site as `int` picks up garbage in the upper 24 bits (e.g. -980287487).
+// Local Debug happened to zero those bits; Release CI didn't.
+extern "C" bool mi_is_redirected();
+extern "C" bool mi_is_in_heap_region( const void* p );
 
 namespace MR
 {
@@ -23,11 +27,11 @@ TEST( MRMesh, MimallocRedirectActive )
         GTEST_SKIP() << "MIMALLOC_DISABLE_REDIRECT=1; redirect intentionally disabled.";
     }
 
-    EXPECT_EQ( mi_is_redirected(), 1 );
+    EXPECT_TRUE( mi_is_redirected() );
 
     void* p = std::malloc( 64 );
     ASSERT_NE( p, nullptr );
-    EXPECT_EQ( mi_is_in_heap_region( p ), 1 );
+    EXPECT_TRUE( mi_is_in_heap_region( p ) );
     std::free( p );
 }
 

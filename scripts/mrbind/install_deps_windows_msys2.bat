@@ -54,12 +54,12 @@ rem `could not fork a new process (Resource temporarily unavailable)` because
 rem Cygwin's fork() relies on the in-process address-space layout still
 rem matching msys2-runtime on disk. A fresh shell loads the new runtime cleanly.
 rem See https://www.msys2.org/docs/faq/ ("Updating from the command line").
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh _clang22'"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh' _clang22"
 if errorlevel 1 (
     echo `msys2_download_packages.sh` failed.
     exit /b 1
 )
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_install_packages.sh _clang22'"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_install_packages.sh' _clang22"
 echo Please ignore the errors above, if any, after the words `:: Running post-transaction hooks...`.
 
 endlocal

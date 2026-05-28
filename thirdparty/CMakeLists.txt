@@ -38,8 +38,6 @@ IF(MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
-# GTest comes from Homebrew on Apple and from apt on Linux; build it from
-# the submodule only for Emscripten.
 IF(EMSCRIPTEN)
   set(INSTALL_GTEST ON)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)

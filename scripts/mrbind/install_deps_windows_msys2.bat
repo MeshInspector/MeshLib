@@ -47,7 +47,19 @@ if exist %MSYS2_DIR% (
 )
 
 rem ------ Install MSYS2 packages
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh' && '%~dp0\msys2_install_packages.sh'"
+rem Run download and install in two separate msys2_shell.cmd invocations.
+rem The download step upgrades core packages (msys2-runtime, bash, pacman, ...);
+rem running the install step in the same shell after that triggers
+rem `could not fork a new process (Resource temporarily unavailable)` because
+rem Cygwin's fork() relies on the in-process address-space layout still
+rem matching msys2-runtime on disk. A fresh shell loads the new runtime cleanly.
+rem See https://www.msys2.org/docs/faq/ ("Updating from the command line").
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh'"
+if errorlevel 1 (
+    echo `msys2_download_packages.sh` failed.
+    exit /b 1
+)
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_install_packages.sh'"
 echo Please ignore the errors above, if any, after the words `:: Running post-transaction hooks...`.
 
 endlocal

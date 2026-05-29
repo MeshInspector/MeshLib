@@ -346,6 +346,8 @@ jobs:
           path: MREDist_${{ matrix.upload_name || matrix.config }}.7z
           retention-days: 1
           overwrite: true
+          # The payload is already a .7z; don't re-Deflate it (no size gain).
+          compression-level: 0
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build && env.job_upload_artifact == 'true' }}
@@ -364,6 +366,8 @@ jobs:
           path: MeshLibC2Headers.7z
           retention-days: 1
           overwrite: true
+          # The payload is already a .7z; don't re-Deflate it (no size gain).
+          compression-level: 0
 
       - name: Create and fix fake Wheel for NuGet
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}

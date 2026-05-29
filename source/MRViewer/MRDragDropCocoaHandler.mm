@@ -67,6 +67,7 @@ public:
     static NSDragOperation onDraggingEntered( NSView* view, SEL cmd, id<NSDraggingInfo> sender );
     static NSDragOperation onDraggingUpdated( NSView* view, SEL cmd, id<NSDraggingInfo> sender );
     static void onDraggingExited( NSView* view, SEL cmd, id<NSDraggingInfo> sender );
+    static void onDraggingEnded( NSView* view, SEL cmd, id<NSDraggingInfo> sender );
 
 private:
     // convert the Cocoa dragging location to the Win32/Wasm convention and emit dragOverSignal
@@ -106,6 +107,16 @@ DragDropCocoaHandler::Impl::Impl( GLFWwindow* window, DragDropCocoaHandler* hand
     if ( !class_addMethod( cls, @selector( draggingExited: ), (IMP)Impl::onDraggingExited, "v@:@" ) )
         class_replaceMethod( cls, @selector( draggingExited: ), (IMP)Impl::onDraggingExited, "v@:@" );
 
+    // draggingExited: is documented only for the drag image leaving the view bounds, so it does not
+    // fire in every terminal case: an accepted non-file URL drop (GLFW returns YES without calling
+    // its drop callback), or a cancelled/interrupted session (Esc, Mission Control, Space/display
+    // switch, source app quitting) — leaving the highlight stuck. draggingEnded: is sent to the
+    // destination at the end of every dragging session (macOS 10.7+), so clear the highlight there
+    // too. The double-clear with draggingExited:/the post-drop clear is idempotent, so this is
+    // harmless after a normal file drop.
+    if ( !class_addMethod( cls, @selector( draggingEnded: ), (IMP)Impl::onDraggingEnded, "v@:@" ) )
+        class_replaceMethod( cls, @selector( draggingEnded: ), (IMP)Impl::onDraggingEnded, "v@:@" );
+
     DragDropCocoaHandlerRegistry::instance().add( view_, handler );
 }
 
@@ -117,8 +128,8 @@ DragDropCocoaHandler::Impl::~Impl()
         if ( enteredMethod )
             method_setImplementation( enteredMethod, previousDraggingEnteredMethod_ );
     }
-    // draggingUpdated:/draggingExited: stay installed (Objective-C methods cannot be removed); the
-    // registry lookup below makes them no-ops once this handler is gone.
+    // draggingUpdated:/draggingExited:/draggingEnded: stay installed (Objective-C methods cannot be
+    // removed); the registry lookup below makes them no-ops once this handler is gone.
     DragDropCocoaHandlerRegistry::instance().remove( view_ );
 }
 
@@ -153,6 +164,20 @@ NSDragOperation DragDropCocoaHandler::Impl::onDraggingUpdated( NSView* view, SEL
 }
 
 void DragDropCocoaHandler::Impl::onDraggingExited( NSView* view, SEL, id<NSDraggingInfo> )
+{
+    if ( !DragDropCocoaHandlerRegistry::instance().find( view ) )
+        return;
+
+    auto& v = getViewerInstance();
+    v.emplaceEvent( "Drag leave", [&v] ()
+    {
+        v.signals().dragEntranceSignal( false );
+    } );
+    v.postEmptyEvent();
+}
+
+// Same clear as onDraggingExited; see the draggingEnded: install site for why both paths are needed.
+void DragDropCocoaHandler::Impl::onDraggingEnded( NSView* view, SEL, id<NSDraggingInfo> )
 {
     if ( !DragDropCocoaHandlerRegistry::instance().find( view ) )
         return;

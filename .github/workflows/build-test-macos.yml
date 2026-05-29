@@ -39,9 +39,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # DIAGNOSTIC (mimalloc-native): trimmed to arm64 Debug self-hosted only, to
-        # reproduce the macOS-13 dyld abort. Restore x64/arm64 Release before merge.
+        arch: [ x64, arm64 ]
+        config: [ Debug, Release ]
+        exclude:
+          - arch: x64
+            config: Debug
         include:
+          - arch: x64
+            config: Release
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
+            # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
+            runner: macos-15-intel # github hosted
+            instance: macos-15-intel
+          - arch: arm64
+            config: Release
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
+            # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
+            runner: macos-14
+            instance: macos-14
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
@@ -167,20 +186,7 @@ jobs:
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
-        env:
-          # DIAGNOSTIC (mimalloc-native): capture why dyld aborts on macOS 13.
-          MIMALLOC_VERBOSE: 1
-          MIMALLOC_SHOW_ERRORS: 1
-          DYLD_PRINT_INITIALIZERS: 1
         run: ./build/${{ matrix.config }}/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
-
-      - name: Dump crash report (diagnostic)
-        if: failure()
-        run: |
-          sleep 3
-          ls -lt ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -10 || true
-          f=$(ls -t ~/Library/Logs/DiagnosticReports/MeshViewer* 2>/dev/null | head -1)
-          [ -n "$f" ] && { echo "=== $f ==="; cat "$f"; } || echo "(no MeshViewer crash report found)"
 
       - name: Verify meshlib.mrmeshpy import
         if: ${{ inputs.mrbind }}

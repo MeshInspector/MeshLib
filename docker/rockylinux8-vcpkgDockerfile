@@ -55,8 +55,10 @@ RUN source /opt/rh/gcc-toolset-11/enable && \
     source /root/venv/bin/activate && \
     $(: network may flake ) \
     retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports $(cat ../MeshLib/requirements.txt | tr '\n' ' ') || \
-    { echo "===== dumping vcpkg buildtree *-out.log for diagnostics ====="; \
-      for log in /root/vcpkg/buildtrees/*/*-out.log; do \
+    { echo "===== vcpkg issue_body.md (curated failure report for failing port) ====="; \
+      cat /root/vcpkg/installed/vcpkg/issue_body.md 2>/dev/null || true; \
+      echo "===== most-recent vcpkg buildtree *-out.log / *-err.log (top 8 by mtime) ====="; \
+      for log in $(ls -1t /root/vcpkg/buildtrees/*/*-out.log /root/vcpkg/buildtrees/*/*-err.log 2>/dev/null | head -n 8); do \
           echo "----- $log -----"; \
           tail -n 200 "$log" 2>/dev/null || true; \
       done; \

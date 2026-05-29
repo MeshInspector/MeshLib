@@ -19,12 +19,12 @@ jobs:
       matrix:
         include:
           - vcpkg_triplet: x64-windows-vs2019-meshlib
-            extract_release: MREDist_Release.tar.xz
-            extract_debug: MREDist_Debug.tar.xz
+            extract_release: MREDist_Release.7z
+            extract_debug: MREDist_Debug.7z
             output_zip: MeshLibDist.zip
             artifact_name: DistributivesWin
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
-            extract_debug: MREDist_Debug-IteratorDebug.tar.xz
+            extract_debug: MREDist_Debug-IteratorDebug.7z
             output_zip: MeshLibDist-IteratorDebug.zip
             artifact_name: DistributivesWin-IteratorDebug
     env:
@@ -51,10 +51,10 @@ jobs:
       - name: Extract Windows Binaries
         run: |
           if ("${{ matrix.extract_release }}") {
-            tar -xvf ${{ matrix.extract_release }}
+            7z x -y ${{ matrix.extract_release }}
           }
-          tar -xvf ${{ matrix.extract_debug }}
-          tar -xvf MeshLibC2Headers.tar.xz
+          7z x -y ${{ matrix.extract_debug }}
+          7z x -y MeshLibC2Headers.7z
 
       - name: Make Install Folder
         run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}

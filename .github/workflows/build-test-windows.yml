@@ -329,18 +329,18 @@ jobs:
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ env.job_upload_artifact == 'true' }}
-        run: tar -a -c -f MREDist_${{ matrix.upload_name || matrix.config }}.tar.xz ./source/x64/${{ matrix.config }}
+        run: 7z a MREDist_${{ matrix.upload_name || matrix.config }}.7z ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
         if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
-        run: tar -a -c -f MeshLibC2Headers.tar.xz ./source/MeshLibC2/include
+        run: 7z a MeshLibC2Headers.7z ./source/MeshLibC2/include
 
       - name: Upload Windows Binaries Archive
         if: ${{ env.job_upload_artifact == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-          path: MREDist_${{ matrix.upload_name || matrix.config }}.tar.xz
+          path: MREDist_${{ matrix.upload_name || matrix.config }}.7z
           retention-days: 1
           overwrite: true
 
@@ -350,7 +350,7 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.tar.xz
+          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.7z
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive
@@ -358,7 +358,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers
-          path: MeshLibC2Headers.tar.xz
+          path: MeshLibC2Headers.7z
           retention-days: 1
           overwrite: true
 

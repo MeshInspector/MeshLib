@@ -48,6 +48,11 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+      # CUDA toolkit version is derived from the compiler: msvc-2019 builds pin
+      # CUDA 11.4, everything else uses CUDA 12.0.
+      CUDA_VERSION: ${{ fromJSON('["12.0.1.52833", "11.4.2.47141"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+      CUDA_MAJOR: ${{ fromJSON('["12", "11"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+      CUDA_MINOR: ${{ fromJSON('["0", "4"]')[matrix.cxx_compiler == 'msvc-2019'] }}
 
     steps:
       - name: Checkout
@@ -118,17 +123,17 @@ jobs:
       - name: Install CUDA
         uses: ./.github/actions/install-cuda
         with:
-          cuda-version: ${{ matrix.CUDA-VERSION }}
-          cuda-major: ${{ matrix.CUDA-MAJOR }}
-          cuda-minor: ${{ matrix.CUDA-MINOR }}
+          cuda-version: ${{ env.CUDA_VERSION }}
+          cuda-major: ${{ env.CUDA_MAJOR }}
+          cuda-minor: ${{ env.CUDA_MINOR }}
 
       - name: Setup CUDA
         shell: cmd
         run: |
-          echo>>%GITHUB_ENV% CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
-          echo>>%GITHUB_ENV% CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
-          echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}
-          echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\bin
+          echo>>%GITHUB_ENV% CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}
+          echo>>%GITHUB_ENV% CUDA_PATH_V${{ env.CUDA_MAJOR }}_${{ env.CUDA_MINOR }}=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}
+          echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA_MAJOR }}_${{ env.CUDA_MINOR }}
+          echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}\bin
 
       - name: Install Visual Studio Integration
         # CUDA's MSBuild integration files are only consumed by the MSBuild

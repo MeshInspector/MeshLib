@@ -23,9 +23,25 @@ function(mr_enable_mimalloc target)
       set_property(TARGET ${target} PROPERTY LINK_LIBRARIES mimalloc)
     endif()
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
+  elseif(APPLE)
+    # macOS: static-link mimalloc via -force_load. brew's DYNAMIC mimalloc 3.x aborts
+    # at launch on macOS <= 13: an allocation during libSystem init hits mi_thread_init,
+    # which touches a thread-local before dyld can bootstrap it -> dyld abort. Static-
+    # linking ties mimalloc's init to this exe's own initializers (after libSystem),
+    # avoiding that early path.
+    find_package(mimalloc CONFIG QUIET)
+    if(TARGET mimalloc-static)
+      target_link_options(${target} PRIVATE "LINKER:-force_load,$<TARGET_FILE:mimalloc-static>")
+    else()
+      set(_mi_saved_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+      set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+      find_library(MR_MIMALLOC_STATIC NAMES mimalloc REQUIRED)
+      set(CMAKE_FIND_LIBRARY_SUFFIXES ${_mi_saved_suffixes})
+      target_link_options(${target} PRIVATE "LINKER:-force_load,${MR_MIMALLOC_STATIC}")
+    endif()
   else()
-    # Linux/macOS: prefer the CMake config (ubuntu24, brew, vcpkg); Ubuntu 22.04's
-    # libmimalloc-dev ships no config, so fall back to finding the library directly.
+    # Linux: dynamic link engages the override (ubuntu24 via CONFIG; ubuntu22's
+    # libmimalloc-dev ships no config, so fall back to find_library).
     find_package(mimalloc CONFIG QUIET)
     if(TARGET mimalloc)
       target_link_libraries(${target} PRIVATE mimalloc)

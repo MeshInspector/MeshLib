@@ -1,7 +1,6 @@
 @echo off
 
 rem Builds the MRBind submodule at `MeshLib/mrbind/build`.
-rem Before running this, run `install_deps_windows_msys2.bat`.
 
 rem Push variables.
 setlocal

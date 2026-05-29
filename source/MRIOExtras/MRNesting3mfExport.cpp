@@ -39,7 +39,7 @@ namespace MR::Nesting
 
 using Slices2D = std::vector<std::pair<Contours2f, float>>;
 
-static Slices2D prepareSlices( const MeshXf& mesh, const Box3f& worldBox, float step, bool decimate )
+static Slices2D prepareSlices( const MeshXf& mesh, const Box3f& worldBox, float step, float maxError )
 {
     if ( !mesh.mesh )
         return {};
@@ -63,14 +63,14 @@ static Slices2D prepareSlices( const MeshXf& mesh, const Box3f& worldBox, float 
         if ( sections.empty() )
             return;
 
-        if ( decimate )
+        if ( maxError > 0 )
         {
             Contours3f conts;
             Polyline3 polyline;
             for ( const auto& section : sections )
                 polyline.addFromSurfacePath( *mesh.mesh, section );
             DecimatePolylineSettings3 pds;
-            pds.maxError = 0.5f * step;
+            pds.maxError = maxError;
             decimatePolyline( polyline, pds );
             conts = polyline.contours();
             slices.resize( conts.size() );
@@ -271,7 +271,7 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
     {
         keepGoing = ParallelFor( params.meshes, [&] ( ObjId i )
         {
-            auto slices = prepareSlices( params.meshes[i], worldBoxes[i], params.zStep, params.decimateSlices );
+            auto slices = prepareSlices( params.meshes[i], worldBoxes[i], params.zStep, params.decimateMaxError );
             auto slPath = utf8string( dir / "2D" / ( uuids[i] + ".model" ) );
             save2dModelFile( slPath, slices );
         }, subprogress( params.cb, 0.15f, 0.4f ) );

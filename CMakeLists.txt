@@ -83,6 +83,8 @@ option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
 
+option(MESHLIB_USE_MIMALLOC "Use the mimalloc allocator for executables" ON)
+
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
 IF(MR_EMSCRIPTEN OR APPLE)

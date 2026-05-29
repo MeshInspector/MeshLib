@@ -25,7 +25,7 @@ libe57format
 libharu
 libzip
 mimalloc[override]
-opencascade
+opencascade-minimal
 openctm
 openvdb
 python3

@@ -48,10 +48,34 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+      # CUDA toolkit version is derived from the compiler: msvc-2019 builds pin
+      # CUDA 11.4, everything else uses CUDA 12.0.
+      CUDA_VERSION: ${{ fromJSON('["12.0.1.52833", "11.4.2.47141"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+      CUDA_MAJOR: ${{ fromJSON('["12", "11"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+      CUDA_MINOR: ${{ fromJSON('["0", "4"]')[matrix.cxx_compiler == 'msvc-2019'] }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Locate Visual Studio
+        # Resolve the VS install path at runtime via vswhere instead of
+        # hardcoding it in the matrix. vswhere ships with the VS Installer at a
+        # fixed location. The result is exported as VC_PATH for later steps.
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) {
+            Write-Error "vswhere.exe not found at $vswhere"
+            exit 1
+          }
+          $vcPath = & $vswhere -latest -products * -property installationPath
+          if (-not $vcPath) {
+            Write-Error "Visual Studio installation not found via vswhere"
+            exit 1
+          }
+          Write-Host "Found Visual Studio at: $vcPath"
+          "VC_PATH=$vcPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Checkout third-party submodules
         shell: bash
@@ -99,17 +123,17 @@ jobs:
       - name: Install CUDA
         uses: ./.github/actions/install-cuda
         with:
-          cuda-version: ${{ matrix.CUDA-VERSION }}
-          cuda-major: ${{ matrix.CUDA-MAJOR }}
-          cuda-minor: ${{ matrix.CUDA-MINOR }}
+          cuda-version: ${{ env.CUDA_VERSION }}
+          cuda-major: ${{ env.CUDA_MAJOR }}
+          cuda-minor: ${{ env.CUDA_MINOR }}
 
       - name: Setup CUDA
         shell: cmd
         run: |
-          echo>>%GITHUB_ENV% CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
-          echo>>%GITHUB_ENV% CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}
-          echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ matrix.CUDA-MAJOR }}_${{ matrix.CUDA-MINOR }}
-          echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\bin
+          echo>>%GITHUB_ENV% CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}
+          echo>>%GITHUB_ENV% CUDA_PATH_V${{ env.CUDA_MAJOR }}_${{ env.CUDA_MINOR }}=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}
+          echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA_MAJOR }}_${{ env.CUDA_MINOR }}
+          echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}\bin
 
       - name: Install Visual Studio Integration
         # CUDA's MSBuild integration files are only consumed by the MSBuild
@@ -121,7 +145,7 @@ jobs:
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi '${{matrix.vc-path}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+          (gi '${{env.VC_PATH}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Setup python
         run: py -3 scripts\setup_win_python_reqs.py
@@ -155,7 +179,7 @@ jobs:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
 
         # This consumes the JSON created by generating the C bindings.
@@ -166,7 +190,7 @@ jobs:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
           dotnet build examples/c-sharp-examples -c ${{matrix.config}}
 
@@ -181,7 +205,7 @@ jobs:
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
+            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
             cmake --version || exit /b 1
             cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
@@ -198,7 +222,7 @@ jobs:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
@@ -219,7 +243,7 @@ jobs:
           }
           Push-Location $buildDir
           try {
-            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ matrix.vc-path }}"
+            & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-bin-imports.ps1" -VcPath "${{ env.VC_PATH }}"
           } finally {
             Pop-Location
           }
@@ -299,7 +323,7 @@ jobs:
           rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the
           rem step env: value so MESHLIB_INCLUDE_DIRS resolves to the project vcpkg.
           set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
           set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake --version || exit /b 1
           cmake ^
@@ -315,7 +339,7 @@ jobs:
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 ${{ fromJSON('["", "-vcvars_ver=14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }} || exit /b 1
           cmake --version || exit /b 1
           cmake ^
             -S examples/c-examples ^

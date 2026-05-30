@@ -5,16 +5,14 @@
       "config": "Debug",
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-vs2019-meshlib",
-      "runner": ["windows-2022"],
-      "test_artifacts_path": "windows/windows-2019/Debug"
+      "runner": ["windows-2022"]
     },
     {
       "cxx_compiler": "msvc-2019",
       "config": "Release",
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-vs2019-meshlib",
-      "runner": ["windows-2022"],
-      "test_artifacts_path": "windows/windows-2019/Release"
+      "runner": ["windows-2022"]
     },
     {
       "cxx_compiler": "msvc-2019",
@@ -22,8 +20,7 @@
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-meshlib-iterator-debug",
       "upload_name": "Debug-IteratorDebug",
-      "runner": ["windows-2022"],
-      "test_artifacts_path": "windows/windows-2019/Debug-IteratorDebug"
+      "runner": ["windows-2022"]
     }
   ]
 }

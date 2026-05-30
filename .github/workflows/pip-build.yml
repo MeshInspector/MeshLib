@@ -380,23 +380,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Locate Visual Studio
-        # Resolve the VS install path at runtime via vswhere instead of
-        # hardcoding it. vswhere ships with the VS Installer at a fixed
-        # location. The result is exported as VC_PATH for later steps.
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          if (-not (Test-Path $vswhere)) {
-            Write-Error "vswhere.exe not found at $vswhere"
-            exit 1
-          }
-          $vcPath = & $vswhere -latest -products * -property installationPath
-          if (-not $vcPath) {
-            Write-Error "Visual Studio installation not found via vswhere"
-            exit 1
-          }
-          Write-Host "Found Visual Studio at: $vcPath"
-          "VC_PATH=$vcPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+        uses: ./.github/actions/locate-visual-studio
 
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows

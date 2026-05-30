@@ -642,7 +642,14 @@ jobs:
     needs: [windows-pip-build]
     if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      # Test the wheel on both the image that built it (windows-2025) and the
+      # previous one (windows-2022) to catch wheels that only run on a fresh
+      # hosted image.
+      matrix:
+        runner: [windows-2022, windows-2025]
     steps:
       - name: Checkout
         uses: actions/checkout@v6

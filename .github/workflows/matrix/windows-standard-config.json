@@ -18,14 +18,14 @@
       "cxx_compiler": "msvc-2022",
       "config": "Release",
       "build_system": "MSBuild",
-      "vcpkg_triplet": "x64-windows-meshlib",
+      "vcpkg_triplet": "x64-windows-vs2022-meshlib",
       "runner": ["windows-2022"]
     },
     {
       "cxx_compiler": "msvc-2022",
       "config": "Release",
       "build_system": "CMake",
-      "vcpkg_triplet": "x64-windows-meshlib",
+      "vcpkg_triplet": "x64-windows-vs2022-meshlib",
       "runner": ["windows-2022"]
     },
     {

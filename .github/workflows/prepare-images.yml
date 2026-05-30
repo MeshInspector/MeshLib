@@ -202,7 +202,7 @@ jobs:
           - vs: vs2022
             runner: windows-2022
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
-            vcpkg_triplet: x64-windows-meshlib
+            vcpkg_triplet: x64-windows-vs2022-meshlib
           - vs: vs2019
             runner: windows-2022
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}

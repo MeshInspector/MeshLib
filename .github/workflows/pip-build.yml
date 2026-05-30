@@ -362,6 +362,16 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+    env:
+      # Pin the VS2022 vcpkg triplet and matching MSVC toolset. windows-2025 may
+      # default to a newer toolset, but v143 is what matches the CUDA 12.0
+      # BuildCustomizations (MRCudaVersion in source/platform.props) and the
+      # x64-windows-vs2022-meshlib triplet's VCPKG_PLATFORM_TOOLSET. vcvars_ver
+      # 14.4 prefix-matches the installed 14.4x toolset dir; PlatformToolset is
+      # the stable MSBuild name.
+      VCPKG_DEFAULT_TRIPLET: x64-windows-vs2022-meshlib
+      VCVARS_VER: '14.4'
+      PLATFORM_TOOLSET: v143
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -392,6 +402,7 @@ jobs:
         uses: ./.github/actions/setup-vcpkg-windows
         with:
           vcpkg-version: ${{ env.VCPKG-VERSION }}
+          vcpkg-triplet: ${{ env.VCPKG_DEFAULT_TRIPLET }}
           install-flags: '--write-s3'
           internal-build: 'true'
 
@@ -422,7 +433,7 @@ jobs:
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build
-        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
+        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }}
 
       - name: Install MSYS2 for MRBind
         uses: ./.github/actions/install-msys2-mrbind
@@ -439,7 +450,7 @@ jobs:
         env:
           MSYS2_DIR: C:\msys64
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1
 
       - name: Run Test

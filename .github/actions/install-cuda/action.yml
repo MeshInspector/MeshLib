@@ -34,7 +34,7 @@ runs:
       id: cuda-cache
       continue-on-error: true
       with:
-        key: cuda-toolkit-subset-${{ inputs.cuda-version }}-v3
+        key: cuda-toolkit-subset-${{ inputs.cuda-version }}-v1
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-major }}.${{ inputs.cuda-minor }}
 
     - name: Install CUDA

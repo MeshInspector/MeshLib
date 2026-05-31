@@ -33,9 +33,11 @@ runs:
       shell: powershell
       run: |
         try {
-            $Token = Invoke-RestMethod -Uri "http://169.254.169.254/latest/api/token" -Method PUT -Headers @{ "X-aws-ec2-metadata-token-ttl-seconds" = "10" }
-            $InstanceType = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-type" -Headers @{ "X-aws-ec2-metadata-token" = $Token }
-            $InstanceLifeCycle = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-life-cycle" -Headers @{ "X-aws-ec2-metadata-token" = $Token }
+            # -TimeoutSec bounds each request so a non-EC2 runner fails fast instead of
+            # waiting out the ~21s OS TCP connect timeout on the unreachable link-local IP.
+            $Token = Invoke-RestMethod -Uri "http://169.254.169.254/latest/api/token" -Method PUT -Headers @{ "X-aws-ec2-metadata-token-ttl-seconds" = "10" } -TimeoutSec 2
+            $InstanceType = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-type" -Headers @{ "X-aws-ec2-metadata-token" = $Token } -TimeoutSec 2
+            $InstanceLifeCycle = Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/instance-life-cycle" -Headers @{ "X-aws-ec2-metadata-token" = $Token } -TimeoutSec 2
             # if not an EC2 instance
             if ($null -eq $InstanceType) { $InstanceType = "self-hosted" }
             if ($null -eq $InstanceLifeCycle) { $InstanceType = "self-hosted" }

@@ -19,13 +19,21 @@ runs:
       run: |
         $semver = (("${{ inputs.cuda-version }}" -split '\.')[0..2]) -join '.'
         "version=$semver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        # CUDA 13 split the CRT headers (crt/host_config.h, pulled in by
+        # cuda_runtime.h) out of the nvcc package into a standalone 'crt'
+        # sub-package. Install it on 13+ so nvcc can compile; on 11/12 the
+        # crt headers ship inside nvcc and there is no 'crt' component.
+        $sub = @('nvcc', 'cudart', 'visual_studio_integration')
+        if ([int]'${{ inputs.cuda-major }}' -ge 13) { $sub += 'crt' }
+        $json = '[' + (($sub | ForEach-Object { '"' + $_ + '"' }) -join ',') + ']'
+        "sub-packages=$json" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Restore CUDA Cache
       uses: actions/cache@v5
       id: cuda-cache
       continue-on-error: true
       with:
-        key: cuda-toolkit-subset-${{ inputs.cuda-version }}-v1
+        key: cuda-toolkit-subset-${{ inputs.cuda-version }}-v2
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-major }}.${{ inputs.cuda-minor }}
 
     - name: Install CUDA
@@ -34,4 +42,4 @@ runs:
       with:
         cuda: ${{ steps.cuda-semver.outputs.version }}
         method: network
-        sub-packages: '["nvcc", "cudart", "visual_studio_integration"]'
+        sub-packages: ${{ steps.cuda-semver.outputs.sub-packages }}

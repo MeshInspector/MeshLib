@@ -48,13 +48,6 @@ on:
         required: false
         type: boolean
 
-env:
-  VCPKG-VERSION: '2026.04.27'
-  CUDA-VERSION: '12.0.1.52833'
-  CUDA-MAJOR: '12'
-  CUDA-MINOR: '0'
-
-
 jobs:
   setup:
     timeout-minutes: 5
@@ -357,6 +350,11 @@ jobs:
     if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
     runs-on:  [windows-2022]
+    env:
+      VCPKG-VERSION: '2026.04.27'
+      CUDA-VERSION: '12.0.1.52833'
+      CUDA-MAJOR: '12'
+      CUDA-MINOR: '0'
     strategy:
       fail-fast: false
     permissions:

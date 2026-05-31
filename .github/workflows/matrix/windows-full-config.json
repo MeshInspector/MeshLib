@@ -1,6 +1,34 @@
 {
   "include": [
     {
+      "cxx_compiler": "msvc-2026",
+      "config": "Debug",
+      "build_system": "MSBuild",
+      "vcpkg_triplet": "x64-windows-meshlib",
+      "runner": ["windows-2025"]
+    },
+    {
+      "cxx_compiler": "msvc-2026",
+      "config": "Release",
+      "build_system": "MSBuild",
+      "vcpkg_triplet": "x64-windows-meshlib",
+      "runner": ["windows-2025"]
+    },
+    {
+      "cxx_compiler": "msvc-2026",
+      "config": "Debug",
+      "build_system": "CMake",
+      "vcpkg_triplet": "x64-windows-meshlib",
+      "runner": ["windows-2025"]
+    },
+    {
+      "cxx_compiler": "msvc-2026",
+      "config": "Release",
+      "build_system": "CMake",
+      "vcpkg_triplet": "x64-windows-meshlib",
+      "runner": ["windows-2025"]
+    },
+    {
       "cxx_compiler": "msvc-2022",
       "config": "Debug",
       "build_system": "MSBuild",

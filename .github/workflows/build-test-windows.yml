@@ -44,21 +44,15 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2022' && matrix.build_system == 'CMake' }}
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'CMake' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-      # CUDA toolkit version is derived from the compiler: msvc-2019 builds pin
-      # CUDA 11.4, everything else uses CUDA 12.0.
-      CUDA_VERSION: ${{ fromJSON('["12.0.1.52833", "11.4.2.47141"]')[matrix.cxx_compiler == 'msvc-2019'] }}
-      CUDA_MAJOR: ${{ fromJSON('["12", "11"]')[matrix.cxx_compiler == 'msvc-2019'] }}
-      CUDA_MINOR: ${{ fromJSON('["0", "4"]')[matrix.cxx_compiler == 'msvc-2019'] }}
-      # MSVC toolset is pinned per compiler so a newer toolset in the same VS
-      # install isn't picked up implicitly. vcvars_ver prefix-matches an
-      # installed toolset dir (14.4 -> the installed 14.44); PlatformToolset is
-      # the stable MSBuild name.
-      VCVARS_VER: ${{ fromJSON('["14.4", "14.2"]')[matrix.cxx_compiler == 'msvc-2019'] }}
-      PLATFORM_TOOLSET: ${{ fromJSON('["v143", "v142"]')[matrix.cxx_compiler == 'msvc-2019'] }}
+      CUDA_VERSION: ${{ fromJSON('{"msvc-2019": "11.4.2.47141", "msvc-2022": "12.0.1.52833"}')[matrix.cxx_compiler] || '13.2.1' }}
+      CUDA_MAJOR: ${{ fromJSON('{"msvc-2019": "11", "msvc-2022": "12"}')[matrix.cxx_compiler] || '13' }}
+      CUDA_MINOR: ${{ fromJSON('{"msvc-2019": "4", "msvc-2022": "0"}')[matrix.cxx_compiler] || '2' }}
+      VCVARS_VER: ${{ fromJSON('{"msvc-2019": "14.2", "msvc-2022": "14.4"}')[matrix.cxx_compiler] || '14.5' }}
+      PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019": "v142", "msvc-2022": "v143"}')[matrix.cxx_compiler] || 'v145' }}
 
     steps:
       - name: Checkout

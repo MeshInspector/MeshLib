@@ -363,12 +363,6 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
-      # Pin the VS2022 vcpkg triplet and matching MSVC toolset. windows-2025 may
-      # default to a newer toolset, but v143 is what matches the CUDA 12.0
-      # BuildCustomizations (MRCudaVersion in source/platform.props) and the
-      # x64-windows-vs2022-meshlib triplet's VCPKG_PLATFORM_TOOLSET. vcvars_ver
-      # 14.4 prefix-matches the installed 14.4x toolset dir; PlatformToolset is
-      # the stable MSBuild name.
       VCPKG_DEFAULT_TRIPLET: x64-windows-vs2022-meshlib
       VCVARS_VER: '14.4'
       PLATFORM_TOOLSET: v143
@@ -645,9 +639,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      # Test the wheel on both the image that built it (windows-2025) and the
-      # previous one (windows-2022) to catch wheels that only run on a fresh
-      # hosted image.
       matrix:
         runner: [windows-2022, windows-2025]
     steps:

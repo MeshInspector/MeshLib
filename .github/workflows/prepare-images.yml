@@ -199,10 +199,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - vs: vs2022
-            runner: windows-2022
+          - vs: vs2026
+            runner: windows-2025
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
             vcpkg_triplet: x64-windows-meshlib
+          - vs: vs2022
+            runner: windows-2025
+            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
+            vcpkg_triplet: x64-windows-vs2022-meshlib
           - vs: vs2019
             runner: windows-2022
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}

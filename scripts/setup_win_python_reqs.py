@@ -23,6 +23,17 @@ def detect_vcpkg_python_version(vcpkg_root, triplet="x64-windows-meshlib"):
                 return f"3.{minor_version}"
     return None
 
+def python_version_available(version: str) -> bool:
+    try:
+        subprocess.run(
+            f"py -{version} --version",
+            shell=True, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 def choco_install_python(version: str):
     version_nodot = version.replace('.', '')  # "3.11" -> "311"
     choco_package = f"python{version_nodot}"
@@ -38,7 +49,6 @@ def run_python_setup(py_version: str):
     try:
         print(f"Ensuring pip is available for Python {py_version}...")
         subprocess.run(f"{py_cmd} -m ensurepip --upgrade", shell=True, check=True)
-        subprocess.run(f"{py_cmd} -m pip install --upgrade pip", shell=True, check=True)
 
         requirements_file = Path(__file__).resolve().parents[1] / "requirements" / "python" / "requirements.txt"
         if requirements_file.exists():
@@ -56,5 +66,8 @@ if platform.system() == "Windows":
         detected_version = detect_vcpkg_python_version(vcpkg_root, triplet=triplet)
         if detected_version:
             print(f"Using python version {detected_version}")
-            choco_install_python(detected_version)
+            if python_version_available(detected_version):
+                print(f"Python {detected_version} already available, skipping Chocolatey install")
+            else:
+                choco_install_python(detected_version)
             run_python_setup(detected_version)

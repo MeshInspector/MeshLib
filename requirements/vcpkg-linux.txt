@@ -13,7 +13,7 @@ boost-stacktrace
 boost-url
 clip
 cpr
-dbus
+dbus[core]
 eigen3
 fastmcpp
 freetype

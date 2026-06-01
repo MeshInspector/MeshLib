@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       vs19_vcpkg_version: "2024.10.21"
-      vs22_vcpkg_version: "2026.04.27"
+      vs22_vcpkg_version: "2026.05.25"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}
       release_tag: ${{ steps.set.outputs.release_tag }}
@@ -43,14 +43,13 @@ jobs:
 
           # Minimal matrix: Release only
           MATRIX_FILE=".github/workflows/matrix/windows-finalize-release-config.json"
-          MATRIX=$(jq -c . < "$MATRIX_FILE")
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
+          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
+          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
             --arg vs19 "${{ env.vs19_vcpkg_version }}" \
             --arg vs22 "${{ env.vs22_vcpkg_version }}" \
-            '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
-            | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
+            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

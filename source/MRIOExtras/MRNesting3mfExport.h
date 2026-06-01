@@ -24,8 +24,9 @@ struct Nesting3mfParams
     /// slicing step
     float zStep = 1.0f;
 
-    /// if set: decimate slices
-    bool decimateSlices{ true };
+    /// max error for slice decimation:
+    /// 0 - no decimation, >0 - used directly as the slice decimation max error
+    float decimateMaxError = 0.f;
 
     /// optional image of all meshes in nest
     const Image* image = nullptr;

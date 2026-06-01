@@ -262,6 +262,9 @@ const RibbonMenuItem::DropItemsList& OpenFilesMenuItem::dropItems() const
 void OpenFilesMenuItem::dragEntrance_( bool entered )
 {
     dragging_ = entered;
+    auto& v = getViewerInstance();
+    v.incrementForceRedrawFrames( v.forceRedrawMinimumIncrementAfterEvents, true );
+
 }
 
 bool OpenFilesMenuItem::dragOver_( int x, int y )

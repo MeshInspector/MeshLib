@@ -155,7 +155,7 @@ jobs:
       - linux-vcpkg-build-test
       - macos-build-test
     timeout-minutes: 20
-    runs-on: windows-2022
+    runs-on: windows-2025
     steps:
      - name: Checkout
        uses: actions/checkout@v6
@@ -279,7 +279,17 @@ jobs:
           failOnError: false
 
   windows-unity-test:
-    if: ${{ needs.config.outputs.run_unity_nuget_test == 'true' }}
+    # Run whenever full-ci is requested and the Windows build is enabled, provided the
+    # NuGet package was actually built and uploaded to the release. `!cancelled()` keeps
+    # this job from being auto-skipped: without a status function the implicit success()
+    # gate skips it whenever a disabled platform (e.g. emscripten) is reached transitively
+    # through `upload-distributions`, which is why it never ran on pull_request events.
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.run_unity_nuget_test == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
     needs:
       - config
       - windows-build-test

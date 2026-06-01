@@ -18,6 +18,7 @@ IGNORED_FILENAMES = {
     "config.h",
     "config_cmake.h",
     # macOS-specific files
+    "mrdragdropcocoahandler.h",
     "mrfiledialogcocoa.h",
     "mrtouchpadcocoahandler.h",
 }

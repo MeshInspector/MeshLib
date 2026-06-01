@@ -54,7 +54,16 @@ runs:
     # is pinned by the submodule commit, replacing the former S3 path + actions/cache.
     - name: Fetch test data submodule
       shell: bash
-      run: bash scripts/retry.sh -- git submodule update --init --checkout --depth 1 test_data
+      run: |
+        # Linux jobs run in containers where the checked-out repo is owned by a
+        # different user than the step, so git refuses to operate on it. Mirror the
+        # workflows' own checkout-submodule setup before fetching. Windows/macOS
+        # runners are not containerized and do not need this.
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          export HOME="${RUNNER_TEMP}"
+          git config --global --add safe.directory '*'
+        fi
+        bash scripts/retry.sh -- git submodule update --init --checkout --depth 1 test_data
 
     - name: Python Regression Tests
       if: ${{ runner.os != 'Windows' }}

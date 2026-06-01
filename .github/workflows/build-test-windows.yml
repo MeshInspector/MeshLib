@@ -337,24 +337,21 @@ jobs:
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ env.job_upload_artifact == 'true' }}
-        # No leading ./ : 7-Zip anchors at it and would store paths as Release\...
-        # (dropping the source/x64/ prefix). Without it the full relative path is kept,
-        # so extraction recreates source/x64/<config>/... as make_install_folder expects.
-        run: 7z a MREDist_${{ matrix.upload_name || matrix.config }}.7z source/x64/${{ matrix.config }}
+        run: tar --format zip -c -f MREDist_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
         if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
-        run: 7z a MeshLibC2Headers.7z source/MeshLibC2/include
+        run: tar --format zip -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
 
       - name: Upload Windows Binaries Archive
         if: ${{ env.job_upload_artifact == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-          path: MREDist_${{ matrix.upload_name || matrix.config }}.7z
+          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
           retention-days: 1
           overwrite: true
-          # The payload is already a .7z; don't re-Deflate it (no size gain).
+          # The payload is already a .zip; don't re-Deflate it (no size gain).
           compression-level: 0
 
       - name: Collect artifact stats
@@ -363,7 +360,7 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.7z
+          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive
@@ -371,10 +368,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers
-          path: MeshLibC2Headers.7z
+          path: MeshLibC2Headers.zip
           retention-days: 1
           overwrite: true
-          # The payload is already a .7z; don't re-Deflate it (no size gain).
+          # The payload is already a .zip; don't re-Deflate it (no size gain).
           compression-level: 0
 
       - name: Create and fix fake Wheel for NuGet

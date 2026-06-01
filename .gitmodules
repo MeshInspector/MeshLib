@@ -88,3 +88,8 @@
 [submodule "thirdparty/zlib-ng"]
 	path = thirdparty/zlib-ng
 	url = https://github.com/zlib-ng/zlib-ng.git
+[submodule "test_data"]
+	path = test_data
+	url = https://github.com/MeshInspector/MeshLibTestData.git
+	update = none
+	shallow = true

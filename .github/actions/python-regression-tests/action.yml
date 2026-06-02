@@ -46,19 +46,11 @@ runs:
         Write-Output "test_artifacts_path: ${{ inputs.test_artifacts_path }}"
         Write-Output "upload_test_artifacts: ${{ inputs.upload_test_artifacts }}"
 
-    # Test input data lives in the MeshLibTestData submodule, mounted at test_data/
-    # (the suite reads it via test_files_path = "../test_data", see
-    # test_regression/constants.py). The submodule is declared with `update = none`
-    # in .gitmodules so ordinary recursive/true checkouts (pip-build, prepare-images)
-    # skip its ~100 MiB; we fetch it explicitly here with --checkout. The data version
-    # is pinned by the submodule commit, replacing the former S3 path + actions/cache.
+    # test_data is declared with `update = none`, so fetch it explicitly with --checkout.
     - name: Fetch test data submodule
       shell: bash
       run: |
-        # Linux jobs run in containers where the checked-out repo is owned by a
-        # different user than the step, so git refuses to operate on it. Mirror the
-        # workflows' own checkout-submodule setup before fetching. Windows/macOS
-        # runners are not containerized and do not need this.
+        # Linux jobs run in containers and need safe.directory set first.
         if [ "$RUNNER_OS" = "Linux" ]; then
           export HOME="${RUNNER_TEMP}"
           git config --global --add safe.directory '*'
@@ -85,8 +77,6 @@ runs:
         -s ${{ inputs.smoke }}
         -a='${{ inputs.pytest_args }}'
 
-    # AWS credentials are only needed to upload test artifacts; configure them
-    # solely in that case so the data-fetch path no longer depends on AWS.
     - name: Configure AWS Credentials
       if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}
       uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0

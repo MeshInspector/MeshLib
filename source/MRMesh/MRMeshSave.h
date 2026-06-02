@@ -51,6 +51,12 @@ public:
     /// writes STL header in the stream
     MRMESH_API explicit BinaryStlSaver( std::ostream & out, const SaveSettings & settings = {}, std::uint32_t expectedNumTris = 0 );
 
+    BinaryStlSaver( const BinaryStlSaver& ) = delete;
+    BinaryStlSaver( BinaryStlSaver&& ) noexcept = delete;
+
+    BinaryStlSaver& operator = ( const BinaryStlSaver& ) = delete;
+    BinaryStlSaver& operator = ( BinaryStlSaver&& ) noexcept = delete;
+
     /// writes one more triangle in the stream
     MRMESH_API bool writeTri( const Triangle3f& tri );
 

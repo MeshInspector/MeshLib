@@ -54,9 +54,6 @@ public:
     BinaryStlSaver( const BinaryStlSaver& ) = delete;
     BinaryStlSaver( BinaryStlSaver&& ) noexcept = delete;
 
-    BinaryStlSaver& operator = ( const BinaryStlSaver& ) = delete;
-    BinaryStlSaver& operator = ( BinaryStlSaver&& ) noexcept = delete;
-
     /// writes one more triangle in the stream
     MRMESH_API bool writeTri( const Triangle3f& tri );
 

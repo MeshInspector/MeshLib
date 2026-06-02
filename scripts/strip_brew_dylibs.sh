@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Strip dylibs we'll bundle (brew keeps full symbol tables for symbolication).
 # NOTE: `strip` prints a sig-invalidation warning and exits 1 on signed dylibs.

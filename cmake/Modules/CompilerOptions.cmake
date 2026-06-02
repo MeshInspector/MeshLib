@@ -38,7 +38,11 @@ IF(MSVC)
 
   # Common C/C++ flags:
 
-  set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE")
+  # _CRT_SECURE_NO_DEPRECATE makes vcruntime.h auto-#define _CRT_SECURE_NO_WARNINGS (with an empty value).
+  # OpenCASCADE's imported target additionally defines _CRT_SECURE_NO_WARNINGS (=1) on its consumers (MRIOExtras),
+  # so the empty value baked into the MRPch precompiled header clashes with OCCT's, triggering C4005 (now fatal
+  # under /WX). Define it explicitly here so the macro has a consistent value across the PCH and all targets.
+  set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS")
 
   # Vcpkg automatically adds `/external:W0`, but we duplicate it here because it somehow doesn't propagate to Lazperf.
   set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /W4 /WX /external:W0 /external:env:INCLUDE")

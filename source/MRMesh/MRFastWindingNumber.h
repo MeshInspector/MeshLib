@@ -11,6 +11,11 @@ namespace MR
 class IFastWindingNumber
 {
 public:
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    IFastWindingNumber() = default;
+    IFastWindingNumber( const IFastWindingNumber & ) = default;
+    IFastWindingNumber( IFastWindingNumber && ) noexcept = default;
+
     virtual ~IFastWindingNumber() = default;
 
     /// calculates winding numbers in the points from given vector

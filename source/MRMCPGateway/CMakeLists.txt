@@ -1,11 +1,5 @@
 project(MRMCPGateway CXX)
 
-IF(MSVC)
-  # Disabling following warnings:
-  #   warning C5204: class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd5204")
-ENDIF()
-
 add_executable(${PROJECT_NAME}
   MRMCPGateway.cpp
   MRMCPGatewayBackend.cpp

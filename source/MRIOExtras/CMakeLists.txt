@@ -142,6 +142,10 @@ IF(NOT MRIOEXTRAS_NO_TIFF)
   target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
 ENDIF()
 
+IF(MR_PCH)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()
+
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

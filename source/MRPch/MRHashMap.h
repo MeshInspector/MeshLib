@@ -11,7 +11,7 @@ MR_SUPPRESS_WARNING_PUSH
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#pragma warning(disable: 4574) // '__has_feature' defined to 0 by Eigen/spdlog shim; phmap's #ifdef is 
+#pragma warning(disable: 4574) // '__has_feature' defined to 0 by Eigen/spdlog shim; phmap's #ifdef is benign
 
 #include <parallel_hashmap/phmap_config.h>
 #ifdef __aarch64__

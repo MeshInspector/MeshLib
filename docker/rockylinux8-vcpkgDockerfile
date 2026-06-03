@@ -78,7 +78,7 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
         export VCPKG_BINARY_SOURCES="clear;x-aws-config,no-sign-request;x-aws,${S3_URL},read" ; \
     fi && \
     $(: network may flake ) \
-    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
+    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports --debug $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 

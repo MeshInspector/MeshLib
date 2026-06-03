@@ -113,6 +113,13 @@ struct UiRenderParams : BaseRenderParams
 
 struct UiRenderManager
 {
+    UiRenderManager() = default;
+    UiRenderManager( const UiRenderManager& ) = default;
+    UiRenderManager( UiRenderManager&& ) noexcept = default;
+    
+    UiRenderManager & operator = ( const UiRenderManager& ) = default;
+    UiRenderManager & operator = ( UiRenderManager&& ) noexcept = default;
+
     virtual ~UiRenderManager() = default;
 
     // This is called before doing `IRenderObject::renderUi()` on even object in a viewport. Each viewport is rendered separately.

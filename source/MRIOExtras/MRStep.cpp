@@ -18,6 +18,9 @@
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
 MR_SUPPRESS_WARNING( "-Wpedantic", 4996 )
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wdeprecated-copy-with-user-provided-dtor"
+#endif
 #if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #endif

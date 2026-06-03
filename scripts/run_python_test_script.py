@@ -39,36 +39,9 @@ parser.add_argument("-a", dest="pytest_args", type=str,
 args = parser.parse_args()
 print(args)
 
-python_cmds = ["py -3.11"]
+python_cmds = ["python3"]
 platformSystem = platform.system()
-
-if platformSystem == 'Linux':
-    python_cmds = ["python3"]
-
-    os_name = ""
-    os_version = ""
-    if os.path.exists('/etc/os-release'):
-        lines = open('/etc/os-release').read().split('\n')
-        for line in lines:
-            if line.startswith('NAME='):
-                os_name = line.split('=')[-1].replace('"', '')
-            if line.startswith('VERSION_ID='):
-                os_version = line.split('=')[-1].replace('"', '')
-
-    if "ubuntu" in os_name.lower():
-        python_cmds = ["python3"] # use the same python version as in venv
-    elif "fedora" in os_name.lower():
-        if os_version.startswith("35"):
-            python_cmds = ["python3.9"]
-        elif os_version.startswith("37"):
-            python_cmds = ["python3.11"]
-        elif os_version.startswith("39"):
-            python_cmds = ["python3.12"]
-
-elif platformSystem == 'Darwin':
-    python_cmds = ["python3.10"]
-
-elif platformSystem == "Windows":
+if platformSystem == "Windows":
     python_cmds = ["py -3"]
     vcpkg_root = get_vcpkg_root_from_where()
     if vcpkg_root:

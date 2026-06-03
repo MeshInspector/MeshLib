@@ -80,10 +80,8 @@ public:
             // attach the larger id under the smaller, so the root of a set is always its minimal id
             if ( first < second )
                 std::swap( first, second );
-            std::atomic_ref<I> parentOfFirst( parents_[first] );
-            I expected = first; // the exchange succeeds only while first is still a root
-            if ( parentOfFirst.compare_exchange_strong( expected, second,
-                    std::memory_order_acq_rel, std::memory_order_relaxed ) )
+            // the exchange succeeds only while first is still a root
+            if ( casAtomic_( parents_[first], first, second ) )
                 return;
             // first is no longer a root (another thread linked it first): retry
         }
@@ -135,21 +133,57 @@ private:
         return r;
     }
 
+    // Lock-free primitives on one parent slot, used by uniteAtomic()/findAtomic_().
+    // std::atomic_ref is used where the standard library provides it (MSVC, libstdc++, recent libc++);
+    // otherwise we fall back to compiler atomic builtins (e.g. Apple clang, whose libc++ lacks atomic_ref).
+    static I loadAtomic_( I& slot )
+    {
+        using T = typename I::ValueType;
+#ifdef __cpp_lib_atomic_ref
+        return I( std::atomic_ref<T>( slot.get() ).load( std::memory_order_relaxed ) );
+#else
+        return I( __atomic_load_n( &slot.get(), __ATOMIC_RELAXED ) );
+#endif
+    }
+
+    // best-effort single attempt slot: expected -> desired (path halving; a failed swap is harmless)
+    static void halveAtomic_( I& slot, I expected, I desired )
+    {
+        using T = typename I::ValueType;
+        T exp = expected.get();
+#ifdef __cpp_lib_atomic_ref
+        std::atomic_ref<T>( slot.get() ).compare_exchange_weak( exp, desired.get(), std::memory_order_relaxed );
+#else
+        __atomic_compare_exchange_n( &slot.get(), &exp, desired.get(), true, __ATOMIC_RELAXED, __ATOMIC_RELAXED );
+#endif
+    }
+
+    // attempts slot: expected -> desired once, returns true on success (acquire-release on success)
+    static bool casAtomic_( I& slot, I expected, I desired )
+    {
+        using T = typename I::ValueType;
+        T exp = expected.get();
+#ifdef __cpp_lib_atomic_ref
+        return std::atomic_ref<T>( slot.get() ).compare_exchange_strong( exp, desired.get(), std::memory_order_acq_rel, std::memory_order_relaxed );
+#else
+        return __atomic_compare_exchange_n( &slot.get(), &exp, desired.get(), false, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED );
+#endif
+    }
+
     /// lock-free find of the set's root with best-effort path halving;
     /// safe to call concurrently with uniteAtomic() running on the same structure
     I findAtomic_( I a )
     {
         for ( ;; )
         {
-            std::atomic_ref<I> parentOfA( parents_[a] );
-            I p = parentOfA.load( std::memory_order_relaxed );
+            I p = loadAtomic_( parents_[a] );
             if ( p == a )
                 return a; // a is a root
-            I gp = std::atomic_ref<I>( parents_[p] ).load( std::memory_order_relaxed );
+            I gp = loadAtomic_( parents_[p] );
             if ( p == gp )
                 return p; // p is a root
-            // make a point to its grandparent; a failed exchange only means another thread already shortened the path
-            parentOfA.compare_exchange_weak( p, gp, std::memory_order_relaxed );
+            // make a point to its grandparent; a failed swap only means another thread already shortened the path
+            halveAtomic_( parents_[a], p, gp );
             a = gp;
         }
     }

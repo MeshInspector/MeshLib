@@ -555,6 +555,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         params.outPreCutA->contours = std::move( meshAContours );
         params.outPreCutA->mesh = std::move( meshA );
     }
+
+    bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
+    bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
     if ( needCutMeshA && !params.outPreCutA )
     {
         taskGroup.run( [&] ()
@@ -567,6 +570,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             cmParams.new2OldMap = cut2oldAPtr;
             if ( params.forceCut )
                 cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
+            else
+                cmParams.fillPart = needInsideA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right;
             auto res = cutMesh( meshA, meshAContours, cmParams );
             meshAContours.clear();
             meshAContours.shrink_to_fit(); // free memory
@@ -602,6 +607,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cmParams.new2OldMap = cut2oldBPtr;
         if ( params.forceCut )
             cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
+        else
+            cmParams.fillPart = needInsideB ? CutMeshParameters::FillPart::Right : CutMeshParameters::FillPart::Left;
         auto res = cutMesh( meshB, meshBContours, cmParams );
         meshBContours.clear();
         meshBContours.shrink_to_fit(); // free memory

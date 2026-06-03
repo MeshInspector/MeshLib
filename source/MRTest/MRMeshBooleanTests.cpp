@@ -127,13 +127,13 @@ TEST( MRMesh, BooleanResultMapper )
 
     const auto& mapsA = mapper.getMaps( BooleanResultMapper::MapObject::A );
     EXPECT_EQ( mapsA.old2newVerts.size(), 160 );
-    EXPECT_EQ( mapsA.cut2newFaces.size(), 348 );
-    EXPECT_EQ( mapsA.cut2origin.size(), 348 );
+    EXPECT_EQ( mapsA.cut2newFaces.size(), 280 );
+    EXPECT_EQ( mapsA.cut2origin.size(), 280 );
 
     const auto& mapsB = mapper.getMaps( BooleanResultMapper::MapObject::B );
     EXPECT_EQ( mapsB.old2newVerts.size(), 160 );
-    EXPECT_EQ( mapsB.cut2newFaces.size(), 384 );
-    EXPECT_EQ( mapsB.cut2origin.size(), 384 );
+    EXPECT_EQ( mapsB.cut2newFaces.size(), 320 );
+    EXPECT_EQ( mapsB.cut2origin.size(), 320 );
 }
 
 } //namespace MR

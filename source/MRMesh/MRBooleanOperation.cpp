@@ -216,11 +216,11 @@ Expected<MR::Mesh> doBooleanOperation(
          ( ( needStitch ) && ( !bPart || !aPart ) ) )
     {
         std::string s;
-        if ( !aPart )
+        if ( !aPart && !onlyCutB )
             s += "Cannot separate mesh A to inside and outside parts, probably contours on mesh A are not closed or are not consistent.";
-        if ( !bPart )
+        if ( !bPart && !onlyCutA )
         {
-            if ( !aPart )
+            if ( !aPart && !onlyCutB )
                 s += " ";
             s += "Cannot separate mesh B to inside and outside parts, probably contours on mesh B are not closed or are not consistent.";
         }

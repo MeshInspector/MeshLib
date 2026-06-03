@@ -162,6 +162,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
 
     int numVerts = 0;
     int numEdges = 0;
+    int intersectedEdges = 0;
     for ( const auto& cont : contours )
     {
         auto size = int( cont.intersections.size() );
@@ -169,7 +170,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
         numEdges += 2 * size;
         for ( const auto& in : cont.intersections )
             if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
-                numEdges += 2;
+                ++intersectedEdges;
+        numEdges += 2 * intersectedEdges;
         if ( cont.closed )
             --numVerts;
     }
@@ -183,6 +185,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     res.paths.resize( contours.size() );
     res.oldEdgesInfo.resize( contours.size() );
     res.removedFaces.resize( contours.size() );
+    res.edgeData.reserve( size_t( intersectedEdges ) );
     auto oldEdgesSize = mesh.topology.edgeSize();
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
     {
@@ -1133,20 +1136,33 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     EdgeBitSet allHoleEdges( mesh.topology.edgeSize() );
     std::vector<EdgeId> holeRepresentativeEdges;
     std::vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
+    std::vector<EdgeId> pseudoHoleRepresentativeEdges;
+    std::vector<FaceId> pseudoOldFaces; // of corresponding pseudoHoleRepresentativeEdges
     const bool needOldFaces = params.new2OldMap || params.new2oldEdgesMap;
-    auto addHoleDesc = [&]( EdgeId e, FaceId oldf )
+    auto addHoleDesc = [&] ( EdgeId e, FaceId oldf, bool pseudofill )
     {
         if ( allHoleEdges.test( e ) )
             return;
-        holeRepresentativeEdges.push_back( e );
-        if ( needOldFaces )
-            oldFaces.push_back( oldf );
+        if ( !pseudofill )
+        {
+            holeRepresentativeEdges.push_back( e );
+            if ( needOldFaces )
+                oldFaces.push_back( oldf );
+        }
+        else
+        {
+            pseudoHoleRepresentativeEdges.push_back( e );
+            if ( needOldFaces )
+                pseudoOldFaces.push_back( oldf );
+        }
         for ( auto ei : leftRing( mesh.topology, e ) )
         {
             [[maybe_unused]] auto v = allHoleEdges.test_set( ei );
             assert( !v );
         }
     };
+    bool fillLeft = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Left || params.forceFillMode == CutMeshParameters::ForceFill::All;
+    bool fillRight = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Right || params.forceFillMode == CutMeshParameters::ForceFill::All;
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1157,10 +1173,19 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
             if ( !oldf.valid() ||
                 ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithContourIntersections.test( oldf ) ) )
                 continue;
-            if ( oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid() )
-                addHoleDesc( path[edgeId], oldf );
-            if ( oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid() )
-                addHoleDesc( path[edgeId].sym(), oldf );
+            bool addLeftDesc = oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid();
+            bool addRightDesc = oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid();
+            // order does matter beacuse bad holes have tunnels and passes trough both left and right
+            if ( !fillLeft )
+            {
+                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );
+                if ( addLeftDesc ) addHoleDesc( path[edgeId], oldf, true ); // pseudo hole should always be second
+            }
+            else
+            {
+                if ( addLeftDesc ) addHoleDesc( path[edgeId], oldf, false ); // real hole should alwauys be first
+                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );
+            }
         }
     }
     t.finish();
@@ -1170,7 +1195,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     // fill contours
     t.restart( "run TriangulateContourPlans" );
-    int numTris = 0;
+    int numTris = int( pseudoHoleRepresentativeEdges.size() );
     int numEdges = 0;
     for ( const auto& plan : fillPlans )
     {
@@ -1194,6 +1219,21 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
         executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i],
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );
+    }
+
+    auto pseudoFill = [&] ( EdgeId eid, FaceId of )
+    {
+        auto nf = mesh.topology.addFaceId();
+        mesh.topology.setLeft( eid, nf );
+        if ( params.new2OldMap )
+        {
+            assert( of.valid() );
+            params.new2OldMap->autoResizeSet( nf, of );
+        }
+    };
+    for ( size_t i = 0; i < pseudoHoleRepresentativeEdges.size(); ++i )
+    {
+        pseudoFill( pseudoHoleRepresentativeEdges[i], needOldFaces ? pseudoOldFaces[i] : FaceId{} );
     }
 
     assert( mesh.topology.faceSize() == expectedTotalTris );

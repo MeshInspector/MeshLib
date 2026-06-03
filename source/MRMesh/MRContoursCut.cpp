@@ -1161,8 +1161,8 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
             assert( !v );
         }
     };
-    bool fillLeft = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Left || params.forceFillMode == CutMeshParameters::ForceFill::All;
-    bool fillRight = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Right || params.forceFillMode == CutMeshParameters::ForceFill::All;
+    bool fillLeft = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Left;
+    bool fillRight = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Right;
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1175,7 +1175,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
                 continue;
             bool addLeftDesc = oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid();
             bool addRightDesc = oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid();
-            // order does matter beacuse bad holes have tunnels and passes trough both left and right
+            // order does matter because bad holes have tunnels and passes through both left and right
             if ( !fillLeft )
             {
                 if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );

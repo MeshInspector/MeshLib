@@ -39,7 +39,7 @@ struct CutMeshParameters
     FaceMap* new2OldMap{nullptr};
 
     /// Caller can avoid filling non-needed part of cut faces to speedup cutting
-    /// still add pseude FaceId to opposite side to keep connectivity
+    /// still add pseudo FaceId to opposite side to keep connectivity
     enum class FillPart
     {
         Both,

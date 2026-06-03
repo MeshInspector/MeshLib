@@ -141,7 +141,9 @@ runs:
     # so brew packages must be installed on hosted runners even on cache hit.
     - name: Install brew requirements
       shell: bash
-      run: ./scripts/install_brew_requirements.sh
+      run: |
+        ./scripts/install_brew_requirements.sh
+        ./scripts/strip_brew_dylibs.sh
 
     - name: Build thirdparty libs
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}

@@ -38,10 +38,7 @@ IF(MSVC)
 
   # Common C/C++ flags:
 
-  # _CRT_SECURE_NO_DEPRECATE makes vcruntime.h auto-#define _CRT_SECURE_NO_WARNINGS (with an empty value).
-  # OpenCASCADE's imported target additionally defines _CRT_SECURE_NO_WARNINGS (=1) on its consumers (MRIOExtras),
-  # so the empty value baked into the MRPch precompiled header clashes with OCCT's, triggering C4005 (now fatal
-  # under /WX). Define it explicitly here so the macro has a consistent value across the PCH and all targets.
+  # _CRT_SECURE_NO_WARNINGS is defined explicitly to match OCCT and avoid a C4005 clash in the shared PCH.
   set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS")
 
   # Vcpkg automatically adds `/external:W0`, but we duplicate it here because it somehow doesn't propagate to Lazperf.

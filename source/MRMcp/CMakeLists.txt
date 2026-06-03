@@ -28,6 +28,10 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   )
 endif()
 
+IF(MR_PCH)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()
+
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

@@ -15,6 +15,7 @@ MR_SUPPRESS_WARNING_PUSH
 
 #if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
 #endif
 #if __EMSCRIPTEN__
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"

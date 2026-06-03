@@ -138,9 +138,8 @@ private:
     // otherwise we fall back to compiler atomic builtins (e.g. Apple clang, whose libc++ lacks atomic_ref).
     static I loadAtomic_( I& slot )
     {
-        using T = typename I::ValueType;
 #ifdef __cpp_lib_atomic_ref
-        return I( std::atomic_ref<T>( slot.get() ).load( std::memory_order_relaxed ) );
+        return I( std::atomic_ref<typename I::ValueType>( slot.get() ).load( std::memory_order_relaxed ) );
 #else
         return I( __atomic_load_n( &slot.get(), __ATOMIC_RELAXED ) );
 #endif

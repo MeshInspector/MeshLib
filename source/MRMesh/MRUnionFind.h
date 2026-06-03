@@ -81,7 +81,7 @@ public:
             if ( first < second )
                 std::swap( first, second );
             // the exchange succeeds only while first is still a root
-            if ( casAtomic_( parents_[first], first, second ) )
+            if ( casAtomic_<std::memory_order_acq_rel>( parents_[first], first, second ) )
                 return;
             // first is no longer a root (another thread linked it first): retry
         }
@@ -145,27 +145,19 @@ private:
 #endif
     }
 
-    // best-effort single attempt slot: expected -> desired (path halving; a failed swap is harmless)
-    static void halveAtomic_( I& slot, I expected, I desired )
-    {
-        using T = typename I::ValueType;
-        T exp = expected.get();
-#ifdef __cpp_lib_atomic_ref
-        std::atomic_ref<T>( slot.get() ).compare_exchange_weak( exp, desired.get(), std::memory_order_relaxed );
-#else
-        __atomic_compare_exchange_n( &slot.get(), &exp, desired.get(), true, __ATOMIC_RELAXED, __ATOMIC_RELAXED );
-#endif
-    }
-
-    // attempts slot: expected -> desired once, returns true on success (acquire-release on success)
+    // single attempt slot: expected -> desired with the given success ordering; returns true on success.
+    // Used both for the union link (acq_rel) and for best-effort path halving (relaxed); a lost halving
+    // race is harmless, so the same primitive serves both with the ordering chosen per call site.
+    template <std::memory_order Success>
     static bool casAtomic_( I& slot, I expected, I desired )
     {
         using T = typename I::ValueType;
         T exp = expected.get();
 #ifdef __cpp_lib_atomic_ref
-        return std::atomic_ref<T>( slot.get() ).compare_exchange_strong( exp, desired.get(), std::memory_order_acq_rel, std::memory_order_relaxed );
+        return std::atomic_ref<T>( slot.get() ).compare_exchange_strong( exp, desired.get(), Success, std::memory_order_relaxed );
 #else
-        return __atomic_compare_exchange_n( &slot.get(), &exp, desired.get(), false, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED );
+        constexpr int success = Success == std::memory_order_relaxed ? __ATOMIC_RELAXED : __ATOMIC_ACQ_REL;
+        return __atomic_compare_exchange_n( &slot.get(), &exp, desired.get(), false, success, __ATOMIC_RELAXED );
 #endif
     }
 
@@ -181,8 +173,8 @@ private:
             I gp = loadAtomic_( parents_[p] );
             if ( p == gp )
                 return p; // p is a root
-            // make a point to its grandparent; a failed swap only means another thread already shortened the path
-            halveAtomic_( parents_[a], p, gp );
+            // point a to its grandparent (best-effort: a lost race just means another thread already shortened the path)
+            casAtomic_<std::memory_order_relaxed>( parents_[a], p, gp );
             a = gp;
         }
     }

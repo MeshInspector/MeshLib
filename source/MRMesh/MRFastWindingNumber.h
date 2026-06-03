@@ -74,6 +74,11 @@ private:
 class IFastWindingNumberByParts
 {
 public:
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    IFastWindingNumberByParts() = default;
+    IFastWindingNumberByParts( const IFastWindingNumberByParts& ) = default;
+    IFastWindingNumberByParts( IFastWindingNumberByParts&& ) noexcept = default;
+
     virtual ~IFastWindingNumberByParts() = default;
 
     /// callback that gets a block of resulting winding numbers

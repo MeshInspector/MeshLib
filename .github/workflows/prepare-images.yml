@@ -183,7 +183,26 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux vcpkg image
-        run: docker build -f ./docker/${{ matrix.os }}-vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
+        # AWS credentials are passed as BuildKit secrets so the Dockerfile's
+        # `vcpkg install` can read/write the shared S3 binary cache and skip
+        # rebuilding unchanged ports from source. They are scoped to this step
+        # and never written to image layers. When unavailable (e.g. no secret
+        # access) the build falls back to anonymous read-only cache access.
+        env:
+          DOCKER_BUILDKIT: 1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          secret_args=()
+          if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ]; then
+            secret_args+=(--secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY)
+          fi
+          docker build \
+            -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+            -t ${{ env.image }} \
+            --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
+            "${secret_args[@]}" \
+            . --progress=plain
 
       - name: Push Linux vcpkg image
         run: docker push ${{ env.image }}

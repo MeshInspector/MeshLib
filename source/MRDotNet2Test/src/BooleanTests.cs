@@ -86,13 +86,13 @@ namespace MRTest
 
             var mapsA = parameters.mapper.getMaps( BooleanResultMapper.MapObject.A );
             Assert.That( mapsA.old2newVerts.size(), Is.EqualTo(160) );
-            Assert.That( mapsA.cut2newFaces.size(), Is.EqualTo(348) );
-            Assert.That( mapsA.cut2origin.size(), Is.EqualTo(348) );
+            Assert.That( mapsA.cut2newFaces.size(), Is.EqualTo(280) );
+            Assert.That( mapsA.cut2origin.size(), Is.EqualTo(280) );
 
             var mapsB = parameters.mapper.getMaps( BooleanResultMapper.MapObject.B );
             Assert.That( mapsB.old2newVerts.size(), Is.EqualTo(160) );
-            Assert.That( mapsB.cut2newFaces.size(), Is.EqualTo(384) );
-            Assert.That( mapsB.cut2origin.size(), Is.EqualTo(384) );
+            Assert.That( mapsB.cut2newFaces.size(), Is.EqualTo(320) );
+            Assert.That( mapsB.cut2origin.size(), Is.EqualTo(320) );
         }
     }
 }

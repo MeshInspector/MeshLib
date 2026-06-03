@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRTimer.h"
+#include <atomic>
 #include <utility>
 
 namespace MR
@@ -65,6 +66,29 @@ public:
         }
     }
 
+    /// thread-safe version of unite() for parallel construction of the structure:
+    /// links by element id (the smaller id becomes the common root) using lock-free path halving;
+    /// unlike unite() it does NOT maintain component sizes, so sizeOfComp() is invalid after any uniteAtomic() call
+    void uniteAtomic( I first, I second )
+    {
+        for ( ;; )
+        {
+            first = findAtomic_( first );
+            second = findAtomic_( second );
+            if ( first == second )
+                return; // already in the same set
+            // attach the larger id under the smaller, so the root of a set is always its minimal id
+            if ( first < second )
+                std::swap( first, second );
+            std::atomic_ref<I> parentOfFirst( parents_[first] );
+            I expected = first; // the exchange succeeds only while first is still a root
+            if ( parentOfFirst.compare_exchange_strong( expected, second,
+                    std::memory_order_acq_rel, std::memory_order_relaxed ) )
+                return;
+            // first is no longer a root (another thread linked it first): retry
+        }
+    }
+
     /// returns true if given two elements are from one set
     bool united( I first, I second )
     {
@@ -109,6 +133,25 @@ private:
         I r = parents_[a];
         for ( I e = a; e != r; r = parents_[e = r] ) {}
         return r;
+    }
+
+    /// lock-free find of the set's root with best-effort path halving;
+    /// safe to call concurrently with uniteAtomic() running on the same structure
+    I findAtomic_( I a )
+    {
+        for ( ;; )
+        {
+            std::atomic_ref<I> parentOfA( parents_[a] );
+            I p = parentOfA.load( std::memory_order_relaxed );
+            if ( p == a )
+                return a; // a is a root
+            I gp = std::atomic_ref<I>( parents_[p] ).load( std::memory_order_relaxed );
+            if ( p == gp )
+                return p; // p is a root
+            // make a point to its grandparent; a failed exchange only means another thread already shortened the path
+            parentOfA.compare_exchange_weak( p, gp, std::memory_order_relaxed );
+            a = gp;
+        }
     }
 
     /// sets new root \param r for the element \param a and all its ancestors, returns new root \param r

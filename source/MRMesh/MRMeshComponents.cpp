@@ -523,25 +523,15 @@ static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, con
 
     if ( numThreads > 1 )
     {
-        auto inRange = [&] ( FaceId f, UndirectedEdgeId beg, UndirectedEdgeId end )->bool
-        {
-            for ( auto e : leftRing( topology, f ) )
-                if ( e.undirected() < beg || e.undirected() >= end )
-                    return false;
-            return true;
-        };
-
+        // single lock-free pass over all edges: each edge is united atomically (see UnionFind::uniteAtomic),
+        // so there is no interior/boundary classification and no sequential tail; processing order is irrelevant
         const size_t undirSize = topology.undirectedEdgeSize();
-        UndirectedEdgeBitSet lastPassEdges( undirSize );
-        tbb::parallel_for( tbb::blocked_range( size_t( 0 ), lastPassEdges.num_blocks(), 64 ),
-            [&] ( const tbb::blocked_range<size_t>& blockRange )
+        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), undirSize ),
+            [&] ( const tbb::blocked_range<size_t>& range )
         {
-            auto beginBit = UndirectedEdgeId( blockRange.begin() * UndirectedEdgeBitSet::bits_per_block );
-            auto endBit = UndirectedEdgeId( blockRange.end() * UndirectedEdgeBitSet::bits_per_block );
-            for ( UndirectedEdgeId ue = beginBit; ue < endBit; ++ue )
+            for ( size_t i = range.begin(); i < range.end(); ++i )
             {
-                if ( ue >= undirSize )
-                    return;
+                UndirectedEdgeId ue( i );
                 if ( isCompBd && isCompBd->test( ue ) )
                     continue;
                 auto l = topology.left( ue );
@@ -550,25 +540,9 @@ static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, con
                 auto r = topology.right( ue );
                 if ( !region.test( r ) )
                     continue;
-                if ( inRange( l, beginBit, endBit ) && inRange( r, beginBit, endBit ) )
-                    res.unite( l, r );
-                else
-                    lastPassEdges.set( ue );
+                res.uniteAtomic( l, r );
             }
         } );
-
-        for ( auto ue : lastPassEdges )
-        {
-            if ( isCompBd && isCompBd->test( ue ) )
-                continue;
-            auto l = topology.left( ue );
-            if ( !region.test( l ) )
-                continue;
-            auto r = topology.right( ue );
-            if ( !region.test( r ) )
-                continue;
-            res.unite( l, r );
-        }
     }
     else
     {

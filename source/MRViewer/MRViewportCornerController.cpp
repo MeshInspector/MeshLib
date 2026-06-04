@@ -18,6 +18,7 @@
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRMouseController.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {

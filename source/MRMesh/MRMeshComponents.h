@@ -52,7 +52,7 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgeBitSet * isCompBd );
 
 /// given prepared union-find structure returns the union of connected components, each having at least given area
-[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea,
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, BaseUnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps = nullptr );
 
 struct ExpandToComponentsParams
@@ -171,13 +171,13 @@ struct LargeByAreaComponentsSettings
 MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region = nullptr, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API BaseUnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API BaseUnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region = nullptr, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to skip uniting components over it
 /// it is guaranteed that isCompBd is invoked in a thread-safe manner (that left and right face are always processed by one thread)
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd = {} );
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region = nullptr, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API BaseUnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd = {} );
+[[nodiscard]] MRMESH_API BaseUnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region = nullptr, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );

@@ -72,6 +72,14 @@ std::string utf8string( const std::string & ) = delete;
 /// and containing at most \p count unicode symbols (but res.size() can be more than \p count since a unicode symbol can be represented by more than 1 byte)
 [[nodiscard]] MRMESH_API std::string utf8substr( const char * s, size_t pos, size_t count );
 
+/// Reads the first code point from the given UTF-8 encoded string and returns the code point and a number of consumed bytes.
+/// If the string starts from an invalid UTF-8 sequence, the replacement character (U+FFFD) is returned.
+/// Note that the function checks neither for the null pointer nor for the null character; it is user responsibility to pass correct values.
+[[nodiscard]] MRMESH_API std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size );
+
+/// Converts the given UTF-8 encoded string to a UTF-32 encoded string.
+[[nodiscard]] MRMESH_API std::u32string utf8ToUtf32( const std::string& str );
+
 /// converts given size in string:
 /// [0,1024) -> nnn bytes
 /// [1024,1024*1024) -> nnn.nn Kb

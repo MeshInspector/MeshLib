@@ -5,6 +5,8 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRVector.h"
 #include "MRColorTheme.h"
+#include "MRI18n.h"
+#include "MRRibbonFontManager.h"
 #include "MRViewer.h"
 #include "MRViewerSignals.h"
 #include "MRViewport.h"
@@ -13,10 +15,125 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRMouseController.h"
 
 namespace MR
 {
+
+namespace
+{
+
+void copyTexture( int w, int h, const ImTextureData* tex, int tx0, int ty0, Image& img, int ix0, int iy0 )
+{
+    for ( auto y = 0; y < h; ++y )
+    {
+        for ( auto x = 0; x < w; ++x )
+        {
+            const auto* src = tex->Pixels + ( ( ty0 + y ) * tex->Width + ( tx0 + x ) ) * tex->BytesPerPixel;
+            auto& dst = img.pixels[( iy0 + y ) * img.resolution.x + ( ix0 + x )];
+            switch ( tex->Format )
+            {
+            case ImTextureFormat_RGBA32:
+                for ( auto i = 0; i < tex->BytesPerPixel; ++i )
+                    dst[i] = src[i];
+                break;
+            case ImTextureFormat_Alpha8:
+                dst = { *src, *src, *src };
+                break;
+            }
+        }
+    }
+}
+
+void copyImage( int w, int h, const Image& src, int sx0, int sy0, Image& dst, int dx0, int dy0 )
+{
+    for ( auto y = 0; y < h; ++y )
+        for ( auto x = 0; x < w; ++x )
+            dst.pixels[( dy0 + y ) * dst.resolution.x + ( dx0 + x )] = src.pixels[( sy0 + y ) * src.resolution.x + ( sx0 + x )];
+}
+
+void flipVertically( Image& img )
+{
+    const auto w = img.resolution.x, h = img.resolution.y;
+    for ( auto y = 0; y < h / 2; ++y )
+        for ( auto x = 0; x < w; ++x )
+            std::swap( img.pixels[y * w + x], img.pixels[( h - y - 1 ) * w + x] );
+}
+
+Expected<Image> renderControllerSideText( const Vector2i& resolution )
+{
+    // TODO: disconnect from ImGui/ribbon menu
+    auto [font, size] = RibbonFontManager::getFontAndSizeByTypeStatic( RibbonFontManager::FontType::BigSemiBold );
+    if ( !font )
+        return unexpected( "Could not load font" );
+
+    auto* baked = font->GetFontBaked( size );
+    if ( !baked )
+        return unexpected( "Could not load font" );
+
+    const auto* tex = ImGui::GetIO().Fonts->TexData;
+
+    constexpr std::array cSideTexts = {
+        _t( "RIGHT" ),  _t( "LEFT" ),
+        _t( "TOP" ),    _t( "BOTTOM" ),
+        _t( "FRONT" ),  _t( "BACK" ),
+    };
+
+    Image image;
+    image.resolution = resolution;
+    image.pixels.resize( image.resolution.x * image.resolution.y, { 255, 255, 255, 0 } );
+
+    for ( auto i = 0; i < cSideTexts.size(); ++i )
+    {
+        const auto text = s_tr( cSideTexts[i] );
+
+        Image block;
+        block.resolution = {
+            image.resolution.x / 2,
+            image.resolution.y / 3,
+        };
+        block.pixels.resize( block.resolution.x * block.resolution.y );
+
+        int maxx = 0, maxy = 0;
+        for ( const auto ch : utf8ToUtf32( text ) )
+        {
+            auto* glyph = baked->FindGlyph( (ImWchar)ch );
+            if ( !glyph )
+                return unexpected( fmt::format( "Could not load glyph for code point {}", (size_t)ch ) );
+
+            const auto
+                x0 = int( glyph->U0 * tex->Width ),
+                x1 = int( glyph->U1 * tex->Width ),
+                y0 = int( glyph->V0 * tex->Height ),
+                y1 = int( glyph->V1 * tex->Height );
+            const auto
+                w = x1 - x0,
+                h = y1 - y0;
+            if ( block.resolution.x < maxx + w || block.resolution.y < h )
+            {
+                // TODO: adjust font size
+                assert( false );
+                break;
+            }
+
+            copyTexture( w, h, tex, x0, y0, block, maxx, 0 );
+            maxx += w;
+            maxy = std::max( maxy, h );
+        }
+
+        int offsetx = ( i % 2 ) * block.resolution.x;
+        int offsety = ( i / 2 ) * block.resolution.y;
+        offsetx += ( block.resolution.x - maxx ) / 2;
+        offsety += ( block.resolution.y - maxy ) / 2;
+        copyImage( maxx, maxy, block, 0, 0, image, offsetx, offsety );
+    }
+
+    flipVertically( image );
+    return image;
+}
+
+} // namespace
 
 Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
 {
@@ -314,30 +431,51 @@ VertUVCoords makeCornerControllerUVCoords( float cornerRatio /*= 0.2f */ )
     return uvs;
 }
 
-Vector<MR::MeshTexture, TextureId> loadCornerControllerTextures()
+Vector<MeshTexture, TextureId> loadCornerControllerTextures()
 {
-    Vector<MR::MeshTexture, TextureId> res;
-    res.resize( TextureId( 3 ) );
-
-    auto path = SystemPath::getResourcesDirectory() / "resource" / "textures";
+    const auto path = SystemPath::getResourcesDirectory() / "resource" / "textures";
     const std::array<std::filesystem::path, 3> cTexturePaths = {
         path / "controller_cube_default.png",
-        path / "controller_cube_sides.png",
-        path / "controller_cube_edges.png"
+        path / "controller_cube_hover.png",
+        path / "controller_cube_edges.png",
     };
-    for ( int i = 0; i < 3; ++i )
+
+    Vector<MeshTexture, TextureId> res;
+    res.reserve( cTexturePaths.size() );
+    for ( const auto& texPath : cTexturePaths )
     {
-        auto loaded = ImageLoad::fromAnySupportedFormat( cTexturePaths[i] );
+        auto loaded = ImageLoad::fromAnySupportedFormat( texPath );
         if ( !loaded.has_value() )
             return {};
-        res[TextureId( i )].pixels = std::move( loaded->pixels );
-        res[TextureId( i )].resolution = loaded->resolution;
-        res[TextureId( i )].filter = FilterType::Linear;
+
+        MeshTexture tex;
+        tex.pixels = std::move( loaded->pixels );
+        tex.resolution = loaded->resolution;
+        tex.filter = FilterType::Linear;
+        res.emplace_back( std::move( tex ) );
     }
+
+    if ( const auto textImage = renderControllerSideText( res.front().resolution ) )
+    {
+        const std::array<Color, 3> textColors = {
+            Color { 133, 139, 147 },
+            Color { 133, 139, 147 },
+            Color { 255, 255, 255 },
+        };
+        for ( auto i = 0; i < 3; ++i )
+        {
+            auto& tex = res.vec_[i];
+            const auto& col = textColors[i];
+            assert( tex.pixels.size() == textImage->pixels.size() );
+            for ( auto px = 0; px < tex.pixels.size(); ++px )
+                tex.pixels[px] = blend( { col.r, col.g, col.b, textImage->pixels[px].a }, tex.pixels[px] );
+        }
+    }
+
     return res;
 }
 
-const TexturePerFace& getCornerControllerTexureMap()
+const TexturePerFace& getCornerControllerTextureMap()
 {
     static TexturePerFace textures;
     if ( textures.empty() )
@@ -384,7 +522,7 @@ RegionId getCornerControllerRegionByFace( FaceId face )
 
 TexturePerFace getCornerControllerHoveredTextureMap( RegionId rId )
 {
-    auto textures = getCornerControllerTexureMap();
+    auto textures = getCornerControllerTextureMap();
     const int fOffset = 2 * 6;
     const int fOffset2 = 4 * 12;
     if ( rId < 6 )
@@ -578,7 +716,7 @@ void CornerControllerObject::initDefault()
         if ( !obj->getTextures().empty() )
         {
             if ( hoverable )
-                obj->setTexturePerFace( getCornerControllerTexureMap() );
+                obj->setTexturePerFace( getCornerControllerTextureMap() );
             obj->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
         }
     };

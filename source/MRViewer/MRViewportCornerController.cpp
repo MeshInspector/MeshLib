@@ -30,8 +30,10 @@ constexpr float cControllerCubeFontSize = 20.f;  // tuned for force-emboldened N
 
 ImFont* loadControllerCubeFont( float fontSize )
 {
-    loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf", fontSize, { .forceBold = true } );
-    return loadCustomFont( SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc", fontSize, { .mergeMode = true } );
+    auto* font = loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf", fontSize, { .forceBold = true } );
+    if ( font )
+        font = loadCustomFont( SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc", fontSize, { .mergeMode = true } );
+    return font;
 }
 
 void copyTexture( int w, int h, const ImTextureData* tex, int tx0, int ty0, Image& img, int ix0, int iy0 )

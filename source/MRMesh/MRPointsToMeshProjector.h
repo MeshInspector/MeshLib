@@ -12,6 +12,11 @@ namespace MR
 class IPointsToMeshProjector
 {
 public:
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    IPointsToMeshProjector() = default;
+    IPointsToMeshProjector( const IPointsToMeshProjector & ) = default;
+    IPointsToMeshProjector( IPointsToMeshProjector && ) noexcept = default;
+
     virtual ~IPointsToMeshProjector() = default;
     /// Updates all data related to the referencing mesh
     virtual void updateMeshData( const Mesh* mesh ) = 0;

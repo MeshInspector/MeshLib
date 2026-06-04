@@ -600,6 +600,11 @@ COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
 else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 endif
+# Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
+# emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
+# code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
+# The release/debug import libraries have different names and live in the right `-L$(DEPS_LIB_DIR)` already.
+LINKER_FLAGS += $(if $(filter Debug,$(VS_MODE)),-ltbb12_debug,-ltbb12)
 endif # Windows
 
 # Linux.

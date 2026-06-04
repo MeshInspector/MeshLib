@@ -6,6 +6,7 @@
 #include "MRMesh/MRVector.h"
 #include "MRColorTheme.h"
 #include "MRI18n.h"
+#include "MRLocale.h"
 #include "MRRibbonFontManager.h"
 #include "MRViewer.h"
 #include "MRViewerSignals.h"
@@ -787,6 +788,26 @@ void CornerControllerObject::initDefault()
             return true;
         return false;
     } ) );
+
+#ifndef MRVIEWER_NO_LOCALE
+    [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [hoverable = std::weak_ptr{ basisViewControllerHoverable }, nonhoverable = std::weak_ptr{ basisViewControllerNonHoverable }] ( const std::string& )
+    {
+        const auto textures = loadCornerControllerTextures();
+        if ( auto obj = hoverable.lock() )
+        {
+            obj->setTextures( textures );
+            obj->setDirtyFlags( DIRTY_TEXTURE );
+        }
+        if ( auto obj = nonhoverable.lock() )
+        {
+            if ( !textures.empty() )
+            {
+                obj->setTextures( { textures.front() } );
+                obj->setDirtyFlags( DIRTY_TEXTURE );
+            }
+        }
+    } );
+#endif
 
     rootObj_ = std::make_shared<Object>();
     rootObj_->addChild( basisViewControllerNonHoverable );

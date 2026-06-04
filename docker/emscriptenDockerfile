@@ -18,13 +18,16 @@ FROM emscripten/emsdk:4.0.10-arm64 AS builder
 
 # Minimal apt set required by ./scripts/build_thirdparty.sh.
 # No firefox/xvfb/dbus here — those are test-runtime only, not build deps.
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list && \
-    apt-get update -qqy && \
+RUN <<EOF
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        git pkg-config ninja-build gettext && \
-    apt-get clean && \
+        git pkg-config ninja-build gettext
+    apt-get clean
     rm -rf /var/lib/apt/lists/*
+EOF
 
 WORKDIR /home/MeshLib
 
@@ -38,20 +41,29 @@ ENV MR_EMSCRIPTEN=ON
 
 # Stage the three installs under /opt/meshlib-thirdparty so the COPY --from=
 # in the final stage is unambiguous about what to pick up.
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten && \
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
     rm -rf bin include lib share thirdparty_build
+EOF
 
 ENV MR_EMSCRIPTEN_SINGLE=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single && \
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
     rm -rf bin include lib share thirdparty_build
+EOF
 
 ENV MR_EMSCRIPTEN_SINGLE=OFF
 ENV MR_EMSCRIPTEN_WASM64=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64 && \
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
     rm -rf bin include lib share thirdparty_build
+EOF
 
 
 ## ============================================================================
@@ -59,16 +71,19 @@ RUN ./scripts/build_thirdparty.sh && \
 ## ============================================================================
 FROM emscripten/emsdk:4.0.10-arm64
 
-RUN export DEBIAN_FRONTEND=noninteractive; \
-    export DEBCONF_NONINTERACTIVE_SEEN=true; \
-    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
-    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list; \
-    apt-get update -qqy \
- && apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build gettext \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+RUN <<EOF
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    apt-get update -qqy
+    apt-get install -qqy --no-install-recommends \
+        tzdata git pkg-config ninja-build gettext
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF
 
 # Pull only the compiled thirdparty trees from the builder. Target paths
 # match what build-test-emscripten.yml's matrix.thirdparty-dir already expects.
@@ -78,9 +93,12 @@ COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/ems
 
 # Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
 # https://github.com/actions/checkout/issues/1014
-RUN groupadd -g 1001 user && \
-    useradd -m -u 1001 -g user -s /bin/bash user && \
+RUN <<EOF
+    set -e
+    groupadd -g 1001 user
+    useradd -m -u 1001 -g user -s /bin/bash user
     sudo chmod -R 777 /emsdk/upstream/emscripten/
+EOF
 
 # Change to non-root privilege
 USER user

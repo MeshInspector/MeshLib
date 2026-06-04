@@ -86,7 +86,7 @@ MRVIEWER_API Vector<MeshTexture, TextureId> loadCornerControllerTextures();
 
 /// returns textures map for each part\n
 /// actually all zeros
-MRVIEWER_API const TexturePerFace& getCornerControllerTexureMap();
+MRVIEWER_API const TexturePerFace& getCornerControllerTextureMap();
 
 /// returns region id of corner controller by its face
 MRVIEWER_API RegionId getCornerControllerRegionByFace( FaceId face );

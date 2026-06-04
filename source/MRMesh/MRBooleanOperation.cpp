@@ -52,8 +52,6 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     AffineXf3f a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     bool needRightPart = needInsideComps != originIsA;
 
-    updateRootsParallel( unionFind );
-
     FaceId leftRoot;  // root of the components to the left of cutPaths
     FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
@@ -77,6 +75,8 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
         if ( leftRoot && leftRoot == rightRoot )
             return std::nullopt;
     }
+
+    updateRootsParallel( unionFind );
 
     // find correct part
     auto includeRoot = needRightPart ? rightRoot : leftRoot;

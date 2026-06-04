@@ -197,18 +197,13 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: |
-          secret_args=()
-          if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ]; then
-            secret_args+=(--secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY)
-            if [ -n "${AWS_SESSION_TOKEN}" ]; then
-              secret_args+=(--secret id=AWS_SESSION_TOKEN)
-            fi
-          fi
           docker build \
             -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
             -t ${{ env.image }} \
             --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
-            "${secret_args[@]}" \
+            --secret id=AWS_ACCESS_KEY_ID \
+            --secret id=AWS_SECRET_ACCESS_KEY \
+            --secret id=AWS_SESSION_TOKEN \
             . --progress=plain
 
       - name: Push Linux vcpkg image

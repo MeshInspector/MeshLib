@@ -19,7 +19,7 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         && \
     dnf clean all
 
-# install aws cli (used by vcpkg's x-aws S3 binary cache backend below)
+# install aws cli for vcpkg cache
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update && \
@@ -58,10 +58,6 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
 # build vcpkg packages
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-# Configure the shared S3 vcpkg binary cache (see configure_s3_cache.sh) so that
-# unchanged ports are restored as prebuilt archives instead of rebuilt from
-# source. AWS credentials are optional BuildKit secrets: present -> read-write
-# cache, absent -> anonymous read-only.
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN \

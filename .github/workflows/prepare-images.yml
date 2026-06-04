@@ -195,6 +195,11 @@ jobs:
         with:
           aws-region: us-east-1
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          # A cold rebuild compiles every port (~1 h). Extend the session past
+          # the job's 75 min timeout so the credentials don't expire mid-build
+          # and silently skip cache uploads. Requires the role's
+          # MaxSessionDuration to allow >= this value.
+          role-duration-seconds: 7200
           retry-max-attempts: 5
 
       - name: Build Linux vcpkg image

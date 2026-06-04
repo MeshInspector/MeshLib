@@ -93,40 +93,47 @@ Expected<Image> renderControllerSideText( const Vector2i& resolution )
             image.resolution.x / 2,
             image.resolution.y / 3,
         };
-        block.pixels.resize( block.resolution.x * block.resolution.y );
+        block.pixels.resize( block.resolution.x * block.resolution.y, { 255, 255, 255, 0 } );
 
+        int minx = INT_MAX, miny = INT_MAX;
         int maxx = 0, maxy = 0;
+        float penx = 0.f;
         for ( const auto ch : utf8ToUtf32( text ) )
         {
             auto* glyph = baked->FindGlyph( (ImWchar)ch );
             if ( !glyph )
                 return unexpected( fmt::format( "Could not load glyph for code point {}", (size_t)ch ) );
 
-            const auto
-                x0 = int( glyph->U0 * tex->Width ),
-                x1 = int( glyph->U1 * tex->Width ),
-                y0 = int( glyph->V0 * tex->Height ),
-                y1 = int( glyph->V1 * tex->Height );
-            const auto
-                w = x1 - x0,
-                h = y1 - y0;
-            if ( block.resolution.x < maxx + w || block.resolution.y < h )
+            if ( block.resolution.x < (int)std::ceil( penx + glyph->X1 ) || block.resolution.y < (int)std::ceil( glyph->Y1 ) )
             {
                 // TODO: adjust font size
                 assert( false );
                 break;
             }
 
-            copyTexture( w, h, tex, x0, y0, block, maxx, 0 );
-            maxx += w;
-            maxy = std::max( maxy, h );
+            const auto
+                w = int( glyph->X1 - glyph->X0 ),
+                h = int( glyph->Y1 - glyph->Y0 );
+            const auto
+                tx0 = int( glyph->U0 * tex->Width ),
+                ty0 = int( glyph->V0 * tex->Height );
+            copyTexture( w, h, tex, tx0, ty0, block, std::floor( penx + glyph->X0 ), std::floor( glyph->Y0 ) );
+
+            if ( penx == 0.f )
+                minx = (int)std::floor( glyph->X0 );
+            miny = std::min( miny, (int)std::floor( glyph->Y0 ) );
+            maxx = (int)std::ceil( penx + glyph->X1 );
+            maxy = std::max( maxy, (int)std::ceil( glyph->Y1 ) );
+            penx += glyph->AdvanceX;
         }
+        if ( maxx < minx || maxy < miny )
+            continue;
 
         int offsetx = ( i % 2 ) * block.resolution.x;
         int offsety = ( i / 2 ) * block.resolution.y;
-        offsetx += ( block.resolution.x - maxx ) / 2;
-        offsety += ( block.resolution.y - maxy ) / 2;
-        copyImage( maxx, maxy, block, 0, 0, image, offsetx, offsety );
+        offsetx += ( block.resolution.x - ( maxx - minx ) ) / 2;
+        offsety += ( block.resolution.y - ( maxy - miny ) ) / 2;
+        copyImage( maxx - minx, maxy - miny, block, minx, miny, image, offsetx, offsety );
     }
 
     flipVertically( image );

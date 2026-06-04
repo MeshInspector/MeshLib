@@ -40,6 +40,7 @@ RUN python3.12 -m venv venv && \
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
 COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ARG VCPKG_VERSION
@@ -57,28 +58,17 @@ RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.o
 # build vcpkg packages
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-# The shared S3 vcpkg binary cache (same bucket as thirdparty/install.bat:
-# s3://vcpkg-export/<version>/<triplet>/) lets unchanged ports be restored as
-# prebuilt archives instead of rebuilt from source. AWS credentials are optional
-# BuildKit secrets: present -> read-write cache, absent -> anonymous read-only.
+# Configure the shared S3 vcpkg binary cache (see configure_s3_cache.sh) so that
+# unchanged ports are restored as prebuilt archives instead of rebuilt from
+# source. AWS credentials are optional BuildKit secrets: present -> read-write
+# cache, absent -> anonymous read-only.
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN \
+    source ../MeshLib/configure_s3_cache.sh && \
     source /opt/rh/gcc-toolset-11/enable && \
     source /opt/autoconf27/enable && \
     source /root/venv/bin/activate && \
-    export AWS_DEFAULT_REGION=us-east-1 && \
-    S3_URL="s3://vcpkg-export/${VCPKG_VERSION}/${VCPKG_TRIPLET}/" && \
-    if [ -s /run/secrets/AWS_ACCESS_KEY_ID ] && [ -s /run/secrets/AWS_SECRET_ACCESS_KEY ]; then \
-        export AWS_ACCESS_KEY_ID="$(cat /run/secrets/AWS_ACCESS_KEY_ID)" && \
-        export AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/AWS_SECRET_ACCESS_KEY)" && \
-        if [ -s /run/secrets/AWS_SESSION_TOKEN ]; then export AWS_SESSION_TOKEN="$(cat /run/secrets/AWS_SESSION_TOKEN)"; fi && \
-        echo "vcpkg S3 binary cache: read-write (${S3_URL})" && \
-        export VCPKG_BINARY_SOURCES="clear;x-aws,${S3_URL},readwrite" ; \
-    else \
-        echo "vcpkg S3 binary cache: anonymous read-only (${S3_URL})" && \
-        export VCPKG_BINARY_SOURCES="clear;x-aws-config,no-sign-request;x-aws,${S3_URL},read" ; \
-    fi && \
     $(: network may flake ) \
     retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports --debug $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt

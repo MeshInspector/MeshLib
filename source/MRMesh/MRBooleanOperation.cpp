@@ -14,6 +14,7 @@
 #include "MREdgeMetric.h"
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
+#include "MRUnionFindParallel.h"
 
 namespace MR
 {
@@ -29,7 +30,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
-    UnionFind<FaceId> unionFind;
+    BaseUnionFind<FaceId> unionFind;
     if ( cutPaths.empty() )
         unionFind = MeshComponents::getUnionFindStructureFaces( origin );
     else
@@ -51,6 +52,8 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     AffineXf3f a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     bool needRightPart = needInsideComps != originIsA;
 
+    updateRootsParallel( unionFind );
+
     FaceId leftRoot;  // root of the components to the left of cutPaths
     FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
@@ -60,9 +63,9 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             for ( auto e : path )
             {
                 if ( auto l = origin.topology.left( e ) )
-                    leftRoot = leftRoot ? unionFind.unite( leftRoot, l ).first : unionFind.find( l );
+                    leftRoot = leftRoot ? unionFind.uniteUnbalanced( leftRoot, l ).first : unionFind.find( l );
                 if ( auto r = origin.topology.right( e ) )
-                    rightRoot = rightRoot ? unionFind.unite( rightRoot, r ).first : unionFind.find( r );
+                    rightRoot = rightRoot ? unionFind.uniteUnbalanced( rightRoot, r ).first : unionFind.find( r );
             }
 
         // if last unite merged left and right, we need to update roots
@@ -95,12 +98,12 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             if ( mergeAllNonIntersectingComponents ||
                 isNonIntersectingInside( origin, f, otherPtr ? *otherPtr : otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps )
             {
-                includeRoot = includeRoot ? unionFind.unite( includeRoot, f ).first : unionFind.find( f );
+                includeRoot = includeRoot ? unionFind.uniteUnbalanced( includeRoot, f ).first : unionFind.find( f );
                 res.set( f );
             }
             else
             {
-                excludeRoot = excludeRoot ? unionFind.unite( excludeRoot, f ).first : unionFind.find( f );
+                excludeRoot = excludeRoot ? unionFind.uniteUnbalanced( excludeRoot, f ).first : unionFind.find( f );
             }
         }
     }

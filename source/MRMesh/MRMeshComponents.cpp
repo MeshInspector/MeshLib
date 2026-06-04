@@ -179,25 +179,18 @@ FaceBitSet getComponents( const MeshTopology& topology, const FaceBitSet & seeds
     auto unionFindStruct = getUnionFindStructureFaces( topology, region0, incidence, isCompBd );
     const FaceBitSet& region = topology.getFaceIds( region0 );
 
-    FaceId faceRoot;
+    const auto& allRoots = unionFindStruct.roots();
+    // collect the roots of all components that contain a seed
+    FaceBitSet seedRoots( allRoots.size() );
     for ( auto s : seeds )
-    {
-        if ( faceRoot < 0 )
-            faceRoot = unionFindStruct.find( s );
-        else
-            faceRoot = unionFindStruct.unite( faceRoot, s ).first;
-    }
+        seedRoots.set( allRoots[s] );
 
-    if ( faceRoot )
+    res.resize( allRoots.size() );
+    BitSetParallelFor( region, [&]( FaceId f )
     {
-        const auto& allRoots = unionFindStruct.roots();
-        res.resize( allRoots.size() );
-        BitSetParallelFor( region, [&]( FaceId f )
-        {
-            if ( allRoots[f] == faceRoot )
-                res.set( f );
-        } );
-    }
+        if ( seedRoots.test( allRoots[f] ) )
+            res.set( f );
+    } );
     return res;
 }
 
@@ -292,7 +285,7 @@ FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, fl
     return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea, outBdEdgesBetweenLargeComps );
 }
 
-FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea,
+FaceBitSet getLargeByAreaComponents( const MeshPart& mp, BaseUnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {
     MR_TIMER;
@@ -512,7 +505,7 @@ std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceInci
     return getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first;
 }
 
-static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region0, const UndirectedEdgeBitSet * isCompBd, UnionFind<FaceId>& res )
+static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region0, const UndirectedEdgeBitSet * isCompBd, ParallelUnionFind<FaceId>& res )
 {
     MR_TIMER;
 
@@ -523,7 +516,7 @@ static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, con
 
     if ( numThreads > 1 )
     {
-        // single lock-free pass over all edges: each edge is united atomically (see UnionFind::uniteAtomic),
+        // single lock-free pass over all edges: each edge is united atomically (see ParallelUnionFind::uniteAtomic),
         // so there is no interior/boundary classification and no sequential tail; processing order is irrelevant
         const size_t undirSize = topology.undirectedEdgeSize();
         tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), undirSize ),
@@ -556,7 +549,7 @@ static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, con
             auto r = topology.right( ue );
             if ( !region.test( r ) )
                 continue;
-            res.unite( l, r );
+            res.uniteAtomic( l, r );
         }
     }
 }
@@ -584,7 +577,7 @@ std::pair<Face2RegionMap, int> getFacePairRegionMap( const Mesh& mesh, const std
         fs.set( f.bFace );
     }
 
-    auto unionFindStruct = getUnionFindStructureFaces( { mesh, &fs }, incidence, isCompBd );
+    UnionFind<FaceId> unionFindStruct( getUnionFindStructureFaces( { mesh, &fs }, incidence, isCompBd ) );
 
     for ( const auto & f : facePairs )
         unionFindStruct.unite( f.aFace, f.bFace );
@@ -777,29 +770,28 @@ void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection )
     }
 }
 
-UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region, const UndirectedEdgeBitSet * isCompBd )
+BaseUnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region, const UndirectedEdgeBitSet * isCompBd )
 {
-    UnionFind<FaceId> res;
+    ParallelUnionFind<FaceId> res;
     getUnionFindStructureFacesPerEdge( topology, region, isCompBd, res );
     return res;
 }
 
-UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd )
+BaseUnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd )
 {
     return getUnionFindStructureFacesPerEdge( meshPart.mesh.topology, meshPart.region, isCompBd );
 }
 
-UnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region0, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+BaseUnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region0, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
-    UnionFind<FaceId> res;
     if ( incidence == FaceIncidence::PerEdge )
         return getUnionFindStructureFacesPerEdge( topology, region0, isCompBd );
 
     MR_TIMER;
     assert( !isCompBd );
-    const FaceBitSet& region = topology.getFaceIds( region0 );
-    res.reset( region.find_last() + 1 );
     assert ( incidence == FaceIncidence::PerVertex );
+    const FaceBitSet& region = topology.getFaceIds( region0 );
+    UnionFind<FaceId> res( region.find_last() + 1 );
     VertBitSet store;
     for ( auto v : getIncidentVerts( topology, region0, store ) )
     {
@@ -820,7 +812,7 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, cons
     return res;
 }
 
-UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+BaseUnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     return getUnionFindStructureFaces( meshPart.mesh.topology, meshPart.region, incidence, isCompBd );
 }
@@ -1002,14 +994,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
     }
 
     if ( allPointToRoots )
-    {
-        tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( res.size() ) ),
-            [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
-        {
-            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-                res.findUpdateRange( ue, range.begin(), range.end() );
-        } );
-    }
+        updateRootsParallel( res );
 
     return res;
 }

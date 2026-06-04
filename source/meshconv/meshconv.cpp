@@ -19,12 +19,25 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRIOExtras/MRIOExtras.h"
+
 #pragma warning(push)
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+
+#if (defined(__APPLE__) && defined(__clang__))
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-copy-with-dtor"
+#endif
+
 #include <boost/program_options.hpp>
+
+#if (defined(__APPLE__) && defined(__clang__))
+#pragma clang diagnostic pop
+#endif
+
 #pragma warning(pop)
+
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
 

@@ -6,11 +6,15 @@ project(MeshLibC2 CXX)
 
 IF(MSVC)
   # Disabling following warnings:
+  #   warning C4242: '=': conversion from 'int' to 'unsigned short', possible loss of data
   #   warning C4244: '+=': conversion from 'T' to 'unsigned short', possible loss of data
   #   warning C4297: function assumed not to throw an exception but does
   #   warning C4305: 'argument': truncation from 'int' to 'T'
+  #   warning C4355: 'this': used in base member initializer list
+  #   warning C4800: Implicit conversion from '_Ty *' to bool. Possible information loss
   #   warning C4804: '+=': unsafe use of type 'bool' in operation
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4297 /wd4305 /wd4804")
+  #   warning C5204: class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4242 /wd4244 /wd4297 /wd4305 /wd4355 /wd4800 /wd4804 /wd5204")
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context -Wno-deprecated-declarations")
 ENDIF()

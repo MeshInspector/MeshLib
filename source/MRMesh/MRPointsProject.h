@@ -94,6 +94,13 @@ class IPointsProjector
 public:
     virtual ~IPointsProjector() = default;
 
+    IPointsProjector() = default;
+    IPointsProjector( const IPointsProjector& ) = default;
+    IPointsProjector( IPointsProjector&& ) noexcept = default;
+    
+    IPointsProjector & operator = ( const IPointsProjector& ) = default;
+    IPointsProjector & operator = ( IPointsProjector&& ) noexcept = default;
+
     /// sets the reference point cloud
     virtual Expected<void> setPointCloud( const PointCloud& pointCloud ) = 0;
 

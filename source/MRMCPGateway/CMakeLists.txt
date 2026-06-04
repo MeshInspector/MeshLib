@@ -41,7 +41,11 @@ endif()
 
 IF(MR_PCH)
   if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DFMT_SHARED /DSPDLOG_COMPILED_LIB /DSPDLOG_FMT_EXTERNAL /DSPDLOG_SHARED_LIB /DTBB_USE_DEBUG")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DFMT_SHARED /DSPDLOG_COMPILED_LIB /DSPDLOG_FMT_EXTERNAL /DSPDLOG_SHARED_LIB")
+    # TBB_USE_DEBUG must match the value baked into MRPch's precompiled header, which
+    # <oneapi/tbb/detail/_config.h> derives from the build config. Only define it in Debug;
+    # forcing it in Release would clash with TBB's own definition (0) and trip C4005 under /WX.
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DTBB_USE_DEBUG")
   endif()
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VCPKG_VERSION=2026.05.25
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 

@@ -134,7 +134,7 @@ Expected<Image> renderControllerSideText( const Vector2i& resolution )
             const auto
                 tx0 = int( glyph->U0 * tex->Width ),
                 ty0 = int( glyph->V0 * tex->Height );
-            copyTexture( w, h, tex, tx0, ty0, block, std::floor( penx + glyph->X0 ), std::floor( glyph->Y0 ) );
+            copyTexture( w, h, tex, tx0, ty0, block, (int)std::floor( penx + glyph->X0 ), (int)std::floor( glyph->Y0 ) );
 
             if ( penx == 0.f )
                 minx = (int)std::floor( glyph->X0 );

@@ -24,6 +24,14 @@ namespace MR
 namespace
 {
 
+constexpr float cControllerCubeFontSize = 22.f;
+
+ImFont* loadControllerCubeFont( float fontSize )
+{
+    loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-Bold.ttf", fontSize );
+    return loadCustomFont( SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc", fontSize, { .mergeMode = true } );
+}
+
 void copyTexture( int w, int h, const ImTextureData* tex, int tx0, int ty0, Image& img, int ix0, int iy0 )
 {
     for ( auto y = 0; y < h; ++y )
@@ -63,12 +71,12 @@ void flipVertically( Image& img )
 
 Expected<Image> renderControllerSideText( const Vector2i& resolution )
 {
-    // TODO: disconnect from ImGui/ribbon menu
-    auto [font, size] = RibbonFontManager::getFontAndSizeByTypeStatic( RibbonFontManager::FontType::BigSemiBold );
+    // TODO: disconnect from ImGui
+    static auto* font = loadControllerCubeFont( cControllerCubeFontSize );
     if ( !font )
         return unexpected( "Could not load font" );
 
-    auto* baked = font->GetFontBaked( size );
+    auto* baked = font->GetFontBaked( cControllerCubeFontSize );
     if ( !baked )
         return unexpected( "Could not load font" );
 

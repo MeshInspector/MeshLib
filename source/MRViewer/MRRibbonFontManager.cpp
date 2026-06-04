@@ -224,6 +224,8 @@ ImFont* loadCustomFont( const std::filesystem::path& fontPath, float fontSize, c
     config.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_Bitmap;
     // TODO: config.GlyphOffset
     config.MergeMode = settings.mergeMode;
+    if ( settings.forceBold )
+        config.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_Bold;
     return ImGui::GetIO().Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config );
 }
 

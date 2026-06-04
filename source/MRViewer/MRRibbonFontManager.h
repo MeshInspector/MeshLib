@@ -95,6 +95,8 @@ private:
 /// settings for loadCustomFont
 struct FontLoadSettings
 {
+    // artificially embolden the font; mapped to ImGuiFreeTypeLoaderFlags_Bold
+    bool forceBold = false;
     // merge into previous font; mapped to ImFontConfig::MergeMode
     bool mergeMode = false;
 };

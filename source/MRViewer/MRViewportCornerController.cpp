@@ -26,11 +26,11 @@ namespace MR
 namespace
 {
 
-constexpr float cControllerCubeFontSize = 22.f;
+constexpr float cControllerCubeFontSize = 20.f;  // tuned for force-emboldened NotoSans-SemiBold
 
 ImFont* loadControllerCubeFont( float fontSize )
 {
-    loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-Bold.ttf", fontSize );
+    loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf", fontSize, { .forceBold = true } );
     return loadCustomFont( SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc", fontSize, { .mergeMode = true } );
 }
 

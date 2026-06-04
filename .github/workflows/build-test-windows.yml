@@ -48,9 +48,9 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-      CUDA_VERSION: ${{ fromJSON('{"msvc-2019":"11.4.2.47141","msvc-2022":"12.0.1.52833"}')[matrix.cxx_compiler] || '13.2.0' }}
-      CUDA_MAJOR: ${{ fromJSON('{"msvc-2019":"11","msvc-2022":"12"}')[matrix.cxx_compiler] || '13' }}
-      CUDA_MINOR: ${{ fromJSON('{"msvc-2019":"4","msvc-2022":"0"}')[matrix.cxx_compiler] || '2' }}
+      CUDA_VERSION: ${{ fromJSON('{"msvc-2019":"11.4.2.47141","msvc-2022":"12.0.1.52833","msvc-2026":"12.0.1.52833"}')[matrix.cxx_compiler] || '13.2.0' }}
+      CUDA_MAJOR: ${{ fromJSON('{"msvc-2019":"11","msvc-2022":"12","msvc-2026":"12"}')[matrix.cxx_compiler] || '13' }}
+      CUDA_MINOR: ${{ fromJSON('{"msvc-2019":"4","msvc-2022":"0","msvc-2026":"0"}')[matrix.cxx_compiler] || '2' }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
 

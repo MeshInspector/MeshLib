@@ -16,6 +16,7 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRPch/MRFmt.h"
@@ -38,7 +39,7 @@ ImFont* loadControllerCubeFont( float fontSize )
 
 void copyTexture( int w, int h, const ImTextureData* tex, int tx0, int ty0, Image& img, int ix0, int iy0 )
 {
-    for ( auto y = 0; y < h; ++y )
+    ParallelFor( 0, h, [&] ( int y )
     {
         for ( auto x = 0; x < w; ++x )
         {
@@ -55,22 +56,26 @@ void copyTexture( int w, int h, const ImTextureData* tex, int tx0, int ty0, Imag
                 break;
             }
         }
-    }
+    } );
 }
 
 void copyImage( int w, int h, const Image& src, int sx0, int sy0, Image& dst, int dx0, int dy0 )
 {
-    for ( auto y = 0; y < h; ++y )
+    ParallelFor( 0, h, [&] ( int y )
+    {
         for ( auto x = 0; x < w; ++x )
             dst.pixels[( dy0 + y ) * dst.resolution.x + ( dx0 + x )] = src.pixels[( sy0 + y ) * src.resolution.x + ( sx0 + x )];
+    } );
 }
 
 void flipVertically( Image& img )
 {
     const auto w = img.resolution.x, h = img.resolution.y;
-    for ( auto y = 0; y < h / 2; ++y )
+    ParallelFor( 0, h / 2, [&] ( int y )
+    {
         for ( auto x = 0; x < w; ++x )
             std::swap( img.pixels[y * w + x], img.pixels[( h - y - 1 ) * w + x] );
+    } );
 }
 
 Expected<Image> renderControllerSideText( const Vector2i& resolution )

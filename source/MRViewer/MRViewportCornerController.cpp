@@ -807,6 +807,7 @@ void CornerControllerObject::initDefault()
                 obj->setDirtyFlags( DIRTY_TEXTURE );
             }
         }
+        getViewerInstance().setSceneDirty();
     } );
 #endif
 

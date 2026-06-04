@@ -52,12 +52,14 @@ ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 # BuildKit secrets: present -> read-write cache, absent -> anonymous read-only.
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
+    --mount=type=secret,id=AWS_SESSION_TOKEN \
     source /opt/rh/autoconf271/enable && \
     export AWS_DEFAULT_REGION=us-east-1 && \
     S3_URL="s3://vcpkg-export/${VCPKG_VERSION}/${VCPKG_TRIPLET}/" && \
     if [ -s /run/secrets/AWS_ACCESS_KEY_ID ] && [ -s /run/secrets/AWS_SECRET_ACCESS_KEY ]; then \
         export AWS_ACCESS_KEY_ID="$(cat /run/secrets/AWS_ACCESS_KEY_ID)" && \
         export AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/AWS_SECRET_ACCESS_KEY)" && \
+        if [ -s /run/secrets/AWS_SESSION_TOKEN ]; then export AWS_SESSION_TOKEN="$(cat /run/secrets/AWS_SESSION_TOKEN)"; fi && \
         echo "vcpkg S3 binary cache: read-write (${S3_URL})" && \
         export VCPKG_BINARY_SOURCES="clear;x-aws,${S3_URL},readwrite" ; \
     else \

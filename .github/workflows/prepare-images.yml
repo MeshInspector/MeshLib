@@ -154,6 +154,10 @@ jobs:
 
   linux-vcpkg-build-upload:
     if: ${{ inputs.need_linux_vcpkg_rebuild && !inputs.disable_linux_vcpkg }}
+    # OIDC: this job assumes an AWS role to read/write the vcpkg S3 binary cache.
+    permissions:
+      id-token: write
+      contents: read
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -182,20 +186,33 @@ jobs:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Configure AWS Credentials
+        # OIDC role assumption (same role as the Windows vcpkg cache) issues
+        # temporary credentials into the step environment. They are forwarded
+        # into `docker build` below as BuildKit secrets, because `vcpkg install`
+        # runs inside the build sandbox and does not inherit the runner's AWS env.
+        uses: aws-actions/configure-aws-credentials@99214aa6889fcddfa57764031d71add364327e59 # v6.1.3
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          retry-max-attempts: 5
+
       - name: Build Linux vcpkg image
-        # AWS credentials are passed as BuildKit secrets so the Dockerfile's
-        # `vcpkg install` can read/write the shared S3 binary cache and skip
-        # rebuilding unchanged ports from source. They are scoped to this step
-        # and never written to image layers. When unavailable (e.g. no secret
-        # access) the build falls back to anonymous read-only cache access.
+        # The temporary AWS credentials are passed as BuildKit secrets so the
+        # Dockerfile's `vcpkg install` can read/write the shared S3 binary cache
+        # and skip rebuilding unchanged ports. Secrets are scoped to this step
+        # and never written into image layers. If credentials are absent (e.g.
+        # no OIDC access) no secret args are passed and the build degrades to
+        # anonymous read-only cache access.
         env:
           DOCKER_BUILDKIT: 1
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           secret_args=()
           if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ]; then
             secret_args+=(--secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY)
+            if [ -n "${AWS_SESSION_TOKEN}" ]; then
+              secret_args+=(--secret id=AWS_SESSION_TOKEN)
+            fi
           fi
           docker build \
             -f ./docker/${{ matrix.os }}-vcpkgDockerfile \

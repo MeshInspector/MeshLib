@@ -1,38 +1,6 @@
 # syntax=docker/dockerfile:1
-FROM ubuntu:22.04 AS build
 
-# update and install req
-RUN <<EOF
-    set -e
-    export DEBIAN_FRONTEND=noninteractive
-    export DEBCONF_NONINTERACTIVE_SEEN=true
-    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
-    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
-    apt-get update -qqy
-    apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time ninja-build
-    apt-get clean
-    rm -rf /var/lib/apt/lists/*
-EOF
-
-RUN mkdir /home/MeshLib
-WORKDIR "/home/MeshLib"
-
-# copy files
-COPY .git .git
-COPY cmake cmake
-COPY thirdparty thirdparty
-COPY scripts scripts
-COPY source source
-COPY requirements requirements
-
-# build and install thirdparty
-ENV MR_STATE=DOCKER_BUILD
-RUN ./scripts/build_thirdparty.sh
-
-
-FROM ubuntu:22.04 AS production
+FROM ubuntu:22.04 AS base
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
@@ -41,14 +9,9 @@ COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/install_apt_cuda.sh scripts/install_apt_cuda.sh
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
-COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
 COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
 COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
-
-COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
-COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
-COPY --from=build /home/MeshLib/share /usr/local/lib/meshlib-thirdparty-lib/share
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -67,19 +30,12 @@ RUN <<EOF
     ./scripts/install_apt_cuda.sh
     ./scripts/mrbind/install_deps_ubuntu.sh
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
     apt-get update -y
     apt-get install -y gh g++-12 clang-14
     apt-get clean
     rm -rf /var/lib/apt/lists/*
-EOF
-
-RUN <<EOF
-    set -e
-    ./scripts/install_thirdparty.sh
-    echo '/usr/local/lib' | tee -a /etc/ld.so.conf
-    sudo ldconfig
 EOF
 
 # install aws cli
@@ -93,7 +49,42 @@ RUN <<EOF
     esac
     curl "$ARCH_URL" -o "awscliv2.zip"
     unzip awscliv2.zip
-    sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+EOF
+
+
+FROM base AS build
+
+RUN mkdir /home/MeshLib
+WORKDIR "/home/MeshLib"
+
+# copy files
+COPY .git .git
+COPY cmake cmake
+COPY thirdparty thirdparty
+COPY scripts scripts
+COPY source source
+COPY requirements requirements
+
+# build and install thirdparty
+RUN ./scripts/build_thirdparty.sh
+
+
+FROM base AS production
+
+WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
+
+COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
+
+COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=build /home/MeshLib/share /usr/local/lib/meshlib-thirdparty-lib/share
+
+RUN <<EOF
+    set -e
+    ./scripts/install_thirdparty.sh
+    echo '/usr/local/lib' | tee -a /etc/ld.so.conf
+    ldconfig
 EOF
 
 # Add a new user "actions-runner" with user id 8877

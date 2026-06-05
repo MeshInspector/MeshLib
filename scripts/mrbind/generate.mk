@@ -593,12 +593,18 @@ COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 # Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
 # And I'm not sure if exporting them even did anything useful on Windows in the first place.
 COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
+# Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
+# emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
+# code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
+# The release/debug import libraries have different names but both live in the right `-L$(DEPS_LIB_DIR)`.
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
+LINKER_FLAGS += -ltbb12_debug
 else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
+LINKER_FLAGS += -ltbb12
 endif
 endif # Windows
 

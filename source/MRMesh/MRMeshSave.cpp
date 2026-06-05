@@ -547,6 +547,8 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extens
     return saver.streamSave( mesh, out, settings );
 }
 
+/// One can call this function from VS interpreter window during debuging
+/// ( { ,,MRMesh.dll }MR::MeshSave::debugSaveMesh_ )( ( void* )meshPtr,( void* )faceBitSet, "E:/debug.mru" )
 void debugSaveMesh_( void* mesh, void* faces, const char* path )
 {
     using namespace MR;

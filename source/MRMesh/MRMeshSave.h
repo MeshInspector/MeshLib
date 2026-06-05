@@ -95,10 +95,6 @@ MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::st
 
 /// \}
 
-/// One can call this function from VS interpreter window during debuging
-/// ( { ,,MRMesh.dll }MR::MeshSave::debugSaveMesh_ )( ( void* )meshPtr,( void* )faceBitSet, "E:/debug.mru" )
-MRMESH_API void debugSaveMesh_( void* mesh, void* faces, const char* path );
-
 } // namespace MeshSave
 
 } // namespace MR

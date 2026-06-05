@@ -216,6 +216,11 @@ jobs:
     if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}
     timeout-minutes: 240
     runs-on: ${{ matrix.runner }}
+    # install.bat (run inside the setup-vcpkg-windows action) picks the triplet
+    # from VCPKG_DEFAULT_TRIPLET; set it at the job level so it propagates into
+    # the composite action's steps (a step-level `env:` would not).
+    env:
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
     strategy:
       fail-fast: false
       matrix:
@@ -237,14 +242,6 @@ jobs:
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
             vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
-      - name: Setup vcpkg
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{ matrix.vcpkg-version }}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -259,7 +256,11 @@ jobs:
           retry-max-attempts: 5
 
       - name: Build and cache vcpkg
-        env:
-          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-        run: |
-          .\thirdparty\install.bat --write-s3 --use-s3-asset-provider
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: ${{ matrix.vcpkg-version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          # The S3 asset provider is only used for the VS2019 triplets
+          # (x64-windows-vs2019-meshlib and x64-windows-meshlib-iterator-debug);
+          # VS2022/VS2026 fetch their assets from upstream instead.
+          install-flags: ${{ matrix.vs == 'vs2019' && '--write-s3 --use-s3-asset-provider' || '--write-s3' }}

@@ -1,16 +1,20 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:22.04 AS build
 
 # update and install req
-RUN export DEBIAN_FRONTEND=noninteractive; \
-    export DEBCONF_NONINTERACTIVE_SEEN=true; \
-    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
-    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list; \
-    apt-get update -qqy \
- && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time ninja-build \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+RUN <<EOF
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    apt-get update -qqy
+    apt-get install -qqy --no-install-recommends \
+        tzdata git sudo time ninja-build
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF
 
 RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
@@ -49,39 +53,48 @@ COPY --from=build /home/MeshLib/share /usr/local/lib/meshlib-thirdparty-lib/shar
 ENV MR_STATE=DOCKER_BUILD
 
 # update and install req
-RUN export DEBIAN_FRONTEND=noninteractive; \
-    export DEBCONF_NONINTERACTIVE_SEEN=true; \
-    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
-    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list; \
-    apt-get update -qqy \
- && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext \
- && ./scripts/install_apt_requirements.sh \
- && ./scripts/install_apt_cuda.sh \
- && ./scripts/mrbind/install_deps_ubuntu.sh \
- && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh \
- && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
- && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
- && apt-get update -y \
- && apt-get install -y gh g++-12 clang-14 \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+RUN <<EOF
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    apt-get update -qqy
+    apt-get install -qqy --no-install-recommends \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext
+    ./scripts/install_apt_requirements.sh
+    ./scripts/install_apt_cuda.sh
+    ./scripts/mrbind/install_deps_ubuntu.sh
+    ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    apt-get update -y
+    apt-get install -y gh g++-12 clang-14
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF
 
-RUN ./scripts/install_thirdparty.sh && \
-    echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
+RUN <<EOF
+    set -e
+    ./scripts/install_thirdparty.sh
+    echo '/usr/local/lib' | tee -a /etc/ld.so.conf
     sudo ldconfig
+EOF
 
 # install aws cli
-RUN ARCH=$(uname -m) && \
-    case $ARCH in \
-        x86_64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" ;; \
-        aarch64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" ;; \
-        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
-    esac && \
-    curl "$ARCH_URL" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
+RUN <<EOF
+    set -e
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" ;;
+        aarch64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" ;;
+        *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+    esac
+    curl "$ARCH_URL" -o "awscliv2.zip"
+    unzip awscliv2.zip
     sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+EOF
 
 # Add a new user "actions-runner" with user id 8877
 RUN useradd -u 8877 -m user

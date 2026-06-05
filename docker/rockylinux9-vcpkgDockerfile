@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG VCPKG_VERSION=2026.05.25
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
@@ -6,22 +7,27 @@ FROM rockylinux:9 AS build
 
 COPY scripts/retry.sh /usr/local/bin/retry.sh
 
-RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
-    $(: network may flake ) \
+RUN <<EOF
+    set -e
+    echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
+    # network may flake
     retry.sh -- dnf -y install --enablerepo crb \
         git cmake ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf271 autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
-        && \
+        autoconf271 autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2
     dnf clean all
+EOF
 
 # install aws cli for vcpkg cache
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update && \
+RUN <<EOF
+    set -e
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
     rm -rf awscliv2.zip aws/
+EOF
 
 WORKDIR /root
 
@@ -33,26 +39,34 @@ COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ARG VCPKG_VERSION
 ENV VCPKG_VERSION=$VCPKG_VERSION
-RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
-    cd vcpkg && \
+RUN <<EOF
+    set -e
+    git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch
+    cd vcpkg
     ./bootstrap-vcpkg.sh -disableMetrics
+EOF
 
 WORKDIR /root/vcpkg
 
 # replace the original source URL with a faster mirror's one
-RUN sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/vcpkg-make/portfile.cmake && \
+RUN <<EOF
+    set -e
+    sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/vcpkg-make/portfile.cmake
     sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
+EOF
 
 # build vcpkg packages
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
-    --mount=type=secret,id=AWS_SESSION_TOKEN \
-    source ../MeshLib/configure_s3_cache.sh && \
-    source /opt/rh/autoconf271/enable && \
-    $(: network may flake ) \
+    --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
+    set -e
+    source ../MeshLib/configure_s3_cache.sh
+    source /opt/rh/autoconf271/enable
+    # network may flake
     retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports --debug $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
+EOF
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
@@ -68,8 +82,10 @@ ENV VCPKG_ROOT=/opt/vcpkg
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
-RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
-    $(: network may flake ) \
+RUN <<EOF
+    set -e
+    echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
+    # network may flake
     retry.sh -- dnf -y install --enablerepo crb \
         git cmake ninja-build clang-devel \
         $(: vcpkg requirements ) \
@@ -79,19 +95,24 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         $(: mrbind requirements ) \
         lld llvm-devel python3-devel which zlib-devel \
         $(: CI environment ) \
-        time python3-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext \
-        && \
+        time python3-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all
+EOF
 
 # install github-cli
-RUN retry.sh -- dnf -y install 'dnf-command(config-manager)' && \
-    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
-    retry.sh -- dnf -y install gh && \
+RUN <<EOF
+    set -e
+    retry.sh -- dnf -y install 'dnf-command(config-manager)'
+    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+    retry.sh -- dnf -y install gh
     dnf clean all
+EOF
 
 # install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update && \
+RUN <<EOF
+    set -e
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
     rm -rf awscliv2.zip aws/
-
+EOF

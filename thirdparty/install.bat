@@ -11,7 +11,7 @@ REM                                   May be passed multiple times. Lets downstr
 REM                                   onto the same vcpkg invocation, so all the env-var and overlay setup lives here.
 
 REM VCPKG_TAG is the S3 binary-cache folder, derived below from the checked-out
-REM vcpkg release tag (e.g. 2026.05.25); it may not always exist in S3.
+REM vcpkg release tag (e.g. 2026.06.01); it may not always exist in S3.
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
 if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
@@ -35,7 +35,7 @@ if not defined vcpkg_path (
     echo vcpkg not found. Setting VCPKG_TAG to "no-tag".
     set VCPKG_TAG=no-tag
 ) else (
-    REM S3 folder name = the checked-out vcpkg release tag (e.g. 2026.05.25).
+    REM S3 folder name = the checked-out vcpkg release tag (e.g. 2026.06.01).
     REM CI checks vcpkg out at a release tag before running this script, so
     REM `git describe --exact-match` yields that tag and keeps the binary-cache
     REM producer (prepare-images) and consumer (build) in sync. Fall back to the

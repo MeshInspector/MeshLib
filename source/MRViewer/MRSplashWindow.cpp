@@ -190,7 +190,8 @@ void DefaultSplashWindow::postInit_()
 
 void DefaultSplashWindow::positioning_( float )
 {
-    assert( splashImage_ );
+    if ( !splashImage_ )
+        return;
 
     int workAreaX = 0, workAreaY = 0, workAreaW = 0, workAreaH = 0;
     glfwGetMonitorWorkarea( glfwGetPrimaryMonitor(), &workAreaX, &workAreaY, &workAreaW, &workAreaH );
@@ -224,6 +225,8 @@ void DefaultSplashWindow::reloadFont_( float hdpiScale, float pixelRatio )
 
 bool DefaultSplashWindow::frame_( float /*scaling*/ )
 {
+    if ( !splashImage_ )
+        return false;
     ImGui::SetNextWindowSize( ImGui::GetIO().DisplaySize );
     ImGui::SetNextWindowPos( ImVec2( 0, 0 ) );
     ImGui::Begin( "Splash window", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove );

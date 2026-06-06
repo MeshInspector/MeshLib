@@ -193,8 +193,12 @@ void DefaultSplashWindow::positioning_( float )
     if ( !splashImage_ )
         return;
 
+    const auto pMonitor = glfwGetPrimaryMonitor();
+    if ( !pMonitor )
+        return;
+
     int workAreaX = 0, workAreaY = 0, workAreaW = 0, workAreaH = 0;
-    glfwGetMonitorWorkarea( glfwGetPrimaryMonitor(), &workAreaX, &workAreaY, &workAreaW, &workAreaH );
+    glfwGetMonitorWorkarea( pMonitor, &workAreaX, &workAreaY, &workAreaW, &workAreaH );
 
     int width = std::min( int( 0.6f * float( workAreaW ) ), splashImage_->getImageWidth() );
     int height = int( float( width ) * float( splashImage_->getImageHeight() ) / float( splashImage_->getImageWidth() ) );

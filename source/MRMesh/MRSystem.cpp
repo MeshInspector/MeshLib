@@ -617,9 +617,7 @@ void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
         logger->sinks().clear(); // clear all sinks when setting default logger
 
 #ifndef __EMSCRIPTEN__
-#ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
     printStacktraceOnCrash();
-#endif
 #endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
 

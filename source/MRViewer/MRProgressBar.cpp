@@ -186,8 +186,7 @@ void setup()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( "###GlobalProgressBarPopup", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        UI::TestEngine::pushTree( "ProgressBar" );
-        MR_FINALLY{ UI::TestEngine::popTree(); };
+        UI::TestEngine::TreeGuard testEngineGuard( "ProgressBar" );
 
         instance.frameRequest_.reset();
 

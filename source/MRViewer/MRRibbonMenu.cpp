@@ -454,8 +454,7 @@ void RibbonMenu::drawLanguageButton_()
 
 bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
-    UI::TestEngine::pushTree( "CustomCheckBox" );
-    MR_FINALLY { UI::TestEngine::popTree(); };
+    UI::TestEngine::TreeGuard testEngineGuard( "CustomCheckBox" );
 
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )

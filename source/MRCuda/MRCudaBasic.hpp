@@ -4,9 +4,10 @@
 #include "MRCudaBasic.cuh"
 
 #ifndef __CUDACC__ // reduce dependency of CUDA kernels from host STL
-#include <cassert>
 #include <string>
 #endif
+
+#include <cassert>
 
 namespace MR
 {

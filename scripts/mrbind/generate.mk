@@ -129,8 +129,12 @@ override IS_EMSCRIPTEN := 1
 
 # Must special-case Windows because there `em++` is actually `em++.py`, and Bash doesn't want to run it without the extension.
 # `MSYS2_ARG_CONV_EXCL=*` guards `/c`.
-EMSCRIPTEN_SYSROOT := $(call safe_shell,echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
+EMSCRIPTEN_SYSROOT := $(shell echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
+ifneq ($(EMSCRIPTEN_SYSROOT),)
 $(info Determined EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_SYSROOT)`)
+else
+$(error Unable to find Emscripten SDK, ensure you have `em++` in the PATH. In powershell run `emsdk/emsdk_env.ps1`; or in bash run `. emsdk/emsdk_env.sh`)
+endif
 endif
 
 endif # TARGETING_EMSCRIPTEN

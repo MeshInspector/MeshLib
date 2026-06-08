@@ -68,7 +68,7 @@ private:
 class BitSet
 {
 public:
-    using block_type = Uint64;
+    using block_type = std::uint64_t;
     inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 

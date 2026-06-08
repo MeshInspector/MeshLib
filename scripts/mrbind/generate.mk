@@ -63,21 +63,79 @@ ifeq ($(OS),Windows_NT)
 IS_WINDOWS := 1
 IS_MACOS := 0
 IS_LINUX := 0
+# This is 1 only when we're not using host headers for Emscripten (using host headers is a hack).
+IS_EMSCRIPTEN := 0
 else
 UNAME := $(shell uname -s)
 ifeq ($(UNAME),Darwin)
 IS_WINDOWS := 0
 IS_MACOS := 1
 IS_LINUX := 0
+IS_EMSCRIPTEN := 0
 else
 IS_WINDOWS := 0
 IS_MACOS := 0
 IS_LINUX := 1
+IS_EMSCRIPTEN := 0
 endif
 endif
+
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 override IS_MACOS := $(filter-out 0,$(IS_MACOS))
 override IS_LINUX := $(filter-out 0,$(IS_LINUX))
+override IS_EMSCRIPTEN := $(filter-out 0,$(IS_EMSCRIPTEN))
+
+HOST_IS_WINDOWS := $(IS_WINDOWS)
+HOST_IS_MACOS := $(IS_MACOS)
+HOST_IS_LINUX := $(IS_LINUX)
+override HOST_IS_WINDOWS := $(filter-out 0,$(HOST_IS_WINDOWS))
+override HOST_IS_MACOS := $(filter-out 0,$(HOST_IS_MACOS))
+override HOST_IS_LINUX := $(filter-out 0,$(HOST_IS_LINUX))
+
+ifeq ($(TARGET),c)
+# Do we bind `size_t` separately from `uint64_t`? Only matters for C. Requires the target platform to be either Mac or Emscripten.
+# Setting this to 0 is no longer supported, since we got rid of our `Int64` and `Uint64` typedefs (which are in turn not compatible with setting this to `1`, and would have to be `#ifdef`ed if we wanted to support both modes).
+SUPPORT_SIZE_T := 1
+override SUPPORT_SIZE_T := $(filter-out 0,$(SUPPORT_SIZE_T))
+$(info Do we support `size_t` as a type separate from `uint64_t` (new style)? $(if $(SUPPORT_SIZE_T),YES,NO))
+
+# Will we tell the parser that the target platform is emscripten?
+# The difference between this and `IS_EMSCRIPTEN` is that we set the latter only if we use the proper Emscripten headers, as opposed to host headers.
+# If `TARGETING_EMSCRIPTEN` is set, then either this will be set or `EM_USE_HOST_HEADERS` will be set, but never both.
+override TARGETING_EMSCRIPTEN := $(and $(SUPPORT_SIZE_T),$(if $(IS_MACOS),,1))
+$(info Pretending that the target platform is Emscripten? $(if $(TARGETING_EMSCRIPTEN),YES,NO))
+
+else # TARGET != "c"
+override SUPPORT_SIZE_T :=
+override TARGETING_EMSCRIPTEN :=
+endif
+
+# If the target platform is Emscripten...
+ifneq ($(TARGETING_EMSCRIPTEN),)
+
+EM_USE_HOST_HEADERS := $(if $(HOST_IS_LINUX),1,0)
+override EM_USE_HOST_HEADERS := $(filter-out 0,$(EM_USE_HOST_HEADERS))
+$(info Use host headers instead of the Emscripten ones? $(if $(EM_USE_HOST_HEADERS),YES,NO))
+
+ifeq ($(EM_USE_HOST_HEADERS),)
+# Not using host headers.
+
+override IS_WINDOWS :=
+override IS_MACOS :=
+override IS_LINUX :=
+override IS_EMSCRIPTEN := 1
+
+# Find Emscripten SDK sysroot!
+
+# Must special-case Windows because there `em++` is actually `em++.py`, and Bash doesn't want to run it without the extension.
+# `MSYS2_ARG_CONV_EXCL=*` guards `/c`.
+EMSCRIPTEN_SYSROOT := $(call safe_shell,echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
+$(info Determined EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_SYSROOT)`)
+endif
+
+endif # TARGETING_EMSCRIPTEN
+
+
 
 # On Windows, check that we are in the VS prompt, or at least that `VCToolsInstallDir` is defined (which is what Clang needs).
 # Otherwise Clang may or may not choose some weird system libraries.
@@ -174,9 +232,9 @@ MACOS_MIN_VER :=
 # The C++ compiler.
 # When making C bindings, this is still necessary even though we don't compile anything with it.
 # That's because we need to run `clang++ -print-resource-dir` and feed that resource directory to libclang, so it can find its internal headers.
-ifneq ($(IS_WINDOWS),)
+ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
-else ifneq ($(IS_MACOS),)
+else ifneq ($(HOST_IS_MACOS),)
 CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
@@ -194,14 +252,19 @@ MRBIND_GEN_CSHARP_EXE = $(MRBIND_EXE)_gen_csharp
 
 
 # Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
-ifneq ($(IS_WINDOWS),)
+ifneq ($(IS_EMSCRIPTEN),)
+DEPS_BASE_DIR :=
+DEPS_INCLUDE_DIR :=
+DEPS_LIB_DIR :=
+else ifneq ($(IS_WINDOWS),)
 DEPS_BASE_DIR := $(VCPKG_DIR)/installed/$(VCPKG_TRIPLET)
+DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
 else
 DEPS_BASE_DIR := .
+DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/lib
 endif
-DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 
 
 ifeq ($(TARGET),python)
@@ -490,10 +553,10 @@ INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.tx
 INPUT_FILES_WHITELIST := %
 ifneq ($(filter c csharp,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
-else ifneq ($(IS_WINDOWS),)
+else ifneq ($(HOST_IS_WINDOWS),)
 TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
 else
-TEMP_OUTPUT_DIR := build/binds
+TEMP_OUTPUT_DIR := build/binds_$(TARGET)
 endif
 
 ifneq ($(TARGET),csharp) # Stuff below is for all languages except C#. C# logic is at the bottom of this makefile.
@@ -514,12 +577,14 @@ endif
 # `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makefile_dir)mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
-COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)../../source
+COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. $(if $(DEPS_INCLUDE_DIR),-I$(DEPS_INCLUDE_DIR)) -I$(makefile_dir)../../source
 # Add `-frelaxed-template-template-args` if Clang is old enough to support it. Newer versions have this behavior by default.
 # Clang 18 and older need this flag. Clang 19 and 20 do the right thing by default, but still allow the flag with a deprecation warning. Clang 21 and newer consider this an unknown flag and error.
 COMPILER_FLAGS += $(shell $(CXX_FOR_BINDINGS) --help | grep -o -- -frelaxed-template-template-args)
+ifneq ($(DEPS_INCLUDE_DIR),)
 # Required for vcpkg environments
 COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
+endif
 # TODO: use system Eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
@@ -540,10 +605,43 @@ COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_C_BINDINGS
 COMPILER += -DMR_COMPILING_C_BINDINGS
 endif
 
+
+
+ifneq ($(TARGETING_EMSCRIPTEN),)
+
+COMPILER_FLAGS_LIBCLANG += --target=wasm32-unknown-emscripten
+ifneq ($(EM_USE_HOST_HEADERS),)
+override default_include_paths := $(call safe_shell,$(CXX_FOR_BINDINGS) -xc++ /dev/null -fsyntax-only -v 2>&1 | awk '/^#include <...> search starts here:$$/{x=1; next} !/^ /&&x{exit} x{gsub(/^ /,""); printf " -isystem%s"$(comma) $$0} END{print ""}')
+COMPILER_FLAGS_LIBCLANG += -stdlib=libstdc++ $(default_include_paths)
+else
+COMPILER_FLAGS_LIBCLANG += --sysroot=$(call quote,$(EMSCRIPTEN_SYSROOT))
+COMPILER_FLAGS_LIBCLANG += -isystem $(call quote,$(EMSCRIPTEN_SYSROOT)/include/compat)# Mhm.
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/expected/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/spdlog/include
+
+#EMSCRIPTEN_THIRDPARTY_DIR := .
+#$(info EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_THIRDPARTY_DIR)`)
+#COMPILER_FLAGS_LIBCLANG += -isystem $(call quote,$(EMSCRIPTEN_THIRDPARTY_DIR)/include)
+
+# Those would normally be in `./include`, but we try to avoid building third-party libraries...
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/parallel-hashmap
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/onetbb/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/jsoncpp/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/googletest/googletest/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/openvdb/v10/openvdb/openvdb
+# OpenVDB generates a file called `openvdb/version.h` during build. To avoid having to generate it, we add our own copy of it to the include path.
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)emscripten_headers
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)emscripten_headers/openvdb
+endif
+
+endif # TARGETING_EMSCRIPTEN
+
+
+
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
-LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
+LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
 
 # Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
 #   because the header override with it being constexpr is in this resource directory.
@@ -555,10 +653,15 @@ MRBIND_GEN_C_FLAGS := $(call load_file,$(makefile_dir)mrbind_gen_c_flags.txt)
 
 # Adjusting canonical types to fixed-size typedefs.
 ifeq ($(TARGET),c)
+MRBIND_FLAGS += --implicit-enum-underlying-type-is-always-int
+ifneq ($(SUPPORT_SIZE_T),)
+MRBIND_FLAGS += --canonicalize-long-to-size_t --canonicalize-64-to-fixed-size-typedefs
+else
 # Here you can choose between `--canonicalize-to-fixed-size-typedefs` and `--canonicalize-64-to-fixed-size-typedefs` to control
 #   whether the integerl types smaller than 64 bits are replaced with the typedefs or not. The 64-bit ones always need to be replaced.
-MRBIND_FLAGS += --canonicalize-64-to-fixed-size-typedefs --canonicalize-size_t-to-uint64_t --implicit-enum-underlying-type-is-always-int
+MRBIND_FLAGS += --canonicalize-64-to-fixed-size-typedefs --canonicalize-size_t-to-uint64_t
 MRBIND_GEN_C_FLAGS += --reject-long-and-long-long --use-size_t-typedef-for-uint64_t
+endif
 endif
 
 # Inherit class members.
@@ -575,6 +678,9 @@ MRBIND_GEN_C_FLAGS += --bind-shared-ptr-virally --force-emit-common-helpers
 endif
 
 
+# OS-specific flags:
+
+# Windows.
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
 COMPILER_FLAGS += --target=x86_64-pc-windows-msvc
@@ -605,7 +711,7 @@ LINKER_FLAGS += -ltbb12_debug
 else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 LINKER_FLAGS += -ltbb12
-endif
+endif # VS_MODE == Release
 endif # Windows
 
 # Linux.

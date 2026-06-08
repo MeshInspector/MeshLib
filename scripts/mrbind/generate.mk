@@ -129,7 +129,8 @@ override IS_EMSCRIPTEN := 1
 
 # Must special-case Windows because there `em++` is actually `em++.py`, and Bash doesn't want to run it without the extension.
 # `MSYS2_ARG_CONV_EXCL=*` guards `/c`.
-EMSCRIPTEN_SYSROOT := $(shell echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
+# Note that we have to poke some libraries here too, to add them to the sysroot.
+EMSCRIPTEN_SYSROOT := $(shell echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - -sUSE_BOOST_HEADERS=1 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
 ifneq ($(EMSCRIPTEN_SYSROOT),)
 $(info Determined EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_SYSROOT)`)
 else

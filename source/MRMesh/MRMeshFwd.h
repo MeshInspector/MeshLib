@@ -182,7 +182,7 @@ struct Color;
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector2,
     ( Vector2b,   Vector2<bool>   )
     ( Vector2i,   Vector2<int>    )
-    ( Vector2i64, Vector2<std::uint64_t> )
+    ( Vector2i64, Vector2<std::int64_t> )
     ( Vector2f,   Vector2<float>  )
     ( Vector2d,   Vector2<double> )
 )
@@ -190,7 +190,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector2,
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector3,
     ( Vector3b,   Vector3<bool>   )
     ( Vector3i,   Vector3<int>    )
-    ( Vector3i64, Vector3<std::uint64_t> )
+    ( Vector3i64, Vector3<std::int64_t> )
     ( Vector3f,   Vector3<float>  )
     ( Vector3d,   Vector3<double> )
 )
@@ -198,7 +198,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector3,
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Vector4,
     ( Vector4b,   Vector4<bool>   )
     ( Vector4i,   Vector4<int>    )
-    ( Vector4i64, Vector4<std::uint64_t> )
+    ( Vector4i64, Vector4<std::int64_t> )
     ( Vector4f,   Vector4<float>  )
     ( Vector4d,   Vector4<double> )
 )
@@ -209,7 +209,7 @@ using Vector4ll [[deprecated("Use `Vector4i64` instead.")]] = Vector4<long long>
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix2,
     ( Matrix2b,   Matrix2<bool>   )
     ( Matrix2i,   Matrix2<int>    )
-    ( Matrix2i64, Matrix2<std::uint64_t> )
+    ( Matrix2i64, Matrix2<std::int64_t> )
     ( Matrix2f,   Matrix2<float>  )
     ( Matrix2d,   Matrix2<double> )
 )
@@ -220,7 +220,7 @@ using Matrix2ll [[deprecated("Use `Matrix2i64` instead.")]] = Matrix2<long long>
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix3,
     ( Matrix3b,   Matrix3<bool>   )
     ( Matrix3i,   Matrix3<int>    )
-    ( Matrix3i64, Matrix3<std::uint64_t> )
+    ( Matrix3i64, Matrix3<std::int64_t> )
     ( Matrix3f,   Matrix3<float>  )
     ( Matrix3d,   Matrix3<double> )
 )
@@ -231,7 +231,7 @@ using Matrix3ll [[deprecated("Use `Matrix3i64` instead.")]] = Matrix3<long long>
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix4,
     ( Matrix4b,   Matrix4<bool>   )
     ( Matrix4i,   Matrix4<int>    )
-    ( Matrix4i64, Matrix4<std::uint64_t> )
+    ( Matrix4i64, Matrix4<std::int64_t> )
     ( Matrix4f,   Matrix4<float>  )
     ( Matrix4d,   Matrix4<double> )
 )
@@ -242,7 +242,7 @@ using Matrix4ll [[deprecated("Use `Matrix4i64` instead.")]] = Matrix4<long long>
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix2,
     ( SymMatrix2b,   SymMatrix2<bool>   )
     ( SymMatrix2i,   SymMatrix2<int>    )
-    ( SymMatrix2i64, SymMatrix2<std::uint64_t> )
+    ( SymMatrix2i64, SymMatrix2<std::int64_t> )
     ( SymMatrix2f,   SymMatrix2<float>  )
     ( SymMatrix2d,   SymMatrix2<double> )
 )
@@ -253,7 +253,7 @@ using SymMatrix2ll [[deprecated("Use `SymMatrix2i64` instead.")]] = SymMatrix2<l
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix3,
     ( SymMatrix3b,   SymMatrix3<bool>   )
     ( SymMatrix3i,   SymMatrix3<int>    )
-    ( SymMatrix3i64, SymMatrix3<std::uint64_t> )
+    ( SymMatrix3i64, SymMatrix3<std::int64_t> )
     ( SymMatrix3f,   SymMatrix3<float>  )
     ( SymMatrix3d,   SymMatrix3<double> )
 )
@@ -264,7 +264,7 @@ using SymMatrix3ll [[deprecated("Use `SymMatrix3i64` instead.")]] = SymMatrix3<l
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
     ( SymMatrix4b,   SymMatrix4<bool>   )
     ( SymMatrix4i,   SymMatrix4<int>    )
-    ( SymMatrix4i64, SymMatrix4<std::uint64_t> )
+    ( SymMatrix4i64, SymMatrix4<std::int64_t> )
     ( SymMatrix4f,   SymMatrix4<float>  )
     ( SymMatrix4d,   SymMatrix4<double> )
 )
@@ -385,15 +385,15 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
     ( Box1i,   Box<int>             )
-    ( Box1i64, Box<std::uint64_t>          )
+    ( Box1i64, Box<std::int64_t>          )
     ( Box1f,   Box<float>           )
     ( Box1d,   Box<double>          )
     ( Box2i,   Box<Vector2<int>>    )
-    ( Box2i64, Box<Vector2<std::uint64_t>> )
+    ( Box2i64, Box<Vector2<std::int64_t>> )
     ( Box2f,   Box<Vector2<float>>  )
     ( Box2d,   Box<Vector2<double>> )
     ( Box3i,   Box<Vector3<int>>    )
-    ( Box3i64, Box<Vector3<std::uint64_t>> )
+    ( Box3i64, Box<Vector3<std::int64_t>> )
     ( Box3f,   Box<Vector3<float>>  )
     ( Box3d,   Box<Vector3<double>> )
 )

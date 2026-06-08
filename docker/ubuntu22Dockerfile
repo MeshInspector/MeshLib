@@ -26,6 +26,9 @@ RUN <<EOF
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
     # use more reliable mirror
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # install prerequisites for additional repos
+    apt update
+    apt install -y software-properties-common curl
     # configure GitHub repo
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list

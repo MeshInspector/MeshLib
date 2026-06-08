@@ -110,6 +110,17 @@ template <AllowedValueType T>
 MRVIEWER_API void pushTree( std::string_view name );
 MRVIEWER_API void popTree();
 
+// RAII wrapper for `pushTree()`/`popTree()`: pushes a named group on construction and pops it on scope exit
+// (including early returns and exceptions). Prefer this over a manual `pushTree()` + `MR_FINALLY{ popTree(); }`.
+class TreeGuard
+{
+public:
+    explicit TreeGuard( std::string_view name ) { pushTree( name ); }
+    ~TreeGuard() { popTree(); }
+    TreeGuard( const TreeGuard& ) = delete;
+    TreeGuard& operator=( const TreeGuard& ) = delete;
+};
+
 struct Entry;
 
 struct ButtonEntry

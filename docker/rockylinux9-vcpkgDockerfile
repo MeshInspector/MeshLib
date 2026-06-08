@@ -59,8 +59,8 @@ RUN <<EOF
     cd vcpkg
     ./bootstrap-vcpkg.sh -disableMetrics
     # replace the original source URL with a faster mirror's one
-    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' /vcpkports/vcpkg-make/portfile.cmake
-    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' /vcpkports/gettext/portfile.cmake
+    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' vcpkg/ports/vcpkg-make/portfile.cmake
+    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' vcpkg/ports/gettext/portfile.cmake
 EOF
 
 WORKDIR /root/vcpkg

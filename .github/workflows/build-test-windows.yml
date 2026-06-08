@@ -114,25 +114,13 @@ jobs:
           cuda-major: ${{ env.CUDA_MAJOR }}
           cuda-minor: ${{ env.CUDA_MINOR }}
 
-      - name: Setup CUDA
-        shell: cmd
-        run: |
-          echo>>%GITHUB_ENV% CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}
-          echo>>%GITHUB_ENV% CUDA_PATH_V${{ env.CUDA_MAJOR }}_${{ env.CUDA_MINOR }}=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}
-          echo>>%GITHUB_ENV% CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA_MAJOR }}_${{ env.CUDA_MINOR }}
-          echo>>%GITHUB_PATH% C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_MAJOR }}.${{ env.CUDA_MINOR }}\bin
-
-      - name: Install Visual Studio Integration
-        # CUDA's MSBuild integration files are only consumed by the MSBuild
-        # variant (source/MRCuda/MRCuda.vcxproj imports
-        # `$(VCTargetsPath)\BuildCustomizations\CUDA $(MRCudaVersion).props`).
-        # The CMake variants use `project(MRCuda CXX CUDA)` and call nvcc
-        # directly, so this step is a no-op for them.
-        if: ${{ matrix.build_system == 'MSBuild' }}
-        run: |
-          $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
-          $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi '${{env.VC_PATH}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+      - name: Set up CUDA
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-major: ${{ env.CUDA_MAJOR }}
+          cuda-minor: ${{ env.CUDA_MINOR }}
+          # MSBuild consumes CUDA's BuildCustomizations; CMake calls nvcc directly.
+          install-vs-integration: ${{ matrix.build_system == 'MSBuild' }}
 
       - name: Setup python
         run: py -3 scripts\setup_win_python_reqs.py

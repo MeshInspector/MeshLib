@@ -1,20 +1,26 @@
 # syntax=docker/dockerfile:1.6
 
+
 FROM emscripten/emsdk:4.0.10-arm64 AS base
 
 RUN <<EOF
     set -e
+    # configure timezone
     export DEBIAN_FRONTEND=noninteractive
     export DEBCONF_NONINTERACTIVE_SEEN=true
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    # use more reliable mirror
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
         tzdata git pkg-config ninja-build gettext
+    # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 EOF
+
 
 FROM base AS builder
 
@@ -25,6 +31,7 @@ COPY . .
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
 
+# 32-bit multi-threaded
 RUN <<EOF
     set -e
     ./scripts/build_thirdparty.sh
@@ -32,18 +39,19 @@ RUN <<EOF
     rm -rf bin include lib share thirdparty_build
 EOF
 
-ENV MR_EMSCRIPTEN_SINGLE=ON
+# 32-bit single-threaded
 RUN <<EOF
     set -e
+    export MR_EMSCRIPTEN_SINGLE=ON
     ./scripts/build_thirdparty.sh
     ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
     rm -rf bin include lib share thirdparty_build
 EOF
 
-ENV MR_EMSCRIPTEN_SINGLE=OFF
-ENV MR_EMSCRIPTEN_WASM64=ON
+# 64-bit multi-threaded
 RUN <<EOF
     set -e
+    export MR_EMSCRIPTEN_WASM64=ON
     ./scripts/build_thirdparty.sh
     ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
     rm -rf bin include lib share thirdparty_build

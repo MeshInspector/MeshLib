@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
 
+
 FROM ubuntu:22.04 AS base
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
@@ -18,38 +19,33 @@ ENV MR_STATE=DOCKER_BUILD
 # update and install req
 RUN <<EOF
     set -e
+    # configure timezone
     export DEBIAN_FRONTEND=noninteractive
     export DEBCONF_NONINTERACTIVE_SEEN=true
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    # use more reliable mirror
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # configure GitHub repo
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+    # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
+        gh g++-12 clang-14 \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext
     ./scripts/install_apt_requirements.sh
     ./scripts/install_apt_cuda.sh
     ./scripts/mrbind/install_deps_ubuntu.sh
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
-    apt-get update -y
-    apt-get install -y gh g++-12 clang-14
+    # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*
-EOF
-
-# install aws cli
-RUN <<EOF
-    set -e
-    ARCH=$(uname -m)
-    case $ARCH in
-        x86_64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" ;;
-        aarch64) ARCH_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" ;;
-        *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-    esac
-    curl "$ARCH_URL" -o "awscliv2.zip"
+    # install aws cli
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip
     ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+    rm -rf awscliv2.zip aws/
 EOF
 
 

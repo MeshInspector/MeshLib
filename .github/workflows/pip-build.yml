@@ -357,7 +357,7 @@ jobs:
       contents: read  # This is required for actions/checkout
     env:
       VCPKG-VERSION: '2026.06.01'
-      CUDA-VERSION: '12.0.1.52833'
+      CUDA-VERSION: '12.0.1'
       CUDA-MAJOR: '12'
       CUDA-MINOR: '0'
       VCPKG_DEFAULT_TRIPLET: x64-windows-vs2022-meshlib

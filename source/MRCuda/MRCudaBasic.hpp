@@ -3,8 +3,11 @@
 #include "exports.h"
 #include "MRCudaBasic.cuh"
 
-#include <cassert>
+#ifndef __CUDACC__ // reduce dependency of CUDA kernels from host STL
 #include <string>
+#endif
+
+#include <cassert>
 
 namespace MR
 {
@@ -12,8 +15,10 @@ namespace MR
 namespace Cuda
 {
 
+#ifndef __CUDACC__
 /// converts given code in user-readable error string
 [[nodiscard]] MRCUDA_API std::string getError( cudaError_t code );
+#endif
 
 /// spdlog::error the information about some CUDA error including optional filename and line number
 MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, int line = 0 );
@@ -112,7 +117,9 @@ template <typename U>
 inline cudaError_t DynamicArray<T>::copyFrom( const U* data, size_t size )
 {
     static_assert ( sizeof( T ) == sizeof( U ) );
-    return CUDA_LOGE( cudaMemcpy( data_, data, std::min( size_, size ) * sizeof( T ), cudaMemcpyHostToDevice ) );
+    if ( size_ < size )
+        size = size_;
+    return CUDA_LOGE( cudaMemcpy( data_, data, size * sizeof( T ), cudaMemcpyHostToDevice ) );
 }
 
 template <typename T>
@@ -120,7 +127,9 @@ template <typename U>
 inline cudaError_t DynamicArray<T>::copyTo( U* data, size_t size ) const
 {
     static_assert ( sizeof( T ) == sizeof( U ) );
-    return CUDA_LOGE( cudaMemcpy( data, data_, std::min( size, size_ ) * sizeof( T ), cudaMemcpyDeviceToHost ) );
+    if ( size_ < size )
+        size = size_;
+    return CUDA_LOGE( cudaMemcpy( data, data_, size * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 template<typename T>

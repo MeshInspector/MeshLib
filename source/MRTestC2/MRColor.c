@@ -47,7 +47,7 @@ void testMrVertColorsNewSized( void )
 {
     // Test if mrVertColorsNewSized creates a new color map with the expected size.
     size_t size = 10;
-    MR_VertColors* vertColors = MR_VertColors_Construct_1_uint64_t(size);
+    MR_VertColors* vertColors = MR_VertColors_Construct_1_size_t(size);
     TEST_ASSERT(vertColors != NULL);
     TEST_ASSERT(MR_VertColors_size(vertColors) == size);
     MR_VertColors_Destroy(vertColors);

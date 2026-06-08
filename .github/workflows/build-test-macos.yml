@@ -272,16 +272,12 @@ jobs:
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         env:
           ACTIONS_ARTIFACT_UPLOAD_TIMEOUT_MS: 1800000
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: Distributives_macos-${{matrix.arch}}
-            path: meshlib_${{matrix.arch}}.pkg
-            retention-days: 1
-            overwrite: true
+          name: Distributives_macos-${{matrix.arch}}
+          path: meshlib_${{matrix.arch}}.pkg
+          retention-days: 1
+          overwrite: true
 
       - name: Collect artifact stats
         # Mirror `Upload Macos Distribution`'s gate -- otherwise Debug jobs
@@ -308,13 +304,9 @@ jobs:
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: actions/upload-artifact@v7
         with:
-          action: actions/upload-artifact@v7
-          attempt_limit: 3
-          attempt_delay: 30000 # milliseconds
-          with: |
-            name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
-            path: ./patched_content/*
-            retention-days: 1
-            overwrite: true
+          name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
+          path: ./patched_content/*
+          retention-days: 1
+          overwrite: true

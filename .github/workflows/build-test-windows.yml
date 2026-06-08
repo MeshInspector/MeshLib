@@ -155,12 +155,11 @@ jobs:
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
 
-        # Need this to generate the bindings on Windows. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
-      - name: Install Emscripten SDK
+        # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
+      - name: Install Emscripten SDK for MRBind
         if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         env:
           MSYS2_DIR: C:\msys64
-        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           git clone https://github.com/emscripten-core/emsdk ../emsdk
           ../emsdk/emsdk install 4.0.10

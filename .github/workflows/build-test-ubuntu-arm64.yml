@@ -103,6 +103,13 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
+      - name: Checkout additional third-party submodules for C bindings
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/onetbb \
+            thirdparty/jsoncpp \
+
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
@@ -130,11 +137,21 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
+        # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
+      - name: Install Emscripten SDK for MRBind
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          git clone https://github.com/emscripten-core/emsdk ../emsdk
+          ../emsdk/emsdk install 4.0.10
+          ../emsdk/emsdk activate 4.0.10
+
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
+        run: \
+          . ../emsdk/emsdk_env.sh
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace
 
       - name: Upload C bindings headers
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}

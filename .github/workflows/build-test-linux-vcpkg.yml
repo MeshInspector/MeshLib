@@ -145,11 +145,21 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
+        # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
+      - name: Install Emscripten SDK for MRBind
+        if: ${{ inputs.mrbind_c && matrix.arch == 'arm64' }}
+        run: |
+          git clone https://github.com/emscripten-core/emsdk ../emsdk
+          ../emsdk/emsdk install 4.0.10
+          ../emsdk/emsdk activate 4.0.10
+
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
+        run: \
+          ${{ fromJSON('["", ". ../emsdk/emsdk_env.sh"]')[matrix.config == 'arm64'] }}
+          make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
 
       - name: Build
         run: ./scripts/build_source.sh

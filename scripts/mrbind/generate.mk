@@ -113,7 +113,7 @@ endif
 # If the target platform is Emscripten...
 ifneq ($(TARGETING_EMSCRIPTEN),)
 
-EM_USE_HOST_HEADERS := $(if $(HOST_IS_LINUX),1,0)
+EM_USE_HOST_HEADERS := $(if $(and $(HOST_IS_LINUX),$(filter x86_64,$(shell uname -m))),1,0)
 override EM_USE_HOST_HEADERS := $(filter-out 0,$(EM_USE_HOST_HEADERS))
 $(info Use host headers instead of the Emscripten ones? $(if $(EM_USE_HOST_HEADERS),YES,NO))
 

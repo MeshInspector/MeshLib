@@ -9,6 +9,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRMeshTexture.h"
 #include "MRImageSave.h"
+#include "MRSerializer.h"
 
 namespace MR
 {
@@ -544,6 +545,26 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extens
         return unexpected( std::string( "unsupported stream extension" ) );
 
     return saver.streamSave( mesh, out, settings );
+}
+
+/// One can call this function from VS interpreter window during debuging
+/// ( { ,,MRMesh.dll }MR::MeshSave::debugSaveMesh_ )( ( void* )meshPtr,( void* )faceBitSet, "E:/debug.mru" )
+void debugSaveMesh_( void* mesh, void* faces, const char* path )
+{
+    using namespace MR;
+    auto pp = pathFromUtf8( path );
+    if ( utf8string( pp.extension() ) == ".mru" || faces )
+    {
+        // isolation is needed so it does not steal actuall work during debug saving
+        tbb::this_task_arena::isolate( [&] ()
+        {
+            ( void )serializeMesh( *( const Mesh* )mesh, pp, ( const FaceBitSet* )faces );
+        } );
+    }
+    else
+    {
+        ( void )toAnySupportedFormat( *( const Mesh* )mesh, pp );
+    }
 }
 
 MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, {}, -1 )

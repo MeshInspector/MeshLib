@@ -190,10 +190,15 @@ void DefaultSplashWindow::postInit_()
 
 void DefaultSplashWindow::positioning_( float )
 {
-    assert( splashImage_ );
+    if ( !splashImage_ )
+        return;
+
+    const auto pMonitor = glfwGetPrimaryMonitor();
+    if ( !pMonitor )
+        return;
 
     int workAreaX = 0, workAreaY = 0, workAreaW = 0, workAreaH = 0;
-    glfwGetMonitorWorkarea( glfwGetPrimaryMonitor(), &workAreaX, &workAreaY, &workAreaW, &workAreaH );
+    glfwGetMonitorWorkarea( pMonitor, &workAreaX, &workAreaY, &workAreaW, &workAreaH );
 
     int width = std::min( int( 0.6f * float( workAreaW ) ), splashImage_->getImageWidth() );
     int height = int( float( width ) * float( splashImage_->getImageHeight() ) / float( splashImage_->getImageWidth() ) );
@@ -224,6 +229,8 @@ void DefaultSplashWindow::reloadFont_( float hdpiScale, float pixelRatio )
 
 bool DefaultSplashWindow::frame_( float /*scaling*/ )
 {
+    if ( !splashImage_ )
+        return false;
     ImGui::SetNextWindowSize( ImGui::GetIO().DisplaySize );
     ImGui::SetNextWindowPos( ImVec2( 0, 0 ) );
     ImGui::Begin( "Splash window", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove );

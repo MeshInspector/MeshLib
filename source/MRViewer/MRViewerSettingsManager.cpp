@@ -379,7 +379,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         const bool maximized = cfg.getBool( cMainWindowMaximized );
         CommandLoop::appendCommand( [&viewer, maximized]
         {
-            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide )
+            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide
+                                || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::TryHidden )
                 return;
             if ( maximized )
             {

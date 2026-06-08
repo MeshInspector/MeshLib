@@ -36,7 +36,7 @@ int main( void )
     MR_VertScalars* vertDistances = MR_findSignedDistances_4( refMesh, mesh, NULL, NULL );
     float minDist = FLT_MAX;
     float maxDist = -FLT_MAX;
-    for ( MR_uint64_t i = 0; i < MR_VertScalars_size( vertDistances ); ++i )
+    for ( size_t i = 0; i < MR_VertScalars_size( vertDistances ); ++i )
     {
         float dist = MR_VertScalars_data( vertDistances )[i];
         if ( dist < minDist )

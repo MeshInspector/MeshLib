@@ -41,13 +41,6 @@ DynamicArray<T>::DynamicArray( size_t size )
 }
 
 template<typename T>
-template<typename U>
-DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
-{
-    fromVector( vec );
-}
-
-template<typename T>
 DynamicArray<T>::~DynamicArray()
 {
     resize( 0 );
@@ -72,6 +65,14 @@ DynamicArray<T>& DynamicArray<T>::operator=( DynamicArray&& other )
     return *this;
 }
 
+#ifndef __CUDACC__
+template<typename T>
+template<typename U>
+DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
+{
+    fromVector( vec );
+}
+
 template<typename T>
 template<typename U>
 inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
@@ -82,6 +83,15 @@ inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
     return CUDA_LOGE( cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice ) );
 }
 
+template<typename T>
+template<typename U>
+cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    vec.resize( size_ );
+    return CUDA_LOGE( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+}
+#endif //!__CUDACC__
 
 template <typename T>
 inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
@@ -131,15 +141,6 @@ cudaError_t DynamicArray<T>::resize( size_t size )
             return code;
     }
     return cudaSuccess;
-}
-
-template<typename T>
-template<typename U>
-cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const
-{
-    static_assert ( sizeof( T ) == sizeof( U ) );
-    vec.resize( size_ );
-    return CUDA_LOGE( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 inline cudaError_t setToZero( DynamicArrayF& devArray )

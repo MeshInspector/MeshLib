@@ -92,7 +92,7 @@ jobs:
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory $(pwd)
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/imgui \
@@ -138,7 +138,7 @@ jobs:
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
         # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
-      - name: Install Emscripten SDK for MRBind
+      - name: Install Emscripten SDK for C bindings
         if: ${{ inputs.mrbind_c }}
         run: |
           git clone https://github.com/emscripten-core/emsdk ../emsdk

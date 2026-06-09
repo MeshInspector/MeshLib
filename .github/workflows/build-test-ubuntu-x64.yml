@@ -104,7 +104,8 @@ jobs:
       - name: Install additional packages for C bindings
         if: ${{ inputs.mrbind_c }}
         run: |
-          sudo apt install libc6-dev-i386
+          sudo apt-get update
+          sudo apt-get install libc6-dev-i386
 
       - name: Create virtualenv
         run: |

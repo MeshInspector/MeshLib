@@ -94,11 +94,24 @@ runs:
       if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
       shell: pwsh
       run: |
+        # Discard the restore if EITHER the restore step failed (continue-on-error
+        # masks its conclusion to success, but its `outcome` is still 'failure')
+        # OR it produced no usable tree. The outcome check also catches a failed
+        # restore that left partial-but-non-empty files, which would otherwise
+        # sneak past the sentinel below. (steps.<id>.outcome is empty on old
+        # runners lacking actions/runner#1578 — it then harmlessly falls back to
+        # the tree check.)
+        $restoreFailed = ('${{ steps.restore.outcome }}' -eq 'failure')
         $sentinel = "C:\vcpkg\installed\${{ inputs.vcpkg-triplet }}"
-        if ((Test-Path $sentinel) -and (Get-ChildItem -Force $sentinel | Select-Object -First 1)) {
+        $treeOk = (Test-Path $sentinel) -and (Get-ChildItem -Force $sentinel | Select-Object -First 1)
+        if ((-not $restoreFailed) -and $treeOk) {
           Write-Host "Restored cache verified: '$sentinel' exists and is non-empty."
         } else {
-          Write-Warning "Cache hit but '$sentinel' is missing or empty (restore flake) — treating as a cache miss and rebuilding from source."
+          if ($restoreFailed) {
+            Write-Warning "Restore step failed (restore flake) — discarding the incomplete restore and rebuilding from source."
+          } else {
+            Write-Warning "Cache hit but '$sentinel' is missing or empty (restore flake) — treating as a cache miss and rebuilding from source."
+          }
           # Discard the incomplete restore. Remove-Item may leave locked
           # remnants, so if C:\vcpkg survives, rename it aside to free the path
           # before moving the stash back (Move-Item won't overwrite a dir).

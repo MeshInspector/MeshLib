@@ -71,10 +71,8 @@ runs:
 
     - name: Restore Vcpkg Cache
       id: restore
-      # Tolerate a failed or partial extraction (a known actions/cache flake on
-      # Windows where tar errors out or silently drops files). Don't fail the
-      # step here — let "Verify" below detect the empty tree and fall through to
-      # the build-from-source path instead of aborting the whole job.
+      # Tolerate a failed/partial extraction (a known actions/cache flake on
+      # Windows): don't fail here — let "Verify" below catch it and rebuild.
       continue-on-error: true
       if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
       uses: actions/cache/restore@v5
@@ -83,24 +81,16 @@ runs:
         path: |
           C:\vcpkg\*
 
-    # Guard against a "cache hit" that did not produce a usable tree — either the
-    # restore step above errored during extraction, or it reported success but
-    # tar silently dropped files (both are known actions/cache flakes on
-    # Windows). If the installed root for this triplet is missing or empty,
-    # discard the bad restore, put the runner's pristine vcpkg clone back, and
-    # fall through to the build path. Runs even when the restore step failed
-    # (continue-on-error above keeps the composite going).
+    # A cache hit can still yield no usable tree (restore errored, or "succeeded"
+    # but tar dropped files). Discard such a restore, put the runner's vcpkg
+    # clone back, and fall through to the build path.
     - name: Verify Restored Vcpkg Cache
       if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
       shell: pwsh
       run: |
-        # Discard the restore if EITHER the restore step failed (continue-on-error
-        # masks its conclusion to success, but its `outcome` is still 'failure')
-        # OR it produced no usable tree. The outcome check also catches a failed
-        # restore that left partial-but-non-empty files, which would otherwise
-        # sneak past the sentinel below. (steps.<id>.outcome is empty on old
-        # runners lacking actions/runner#1578 — it then harmlessly falls back to
-        # the tree check.)
+        # Discard if the restore step failed (its `outcome` stays 'failure' under
+        # continue-on-error) or left no usable tree. Combined, they also cover a
+        # partial restore and old runners where composite outcome is empty.
         $restoreFailed = ('${{ steps.restore.outcome }}' -eq 'failure')
         $sentinel = "C:\vcpkg\installed\${{ inputs.vcpkg-triplet }}"
         $treeOk = (Test-Path $sentinel) -and (Get-ChildItem -Force $sentinel | Select-Object -First 1)
@@ -112,9 +102,8 @@ runs:
           } else {
             Write-Warning "Cache hit but '$sentinel' is missing or empty (restore flake) — treating as a cache miss and rebuilding from source."
           }
-          # Discard the incomplete restore. Remove-Item may leave locked
-          # remnants, so if C:\vcpkg survives, rename it aside to free the path
-          # before moving the stash back (Move-Item won't overwrite a dir).
+          # Remove-Item can leave locked remnants; if C:\vcpkg survives, rename it
+          # aside so Move-Item (which won't overwrite a dir) can restore the stash.
           if (Test-Path C:\vcpkg) { Remove-Item C:\vcpkg -Recurse -Force -ErrorAction SilentlyContinue }
           if (Test-Path C:\vcpkg) { Move-Item C:\vcpkg "C:\vcpkg-broken-$(New-Guid)" -Force -ErrorAction SilentlyContinue }
           if ($env:VCPKG_STASH -and (Test-Path $env:VCPKG_STASH)) {

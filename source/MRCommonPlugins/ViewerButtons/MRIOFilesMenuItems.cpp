@@ -916,9 +916,10 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                     vp.setParameters( params );
                 }
             }
-            // Hide 3D scene overlays (nav cube, basis axes, global basis, rotation center) so they
-            // are not baked into the saved image; their visibility is restored right after capture.
+            // Hide 3D scene overlays (nav cube, basis axes, global basis, rotation center, viewport
+            // border) so they are not baked into the saved image; all restored right after capture.
             ViewportMask basisAxesMaskBackup, globalBasisMaskBackup, rotationCenterMaskBackup, navCubeMaskBackup;
+            std::vector<Color> borderColorBackup;
             if ( hideOverlays_ )
             {
                 auto& viewer = getViewerInstance();
@@ -941,6 +942,13 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                 {
                     navCubeMaskBackup = viewer.basisViewController->getEnabledMask();
                     viewer.basisViewController->enable( {} );
+                }
+                for ( auto& vp : viewer.viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    borderColorBackup.push_back( params.borderColor );
+                    params.borderColor = Color::transparent();
+                    vp.setParameters( params );
                 }
             }
             auto image = getViewerInstance().captureSceneScreenShot( resolution_ );
@@ -966,6 +974,13 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                     viewer.rotationSphere->setVisibilityMask( rotationCenterMaskBackup );
                 if ( viewer.basisViewController )
                     viewer.basisViewController->enable( navCubeMaskBackup );
+                int i = 0;
+                for ( auto& vp : viewer.viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    params.borderColor = borderColorBackup[i++];
+                    vp.setParameters( params );
+                }
             }
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )

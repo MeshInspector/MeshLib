@@ -131,8 +131,10 @@ jobs:
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/eigen \
             thirdparty/expected \
+            thirdparty/jsoncpp \
             thirdparty/onetbb \
             thirdparty/parallel-hashmap \
+            thirdparty/spdlog \
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}

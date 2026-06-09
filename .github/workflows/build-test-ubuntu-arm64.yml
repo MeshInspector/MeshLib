@@ -112,6 +112,7 @@ jobs:
             thirdparty/expected \
             thirdparty/jsoncpp \
             thirdparty/onetbb \
+            thirdparty/spdlog \
 
       - name: Install thirdparty libs
         run: |

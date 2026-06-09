@@ -57,6 +57,10 @@ jobs:
       CUDA_MINOR: ${{ (matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild') && '0' || fromJSON('{"msvc-2019":"4","msvc-2022":"0"}')[matrix.cxx_compiler] || '2' }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
+      # Override only MRCuda's toolset (MRCuda.vcxproj uses MRCudaPlatformToolset when set, leaving
+      # every other project on PLATFORM_TOOLSET). Under VS2026 build MRCuda with v143 + CUDA 12.0,
+      # since its default v145 toolset has no CUDA support yet. Empty = no override.
+      MRCUDA_PLATFORM_TOOLSET: ${{ (matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild') && 'v143' || '' }}
 
     steps:
       - name: Checkout
@@ -191,7 +195,7 @@ jobs:
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }} || exit /b 1
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
 
       - name: Generate and build Python bindings

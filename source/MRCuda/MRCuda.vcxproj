@@ -28,20 +28,22 @@
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <!-- VS2026's v145 toolset is not yet supported by the CUDA Toolkit. Build MRCuda (the
-       only project that compiles CUDA code) with the v143 toolset there; platform.props
-       pairs v143 with CUDA 12.0. Every other project keeps v145. CI passes PlatformToolset
-       to the solution build as a global MSBuild property, so it is listed in
-       TreatAsLocalProperty on the Project element above to allow this per-project override. -->
-  <PropertyGroup Label="Configuration" Condition="'$(DefaultPlatformToolset)' == 'v145'">
-    <PlatformToolset>v143</PlatformToolset>
+  <!-- Build MRCuda with a different platform toolset than the rest of the solution by defining
+       the MRCudaPlatformToolset property (the build that launches MSBuild decides whether/what to
+       pass). E.g. CI passes MRCudaPlatformToolset=v143 for VS2026, whose default v145 toolset the
+       CUDA Toolkit does not yet support. The chosen toolset also selects the CUDA version via
+       platform.props (v143 -> CUDA 12.0). PlatformToolset is listed in TreatAsLocalProperty on the
+       Project element above so this value can override the global PlatformToolset passed to the
+       solution build. -->
+  <PropertyGroup Label="Configuration" Condition="'$(MRCudaPlatformToolset)' != ''">
+    <PlatformToolset>$(MRCudaPlatformToolset)</PlatformToolset>
   </PropertyGroup>
-  <!-- The shared MRPch.pch is built with the default v145 toolset, which MRCuda's v143 build
-       cannot consume (error C1853). Use the precompiled header only when not on v145; under
-       VS2026 ForcedIncludeFiles still pulls in MRPch.h directly. -->
+  <!-- The shared MRPch.pch is built with the solution's default toolset; when MRCuda overrides
+       its toolset it cannot consume that PCH (error C1853), so skip the precompiled header and let
+       ForcedIncludeFiles pull in MRPch.h directly. -->
   <PropertyGroup>
     <MRCudaPrecompiledHeader>Use</MRCudaPrecompiledHeader>
-    <MRCudaPrecompiledHeader Condition="'$(DefaultPlatformToolset)' == 'v145'">NotUsing</MRCudaPrecompiledHeader>
+    <MRCudaPrecompiledHeader Condition="'$(MRCudaPlatformToolset)' != ''">NotUsing</MRCudaPrecompiledHeader>
   </PropertyGroup>
   <Import Project="$(ProjectDir)\..\platform.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -64,7 +66,7 @@
       <PrecompiledHeader>$(MRCudaPrecompiledHeader)</PrecompiledHeader>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
-      <ForcedIncludeFiles Condition="'$(DefaultPlatformToolset)' != 'v145'">$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(MRCudaPlatformToolset)' == ''">$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -88,7 +90,7 @@
       <PrecompiledHeader>$(MRCudaPrecompiledHeader)</PrecompiledHeader>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
-      <ForcedIncludeFiles Condition="'$(DefaultPlatformToolset)' != 'v145'">$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(MRCudaPlatformToolset)' == ''">$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

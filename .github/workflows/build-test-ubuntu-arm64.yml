@@ -149,6 +149,8 @@ jobs:
 
       - name: Generate C bindings
         if: ${{ inputs.mrbind_c }}
+        # The default shell is `sh`?!
+        shell: bash
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: |

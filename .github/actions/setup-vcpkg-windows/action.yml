@@ -70,6 +70,10 @@ runs:
         }
 
     - name: Restore Vcpkg Cache
+      id: restore
+      # Tolerate a failed/partial extraction (a known actions/cache flake on
+      # Windows): don't fail here — let "Verify" below catch it and rebuild.
+      continue-on-error: true
       if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
       uses: actions/cache/restore@v5
       with:
@@ -77,21 +81,31 @@ runs:
         path: |
           C:\vcpkg\*
 
-    # Guard against a "cache hit" that restored an empty or incomplete tree —
-    # a known actions/cache flake on Windows where the step reports the cache
-    # as restored but tar extraction silently dropped files. If the installed
-    # root for this triplet is missing, discard the bad restore, put the
-    # runner's pristine vcpkg clone back, and fall through to the build path.
+    # A cache hit can still yield no usable tree (restore errored, or "succeeded"
+    # but tar dropped files). Discard such a restore, put the runner's vcpkg
+    # clone back, and fall through to the build path.
     - name: Verify Restored Vcpkg Cache
       if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
       shell: pwsh
       run: |
+        # Discard if the restore step failed (its `outcome` stays 'failure' under
+        # continue-on-error) or left no usable tree. Combined, they also cover a
+        # partial restore and old runners where composite outcome is empty.
+        $restoreFailed = ('${{ steps.restore.outcome }}' -eq 'failure')
         $sentinel = "C:\vcpkg\installed\${{ inputs.vcpkg-triplet }}"
-        if ((Test-Path $sentinel) -and (Get-ChildItem -Force $sentinel | Select-Object -First 1)) {
+        $treeOk = (Test-Path $sentinel) -and (Get-ChildItem -Force $sentinel | Select-Object -First 1)
+        if ((-not $restoreFailed) -and $treeOk) {
           Write-Host "Restored cache verified: '$sentinel' exists and is non-empty."
         } else {
-          Write-Warning "Cache hit but '$sentinel' is missing or empty — treating as a cache miss and rebuilding from source."
+          if ($restoreFailed) {
+            Write-Warning "Restore step failed (restore flake) — discarding the incomplete restore and rebuilding from source."
+          } else {
+            Write-Warning "Cache hit but '$sentinel' is missing or empty (restore flake) — treating as a cache miss and rebuilding from source."
+          }
+          # Remove-Item can leave locked remnants; if C:\vcpkg survives, rename it
+          # aside so Move-Item (which won't overwrite a dir) can restore the stash.
           if (Test-Path C:\vcpkg) { Remove-Item C:\vcpkg -Recurse -Force -ErrorAction SilentlyContinue }
+          if (Test-Path C:\vcpkg) { Move-Item C:\vcpkg "C:\vcpkg-broken-$(New-Guid)" -Force -ErrorAction SilentlyContinue }
           if ($env:VCPKG_STASH -and (Test-Path $env:VCPKG_STASH)) {
             Move-Item $env:VCPKG_STASH C:\vcpkg -Force
           }

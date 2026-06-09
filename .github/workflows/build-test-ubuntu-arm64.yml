@@ -92,7 +92,7 @@ jobs:
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory $(pwd)
+          git config --global --add safe.directory '*'
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/imgui \
@@ -105,7 +105,9 @@ jobs:
 
       - name: Checkout additional third-party submodules for C bindings
         if: ${{ inputs.mrbind_c }}
+        # Must set `HOME` here to reuse the `safe.directory` setting from the generic submodule checkout step above.
         run: |
+          export HOME=${RUNNER_TEMP}
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/onetbb \
             thirdparty/jsoncpp \

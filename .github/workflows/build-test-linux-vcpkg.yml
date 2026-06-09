@@ -123,6 +123,12 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
+      - name: Checkout additional third-party submodules for C bindings
+        if: ${{ inputs.mrbind_c && matrix.arch == 'arm64' }}
+        run: |
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/parallel-hashmap \
+
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind

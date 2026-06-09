@@ -109,8 +109,9 @@ jobs:
         run: |
           export HOME=${RUNNER_TEMP}
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/onetbb \
+            thirdparty/expected \
             thirdparty/jsoncpp \
+            thirdparty/onetbb \
 
       - name: Install thirdparty libs
         run: |

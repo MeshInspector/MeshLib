@@ -121,6 +121,9 @@ jobs:
 
       - name: Install MRBind deps
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        env:
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed llvm/lld, no z3, no rebuild
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
       - name: Build MRBind

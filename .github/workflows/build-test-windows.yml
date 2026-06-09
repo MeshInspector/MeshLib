@@ -48,18 +48,18 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-      # MRCuda builds with the v143 toolset under VS2026 (v145 has no CUDA support yet),
-      # which pairs with CUDA 12.0 (see source/MRCuda/MRCuda.vcxproj and source/platform.props).
-      # Only the MSBuild variant imports CUDA's MSBuild integration, so it needs CUDA 12.0;
-      # the CMake msvc-2026 build keeps CUDA 13.2.
+      # We prefer CUDA 12.0 over 13.2 (13.2 needs the newest GPUs/drivers), and CUDA 12.0 does not
+      # support the VS2026 v145 host compiler, so MRCuda builds with v143 there (see
+      # source/MRCuda/MRCuda.vcxproj and source/platform.props). Only the MSBuild variant imports
+      # CUDA's MSBuild integration, so it needs CUDA 12.0; the CMake msvc-2026 build keeps CUDA 13.2.
       CUDA_VERSION: ${{ (matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild') && '12.0.1' || fromJSON('{"msvc-2019":"11.4.2","msvc-2022":"12.0.1"}')[matrix.cxx_compiler] || '13.2.0' }}
       CUDA_MAJOR: ${{ (matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild') && '12' || fromJSON('{"msvc-2019":"11","msvc-2022":"12"}')[matrix.cxx_compiler] || '13' }}
       CUDA_MINOR: ${{ (matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild') && '0' || fromJSON('{"msvc-2019":"4","msvc-2022":"0"}')[matrix.cxx_compiler] || '2' }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
       # Override only MRCuda's toolset (MRCuda.vcxproj uses MRCudaPlatformToolset when set, leaving
-      # every other project on PLATFORM_TOOLSET). Under VS2026 build MRCuda with v143 + CUDA 12.0,
-      # since its default v145 toolset has no CUDA support yet. Empty = no override.
+      # every other project on PLATFORM_TOOLSET). Under VS2026 build MRCuda with v143 so it can use
+      # the preferred CUDA 12.0, which does not support the default v145 host compiler. Empty = no override.
       MRCUDA_PLATFORM_TOOLSET: ${{ (matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild') && 'v143' || '' }}
 
     steps:

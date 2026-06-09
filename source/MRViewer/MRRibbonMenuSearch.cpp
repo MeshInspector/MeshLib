@@ -66,8 +66,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     if ( !isSmallUI_ && resultsList.empty() )
         return;
 
-    UI::TestEngine::pushTree( "RibbonSearchPopup" );
-    MR_FINALLY{ UI::TestEngine::popTree(); };
+    UI::TestEngine::TreeGuard testEngineGuard( "RibbonSearchPopup" );
 
     const float screenWidth = float( getViewerInstance().framebufferSize.x );
     const float windowPaddingX = ImGui::GetStyle().WindowPadding.x;

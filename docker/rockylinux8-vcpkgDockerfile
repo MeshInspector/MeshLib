@@ -3,32 +3,46 @@ ARG VCPKG_VERSION=2026.06.01
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
 
-FROM rockylinux:8 AS build
+FROM rockylinux:8 AS base
 
 COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 RUN <<EOF
     set -e
+    # don't install excess dependencies
     echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
+    # configure CUDA repo
+    case "$(uname -m)" in
+        x86_64)  CUDA_REPO_ARCH=x86_64 ;;
+        aarch64) CUDA_REPO_ARCH=sbsa ;;
+    esac
     # network may flake
-    retry.sh -- dnf -y install epel-release
+    retry.sh -- dnf -y install 'dnf-command(config-manager)' epel-release
+    retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
+    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
     retry.sh -- dnf -y install --enablerepo powertools \
         git cmake gcc-toolset-11 ninja-build clang-devel-21* \
+        $(: minimal CUDA toolkit - nvcc, cudart ) \
+        cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3.12-pip
+        autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
+        $(: mrbind requirements ) \
+        lld-21* llvm-devel-21* python3.12-devel which zlib-devel \
+        $(: CI environment ) \
+        gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all
-EOF
-
-# install aws cli for vcpkg cache
-RUN <<EOF
-    set -e
+    # install aws cli
     curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip
     ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
     rm -rf awscliv2.zip aws/
 EOF
+ENV PATH=/usr/local/cuda/bin:$PATH
+
+
+FROM base AS build
 
 # override system autoconf
 RUN <<EOF
@@ -54,7 +68,6 @@ COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
 COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
-COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ARG VCPKG_VERSION
 ENV VCPKG_VERSION=$VCPKG_VERSION
@@ -63,16 +76,12 @@ RUN <<EOF
     git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch
     cd vcpkg
     ./bootstrap-vcpkg.sh -disableMetrics
+    # replace the original source URL with a faster mirror's one
+    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' ports/vcpkg-make/portfile.cmake
+    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' ports/gettext/portfile.cmake
 EOF
 
 WORKDIR /root/vcpkg
-
-# replace the original source URL with a faster mirror's one
-RUN <<EOF
-    set -e
-    sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/vcpkg-make/portfile.cmake
-    sed -i 's|https://ftp.gnu.org/|https://www.mirrorservice.org/sites/ftp.gnu.org/|' ports/gettext/portfile.cmake
-EOF
 
 # build vcpkg packages
 ARG VCPKG_TRIPLET
@@ -81,20 +90,23 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
     set -e
-    source ../MeshLib/configure_s3_cache.sh
+    source /root/MeshLib/configure_s3_cache.sh
     source /opt/rh/gcc-toolset-11/enable
     source /opt/autoconf27/enable
     source /root/venv/bin/activate
+    export VCPKG_DEFAULT_HOST_TRIPLET=${VCPKG_TRIPLET}
+    export VCPKG_OVERLAY_PORTS=/root/MeshLib/ports
+    export VCPKG_OVERLAY_TRIPLETS=/root/MeshLib/triplets
     # network may flake
-    retry.sh -- ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --overlay-ports=../MeshLib/ports --debug $(cat ../MeshLib/requirements.txt | tr '\n' ' ')
+    retry.sh -- \
+        ./vcpkg install --debug $(cat /root/MeshLib/requirements.txt | tr '\n' ' ')
+    ./vcpkg export --x-all-installed --raw --output=vcpkg --output-dir=/opt
 EOF
-RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=../MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
-FROM rockylinux:8 AS production
+FROM base AS production
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
-COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
@@ -102,57 +114,3 @@ ENV VCPKG_ROOT=/opt/vcpkg
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-
-RUN <<EOF
-    set -e
-    echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
-    # network may flake
-    retry.sh -- dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel-21* \
-        $(: vcpkg requirements ) \
-        curl zip unzip tar \
-        $(: vcpkg package requirements ) \
-        autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
-        $(: mrbind requirements ) \
-        lld-21* llvm-devel-21* python3.12-devel which zlib-devel \
-        $(: CI environment ) \
-        time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
-    dnf clean all
-EOF
-
-# install minimal CUDA 12.0 toolkit (nvcc + cudart)
-RUN <<EOF
-    set -e
-    retry.sh -- dnf -y install 'dnf-command(config-manager)'
-    case "$(uname -m)" in
-        x86_64)  CUDA_REPO_ARCH=x86_64 ;;
-        aarch64) CUDA_REPO_ARCH=sbsa ;;
-        *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
-    esac
-    retry.sh -- dnf config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo"
-    retry.sh -- dnf -y install \
-        cuda-nvcc-12-0 \
-        cuda-cudart-12-0 \
-        cuda-cudart-devel-12-0 \
-        cuda-driver-devel-12-0 \
-        cuda-cuxxfilt-12-0
-    dnf clean all
-EOF
-ENV PATH=/usr/local/cuda/bin:$PATH
-
-# install github-cli
-RUN <<EOF
-    set -e
-    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
-    retry.sh -- dnf -y install gh
-    dnf clean all
-EOF
-
-# install aws cli
-RUN <<EOF
-    set -e
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
-    unzip awscliv2.zip
-    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-    rm -rf awscliv2.zip aws/
-EOF

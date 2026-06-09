@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" TreatAsLocalProperty="PlatformToolset" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -27,6 +27,14 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <!-- VS2026's v145 toolset is not yet supported by the CUDA Toolkit. Build MRCuda (the
+       only project that compiles CUDA code) with the v143 toolset there; platform.props
+       pairs v143 with CUDA 12.0. Every other project keeps v145. CI passes PlatformToolset
+       to the solution build as a global MSBuild property, so it is listed in
+       TreatAsLocalProperty on the Project element above to allow this per-project override. -->
+  <PropertyGroup Label="Configuration" Condition="'$(DefaultPlatformToolset)' == 'v145'">
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(ProjectDir)\..\platform.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />

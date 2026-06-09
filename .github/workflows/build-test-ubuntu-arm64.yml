@@ -112,6 +112,7 @@ jobs:
             thirdparty/expected \
             thirdparty/jsoncpp \
             thirdparty/onetbb \
+            thirdparty/openvdb/v10/openvdb \
             thirdparty/spdlog \
 
       - name: Install thirdparty libs

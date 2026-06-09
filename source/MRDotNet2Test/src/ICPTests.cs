@@ -89,10 +89,10 @@ namespace MRTest
             Assert.That(Math.Abs(diffXf.b.z), Is.LessThan(1e-6f));
 
             var pairs = icp.getRef2FltPairs();
-            Assert.That(pairs.size(), Is.EqualTo(1024));
+            Assert.That(pairs.size(), Is.EqualTo((nuint)1024));
 
             pairs = icp.getFlt2RefPairs();
-            Assert.That(pairs.size(), Is.EqualTo(1024));
+            Assert.That(pairs.size(), Is.EqualTo((nuint)1024));
         }
     }
 }

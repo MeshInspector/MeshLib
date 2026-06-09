@@ -69,9 +69,9 @@ namespace MRTest
         {
             var mesh = CreateMeshWithHoles();
             var loops = findRightBoundary(mesh.topology);
-            Assert.That(loops.size(), Is.EqualTo(2));
-            Assert.That(loops[0].size(), Is.EqualTo(3));
-            Assert.That(loops[1].size(), Is.EqualTo(4));
+            Assert.That(loops.size(), Is.EqualTo((nuint)2));
+            Assert.That(loops[0].size(), Is.EqualTo((nuint)3));
+            Assert.That(loops[1].size(), Is.EqualTo((nuint)4));
         }
 
         [Test]
@@ -79,7 +79,7 @@ namespace MRTest
         {
             var mesh = CreateMeshWithHoles();
             var complicatedFaces = findHoleComplicatingFaces(mesh);
-            Assert.That(complicatedFaces.count(), Is.EqualTo(0));
+            Assert.That(complicatedFaces.count(), Is.EqualTo((nuint)0));
         }
     }
 }

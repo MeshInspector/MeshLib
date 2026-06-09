@@ -133,6 +133,7 @@ jobs:
             thirdparty/expected \
             thirdparty/jsoncpp \
             thirdparty/onetbb \
+            thirdparty/openvdb/v10/openvdb \
             thirdparty/parallel-hashmap \
             thirdparty/spdlog \
 

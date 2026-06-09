@@ -33,14 +33,14 @@ namespace MRTest
             icp.setParams(iCPProperties);
             icp.updateAllPointPairs();
 
-            Assert.That(icp.getNumActivePairs(), Is.EqualTo(1748));
-            Assert.That(icp.getNumSamples(), Is.EqualTo(1748));
+            Assert.That(icp.getNumActivePairs(), Is.EqualTo((nuint)1748));
+            Assert.That(icp.getNumSamples(), Is.EqualTo((nuint)1748));
             Assert.That(icp.getMeanSqDistToPoint(), Is.EqualTo(0.00254).Within(1e-5));
 
             Console.WriteLine("Calculating transformations...");
             var xfs = icp.calculateTransformations();
-            Assert.That(icp.getNumActivePairs(), Is.EqualTo(1748));
-            Assert.That(icp.getNumSamples(), Is.EqualTo(1748));
+            Assert.That(icp.getNumActivePairs(), Is.EqualTo((nuint)1748));
+            Assert.That(icp.getNumSamples(), Is.EqualTo((nuint)1748));
             Assert.That(icp.getMeanSqDistToPoint(), Is.EqualTo(0).Within(1e-5));
         }
 

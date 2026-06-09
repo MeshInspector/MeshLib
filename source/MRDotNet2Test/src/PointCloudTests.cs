@@ -88,8 +88,8 @@ namespace MRTest
             Assert.That(restored is not null);
             if (restored is not null)
             {
-                Assert.That(restored.points.size(), Is.EqualTo(1024));
-                Assert.That(restored.topology.getValidVerts().count(), Is.EqualTo(1024));
+                Assert.That(restored.points.size(), Is.EqualTo((nuint)1024));
+                Assert.That(restored.topology.getValidVerts().count(), Is.EqualTo((nuint)1024));
                 Assert.That(restored.topology.findHoleRepresentiveEdges().size() == 0);
             }
         }

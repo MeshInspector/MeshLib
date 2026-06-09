@@ -41,12 +41,12 @@ namespace MRTest
         {
             var mesh = CreateMeshWithHoles();
             var holes = mesh.topology.findHoleRepresentiveEdges();
-            Assert.That(holes.size(), Is.EqualTo(2) );
+            Assert.That(holes.size(), Is.EqualTo((nuint)2) );
 
             var param = new FillHoleParams();
 
             fillHoles(mesh, holes, param);
-            Assert.That(mesh.topology.findHoleRepresentiveEdges().size(), Is.EqualTo(0));
+            Assert.That(mesh.topology.findHoleRepresentiveEdges().size(), Is.EqualTo((nuint)0));
         }
 
         [Test]
@@ -54,14 +54,14 @@ namespace MRTest
         {
             var mesh = CreateMeshWithHoles();
             var holes = mesh.topology.findHoleRepresentiveEdges();
-            Assert.That(holes.size(), Is.EqualTo(2));
+            Assert.That(holes.size(), Is.EqualTo((nuint)2));
 
             var param = new FillHoleNicelySettings();
 
             var patch = fillHoleNicely(mesh, holes[0], param);
 
-            Assert.That( patch.count, Is.EqualTo(1887) );
-            Assert.That(mesh.topology.findHoleRepresentiveEdges().size(), Is.EqualTo(1));
+            Assert.That( patch.count, Is.EqualTo((nuint)1887) );
+            Assert.That(mesh.topology.findHoleRepresentiveEdges().size(), Is.EqualTo((nuint)1));
         }
 
         [Test]

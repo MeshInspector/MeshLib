@@ -130,6 +130,7 @@ jobs:
           export HOME=${RUNNER_TEMP}
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/parallel-hashmap \
+            thirdparty/expected \
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}

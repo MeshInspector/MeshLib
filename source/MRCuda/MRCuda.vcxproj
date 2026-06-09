@@ -28,19 +28,9 @@
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <!-- Build MRCuda with a different platform toolset than the rest of the solution by defining
-       the MRCudaPlatformToolset property (the build that launches MSBuild decides whether/what to
-       pass). E.g. CI passes MRCudaPlatformToolset=v143 for VS2026, whose default v145 toolset the
-       CUDA Toolkit does not yet support. The chosen toolset also selects the CUDA version via
-       platform.props (v143 -> CUDA 12.0). PlatformToolset is listed in TreatAsLocalProperty on the
-       Project element above so this value can override the global PlatformToolset passed to the
-       solution build. -->
   <PropertyGroup Label="Configuration" Condition="'$(MRCudaPlatformToolset)' != ''">
     <PlatformToolset>$(MRCudaPlatformToolset)</PlatformToolset>
   </PropertyGroup>
-  <!-- The shared MRPch.pch is built with the solution's default toolset; when MRCuda overrides
-       its toolset it cannot consume that PCH (error C1853), so skip the precompiled header and let
-       ForcedIncludeFiles pull in MRPch.h directly. -->
   <PropertyGroup>
     <MRCudaPrecompiledHeader>Use</MRCudaPrecompiledHeader>
     <MRCudaPrecompiledHeader Condition="'$(MRCudaPlatformToolset)' != ''">NotUsing</MRCudaPrecompiledHeader>

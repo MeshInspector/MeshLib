@@ -922,28 +922,28 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
             std::vector<Color> borderColorBackup;
             if ( hideOverlays_ )
             {
-                auto& viewer = getViewerInstance();
-                if ( viewer.basisAxes )
+                auto& viewerInst = getViewerInstance();
+                if ( viewerInst.basisAxes )
                 {
-                    basisAxesMaskBackup = viewer.basisAxes->visibilityMask();
-                    viewer.basisAxes->setVisibilityMask( {} );
+                    basisAxesMaskBackup = viewerInst.basisAxes->visibilityMask();
+                    viewerInst.basisAxes->setVisibilityMask( {} );
                 }
-                if ( viewer.globalBasis )
+                if ( viewerInst.globalBasis )
                 {
-                    globalBasisMaskBackup = viewer.globalBasis->getVisibilityMask();
-                    viewer.globalBasis->setVisibilityMask( {} );
+                    globalBasisMaskBackup = viewerInst.globalBasis->getVisibilityMask();
+                    viewerInst.globalBasis->setVisibilityMask( {} );
                 }
-                if ( viewer.rotationSphere )
+                if ( viewerInst.rotationSphere )
                 {
-                    rotationCenterMaskBackup = viewer.rotationSphere->visibilityMask();
-                    viewer.rotationSphere->setVisibilityMask( {} );
+                    rotationCenterMaskBackup = viewerInst.rotationSphere->visibilityMask();
+                    viewerInst.rotationSphere->setVisibilityMask( {} );
                 }
-                if ( viewer.basisViewController )
+                if ( viewerInst.basisViewController )
                 {
-                    navCubeMaskBackup = viewer.basisViewController->getEnabledMask();
-                    viewer.basisViewController->enable( {} );
+                    navCubeMaskBackup = viewerInst.basisViewController->getEnabledMask();
+                    viewerInst.basisViewController->enable( {} );
                 }
-                for ( auto& vp : viewer.viewport_list )
+                for ( auto& vp : viewerInst.viewport_list )
                 {
                     auto params = vp.getParameters();
                     borderColorBackup.push_back( params.borderColor );
@@ -965,17 +965,17 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
             }
             if ( hideOverlays_ )
             {
-                auto& viewer = getViewerInstance();
-                if ( viewer.basisAxes )
-                    viewer.basisAxes->setVisibilityMask( basisAxesMaskBackup );
-                if ( viewer.globalBasis )
-                    viewer.globalBasis->setVisibilityMask( globalBasisMaskBackup );
-                if ( viewer.rotationSphere )
-                    viewer.rotationSphere->setVisibilityMask( rotationCenterMaskBackup );
-                if ( viewer.basisViewController )
-                    viewer.basisViewController->enable( navCubeMaskBackup );
+                auto& viewerInst = getViewerInstance();
+                if ( viewerInst.basisAxes )
+                    viewerInst.basisAxes->setVisibilityMask( basisAxesMaskBackup );
+                if ( viewerInst.globalBasis )
+                    viewerInst.globalBasis->setVisibilityMask( globalBasisMaskBackup );
+                if ( viewerInst.rotationSphere )
+                    viewerInst.rotationSphere->setVisibilityMask( rotationCenterMaskBackup );
+                if ( viewerInst.basisViewController )
+                    viewerInst.basisViewController->enable( navCubeMaskBackup );
                 int i = 0;
-                for ( auto& vp : viewer.viewport_list )
+                for ( auto& vp : viewerInst.viewport_list )
                 {
                     auto params = vp.getParameters();
                     params.borderColor = borderColorBackup[i++];

@@ -34,6 +34,8 @@
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerSignals.h"
+#include "MRViewer/MRViewportCornerController.h"
+#include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
@@ -890,6 +892,7 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
     UI::drag<PixelSizeUnit>( _tr( "Width" ), resolution_.x, 1, 256 );
     UI::drag<PixelSizeUnit>( _tr( "Height" ), resolution_.y, 1, 256 );
     UI::checkbox( _tr( "Transparent Background" ), &transparentBg_ );
+    UI::checkbox( _tr( "Hide scene overlays" ), &hideOverlays_ );
     if ( UI::button( _tr( "Capture" ), ImVec2( -1, 0 ) ) )
     {
         auto now = std::chrono::system_clock::now();
@@ -913,6 +916,33 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                     vp.setParameters( params );
                 }
             }
+            // Hide 3D scene overlays (nav cube, basis axes, global basis, rotation center) so they
+            // are not baked into the saved image; their visibility is restored right after capture.
+            ViewportMask basisAxesMaskBackup, globalBasisMaskBackup, rotationCenterMaskBackup, navCubeMaskBackup;
+            if ( hideOverlays_ )
+            {
+                auto& viewer = getViewerInstance();
+                if ( viewer.basisAxes )
+                {
+                    basisAxesMaskBackup = viewer.basisAxes->visibilityMask();
+                    viewer.basisAxes->setVisibilityMask( {} );
+                }
+                if ( viewer.globalBasis )
+                {
+                    globalBasisMaskBackup = viewer.globalBasis->getVisibilityMask();
+                    viewer.globalBasis->setVisibilityMask( {} );
+                }
+                if ( viewer.rotationSphere )
+                {
+                    rotationCenterMaskBackup = viewer.rotationSphere->visibilityMask();
+                    viewer.rotationSphere->setVisibilityMask( {} );
+                }
+                if ( viewer.basisViewController )
+                {
+                    navCubeMaskBackup = viewer.basisViewController->getEnabledMask();
+                    viewer.basisViewController->enable( {} );
+                }
+            }
             auto image = getViewerInstance().captureSceneScreenShot( resolution_ );
             if ( transparentBg_ )
             {
@@ -924,6 +954,18 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                     i++;
                     vp.setParameters( params );
                 }
+            }
+            if ( hideOverlays_ )
+            {
+                auto& viewer = getViewerInstance();
+                if ( viewer.basisAxes )
+                    viewer.basisAxes->setVisibilityMask( basisAxesMaskBackup );
+                if ( viewer.globalBasis )
+                    viewer.globalBasis->setVisibilityMask( globalBasisMaskBackup );
+                if ( viewer.rotationSphere )
+                    viewer.rotationSphere->setVisibilityMask( rotationCenterMaskBackup );
+                if ( viewer.basisViewController )
+                    viewer.basisViewController->enable( navCubeMaskBackup );
             }
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )

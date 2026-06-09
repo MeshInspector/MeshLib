@@ -151,7 +151,7 @@ jobs:
         if: ${{ inputs.mrbind_c }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: \
+        run: |
           . ../emsdk/emsdk_env.sh
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace
 

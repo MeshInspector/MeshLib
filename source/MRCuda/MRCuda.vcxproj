@@ -36,6 +36,13 @@
   <PropertyGroup Label="Configuration" Condition="'$(DefaultPlatformToolset)' == 'v145'">
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
+  <!-- The shared MRPch.pch is built with the default v145 toolset, which MRCuda's v143 build
+       cannot consume (error C1853). Use the precompiled header only when not on v145; under
+       VS2026 ForcedIncludeFiles still pulls in MRPch.h directly. -->
+  <PropertyGroup>
+    <MRCudaPrecompiledHeader>Use</MRCudaPrecompiledHeader>
+    <MRCudaPrecompiledHeader Condition="'$(DefaultPlatformToolset)' == 'v145'">NotUsing</MRCudaPrecompiledHeader>
+  </PropertyGroup>
   <Import Project="$(ProjectDir)\..\platform.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -54,7 +61,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>MRCuda_EXPORTS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>$(MRCudaPrecompiledHeader)</PrecompiledHeader>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
@@ -78,7 +85,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>MRCuda_EXPORTS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>$(MRCudaPrecompiledHeader)</PrecompiledHeader>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>

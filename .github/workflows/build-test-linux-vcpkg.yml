@@ -157,7 +157,7 @@ jobs:
         if: ${{ inputs.mrbind_c }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: \
+        run: |
           ${{ fromJSON('["", ". ../emsdk/emsdk_env.sh"]')[matrix.config == 'arm64'] }}
           make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
 

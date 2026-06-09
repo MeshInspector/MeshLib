@@ -98,6 +98,14 @@ jobs:
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', format('docker/{0}Dockerfile', matrix.os)) }}
 
+        # On Linux x64, we set the mrbind parser target platform to Emscripten (like everywhere except Mac, see `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for details),
+        #   but only on Linux x64 we recycle the host headers in that mode, instead of using Emscripten SDK stdlib headers. This is sketchy, but works and is convenient.
+        # This requires installing the 32-bit libc headers though, which is what we're doing here.
+      - name: Install additional packages for C bindings
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          sudo apt install libc6-dev-i386
+
       - name: Create virtualenv
         run: |
           python3 -m venv .venv

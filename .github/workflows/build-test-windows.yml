@@ -85,8 +85,9 @@ jobs:
         shell: bash
         run: |
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/onetbb \
             thirdparty/jsoncpp \
+            thirdparty/onetbb \
+            thirdparty/spdlog
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

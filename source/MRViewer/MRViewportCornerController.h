@@ -32,6 +32,9 @@ public:
     /// enables or disables this object by provided mask
     MRVIEWER_API void enable( ViewportMask mask );
 
+    /// returns the mask of viewports where this object is currently enabled
+    MRVIEWER_API ViewportMask getEnabledMask() const;
+
     /// draw this object in given viewport in position of basis axes
     MRVIEWER_API void draw( const Viewport& vp, const AffineXf3f& rotXf, const AffineXf3f& vpInvXf );
 

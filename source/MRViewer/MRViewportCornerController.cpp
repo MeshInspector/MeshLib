@@ -832,6 +832,13 @@ void CornerControllerObject::enable( ViewportMask mask )
     rootObj_->setVisibilityMask( mask );
 }
 
+ViewportMask CornerControllerObject::getEnabledMask() const
+{
+    if ( !rootObj_ )
+        return {};
+    return rootObj_->visibilityMask();
+}
+
 void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, const AffineXf3f& vpInvXf )
 {
     if ( !rootObj_ || !rootObj_->isVisible( vp.id ) )

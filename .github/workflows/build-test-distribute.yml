@@ -226,12 +226,26 @@ jobs:
          failOnError: false
 
   upload-distributions:
-    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
+    # Skip publishing whenever any platform build failed: a failed build never produced its
+    # distributive, so there is nothing to upload and the downstream `test-distribution` job
+    # would otherwise fail with "no assets to download". Skipped builds (disabled platforms)
+    # have result 'skipped', not 'failure', so they keep this job running for the platforms
+    # that did build.
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.windows-build-test.result != 'failure'
+        && needs.ubuntu-x64-build-test.result != 'failure'
+        && needs.ubuntu-arm64-build-test.result != 'failure'
+        && needs.linux-vcpkg-build-test.result != 'failure'
+        && needs.emscripten-build-test.result != 'failure'
+        && needs.macos-build-test.result != 'failure' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
       - config
       - versioning-and-release-url
+      - windows-build-test
       - update-win-version
       - create-nuget-package
       - ubuntu-x64-build-test
@@ -300,7 +314,10 @@ jobs:
       release_tag: ${{ needs.config.outputs.release_tag }}
 
   test-distribution:
-    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
+    # Only test the distribution once it was actually published. When a build fails,
+    # `upload-distributions` is skipped (see above), so require its success here as well —
+    # otherwise this job runs against an empty release and fails with "no assets to download".
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}
     needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:

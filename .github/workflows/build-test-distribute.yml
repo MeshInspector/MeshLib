@@ -226,11 +226,7 @@ jobs:
          failOnError: false
 
   upload-distributions:
-    # Skip publishing whenever any platform build failed: a failed build never produced its
-    # distributive, so there is nothing to upload and the downstream `test-distribution` job
-    # would otherwise fail with "no assets to download". Skipped builds (disabled platforms)
-    # have result 'skipped', not 'failure', so they keep this job running for the platforms
-    # that did build.
+    # Don't publish if any build failed (its distributive is missing); skipped builds are fine.
     if: >-
       ${{ !cancelled()
         && needs.config.outputs.upload_artifacts == 'true'
@@ -314,9 +310,7 @@ jobs:
       release_tag: ${{ needs.config.outputs.release_tag }}
 
   test-distribution:
-    # Only test the distribution once it was actually published. When a build fails,
-    # `upload-distributions` is skipped (see above), so require its success here as well —
-    # otherwise this job runs against an empty release and fails with "no assets to download".
+    # Skip if publishing was skipped, so we don't test against an empty release.
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}
     needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml

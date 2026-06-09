@@ -148,8 +148,7 @@ jobs:
       - name: Install additional packages for C bindings
         if: ${{ inputs.mrbind_c && matrix.arch == 'x64' }}
         run: |
-          sudo apt-get update
-          sudo apt-get install libc6-dev-i386
+          scripts/retry.sh -- dnf -y install glibc-devel.i686
 
         # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
       - name: Install Emscripten SDK for C bindings

@@ -148,7 +148,7 @@ namespace MRTest
             var p = new Vector3i();
             Assert.That( getValue( vdbVolume.data, p ) == 3.0f );
 
-            var region = new VoxelBitSet( (ulong)( vdbVolume.dims.x * vdbVolume.dims.y * vdbVolume.dims.z ) );
+            var region = new VoxelBitSet( (nuint)( vdbVolume.dims.x * vdbVolume.dims.y * vdbVolume.dims.z ) );
             region.set(new VoxelId(0));
             setValue( vdbVolume.data, region, 1.0f );
             Assert.That( getValue( vdbVolume.data, p ) == 1.0f );

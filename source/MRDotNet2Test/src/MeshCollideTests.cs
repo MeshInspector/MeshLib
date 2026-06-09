@@ -19,7 +19,7 @@ namespace MRTest
             Assert.That(intersections.size(), Is.EqualTo(152));
             var edgeATriBCount = 0;
             var edgeBTriACount = 0;
-            for (ulong i = 0; i < intersections.size(); i++)
+            for (nuint i = 0; i < intersections.size(); i++)
             {
                 if ( intersections[i].isEdgeATriB() )
                     edgeATriBCount++;
@@ -43,8 +43,8 @@ namespace MRTest
             getOneMeshIntersectionContours(meshA, meshB, contours, null, bConts, conv);
             Assert.That(bConts.size(), Is.EqualTo(4));
 
-            ulong posCount = 0;
-            for (ulong i = 0; i < aConts.size(); i++)
+            nuint posCount = 0;
+            for (nuint i = 0; i < aConts.size(); i++)
             {
                 posCount += aConts[i].intersections.size();
             }

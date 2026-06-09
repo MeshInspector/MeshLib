@@ -415,7 +415,7 @@ namespace MRTest
 
             var hole0 = trackRightBoundaryLoop(cubeMesh.topology, holes[0][0]);
             Assert.That(hole0.size(), Is.EqualTo(holes[0].size()));
-            for (ulong i = 0; i < hole0.size(); i++)
+            for (nuint i = 0; i < hole0.size(); i++)
             {
                 Assert.That(hole0[i].id, Is.EqualTo(holes[0][i].id));
             }

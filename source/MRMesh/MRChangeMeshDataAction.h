@@ -2,7 +2,7 @@
 
 #include "MRCombinedHistoryAction.h"
 #include "MRObjectMesh.h"
-#include "MRMesh.h" // for `std::make_shared<Mesh>` in the constructor
+#include "MRMesh.h"
 
 namespace MR
 {

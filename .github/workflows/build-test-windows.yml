@@ -196,12 +196,8 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
 
-        # MeshLibC2 isn't a part of MeshLib.sln (the solution must stay buildable
-        # when the bindings aren't generated), so build it explicitly here.
-        # The properties must match the solution build above, so that the project
-        # references (MRMesh etc.) are seen as up to date and aren't rebuilt.
       - name: Build C bindings with MSBuild
-        if: ${{ inputs.mrbind_c && matrix.build_system != 'CMake' }}
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
         shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg

@@ -209,7 +209,8 @@ Then you must build MeshLib with a special CMake flag, which will build the gene
 * There, run <code>scripts\mrbind\generate_win.bat -B --trace TARGET=c</code>
 
 * Compile MeshLib using CMake, with flag `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to also compile the generated bindings.<br/>
-  Compiling bindings using Visual Studio is not supported, you must use CMake.
+  Alternatively build the `MeshLibC2` project with MSBuild: <code>msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=Release -p:Platform=x64 -p:SolutionDir=%CD%\source\</code> (from the repository root; the trailing backslash in `SolutionDir` matters), or build the project from the IDE.<br/>
+  The project is a part of `MeshLib.sln`, but is excluded from the default solution build, because its sources only exist after running the generation script.
 
 ### Linux
 

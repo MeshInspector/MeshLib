@@ -68,6 +68,12 @@
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
+  <!-- The CMake build receives the vcpkg headers as SYSTEM includes and doesn't see warnings
+       from them, while this project compiles them directly (no PCH to hide them in), and e.g.
+       Eigen triggers C5266 under `/Wall /WX`. Mark them as external and silence their warnings. -->
+  <PropertyGroup>
+    <ExternalIncludePath>$(VcpkgCurrentInstalledDir)\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
   <!-- Intentionally no PCH (same as the CMake build): this project adds bindings-only defines
        that are missing in the PCH, and them mismatching causes issues.
        `ExceptionHandling=SyncCThrow` is `/EHs`: don't assume that `extern "C"` functions don't
@@ -89,6 +95,7 @@
       <PreprocessorDefinitions>MR_COMPILING_ANY_BINDINGS;MR_COMPILING_C_BINDINGS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <DisableSpecificWarnings>4242;4244;4297;4305;4355;4800;4804;5204;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)..\..;%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
     </ClCompile>
@@ -107,6 +114,7 @@
       <PreprocessorDefinitions>MR_COMPILING_ANY_BINDINGS;MR_COMPILING_C_BINDINGS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <DisableSpecificWarnings>4242;4244;4297;4305;4355;4800;4804;5204;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)..\..;%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
     </ClCompile>

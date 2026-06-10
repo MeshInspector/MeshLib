@@ -196,8 +196,9 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
 
-        # MeshLibC2 is excluded from the default solution build (its sources only
-        # exist after the bindings generation step), so build it explicitly.
+        # MeshLibC2 is excluded from the default solution build, so that the solution
+        # stays buildable when the bindings aren't generated (mrbind_c disabled, or
+        # a local build without the generation script); so build it explicitly here.
         # The properties must match the solution build above, so that the project
         # references (MRMesh etc.) are seen as up to date and aren't rebuilt.
       - name: Build C bindings with MSBuild

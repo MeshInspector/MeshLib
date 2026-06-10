@@ -48,10 +48,6 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-      # CUDA version and the optional MRCuda toolset override are per-entry matrix attributes
-      # (see .github/workflows/matrix/windows-*.json): under VS2026 MRCuda builds with v143 +
-      # CUDA 12.0, since CUDA 13.2 (paired with v145) needs the newest GPUs/drivers and does not
-      # support the v145 host compiler. CUDA_MAJOR/CUDA_MINOR are derived from CUDA_VERSION below.
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}

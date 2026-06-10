@@ -62,6 +62,8 @@ jobs:
 
   generate-c-bindings:
     uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}

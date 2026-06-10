@@ -117,12 +117,13 @@ runs:
       run: |
         set -eu
         case "$RUNNER_OS" in
-          # Git Bash has no `strip` of its own, so use MSYS2's.
-          Windows) strip=("$(cygpath -u '${{ inputs.msys2-dir }}')/clang64/bin/strip.exe"); ext=.exe ;;
-          # -S drops debug symbols but keeps the dynamic symbol table.
-          macOS)   strip=(strip -S); ext= ;;
-          *)       strip=(strip); ext= ;;
+          Windows)
+            # Git Bash has no `strip` of its own, so use MSYS2's.
+            STRIP_EXE="$(cygpath -u '${{ inputs.msys2-dir }}')/clang64/bin/strip.exe"
+            "$STRIP_EXE" "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe ;;
+          macOS)
+            # -S drops debug symbols but keeps the dynamic symbol table.
+            strip -S "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp} ;;
+          *)
+            strip "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp} ;;
         esac
-        for bin in mrbind mrbind_gen_c mrbind_gen_csharp; do
-          "${strip[@]}" "${{ inputs.mrbind-dir }}/build/$bin$ext"
-        done

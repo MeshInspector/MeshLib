@@ -2,6 +2,10 @@ name: Build and test Ubuntu x64
 
 on:
   workflow_call:
+    inputs:
+      docker_image_tag:
+        required: true
+        type: string
 
 jobs:
   generate-c-bindings:

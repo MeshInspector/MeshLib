@@ -164,14 +164,6 @@ jobs:
         run: |
           scripts/retry.sh -- dnf -y install glibc-devel.i686
 
-        # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#size_t-and-other-standard-typedefs` for more details.
-      - name: Install Emscripten SDK for C bindings
-        if: ${{ inputs.mrbind_c && matrix.arch == 'arm64' }}
-        run: |
-          git clone https://github.com/emscripten-core/emsdk ../emsdk
-          ../emsdk/emsdk install 4.0.10
-          ../emsdk/emsdk activate 4.0.10
-
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
         uses: actions/download-artifact@v8

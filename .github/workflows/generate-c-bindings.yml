@@ -51,25 +51,8 @@ jobs:
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 
-      - name: Install Emscripten SDK for C bindings
-        run: |
-          git clone https://github.com/emscripten-core/emsdk ../emsdk
-          ../emsdk/emsdk install 4.0.10
-          ../emsdk/emsdk activate 4.0.10
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        run: |
-          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
+      - name: Generate C bindings
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace ENABLE_CUDA=1
 
       - name: Upload C bindings
         uses: actions/upload-artifact@v7

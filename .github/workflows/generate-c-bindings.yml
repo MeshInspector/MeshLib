@@ -53,7 +53,6 @@ jobs:
 
         # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#option-a` for more details.
       - name: Install Emscripten SDK for C bindings
-        if: ${{ inputs.mrbind_c }}
         run: |
           git clone https://github.com/emscripten-core/emsdk ../emsdk
           ../emsdk/emsdk install 4.0.10

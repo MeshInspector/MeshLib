@@ -55,7 +55,7 @@ jobs:
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
       - name: Generate C bindings
         run: |
-          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=1 ENABLE_CUDA=1
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
       - name: Upload C bindings
         uses: actions/upload-artifact@v7

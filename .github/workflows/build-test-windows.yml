@@ -48,11 +48,10 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
-      CUDA_VERSION: ${{ fromJSON('{"msvc-2019":"11.4.2","msvc-2022":"12.0.1"}')[matrix.cxx_compiler] || '13.2.0' }}
-      CUDA_MAJOR: ${{ fromJSON('{"msvc-2019":"11","msvc-2022":"12"}')[matrix.cxx_compiler] || '13' }}
-      CUDA_MINOR: ${{ fromJSON('{"msvc-2019":"4","msvc-2022":"0"}')[matrix.cxx_compiler] || '2' }}
+      CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
+      MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
 
     steps:
       - name: Checkout
@@ -106,6 +105,13 @@ jobs:
           # VS2022/VS2026 fetch their assets from upstream instead.
           install-flags: ${{ (matrix.vcpkg_triplet == 'x64-windows-vs2019-meshlib' || matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug') && '--write-s3 --use-s3-asset-provider' || '--write-s3' }}
           internal-build: ${{ inputs.internal_build }}
+
+      - name: Resolve CUDA major/minor
+        shell: bash
+        run: |
+          IFS=. read -r major minor _ <<< "$CUDA_VERSION"
+          echo "CUDA_MAJOR=$major" >> "$GITHUB_ENV"
+          echo "CUDA_MINOR=$minor" >> "$GITHUB_ENV"
 
       - name: Install CUDA
         uses: ./.github/actions/install-cuda
@@ -187,7 +193,7 @@ jobs:
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }} || exit /b 1
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
 
       - name: Generate and build Python bindings

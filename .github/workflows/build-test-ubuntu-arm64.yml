@@ -150,25 +150,19 @@ jobs:
           ../emsdk/emsdk install 4.0.10
           ../emsdk/emsdk activate 4.0.10
 
-      - name: Generate C bindings
+      - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
-        # The default shell is `sh`?!
-        shell: bash
-        env:
-          CXX: ${{ matrix.cxx-compiler }}
-        run: |
-          . ../emsdk/emsdk_env.sh
-          make -f scripts/mrbind/generate.mk TARGET=c -B --trace
-
-      - name: Upload C bindings headers
-        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: CBindings
-          path: |
-            ./source/MeshLibC2/include
-            ./source/MeshLibC2Cuda/include
-          retention-days: 1
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}

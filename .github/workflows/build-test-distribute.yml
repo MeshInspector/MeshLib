@@ -60,9 +60,12 @@ jobs:
       release_tag:       ${{ needs.config.outputs.release_tag }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
+  generate-c-bindings:
+    uses: ./.github/workflows/generate-c-bindings.yml
+
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
-    needs: [ config, prepare-image ]
+    needs: [ config, prepare-image, generate-c-bindings ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
       config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
@@ -75,7 +78,7 @@ jobs:
 
   ubuntu-arm64-build-test:
     if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
-    needs: [ config, prepare-image ]
+    needs: [ config, prepare-image, generate-c-bindings ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -88,7 +91,7 @@ jobs:
 
   ubuntu-x64-build-test:
     if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
-    needs: [ config, prepare-image ]
+    needs: [ config, prepare-image, generate-c-bindings ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -102,7 +105,7 @@ jobs:
 
   linux-vcpkg-build-test:
     if: ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' }}
-    needs: [ config, prepare-image ]
+    needs: [ config, prepare-image, generate-c-bindings ]
     uses: ./.github/workflows/build-test-linux-vcpkg.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -116,7 +119,7 @@ jobs:
 
   emscripten-build-test:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
-    needs: [ config, prepare-image ]
+    needs: [ config, prepare-image, generate-c-bindings ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
@@ -125,7 +128,7 @@ jobs:
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
-    needs: [ config ]
+    needs: [ config, generate-c-bindings ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -316,7 +319,7 @@ jobs:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
     if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && !cancelled() }}
-    needs: [ config, ubuntu-arm64-build-test ]
+    needs: [ config, generate-c-bindings ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
@@ -438,13 +441,13 @@ jobs:
           name: PythonStubs
           failOnError: false
 
-      - name: Delete C bindings headers
+      - name: Delete C bindings
         if: needs.update-dev-documentation.result == 'success'
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CBindings
           failOnError: false
-          
+
       - name: Delete Csharp bindings
         if: needs.update-dev-documentation.result == 'success'
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0

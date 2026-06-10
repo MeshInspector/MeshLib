@@ -172,13 +172,19 @@ jobs:
           ../emsdk/emsdk install 4.0.10
           ../emsdk/emsdk activate 4.0.10
 
-      - name: Generate C bindings
+      - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
-        env:
-          CXX: ${{ matrix.cxx-compiler }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
         run: |
-          ${{ fromJSON('["", ". ../emsdk/emsdk_env.sh"]')[matrix.arch == 'arm64'] }}
-          make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Build
         run: ./scripts/build_source.sh

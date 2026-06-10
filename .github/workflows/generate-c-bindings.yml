@@ -1,0 +1,74 @@
+name: Build and test Ubuntu x64
+
+on:
+  workflow_call:
+
+jobs:
+  generate-c-bindings:
+    timeout-minutes: 60
+    runs-on: [ubuntu-latest]
+    permissions:
+      contents: read  # This is required for actions/checkout
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory '*'
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+            thirdparty/expected \
+            thirdparty/jsoncpp \
+            thirdparty/onetbb \
+            thirdparty/openvdb/v10/openvdb \
+            thirdparty/spdlog
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+
+      - name: Install MRBind
+        uses: ./.github/actions/build-mrbind
+        with:
+          # The Dockerfile hash in extra-cache-key busts the cache whenever the
+          # toolchain inside the image changes (e.g. glibc, clang upgrade).
+          cache-key-prefix: ubuntu-x64-ubuntu-latest
+          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+
+      - name: Install Emscripten SDK for C bindings
+        run: |
+          git clone https://github.com/emscripten-core/emsdk ../emsdk
+          ../emsdk/emsdk install 4.0.10
+          ../emsdk/emsdk activate 4.0.10
+
+      - name: Download C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
+
+      - name: Upload C bindings
+        uses: actions/upload-artifact@v7
+        with:
+          name: CBindings
+          path: |
+            ./source/MeshLibC2
+            ./source/MeshLibC2Cuda
+          retention-days: 1

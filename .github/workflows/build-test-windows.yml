@@ -142,11 +142,11 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Install MSYS2 for MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
+        if: ${{inputs.mrbind || inputs.mrbind_c || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
+        if: ${{inputs.mrbind || inputs.mrbind_c || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/build-mrbind
         with:
           cache-key-prefix: windows-clang18
@@ -154,7 +154,7 @@ jobs:
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
 
       - name: Generate C bindings
-        if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64

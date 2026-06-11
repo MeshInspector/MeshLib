@@ -402,6 +402,9 @@ jobs:
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build
+        env:
+          # add frequently used MeshLib headers to the precompiled header (see MRPch.h)
+          CL: /DMR_PCH_USE_EXTRA_HEADERS
         run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }}
 
       - name: Install MSYS2 for MRBind
@@ -528,6 +531,7 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 

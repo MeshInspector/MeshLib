@@ -22,8 +22,7 @@
     against either vcpkg snapshot without per-runner edits.
 
     Verified by MRTest's MRMesh.MimallocRedirectActive unit test (gated by
-    MIMALLOC_DISABLE_REDIRECT env var). See also MimallocRedirect.cmake for the
-    CMake equivalent.
+    MIMALLOC_DISABLE_REDIRECT env var). See also Mimalloc.cmake (mr_enable_mimalloc).
   -->
   <PropertyGroup>
     <MimallocDebugLib Condition="Exists('$(VcpkgCurrentInstalledDir)\debug\lib\mimalloc-debug.dll.lib')">mimalloc-debug.dll.lib</MimallocDebugLib>
@@ -32,12 +31,20 @@
     <MimallocReleaseLib Condition="'$(MimallocReleaseLib)'=='' AND Exists('$(VcpkgCurrentInstalledDir)\lib\mimalloc.lib')">mimalloc.lib</MimallocReleaseLib>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <!-- Marks this EXE mimalloc-linked so the engagement test compiles (cf. Mimalloc.cmake). -->
+      <PreprocessorDefinitions>MR_MIMALLOC_ENABLED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <Link>
       <AdditionalDependencies>$(MimallocDebugLib);%(AdditionalDependencies)</AdditionalDependencies>
       <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <!-- Marks this EXE mimalloc-linked so the engagement test compiles (cf. Mimalloc.cmake). -->
+      <PreprocessorDefinitions>MR_MIMALLOC_ENABLED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <Link>
       <AdditionalDependencies>$(MimallocReleaseLib);%(AdditionalDependencies)</AdditionalDependencies>
       <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>

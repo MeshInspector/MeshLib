@@ -79,10 +79,7 @@ sudo cp MyPlugin.items.json MyPlugin.ui.json /usr/share/MeshInspector/
 sudo cp -R resource                        /usr/share/MeshInspector/
 \endcode
 
-\note If you installed MeshInspector via a different channel (tarball, AppImage, source build), the directory layout differs. You can list the canonical locations with:
-\code{.sh}
-dpkg -L meshinspector | grep -E "MRPlugins|share/MeshInspector"     # .deb installs
-\endcode
+\note If you installed MeshInspector via a different channel (tarball, AppImage, source build), the directory layout differs.
 For an SDK archive build, copy into `install/app/Release/` — same layout as Windows.
 
 ### macOS (arm64 / Intel)
@@ -129,59 +126,6 @@ sudo codesign --force --deep --sign - /Applications/MeshInspector.app
 
 \warning Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/libs/` runs every time anyone on the machine launches MeshInspector.
 
-#### macOS — building plugins so they actually load
-
-Plugins built on a developer machine often link against absolute Homebrew paths (`/opt/homebrew/opt/jsoncpp/lib/libjsoncpp.27.dylib`). When that exact dylib does not exist on the host machine — say the user has a different `jsoncpp` version — `dlopen` fails. Build the plugin so its dependencies resolve **relative to the host app**.
-
-In CMake, declare an install RPATH and force it into the build artifact:
-
-\code{.cmake}
-set_target_properties(MyPlugin PROPERTIES
-    INSTALL_RPATH "@executable_path/../libs"
-    BUILD_WITH_INSTALL_RPATH ON   # apply RPATH at build time, not only on `cmake --install`
-)
-\endcode
-
-\note Without `BUILD_WITH_INSTALL_RPATH ON`, the install RPATH only takes effect when you run `cmake --install`. If you skip the install step (most plugin authors do), the dylib in the build directory still has the build-tree RPATH and dlopen will not find the host's libraries.
-
-After the build, audit the dependencies — they must all be one of: a system path under `/usr/lib/`, an `@rpath/...` reference, or `@executable_path/../libs/...`:
-
-\code{.sh}
-otool -L libMyPlugin.dylib
-\endcode
-
-If you still see absolute Homebrew paths, retarget them. **First read your own dylib's deps and substitute your actual versions** — do not copy the example below verbatim:
-
-\code{.sh}
-# 1) Find what your plugin actually links to:
-otool -L libMyPlugin.dylib | grep homebrew
-
-# 2) For every offending line, run install_name_tool -change.
-#    Replace these example versions with what otool printed.
-install_name_tool \
-    -change /opt/homebrew/opt/jsoncpp/lib/libjsoncpp.27.dylib \
-            @executable_path/../libs/libjsoncpp.27.dylib \
-    -change /opt/homebrew/opt/cpr/lib/libcpr.1.dylib \
-            @executable_path/../libs/libcpr.1.dylib \
-    libMyPlugin.dylib
-\endcode
-
-\note Intel Macs (`x86_64`) use `/usr/local/opt/...` instead of `/opt/homebrew/opt/...`. Adjust accordingly.
-
-#### macOS — SONAME mismatches
-
-Plugins typically link against the short SONAME (e.g. `libcpr.1.dylib`), but a MeshInspector bundle ships only the fully-versioned file (`libcpr.1.14.2.dylib`). dyld will not synthesize the missing short name — create the symlink once during install:
-
-\code{.sh}
-# In the user-writable clone:
-ln -sf libcpr.1.14.2.dylib ~/Apps/MI-MyPlugin/Contents/libs/libcpr.1.dylib
-
-# In /Applications (option B):
-sudo ln -sf libcpr.1.14.2.dylib /Applications/MeshInspector.app/Contents/libs/libcpr.1.dylib
-\endcode
-
-You only need this when the file the host shipped under `Contents/libs/` does not match the SONAME your plugin asks for. `otool -L` shows the SONAME your plugin needs; `ls /path/to/libs/` shows what the host shipped.
-
 \section HowtoAddPluginOverview_VerifyInstall Verifying the install
 
 Launch the host application and inspect the log file:
@@ -202,10 +146,6 @@ A successful install shows two lines per plugin:
 
 **"Ribbon item \"My Tool\" is not registered"** — the `Name` field in `*.items.json` does not match the string passed to `RibbonMenuItem("...")` (or `StatePlugin("...")`) in the source. Names are byte-identical strings; "My Tool" and "MyTool" are different. Fix the JSON or the source so they match exactly.
 
-**"Library not loaded: /opt/homebrew/...libjsoncpp.26.dylib"** — your plugin links against a library version that the host does not ship. Rebuild on the developer machine with `INSTALL_RPATH "@executable_path/../libs"` (see above), or patch the existing binary with `install_name_tool`. The number after the dot is the library SONAME, not a path; `26` and `27` are different ABIs.
-
-**"Library not loaded: @executable_path/../libs/libcpr.1.dylib"** — short SONAME missing in the host's `libs/`. Create the symlink as shown in "SONAME mismatches" above.
-
 **Plugin loads but ribbon button does not appear** — `*.ui.json` references a tab or group that does not exist, or the `Order` value collides with another plugin. Check that `Tabs[].Name` matches an existing tab (e.g. `Home`, `Mesh Edit`) and that `Groups[].Name` matches a group inside that tab.
 
 **Plugin loads but no items show** — your `LibName` in `*.ui.json` does not match the produced library file name (without the `lib` prefix and `.dylib`/`.so`/`.dll` suffix). For `libMyPlugin.dylib`, `LibName` must be `MyPlugin`.
@@ -221,7 +161,7 @@ rm ~/Apps/MI-MyPlugin/Contents/Resources/MyPlugin.ui.json
 rm -rf ~/Apps/MI-MyPlugin/Contents/Resources/resource     # only if you copied it
 \endcode
 
-For the macOS option B install, the same three `rm` commands prefixed with `sudo` and pointing at `/Applications/MeshInspector.app/Contents/...`. The `libcpr.1.dylib` symlink you may have added is safe to leave in place, or remove with `rm`.
+For the macOS option B install, the same three `rm` commands prefixed with `sudo` and pointing at `/Applications/MeshInspector.app/Contents/...`.
 
 For Windows and Linux, delete the same three sets of files from the install directory you copied them to.
 

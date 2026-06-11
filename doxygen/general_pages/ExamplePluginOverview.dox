@@ -162,19 +162,11 @@ sudo cp -R example_plugin/resource                   /usr/share/MeshInspector/
 
 The MeshLib SDK ships as a framework at `/Library/Frameworks/MeshLib.framework`.
 
-1. Install Homebrew prerequisites listed in `requirements/macos.txt` (jsoncpp, fmt, spdlog, glfw, tbb, cpr, etc.).
-2. Build (the `INSTALL_RPATH` line tells the linker to look next to the host MeshInspector):
+1. Install MeshLib SDK.
+2. Build:
 \code{.sh}
-cmake -S example_plugin -B example_plugin_build -D CMAKE_BUILD_TYPE=Release \
-      -D MeshLib_DIR=/Library/Frameworks/MeshLib.framework/Versions/Current/Resources/cmake \
-      -D CMAKE_INSTALL_RPATH="@executable_path/../libs"
+cmake -S example_plugin -B example_plugin_build -D CMAKE_BUILD_TYPE=Release
 cmake --build example_plugin_build -j
-\endcode
-3. Verify dependencies look portable:
-\code{.sh}
-otool -L example_plugin_build/libMyPlugin.dylib
-# Every line must be /usr/lib/..., @rpath/..., or @executable_path/../libs/...
-# If you still see /opt/homebrew/... paths, fix them with install_name_tool -change.
 \endcode
 4. Deploy. **Recommended (safer):** install into a writable clone of the host app — does not touch the system bundle and does not break its code signature.
 \code{.sh}
@@ -185,12 +177,6 @@ cp example_plugin_build/libMyPlugin.dylib            ~/Apps/MI-MyPlugin/Contents
 cp example_plugin/MyPlugin.items.json                ~/Apps/MI-MyPlugin/Contents/Resources/
 cp example_plugin/MyPlugin.ui.json                   ~/Apps/MI-MyPlugin/Contents/Resources/
 cp -R example_plugin/resource                        ~/Apps/MI-MyPlugin/Contents/Resources/
-
-# SONAME symlink (only if the bundle does not already ship the short name your plugin needs):
-ln -sf libcpr.1.14.2.dylib ~/Apps/MI-MyPlugin/Contents/libs/libcpr.1.dylib
-
-# Launch:
-~/Apps/MI-MyPlugin/Contents/MacOS/MeshInspector
 \endcode
 
 The system-wide alternative (writes into the notarized `MeshInspector.app` bundle) is documented under \ref HowtoAddPluginOverview "How to Add Plugin" → macOS option B, including the signature trade-off.

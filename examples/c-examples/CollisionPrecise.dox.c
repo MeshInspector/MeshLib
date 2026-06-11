@@ -32,7 +32,7 @@ int main( void )
         mpA, mpB, MR_PassBy_Copy, MR_CoordinateConverters_GetMutable_toInt( converters ), NULL, NULL );
 
     // print pairs of edges triangles
-    for ( MR_uint64_t i = 0; i < MR_std_vector_MR_VarEdgeTri_size( collidingFaceEdges ); ++i )
+    for ( size_t i = 0; i < MR_std_vector_MR_VarEdgeTri_size( collidingFaceEdges ); ++i )
     {
         MR_VarEdgeTri* edgeTri = MR_std_vector_MR_VarEdgeTri_at_mut( collidingFaceEdges, i );
         bool edgeATriB = MR_VarEdgeTri_isEdgeATriB( edgeTri );

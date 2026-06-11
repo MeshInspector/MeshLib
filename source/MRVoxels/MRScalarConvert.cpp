@@ -3,7 +3,7 @@
 namespace MR
 {
 
-std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, Uint64 range, Int64 min )
+std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, std::uint64_t range, std::int64_t min )
 {
     return [range, min, scalarType] ( const char* c )
     {

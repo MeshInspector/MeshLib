@@ -8,7 +8,7 @@ public class CollisionSelfExample
 
         // find self-intersecting faces pairs
         var selfCollidingPairs = findSelfCollidingTriangles(mesh);
-        for (ulong i = 0; i < selfCollidingPairs.size(); i++)
+        for (nuint i = 0; i < selfCollidingPairs.size(); i++)
         {
             var pair = selfCollidingPairs[i];
             Console.WriteLine($"{pair.aFace.id} {pair.bFace.id}"); // print each pair

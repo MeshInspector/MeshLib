@@ -32,7 +32,7 @@ namespace MRTest
             var restored = gridToMesh(vdbVolume.data, gridToMeshSettings);
             var bbox = restored.getBoundingBox();
 
-            Assert.That(restored.points.size(), Is.EqualTo(3748));
+            Assert.That(restored.points.size(), Is.EqualTo((nuint)3748));
             Assert.That(bbox.min.x, Is.EqualTo(0.2).Within(0.001));
             Assert.That(bbox.min.y, Is.EqualTo(0.2).Within(0.001));
             Assert.That(bbox.min.z, Is.EqualTo(0.2).Within(0.001));
@@ -55,7 +55,7 @@ namespace MRTest
             if (restored is null)
                 return;
 
-            Assert.That(restored.size(), Is.EqualTo(1));
+            Assert.That(restored.size(), Is.EqualTo((nuint)1));
 
             var readVolume = restored[0];
             Assert.That(readVolume.dims.x, Is.EqualTo(26));
@@ -111,7 +111,7 @@ namespace MRTest
             if (restored is null)
                 return;
 
-            Assert.That(restored.size(), Is.EqualTo(1));
+            Assert.That(restored.size(), Is.EqualTo((nuint)1));
 
             var readVolume = restored[0];
             Assert.That(readVolume.voxelSize.x, Is.EqualTo(0.2f).Within(0.001f));
@@ -148,7 +148,7 @@ namespace MRTest
             var p = new Vector3i();
             Assert.That( getValue( vdbVolume.data, p ) == 3.0f );
 
-            var region = new VoxelBitSet( (ulong)( vdbVolume.dims.x * vdbVolume.dims.y * vdbVolume.dims.z ) );
+            var region = new VoxelBitSet( (nuint)( vdbVolume.dims.x * vdbVolume.dims.y * vdbVolume.dims.z ) );
             region.set(new VoxelId(0));
             setValue( vdbVolume.data, region, 1.0f );
             Assert.That( getValue( vdbVolume.data, p ) == 1.0f );

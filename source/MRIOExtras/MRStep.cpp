@@ -404,6 +404,50 @@ public:
 
 private:
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
+    std::pair<std::optional<Color>, std::optional<Color>> readShapeColors_( const TopoDS_Shape& shape ) const
+    {
+        std::optional<Color> faceColor, edgeColor;
+#if STEP_LOAD_COLORS
+        Quantity_ColorRGBA color;
+        if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
+            faceColor = edgeColor = toColor( color );
+        if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
+            faceColor = toColor( color );
+        if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
+            edgeColor = toColor( color );
+#endif
+        return { faceColor, edgeColor };
+    }
+
+    bool addSplitSimpleShapeChildren_( const TopoDS_Shape& shape, const std::shared_ptr<Object>& parent, std::optional<Color> faceColor, std::optional<Color> edgeColor )
+    {
+        std::vector<std::pair<TopoDS_Shape, std::string>> bodies;
+
+        auto solidIndex = 0;
+        for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            bodies.emplace_back( explorer.Current(), fmt::format( "Solid{}", ++solidIndex ) );
+
+        auto shellIndex = 0;
+        for ( auto explorer = TopExp_Explorer( shape, TopAbs_SHELL, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            bodies.emplace_back( explorer.Current(), fmt::format( "Shell{}", ++shellIndex ) );
+
+        if ( bodies.size() <= 1 )
+            return false;
+
+        for ( const auto& [bodyShape, bodyName] : bodies )
+        {
+            auto objMesh = std::make_shared<ObjectMesh>();
+            objMesh->setName( bodyName );
+            objMesh->setMesh( std::make_shared<Mesh>() );
+            objMesh->select( true );
+            parent->addChild( objMesh );
+
+            meshTriangulationContexts_.emplace_back( bodyShape, objMesh, faceColor, edgeColor );
+        }
+
+        return true;
+    }
+
     void readLabel_( const TDF_Label& label )
     {
         using ShapeTool = XCAFDoc_ShapeTool;
@@ -443,24 +487,16 @@ private:
             if ( ShapeTool::IsSimpleShape( ref ) )
             {
                 const auto refShape = ShapeTool::GetShape( ref );
-
-                std::optional<Color> faceColor, edgeColor;
-#if STEP_LOAD_COLORS
-                Quantity_ColorRGBA color;
-                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorGen, color ) )
-                    faceColor = edgeColor = toColor( color );
-                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorSurf, color ) )
-                    faceColor = toColor( color );
-                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorCurv, color ) )
-                    edgeColor = toColor( color );
-#endif
+                auto [faceColor, edgeColor] = readShapeColors_( refShape );
 
                 // remove existing sub-shape triangulations
                 std::erase_if( meshTriangulationContexts_, [&] ( const MeshTriangulationContext& ctx )
                 {
                     return ctx.mesh == objMesh;
                 } );
-                meshTriangulationContexts_.emplace_back( refShape, objMesh, faceColor, edgeColor );
+
+                if ( !addSplitSimpleShapeChildren_( refShape, objMesh, faceColor, edgeColor ) )
+                    meshTriangulationContexts_.emplace_back( refShape, objMesh, faceColor, edgeColor );
             }
         }
         else
@@ -476,6 +512,18 @@ private:
             }
             else
             {
+                const auto [faceColor, edgeColor] = readShapeColors_( shape );
+                auto obj = std::make_shared<Object>();
+                obj->setName( name );
+                obj->setXf( xf );
+                obj->select( true );
+
+                if ( addSplitSimpleShapeChildren_( shape, obj, faceColor, edgeColor ) )
+                {
+                    objStack_.top()->addChild( obj );
+                    return;
+                }
+
                 objMesh = std::make_shared<ObjectMesh>();
                 objMesh->setName( name );
                 objMesh->setMesh( std::make_shared<Mesh>() );
@@ -484,16 +532,7 @@ private:
                 objStack_.top()->addChild( objMesh );
             }
 
-            std::optional<Color> faceColor, edgeColor;
-#if STEP_LOAD_COLORS
-            Quantity_ColorRGBA color;
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
-                faceColor = edgeColor = toColor( color );
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
-                faceColor = toColor( color );
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
-                edgeColor = toColor( color );
-#endif
+            auto [faceColor, edgeColor] = readShapeColors_( shape );
 
             meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
         }

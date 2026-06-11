@@ -19,6 +19,8 @@
 #include "MRTriPoint.h"
 #include "MRPch/MRBindingMacros.h"
 
+#include <cassert>
+
 namespace MR
 {
 

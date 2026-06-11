@@ -54,9 +54,9 @@ jobs:
         # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#option-a` for more details.
       - name: Install Emscripten SDK for C bindings
         run: |
-          git clone https://github.com/emscripten-core/emsdk ../emsdk
-          ../emsdk/emsdk install 4.0.10
-          ../emsdk/emsdk activate 4.0.10
+          git clone https://github.com/emscripten-core/emsdk
+          emsdk/emsdk install 4.0.10
+          emsdk/emsdk activate 4.0.10
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
@@ -64,7 +64,7 @@ jobs:
         # I get `sh` by default.
         shell: bash
         run: |
-          . ../emsdk/emsdk_env.sh
+          . emsdk/emsdk_env.sh
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
       - name: Upload C bindings

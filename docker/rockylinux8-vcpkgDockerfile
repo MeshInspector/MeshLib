@@ -88,7 +88,7 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     # network may flake
     retry.sh -- \
         ./vcpkg install --x-manifest-root=/root/MeshLib/ --debug
-    ./vcpkg export --x-manifest-root=/root/MeshLib/ --raw --output=vcpkg --output-dir=/opt/vcpkg/
+    ./vcpkg export --x-manifest-root=/root/MeshLib/ --raw --output=vcpkg --output-dir=/opt
 EOF
 
 

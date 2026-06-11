@@ -387,11 +387,13 @@ void RibbonSchemaLoader::loadSchema() const
     RibbonSchemaHolder::schema().sortTabsByPriority();
     RibbonSchemaHolder::schema().updateCaptions();
 
+#ifndef MRVIEWER_NO_LOCALE
     [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [] ( const std::string& )
     {
         recalcItemSizes();
         RibbonSchemaHolder::schema().updateCaptions();
     } );
+#endif
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
@@ -580,7 +582,12 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
 
 void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const std::string& schemaName ) const
 {
+#ifndef MRVIEWER_NO_LOCALE
     const auto domainId = !schemaName.empty() ? Locale::addDomain( schemaName ) : LocaleDomainId{};
+#else
+    (void)schemaName;
+    static const LocaleDomainId domainId{};
+#endif
 
     auto items = itemsStruct["Items"];
     if ( !items.isArray() )
@@ -670,8 +677,12 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
     // cannot use `path.stem()` because of two segment extensions (.ui.json)
     const auto filename = utf8string( path.filename() );
     const auto stem = filename.substr( 0, filename.find( '.' ) );
+#ifndef MRVIEWER_NO_LOCALE
     const auto domainId = Locale::findDomain( stem );
     readUIJson_( *itemsStructRes, domainId );
+#else
+    readUIJson_( *itemsStructRes );
+#endif
 }
 
 void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleDomainId domainId ) const

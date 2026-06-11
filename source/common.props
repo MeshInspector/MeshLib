@@ -64,6 +64,8 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <!--
         !! NOTE: Sync this list with `CompilerOptions.cmake` !!
            warning C4061: enumerator V in switch of enum E is not explicitly handled by a case label

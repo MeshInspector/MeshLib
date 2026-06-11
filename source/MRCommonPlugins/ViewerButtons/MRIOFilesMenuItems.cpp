@@ -34,6 +34,8 @@
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerSignals.h"
+#include "MRViewer/MRViewportCornerController.h"
+#include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
@@ -262,6 +264,9 @@ const RibbonMenuItem::DropItemsList& OpenFilesMenuItem::dropItems() const
 void OpenFilesMenuItem::dragEntrance_( bool entered )
 {
     dragging_ = entered;
+    auto& v = getViewerInstance();
+    v.incrementForceRedrawFrames( v.forceRedrawMinimumIncrementAfterEvents, true );
+
 }
 
 bool OpenFilesMenuItem::dragOver_( int x, int y )
@@ -291,7 +296,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( !checkPaths( paths, filters_ ) )
         return false;
 
-    FileLoadOptions options{ .undoPrefix = "Drop " };
+    FileLoadOptions options{ .undoPrefix = _t( "Drop {}" ) };
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();
@@ -887,6 +892,7 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
     UI::drag<PixelSizeUnit>( _tr( "Width" ), resolution_.x, 1, 256 );
     UI::drag<PixelSizeUnit>( _tr( "Height" ), resolution_.y, 1, 256 );
     UI::checkbox( _tr( "Transparent Background" ), &transparentBg_ );
+    UI::checkbox( _tr( "Hide scene overlays" ), &hideOverlays_ );
     if ( UI::button( _tr( "Capture" ), ImVec2( -1, 0 ) ) )
     {
         auto now = std::chrono::system_clock::now();
@@ -910,6 +916,41 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                     vp.setParameters( params );
                 }
             }
+            // Hide 3D scene overlays (nav cube, basis axes, global basis, rotation center, viewport
+            // border) so they are not baked into the saved image; all restored right after capture.
+            ViewportMask basisAxesMaskBackup, globalBasisMaskBackup, rotationCenterMaskBackup, navCubeMaskBackup;
+            std::vector<Color> borderColorBackup;
+            if ( hideOverlays_ )
+            {
+                auto& viewerInst = getViewerInstance();
+                if ( viewerInst.basisAxes )
+                {
+                    basisAxesMaskBackup = viewerInst.basisAxes->visibilityMask();
+                    viewerInst.basisAxes->setVisibilityMask( {} );
+                }
+                if ( viewerInst.globalBasis )
+                {
+                    globalBasisMaskBackup = viewerInst.globalBasis->getVisibilityMask();
+                    viewerInst.globalBasis->setVisibilityMask( {} );
+                }
+                if ( viewerInst.rotationSphere )
+                {
+                    rotationCenterMaskBackup = viewerInst.rotationSphere->visibilityMask();
+                    viewerInst.rotationSphere->setVisibilityMask( {} );
+                }
+                if ( viewerInst.basisViewController )
+                {
+                    navCubeMaskBackup = viewerInst.basisViewController->getEnabledMask();
+                    viewerInst.basisViewController->enable( {} );
+                }
+                for ( auto& vp : viewerInst.viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    borderColorBackup.push_back( params.borderColor );
+                    params.borderColor = Color::transparent();
+                    vp.setParameters( params );
+                }
+            }
             auto image = getViewerInstance().captureSceneScreenShot( resolution_ );
             if ( transparentBg_ )
             {
@@ -919,6 +960,25 @@ void CaptureScreenshotMenuItem::drawDialog( ImGuiContext* )
                     auto params = vp.getParameters();
                     params.backgroundColor = backgroundBackup[i];
                     i++;
+                    vp.setParameters( params );
+                }
+            }
+            if ( hideOverlays_ )
+            {
+                auto& viewerInst = getViewerInstance();
+                if ( viewerInst.basisAxes )
+                    viewerInst.basisAxes->setVisibilityMask( basisAxesMaskBackup );
+                if ( viewerInst.globalBasis )
+                    viewerInst.globalBasis->setVisibilityMask( globalBasisMaskBackup );
+                if ( viewerInst.rotationSphere )
+                    viewerInst.rotationSphere->setVisibilityMask( rotationCenterMaskBackup );
+                if ( viewerInst.basisViewController )
+                    viewerInst.basisViewController->enable( navCubeMaskBackup );
+                int i = 0;
+                for ( auto& vp : viewerInst.viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    params.borderColor = borderColorBackup[i++];
                     vp.setParameters( params );
                 }
             }

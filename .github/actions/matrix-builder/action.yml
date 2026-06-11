@@ -1,0 +1,34 @@
+name: Matrix Builder
+description: >
+  Declarative, ordered include/extend/exclude rules for building GitHub Actions
+  matrices. Unlike GitHub's native matrix.include/exclude (where exclude is
+  applied first and include can resurrect excluded entries), every rule here is
+  evaluated in source order, so the final matrix is exactly what the YAML reads
+  top-to-bottom.
+
+inputs:
+  matrix:
+    required: false
+    default: '{}'
+    description: >
+      YAML or JSON object mapping axis names to value lists. The base matrix
+      is the cartesian product of all axes. Pass {} (or omit) to start from
+      an empty matrix and build it entirely via rules.
+  rules:
+    required: false
+    default: '[]'
+    description: >
+      YAML or JSON list of rules, applied in order. Each rule must have
+      exactly one of `include`, `extend`, `exclude`, optionally guarded by
+      `if`. The keyword's value may be either a single object or a list of
+      objects; the list form groups several related operations under one
+      keyword (and under one `if`) and is applied in order. See the action
+      README for full grammar.
+
+outputs:
+  matrix:
+    description: JSON-encoded array of the resulting matrix combinations.
+
+runs:
+  using: node24
+  main: dist/index.js

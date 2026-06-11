@@ -1,5 +1,11 @@
 project(MRMCPGateway CXX)
 
+IF(MSVC)
+  # Disabling following warnings:
+  #   warning C5204: class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd5204")
+ENDIF()
+
 add_executable(${PROJECT_NAME}
   MRMCPGateway.cpp
   MRMCPGatewayBackend.cpp
@@ -32,6 +38,15 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       $<$<COMPILE_LANGUAGE:CXX>:"fastmcpp/clang.hpp">
   )
 endif()
+
+IF(MR_PCH)
+  if(MSVC)
+    # MSVC requires to match all defines exactly with precompiled header
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DFMT_SHARED /DSPDLOG_COMPILED_LIB /DSPDLOG_FMT_EXTERNAL /DSPDLOG_SHARED_LIB")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DTBB_USE_DEBUG")
+  endif()
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()
 
 install(
   TARGETS ${PROJECT_NAME}

@@ -25,6 +25,23 @@ int getGlfwModPrimaryCtrl()
 #endif
 }
 
+int getGlfwKeyDelete()
+{
+#ifndef __EMSCRIPTEN__
+#ifdef __APPLE__
+    return GLFW_KEY_BACKSPACE;
+#else
+    return GLFW_KEY_DELETE;
+#endif
+#else
+    static const auto isMac = bool( EM_ASM_INT( return is_mac() ) );
+    if ( isMac )
+        return GLFW_KEY_BACKSPACE;
+    else
+        return GLFW_KEY_DELETE;
+#endif
+}
+
 const char* getSuperModName()
 {
     static const char* superName = [] ()->const char*

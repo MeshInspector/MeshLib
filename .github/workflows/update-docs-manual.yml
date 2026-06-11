@@ -63,7 +63,11 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
       - name: Install mrbind
-        run: scripts/mrbind/install_mrbind_ubuntu.sh
+        uses: ./.github/actions/build-mrbind
+        with:
+          cache-key-prefix: ubuntu-docs-clang
+          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 
       - name: Create virtualenv
         run: |
@@ -72,7 +76,7 @@ jobs:
           echo $PATH >> $GITHUB_PATH
 
       - name: Setup python requirements
-        run: python3 -m pip install -r ./requirements/python.txt
+        run: python3 -m pip install -r ./requirements/python/requirements.txt
 
       - name: Build
         run: ./scripts/build_source.sh

@@ -1,6 +1,6 @@
 #if !defined __EMSCRIPTEN__ && !defined MRIOEXTRAS_NO_PDF
 #include <MRIOExtras/MRPdf.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRImage.h>
 #include <MRMesh/MRImageSave.h>

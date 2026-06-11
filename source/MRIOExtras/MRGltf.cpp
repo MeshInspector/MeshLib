@@ -13,13 +13,6 @@
 
 MR_SUPPRESS_WARNING_PUSH
 
-#if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#if __EMSCRIPTEN__
-#pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
-#endif
-
 #pragma warning( disable : 4018 ) //'>=': signed/unsigned mismatch
 #pragma warning( disable : 4062 ) //enumerator 'nlohmann::json_abi_v3_11_2::detail::value_t::binary' in switch of enum 'nlohmann::json_abi_v3_11_2::detail::value_t' is not handled
 #pragma warning( disable : 4242 ) //'argument': conversion from 'int' to 'short', possible loss of data
@@ -27,14 +20,26 @@ MR_SUPPRESS_WARNING_PUSH
 #pragma warning( disable : 4267 ) //'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning( disable : 4866 ) //compiler may not enforce left-to-right evaluation order for call to 'nlohmann::json_abi_v3_11_2::basic_json<std::map,std::vector,std::basic_string<char,std::char_traits<char>,std::allocator<char> >,bool,__int64,unsigned __int64,double,std::allocator,nlohmann::json_abi_v3_11_2::adl_serializer,std::vector<unsigned char,std::allocator<unsigned char> > >::operator[]'
 
+#if __GNUC__ >= 10
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
 #if __GNUC__ >= 14
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
+
 #if __GNUC__ >= 15
 #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
-#if __clang_major__ >= 20
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#if __clang_major__ >= 17
+#pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
+#else
+#pragma clang diagnostic ignored "-Wdeprecated"
+#endif
 #endif
 
 #define TINYGLTF_IMPLEMENTATION

@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2026.03.18" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.06.01" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -201,7 +201,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
@@ -310,11 +310,12 @@ jobs:
             MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
           fi
 
+          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
+          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
             --arg vs19 "2024.10.21" \
-            --arg vs22 "2026.03.18" \
-            '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
-            | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
+            --arg vs22 "2026.06.01" \
+            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

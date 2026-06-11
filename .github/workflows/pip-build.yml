@@ -31,20 +31,31 @@ on:
         default: false
         required: false
         type: boolean
-
-env:
-  VCPKG-VERSION: '2026.03.18'
-  CUDA-VERSION: '12.0.1.52833'
-  CUDA-MAJOR: '12'
-  CUDA-MINOR: '0'
-
+      disable_ubuntu_x64:
+        default: false
+        required: false
+        type: boolean
+      disable_ubuntu_arm64:
+        default: false
+        required: false
+        type: boolean
+      disable_macos:
+        default: false
+        required: false
+        type: boolean
+      disable_windows:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+      version_tag:  ${{ steps.get-latest-tag.outputs.tag }}
+      build-matrix: ${{ steps.build-matrix.outputs.matrix }}
+      test-matrix:  ${{ steps.test-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -55,28 +66,99 @@ jobs:
         if: ${{ github.event_name == 'release' || inputs.publish }}
         id: get-latest-tag
 
+      - id: build-matrix
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix: |
+            platform:
+              - x86_64
+              - aarch64
+          rules: |
+            - extend:
+                - platform: x86_64
+                  os: rockylinux8-vcpkg-x64
+                  container-options: "--user root"
+                  runner: ubuntu-latest
+                  compiler: /usr/bin/clang++
+                  container-prefix: ""
+                - platform: aarch64
+                  os: rockylinux8-vcpkg-arm64
+                  container-options: " "
+                  runner: ubuntu-24.04-arm
+                  compiler: /usr/bin/clang++
+                  container-prefix: arm64v8/
+            - if: ${{ inputs.disable_ubuntu_x64 }}
+              exclude:
+                platform: x86_64
+            - if: ${{ inputs.disable_ubuntu_arm64 }}
+              exclude:
+                platform: aarch64
+
+      - id: test-matrix
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix: |
+            platform:
+              - x86_64
+              - aarch64
+            py-version:
+              - "3.8"
+              - "3.9"
+              - "3.10"
+              - "3.11"
+              - "3.12"
+              - "3.13"
+              - "3.14"
+          rules: |
+            - extend:
+                - platform: x86_64
+                  container-options: "--user root"
+                  runner: ubuntu-latest
+                  compiler: /usr/bin/clang++
+                  container-prefix: ""
+                - platform: aarch64
+                  container-options: " "
+                  runner: ubuntu-24.04-arm
+                  compiler: /usr/bin/clang++
+                  container-prefix: arm64v8/
+            - extend:
+                - py-version: "3.8"
+                  os: "rockylinux:8"
+                - py-version: "3.9"
+                  os: "debian:11-slim"
+                - py-version: "3.10"
+                  os: "ubuntu:22.04"
+                - py-version: "3.11"
+                  os: "fedora:37"
+                - py-version: "3.12"
+                  os: "fedora:39"
+                - py-version: "3.13"
+                  os: "fedora:42"
+                - py-version: "3.14"
+                  os: "ubuntu:25.10"
+            - if: ${{ inputs.disable_ubuntu_x64 }}
+              exclude:
+                platform: x86_64
+            - if: ${{ inputs.disable_ubuntu_arm64 }}
+              exclude:
+                platform: aarch64
+
   manylinux-pip-build:
     needs: setup
+    # Skip entirely when both platforms are disabled (empty matrix would
+    # otherwise error out on GitHub Actions).
+    if: ${{ needs.setup.outputs.build-matrix != '[]' }}
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.vcpkg_docker_image_tag || 'latest'}}
+      image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
+      # `include` enumerates the per-platform combos, surviving platforms
+      # only. See `setup.matrix` step for the include/exclude logic.
       matrix:
-        platform: ["x86_64", "aarch64"]
-        include:
-          - platform: "x86_64"
-            os: rockylinux8-vcpkg-x64
-            container-options: "--user root"
-            runner: ubuntu-latest
-            compiler: /usr/bin/clang++
-          - platform: "aarch64"
-            os: rockylinux8-vcpkg-arm64
-            container-options: " " # empty
-            runner: ubuntu-24.04-arm
-            compiler: /usr/bin/clang++
+        include: ${{ fromJSON(needs.setup.outputs.build-matrix) }}
 
     steps:
       - name: Work-around possible permission issues
@@ -117,10 +199,18 @@ jobs:
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
       - name: Install mrbind
-        # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
-        run: |
-          ./scripts/mrbind/install_mrbind_rockylinux.sh
-          free -h
+        uses: ./.github/actions/build-mrbind
+        with:
+          # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
+          # image and script. The Dockerfile hash in extra-cache-key busts the cache
+          # whenever the toolchain inside the image changes (e.g. clang upgrade).
+          cache-key-prefix: ${{ matrix.os }}
+          build-script: scripts/mrbind/install_mrbind_rockylinux.sh
+          extra-cache-key: ${{ hashFiles('docker/rockylinux8-vcpkgDockerfile') }}
+
+      - name: Print RAM
+        # If there's not enough RAM, building MRBind bindings can fail. Not running this in the mrbind step itself, because OOM fails can erase logs from the current step.
+        run: free -h
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -143,7 +233,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
 
       - name: Build Python shim libs
         run: |
@@ -177,7 +267,7 @@ jobs:
       - name: Python Tests
         run: |
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
-          REQUIREMENTS_FILE=${PWD}/requirements/python.txt
+          REQUIREMENTS_FILE=${PWD}/requirements/python/requirements.txt
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
           cd build/Release/bin
@@ -257,13 +347,23 @@ jobs:
 
   windows-pip-build:
     needs: setup
+    if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
-    runs-on:  [windows-2022]
+    runs-on:  [windows-2025]
     strategy:
       fail-fast: false
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+    env:
+      VCPKG-VERSION: '2026.06.01'
+      CUDA-VERSION: '12.0.1'
+      CUDA-MAJOR: '12'
+      CUDA-MINOR: '0'
+      VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib
+      VCVARS_VER: '14.5'
+      PLATFORM_TOOLSET: v145
+      CUDA_PLATFORM_TOOLSET: v143
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -271,10 +371,14 @@ jobs:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
           vcpkg-version: ${{ env.VCPKG-VERSION }}
+          vcpkg-triplet: ${{ env.VCPKG_DEFAULT_TRIPLET }}
           install-flags: '--write-s3'
           internal-build: 'true'
 
@@ -288,36 +392,34 @@ jobs:
           cuda-major: ${{ env.CUDA-MAJOR }}
           cuda-minor: ${{ env.CUDA-MINOR }}
 
-      - name: Setup CUDA
-        run: |
-          "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $env:GITHUB_ENV
-          "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $env:GITHUB_ENV
-          "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $env:GITHUB_ENV
-          "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $env:GITHUB_PATH
-
-      - name: Install Visual Studio Integration
-        run: |
-          $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
-          $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-          (gi 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+      - name: Set up CUDA
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-major: ${{ env.CUDA-MAJOR }}
+          cuda-minor: ${{ env.CUDA-MINOR }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build
-        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
+        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }}
 
       - name: Install MSYS2 for MRBind
         uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
-        shell: cmd
-        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+        uses: ./.github/actions/build-mrbind
+        with:
+          cache-key-prefix: windows-clang18
+          build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang18.txt') }}
 
       - name: Generate and build MRBind bindings
         shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1
 
       - name: Run Test
@@ -354,6 +456,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
+    if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
     strategy:
@@ -392,10 +495,30 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Install thirdparty libs
-        run: |
-          ./scripts/build_thirdparty.sh
-          ./scripts/mrbind/install_deps_macos.sh
-          ./scripts/mrbind/install_mrbind_macos.sh
+        id: thirdparty
+        uses: ./.github/actions/install-macos-thirdparty
+        with:
+          # `cache-instance` and `cache-compiler` must match the values used by
+          # build-test-macos.yml on the same runner image (`AppleClang` here matches
+          # build-test-macos.yml's x64-Release and arm64-Debug matrix entries), so
+          # the thirdparty ./lib + ./include cache is shared across the two workflows.
+          cache-instance: ${{ matrix.instance }}
+          cache-compiler: AppleClang
+
+      - name: Install MRBind deps
+        env:
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed llvm/lld, no z3, no rebuild
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
+        run: ./scripts/mrbind/install_deps_macos.sh
+
+      - name: Build MRBind
+        uses: ./.github/actions/build-mrbind
+        with:
+          # Keyed on the runner image (matrix.instance) so this cache is shared with
+          # build-test-macos.yml when its matrix.instance matches.
+          cache-key-prefix: ${{ matrix.instance }}-clang
+          build-script: scripts/mrbind/install_mrbind_macos.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -443,41 +566,19 @@ jobs:
           retention-days: 1
 
   manylinux-pip-test:
-    needs: [manylinux-pip-build]
+    needs: [setup, manylinux-pip-build]
+    if: ${{ needs.setup.outputs.test-matrix != '[]' }}
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{matrix.container-prefix}}${{matrix.os}}
+      image: ${{ matrix.container-prefix }}${{ matrix.os }}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
+      # `include` is the cartesian product (surviving platforms x
+      # py-versions) computed in `setup.matrix`.
       matrix:
-        platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-        include:
-          - platform: "x86_64"
-            runner: ubuntu-latest
-            container-options: "--user root"
-            container-prefix: " "
-          - platform: "aarch64"
-            runner: ubuntu-24.04-arm
-            container-options: " " # empty
-            container-prefix: "arm64v8/"
-          - py-version: "3.8"
-            os: "rockylinux:8"
-          - py-version: "3.9"
-            os: "debian:11-slim"
-          - py-version: "3.10"
-            os: "ubuntu:22.04"
-          - py-version: "3.11"
-            os: "fedora:37"
-          - py-version: "3.12"
-            os: "fedora:39"
-          - py-version: "3.13"
-            os: "fedora:42"
-          # TODO: replace with a distro with default Python 3.14
-          - py-version: "3.14"
-            os: "ubuntu:25.10"
+        include: ${{ fromJSON(needs.setup.outputs.test-matrix) }}
     env:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:
@@ -509,7 +610,7 @@ jobs:
         run: |
           ${{ env.PYTHON_CMD }} -m pip install --upgrade pip
           ${{ env.PYTHON_CMD }} -m pip uninstall -y meshlib
-          ${{ env.PYTHON_CMD }} -m pip install --upgrade -r ./requirements/python.txt
+          ${{ env.PYTHON_CMD }} -m pip install --upgrade -r ./requirements/python/requirements.txt
           ${{ env.PYTHON_CMD }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
@@ -527,12 +628,13 @@ jobs:
 
   windows-pip-test:
     needs: [windows-pip-build]
-    timeout-minutes: 20
-    runs-on: windows-latest
+    if: ${{ inputs.disable_windows != true }}
+    timeout-minutes: 90
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        runner: [windows-2022, windows-2025]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -548,77 +650,87 @@ jobs:
       - name: Python setup
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.py-version }}
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+            3.12
+            3.13
+            3.14
 
-      - name: Setup pip
-        run: |
-          py -${{matrix.py-version}} -m pip install --upgrade pip
-          py -${{matrix.py-version}} -m pip uninstall -y meshlib
-          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
-          py -${{matrix.py-version}} -m pip install pytest
-
-      - name: Install Meshlib wheel
+      # One step per Python ABI so the GitHub Actions UI shows per-version
+      # status / timing / logs. Each step is a thin wrapper around the
+      # shared `test_wheel_windows.ps1` script.
+      - name: Test wheel against Python 3.8
         shell: pwsh
-        run: $wheel_file=Get-ChildItem -Filter meshlib*win*.whl; py -${{matrix.py-version}} -m pip install $wheel_file
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.8
 
-      - name: Run Python tests
-        working-directory: test_python
-        run: py -${{matrix.py-version}} -m pytest -s -v
+      - name: Test wheel against Python 3.9
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.9
+
+      - name: Test wheel against Python 3.10
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.10
+
+      - name: Test wheel against Python 3.11
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.11
+
+      - name: Test wheel against Python 3.12
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.12
+
+      - name: Test wheel against Python 3.13
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.13
+
+      - name: Test wheel against Python 3.14
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.14
 
   macos-pip-test:
     needs: [macos-pip-build]
-    timeout-minutes: 40
+    if: ${{ inputs.disable_macos != true }}
+    timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
+      # `runner-tier` exercises both the GitHub-hosted images that built the
+      # wheels and our self-hosted fleet (different macOS versions / brew
+      # prefixes), so we catch wheels that only run on a fresh hosted image.
+      # Multiple GitHub-hosted images per platform widen macOS-version
+      # coverage; collapsing the cross-product into `include` keeps each
+      # (platform, instance) pair explicit instead of relying on exclude.
       matrix:
-        platform: ["arm64", "x86"]
-        py-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"] # python 3.8 disabled on macOS since 2024-10-14
         include:
-          - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-15-intel
           - platform: "arm64"
-            plat-name: macosx_12_0_arm64
+            runner-tier: "self-hosted"
+            instance: macos-13
+          - platform: "arm64"
+            runner-tier: "github"
             instance: macos-14
-          - py-version: "3.9"
-            py-cmd: "python3.9"
-          - py-version: "3.10"
-            py-cmd: "python3.10"
-          - py-version: "3.11"
-            py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-cmd: "python3.12"
-          - py-version: "3.13"
-            py-cmd: "python3.13"
-          - py-version: "3.14"
-            py-cmd: "python3.14"
+          - platform: "arm64"
+            runner-tier: "github"
+            instance: macos-15
+          - platform: "arm64"
+            runner-tier: "github"
+            instance: macos-26
+          - platform: "x86"
+            runner-tier: "self-hosted"
+            instance: macos-12-intel
+          - platform: "x86"
+            runner-tier: "github"
+            instance: macos-15-intel
+          - platform: "x86"
+            runner-tier: "github"
+            instance: macos-26-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: ${{needs.setup.outputs.version_tag}}
-
-      - name: Python setup
-        if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
-        run: brew install --overwrite --quiet python@${{matrix.py-version}}
-
-      - name: Create virtualenv
-        run: |
-          # Remove from PATH anything with the word `anaconda` in it.
-          # Even if Anaconda's Python works, it's probably a good idea to avoid it for consistency (because without this line only one specific Python version gets taken from Anaconda.)
-          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
-          ${{ matrix.py-cmd }} -m venv .venv
-          . .venv/bin/activate
-          echo PATH=$PATH >> $GITHUB_ENV
-          pip install pytest
-
-      - name: Pip setup
-        run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v8
@@ -626,12 +738,29 @@ jobs:
           name: Macos-${{matrix.platform}}
           merge-multiple: true
 
-      - name: Meshlib wheel install
-        run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*${{matrix.platform}}*.whl
+      # One step per Python ABI so the GitHub Actions UI shows per-version
+      # status / timing / logs. Each step is a thin wrapper around the
+      # shared `test_wheel_macos.sh` script. `runner-tier` is forwarded so
+      # the script can scope the macos-15-intel 3.11 brew-skip to the
+      # GitHub-hosted runner only (self-hosted x86 does need the install).
+      # python 3.8 disabled on macOS since 2024-10-14
+      - name: Test wheel against Python 3.9
+        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
-      - name: Run Python tests
-        working-directory: test_python
-        run: ${{ matrix.py-cmd }} -m pytest -s -v
+      - name: Test wheel against Python 3.10
+        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+
+      - name: Test wheel against Python 3.11
+        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+
+      - name: Test wheel against Python 3.12
+        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+
+      - name: Test wheel against Python 3.13
+        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+
+      - name: Test wheel against Python 3.14
+        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
   upload-to-release:
     if: ${{ github.event_name == 'release' || inputs.publish }}

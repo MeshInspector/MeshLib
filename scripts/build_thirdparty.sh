@@ -96,12 +96,14 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   export CFLAGS=""
   export CXXFLAGS=""
   export LDFLAGS=""
+  [[ ${MR_EMSCRIPTEN_SIMD:=} ]] || export MR_EMSCRIPTEN_SIMD=1
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
     -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
     -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
+    -D MR_EMSCRIPTEN_SIMD=${MR_EMSCRIPTEN_SIMD} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
     CFLAGS="${CFLAGS} -pthread"
@@ -111,6 +113,10 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CFLAGS="${CFLAGS} -s MEMORY64=1"
     CXXFLAGS="${CFLAGS} -s MEMORY64=1"
     LDFLAGS="${LDFLAGS} -s MEMORY64=1"
+  fi
+  if [[ ${MR_EMSCRIPTEN_SIMD} == 1 ]] ; then
+    CFLAGS="${CFLAGS} -msimd128"
+    CXXFLAGS="${CXXFLAGS} -msimd128"
   fi
 fi
 

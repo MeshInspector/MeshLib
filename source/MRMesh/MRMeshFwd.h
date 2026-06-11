@@ -2,6 +2,7 @@
 
 #include "config.h"
 
+#include "MRMesh/MRMacros.h"
 #include "MRMesh/MRCanonicalTypedefs.h"
 #include "MRPch/MRBindingMacros.h"
 
@@ -68,6 +69,7 @@
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
 #include <functional>
+#include <cstdint>
 
 #ifdef _WIN32
 #   ifdef MRMesh_EXPORTS
@@ -302,7 +304,18 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
 using SymMatrix4ll [[deprecated("Use `SymMatrix4i64` instead.")]] = SymMatrix4<long long>;
 #endif
 
-MR_CANONICAL_TYPEDEFS( (template <typename V> struct), AffineXf,
+namespace detail::AffineXf3f
+{
+    template <typename T>
+    struct VectorElemType {};
+    template <template <typename> typename T, typename U>
+    struct VectorElemType<T<U>> { using type = U; };
+
+    template <typename T>
+    static constexpr bool IsValidTemplateArg = std::is_floating_point_v<typename VectorElemType<T>::type>;
+}
+
+MR_CANONICAL_TYPEDEFS( (template <typename V> MR_REQUIRES_IF_SUPPORTED( detail::AffineXf3f::IsValidTemplateArg<V> ) struct), AffineXf,
     ( AffineXf2f, AffineXf<Vector2<float>>  )
     ( AffineXf2d, AffineXf<Vector2<double>> )
     ( AffineXf3f, AffineXf<Vector3<float>>  )
@@ -310,6 +323,15 @@ MR_CANONICAL_TYPEDEFS( (template <typename V> struct), AffineXf,
 )
 template <typename T> using AffineXf2 = AffineXf<Vector2<T>>;
 template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
+
+namespace detail::AffineXf3f
+{
+    template <typename T, typename = void> struct TypeOrPlaceholder { using type = std::nullptr_t; };
+    template <typename T> struct TypeOrPlaceholder<T, std::enable_if_t<IsValidTemplateArg<T>>> { using type = AffineXf<T>; };
+}
+
+template <typename T> using AffineXf2OrPlaceholder = typename detail::AffineXf3f::TypeOrPlaceholder<Vector2<T>>::type;
+template <typename T> using AffineXf3OrPlaceholder = typename detail::AffineXf3f::TypeOrPlaceholder<Vector3<T>>::type;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), RigidXf3,
     ( RigidXf3f, RigidXf3<float>  )

@@ -1,6 +1,7 @@
 #include "MRStep.h"
 #ifndef MRIOEXTRAS_NO_STEP
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRHexPalette.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
@@ -17,6 +18,9 @@
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
 MR_SUPPRESS_WARNING( "-Wpedantic", 4996 )
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wdeprecated-copy-with-user-provided-dtor"
+#endif
 #if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #endif
@@ -374,6 +378,28 @@ public:
                 objMesh->setFacesColorMap( std::move( faceColors ) );
             }
         } );
+
+        if ( loadSettings_.autoColorize && meshTriangulationContexts_.size() > 1 )
+        {
+            bool anyColorPresent = false;
+            for ( const auto& ctx : meshTriangulationContexts_ )
+            {
+                if ( ctx.faceColor.has_value() )
+                {
+                    anyColorPresent = true;
+                    break;
+                }
+            }
+            if ( !anyColorPresent )
+            {
+                int i = 0;
+                for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( rootObj_.get() ) )
+                {
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), true );
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), false );
+                }
+            }
+        }
     }
 
 private:

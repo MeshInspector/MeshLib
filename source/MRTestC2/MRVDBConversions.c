@@ -44,8 +44,7 @@ void testVDBConversions( void )
     const MR_Box1f* box = MR_VdbVolume_UpcastTo_MR_Box1f( volume );
     TEST_ASSERT( box->min > -0.001f && box->min < 0.001f );
     TEST_ASSERT( box->max > 2.999f && box->max < 3.001f );
-    const MR_VoxelsVolume_MR_FloatGrid* baseVolume = MR_VdbVolume_UpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume );
-    const MR_Vector3i* dims = MR_VoxelsVolume_MR_FloatGrid_Get_dims( baseVolume );
+    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( volume );
     TEST_ASSERT( dims->x == 26 );
     TEST_ASSERT( dims->y == 26 );
     TEST_ASSERT( dims->z == 26 );
@@ -54,7 +53,7 @@ void testVDBConversions( void )
     MR_GridToMeshSettings_Set_voxelSize( gridToMeshSettings, MR_Vector3f_diagonal( 0.1f ) );
     MR_GridToMeshSettings_Set_isoValue( gridToMeshSettings, 1 );
 
-    MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VoxelsVolume_MR_FloatGrid_Get_data( baseVolume ), gridToMeshSettings );
+    MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VdbVolume_Get_data( volume ), gridToMeshSettings );
     const MR_Mesh* restored = MR_expected_MR_Mesh_std_string_value( restoredEx );
     MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( restored, NULL );
     TEST_ASSERT( bbox.min.x > 0.199f && bbox.min.x < 0.201f );
@@ -75,12 +74,11 @@ void testVDBConversions( void )
 void testUniformResampling( void )
 {
     MR_VdbVolume* volume = createVolume();
-    MR_FloatGrid* resampledGrid = MR_resampled_float( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), 2.0f, MR_PassBy_DefaultArgument, NULL );
+    MR_FloatGrid* resampledGrid = MR_resampled_float( MR_VdbVolume_GetMutable_data( volume ), 2.0f, MR_PassBy_DefaultArgument, NULL );
     MR_VdbVolume* resampledVolume = MR_floatGridToVdbVolume( MR_PassBy_Move, resampledGrid );
     MR_FloatGrid_Destroy( resampledGrid );
 
-    const MR_VoxelsVolume_MR_FloatGrid* baseResampledVolume = MR_VdbVolume_UpcastTo_MR_VoxelsVolume_MR_FloatGrid( resampledVolume );
-    const MR_Vector3i* dims = MR_VoxelsVolume_MR_FloatGrid_Get_dims( baseResampledVolume );
+    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( resampledVolume );
 
     TEST_ASSERT( dims->x == 13 );
     TEST_ASSERT( dims->y == 13 );
@@ -98,12 +96,11 @@ void testResampling( void )
     voxelScale.y = 1.0f;
     voxelScale.z = 0.5f;
 
-    MR_FloatGrid* resampledGrid = MR_resampled_MR_Vector3f( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), &voxelScale, MR_PassBy_DefaultArgument, NULL );
+    MR_FloatGrid* resampledGrid = MR_resampled_MR_Vector3f( MR_VdbVolume_GetMutable_data( volume ), &voxelScale, MR_PassBy_DefaultArgument, NULL );
     MR_VdbVolume* resampledVolume = MR_floatGridToVdbVolume( MR_PassBy_Move, resampledGrid );
     MR_FloatGrid_Destroy( resampledGrid );
 
-    const MR_VoxelsVolume_MR_FloatGrid* baseResampledVolume = MR_VdbVolume_UpcastTo_MR_VoxelsVolume_MR_FloatGrid( resampledVolume );
-    const MR_Vector3i* dims = MR_VoxelsVolume_MR_FloatGrid_Get_dims( baseResampledVolume );
+    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( resampledVolume );
 
     TEST_ASSERT( dims->x == 13 );
     TEST_ASSERT( dims->y == 27 );
@@ -124,13 +121,12 @@ void testCropping( void )
     box.max.y = 13;
     box.max.z = 23;
 
-    MR_FloatGrid* croppedGrid = MR_cropped( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), &box, MR_PassBy_DefaultArgument, NULL );
+    MR_FloatGrid* croppedGrid = MR_cropped( MR_VdbVolume_GetMutable_data( volume ), &box, MR_PassBy_DefaultArgument, NULL );
 
     MR_VdbVolume* croppedVolume = MR_floatGridToVdbVolume( MR_PassBy_Move, croppedGrid );
     MR_FloatGrid_Destroy( croppedGrid );
 
-    const MR_VoxelsVolume_MR_FloatGrid* baseCroppedVolume = MR_VdbVolume_UpcastTo_MR_VoxelsVolume_MR_FloatGrid( croppedVolume );
-    const MR_Vector3i* dims = MR_VoxelsVolume_MR_FloatGrid_Get_dims( baseCroppedVolume );
+    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( croppedVolume );
 
     TEST_ASSERT( dims->x == 16 );
     TEST_ASSERT( dims->y == 8 );
@@ -145,25 +141,24 @@ void testAccessors( void )
     MR_VdbVolume* volume = createVolume();
     MR_Vector3i p;
     p.x = 0; p.y = 0; p.z = 0;
-    float value = MR_getValue( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), &p );
+    float value = MR_getValue( MR_VdbVolume_GetMutable_data( volume ), &p );
     TEST_ASSERT( value == 3.0f );
 
-    const MR_VoxelsVolume_MR_FloatGrid* baseVolume = MR_VdbVolume_UpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume );
-    const MR_Vector3i* dims = MR_VoxelsVolume_MR_FloatGrid_Get_dims( baseVolume );
+    const MR_Vector3i* dims = MR_VdbVolume_Get_dims( volume );
 
     MR_VoxelBitSet* region = MR_VoxelBitSet_DefaultConstruct();
-    MR_BitSet_resize( MR_VoxelBitSet_MutableUpcastTo_MR_BitSet( region ), dims->x * dims->y * dims->z, NULL );
+    MR_VoxelBitSet_resize( region, dims->x * dims->y * dims->z, NULL );
 
-    MR_BitSet_set_2( MR_VoxelBitSet_MutableUpcastTo_MR_BitSet( region ), 0, true );
+    MR_VoxelBitSet_set_2( region, (MR_VoxelId){0}, true );
 
-    MR_setValue_MR_VoxelBitSet( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), region, 1.0f );
+    MR_setValue_MR_VoxelBitSet( MR_VdbVolume_GetMutable_data( volume ), region, 1.0f );
     MR_VoxelBitSet_Destroy( region );
 
-    value = MR_getValue( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), &p );
+    value = MR_getValue( MR_VdbVolume_GetMutable_data( volume ), &p );
     TEST_ASSERT( value == 1.0f );
 
-    MR_setValue_MR_Vector3i( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), &p, 2.0f );
-    value = MR_getValue( MR_VoxelsVolume_MR_FloatGrid_GetMutable_data( MR_VdbVolume_MutableUpcastTo_MR_VoxelsVolume_MR_FloatGrid( volume ) ), &p );
+    MR_setValue_MR_Vector3i( MR_VdbVolume_GetMutable_data( volume ), &p, 2.0f );
+    value = MR_getValue( MR_VdbVolume_GetMutable_data( volume ), &p );
     TEST_ASSERT( value == 2.0f );
 
     MR_VdbVolume_Destroy( volume );

@@ -87,7 +87,7 @@ jobs:
       - name: Install Python requirements
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python/requirements.txt
 
       - name: Install supported compiler
         run: |
@@ -181,7 +181,7 @@ jobs:
       - name: Install Python requirements
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python/requirements.txt
 
       - name: Install supported compiler
         run: apt-get -y install ${{ matrix.compiler }}
@@ -215,8 +215,33 @@ jobs:
 
   macos-test:
     if: ${{ inputs.test_macos }}
-    runs-on: macos-15-intel
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-13
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
+            runner: macos-14
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
+            runner: macos-15
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
+            runner: macos-26
+            pkg_pattern: '*arm64.pkg'
+          - arch: x64
+            runner: macos-12-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
+            runner: macos-15-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
+            runner: macos-26-intel
+            pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -224,25 +249,53 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        # `gh auth login --with-token` validates the token by calling the
+        # GraphQL `viewer` query, which intermittently returns HTTP 401
+        # ("Bad credentials") even for a perfectly valid token -- a known
+        # transient on GitHub's side. See community discussion #101661;
+        # GitHub's official guidance is to retry after a short delay.
+        # Auth and download are wrapped in independent retry loops so a
+        # flake in one does not force the other to re-run. `--clobber`
+        # lets a download retry overwrite a partial file from a previous
+        # attempt.
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg" --repo ${{ github.repository }}
+          scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
+      # Self-hosted runners have no passwordless sudo, so they install into
+      # ~/Library via `-target CurrentUserHomeDirectory` (enabled by the
+      # `<domains enable_currentUserHome="true">` in macos/Distribution.xml).
+      # GitHub-hosted runners keep the production sudo-into-/Library path so
+      # the end-user install scenario is still exercised.
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*x64.pkg  -target /
-          xargs brew install --quiet < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+          if [ "${{ runner.environment }}" = "github-hosted" ]; then
+            sudo installer -pkg meshlib_*.pkg -target /
+            MESHLIB_FW=/Library/Frameworks/MeshLib.framework/Versions/Current
+          else
+            installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
+            MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
+          fi
+          xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
+          echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
+          echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
+        run: MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
+        run: meshconv --help
 
+      # Match the framework dylibs' 12.7 target on the macOS-12 SDK (which
+      # otherwise defaults to 12.0); skip on 13+ where forcing 12.7 would
+      # instead warn against brew bottles built for the host's macOS.
       - name: Build C++ examples
         working-directory: examples/cpp-examples
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           mkdir build && \
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
@@ -252,9 +305,12 @@ jobs:
       - name: Build C examples
         working-directory: examples/c-examples
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
-  
+
   windows-test:
     if: ${{ inputs.test_windows }}
     runs-on: windows-2025

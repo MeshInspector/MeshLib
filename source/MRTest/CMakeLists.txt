@@ -30,6 +30,11 @@ ELSE()
   )
 ENDIF()
 
+if(WIN32)
+  include(MimallocRedirect)
+  mr_win32_enable_mimalloc_redirect(${PROJECT_NAME})
+endif()
+
 add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}

@@ -38,16 +38,10 @@ IF(MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
-set(INSTALL_GTEST ON)
 IF(EMSCRIPTEN)
+  set(INSTALL_GTEST ON)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
   add_subdirectory(./googletest ./googletest)
-ELSE()
-  # https://stackoverflow.com/a/42643260/7325599
-  set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
-  set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCED)
-  add_subdirectory(./googletest ./googletest)
-  set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE BOOL "" FORCED)
 ENDIF()
 
 IF(NOT APPLE AND NOT MR_EMSCRIPTEN)

@@ -177,7 +177,7 @@ MACOS_MIN_VER :=
 ifneq ($(IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)
-CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version.txt))/bin/clang++
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
 CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))
@@ -370,7 +370,9 @@ PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 # Also guess the number of CPU cores.
 ifneq ($(IS_MACOS),)
 ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
-ASSUME_NPROC := $(call safe_shell,sysctl -n hw.ncpu)
+# Physical cores only -- on macOS x86 the VM disables SMT (so logical == physical
+# already), and Apple Silicon has no SMT, so this just matches what's available.
+ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
 # `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
 ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
@@ -387,32 +389,25 @@ CAPPED_NPROC := $(MAX_NPROC)
 override nproc_string := >=$(MAX_NPROC) cores
 endif
 
-ifneq ($(ASSUME_RAM),)
-ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)
-override ram_string := >=64G RAM
-# The default number of jobs. Override with `-jN` or `JOBS=N`, both work fine.
+# Pick NUM_FRAGMENTS and JOBS by machine size:
+#   < 7 cores                           -> JOBS=cores, NUM_FRAGMENTS=32 (small TUs to keep RAM in check on small boxes)
+#   >= 7 cores, RAM < 32G (or unknown)  -> JOBS=cores, NUM_FRAGMENTS=64
+#   RAM >= 64G                          -> JOBS=cores, NUM_FRAGMENTS=cores (few big fragments)
+#   32G <= RAM < 64G                    -> JOBS=cores, NUM_FRAGMENTS=cores*2
+# Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
+override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
+ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
+NUM_FRAGMENTS := 32
 JOBS := $(CAPPED_NPROC)
-# How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
-# When changing this, update the default value for `-j` above.
+else ifeq ($(call safe_shell,echo $$(( $(or $(ASSUME_RAM),0) < 32 ))),1)
+NUM_FRAGMENTS := 64
+JOBS := $(CAPPED_NPROC)
+else ifeq ($(call safe_shell,echo $$(( $(ASSUME_RAM) >= 64 ))),1)
 NUM_FRAGMENTS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 32))),1)
-override ram_string := ~32G RAM
-NUM_FRAGMENTS := $(call safe_shell,echo $$(($(CAPPED_NPROC) * 2)))# = CAPPED_NPROC * 2
 JOBS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 16))),1)
-# At this point we have so little RAM that we ignore nproc completely (or would need to clamp it to something like ~8, but who even has less cores than that?).
-override ram_string := ~16G RAM
-NUM_FRAGMENTS := 64
-JOBS := 8
 else
-override ram_string := ~8G RAM (oof)
-NUM_FRAGMENTS := 64
-JOBS := 4
-endif
-else
-override ram_string := unknown, assuming ~16G
-NUM_FRAGMENTS := 64
-JOBS := 8
+NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(CAPPED_NPROC) * 2 )))
+JOBS := $(CAPPED_NPROC)
 endif
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
@@ -598,24 +593,49 @@ COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 # Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
 # And I'm not sure if exporting them even did anything useful on Windows in the first place.
 COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
+# Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
+# emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
+# code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
+# The release/debug import libraries have different names but both live in the right `-L$(DEPS_LIB_DIR)`.
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
+LINKER_FLAGS += -ltbb12_debug
 else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
+LINKER_FLAGS += -ltbb12
 endif
 endif # Windows
 
 # Linux.
 ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
+# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
+LINKER_FLAGS += -Wl,-z,separate-loadable-segments
 endif
 
 # MacOS.
 ifneq ($(IS_MACOS),)
 # Our dependencies are here.
 COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
+# Point libclang at the macOS SDK so it can find libc++ headers (<iostream> etc.)
+# when parsing with brew llvm@N. With llvm@18 the keg's own libc++ was auto-discovered
+# relative to the resource-dir; on llvm@22 that no longer works and the parse pass
+# fails with `'iostream' file not found`. Using Apple's SDK libc++ is also closer
+# to what the project itself compiles against.
+#
+# Same flag also needs to go on the link line: clang's Darwin driver normally
+# auto-forwards `-syslibroot <sdk>` to the linker by sniffing `xcrun` /
+# `DEVELOPER_DIR` / `xcode-select`, but with brew `llvm@22` + LLD that
+# autodetect doesn't fire on every self-hosted runner (host-dependent --
+# /opt/homebrew + full Xcode works, /Users/runner/.homebrew + CLT-only does
+# not). Without `-syslibroot`, lld can't find `/usr/lib/libSystem.tbd`,
+# `libc++.dylib`, `libc++abi.dylib` and the link fails. Pass it explicitly
+# so the behaviour is host-independent.
+override macos_sdk_path := $(call safe_shell,xcrun --show-sdk-path)
+COMPILER_FLAGS += -isysroot $(macos_sdk_path)
+LINKER_FLAGS   += -isysroot $(macos_sdk_path)
 # Boost.stacktrace complains otherwise.
 COMPILER_FLAGS += -D_GNU_SOURCE
 
@@ -628,6 +648,9 @@ endif # have MACOS_MIN_VER
 ifeq ($(TARGET),python)
 LINKER_FLAGS += -L$(HOMEBREW_DIR)/lib
 LINKER_FLAGS += -ltbb
+# Apple's `/usr/lib/libc++.1.dylib` does not re-export typeinfo for `__int128` (`__ZTIn`) / `unsigned __int128` (`__ZTIo`),
+# which live in `libc++abi.dylib`. Without this, importing the wheel fails with `Symbol not found: __ZTIn` on macOS.
+LINKER_FLAGS += -lc++abi
 # This fixes an error during wheel creation:
 #   /Library/Developer/CommandLineTools/usr/bin/install_name_tool: changing install names or rpaths can't be redone for: /private/var/folders/c2/_t7lgq_s3zb_r01vy_1qd6nh0000gs/T/tmpatczljnu/wheel/meshlib/mrmeshpy.so (for architecture arm64) because larger updated load commands do not fit (the program must be relinked, and you may need to use -headerpad or -headerpad_max_install_names)
 # Apparently there's not enough space in the binary to fit longer library paths, and this pads it to have to up MAXPATHLEN space for each path.
@@ -796,7 +819,7 @@ $(if $($1_PyEnablePch),\
   $(call var,$1__BakedPch := $(TEMP_OUTPUT_DIR)/$1.combined_pch.hpp.gch)\
   $(call var,$1__PchImportFlag := -include$($1__BakedPch:.gch=))\
   \
-  $($1__BakedPch): $($1__CombinedHeaderOutput) ; @echo $(call quote,[$1] [Compiling PCH] $($1__BakedPch)) && $(COMPILER) -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
+  $($1__BakedPch): $($1__CombinedHeaderOutput) ; @echo $(call quote,[$1] [Compiling PCH] $($1__BakedPch)) && $(COMPILER) -c -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
 )
 # PCH object file, if enabled.
 # We strip the include directories from the flags here, because Clang warns that those are unused.

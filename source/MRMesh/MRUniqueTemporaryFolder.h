@@ -20,6 +20,12 @@ public:
     /// removes folder with all its content
     MRMESH_API ~UniqueTemporaryFolder();
 
+    UniqueTemporaryFolder( const UniqueTemporaryFolder& ) = delete;
+    UniqueTemporaryFolder( UniqueTemporaryFolder&& ) noexcept = default;
+
+    UniqueTemporaryFolder & operator = ( const UniqueTemporaryFolder& ) = delete;
+    UniqueTemporaryFolder & operator = ( UniqueTemporaryFolder&& ) noexcept = default;
+
     explicit operator bool() const
     {
         return !folder_.empty();

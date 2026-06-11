@@ -513,7 +513,12 @@ bool buttonIconEx(
 
     std::string buttonText = "##" + text;
 
+    auto backupUnderline = params.baseParams.underlineFirstLetter;
+    // we will `underlineFirstLetter` later in this function, so disable it, not to have floating underline (along with correct one that we will render later)
+    // const_cast to avoid full params copy for simple change of `underlineFirstLetter`
+    if ( backupUnderline ) const_cast< ButtonIconCustomizationParams& >( params ).baseParams.underlineFirstLetter = false;
     bool res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
+    if ( backupUnderline ) const_cast< ButtonIconCustomizationParams& >( params ).baseParams.underlineFirstLetter = true;
     ImGui::SameLine();
 
     ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );

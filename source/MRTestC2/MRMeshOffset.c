@@ -19,7 +19,7 @@ void testOffsetMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_OffsetParameters* params = MR_OffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
+    MR_OffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     float offset = 0.1f;
     MR_expected_MR_Mesh_std_string* outputMesh = MR_offsetMesh(inputMeshPart, offset, params);
     MR_OffsetParameters_Destroy(params);
@@ -36,7 +36,7 @@ void testDoubleOffsetMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_OffsetParameters* params = MR_OffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
+    MR_OffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     float offset = 0.1f;
     float offset2 = -0.2f;
     MR_expected_MR_Mesh_std_string* outputMesh = MR_doubleOffsetMesh(inputMeshPart, offset, offset2, params);
@@ -54,7 +54,7 @@ void testMcOffsetMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_OffsetParameters* params = MR_OffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
+    MR_OffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     float offset = 0.1f;
     MR_expected_MR_Mesh_std_string* outputMesh = MR_mcOffsetMesh(inputMeshPart, offset, params, NULL);
     MR_OffsetParameters_Destroy(params);
@@ -71,7 +71,7 @@ void testSharpOffsetMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_SharpOffsetParameters* params = MR_SharpOffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_SharpOffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
+    MR_SharpOffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     float offset = 0.1f;
     MR_expected_MR_Mesh_std_string* outputMesh = MR_sharpOffsetMesh(inputMeshPart, offset, params);
     MR_SharpOffsetParameters_Destroy(params);
@@ -88,7 +88,7 @@ void testGeneralOffsetMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_GeneralOffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000.f));
+    MR_GeneralOffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     MR_GeneralOffsetParameters_Set_mode(params, MR_OffsetMode_Standard);
     float offset = 0.1f;
     MR_expected_MR_Mesh_std_string* outputMesh = MR_generalOffsetMesh(inputMeshPart, offset, params);
@@ -106,7 +106,7 @@ void testThickenMesh(void)
     MR_Mesh* mesh = MR_makeCube(&size, &base);
     MR_MeshPart* inputMeshPart = MR_MeshPart_Construct(mesh, NULL);
     MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
-    MR_BaseShellParameters_Set_voxelSize(MR_GeneralOffsetParameters_MutableUpcastTo_MR_BaseShellParameters(params), MR_suggestVoxelSize(inputMeshPart, 10000000.f));
+    MR_GeneralOffsetParameters_Set_voxelSize(params, MR_suggestVoxelSize(inputMeshPart, 10000.f));
     MR_GeneralOffsetParameters_Set_mode(params, MR_OffsetMode_Standard);
     float offset = 0.1f;
     MR_PartMapping* map = MR_PartMapping_DefaultConstruct();

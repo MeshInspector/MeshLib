@@ -4,7 +4,6 @@
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
 #include "MRPointCloud.h"
-#include "MRGTest.h"
 #include "MRTimer.h"
 #include "MRPolylineEdgeIterator.h"
 #include <cassert>

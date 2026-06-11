@@ -46,7 +46,7 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( Triangulation.vec,                    Triangulation.vec_                                  );
     MR_ALIAS( TriangulationHelpersSettings,         TriangulationHelpers.Settings                       );
     MR_ALIAS( uniteCloseVertices,                   MeshBuilder.uniteCloseVertices                      );
-    MR_ALIAS( vectorConstMeshPtr,                   std_vector_const_Mesh                               );
+    MR_ALIAS( vectorConstMeshPtr,                   std_vector_const_Mesh_ptr                           );
     MR_ALIAS( vectorEdges,                          EdgeLoop                                            );
     MR_ALIAS( VertCoords.vec,                       VertCoords.vec_                                     );
     MR_ALIAS( VertScalars.vec,                      VertScalars.vec_                                    );

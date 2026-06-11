@@ -1,6 +1,6 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBitSetParallelFor.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRVoxels/MRMarchingCubes.h>
 
 namespace MR

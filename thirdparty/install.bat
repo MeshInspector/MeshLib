@@ -10,7 +10,8 @@ REM   --extra-requirements <file>     append packages from <file> to the install
 REM                                   May be passed multiple times. Lets downstream callers append their own packages
 REM                                   onto the same vcpkg invocation, so all the env-var and overlay setup lives here.
 
-REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
+REM VCPKG_TAG is the S3 binary-cache folder, derived below from the checked-out
+REM vcpkg release tag (e.g. 2026.06.01); it may not always exist in S3.
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
 if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
@@ -34,9 +35,17 @@ if not defined vcpkg_path (
     echo vcpkg not found. Setting VCPKG_TAG to "no-tag".
     set VCPKG_TAG=no-tag
 ) else (
-    REM Extract version number (YYYY-MM-DD-hash) and cut first 10 characters
-    for /f "tokens=6" %%V in ('vcpkg version 2^>nul ^| findstr /R "vcpkg package management program version [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"') do set FULL_VCPKG_TAG=%%V
-    set VCPKG_TAG=!FULL_VCPKG_TAG:~0,10!
+    REM S3 folder name = the checked-out vcpkg release tag (e.g. 2026.06.01).
+    REM CI checks vcpkg out at a release tag before running this script, so
+    REM `git describe --exact-match` yields that tag and keeps the binary-cache
+    REM producer (prepare-images) and consumer (build) in sync. Fall back to the
+    REM vcpkg-tool version date (YYYY-MM-DD) when vcpkg isn't on a tagged commit.
+    set "VCPKG_TAG="
+    for /f "delims=" %%T in ('git -C "!vcpkg_path!." describe --tags --exact-match 2^>nul') do set VCPKG_TAG=%%T
+    if not defined VCPKG_TAG (
+        for /f "tokens=6" %%V in ('vcpkg version 2^>nul ^| findstr /R "vcpkg package management program version [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"') do set FULL_VCPKG_TAG=%%V
+        set VCPKG_TAG=!FULL_VCPKG_TAG:~0,10!
+    )
 )
 
 echo Using vcpkg version: !VCPKG_TAG!

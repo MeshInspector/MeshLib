@@ -394,6 +394,7 @@ void RibbonMenu::drawHelpButton_( const std::string& url )
 
 void RibbonMenu::drawLanguageButton_()
 {
+#ifndef MRVIEWER_NO_LOCALE
     constexpr auto cPopupName = "LanguageSelector";
     const auto buttonSize = UI::scale() * cTopPanelAditionalButtonSize;
     const auto initPos = ImGui::GetCursorPos();
@@ -448,12 +449,12 @@ void RibbonMenu::drawLanguageButton_()
             }
         }
     }
+#endif
 }
 
 bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
-    UI::TestEngine::pushTree( "CustomCheckBox" );
-    MR_FINALLY { UI::TestEngine::popTree(); };
+    UI::TestEngine::TreeGuard testEngineGuard( "CustomCheckBox" );
 
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
@@ -479,7 +480,7 @@ bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>&
 
         std::pair<bool, bool> realRes{ atLeastOneTrue, allTrue };
 
-        if ( UI::checkboxMixed( name.c_str(), &realRes.first, !realRes.second && realRes.first ) )
+        if ( UI::checkboxMixed( _tr( name, Locale::genericDomain ), &realRes.first, !realRes.second && realRes.first ) )
         {
             for ( auto& obj : selected )
             {
@@ -753,9 +754,11 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize )
     // 40 - collapse button size
     availWidth -= 40.0f * UI::scale();
     ++numBtns;
+#ifndef MRVIEWER_NO_LOCALE
     // 40 - language button size
     availWidth -= 40.0f * UI::scale();
     ++numBtns;
+#endif
 
     // 40 - help button size
     if ( !menuUIConfig_.helpLink.empty() )
@@ -804,12 +807,16 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize )
         --numBtns;
     }
 
-    float offset = ( numBtns * 40 - 10 ) * UI::scale();
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * UI::scale() ) );
-    drawLanguageButton_();
-    --numBtns;
+#ifndef MRVIEWER_NO_LOCALE
+    {
+        float offset = ( numBtns * 40 - 10 ) * UI::scale();
+        ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * UI::scale() ) );
+        drawLanguageButton_();
+        --numBtns;
+    }
+#endif
 
-    offset = ( numBtns * 40 - 10 ) * UI::scale();
+    float offset = ( numBtns * 40 - 10 ) * UI::scale();
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - offset, cTabYOffset * UI::scale() ) );
     drawCollapseButton_();
 

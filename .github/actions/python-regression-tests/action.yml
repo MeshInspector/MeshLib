@@ -1,10 +1,6 @@
 name: Python regression tests
 
 inputs:
-  autotest_data_s3_url:
-    required: false
-    type: string
-    default: "s3://data-autotest/test_data_2025-05-13"
   build_config:
     description: "Build config (Release, Debug)"
     required: true
@@ -33,7 +29,6 @@ runs:
       shell: bash
       run: |
         echo << EOF
-        autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}
         build_config: ${{ inputs.build_config }}
         pytest_args: ${{ inputs.pytest_args }}
         smoke: ${{ inputs.smoke }}
@@ -45,36 +40,22 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
       run: |
-        Write-Output "autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}"
         Write-Output "build_config: ${{ inputs.build_config }}"
         Write-Output "pytest_args: ${{ inputs.pytest_args }}"
         Write-Output "smoke: ${{ inputs.smoke }}"
         Write-Output "test_artifacts_path: ${{ inputs.test_artifacts_path }}"
         Write-Output "upload_test_artifacts: ${{ inputs.upload_test_artifacts }}"
 
-    # cache management: https://github.com/MeshInspector/MeshLib/actions/caches
-    - name: Cache autotest data from S3 Tests
-      uses: actions/cache@v4
-      with:
-        path: test_data
-        key: ${{ inputs.autotest_data_s3_url }}
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
-      with:
-        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-        aws-region: us-east-1
-        retry-max-attempts: 5
-
-    - name: Copy autotest data from S3 Tests
-      if: ${{ runner.os != 'Windows' }}
+    # test_data is declared with `update = none`, so fetch it explicitly with --checkout.
+    - name: Fetch test data submodule
       shell: bash
-      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only
-
-    - name: Copy autotest data from S3 Tests (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      shell: powershell
-      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only
+      run: |
+        # Linux jobs run in containers and need safe.directory set first.
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          export HOME="${RUNNER_TEMP}"
+          git config --global --add safe.directory '*'
+        fi
+        bash scripts/retry.sh -- git submodule update --init --checkout --depth 1 test_data
 
     - name: Python Regression Tests
       if: ${{ runner.os != 'Windows' }}
@@ -85,7 +66,7 @@ runs:
         -d '../test_regression'
         -s ${{ inputs.smoke }}
         -a='${{ inputs.pytest_args }}'
-        
+
     - name: Python Regression Tests (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
@@ -95,6 +76,14 @@ runs:
         -d '..\test_regression'
         -s ${{ inputs.smoke }}
         -a='${{ inputs.pytest_args }}'
+
+    - name: Configure AWS Credentials
+      if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}
+      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      with:
+        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+        aws-region: us-east-1
+        retry-max-attempts: 5
 
     - name: Copy test artifacts to S3
       if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() && runner.os != 'Windows' }}

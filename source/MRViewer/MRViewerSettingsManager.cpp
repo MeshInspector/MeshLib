@@ -78,7 +78,7 @@ const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
 const std::string cVisualObjectTags = "visualObjectTags";
-const std::string cLanguage = "language";
+[[maybe_unused]] const std::string cLanguage = "language";
 }
 
 namespace Defaults
@@ -379,7 +379,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         const bool maximized = cfg.getBool( cMainWindowMaximized );
         CommandLoop::appendCommand( [&viewer, maximized]
         {
-            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide )
+            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide
+                                || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::TryHidden )
                 return;
             if ( maximized )
             {
@@ -544,11 +545,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
     }
 
+#ifndef MRVIEWER_NO_LOCALE
     if ( cfg.hasJsonValue( cLanguage ) )
     {
         const auto lang = cfg.getJsonValue( cLanguage ).asString();
         Locale::set( lang );
     }
+#endif
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -704,7 +707,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
 
+#ifndef MRVIEWER_NO_LOCALE
     cfg.setJsonValue( cLanguage, Locale::getName() );
+#endif
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

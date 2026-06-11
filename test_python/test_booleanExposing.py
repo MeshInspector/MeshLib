@@ -36,7 +36,6 @@ def test_boolean_exposing():
         pos3,
     )
 
-    assert bResMesh.topology.getValidVerts().size() == 14
     assert bResMesh.topology.getValidVerts().count() == 14
     assert bResMesh.topology.findHoleRepresentiveEdges().size() == 0
 
@@ -45,7 +44,7 @@ def test_boolean_exposing():
 
     filteredOldFacesA = bResMapper.filteredOldFaceBitSet( meshA.topology.getValidFaces(), mrmesh.BooleanResMapObj.A )
     mapsA = bResMapper.getMaps(mrmesh.BooleanResMapObj.A)
-    assert mapsA.cut2newFaces.vec.size() == 42
+    assert mapsA.cut2newFaces.vec.size() == 30
     assert brmmAA.count() == 1
     assert brmmBB.count() == 1
     assert filteredOldFacesA.count() == 6

@@ -15,7 +15,7 @@ public:
     /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
     ViewerSetup() = default;
     ViewerSetup( const ViewerSetup & ) = default;
-    ViewerSetup( ViewerSetup && ) = default;
+    ViewerSetup( ViewerSetup && ) noexcept = default;
 
     virtual ~ViewerSetup() = default;
 

@@ -115,16 +115,17 @@ void ViewerSetup::setupExtendedLibraries() const
             auto fileJson = deserializeJsonValue( entry.path() );
             if ( !fileJson  )
             {
-                spdlog::error( "JSON ({}) deserialize error: {}", utf8string( entry.path().filename() ), fileJson.error() );
+                spdlog::error( "{} deserialize error: {}", utf8string( entry.path().filename() ), fileJson.error() );
                 assert( false );
                 continue;
             }
             if ( !fileJson.value()["LibName"].isString() || !fileJson.value()["Order"].isInt())
             {
-                spdlog::info( "JSON ({}) format error. Please, check the values of 'LibName' and/or 'Order' fields.", utf8string( entry.path().filename() ), fileJson.error() );
+                spdlog::error( "{} format error. Please, check the values of 'LibName' and/or 'Order' fields.", utf8string( entry.path().filename() ), fileJson.error() );
                 assert( false );
                 continue;
             }
+            spdlog::info( "{} points to the library {} with priority {}", utf8string( entry.path().filename() ), fileJson.value()["LibName"].asString(), fileJson.value()["Order"].asInt() );
             lib2priority.emplace_back( fileJson.value()["LibName"].asString(), fileJson.value()["Order"].asInt() );
         }
     }
@@ -170,6 +171,8 @@ void ViewerSetup::setupExtendedLibraries() const
                 loadedModules_.push_back( lm );
             }
         }
+        else
+            spdlog::error( "The library {} with priority {} does not exist", libName, priority );
     }
 #endif // ifndef __EMSCRIPTEN__
 }

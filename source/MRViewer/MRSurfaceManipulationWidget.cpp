@@ -301,11 +301,11 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             appendHistoryAction_ = true;
             std::string name = "Brush: ";
             if ( settings_.workMode == WorkMode::Add )
-                name += "Add";
+                name = _t( "Brush: Add" );
             else if ( settings_.workMode == WorkMode::Remove )
-                name += "Remove";
+                name = _t( "Brush: Remove" );
             else if ( settings_.workMode == WorkMode::Relax )
-                name += "Smooth";
+                name = _t( "Brush: Smooth" );
 
             if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
@@ -392,7 +392,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         const auto delFaces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
         if ( delFaces.any() )
         {
-            SCOPED_HISTORY( _t( "Brush: Patch" ) );
+            SCOPED_HISTORY( _t( "Brush: Fix" ) );
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
             FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;
@@ -854,7 +854,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertId_ = mesh.getClosestVertex( pick );
     touchVertIniPos_ = mesh.points[touchVertId_];
     initLaplacian_( RememberShape::Yes );
-    historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( "Brush: Deform", obj_ );
+    historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( _t( "Brush: Deform" ), obj_ );
     createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;
 }

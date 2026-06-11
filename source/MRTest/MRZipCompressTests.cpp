@@ -1,5 +1,5 @@
 #include <MRMesh/MRDirectory.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRZip.h>
 #include <MRMesh/MRTimer.h>

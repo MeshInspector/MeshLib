@@ -312,10 +312,21 @@ void OpenLink( const std::string& url )
     EM_ASM( open_link( UTF8ToString( $0 ) ), url.c_str() );
 #pragma clang diagnostic pop
 #else
+    // Single-quote the URL so the shell does not interpret characters common in query strings
+    // ('&', '?', ';', spaces, ...). Without quoting, everything after the first '&' is parsed as a
+    // separate command and dropped, truncating the opened URL.
+    const auto quoteForShell = []( const std::string& s )
+    {
+        std::string result = "'";
+        for ( char c : s )
+            result += ( c == '\'' ) ? std::string( "'\\''" ) : std::string( 1, c );
+        result += '\'';
+        return result;
+    };
 #ifdef __APPLE__
-    auto openres = system( ( "open " + url ).c_str() );
+    auto openres = system( ( "open " + quoteForShell( url ) ).c_str() );
 #else
-    auto openres = system( ( "xdg-open " + url + " &" ).c_str() );
+    auto openres = system( ( "xdg-open " + quoteForShell( url ) + " &" ).c_str() );
 #endif
     if ( openres == -1 )
     {
@@ -606,9 +617,7 @@ void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
         logger->sinks().clear(); // clear all sinks when setting default logger
 
 #ifndef __EMSCRIPTEN__
-#ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
     printStacktraceOnCrash();
-#endif
 #endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
 

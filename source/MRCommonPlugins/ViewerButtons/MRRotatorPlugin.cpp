@@ -112,7 +112,7 @@ void RotatorPlugin::preDraw_()
         std::optional<ScopeHistory> scope;
         if ( appendHistory )
         {
-            scope.emplace( "Rotator" );
+            scope.emplace( _t( "Rotator" ) );
             myLastHistoryAction_ = scope->combinedAction();
         }
         const auto rotMat = Matrix3f::rotation( viewport.getUpDirection(), deltaAngle );

@@ -93,11 +93,6 @@ IF(NOT MRMESH_NO_TIFF)
   target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
 ENDIF()
 
-IF(NOT MRMESH_NO_GTEST)
-  find_package(GTest REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
-ENDIF()
-
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

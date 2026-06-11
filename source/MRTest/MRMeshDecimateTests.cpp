@@ -1,4 +1,4 @@
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRMeshDecimate.h>
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>

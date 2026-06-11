@@ -34,8 +34,19 @@ struct CutMeshParameters
     /// it provides additional info from other mesh used in boolean operation, useful to solve some degeneration
     /// \note Most likely you don't need this in case you call MR::cutMesh manualy, use case of it is MR::boolean
     const SortIntersectionsData* sortData{nullptr};
+
     /// This is optional output - map from newly generated faces to old faces (N-1)
     FaceMap* new2OldMap{nullptr};
+
+    /// Caller can avoid filling non-needed part of cut faces to speedup cutting
+    /// still add pseudo FaceId to opposite side to keep connectivity
+    enum class FillPart
+    {
+        Both,
+        Left,
+        Right
+    } fillPart{ FillPart::Both };
+
     /// This enum defines the MR::cutMesh behaviour in case of bad faces acure
     /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
     /// 

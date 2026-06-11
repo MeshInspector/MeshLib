@@ -565,8 +565,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::Begin( nameWindow.c_str(), NULL, window_flags );
     if ( menuOpened )
     {
-        UI::TestEngine::pushTree( item.item->name() + "##DropDownList" );
-        MR_FINALLY{ UI::TestEngine::popTree(); };
+        UI::TestEngine::TreeGuard testEngineGuard( item.item->name() + "##DropDownList" );
 
         drawDropList_( item.item );
         ImGui::EndPopup();

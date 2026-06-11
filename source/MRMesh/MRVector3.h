@@ -87,8 +87,7 @@ struct Vector3
     std::pair<Vector3, Vector3> perpendicular() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
 
     /// returns this vector transformed by xf if it is
-    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)> // Need this, otherwise the bindings try to instantiate `AffineXf3` with non-FP arguments.
-    Vector3 transformed( const AffineXf3<TT>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
+    Vector3 transformed( const AffineXf3OrPlaceholder<T>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         return xf ? ( *xf )( *this ) : *this;
     }

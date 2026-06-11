@@ -1852,15 +1852,17 @@ void MeshTopology::computeAllFromEdges_()
     }
 }
 
-void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map )
+void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map, VacantElements * vacant )
 {
-    addPartByMask( from, fromFaces, false, {}, {}, map );
+    addPartByMask( from, fromFaces, false, {}, {}, map, vacant );
 }
 
 void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces0, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
-    const PartMapping & map )
+    const PartMapping & map,
+    VacantElements * vacant
+    )
 {
     MR_TIMER;
     const auto szContours = thisContours.size();
@@ -1933,38 +1935,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
-    const EdgeId firstNewEdge = edges_.endId();
-    EdgeId nextNewEdge = firstNewEdge;
-    auto copyEdge = [&]( UndirectedEdgeId fromUe )
-    {
-        assert( !getAt( emap, fromUe ) );
-        setAt( emap, fromUe, nextNewEdge );
-        if ( map.tgt2srcEdges )
-            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ nextNewEdge }, EdgeId{ fromUe } );
-        nextNewEdge += 2;
-    };
-
-    const VertId firstNewVert = edgePerVertex_.endId();
-    VertId nextNewVert = firstNewVert;
-    auto copyVert = [&]( VertId fromV )
-    {
-        auto nv = nextNewVert++;
-        assert( !getAt( vmap, fromV ) );
-        setAt( vmap, fromV, nv );
-        if ( map.tgt2srcVerts )
-            map.tgt2srcVerts->pushBack( nv, fromV );
-    };
-
-    const FaceId firstNewFace = edgePerFace_.endId();
-    FaceId nextNewFace = firstNewFace;
-    auto copyFace = [&]( FaceId fromF )
-    {
-        auto nf = nextNewFace++;
-        if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->pushBack( nf, fromF );
-        setAt( fmap, fromF, nf );
-    };
-
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
     UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
@@ -1972,28 +1942,147 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         tbb::task_group taskGroup;
         taskGroup.run( [&] ()
         {
+            // copy vertices
             if ( fromFaces0 )
                 fromCopiedVerts = getIncidentVerts( from, *fromFaces0 ) - fromMappedVerts;
             else
                 fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
 
-            for ( auto v : fromCopiedVerts )
-                copyVert( v );
+            auto * vacantVerts = vacant ? &vacant->verts : nullptr;
+            VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
+            int verticesCopied = 0;
+            for ( auto fromV : fromCopiedVerts )
+            {
+                assert( !getAt( vmap, fromV ) );
+                if ( vacantVerts )
+                {
+                    lastNewVert = vacantVerts->find_next( lastNewVert );
+                    if ( lastNewVert )
+                    {
+                        assert( lastNewVert < edgePerVertex_.size() );
+                        assert( !updateValids_ || !validVerts_.test( lastNewVert ) );
+                    }
+                    else
+                    {
+                        if ( updateValids_ )
+                            validVerts_ |= *vacantVerts;
+                        vacantVerts->reset();
+                        vacantVerts = nullptr;
+                        lastNewVert = edgePerVertex_.endId();
+                    }
+                }
+                else
+                    ++lastNewVert;
+                setAt( vmap, fromV, lastNewVert );
+                if ( map.tgt2srcVerts )
+                    map.tgt2srcVerts->pushBack( lastNewVert, fromV );
+                ++verticesCopied;
+            };
+            if ( vacantVerts )
+            {
+                if ( updateValids_ )
+                    validVerts_ ^= *vacantVerts;
+                vacantVerts->reset( 0_v, lastNewVert + 1 );
+                if ( updateValids_ )
+                    validVerts_ ^= *vacantVerts;
+            }
+            if ( updateValids_ )
+                numValidVerts_ += verticesCopied;
+
+            if ( edgePerVertex_.size() < lastNewVert + 1 )
+            {
+                if ( updateValids_ )
+                    validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
+                edgePerVertex_.resizeNoInit( lastNewVert + 1 );
+            }
         } );
 
         taskGroup.run( [&] ()
         {
-            for ( auto f : fromFaces )
-                copyFace( f );
+            // copy faces
+            auto * vacantFaces = vacant ? &vacant->faces : nullptr;
+            FaceId lastNewFace = vacant ? FaceId{} : edgePerFace_.endId() - 1;
+            int facesCopied = 0;
+            for ( auto fromF : fromFaces )
+            {
+                if ( vacantFaces )
+                {
+                    lastNewFace = vacantFaces->find_next( lastNewFace );
+                    if ( lastNewFace )
+                    {
+                        assert( lastNewFace < edgePerFace_.size() );
+                        assert( !updateValids_ || !validFaces_.test( lastNewFace ) );
+                    }
+                    else
+                    {
+                        if ( updateValids_ )
+                            validFaces_ |= *vacantFaces;
+                        vacantFaces->reset();
+                        vacantFaces = nullptr;
+                        lastNewFace = edgePerFace_.endId();
+                    }
+                }
+                else
+                    ++lastNewFace;
+                if ( map.tgt2srcFaces )
+                    map.tgt2srcFaces ->pushBack( lastNewFace, fromF );
+                setAt( fmap, fromF, lastNewFace );
+                ++facesCopied;
+            };
+            if ( vacantFaces )
+            {
+                if ( updateValids_ )
+                    validFaces_ ^= *vacantFaces;
+                vacantFaces->reset( 0_f, lastNewFace + 1 );
+                if ( updateValids_ )
+                    validFaces_ ^= *vacantFaces;
+            }
+            if ( updateValids_ )
+                numValidFaces_ += facesCopied;
+
+            if ( edgePerFace_.size() < lastNewFace + 1 )
+            {
+                if ( updateValids_ )
+                    validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
+                edgePerFace_.resizeNoInit( lastNewFace + 1 );
+            }
         } );
 
+        // copy edges
         if ( fromFaces0 )
             fromCopiedEdges = getIncidentEdges( from, *fromFaces0 ) - fromMappedEdges;
         else
             fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
 
-        for ( auto ue : fromCopiedEdges )
-            copyEdge( ue );
+        auto * vacantEdges = vacant ? &vacant->edges : nullptr;
+        UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
+        for ( auto fromUe : fromCopiedEdges )
+        {
+            assert( !getAt( emap, fromUe ) );
+            if ( vacantEdges )
+            {
+                lastNewEdge = vacantEdges->find_next( lastNewEdge );
+                if ( lastNewEdge )
+                {
+                    assert( isLoneEdge( lastNewEdge ) );
+                }
+                else
+                {
+                    vacantEdges->reset();
+                    vacantEdges = nullptr;
+                    lastNewEdge = edges_.endId();
+                }
+            }
+            else
+                ++lastNewEdge;
+            setAt( emap, fromUe, EdgeId( lastNewEdge ) );
+            if ( map.tgt2srcEdges )
+                map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
+        };
+        if ( vacantEdges )
+            vacantEdges->reset( 0_ue, lastNewEdge + 1 );
+        if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
+            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
 
         taskGroup.wait();
     }
@@ -2072,7 +2161,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     // translate edge records
-    edges_.resizeNoInit( nextNewEdge );
     BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
         auto e0 = from.edges_[EdgeId{ fromUe }];
@@ -2086,12 +2174,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate vertex records
-    if ( updateValids_ )
-    {
-        validVerts_.autoResizeSet( firstNewVert, nextNewVert - firstNewVert, true );
-        numValidVerts_ += nextNewVert - firstNewVert;
-    }
-    edgePerVertex_.resizeNoInit( nextNewVert );
     BitSetParallelFor( fromCopiedVerts, [&]( VertId v )
     {
         for ( auto fromE : orgRing( from, v ) )
@@ -2104,12 +2186,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate face records
-    if ( updateValids_ )
-    {
-        validFaces_.autoResizeSet( firstNewFace, nextNewFace - firstNewFace, true );
-        numValidFaces_ += nextNewFace - firstNewFace;
-    }
-    edgePerFace_.resizeNoInit( nextNewFace );
     BitSetParallelFor( fromFaces, [&]( FaceId f )
     {
         for ( auto fromE : leftRing( from, f ) )

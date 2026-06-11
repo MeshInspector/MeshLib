@@ -1,7 +1,7 @@
 # this file must be included AFTER the `project' command because it relies on the detected compiler information
 
 set(MR_PCH_DEFAULT OFF)
-# for macOS, GCC, and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
+# for GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
 IF((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
   set(MR_PCH_DEFAULT ON)
 ELSEIF(MSVC)
@@ -38,10 +38,11 @@ IF(MSVC)
 
   # Common C/C++ flags:
 
-  set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE")
+  # _CRT_SECURE_NO_WARNINGS is defined explicitly to match OCCT and avoid a C4005 clash in the shared PCH.
+  set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS")
 
   # Vcpkg automatically adds `/external:W0`, but we duplicate it here because it somehow doesn't propagate to Lazperf.
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /W4 /WX /external:W0 /external:env:INCLUDE")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /Wall /WX /external:W0 /external:env:INCLUDE")
 
   # Following warnings are silenced:
   # !! NOTE: Sync this list with `common.props` !!
@@ -85,7 +86,7 @@ IF(MSVC)
   # !! NOTE: Sync this list with `common.props` !!
   set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4865 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
 ELSE()
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wdeprecated -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
   # command line option '-fvisibility-inlines-hidden' is valid for C++/ObjC++ but not for C, so we cannot put it in MESHLIB_COMMON_C_CXX_FLAGS
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
 
@@ -189,6 +190,12 @@ ENDIF()
 # more info: https://bugs.openjdk.org/browse/JDK-8244653
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11 AND CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
+ENDIF()
+
+# GCC 16 introduces a new diagnostic that leads to multiple hard-to-diagnose (oh, the irony) compile errors;
+# disable it for now and investigate these cases later
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
 # Apple Clang 17 conflicts with OpenVDB 12.1

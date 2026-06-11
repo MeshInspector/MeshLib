@@ -20,10 +20,13 @@ gdcm
 gtest
 hidapi
 jsoncpp
+laz-perf
 libe57format
 libharu
 libzip
-opencascade
+mimalloc[override]
+opencascade-minimal
+openctm
 openvdb
 python3
 spdlog

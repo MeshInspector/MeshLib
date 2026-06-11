@@ -9,6 +9,9 @@
 #pragma clang diagnostic ignored "-W#warnings"
 #endif
 
+// otherwise precompiled header in CMake+MSVC cannot be used in TBB-free projects
+#define __TBB_NO_IMPLICIT_LINKAGE 1
+
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 // disable constraints for OpenVDB 10 + TBB 2021.5 compatibility
 #if __GNUC__ <= 14

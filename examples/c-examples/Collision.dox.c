@@ -39,12 +39,8 @@ int main( void )
     // find bitsets of colliding faces
     MR_std_pair_MR_FaceBitSet_MR_FaceBitSet* collidingBitSets = MR_findCollidingTriangleBitsets( mpA, mpB, NULL );
 
-    MR_uint64_t numColA = MR_BitSet_count(
-        MR_FaceBitSet_UpcastTo_MR_BitSet(
-            MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_first( collidingBitSets ) ) );
-    MR_uint64_t numColB = MR_BitSet_count(
-        MR_FaceBitSet_UpcastTo_MR_BitSet(
-            MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_second( collidingBitSets ) ) );
+    MR_uint64_t numColA = MR_FaceBitSet_count( MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_first( collidingBitSets ) );
+    MR_uint64_t numColB = MR_FaceBitSet_count( MR_std_pair_MR_FaceBitSet_MR_FaceBitSet_second( collidingBitSets ) );
     fprintf( stdout, "%zu\n", (size_t)numColA ); // print number of colliding faces from mesh A
     fprintf( stdout, "%zu\n", (size_t)numColB ); // print number of colliding faces from mesh B
 

@@ -11,13 +11,10 @@ on:
       release_tag:
         required: true
         type: string
-    secrets:
-      BUILD_MACHINE_TOKEN:
-        required: true
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 concurrency:
   group: unity-test
@@ -31,7 +28,7 @@ jobs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     steps:
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
@@ -56,7 +53,7 @@ jobs:
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
@@ -75,7 +72,7 @@ jobs:
       - name: Download nuget package
         shell: powershell
         env:
-          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
       
@@ -138,7 +135,7 @@ jobs:
     steps:
       - name: Configure AWS Credentials (OIDC)
         if: always()
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1

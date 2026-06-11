@@ -3,8 +3,11 @@
 #include "exports.h"
 #include "MRCudaBasic.cuh"
 
-#include <cassert>
+#ifndef __CUDACC__ // reduce dependency of CUDA kernels from host STL
 #include <string>
+#endif
+
+#include <cassert>
 
 namespace MR
 {
@@ -12,8 +15,10 @@ namespace MR
 namespace Cuda
 {
 
+#ifndef __CUDACC__
 /// converts given code in user-readable error string
 [[nodiscard]] MRCUDA_API std::string getError( cudaError_t code );
+#endif
 
 /// spdlog::error the information about some CUDA error including optional filename and line number
 MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, int line = 0 );
@@ -41,13 +46,6 @@ DynamicArray<T>::DynamicArray( size_t size )
 }
 
 template<typename T>
-template<typename U>
-DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
-{
-    fromVector( vec );
-}
-
-template<typename T>
 DynamicArray<T>::~DynamicArray()
 {
     resize( 0 );
@@ -72,6 +70,14 @@ DynamicArray<T>& DynamicArray<T>::operator=( DynamicArray&& other )
     return *this;
 }
 
+#ifndef __CUDACC__
+template<typename T>
+template<typename U>
+DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
+{
+    fromVector( vec );
+}
+
 template<typename T>
 template<typename U>
 inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
@@ -82,6 +88,15 @@ inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
     return CUDA_LOGE( cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice ) );
 }
 
+template<typename T>
+template<typename U>
+cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    vec.resize( size_ );
+    return CUDA_LOGE( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+}
+#endif //!__CUDACC__
 
 template <typename T>
 inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
@@ -102,7 +117,9 @@ template <typename U>
 inline cudaError_t DynamicArray<T>::copyFrom( const U* data, size_t size )
 {
     static_assert ( sizeof( T ) == sizeof( U ) );
-    return CUDA_LOGE( cudaMemcpy( data_, data, std::min( size_, size ) * sizeof( T ), cudaMemcpyHostToDevice ) );
+    if ( size_ < size )
+        size = size_;
+    return CUDA_LOGE( cudaMemcpy( data_, data, size * sizeof( T ), cudaMemcpyHostToDevice ) );
 }
 
 template <typename T>
@@ -110,7 +127,9 @@ template <typename U>
 inline cudaError_t DynamicArray<T>::copyTo( U* data, size_t size ) const
 {
     static_assert ( sizeof( T ) == sizeof( U ) );
-    return CUDA_LOGE( cudaMemcpy( data, data_, std::min( size, size_ ) * sizeof( T ), cudaMemcpyDeviceToHost ) );
+    if ( size_ < size )
+        size = size_;
+    return CUDA_LOGE( cudaMemcpy( data, data_, size * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 template<typename T>
@@ -131,15 +150,6 @@ cudaError_t DynamicArray<T>::resize( size_t size )
             return code;
     }
     return cudaSuccess;
-}
-
-template<typename T>
-template<typename U>
-cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const
-{
-    static_assert ( sizeof( T ) == sizeof( U ) );
-    vec.resize( size_ );
-    return CUDA_LOGE( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 inline cudaError_t setToZero( DynamicArrayF& devArray )

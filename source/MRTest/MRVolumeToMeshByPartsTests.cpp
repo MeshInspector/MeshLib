@@ -4,7 +4,7 @@
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 #include "MRVoxels/MRMarchingCubes.h"
-#include "MRMesh/MRGTest.h"
+#include <gtest/gtest.h>
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRParallelFor.h"

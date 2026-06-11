@@ -92,4 +92,15 @@ private:
     void loadFont_( FontType type, const ImWchar* ranges );
 };
 
+/// settings for loadCustomFont
+struct FontLoadSettings
+{
+    // artificially embolden the font; mapped to ImGuiFreeTypeLoaderFlags_Bold
+    bool forceBold = false;
+    // merge into previous font; mapped to ImFontConfig::MergeMode
+    bool mergeMode = false;
+};
+/// Loads a custom font into ImGui.
+MRVIEWER_API ImFont* loadCustomFont( const std::filesystem::path& fontPath, float fontSize, const FontLoadSettings& settings = {} );
+
 }

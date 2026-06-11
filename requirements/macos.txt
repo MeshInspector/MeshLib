@@ -6,6 +6,7 @@ eigen
 fmt
 gdcm
 glfw
+googletest
 hidapi
 jpeg-turbo
 jsoncpp
@@ -13,7 +14,6 @@ libharu
 libpng
 libtiff
 libzip
-llvm@14
 ninja
 nlohmann-json
 opencascade

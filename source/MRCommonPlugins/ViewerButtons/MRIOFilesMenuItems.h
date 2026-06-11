@@ -101,6 +101,7 @@ public:
 private:
     Vector2i resolution_;
     bool transparentBg_{ true };
+    bool hideOverlays_{ true };
 };
 
 class CaptureUIScreenshotMenuItem : public RibbonMenuItem

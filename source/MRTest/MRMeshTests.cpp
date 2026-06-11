@@ -2,7 +2,7 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRBitSetParallelFor.h>
 #include <MRMesh/MRPartMappingAdapters.h>
 
@@ -149,6 +149,40 @@ TEST(MRMesh, AddPartByMask)
     EXPECT_EQ( mesh.topology.edgePerFace().size(), 4 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), 21_e ); // 11*2 = 22 half-edges in total
+}
+
+TEST(MRMesh, AddPartByMaskOnVacantElements)
+{
+    auto cube = makeCube();
+
+    // mesh1 has two cube components
+    Mesh mesh1;
+    mesh1.addMesh( cube );
+    FaceBitSet fs = mesh1.topology.getValidFaces();
+    mesh1.addMesh( cube );
+
+    // mesh2 has the first cube component deleted
+    Mesh mesh2 = mesh1;
+    EXPECT_EQ( mesh1, mesh2 );
+    auto vacant = mesh2.deleteFaces( fs );
+    EXPECT_EQ( vacant.faces, fs );
+    EXPECT_EQ( vacant.edges.count(), cube.topology.computeNotLoneUndirectedEdges() );
+    EXPECT_EQ( vacant.verts.count(), cube.topology.numValidVerts() );
+
+    // mesh3 = mesh2 + first cube from mesh1
+    Mesh mesh3 = mesh2;
+    EXPECT_EQ( mesh3, mesh2 );
+    mesh3.addMeshPart( { mesh1, &fs } );
+    EXPECT_EQ( mesh3.topology.numValidFaces(), mesh1.topology.numValidFaces() );
+    EXPECT_NE( mesh1.topology.getValidFaces(), mesh2.topology.getValidFaces() );
+    EXPECT_NE( mesh1.topology.getValidVerts(), mesh2.topology.getValidVerts() );
+
+    // put first cube from mesh1 in vacant space of mesh2
+    mesh2.addMeshPart( { mesh1, &fs }, {}, &vacant );
+    EXPECT_EQ( vacant.edges.count(), 0 );
+    EXPECT_EQ( vacant.verts.count(), 0 );
+    EXPECT_EQ( vacant.faces.count(), 0 );
+    EXPECT_EQ( mesh2, mesh1 );
 }
 
 TEST(MRMesh, AddPartByMaskAndStitch) 

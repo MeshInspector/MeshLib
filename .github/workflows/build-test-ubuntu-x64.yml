@@ -156,6 +156,11 @@ jobs:
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
 
+      - name: Diagnostic — duplicated template instantiations across binding fragments
+        if: ${{ inputs.mrbind }}
+        continue-on-error: true
+        run: ./scripts/mrbind/analyze_fragment_dups.sh build/binds_python
+
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"
 

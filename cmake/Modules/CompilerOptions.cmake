@@ -14,6 +14,13 @@ ELSEIF(MSVC)
   set(MR_PCH_DEFAULT ON)
 ENDIF()
 set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
+# Mirrors MR_PCH_LEAN in MRPch.h. GCC refuses to use a PCH in a TU that lacks
+# any macro that was defined when the PCH was built, so in lean mode the MRPch
+# target must not carry compile definitions that REUSE_FROM consumers don't share.
+set(MR_PCH_LEAN OFF)
+IF(MR_PCH AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(MR_PCH_LEAN ON)
+ENDIF()
 IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 ENDIF()

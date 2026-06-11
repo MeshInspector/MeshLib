@@ -11,15 +11,15 @@ namespace MRTest
         {
             var mesh = makeCube( Vector3f.diagonal(1), Vector3f.diagonal(-0.5f) );
             var normals = computePerVertNormals( mesh );
-            Assert.That( normals.size(), Is.EqualTo( 8 ) );
+            Assert.That( normals.size(), Is.EqualTo((nuint)8) );
         }
 
         [Test]
         public void TestFaceNormals()
         {
-            var mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
+            var mesh = makeCube( Vector3f.diagonal(1), Vector3f.diagonal(-0.5f) );
             var normals = computePerFaceNormals(mesh);
-            Assert.That(normals.size(), Is.EqualTo(12));
+            Assert.That( normals.size(), Is.EqualTo((nuint)12));
         }
     }
 }

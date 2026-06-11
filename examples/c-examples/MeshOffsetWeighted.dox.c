@@ -26,10 +26,10 @@ int main( void )
     MR_Mesh* mesh = MR_makeTorus( NULL, NULL, NULL, NULL, NULL );
 
     // Create VertScalars obj with weights for every vertex
-    MR_uint64_t vertSize = MR_MeshTopology_vertSize( MR_Mesh_Get_topology( mesh ) );
-    MR_VertScalars* scalars = MR_VertScalars_Construct_1_uint64_t( vertSize );
+    size_t vertSize = MR_MeshTopology_vertSize( MR_Mesh_Get_topology( mesh ) );
+    MR_VertScalars* scalars = MR_VertScalars_Construct_1_size_t( vertSize );
     float maxWeight = 0.0f;
-    for ( MR_uint64_t i = 0; i < vertSize; ++i )
+    for ( size_t i = 0; i < vertSize; ++i )
     {
         const MR_std_vector_MR_Vector3f* points = MR_VertCoords_Get_vec_( MR_Mesh_Get_points( mesh ) );
         float weight = abs( MR_std_vector_MR_Vector3f_at( points, i )->x / 5.0f );

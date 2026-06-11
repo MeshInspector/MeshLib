@@ -1,0 +1,77 @@
+name: Build and test Ubuntu x64
+
+on:
+  workflow_call:
+    inputs:
+      docker_image_tag:
+        required: true
+        type: string
+
+jobs:
+  generate-c-bindings:
+    timeout-minutes: 60
+    runs-on: [ubuntu-latest]
+    permissions:
+      contents: read  # This is required for actions/checkout
+    container:
+      image: meshlib/meshlib-ubuntu24:${{inputs.docker_image_tag}}
+      options: --user root
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory '*'
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/eigen \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind \
+            thirdparty/expected \
+            thirdparty/jsoncpp \
+            thirdparty/onetbb \
+            thirdparty/openvdb/v10/openvdb \
+            thirdparty/spdlog
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+
+      - name: Install MRBind
+        uses: ./.github/actions/build-mrbind
+        with:
+          # The Dockerfile hash in extra-cache-key busts the cache whenever the
+          # toolchain inside the image changes (e.g. glibc, clang upgrade).
+          cache-key-prefix: ubuntu-x64-ubuntu24
+          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+
+        # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#option-a` for more details.
+      - name: Install Emscripten SDK for C bindings
+        run: |
+          git clone https://github.com/emscripten-core/emsdk
+          emsdk/emsdk install 4.0.10
+          emsdk/emsdk activate 4.0.10
+
+        # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
+        #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
+      - name: Generate C bindings
+        # I get `sh` by default.
+        shell: bash
+        run: |
+          . emsdk/emsdk_env.sh
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
+
+      - name: Upload C bindings
+        uses: actions/upload-artifact@v7
+        with:
+          name: CBindings
+          path: |
+            ./source/MeshLibC2
+            ./source/MeshLibC2Cuda
+          retention-days: 1

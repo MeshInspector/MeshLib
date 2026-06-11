@@ -33,11 +33,11 @@ namespace MRTest
         public void TestRemesh()
         {
             var sphere = makeSphere( new SphereParams( 0.5f, 300 ) );
-            Assert.That(sphere.topology.getValidFaces().count(), Is.EqualTo(596));
+            Assert.That(sphere.topology.getValidFaces().count(), Is.EqualTo((nuint)596));
             var parameters = new RemeshSettings();
             parameters.targetEdgeLen = 0.1f;
             var remeshResult = remesh(sphere, parameters);
-            Assert.That(sphere.topology.getValidFaces().count(), Is.EqualTo(716));
+            Assert.That(sphere.topology.getValidFaces().count(), Is.EqualTo((nuint)716));
         }
     }
 }

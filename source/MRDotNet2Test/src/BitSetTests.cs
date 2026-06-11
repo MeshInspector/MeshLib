@@ -10,14 +10,14 @@ namespace MRTest
         public void TestDefaultConstructor()
         {
             var a = new BitSet();
-            Assert.That( a.size(), Is.EqualTo(0) );
+            Assert.That( a.size(), Is.EqualTo((nuint)0) );
         }
 
         [Test]
         public void TestConstructor()
         {
             var a = new BitSet( 20 );
-            Assert.That(a.size(), Is.EqualTo(20));
+            Assert.That(a.size(), Is.EqualTo((nuint)20));
         }
 
         [Test]
@@ -34,7 +34,7 @@ namespace MRTest
         {
             var a = new BitSet( 10 );
             a.set( 5 );
-            Assert.That( a.findLast(), Is.EqualTo(5) );
+            Assert.That( a.findLast(), Is.EqualTo((nuint)5) );
         }
 
         [Test]

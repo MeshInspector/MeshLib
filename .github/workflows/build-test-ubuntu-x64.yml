@@ -109,12 +109,25 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
-      - name: Generate C bindings
+      - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
-        env:
-          CXX: ${{ matrix.cxx-compiler }}
-          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
+        shell: bash
+        run: |
+          rm -rf source/MeshLibC2
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          if [[ $${matrix.build_mrcuda} == ON ]]; then
+            rm -rf source/MeshLibC2Cuda
+            mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
+          else
+            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
+          fi
 
       - name: Build
         run: ./scripts/build_source.sh

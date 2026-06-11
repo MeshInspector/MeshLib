@@ -32,26 +32,8 @@ file(GLOB_RECURSE HEADERS "include/*.h")
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
-  set_target_properties(${PROJECT_NAME} PROPERTIES
-    UNITY_BUILD ON
-    UNITY_BUILD_MODE BATCH
-  )
-
-  # Spread the files evenly across the CPU cores, one batch per core.
-  include(ProcessorCount)
-  ProcessorCount(NUM_CORES)
-  IF(NUM_CORES GREATER 0) # ProcessorCount() reports failure as 0; in that case keep CMake's default batch size.
-    list(LENGTH SOURCES NUM_SOURCES)
-    # Round up, to keep the batch count at most the core count, and to avoid a zero batch size
-    # (which CMake interprets as "all files in a single batch").
-    math(EXPR UNITY_BATCH_SIZE "(${NUM_SOURCES} + ${NUM_CORES} - 1) / ${NUM_CORES}")
-    # Cap the batch size, to avoid producing a few huge translation units on machines with few cores,
-    # where they compile too long and use too much memory.
-    IF(UNITY_BATCH_SIZE GREATER 256)
-      set(UNITY_BATCH_SIZE 256)
-    ENDIF()
-    set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD_BATCH_SIZE ${UNITY_BATCH_SIZE})
-  ENDIF()
+  include(UnityBuildHelpers)
+  mr_enable_unity_build(${PROJECT_NAME} ${SOURCES})
 ENDIF()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

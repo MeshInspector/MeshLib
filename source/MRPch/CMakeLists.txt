@@ -1,6 +1,6 @@
 project(MRPch CXX)
 
-option(MR_PCH_USE_EXTRA_HEADERS "Add all MRMesh and MRViewer headers to the precompiled header" OFF)
+option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
 
 file(GLOB HEADERS "*.h")
 

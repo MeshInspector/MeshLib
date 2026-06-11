@@ -154,14 +154,14 @@ jobs:
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
 
       - name: Download C bindings
-        if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         run: |
           rm -r -force source/MeshLibC2
           rm -r -force source/MeshLibC2Cuda
@@ -200,6 +200,14 @@ jobs:
           ) else (
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
+
+      - name: Build C bindings with MSBuild
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+        run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }}
 
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}

@@ -6,7 +6,6 @@
 #include "MRViewer/MRSpaceMouseParameters.h"
 #include "MRViewer/MRTouchpadParameters.h"
 #include "MRMesh/MRVector4.h"
-#include "MRCommonPlugins/exports.h"
 #include "MRMruFormatParameters.h"
 
 namespace MR

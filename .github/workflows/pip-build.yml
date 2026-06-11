@@ -534,6 +534,7 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 

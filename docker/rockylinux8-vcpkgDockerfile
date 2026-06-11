@@ -87,8 +87,8 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     source /opt/autoconf27/enable
     # network may flake
     retry.sh -- \
-        ./vcpkg install --debug --x-manifest-root=/root/MeshLib/ --x-install-root=/opt/vcpkg/
-    ./vcpkg export --raw --output=vcpkg --output-dir=/opt/vcpkg/ --x-manifest-root=/root/MeshLib/ --x-install-root=/opt/vcpkg/
+        ./vcpkg install --x-manifest-root=/root/MeshLib/ --debug
+    ./vcpkg export --x-manifest-root=/root/MeshLib/ --raw --output=vcpkg --output-dir=/opt/vcpkg/
 EOF
 
 

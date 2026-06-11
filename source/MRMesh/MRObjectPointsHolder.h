@@ -34,8 +34,15 @@ public:
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( points_ ); }
 
+    #ifdef __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
+    #endif
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
+    #ifdef __GNUC__
+    #pragma GCC diagnostic pop
+    #endif
 
     /// \return the pair ( point cloud, selected points ) if any point is selected or full point cloud otherwise
     [[nodiscard]] PointCloudPart pointCloudPart() const { return selectedPoints_.any() ? PointCloudPart{ *points_, &selectedPoints_ } : PointCloudPart{ *points_ }; }

@@ -907,12 +907,13 @@ $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(file >>$$@,#include <iostream>$$(lf))
 	$(call,### Write all our headers.)
 	$$(foreach f,$($1__InputFiles),$$(file >>$$@,#include "$$f"$$(lf)))
-	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
+	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit. Guarded from the parser, so it doesn't affect parsing time.)
+	$(call,### Those are the heavy headers that the binding TUs include on top of the MeshLib headers, EXCEPT the `MRBIND_HEADER` machinery itself,)
+	$(call,### which can't be baked here: its first inclusion must happen in the TUs because of the `MB_PB11_STAGE`/`MB_DEFINE_IMPLEMENTATION` dispatch)
+	$(call,### [fragments other than 0 get it from the bigger PCH instead, see `PCH_BAKE_MACHINERY`].)
+	$(call,### The pybind headers go between `pre/post_include_pybind.h`, which save and restore `_DEBUG` that pybind corrupts [see the comments in those].)
 	$(if $(is_py),\
-		$$(if $($1_PyEnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <pybind11/pybind11.h>$$(lf)#endif))\
-		$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)\
-		$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))\
-		$(call,### Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.)\
+		$$(if $($1_PyEnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include "MRPch/MREigen.h"$$(lf)#include "MRPch/MRJson.h"$$(lf)#include <boost/multiprecision/number.hpp>$$(lf)#include <mrbind/targets/pybind11/pre_include_pybind.h>$$(lf)#include <pybind11/pybind11.h>$$(lf)#include <pybind11/functional.h>$$(lf)#include <pybind11/stl_bind.h>$$(lf)#include <pybind11/stl/filesystem.h>$$(lf)#include <mrbind/targets/pybind11/post_include_pybind.h>$$(lf)#endif))\
 	)
 
 # Run the parser.

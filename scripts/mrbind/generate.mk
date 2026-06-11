@@ -442,19 +442,13 @@ PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 PCH_BAKE_MACHINERY := 1
 override PCH_BAKE_MACHINERY := $(filter-out 0,$(PCH_BAKE_MACHINERY))
 
-# If enabled (requires `PCH_BAKE_MACHINERY`), the bigger PCH additionally expands the `MB_REGISTER_TYPE_*` entries of the generated source
-#   for ALL types the bindings mention (not just one fragment's share), inside a function that is never called. Combined with
-#   `-fpch-instantiate-templates`, this instantiates the per-type registration templates (`MRBind::pb11::Register{Return,Param,Field}Type<T>`
-#   and everything they pull in) once, when compiling the PCH, instead of in every fragment that mentions the type.
-# This only moves the template instantiation work (Sema); no code is emitted from the never-called function, so each type's registration
-#   is still emitted exactly where it is today: in the one fragment whose `MB_CHECK_FRAGMENT_TYPES` check claims it.
-# Disabled by default, for two reasons:
-# 1. On Windows it makes the fragments hit a Clang bug: the MSVC mangler crashes (or hangs) on the binding lambdas with deduced
-#    return types once their enclosing functions are instantiated in the PCH. See https://github.com/llvm/llvm-project/issues/203278.
-# 2. Each fragment compilation that loads the baked PCH becomes much heavier; with the current `JOBS`/`NUM_FRAGMENTS` heuristics
-#    the parallel fragment compilations OOM-kill the Linux CI runners. Enabling this requires re-tuning those for the new memory profile.
-PCH_BAKE_TYPES := 0
-override PCH_BAKE_TYPES := $(filter-out 0,$(PCH_BAKE_TYPES))
+# NOTE: an earlier revision could also expand the `MB_REGISTER_TYPE_*` entries of ALL fragments inside the bigger PCH (in a function
+#   that is never called), to instantiate the per-type registration templates once instead of in every fragment that mentions the type
+#   (`PCH_BAKE_TYPES`, see the history of this file). Don't resurrect it until:
+# 1. Clang's MSVC mangler is fixed: it crashes (or hangs) on the binding lambdas with deduced return types once their enclosing
+#    functions are instantiated in the PCH. See https://github.com/llvm/llvm-project/issues/203278.
+# 2. The `JOBS`/`NUM_FRAGMENTS` heuristics account for the much heavier PCH: every parallel fragment compilation loading it
+#    gets several GB bigger, which OOM-killed the Linux CI runners.
 
 
 
@@ -966,7 +960,7 @@ $(if $(and $($1_PyEnablePch),$(filter-out -fpch-instantiate-templates,$(PCH_CODE
   $($1__PchObject): $($1__BakedPch) ; @echo $(call quote,[$1] [Compiling PCH object] $($1__PchObject)) && $(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $($1_CompilerFlagsFixed)))) -c -o $$@ $($1__BakedPch)\
 )
 
-# The bigger PCH for fragments other than 0. See the comments on `PCH_BAKE_MACHINERY` and `PCH_BAKE_TYPES` for what it does.
+# The bigger PCH for fragments other than 0. See the comment on `PCH_BAKE_MACHINERY` for what it does.
 # If it's disabled, those fragments fall back to the normal PCH (or to no PCH at all, if that's disabled too).
 $(call var,$1__BakedFragmentPchSource :=)
 $(call var,$1__BakedFragmentPch :=)
@@ -1018,12 +1012,6 @@ $($1__BakedFragmentPchSource): $($1__CombinedHeaderOutput) $($1__ParserSourceOut
 	$(call,### This bakes `MRBIND_HEADER` with everything it includes, expands the stage 0 pass [the namespace markers], and leaves `MB_PB11_STAGE == 1` defined,)
 	$(call,### so a fragment compiled on top of this PCH runs only its stage 1 pass.)
 	$$(file >>$$@,#define MB_CHECK_FRAGMENT(x) 0$$(lf)#define MB_CHECK_FRAGMENT_TYPES(x) 0$$(lf)#include "$1.generated.cpp"$$(lf)#undef MB_CHECK_FRAGMENT$$(lf)#undef MB_CHECK_FRAGMENT_TYPES$$(lf))
-	$(if $(PCH_BAKE_TYPES),\
-		$(call,### Now expand the type registrations of ALL fragments once more, inside a function that is never called [and thus never emitted],)\
-		$(call,### reusing the genuine stage 1 `MB_REGISTER_TYPE_*` macros that the include above left defined. See the comment on `PCH_BAKE_TYPES`.)\
-		$(call,### `MRBIND_HEADER` must be undefined during this pass, otherwise the generated source would re-include `core.h`, whose stage 1 dispatch would clobber the `MB_FILE` override.)\
-		$$(file >>$$@,#pragma push_macro("MRBIND_HEADER")$$(lf)#pragma push_macro("MB_FILE")$$(lf)#pragma push_macro("MB_END_FILE")$$(lf)#undef MRBIND_HEADER$$(lf)#undef MB_FILE$$(lf)#undef MB_END_FILE$$(lf)#define MB_FILE inline void _mrbind_pch_bake_types() {$$(lf)#define MB_END_FILE }$$(lf)#define MB_CHECK_FRAGMENT(x) 0$$(lf)#define MB_CHECK_FRAGMENT_TYPES(x) 1$$(lf)#include "$1.generated.cpp"$$(lf)#undef MB_CHECK_FRAGMENT$$(lf)#undef MB_CHECK_FRAGMENT_TYPES$$(lf)#pragma pop_macro("MB_END_FILE")$$(lf)#pragma pop_macro("MB_FILE")$$(lf)#pragma pop_macro("MRBIND_HEADER")$$(lf))\
-	)
 endef
 $(foreach x,$(MODULES),$(if $($x__BakedFragmentPchSource),$(eval $(call module_snippet_fragment_pch_src_py,$x))))
 endif # $(TARGET) == python

@@ -1,8 +1,14 @@
 # this file must be included AFTER the `project' command because it relies on the detected compiler information
 
 set(MR_PCH_DEFAULT OFF)
-# for GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
+# MSVC and Clang>=15: the full precompiled header speeds the build up.
+# Clang<15: PCH not only does not give any speedup, but even vice versa.
+# GCC: the full PCH also slowed the build down (GCC loads the whole PCH image in
+# every TU), so MRPch.h precompiles only a lean subset of near-universally used
+# headers there (see MR_PCH_LEAN in MRPch.h).
 IF((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
+  set(MR_PCH_DEFAULT ON)
+ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(MR_PCH_DEFAULT ON)
 ELSEIF(MSVC)
   set(MR_PCH_DEFAULT ON)

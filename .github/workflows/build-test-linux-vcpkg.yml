@@ -123,20 +123,6 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
-      - name: Checkout additional third-party submodules for C bindings
-        if: ${{ inputs.mrbind_c && matrix.arch == 'arm64' }}
-        # Must set `HOME` here to reuse the `safe.directory` setting from the generic submodule checkout step above.
-        run: |
-          export HOME=${RUNNER_TEMP}
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/eigen \
-            thirdparty/expected \
-            thirdparty/jsoncpp \
-            thirdparty/onetbb \
-            thirdparty/openvdb/v10/openvdb \
-            thirdparty/parallel-hashmap \
-            thirdparty/spdlog \
-
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
@@ -158,11 +144,6 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
-
-      - name: Install additional packages for C bindings
-        if: ${{ inputs.mrbind_c && matrix.arch == 'x64' }}
-        run: |
-          scripts/retry.sh -- dnf -y install glibc-devel.i686
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}

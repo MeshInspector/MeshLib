@@ -103,18 +103,6 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
-      - name: Checkout additional third-party submodules for C bindings
-        if: ${{ inputs.mrbind_c }}
-        # Must set `HOME` here to reuse the `safe.directory` setting from the generic submodule checkout step above.
-        run: |
-          export HOME=${RUNNER_TEMP}
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/expected \
-            thirdparty/jsoncpp \
-            thirdparty/onetbb \
-            thirdparty/openvdb/v10/openvdb \
-            thirdparty/spdlog \
-
       - name: Install thirdparty libs
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib

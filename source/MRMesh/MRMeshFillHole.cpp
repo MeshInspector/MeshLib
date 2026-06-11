@@ -52,7 +52,7 @@ bool operator<( const WeightedConn& left, const WeightedConn& right )
     return left.weight > right.weight;
 }
 
-typedef std::vector<std::vector<WeightedConn>> NewEdgesMap;
+typedef std::vector<std::vector<WeightedConn>> WeightedConnMap;
 
 bool sameEdgeExists( const MeshTopology& topology, EdgeId e1Org, EdgeId e2Org )
 {
@@ -115,7 +115,7 @@ void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsig
 }
 
 // finds best candidate among all given steps
-void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,
+void getTriangulationWeights( const MeshTopology& topology, const WeightedConnMap& map, const EdgePath& loop,
     const FillHoleMetric& metrics, bool smoothBd,
     const std::vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
 {
@@ -184,7 +184,7 @@ using MapPatch = std::vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
-bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop, const FillHoleMetric& metricRef, bool smoothBd,
+bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const WeightedConnMap& map, const EdgePath& loop, const FillHoleMetric& metricRef, bool smoothBd,
     WeightedConn start, int maxPolygonSubdivisions, MapPatch& mapPatch )
 {
     MR_TIMER;
@@ -255,7 +255,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
 
 // add next candidate to queue
 void processCandidate( const Mesh& mesh, const WeightedConn& current,
-    std::priority_queue<WeightedConn>& queue, NewEdgesMap& map,
+    std::priority_queue<WeightedConn>& queue, WeightedConnMap& map,
     const std::vector<EdgeId>& aEdgesMap,
     const std::vector<EdgeId>& bEdgesMap,
     const FillHoleMetric& metrics,
@@ -447,7 +447,7 @@ void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& pa
 
     // [0..aLoopEdgesCounter][0..bLoopEdgesCounter]
     // last one represents the same edge as first one, but reaching it means that algorithm has finished
-    NewEdgesMap newEdgesMap( aLoopEdgesCounter + 1, std::vector<WeightedConn>( bLoopEdgesCounter + 1 ) );
+    WeightedConnMap newEdgesMap( aLoopEdgesCounter + 1, std::vector<WeightedConn>( bLoopEdgesCounter + 1 ) );
 
     WeightedConn& firstWConn = newEdgesMap[0][0];
     firstWConn.a = 0; firstWConn.b = 0; firstWConn.weight = std::sqrt( minDistSq );

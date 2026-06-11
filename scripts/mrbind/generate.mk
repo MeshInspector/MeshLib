@@ -430,6 +430,27 @@ override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 #   or weird overload resolution errors during compilation without that.
 PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 
+# If enabled (and if the PCH is enabled at all), fragments other than 0 use a second, bigger PCH, compiled from the generated source itself
+#   rather than just from the combined header. On top of what the normal PCH covers, it bakes the entire binding machinery (`MRBIND_HEADER`
+#   with everything it includes: `core.h`, `bind_std.h`, the extra pybind11 headers), and runs the stage 0 pass of the generated source
+#   (with all bindings and type registrations preprocessed away), so that each fragment then only runs its stage 1 pass on top of the PCH.
+# Fragment 0 can't use this PCH: it compiles the machinery's implementation (`MB_DEFINE_IMPLEMENTATION`), which sits before the stage
+#   dispatch in `core.h` and would be skipped, because the bigger PCH has already advanced `MB_PB11_STAGE` past it. So fragment 0 keeps
+#   using the normal PCH.
+# Unlike the normal PCH, this one can only be compiled after the parser has produced the generated source, so enabling it serializes
+#   `parse -> PCH -> fragments`, which adds the PCH compilation to the critical path. The fragments are expected to win back more than that.
+PCH_BAKE_MACHINERY := 1
+override PCH_BAKE_MACHINERY := $(filter-out 0,$(PCH_BAKE_MACHINERY))
+
+# If enabled (requires `PCH_BAKE_MACHINERY`), the bigger PCH additionally expands the `MB_REGISTER_TYPE_*` entries of the generated source
+#   for ALL types the bindings mention (not just one fragment's share), inside a function that is never called. Combined with
+#   `-fpch-instantiate-templates`, this instantiates the per-type registration templates (`MRBind::pb11::Register{Return,Param,Field}Type<T>`
+#   and everything they pull in) once, when compiling the PCH, instead of in every fragment that mentions the type.
+# This only moves the template instantiation work (Sema); no code is emitted from the never-called function, so each type's registration
+#   is still emitted exactly where it is today: in the one fragment whose `MB_CHECK_FRAGMENT_TYPES` check claims it.
+PCH_BAKE_TYPES := 1
+override PCH_BAKE_TYPES := $(filter-out 0,$(PCH_BAKE_TYPES))
+
 
 
 # --- Guess the build settings for the optimal speed:
@@ -940,10 +961,25 @@ $(if $(and $($1_PyEnablePch),$(filter-out -fpch-instantiate-templates,$(PCH_CODE
   $($1__PchObject): $($1__BakedPch) ; @echo $(call quote,[$1] [Compiling PCH object] $($1__PchObject)) && $(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $($1_CompilerFlagsFixed)))) -c -o $$@ $($1__BakedPch)\
 )
 
+# The bigger PCH for fragments other than 0. See the comments on `PCH_BAKE_MACHINERY` and `PCH_BAKE_TYPES` for what it does.
+# If it's disabled, those fragments fall back to the normal PCH (or to no PCH at all, if that's disabled too).
+$(call var,$1__BakedFragmentPchSource :=)
+$(call var,$1__BakedFragmentPch :=)
+$(call var,$1__FragmentPchImportFlag := $($1__PchImportFlag))
+$(if $(and $($1_PyEnablePch),$(PCH_BAKE_MACHINERY)),\
+  $(call var,$1__BakedFragmentPchSource := $(TEMP_OUTPUT_DIR)/$1.fragment_pch.hpp)\
+  $(call var,$1__BakedFragmentPch := $($1__BakedFragmentPchSource).gch)\
+  $(call var,$1__FragmentPchImportFlag := -include$($1__BakedFragmentPchSource))\
+)
+$(if $($1__BakedFragmentPchSource),\
+  $($1__BakedFragmentPch): $($1__BakedFragmentPchSource) $($1__CombinedHeaderOutput) $($1__ParserSourceOutput) ; @echo $(call quote,[$1] [Compiling fragment PCH] $($1__BakedFragmentPch)) && $(COMPILER) -c -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
+)
+
 # Compile N object files (fragments) from the generated source.
-$(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | $(TEMP_OUTPUT_DIR)
+# Fragment 0 uses the normal PCH (see the comment on `PCH_BAKE_MACHINERY`), the rest use the bigger one when it's enabled.
+$(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) $($1__BakedFragmentPch) | $(TEMP_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Compiling] $$< (fragment $$*))
-	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $($1__PchImportFlag) -DMB_NUM_FRAGMENTS=$(strip $($1_PyNumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
+	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $$(if $$(filter 0,$$*),$($1__PchImportFlag),$($1__FragmentPchImportFlag)) -DMB_NUM_FRAGMENTS=$(strip $($1_PyNumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
 
 # A list of all object files.
 # NOTE: This is amended later, so we must refer to it lazily.
@@ -962,6 +998,26 @@ $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 $($1_PyName): $($1__LinkerOutput)
 endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_build_py,$x)))
+
+# This snippet generates the source of the bigger PCH used by fragments other than 0 (see `module_snippet_build_py` above).
+override define module_snippet_fragment_pch_src_py =
+$($1__BakedFragmentPchSource): $($1__CombinedHeaderOutput) $($1__ParserSourceOutput) | $(TEMP_OUTPUT_DIR)
+	$$(file >$$@,#pragma once$$(lf))
+	$(call,### The same MeshLib headers the normal PCH covers. The `MB_INCLUDE_ORIGINAL_HEADER` include of the generated source points at this same combined header,)
+	$(call,### whose `#pragma once` then makes it a no-op.)
+	$$(file >>$$@,#include "$1.combined.hpp"$$(lf))
+	$(call,### Pass the generated source through stages 0 and 1 with all bindings and type registrations preprocessed away.)
+	$(call,### This bakes `MRBIND_HEADER` with everything it includes, expands the stage 0 pass [the namespace markers], and leaves `MB_PB11_STAGE == 1` defined,)
+	$(call,### so a fragment compiled on top of this PCH runs only its stage 1 pass.)
+	$$(file >>$$@,#define MB_CHECK_FRAGMENT(x) 0$$(lf)#define MB_CHECK_FRAGMENT_TYPES(x) 0$$(lf)#include "$1.generated.cpp"$$(lf)#undef MB_CHECK_FRAGMENT$$(lf)#undef MB_CHECK_FRAGMENT_TYPES$$(lf))
+	$(if $(PCH_BAKE_TYPES),\
+		$(call,### Now expand the type registrations of ALL fragments once more, inside a function that is never called [and thus never emitted],)\
+		$(call,### reusing the genuine stage 1 `MB_REGISTER_TYPE_*` macros that the include above left defined. See the comment on `PCH_BAKE_TYPES`.)\
+		$(call,### `MRBIND_HEADER` must be undefined during this pass, otherwise the generated source would re-include `core.h`, whose stage 1 dispatch would clobber the `MB_FILE` override.)\
+		$$(file >>$$@,#pragma push_macro("MRBIND_HEADER")$$(lf)#pragma push_macro("MB_FILE")$$(lf)#pragma push_macro("MB_END_FILE")$$(lf)#undef MRBIND_HEADER$$(lf)#undef MB_FILE$$(lf)#undef MB_END_FILE$$(lf)#define MB_FILE inline void _mrbind_pch_bake_types() {$$(lf)#define MB_END_FILE }$$(lf)#define MB_CHECK_FRAGMENT(x) 0$$(lf)#define MB_CHECK_FRAGMENT_TYPES(x) 1$$(lf)#include "$1.generated.cpp"$$(lf)#undef MB_CHECK_FRAGMENT$$(lf)#undef MB_CHECK_FRAGMENT_TYPES$$(lf)#pragma pop_macro("MB_END_FILE")$$(lf)#pragma pop_macro("MB_FILE")$$(lf)#pragma pop_macro("MRBIND_HEADER")$$(lf))\
+	)
+endef
+$(foreach x,$(MODULES),$(if $($x__BakedFragmentPchSource),$(eval $(call module_snippet_fragment_pch_src_py,$x))))
 endif # $(TARGET) == python
 
 # This part generates the C code.

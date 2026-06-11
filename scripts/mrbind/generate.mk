@@ -426,9 +426,10 @@ override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 # If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it to the result.
 # (And building this `.o` even when it's not needed doesn't seem to cause any issues.)
 # There are three flags that can be used in any combination here: `-fpch-codegen -fpch-debuginfo -fpch-instantiate-templates`.
-# `-fpch-codegen` seems to be buggy, causing weird errors: undefined references to libfmt/gtest/some other functions when used with `-fpch-instantiate-templates`,
-#   or weird overload resolution errors during compilation without that.
-PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
+# `-fpch-codegen` historically caused "undefined references to libfmt/gtest/some other functions" — but the PCH object was built and
+#   never actually linked (nothing ever added it to the object list), which produces exactly those undefined references. This branch
+#   links both PCH objects and re-enables the flag to test whether the flag was ever broken at all.
+PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
 
 # If enabled (and if the PCH is enabled at all), fragments other than 0 use a second, bigger PCH, compiled from the generated source itself
 #   rather than just from the combined header. On top of what the normal PCH covers, it bakes the entire binding machinery (`MRBIND_HEADER`
@@ -974,6 +975,13 @@ $(if $(and $($1_PyEnablePch),$(PCH_BAKE_MACHINERY)),\
 $(if $($1__BakedFragmentPchSource),\
   $($1__BakedFragmentPch): $($1__BakedFragmentPchSource) $($1__CombinedHeaderOutput) $($1__ParserSourceOutput) ; @echo $(call quote,[$1] [Compiling fragment PCH] $($1__BakedFragmentPch)) && $(COMPILER) -c -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
 )
+# The object file for the bigger PCH, mirroring the normal PCH object above.
+$(call var,$1__FragmentPchObject :=)
+$(if $(and $($1__BakedFragmentPchSource),$(filter-out -fpch-instantiate-templates,$(PCH_CODEGEN_FLAGS))),\
+  $(call var,$1__FragmentPchObject := $(TEMP_OUTPUT_DIR)/$1.fragment_pch.hpp.o)\
+  \
+  $($1__FragmentPchObject): $($1__BakedFragmentPch) ; @echo $(call quote,[$1] [Compiling fragment PCH object] $($1__FragmentPchObject)) && $(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $($1_CompilerFlagsFixed)))) -c -o $$@ $($1__BakedFragmentPch)\
+)
 
 # Compile N object files (fragments) from the generated source.
 # Fragment 0 uses the normal PCH (see the comment on `PCH_BAKE_MACHINERY`), the rest use the bigger one when it's enabled.
@@ -987,6 +995,9 @@ $(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $$$$(if $$$$(filte
 # A list of all object files.
 # NOTE: This is amended later, so we must refer to it lazily.
 $(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))))
+# With `-fpch-codegen`, the code generated once for the PCHs lives in the PCH objects, so they MUST be linked in.
+# (Without that flag they only carry debug info, and linking them is harmless.)
+$(call var,$1__ObjectFiles += $($1__PchObject) $($1__FragmentPchObject))
 
 # Link the module.
 # Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.

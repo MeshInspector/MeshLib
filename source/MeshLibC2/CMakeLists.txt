@@ -35,6 +35,17 @@ IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
     UNITY_BUILD ON
     UNITY_BUILD_MODE BATCH
   )
+
+  # Spread the files evenly across the CPU cores, one batch per core.
+  include(ProcessorCount)
+  ProcessorCount(NUM_CORES)
+  IF(NUM_CORES GREATER 0) # ProcessorCount() reports failure as 0; in that case keep CMake's default batch size.
+    list(LENGTH SOURCES NUM_SOURCES)
+    # Round up, to keep the batch count at most the core count, and to avoid a zero batch size
+    # (which CMake interprets as "all files in a single batch").
+    math(EXPR UNITY_BATCH_SIZE "(${NUM_SOURCES} + ${NUM_CORES} - 1) / ${NUM_CORES}")
+    set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD_BATCH_SIZE ${UNITY_BATCH_SIZE})
+  ENDIF()
 ENDIF()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

@@ -63,21 +63,6 @@ IF(MR_PCH)
   ENDIF()
   IF(MR_PCH_USE_EXTRA_HEADERS AND MESHLIB_BUILD_MRVIEWER)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
-
-    IF(NOT EMSCRIPTEN)
-      IF(APPLE)
-        list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
-      ENDIF()
-
-      # for MRViewer/MRSpaceMouseHandlerHidapi.h
-      # prefer config over module for vcpkg compatibility
-      set(CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV ${CMAKE_FIND_PACKAGE_PREFER_CONFIG})
-      set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
-      find_package(hidapi REQUIRED)
-      set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ${CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV})
-
-      target_link_libraries(${PROJECT_NAME} PUBLIC hidapi::hidapi)
-    ENDIF()
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE

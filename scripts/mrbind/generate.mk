@@ -982,7 +982,10 @@ $(if $($1__BakedFragmentPchSource),\
 
 # Compile N object files (fragments) from the generated source.
 # Fragment 0 uses the normal PCH (see the comment on `PCH_BAKE_MACHINERY`), the rest use the bigger one when it's enabled.
-$(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) $($1__BakedFragmentPch) | $(TEMP_OUTPUT_DIR)
+# The prerequisites match (via `.SECONDEXPANSION`): fragment 0 only waits for the normal PCH, so it can start
+#   while the bigger PCH is still compiling. This matters because fragment 0 is the slowest one (it builds the
+#   machinery implementation), so it should start as early as possible.
+$(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $$$$(if $$$$(filter 0,$$$$*),$($1__BakedPch),$(or $($1__BakedFragmentPch),$($1__BakedPch))) | $(TEMP_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Compiling] $$< (fragment $$*))
 	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $$(if $$(filter 0,$$*),$($1__PchImportFlag),$($1__FragmentPchImportFlag)) -DMB_NUM_FRAGMENTS=$(strip $($1_PyNumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
 

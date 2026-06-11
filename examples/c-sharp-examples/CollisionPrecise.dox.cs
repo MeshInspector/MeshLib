@@ -14,7 +14,7 @@ public class CollisionPreciseExample
         var converters = MR.getVectorConverters(meshPartA, meshPartB).toInt; // create converters to integer field (needed for absolute precision predicates)
         var collidingFaceEdges = MR.findCollidingEdgeTrisPrecise(meshPartA, meshPartB, converters); // find each intersecting edge/triangle pair
         // print pairs of edges triangles
-        for (ulong i = 0; i < collidingFaceEdges.size(); i++)
+        for (nuint i = 0; i < collidingFaceEdges.size(); i++)
         {
             var vet = collidingFaceEdges[i];
             if (vet.isEdgeATriB())

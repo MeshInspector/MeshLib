@@ -33,14 +33,14 @@ namespace MRTest
             icp.setParams(iCPProperties);
             icp.updateAllPointPairs();
 
-            Assert.That(icp.getNumActivePairs(), Is.EqualTo(1748));
-            Assert.That(icp.getNumSamples(), Is.EqualTo(1748));
+            Assert.That(icp.getNumActivePairs(), Is.EqualTo((nuint)1748));
+            Assert.That(icp.getNumSamples(), Is.EqualTo((nuint)1748));
             Assert.That(icp.getMeanSqDistToPoint(), Is.EqualTo(0.00254).Within(1e-5));
 
             Console.WriteLine("Calculating transformations...");
             var xfs = icp.calculateTransformations();
-            Assert.That(icp.getNumActivePairs(), Is.EqualTo(1748));
-            Assert.That(icp.getNumSamples(), Is.EqualTo(1748));
+            Assert.That(icp.getNumActivePairs(), Is.EqualTo((nuint)1748));
+            Assert.That(icp.getNumSamples(), Is.EqualTo((nuint)1748));
             Assert.That(icp.getMeanSqDistToPoint(), Is.EqualTo(0).Within(1e-5));
         }
 
@@ -89,10 +89,10 @@ namespace MRTest
             Assert.That(Math.Abs(diffXf.b.z), Is.LessThan(1e-6f));
 
             var pairs = icp.getRef2FltPairs();
-            Assert.That(pairs.size(), Is.EqualTo(1024));
+            Assert.That(pairs.size(), Is.EqualTo((nuint)1024));
 
             pairs = icp.getFlt2RefPairs();
-            Assert.That(pairs.size(), Is.EqualTo(1024));
+            Assert.That(pairs.size(), Is.EqualTo((nuint)1024));
         }
     }
 }

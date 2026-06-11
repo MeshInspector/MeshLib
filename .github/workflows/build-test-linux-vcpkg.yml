@@ -145,11 +145,19 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
-      - name: Generate C bindings
+      - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
-        env:
-          CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Build
         run: ./scripts/build_source.sh

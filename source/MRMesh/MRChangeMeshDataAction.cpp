@@ -9,6 +9,18 @@
 namespace MR
 {
 
+ChangeMeshDataAction::ChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, bool cloneMesh ) :
+    objMesh_{ obj },
+    name_{ std::move( name ) }
+{
+    if ( objMesh_ )
+    {
+        data_ = objMesh_->data();
+        if ( cloneMesh && data_.mesh )
+            data_.mesh = std::make_shared<Mesh>( *data_.mesh );
+    }
+}
+
 PartialChangeMeshDataAction::PartialChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, ObjectMeshData&& newData )
 {
     std::vector<std::shared_ptr<HistoryAction>> actions;

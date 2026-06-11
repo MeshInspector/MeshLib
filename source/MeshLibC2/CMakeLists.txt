@@ -45,6 +45,11 @@ IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
     # Round up, to keep the batch count at most the core count, and to avoid a zero batch size
     # (which CMake interprets as "all files in a single batch").
     math(EXPR UNITY_BATCH_SIZE "(${NUM_SOURCES} + ${NUM_CORES} - 1) / ${NUM_CORES}")
+    # Cap the batch size, to avoid producing a few huge translation units on machines with few cores,
+    # where they compile too long and use too much memory.
+    IF(UNITY_BATCH_SIZE GREATER 256)
+      set(UNITY_BATCH_SIZE 256)
+    ENDIF()
     set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD_BATCH_SIZE ${UNITY_BATCH_SIZE})
   ENDIF()
 ENDIF()

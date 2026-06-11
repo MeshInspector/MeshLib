@@ -2,7 +2,6 @@
 
 #include "MRCombinedHistoryAction.h"
 #include "MRObjectMesh.h"
-#include "MRMesh.h"
 
 namespace MR
 {

@@ -448,7 +448,12 @@ override PCH_BAKE_MACHINERY := $(filter-out 0,$(PCH_BAKE_MACHINERY))
 #   and everything they pull in) once, when compiling the PCH, instead of in every fragment that mentions the type.
 # This only moves the template instantiation work (Sema); no code is emitted from the never-called function, so each type's registration
 #   is still emitted exactly where it is today: in the one fragment whose `MB_CHECK_FRAGMENT_TYPES` check claims it.
-PCH_BAKE_TYPES := 1
+# Disabled by default, for two reasons:
+# 1. On Windows it makes the fragments hit a Clang bug: the MSVC mangler crashes (or hangs) on the binding lambdas with deduced
+#    return types once their enclosing functions are instantiated in the PCH. See https://github.com/llvm/llvm-project/issues/203278.
+# 2. Each fragment compilation that loads the baked PCH becomes much heavier; with the current `JOBS`/`NUM_FRAGMENTS` heuristics
+#    the parallel fragment compilations OOM-kill the Linux CI runners. Enabling this requires re-tuning those for the new memory profile.
+PCH_BAKE_TYPES := 0
 override PCH_BAKE_TYPES := $(filter-out 0,$(PCH_BAKE_TYPES))
 
 

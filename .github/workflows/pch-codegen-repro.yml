@@ -68,3 +68,14 @@ jobs:
           else
             echo "VERDICT(clang-${{ matrix.clang }} on ubuntu-${{ matrix.os }}): healthy - no unresolved _Dir internals"
           fi
+
+      - name: Preprocess for offline reduction
+        run: |
+          clang++-${{ matrix.clang }} -std=c++23 -E -P pch.hpp -o pch_preprocessed.hpp
+          wc -l pch_preprocessed.hpp
+
+      - name: Upload preprocessed source
+        uses: actions/upload-artifact@v7
+        with:
+          name: preprocessed-clang${{ matrix.clang }}-ubuntu${{ matrix.os }}
+          path: pch_preprocessed.hpp

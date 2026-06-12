@@ -52,7 +52,7 @@ jobs:
           # `-fno-inline` keeps calls out-of-line so available_externally references survive.
           # It must be on BOTH the PCH and the TU: Clang's PCH validation rejects any
           # optimization/inlining mismatch between the two.
-          FLAGS="-std=c++23 -O2 -fno-inline"
+          FLAGS="-std=c++23 -O2 -fno-inline -fPIC"
           $CXX $FLAGS -fpch-instantiate-templates -fpch-codegen -xc++-header pch.hpp -o pch.hpp.gch
           $CXX $FLAGS -c -o pch.o pch.hpp.gch
           $CXX $FLAGS -includepch.hpp -c -o tu.o tu.cpp

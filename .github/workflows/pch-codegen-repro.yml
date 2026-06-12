@@ -13,17 +13,18 @@ jobs:
   repro:
     timeout-minutes: 25
     runs-on: ubuntu-latest
-    container: ubuntu:22.04
+    container: ubuntu:${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         clang: [ 18, 22 ]
+        os: [ "22.04", "24.04" ]
     steps:
-      - name: Install Clang ${{ matrix.clang }} and libstdc++-12
+      - name: Install Clang ${{ matrix.clang }} and libstdc++
         run: |
           set -x
           apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y wget lsb-release software-properties-common gnupg g++-12 binutils
+          DEBIAN_FRONTEND=noninteractive apt install -y wget lsb-release software-properties-common gnupg g++ binutils
           wget -q https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           ./llvm.sh ${{ matrix.clang }}
@@ -63,7 +64,7 @@ jobs:
           echo "=== link as shared library and resolve:"
           $CXX -std=c++23 -shared -o repro.so tu.o pch.o
           if ldd -r repro.so 2>&1 | grep 'undefined symbol' | grep _Dir; then
-            echo "VERDICT(clang-${{ matrix.clang }}): BUG REPRODUCED - _Dir internals referenced but never emitted"
+            echo "VERDICT(clang-${{ matrix.clang }} on ubuntu-${{ matrix.os }}): BUG REPRODUCED - _Dir internals referenced but never emitted"
           else
-            echo "VERDICT(clang-${{ matrix.clang }}): healthy - no unresolved _Dir internals"
+            echo "VERDICT(clang-${{ matrix.clang }} on ubuntu-${{ matrix.os }}): healthy - no unresolved _Dir internals"
           fi

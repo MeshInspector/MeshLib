@@ -200,13 +200,14 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
 ENDIF()
 
-# GCC>=13 at -O3 reports a false-positive array-bounds error in fmt 9's float
-# formatting (__builtin_memmove inlined from bigint::operator= via
-# format_dragon) — but only when the TU is compiled behind the precompiled
-# header; the same code builds clean without PCH, so the warning stays enabled
-# for non-PCH GCC builds.
+# GCC>=13 at -O3 reports false-positive array-bounds and stringop-overflow
+# errors in fmt 9's float formatting (__builtin_memmove inlined from
+# bigint::operator= via format_dragon; fmt >= 10 suppresses both in its own
+# headers) — but only when the TU is compiled behind the precompiled header;
+# the same code builds clean without PCH, so the warnings stay enabled for
+# non-PCH GCC builds.
 IF(MR_PCH_LEAN AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-array-bounds")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-array-bounds -Wno-stringop-overflow")
 ENDIF()
 
 # more info: https://bugs.openjdk.org/browse/JDK-8244653

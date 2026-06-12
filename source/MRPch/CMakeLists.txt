@@ -44,6 +44,14 @@ IF(MR_PCH)
       find_package(GTest REQUIRED)
       target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
     ENDIF()
+  ELSE()
+    # The lean PCH still contains tl::expected and parallel-hashmap. tl::expected
+    # is header-only with no interface compile definitions, so it cannot break
+    # the PCH macro parity lean mode requires; its include root also provides
+    # parallel-hashmap in vcpkg builds, where the vendored
+    # thirdparty/parallel-hashmap directory is not populated.
+    find_package(tl-expected REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE tl::expected)
   ENDIF()
 
   # TODO: CMake config

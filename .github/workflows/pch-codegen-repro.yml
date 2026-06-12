@@ -49,11 +49,13 @@ jobs:
           EOF
           CXX=clang++-${{ matrix.clang }}
           $CXX --version
-          # The PCH and its object, exactly like the bindings build:
-          $CXX -std=c++23 -O2 -fpch-instantiate-templates -fpch-codegen -xc++-header pch.hpp -o pch.hpp.gch
-          $CXX -std=c++23 -O2 -c -o pch.o pch.hpp.gch
-          # -O0 keeps calls out-of-line so available_externally references survive:
-          $CXX -std=c++23 -O0 -includepch.hpp -c -o tu.o tu.cpp
+          # `-fno-inline` keeps calls out-of-line so available_externally references survive.
+          # It must be on BOTH the PCH and the TU: Clang's PCH validation rejects any
+          # optimization/inlining mismatch between the two.
+          FLAGS="-std=c++23 -O2 -fno-inline"
+          $CXX $FLAGS -fpch-instantiate-templates -fpch-codegen -xc++-header pch.hpp -o pch.hpp.gch
+          $CXX $FLAGS -c -o pch.o pch.hpp.gch
+          $CXX $FLAGS -includepch.hpp -c -o tu.o tu.cpp
           echo "=== _Dir-related symbols defined in pch.o:"
           nm --defined-only pch.o | grep _Dir || echo "  (none)"
           echo "=== _Dir-related symbols undefined in tu.o:"

@@ -888,8 +888,12 @@ $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$(call,### Write all our headers.)
 	$$(foreach f,$($1__InputFiles),$$(file >>$$@,#include "$$f"$$(lf)))
 	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
+	$(call,### The pybind header sits between `pre/post_include_pybind.h`, because on MSVC Debug pybind corrupts `_DEBUG` [restores it as empty)
+	$(call,### instead of `1`, see the comments in those headers]. Without the wrappers the corrupted value gets serialized as the PCH's final)
+	$(call,### macro state, so every fragment would start with it, and anything value-sensitive [e.g. TBB's debug detection] parsed after that)
+	$(call,### point would misbehave.)
 	$(if $(is_py),\
-		$$(if $($1_PyEnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <pybind11/pybind11.h>$$(lf)#endif))\
+		$$(if $($1_PyEnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <mrbind/targets/pybind11/pre_include_pybind.h>$$(lf)#include <pybind11/pybind11.h>$$(lf)#include <mrbind/targets/pybind11/post_include_pybind.h>$$(lf)#endif))\
 		$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)\
 		$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))\
 		$(call,### Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.)\

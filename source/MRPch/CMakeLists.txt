@@ -45,24 +45,13 @@ IF(MR_PCH)
       target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
     ENDIF()
   ELSE()
-    # The lean PCH contains tl::expected, parallel-hashmap, TBB and spdlog.
-    # tl::expected is header-only with no interface compile definitions; its
-    # include root also provides parallel-hashmap in vcpkg builds, where the
-    # vendored thirdparty/parallel-hashmap directory is not populated.
-    # fmt/spdlog/TBB interface definitions (FMT_SHARED, SPDLOG_*, ...) reach
-    # every REUSE_FROM consumer through MRMesh's PUBLIC links, keeping the PCH
-    # macro parity that GCC requires — except MRMCPGateway, which links the
-    # same targets explicitly for that reason.
-    find_package(fmt 8 REQUIRED)
-    find_package(spdlog 1.9 REQUIRED)
-    find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
+    # The lean PCH still contains tl::expected and parallel-hashmap. tl::expected
+    # is header-only with no interface compile definitions, so it cannot break
+    # the PCH macro parity lean mode requires; its include root also provides
+    # parallel-hashmap in vcpkg builds, where the vendored
+    # thirdparty/parallel-hashmap directory is not populated.
     find_package(tl-expected REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt::fmt
-      spdlog::spdlog
-      TBB::tbb
-      tl::expected
-    )
+    target_link_libraries(${PROJECT_NAME} PRIVATE tl::expected)
   ENDIF()
 
   # TODO: CMake config

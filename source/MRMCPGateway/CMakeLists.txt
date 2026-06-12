@@ -45,6 +45,21 @@ IF(MR_PCH)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DFMT_SHARED /DSPDLOG_COMPILED_LIB /DSPDLOG_FMT_EXTERNAL /DSPDLOG_SHARED_LIB")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DTBB_USE_DEBUG")
   endif()
+  if(MR_PCH_LEAN)
+    # GCC likewise refuses a PCH built with macros the TU doesn't define. This
+    # target links no MeshLib libraries, so it cannot inherit fmt/spdlog/TBB
+    # interface definitions (FMT_SHARED, SPDLOG_*, ...) transitively like the
+    # other REUSE_FROM consumers do; link the same targets the lean MRPch uses
+    # so the definitions match exactly on every dependency flavor.
+    find_package(fmt 8 REQUIRED)
+    find_package(spdlog 1.9 REQUIRED)
+    find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      fmt::fmt
+      spdlog::spdlog
+      TBB::tbb
+    )
+  endif()
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 

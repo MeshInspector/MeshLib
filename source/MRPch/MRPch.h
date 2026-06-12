@@ -3,7 +3,8 @@
 // GCC's PCH is a monolithic dump of the compiler's memory image that every TU
 // loads back in full, so headers that most TUs never reach (e.g. Eigen: ~5% of
 // TUs) cost more to load than they save in parsing. For GCC, precompile only
-// the headers reachable from roughly half of all TUs or more.
+// the widely used headers: STL, parallel-hashmap, tl::expected, <filesystem>
+// (45-98% TU reach) plus TBB and spdlog (30% / 25%).
 #if defined(__GNUC__) && !defined(__clang__)
 #define MR_PCH_LEAN 1
 #else
@@ -43,8 +44,8 @@
 #pragma warning(pop)
 
 #include "MRJson.h"
-#include "MRSpdlog.h"
 #endif // !MR_PCH_LEAN
+#include "MRSpdlog.h"
 #include "MRSuppressWarning.h"
 
 #include "MRWinapi.h"
@@ -70,8 +71,6 @@
 #pragma warning(pop)
 #endif
 
-#include "MRTBB.h"
-
 #ifndef MESHLIB_NO_VIEWER
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>
@@ -82,6 +81,8 @@
 #endif
 
 #endif // !MR_PCH_LEAN
+
+#include "MRTBB.h"
 
 #include <algorithm>
 #include <array>

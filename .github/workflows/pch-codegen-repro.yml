@@ -1,0 +1,67 @@
+name: PCH codegen _Dir repro
+
+# Diagnostic for the `-fpch-codegen` homed-but-not-emitted defect: libstdc++-12's
+# <filesystem> internals (std::filesystem::__cxx11::_Dir) can end up referenced by
+# PCH-consuming TUs but never emitted into the PCH object. Runs a MeshLib-free
+# micro-repro on plain ubuntu:22.04 (libstdc++-12) under both Clang 18 (known bad
+# with the full MeshLib PCH) and Clang 22 (the open question).
+
+on:
+  pull_request:
+
+jobs:
+  repro:
+    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        clang: [ 18, 22 ]
+    steps:
+      - name: Install Clang ${{ matrix.clang }} and libstdc++-12
+        run: |
+          set -x
+          apt update
+          DEBIAN_FRONTEND=noninteractive apt install -y wget lsb-release software-properties-common gnupg g++-12 binutils
+          wget -q https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          ./llvm.sh ${{ matrix.clang }}
+
+      - name: Run repro
+        run: |
+          set -x
+          cat > pch.hpp <<'EOF'
+          #include <filesystem>
+          #include <iterator>
+          // Mimics headers using the sentinel comparison, whose body odr-uses
+          // std::__shared_ptr<std::filesystem::__cxx11::_Dir>::operator bool().
+          inline bool _pch_touch(std::filesystem::directory_iterator &it)
+          {
+              return it == std::default_sentinel;
+          }
+          EOF
+          cat > tu.cpp <<'EOF'
+          bool use(std::filesystem::directory_iterator &it)
+          {
+              return _pch_touch(it) || it == std::default_sentinel;
+          }
+          EOF
+          CXX=clang++-${{ matrix.clang }}
+          $CXX --version
+          # The PCH and its object, exactly like the bindings build:
+          $CXX -std=c++23 -O2 -fpch-instantiate-templates -fpch-codegen -xc++-header pch.hpp -o pch.hpp.gch
+          $CXX -std=c++23 -O2 -c -o pch.o pch.hpp.gch
+          # -O0 keeps calls out-of-line so available_externally references survive:
+          $CXX -std=c++23 -O0 -includepch.hpp -c -o tu.o tu.cpp
+          echo "=== _Dir-related symbols defined in pch.o:"
+          nm --defined-only pch.o | grep _Dir || echo "  (none)"
+          echo "=== _Dir-related symbols undefined in tu.o:"
+          nm -u tu.o | grep _Dir || echo "  (none)"
+          echo "=== link as shared library and resolve:"
+          $CXX -std=c++23 -shared -o repro.so tu.o pch.o
+          if ldd -r repro.so 2>&1 | grep 'undefined symbol' | grep _Dir; then
+            echo "VERDICT(clang-${{ matrix.clang }}): BUG REPRODUCED - _Dir internals referenced but never emitted"
+          else
+            echo "VERDICT(clang-${{ matrix.clang }}): healthy - no unresolved _Dir internals"
+          fi

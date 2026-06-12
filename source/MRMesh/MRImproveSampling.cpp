@@ -35,7 +35,7 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const Impr
         // find the closest sample for each point of the cloud
         if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
             {
-                pt2sm[v] = findProjectionOnPoints( cloud.points[v], cloudOfSamples ).vId;
+                pt2sm[v] = findProjectionOnPoints( cloud.points[v], PointCloudPart{ cloudOfSamples } ).vId;
             }, subprogress( cb, 0.1f, 0.6f ) ) )
             return false;
 
@@ -69,7 +69,7 @@ bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const Impr
     VertMap sm2pt( sampleSz );
     if ( !ParallelFor( 0_v, sumPos.endId(), [&]( VertId s )
         {
-            sm2pt[s] = findProjectionOnPoints( cloudOfSamples.points[s], cloud ).vId;
+            sm2pt[s] = findProjectionOnPoints( cloudOfSamples.points[s], PointCloudPart{ cloud } ).vId;
         }, subprogress( settings.progress, 0.9f, 0.99f ) ) )
         return false;
 

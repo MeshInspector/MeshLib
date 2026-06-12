@@ -738,6 +738,10 @@ else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 LINKER_FLAGS += -ltbb12
 endif # VS_MODE == Release
+# With `-fpch-codegen`, the PCH objects emit every inline function the PCH saw — including ones referencing non-inline
+# internals that the DLL-export boundary hides: fmt's (compiled into MRMesh.dll but not exported) and `VarCmp` from
+# OleAut32 (dragged in via `MRWinapi.h`). Provide them at the bindings link.
+LINKER_FLAGS += -loleaut32 $(if $(filter Debug,$(VS_MODE)),-lfmtd,-lfmt)
 endif # Windows
 
 # Linux.

@@ -1006,6 +1006,10 @@ $(call var,all_outputs += $($1__LinkerOutput))
 $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)
 	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects) pybind11nonlimitedapi_stubs)
+	$(call,### `-fpch-codegen` can home a symbol into the PCH object and then fail to emit it there [a known Clang defect].)
+	$(call,### `-shared` links don't error on undefined symbols and `-z defs` would reject the Python C API [resolved by the interpreter at runtime],)
+	$(call,### so check with `ldd -r` and a `Py*` allowlist to fail HERE rather than at the first `import`.)
+	$(if $(and $(if $(IS_WINDOWS),,1),$(if $(IS_MACOS),,1),$($1__PchObject)),@bad=$$$$(LD_LIBRARY_PATH=$(MESHLIB_SHLIB_DIR):$(DEPS_LIB_DIR) ldd -r '$$@' 2>&1 | grep 'undefined symbol' | grep -vE 'undefined symbol: _?Py' || true); if [ -n "$$$$bad" ]; then echo "Symbols missing from '$$@' and its dependencies:"; echo "$$$$bad"; exit 1; fi)
 
 # A pretty target.
 .PHONY: $($1_PyName)

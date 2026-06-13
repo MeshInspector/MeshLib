@@ -2,9 +2,23 @@
 
 #pragma warning(push)
 #pragma warning(disable:4275) // non dll-interface class 'std::runtime_error' used as base for dll-interface class 'fmt::v10::format_error'
+// GCC >= 13 at -O3 reports false-positive array-bounds and stringop-overflow
+// errors in fmt 9's float formatting (__builtin_memmove inlined from
+// bigint::operator= via format_dragon) when the TU is compiled behind a
+// precompiled header; fmt >= 10 suppresses these in its own headers.
+// The pragma region covers fmt's inline definitions, so the suppression
+// applies only to code inlined from fmt and not to the rest of the TU.
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 13
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 #include <spdlog/tweakme.h>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/fmt/ostr.h>
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 13
+#pragma GCC diagnostic pop
+#endif
 #pragma warning(pop)
 
 #include "MRPch/MRBindingMacros.h"

@@ -431,6 +431,7 @@ override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 #   nothing was homed but unemitted (a real clang defect, observed on libstdc++-12 only;
 #   see https://github.com/llvm/llvm-project/issues/203691). On affected platforms, pass `PCH_CODEGEN=0` to fall back to the
 #   COMDAT-duplicated codegen.
+# Override with `PCH_CODEGEN=0` (e.g. from a CI matrix conditional).
 PCH_CODEGEN := 1
 override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
 

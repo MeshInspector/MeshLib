@@ -69,6 +69,11 @@ IF(MR_PCH)
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
   )
 
+  # Build the single PCH object that every consumer links (see cmake/Modules/PchCodegen.cmake).
+  IF(MR_PCH_CODEGEN)
+    mr_build_pch_codegen_object()
+  ENDIF()
+
   # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
   # Also needed for `Boost.Stacktrace` apparently.
   IF(NOT WIN32)

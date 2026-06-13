@@ -29,6 +29,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
 
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MR_PCH_CODEGEN)
+    mr_attach_pch_object(${PROJECT_NAME})
+  ENDIF()
 ENDIF()
 
 # On Windows, copy the zipped Python environment to the output directory.

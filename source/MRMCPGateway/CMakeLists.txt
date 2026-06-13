@@ -46,6 +46,9 @@ IF(MR_PCH)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DTBB_USE_DEBUG")
   endif()
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MR_PCH_CODEGEN)
+    mr_attach_pch_object(${PROJECT_NAME})
+  ENDIF()
 ENDIF()
 
 install(

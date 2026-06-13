@@ -13,6 +13,29 @@ IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
 ENDIF()
 message("MR_PCH=${MR_PCH}")
 
+# `-fpch-codegen`: home code generated from PCH-instantiated templates/inline functions once into a linked PCH
+# object instead of COMDAT-duplicating it across every consuming TU (see cmake/Modules/PchCodegen.cmake and
+# https://github.com/MeshInspector/MeshLib/pull/6253, which did the same for the bindings PCH). Clang/AppleClang
+# only; GCC has no such flags and MSVC is unaffected.
+set(MR_PCH_CODEGEN_DEFAULT OFF)
+IF(MR_PCH AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
+  set(MR_PCH_CODEGEN_DEFAULT ON)
+ENDIF()
+set(MR_PCH_CODEGEN ${MR_PCH_CODEGEN_DEFAULT} CACHE BOOL "Home PCH-instantiated codegen into one linked PCH object (-fpch-codegen)")
+IF(MR_PCH_CODEGEN)
+  IF(CMAKE_CONFIGURATION_TYPES)
+    # The PCH object is built from a single-config reused-PCH path; multi-config generators add a per-config
+    # segment we don't resolve. The CI configs that enable this (macOS/Emscripten via build_source.sh) use
+    # single-config Ninja, so just fail fast rather than silently mislink.
+    message(FATAL_ERROR "MR_PCH_CODEGEN is only supported with single-config generators; pass -DMR_PCH_CODEGEN=OFF.")
+  ENDIF()
+  # The reused PCH and all its consumers must be compiled with identical PCH-relevant flags or Clang rejects the
+  # PCH, so add the codegen flags project-wide rather than only on the MRPch target.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpch-codegen -fpch-instantiate-templates -fpch-debuginfo")
+  include(PchCodegen)
+ENDIF()
+message("MR_PCH_CODEGEN=${MR_PCH_CODEGEN}")
+
 # make link to fail if there are unresolved symbols (GCC and Clang)
 IF(NOT APPLE)
   IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

@@ -48,4 +48,7 @@ install(
 
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MR_PCH_CODEGEN)
+    mr_attach_pch_object(${PROJECT_NAME})
+  ENDIF()
 ENDIF()

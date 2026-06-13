@@ -455,12 +455,11 @@ jobs:
           name: PythonStubs
           failOnError: false
 
-      - name: Delete C bindings
-        if: needs.update-dev-documentation.result == 'success'
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: CBindings
-          failOnError: false
+      # NOTE: intentionally NOT deleting the CBindings artifact here.
+      # It already has retention-days: 1 (see generate-c-bindings.yml), and keeping it for
+      # that window lets us re-run individual failed build jobs — a partial re-run does not
+      # re-run generate-c-bindings, so the artifact would otherwise be gone and the re-run
+      # would fail at "Download C bindings" with "Artifact not found for name: CBindings".
 
       - name: Delete Csharp bindings
         if: needs.update-dev-documentation.result == 'success'

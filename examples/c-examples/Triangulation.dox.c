@@ -21,7 +21,7 @@
 int main( void )
 {
     // Generate point cloud
-    MR_VertCoords* points = MR_VertCoords_Construct_1_uint64_t( 10000 );
+    MR_VertCoords* points = MR_VertCoords_Construct_1_size_t( 10000 );
     for ( int i = 0; i < 100; ++i )
     {
         float u = PI*2 * (float)i / ( 100.f - 1.f );

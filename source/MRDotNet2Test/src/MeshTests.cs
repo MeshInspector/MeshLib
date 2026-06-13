@@ -364,7 +364,7 @@ namespace MRTest
             {
                 var mesh = makeSphere(new SphereParams(1.0f, 3000));
                 var count = mesh.topology.getValidVerts().count();
-                Assert.That(count, Is.EqualTo(3000));
+                Assert.That(count, Is.EqualTo((nuint)3000));
                 mesh.Dispose();
             });
         }
@@ -410,12 +410,12 @@ namespace MRTest
             Assert.That(cubeMesh.area(), Is.EqualTo(3.0).Within(0.001));
 
             var holes = findRightBoundary(cubeMesh.topology);
-            Assert.That(holes.size(), Is.EqualTo(1));
-            Assert.That(holes[0].size(), Is.EqualTo(6));
+            Assert.That(holes.size(), Is.EqualTo((nuint)1));
+            Assert.That(holes[0].size(), Is.EqualTo((nuint)6));
 
             var hole0 = trackRightBoundaryLoop(cubeMesh.topology, holes[0][0]);
             Assert.That(hole0.size(), Is.EqualTo(holes[0].size()));
-            for (ulong i = 0; i < hole0.size(); i++)
+            for (nuint i = 0; i < hole0.size(); i++)
             {
                 Assert.That(hole0[i].id, Is.EqualTo(holes[0][i].id));
             }
@@ -428,7 +428,7 @@ namespace MRTest
             var verts = new VertBitSet(8, false);
             verts.set(new VertId(0), true);
             var faces = getIncidentFaces(cubeMesh.topology, verts);
-            Assert.That(faces.count(), Is.EqualTo(6));
+            Assert.That(faces.count(), Is.EqualTo((nuint)6));
         }
 
         [Test]
@@ -438,7 +438,7 @@ namespace MRTest
             var edges = new UndirectedEdgeBitSet(12, false);
             edges.set(new EdgeId(0), true);
             var faces = getIncidentFaces(cubeMesh.topology, edges);
-            Assert.That(faces.count(), Is.EqualTo(8));
+            Assert.That(faces.count(), Is.EqualTo((nuint)8));
         }
 
         [Test]
@@ -446,7 +446,7 @@ namespace MRTest
         {
             var mesh = makeTorus(1.0f, 0.05f, 16, 16);
             var shortEdges = findShortEdges(mesh, 0.1f);
-            Assert.That(shortEdges.count(), Is.EqualTo(256));
+            Assert.That(shortEdges.count(), Is.EqualTo((nuint)256));
         }
     }
 }

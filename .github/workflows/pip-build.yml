@@ -297,13 +297,19 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
-      - name: Generate C bindings
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+      - name: Download C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
         run: |
-          make -f scripts/mrbind/generate.mk TARGET=c -B --trace \
-            CXX_FOR_ABI=${{ matrix.compiler }} \
-            CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-            DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Upload C bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
@@ -528,6 +534,7 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 

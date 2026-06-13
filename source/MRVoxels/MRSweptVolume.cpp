@@ -125,7 +125,7 @@ float getDistanceSq( const LineSegm2f& segm, const Vector2f& p )
     return ( closestPointOnLineSegm( p, segm ) - p ).lengthSq();
 }
 
-bool ccw( const LineSegm2f& segm, const Vector2f& p )
+bool isCcw( const LineSegm2f& segm, const Vector2f& p )
 {
     return cross( segm.b - segm.a, p - segm.a ) > 0.f;
 }
@@ -419,7 +419,7 @@ Expected<Mesh> computeSweptVolumeWithDistanceVolume( const ComputeSweptVolumePar
             return computeSweptVolumeWithDistanceVolume( params, toolBox, [endRadius, cutterHeight, slope, toolBox] ( const Vector2f& toolPos )
             {
                 if ( endRadius <= toolPos.x && toolPos.y <= cutterHeight )
-                    return getDistanceSq( slope, toolPos ) * ( ccw( slope, toolPos ) ? -1.f : +1.f );
+                    return getDistanceSq( slope, toolPos ) * ( isCcw( slope, toolPos ) ? -1.f : +1.f );
                 else
                     return getBoundarySignedDistanceSq( toolBox, toolPos );
             } );

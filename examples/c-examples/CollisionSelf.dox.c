@@ -33,7 +33,7 @@ int main( void )
         goto fail_self_collision_pairs;
     }
 
-    for ( MR_uint64_t i = 0; i < MR_std_vector_MR_FaceFace_size( selfCollidingPairs ); ++i )
+    for ( size_t i = 0; i < MR_std_vector_MR_FaceFace_size( selfCollidingPairs ); ++i )
     {
         const MR_FaceFace* ff = MR_std_vector_MR_FaceFace_at( selfCollidingPairs, i );
         // print each pair

@@ -11,10 +11,11 @@ IF(MSVC)
   #   warning C4297: function assumed not to throw an exception but does
   #   warning C4305: 'argument': truncation from 'int' to 'T'
   #   warning C4355: 'this': used in base member initializer list
+  #   warning C4574: '__has_feature' is defined to be '0': did you mean to use '#if __has_feature'?
   #   warning C4800: Implicit conversion from '_Ty *' to bool. Possible information loss
   #   warning C4804: '+=': unsafe use of type 'bool' in operation
   #   warning C5204: class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4242 /wd4244 /wd4297 /wd4305 /wd4355 /wd4800 /wd4804 /wd5204")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4242 /wd4244 /wd4297 /wd4305 /wd4355 /wd4574 /wd4800 /wd4804 /wd5204")
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context -Wno-deprecated-declarations")
 ENDIF()
@@ -31,10 +32,8 @@ file(GLOB_RECURSE HEADERS "include/*.h")
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
-  set_target_properties(${PROJECT_NAME} PROPERTIES
-    UNITY_BUILD ON
-    UNITY_BUILD_MODE BATCH
-  )
+  include(UnityBuildHelpers)
+  mr_enable_unity_build(${PROJECT_NAME} ${SOURCES})
 ENDIF()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

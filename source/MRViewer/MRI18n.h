@@ -24,10 +24,10 @@ MRVIEWER_API std::string translate( std::string_view msg, LocaleDomainId domainI
 MRVIEWER_API std::string translate( std::string_view context, std::string_view msg, LocaleDomainId domainId = defaultDomain );
 
 /// \brief Translates a plural message form using the active locale.
-MRVIEWER_API std::string translate( std::string_view single, std::string_view plural, Int64 n, LocaleDomainId domainId = defaultDomain );
+MRVIEWER_API std::string translate( std::string_view single, std::string_view plural, std::int64_t n, LocaleDomainId domainId = defaultDomain );
 
 /// \brief Translates a plural message form in context using the active locale.
-MRVIEWER_API std::string translate( std::string_view context, std::string_view single, std::string_view plural, Int64 n, LocaleDomainId domainId = defaultDomain );
+MRVIEWER_API std::string translate( std::string_view context, std::string_view single, std::string_view plural, std::int64_t n, LocaleDomainId domainId = defaultDomain );
 
 /// \brief Translates all strings in a vector using the active locale.
 inline std::vector<std::string> translateAll( const std::vector<std::string>& items, LocaleDomainId domainId = defaultDomain )

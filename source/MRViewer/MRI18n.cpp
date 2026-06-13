@@ -59,7 +59,7 @@ std::string translate( std::string_view context, std::string_view msg, LocaleDom
     return translate_noop( asCStr( context ), asCStr( msg ) );
 }
 
-std::string translate( std::string_view single, std::string_view plural, Int64 n, LocaleDomainId domainId )
+std::string translate( std::string_view single, std::string_view plural, std::int64_t n, LocaleDomainId domainId )
 {
 #ifndef MRVIEWER_NO_LOCALE
     if ( domainId.valid() )
@@ -76,7 +76,7 @@ std::string translate( std::string_view single, std::string_view plural, Int64 n
     return translate_noop( asCStr( single ), asCStr( plural ), n );
 }
 
-std::string translate( std::string_view context, std::string_view single, std::string_view plural, Int64 n, LocaleDomainId domainId )
+std::string translate( std::string_view context, std::string_view single, std::string_view plural, std::int64_t n, LocaleDomainId domainId )
 {
 #ifndef MRVIEWER_NO_LOCALE
     if ( domainId.valid() )

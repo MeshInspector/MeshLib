@@ -204,24 +204,68 @@ Then you must build MeshLib with a special CMake flag, which will build the gene
 
 ### Windows
 
-* Open the `x64 Native Tools Command Prompt for VS` terminal in the Start menu.
+* On Windows you must install Emscripten SDK (for [complicated reasons](./../../thirdparty/mrbind/docs/generating_c.md#option-a)). You only need to do this once.
 
-* There, run <code>scripts\mrbind\generate_win.bat -B --trace TARGET=c</code>
+  ```sh
+  # `cd` to any directory you prefer
+  git clone https://github.com/emscripten-core/emsdk
+  emsdk/emsdk install 4.0.10
+  emsdk/emsdk activate 4.0.10
+  ```
+  You must also add it to the environment variables. You need to do this every time you open a new terminal:
+  * When in PowerShell: `emsdk/emsdk_env.ps1`
+  * Or when in CMD: `emsdk/emsdk_env.bat`
+
+  If done correctly, `em++ --version` should run successfully.
+
+* Run `scripts\mrbind\generate_win.bat -B --trace TARGET=c`
 
 * Compile MeshLib using CMake, with flag `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to also compile the generated bindings.<br/>
-  Compiling bindings using Visual Studio is not supported, you must use CMake.
+  Alternatively build the `MeshLibC2` project with MSBuild (not a part of MeshLib's solution):<br/>
+  `msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=Release -p:Platform=x64 -p:SolutionDir=%CD%\source\`<br/>
 
 ### Linux
 
-* Run <code>make -f scripts\mrbind\generate.mk -B --trace TARGET=c</code>
+* There are two options, use the first one that works.
+
+  1. **Without Emscripten SDK.** This only works on x64 as opposed to ARM. This is a hack and could break one day.
+
+     On Ubuntu, install `sudo apt install libc6-dev-i386`. On other distros, install the package providing `/usr/include/gnu/stubs-32.h` if it doesn't already exist.
+
+     Make sure the third-party libraries for MeshLib are already built, by running `scripts/build_thirdparty.sh` (reply `n` if asked whether to build for Emscripten).
+
+  2. **With Emscripten SDK.**
+
+     Install Emscripten SDK (we need it for [complicated reasons](./../../thirdparty/mrbind/docs/generating_c.md#option-a)). You only need to do this once.
+
+     ```sh
+     # `cd` to any directory you prefer
+     git clone https://github.com/emscripten-core/emsdk
+     emsdk/emsdk install 4.0.10
+     emsdk/emsdk activate 4.0.10
+     ```
+
+     Add Emscripten SDK to your environment variables. You need to do this every time you open a new shell.
+
+     ```sh
+     . emsdk/emsdk_env.sh
+     ```
+
+     If done correctly, `em++ --version` should run successfully.
+
+     In the next step, add `EM_USE_HOST_HEADERS=0` to the end of the `make ...` command.
+
+* Run `make -f scripts\mrbind\generate.mk -B --trace TARGET=c`
 
 * Compile MeshLib using CMake, with flag `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to also compile the generated bindings.<br/>
 
 ### MacOS
 
+* No Emscripten SDK is needed.
+
 * Run `export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$PATH"` to temporarily add a newer version of GNU Make to the PATH (now `make --version` should report 4.x or newer).
 
-* Run <code>make -f scripts\mrbind\generate.mk -B --trace TARGET=c</code>
+* Run `make -f scripts\mrbind\generate.mk -B --trace TARGET=c`
 
 * Compile MeshLib using CMake, with flag `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to also compile the generated bindings.<br/>
 
@@ -241,13 +285,13 @@ The steps below both generate the C# code (at `MeshLib/source/MRDotNet2`) and co
 
 ### Windows
 
-* Run <code>scripts\mrbind\generate_win.bat -B --trace TARGET=csharp</code>
+* Run `scripts\mrbind\generate_win.bat -B --trace TARGET=csharp`
 
 * Locally running C# programs wasn't tested on this OS. You might need to copy the DLLs of the C bindings somewhere C# can find them.
 
 ### Linux
 
-* Run <code>make -f scripts\mrbind\generate.mk -B --trace TARGET=csharp</code>
+* Run `make -f scripts\mrbind\generate.mk -B --trace TARGET=csharp`
 
 * To locally run C# programs that use our C# bindings, you might need to set environment variable `LD_LIBRARY_PATH=...` to the directory that contains `libMRMesh.so` when running your programs.
 
@@ -255,7 +299,7 @@ The steps below both generate the C# code (at `MeshLib/source/MRDotNet2`) and co
 
 * Run `export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$PATH"` to temporarily add a newer version of GNU Make to the PATH (now `make --version` should report 4.x or newer).
 
-* Run <code>make -f scripts\mrbind\generate.mk -B --trace TARGET=csharp</code>
+* Run `make -f scripts\mrbind\generate.mk -B --trace TARGET=csharp`
 
 * Locally running C# programs wasn't tested on this OS. You might need to set environment variable `DYLD_LIBRARY_PATH=...` to the directory that contains `libMRMesh.dylib` when running your programs.
 

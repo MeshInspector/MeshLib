@@ -70,29 +70,29 @@ namespace MRTest
             var vMapB = parameters.mapper.map(validPointsB, BooleanResultMapper.MapObject.B);
 
             Assert.That(!vMapA.intersects(vMapB));
-            Assert.That(vMapA.count(), Is.EqualTo(60));
-            Assert.That(vMapB.count(), Is.EqualTo(48));
+            Assert.That(vMapA.count(), Is.EqualTo((nuint)60));
+            Assert.That(vMapB.count(), Is.EqualTo((nuint)48));
 
             var fMapA = parameters.mapper.map(validFacesA, BooleanResultMapper.MapObject.A);
             var fMapB = parameters.mapper.map(validFacesB, BooleanResultMapper.MapObject.B);
 
             Assert.That(!fMapA.intersects(fMapB));
-            Assert.That(fMapA.count(), Is.EqualTo(224));
-            Assert.That(fMapB.count(), Is.EqualTo(192));
+            Assert.That(fMapA.count(), Is.EqualTo((nuint)224));
+            Assert.That(fMapB.count(), Is.EqualTo((nuint)192));
 
             var newFaces = parameters.mapper.newFaces();
-            Assert.That(newFaces.size(), Is.EqualTo(416) );
-            Assert.That(newFaces.count(), Is.EqualTo(252));
+            Assert.That(newFaces.size(), Is.EqualTo((nuint)416) );
+            Assert.That(newFaces.count(), Is.EqualTo((nuint)252));
 
             var mapsA = parameters.mapper.getMaps( BooleanResultMapper.MapObject.A );
-            Assert.That( mapsA.old2newVerts.size(), Is.EqualTo(160) );
-            Assert.That( mapsA.cut2newFaces.size(), Is.EqualTo(280) );
-            Assert.That( mapsA.cut2origin.size(), Is.EqualTo(280) );
+            Assert.That( mapsA.old2newVerts.size(), Is.EqualTo((nuint)160) );
+            Assert.That( mapsA.cut2newFaces.size(), Is.EqualTo((nuint)280) );
+            Assert.That( mapsA.cut2origin.size(), Is.EqualTo((nuint)280) );
 
             var mapsB = parameters.mapper.getMaps( BooleanResultMapper.MapObject.B );
-            Assert.That( mapsB.old2newVerts.size(), Is.EqualTo(160) );
-            Assert.That( mapsB.cut2newFaces.size(), Is.EqualTo(320) );
-            Assert.That( mapsB.cut2origin.size(), Is.EqualTo(320) );
+            Assert.That( mapsB.old2newVerts.size(), Is.EqualTo((nuint)160) );
+            Assert.That( mapsB.cut2newFaces.size(), Is.EqualTo((nuint)320) );
+            Assert.That( mapsB.cut2origin.size(), Is.EqualTo((nuint)320) );
         }
     }
 }

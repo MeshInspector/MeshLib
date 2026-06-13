@@ -149,14 +149,20 @@ jobs:
           python3 -m pip install -r ./requirements/python/requirements.txt
           python3 -m pip install pytest
 
-      - name: Generate C bindings
+      - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
-        env:
-          PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
-          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
         run: |
-          make --version
-          make -f scripts/mrbind/generate.mk -B --trace TARGET=c
+          rm -rf source/MeshLibC2
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          # Cuda placeholders:
+          cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -169,6 +175,7 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMR_CXX_STANDARD=23
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: MRMesh Exported Symbols
         run: |

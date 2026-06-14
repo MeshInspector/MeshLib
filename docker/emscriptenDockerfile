@@ -22,8 +22,12 @@ RUN <<EOF
     sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
     # install packages
     apt-get update -qqy
+    # g++-12 gives Clang a libstdc++ >= 12 to use. This image is based on Ubuntu jammy,
+    # whose libstdc++ 11 makes MRBind compile its own `std::hash<std::filesystem::path>`
+    # polyfill (guarded by `_GLIBCXX_RELEASE < 12`), which then clashes with the one jammy
+    # already backported. ubuntu22Dockerfile installs g++-12 for the same reason.
     apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build gettext
+        tzdata git pkg-config ninja-build gettext g++-12
     # install Clang and the other MRBind dependencies (used to generate the C bindings)
     ./scripts/mrbind/install_deps_ubuntu.sh
     # clean downloaded files

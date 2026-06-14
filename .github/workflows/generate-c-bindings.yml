@@ -10,11 +10,15 @@ on:
 jobs:
   generate-c-bindings:
     timeout-minutes: 60
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read  # This is required for actions/checkout
     container:
-      image: meshlib/meshlib-ubuntu24:${{inputs.docker_image_tag}}
+      # The Emscripten image already ships the Emscripten SDK (it's `FROM
+      # emscripten/emsdk`), so we no longer have to install it at runtime. Its
+      # Dockerfile now also installs Clang via `install_deps_ubuntu.sh`, giving
+      # us the full MRBind toolchain.
+      image: meshlib/meshlib-emscripten-arm64:${{inputs.docker_image_tag}}
       options: --user root
 
     steps:
@@ -47,24 +51,17 @@ jobs:
         with:
           # The Dockerfile hash in extra-cache-key busts the cache whenever the
           # toolchain inside the image changes (e.g. glibc, clang upgrade).
-          cache-key-prefix: ubuntu-x64-ubuntu24
+          cache-key-prefix: ubuntu-arm64-emscripten
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
 
-        # Need this to generate the bindings on Windows and Ubuntu Arm. See `thirdparty/mrbind/docs/generating_c.md#option-a` for more details.
-      - name: Install Emscripten SDK for C bindings
-        run: |
-          git clone https://github.com/emscripten-core/emsdk
-          emsdk/emsdk install 4.0.10
-          emsdk/emsdk activate 4.0.10
-
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
+        # The Emscripten SDK is already baked into the image (`em++` is on the PATH), so no separate install/activate step is needed.
       - name: Generate C bindings
         # I get `sh` by default.
         shell: bash
         run: |
-          . emsdk/emsdk_env.sh
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
       - name: Upload C bindings

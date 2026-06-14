@@ -61,23 +61,13 @@ COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
 COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
 
-ARG VCPKG_VERSION
-ENV VCPKG_VERSION=$VCPKG_VERSION
-RUN <<EOF
-    set -e
-    git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch
-    cd vcpkg
-    ./bootstrap-vcpkg.sh -disableMetrics
-    # replace the original source URL with a faster mirror's one
-    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' ports/vcpkg-make/portfile.cmake
-    sed -i 's https://ftp.gnu.org/ https://www.mirrorservice.org/sites/ftp.gnu.org/ ' ports/gettext/portfile.cmake
-EOF
-
-WORKDIR /root/vcpkg
-
-# build vcpkg packages
 ARG VCPKG_TRIPLET
 ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
+
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_DISABLE_METRICS=1
+
+# build vcpkg packages
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
@@ -85,20 +75,24 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     source /root/MeshLib/configure_s3_cache.sh
     source /opt/rh/gcc-toolset-11/enable
     source /opt/autoconf27/enable
+    # bootstrap vcpkg
+    source <(curl -L https://aka.ms/vcpkg-init.sh)
     # network may flake
     retry.sh -- \
-        ./vcpkg install --x-manifest-root=/root/MeshLib/ --debug
-    ./vcpkg export --x-manifest-root=/root/MeshLib/ --raw --output=vcpkg --output-dir=/opt
+        /opt/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug
 EOF
 
 
 FROM base AS production
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
+COPY --from=build /opt/vcpkg_installed /opt/vcpkg_installed
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
 ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_MANIFEST_MODE=ON
+ENV VCPKG_INSTALLED_DIR=/opt/vcpkg_installed
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET

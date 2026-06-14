@@ -16,6 +16,7 @@ KNOWN_ITEM_GROUPS = {
 IGNORED_PROJECTS = {
     # auto-generated bindings
     "MeshLibC2",
+    "MeshLibC2Cuda",
 }
 
 IGNORED_FILENAMES = {

@@ -422,13 +422,22 @@ $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
+# If enabled, code generated from PCH-instantiated templates is homed into the PCH object instead of being COMDAT-duplicated in
+#   every consuming TU (`-fpch-codegen`). Consuming TUs reference those symbols as `available_externally`. This deduplicates
+#   roughly 51 MB of COMDAT bytes across the 32 binding fragments (measured on ubuntu24 Release, GCC headers).
+# The historical reputation of `-fpch-codegen` as "buggy, causing undefined references to libfmt/gtest" came from this file
+#   building the PCH object but never linking it (`$1__PchObject` was unused) — every homed symbol came up missing at link time.
+#   Both issues are addressed below: the PCH object is now linked into the module, and a post-link `ldd -r` check verifies that
+#   nothing was homed but unemitted (a real clang defect, observed on libstdc++-12 only;
+#   see https://github.com/llvm/llvm-project/issues/203691). On affected platforms, pass `PCH_CODEGEN=0` to fall back to the
+#   COMDAT-duplicated codegen.
+# Override with `PCH_CODEGEN=0` (e.g. from a CI matrix conditional).
+PCH_CODEGEN := 1
+override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
+
 # Those are passed when compiling the PCH. Can be empty.
-# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it to the result.
-# (And building this `.o` even when it's not needed doesn't seem to cause any issues.)
-# There are three flags that can be used in any combination here: `-fpch-codegen -fpch-debuginfo -fpch-instantiate-templates`.
-# `-fpch-codegen` seems to be buggy, causing weird errors: undefined references to libfmt/gtest/some other functions when used with `-fpch-instantiate-templates`,
-#   or weird overload resolution errors during compilation without that.
-PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
+# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it into the module.
+PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen)
 
 
 
@@ -717,6 +726,12 @@ else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 LINKER_FLAGS += -ltbb12
 endif # VS_MODE == Release
+# With `-fpch-codegen`, the PCH object emits every inline function the PCH saw, including fmt wrappers (referencing fmt
+# internals that are compiled into MRMesh.dll but not exported across the DLL boundary) and an `MRWinapi.h`-pulled wrapper
+# referencing OleAut32 `VarCmp`. Provide them at the bindings link.
+ifneq ($(PCH_CODEGEN),)
+LINKER_FLAGS += -loleaut32 $(if $(filter Debug,$(VS_MODE)),-lfmtd,-lfmt)
+endif
 endif # Windows
 
 # Linux.
@@ -952,6 +967,9 @@ $(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | 
 # A list of all object files.
 # NOTE: This is amended later, so we must refer to it lazily.
 $(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))))
+# With `-fpch-codegen`, the PCH object carries code generated from PCH-instantiated templates, so it MUST be linked in.
+# (With debug-info-only PCH object the link is harmless.)
+$(call var,$1__ObjectFiles += $($1__PchObject))
 
 # Link the module.
 # Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
@@ -960,6 +978,10 @@ $(call var,all_outputs += $($1__LinkerOutput))
 $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)
 	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects) pybind11nonlimitedapi_stubs)
+	$(call,### `-fpch-codegen` can home a symbol into the PCH object and then fail to emit it there [clang defect llvm/llvm-project#203691].)
+	$(call,### `-shared` doesn't error on undefined symbols and `-z defs` would reject the Python C API [resolved at runtime by the interpreter],)
+	$(call,### so check with `ldd -r` and a `Py*` allowlist to fail HERE rather than at the first `import`.)
+	$(if $(and $(if $(IS_WINDOWS),,1),$(if $(IS_MACOS),,1),$($1__PchObject)),@bad=$$$$(LD_LIBRARY_PATH=$(MESHLIB_SHLIB_DIR):$(DEPS_LIB_DIR) ldd -r '$$@' 2>&1 | grep 'undefined symbol' | grep -vE 'undefined symbol: _?Py' || true); if [ -n "$$$$bad" ]; then echo "Symbols missing from '$$@' and its dependencies:"; echo "$$$$bad"; exit 1; fi)
 
 # A pretty target.
 .PHONY: $($1_PyName)

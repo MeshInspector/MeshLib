@@ -178,7 +178,10 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
+          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
+          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin PCH_CODEGEN=${{env.PCH_CODEGEN}}
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}

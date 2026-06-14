@@ -61,7 +61,10 @@ jobs:
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   generate-c-bindings:
-    needs: config
+    # Depends on prepare-image because it now runs inside the meshlib-emscripten-arm64
+    # image: when that Dockerfile changes the tag becomes the branch name, so the image
+    # must be (re)built by prepare-image before this job can pull it.
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}

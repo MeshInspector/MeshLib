@@ -44,7 +44,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'CMake' }}
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
@@ -208,6 +208,14 @@ jobs:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }}
+
+      - name: Build C CUDA bindings with MSBuild
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+        run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }}
 
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}

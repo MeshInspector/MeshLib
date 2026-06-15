@@ -47,10 +47,12 @@ jobs:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-      # Upload a developer distributive from every Visual Studio CMake build
-      # (VS2019/VS2022/VS2026). VS_TAG keeps their archive names distinct so
+      # Upload a developer distributive per Visual Studio toolchain so
       # update-win-version can repackage each into MeshLibDistVS{19,22,26}.zip.
-      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.build_system == 'CMake' }}
+      # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build
+      # (which also produces the C#/.NET components). VS_TAG keeps the archive
+      # names distinct.
+      job_upload_artifact: ${{ inputs.upload_artifacts && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler != 'msvc-2026' && matrix.build_system == 'CMake' ) }}
       VS_TAG: ${{ fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22"}')[matrix.cxx_compiler] || 'VS26' }}
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}

@@ -54,8 +54,8 @@ on:
         description:
         value: ${{ jobs.prepare-config.outputs.vcpkg-docker-image-tag }}
       run_unity_nuget_test:
-        description: "expression to run unity-nuget-test.yml"
-        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       test_pip_build:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
@@ -212,7 +212,7 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/(ubuntu22|ubuntu24|emscripten)Dockerfile'
+              - 'docker/(ubuntu22|ubuntu24|emscripten-c-bindings|emscripten)Dockerfile'
               - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'

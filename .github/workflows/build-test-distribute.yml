@@ -61,7 +61,7 @@ jobs:
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   generate-c-bindings:
-    needs: config
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
@@ -150,6 +150,7 @@ jobs:
     uses: ./.github/workflows/update-win-version.yml
     with:
       vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 
@@ -269,7 +270,13 @@ jobs:
         run: |
           shopt -s nullglob
           for PKG_FILE in MeshLibDist*.zip ; do
-            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}"
+            case "$PKG_FILE" in
+              # Keep the historical layout for the iterator-debug archive:
+              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
+              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
+              *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
+            esac
           done
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
@@ -455,12 +462,11 @@ jobs:
           name: PythonStubs
           failOnError: false
 
-      - name: Delete C bindings
-        if: needs.update-dev-documentation.result == 'success'
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: CBindings
-          failOnError: false
+      # NOTE: intentionally NOT deleting the CBindings artifact here.
+      # It already has retention-days: 1 (see generate-c-bindings.yml), and keeping it for
+      # that window lets us re-run individual failed build jobs — a partial re-run does not
+      # re-run generate-c-bindings, so the artifact would otherwise be gone and the re-run
+      # would fail at "Download C bindings" with "Artifact not found for name: CBindings".
 
       - name: Delete Csharp bindings
         if: needs.update-dev-documentation.result == 'success'

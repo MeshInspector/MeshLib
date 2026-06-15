@@ -1,11 +1,9 @@
 # this file must be included AFTER the `project' command because it relies on the detected compiler information
 
-set(MR_PCH_DEFAULT OFF)
-# for GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
-  set(MR_PCH_DEFAULT ON)
-ELSEIF(MSVC)
-  set(MR_PCH_DEFAULT ON)
+set(MR_PCH_DEFAULT ON)
+# for Clang<15 builds: PCH not only does not give any speedup, but even vice versa
+IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15)
+  set(MR_PCH_DEFAULT OFF)
 ENDIF()
 set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
 IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)

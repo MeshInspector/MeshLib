@@ -12,7 +12,7 @@
     <ClInclude Include="MRWasm.h" />
     <ClInclude Include="MREigenCore.h" />
     <ClInclude Include="MRFmt.h" />
-    <ClInclude Include="MRFilesystem.h" />
+    <ClInclude Include="MRStdlib.h" />
     <ClInclude Include="MRBindingMacros.h" />
     <ClInclude Include="MRWinapi.h" />
     <ClInclude Include="MRExpected.h" />

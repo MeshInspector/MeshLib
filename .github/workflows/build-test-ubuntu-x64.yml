@@ -154,7 +154,10 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
+          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
+          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
+          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"

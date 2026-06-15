@@ -12,6 +12,25 @@ install(
 IF(MR_PCH)
   add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
+  find_package(tl-expected REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE tl::expected)
+  # TODO: CMake config
+  target_include_directories(${PROJECT_NAME}
+    PRIVATE
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+  )
+
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # the full PCH slows the build down for GCC (it loads the whole PCH image in every TU)
+    target_precompile_headers(${PROJECT_NAME}
+      PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRStdlib.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRExpected.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRHashMap.h>"
+    )
+    return()
+  endif()
+
   # Emscripten's Boost package doesn't contain CMake config files
   # on other systems the module mode shows a warning
   IF(NOT EMSCRIPTEN)
@@ -39,12 +58,6 @@ IF(MR_PCH)
     find_package(GTest REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
   ENDIF()
-
-  # TODO: CMake config
-  target_include_directories(${PROJECT_NAME}
-    PRIVATE
-      $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
-  )
 
   IF(EMSCRIPTEN)
     target_compile_definitions(${PROJECT_NAME} PUBLIC

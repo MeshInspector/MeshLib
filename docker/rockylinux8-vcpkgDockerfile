@@ -50,6 +50,11 @@ ENV PATH=/usr/local/cuda/bin:$PATH
 
 FROM base AS build
 
+ARG VCPKG_VERSION
+ARG VCPKG_TRIPLET
+ENV VCPKG_VERSION=$VCPKG_VERSION
+ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
+
 WORKDIR /root
 
 COPY thirdparty/vcpkg/vcpkg.json MeshLib/vcpkg.json
@@ -71,8 +76,6 @@ RUN <<EOF bash
 EOF
 
 # build vcpkg packages
-ARG VCPKG_TRIPLET
-ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \

@@ -61,7 +61,7 @@ jobs:
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   generate-c-bindings:
-    needs: config
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}

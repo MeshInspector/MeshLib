@@ -47,7 +47,11 @@ jobs:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+      # Upload a developer distributive from every Visual Studio CMake build
+      # (VS2019/VS2022/VS2026). VS_TAG keeps their archive names distinct so
+      # update-win-version can repackage each into MeshLibDistVS{19,22,26}.zip.
+      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.build_system == 'CMake' }}
+      VS_TAG: ${{ fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22"}')[matrix.cxx_compiler] || 'VS26' }}
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
@@ -355,18 +359,20 @@ jobs:
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ env.job_upload_artifact == 'true' }}
-        run: tar --format zip -c -f MREDist_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
+        run: tar --format zip -c -f MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
-        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
+        # The C2 headers are compiler-independent; upload them once (from VS2019)
+        # to avoid racing artifact uploads with the same name across VS builds.
+        if: ${{ env.job_upload_artifact == 'true' && matrix.cxx_compiler == 'msvc-2019' && matrix.config == 'Release' && inputs.mrbind_c }}
         run: tar --format zip -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
 
       - name: Upload Windows Binaries Archive
         if: ${{ env.job_upload_artifact == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+          name: WindowsArchive_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}
+          path: MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip
           retention-days: 1
           overwrite: true
           # The payload is already a .zip; don't re-Deflate it (no size gain).
@@ -378,11 +384,11 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+          artifact_glob: MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive
-        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
+        if: ${{ env.job_upload_artifact == 'true' && matrix.cxx_compiler == 'msvc-2019' && matrix.config == 'Release' && inputs.mrbind_c }}
         uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers

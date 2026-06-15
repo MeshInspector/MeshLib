@@ -78,7 +78,7 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     # bootstrap vcpkg
     curl -LO https://aka.ms/vcpkg-init.sh
     ls -la
-    source vcpkg-init.sh
+    . vcpkg-init.sh
     # network may flake
     retry.sh -- \
         /opt/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug

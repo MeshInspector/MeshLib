@@ -422,13 +422,15 @@ $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
+# Enables the `-fpch-codegen` flag for the PCH. This is faster but sometimes doesn't work because of Clang bugs.
+# Set to `0` if you experience those bugs.
+# Example of such bug: https://github.com/llvm/llvm-project/issues/203691
+PCH_CODEGEN := 1
+override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
+
 # Those are passed when compiling the PCH. Can be empty.
-# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it to the result.
-# (And building this `.o` even when it's not needed doesn't seem to cause any issues.)
-# There are three flags that can be used in any combination here: `-fpch-codegen -fpch-debuginfo -fpch-instantiate-templates`.
-# `-fpch-codegen` seems to be buggy, causing weird errors: undefined references to libfmt/gtest/some other functions when used with `-fpch-instantiate-templates`,
-#   or weird overload resolution errors during compilation without that.
-PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
+# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it into the module.
+PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen)
 
 
 
@@ -704,6 +706,10 @@ COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 # Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
 # And I'm not sure if exporting them even did anything useful on Windows in the first place.
 COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
+# Enabling `-fpch-codegen` apparently needs additional libraries that otherwise don't end up being used.
+ifneq ($(PCH_CODEGEN),)
+LINKER_FLAGS += -loleaut32 $(if $(filter Debug,$(VS_MODE)),-lfmtd,-lfmt)
+endif
 # Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
 # emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
 # code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
@@ -951,7 +957,7 @@ $(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | 
 
 # A list of all object files.
 # NOTE: This is amended later, so we must refer to it lazily.
-$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))))
+$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))) $($1__PchObject))
 
 # Link the module.
 # Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
@@ -960,6 +966,10 @@ $(call var,all_outputs += $($1__LinkerOutput))
 $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)
 	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects) pybind11nonlimitedapi_stubs)
+	$(call,### Catch Clang bugs involving `-fpch-codegen`. See the comment on `PCH_CODEGEN` for more details.)
+	$(call,### Those bugs can introduce undefined references, and this tries to check for them. Written by Claude, hopefully it works.)
+	$(call,### We can't use `-Wl,-z,defs` for this because of Python requirements, so we check anything but Python symbols manually here.)
+	$(if $(and $(if $(IS_WINDOWS),,1),$(if $(IS_MACOS),,1),$($1__PchObject)),@bad=$$$$(LD_LIBRARY_PATH=$(MESHLIB_SHLIB_DIR):$(DEPS_LIB_DIR) ldd -r '$$@' 2>&1 | grep 'undefined symbol' | grep -vE 'undefined symbol: _?Py' || true); if [ -n "$$$$bad" ]; then echo "Symbols missing from '$$@' and its dependencies:"; echo "$$$$bad"; exit 1; fi)
 
 # A pretty target.
 .PHONY: $($1_PyName)

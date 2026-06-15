@@ -200,14 +200,17 @@ Expected<void> fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, co
 
         ParallelFor( vertsColorMap, [&] ( VertId v )
         {
+            auto byteStride = bufferView.byteStride;
+            if ( byteStride == 0 )
+                byteStride = size_t( channelCount ) * sizeof( ChannelType );
             if constexpr ( channelCount == 3 )
             {
-                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * byteStride] );
                 vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ) );
             }
             else if constexpr ( channelCount == 4 )
             {
-                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * byteStride] );
                 vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ), float( col[3] / cMax ) );
             }
         } );

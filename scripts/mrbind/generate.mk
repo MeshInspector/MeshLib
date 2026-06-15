@@ -422,16 +422,9 @@ $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
-# If enabled, code generated from PCH-instantiated templates is homed into the PCH object instead of being COMDAT-duplicated in
-#   every consuming TU (`-fpch-codegen`). Consuming TUs reference those symbols as `available_externally`. This deduplicates
-#   roughly 51 MB of COMDAT bytes across the 32 binding fragments (measured on ubuntu24 Release, GCC headers).
-# The historical reputation of `-fpch-codegen` as "buggy, causing undefined references to libfmt/gtest" came from this file
-#   building the PCH object but never linking it (`$1__PchObject` was unused) — every homed symbol came up missing at link time.
-#   Both issues are addressed below: the PCH object is now linked into the module, and a post-link `ldd -r` check verifies that
-#   nothing was homed but unemitted (a real clang defect, observed on libstdc++-12 only;
-#   see https://github.com/llvm/llvm-project/issues/203691). On affected platforms, pass `PCH_CODEGEN=0` to fall back to the
-#   COMDAT-duplicated codegen.
-# Override with `PCH_CODEGEN=0` (e.g. from a CI matrix conditional).
+# Enables the `-fpch-codegen` flag for the PCH. This is faster but sometimes doesn't work because of Clang bugs.
+# Set to `0` if you experience those bugs.
+# Example of such bug: https://github.com/llvm/llvm-project/issues/203691
 PCH_CODEGEN := 1
 override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
 
@@ -713,6 +706,10 @@ COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 # Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
 # And I'm not sure if exporting them even did anything useful on Windows in the first place.
 COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
+# Enabling `-fpch-codegen` apparently needs additional libraries that otherwise don't end up being used.
+ifneq ($(PCH_CODEGEN),)
+LINKER_FLAGS += -loleaut32 $(if $(filter Debug,$(VS_MODE)),-lfmtd,-lfmt)
+endif
 # Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
 # emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
 # code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
@@ -726,12 +723,6 @@ else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 LINKER_FLAGS += -ltbb12
 endif # VS_MODE == Release
-# With `-fpch-codegen`, the PCH object emits every inline function the PCH saw, including fmt wrappers (referencing fmt
-# internals that are compiled into MRMesh.dll but not exported across the DLL boundary) and an `MRWinapi.h`-pulled wrapper
-# referencing OleAut32 `VarCmp`. Provide them at the bindings link.
-ifneq ($(PCH_CODEGEN),)
-LINKER_FLAGS += -loleaut32 $(if $(filter Debug,$(VS_MODE)),-lfmtd,-lfmt)
-endif
 endif # Windows
 
 # Linux.
@@ -966,10 +957,7 @@ $(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | 
 
 # A list of all object files.
 # NOTE: This is amended later, so we must refer to it lazily.
-$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))))
-# With `-fpch-codegen`, the PCH object carries code generated from PCH-instantiated templates, so it MUST be linked in.
-# (With debug-info-only PCH object the link is harmless.)
-$(call var,$1__ObjectFiles += $($1__PchObject))
+$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))) $($1__PchObject))
 
 # Link the module.
 # Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
@@ -978,9 +966,9 @@ $(call var,all_outputs += $($1__LinkerOutput))
 $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)
 	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects) pybind11nonlimitedapi_stubs)
-	$(call,### `-fpch-codegen` can home a symbol into the PCH object and then fail to emit it there [clang defect llvm/llvm-project#203691].)
-	$(call,### `-shared` doesn't error on undefined symbols and `-z defs` would reject the Python C API [resolved at runtime by the interpreter],)
-	$(call,### so check with `ldd -r` and a `Py*` allowlist to fail HERE rather than at the first `import`.)
+	$(call,### Catch Clang bugs involving `-fpch-codegen`. See the comment on `PCH_CODEGEN` for more details.)
+	$(call,### Those bugs can introduce undefined references, and this tries to check for them. Written by Claude, hopefully it works.)
+	$(call,### We can't use `-Wl,-z,defs` for this because of Python requirements, so we check anything but Python symbols manually here.)
 	$(if $(and $(if $(IS_WINDOWS),,1),$(if $(IS_MACOS),,1),$($1__PchObject)),@bad=$$$$(LD_LIBRARY_PATH=$(MESHLIB_SHLIB_DIR):$(DEPS_LIB_DIR) ldd -r '$$@' 2>&1 | grep 'undefined symbol' | grep -vE 'undefined symbol: _?Py' || true); if [ -n "$$$$bad" ]; then echo "Symbols missing from '$$@' and its dependencies:"; echo "$$$$bad"; exit 1; fi)
 
 # A pretty target.

@@ -76,7 +76,8 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     source /opt/rh/gcc-toolset-11/enable
     source /opt/autoconf27/enable
     # bootstrap vcpkg
-    source <(curl -L https://aka.ms/vcpkg-init.sh)
+    curl -LO https://aka.ms/vcpkg-init.sh
+    source vcpkg-init.sh
     # network may flake
     retry.sh -- \
         /opt/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug

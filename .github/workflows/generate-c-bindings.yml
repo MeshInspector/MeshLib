@@ -14,11 +14,10 @@ jobs:
     permissions:
       contents: read  # This is required for actions/checkout
     container:
-      # The Emscripten image already ships the Emscripten SDK (it's `FROM
-      # emscripten/emsdk`), so we no longer have to install it at runtime. Its
-      # Dockerfile now also installs Clang via `install_deps_ubuntu.sh`, giving
-      # us the full MRBind toolchain.
-      image: meshlib/meshlib-emscripten-arm64:${{inputs.docker_image_tag}}
+      # Dedicated image (docker/emscripten-c-bindingsDockerfile): the Emscripten
+      # SDK plus the MRBind/Clang toolchain, nothing else. The SDK is baked in
+      # (`em++` is on the PATH), so there's no per-run emsdk install step.
+      image: meshlib/meshlib-emscripten-c-bindings-arm64:${{inputs.docker_image_tag}}
       options: --user root
 
     steps:

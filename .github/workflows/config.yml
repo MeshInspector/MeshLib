@@ -213,6 +213,7 @@ jobs:
           filters: |
             src:
               - 'docker/(ubuntu22|ubuntu24|emscripten)Dockerfile'
+              - 'docker/emscripten-c-bindingsDockerfile'
               - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'

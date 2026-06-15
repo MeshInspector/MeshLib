@@ -14,9 +14,6 @@ jobs:
     permissions:
       contents: read  # This is required for actions/checkout
     container:
-      # Dedicated image (docker/emscripten-c-bindingsDockerfile): the Emscripten
-      # SDK plus the MRBind/Clang toolchain, nothing else. The SDK is baked in
-      # (`em++` is on the PATH), so there's no per-run emsdk install step.
       image: meshlib/meshlib-emscripten-c-bindings-arm64:${{inputs.docker_image_tag}}
       options: --user root
 
@@ -56,7 +53,6 @@ jobs:
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
-        # The Emscripten SDK is already baked into the image (`em++` is on the PATH), so no separate install/activate step is needed.
       - name: Generate C bindings
         # I get `sh` by default.
         shell: bash

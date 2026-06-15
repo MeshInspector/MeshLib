@@ -38,21 +38,17 @@ RUN <<EOF
     unzip awscliv2.zip
     ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
     rm -rf awscliv2.zip aws/
-EOF
-ENV PATH=/usr/local/cuda/bin:$PATH
-
-
-FROM base AS build
-
-# override system autoconf
-RUN <<EOF
-    set -e
+    # override system autoconf
     mkdir -p /opt/autoconf27/bin/
     for APP in autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames; do
         ln -s /usr/bin/${APP}27 /opt/autoconf27/bin/${APP}
     done
     echo 'export PATH=/opt/autoconf27/bin:$PATH' > /opt/autoconf27/enable
 EOF
+ENV PATH=/usr/local/cuda/bin:$PATH
+
+
+FROM base AS build
 
 WORKDIR /root
 
@@ -61,13 +57,23 @@ COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
 COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
 
-ARG VCPKG_TRIPLET
-ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
-
+# bootstrap vcpkg
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
+RUN <<EOF bash
+    set -e
+    curl -LO https://aka.ms/vcpkg-init.sh
+    # the bootstrap script ignores the system architecture
+    if [ $(uname -m) == "aarch64" ] ; then
+        sed -i 's/vcpkg-glibc/vcpkg-glibc-arm64/' vcpkg-init.sh
+    fi
+    source vcpkg-init.sh
+EOF
 
 # build vcpkg packages
+ARG VCPKG_TRIPLET
+ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
+ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
@@ -75,8 +81,6 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     source /root/MeshLib/configure_s3_cache.sh
     source /opt/rh/gcc-toolset-11/enable
     source /opt/autoconf27/enable
-    # bootstrap vcpkg
-    bash -c "source <(curl -L https://aka.ms/vcpkg-init.sh)"
     # network may flake
     retry.sh -- \
         /opt/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug

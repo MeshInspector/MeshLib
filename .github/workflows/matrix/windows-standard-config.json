@@ -28,14 +28,6 @@
     {
       "cxx_compiler": "msvc-2026",
       "config": "Debug",
-      "build_system": "CMake",
-      "vcpkg_triplet": "x64-windows-meshlib",
-      "runner": ["windows-2025"],
-      "cuda_version": "13.2.0"
-    },
-    {
-      "cxx_compiler": "msvc-2026",
-      "config": "Debug",
       "build_system": "MSBuild",
       "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],

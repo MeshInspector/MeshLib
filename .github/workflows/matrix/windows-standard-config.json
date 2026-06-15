@@ -28,10 +28,27 @@
     {
       "cxx_compiler": "msvc-2026",
       "config": "Debug",
-      "build_system": "CMake",
+      "build_system": "MSBuild",
       "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
-      "cuda_version": "13.2.0"
+      "cuda_version": "12.0.1",
+      "mrcuda_platform_toolset": "v143"
+    },
+    {
+      "cxx_compiler": "msvc-2022",
+      "config": "Debug",
+      "build_system": "CMake",
+      "vcpkg_triplet": "x64-windows-vs2022-meshlib",
+      "runner": ["windows-2025"],
+      "cuda_version": "12.0.1"
+    },
+    {
+      "cxx_compiler": "msvc-2022",
+      "config": "Release",
+      "build_system": "CMake",
+      "vcpkg_triplet": "x64-windows-vs2022-meshlib",
+      "runner": ["windows-2025"],
+      "cuda_version": "12.0.1"
     },
     {
       "cxx_compiler": "msvc-2019",

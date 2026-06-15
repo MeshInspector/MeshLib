@@ -131,11 +131,11 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
 
     for ( int i = 0; i < objsQueue.size(); ++i )
     {
-        auto& objPtr = objsQueue[i];
+        auto objPtr = objsQueue[i]; // copy the shared_ptr: push_back below may reallocate objsQueue, invalidating a reference
         for ( auto& newPtr : objPtr->children() )
             objsQueue.push_back( newPtr );
 
-        if ( objPtr->typeName() == MR::Object::StaticTypeName() )
+        if ( std::string_view( objPtr->typeName() ) == MR::Object::StaticTypeName() ) // compare by content: typeName() is const char* and may differ in address across the DLL boundary
             continue;
 
         if ( auto objMesh = std::dynamic_pointer_cast< MR::ObjectMesh >( objPtr ) )

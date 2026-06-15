@@ -20,7 +20,7 @@
     <ClInclude Include="MREigenCore.h" />
     <ClInclude Include="MREigenSparseCore.h" />
     <ClInclude Include="MRExpected.h" />
-    <ClInclude Include="MRFilesystem.h" />
+    <ClInclude Include="MRStdlib.h" />
     <ClInclude Include="MRFmt.h" />
     <ClInclude Include="MRHashMap.h" />
     <ClInclude Include="MRWasm.h" />

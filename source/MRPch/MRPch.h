@@ -1,25 +1,12 @@
 #pragma once
 
-// GCC's PCH is a monolithic dump of the compiler's memory image that every TU
-// loads back in full, so headers that most TUs never reach (e.g. Eigen: ~5% of
-// TUs) cost more to load than they save in parsing. For GCC, precompile only
-// the headers reachable from roughly half of all TUs or more.
-#if defined(__GNUC__) && !defined(__clang__)
-#define MR_PCH_LEAN 1
-#else
-#define MR_PCH_LEAN 0
-#endif
-
 #pragma warning(push)
 #pragma warning(disable: 4820) //#pragma warning: N bytes padding added after data member
 
-#if !MR_PCH_LEAN
 #include "MREigen.h"
-#endif
 #include "MRHashMap.h"
 #include "MRExpected.h"
 
-#if !MR_PCH_LEAN
 #pragma warning(push)
 #pragma warning(disable: 4619) // #pragma warning: there is no warning number
 #pragma warning(disable: 4643) // Forward declaring 'align_val_t' in namespace std is not permitted by the C++ Standard.
@@ -44,7 +31,6 @@
 
 #include "MRJson.h"
 #include "MRSpdlog.h"
-#endif // !MR_PCH_LEAN
 #include "MRSuppressWarning.h"
 
 #include "MRWinapi.h"
@@ -52,8 +38,6 @@
 #include <shlobj.h>
 #include <commdlg.h>
 #endif
-
-#if !MR_PCH_LEAN
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -81,46 +65,9 @@
 #include <GLFW/glfw3.h>
 #endif
 
-#endif // !MR_PCH_LEAN
+#include "MRStdlib.h"
 
-#include <algorithm>
-#include <array>
-#include <bit>
-#include <cassert>
-#include <cfloat>
-#include <chrono>
-#include <cmath>
-#include <codecvt>
-#include <compare>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <ctype.h>
-#include "MRFilesystem.h"
-#include <fstream>
-#include <functional>
-#include <future>
-#include <iomanip>
-#include <iostream>
-#include <istream>
-#include <iterator>
-#include <limits>
-#include <locale>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <ostream>
-#include <queue>
-#include <string>
-#include <thread>
-#include <tuple>
-#include <typeindex>
-#include <unordered_map>
-#include <variant>
-#include <vector>
-#include <version>
-
-#if defined(MR_PCH_USE_EXTRA_HEADERS) && !MR_PCH_LEAN
+#ifdef MR_PCH_USE_EXTRA_HEADERS
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRFunctional.h"
 #include "MRMesh/MRIOFilters.h"

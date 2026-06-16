@@ -114,7 +114,9 @@ def main() -> int:
     write(src_dir / "mrbind_config.h", CONFIG_HEADER_TEMPLATE.format(module_pyname=args.pyname))
 
     for k in range(args.fragments):
-        impl = "#define MB_DEFINE_IMPLEMENTATION\n" if k == 0 else ""
+        # `=1`, not value-less: core.h tests it with `#if MB_DEFINE_IMPLEMENTATION`, and an empty
+        # macro makes that `#if` ill-formed (matches the makefile's command-line `-DMB_DEFINE_IMPLEMENTATION`).
+        impl = "#define MB_DEFINE_IMPLEMENTATION 1\n" if k == 0 else ""
         write(src_dir / f"{args.module}.fragment.{k}.cpp",
               '// Auto-generated fragment wrapper. Do not edit.\n'
               '#include "mrbind_config.h"\n'

@@ -41,6 +41,9 @@ wheelhouse/*
 /source/MeshLibC2/temp
 /source/MeshLibC2Cuda/include
 /source/MeshLibC2Cuda/src
+# mrbind-generated Python binding sources, laid out by scripts/mrbind/assemble_pybind_msvc.py
+/source/mrmeshpy/src
+/source/mrmeshpy/generated
 compile_commands.json
 /source/CustomMRPlatform.props
 /source/MRDotNet2/bin

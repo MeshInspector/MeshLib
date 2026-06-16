@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The bindings link the same MeshLib libraries that generate.mk links for mrmeshpy
+         (mrmesh_InputProjects), plus MRPython and the patched-pybind shim stubs. Referencing
+         MRPython also builds the runtime shim `pybind11nonlimitedapi_meshlib_3.X.dll`. -->
+    <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
+      <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
+      <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
+      <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRVoxels\MRVoxels.vcxproj">
+      <Project>{7cc4f0fe-ace6-4441-9dd7-296066b6d69f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRPython\MRPython.vcxproj">
+      <Project>{90bc6971-76ca-4ecd-92e0-585fe3bd6672}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
+      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig" />
+  </ItemGroup>
+  <!-- The sources are produced by `scripts\mrbind\generate_win.bat only-generate` (clang parse)
+       followed by `scripts\mrbind\assemble_pybind_msvc.py`, and don't exist in a fresh checkout,
+       hence the wildcards. Don't add or rename files from the IDE, it would expand the wildcards
+       into explicit file lists. The big generated source lives in `generated\` (not matched here);
+       only the per-fragment wrappers, helpers and aliases wrappers under `src\` are compiled. -->
+  <ItemGroup>
+    <ClCompile Include="src\**\*.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\**\*.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{7E2C9A41-6B3D-4F8E-9C2A-1D5B0E7F4A22}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>mrmeshpy</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(ProjectDir)\..\platform.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <Import Project="$(ProjectDir)\..\common.props" />
+  <!-- Stages the built module into the `meshlib` package dir next to the other .pyd modules. -->
+  <Import Project="$(ProjectDir)\..\python_module.props" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <TargetName>mrmeshpy</TargetName>
+    <TargetExt>.pyd</TargetExt>
+    <!-- Generated/Eigen/vcpkg headers warn heavily under common.props' /Wall /WX; treat them as
+         external and silence them. -->
+    <ExternalIncludePath>$(VcpkgCurrentInstalledDir)\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <!-- No PCH: like MeshLibC2, the bindings add bindings-only defines that the shared MRPch PCH was
+       not built with. The generated binding code also trips many warnings, so don't treat warnings
+       as errors here (the rest of the build still does). -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)generated;$(ProjectDir)..\..;$(ProjectDir)..\..\thirdparty;$(ProjectDir)..\..\thirdparty\mrbind\include;$(ProjectDir)..\..\scripts\mrbind;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)generated;$(ProjectDir)..\..;$(ProjectDir)..\..\thirdparty;$(ProjectDir)..\..\thirdparty\mrbind\include;$(ProjectDir)..\..\scripts\mrbind;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Target Name="MRCheckGeneratedBindingSources" BeforeTargets="ClCompile" Condition="!Exists('$(ProjectDir)src')">
+    <Error Text="No generated sources found in '$(ProjectDir)src'. Run `scripts\mrbind\generate_win.bat -B MODE=none only-generate` then `py scripts\mrbind\assemble_pybind_msvc.py` (from the repository root, in a VS developer command prompt) to generate them first." />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

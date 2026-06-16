@@ -42,11 +42,14 @@ CONFIG_HEADER_TEMPLATE = r'''#pragma once
 #define MRBIND_HEADER "mrbind_target_pybind11.h"
 #define MB_PB11_ADJUST_NAMES "s/\\bMR:://g"
 #define MB_PB11_STRIPPED_NAMESPACES "MR","MR.Extra","MR.Cuda"
-#define MB_PB11_ENABLE_CXX_STYLE_CONTAINER_METHODS
-#define MB_PB11_MERGE_STL_TL_EXPECTED
-#define MB_PB11_NO_REGISTER_TYPE_DEPS
-#define MR_COMPILING_ANY_BINDINGS
-#define MR_COMPILING_PB11_BINDINGS
+// The flag-style macros below are passed by generate.mk as `-DFOO`, which the compiler defines to 1.
+// They MUST be defined to 1 here (not value-less): core.h tests them with `#if FOO`, and an empty
+// macro makes that `#if` ill-formed (MSVC C1017: invalid integer constant expression).
+#define MB_PB11_ENABLE_CXX_STYLE_CONTAINER_METHODS 1
+#define MB_PB11_MERGE_STL_TL_EXPECTED 1
+#define MB_PB11_NO_REGISTER_TYPE_DEPS 1
+#define MR_COMPILING_ANY_BINDINGS 1
+#define MR_COMPILING_PB11_BINDINGS 1
 #define PYBIND11_INTERNALS_VERSION 5
 #define MB_PB11_MODULE_NAME {module_pyname}
 '''

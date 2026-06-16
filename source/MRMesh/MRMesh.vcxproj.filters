@@ -1431,6 +1431,9 @@
     <ClInclude Include="MRFrequentHeaderOnly.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshExport.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

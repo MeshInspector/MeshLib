@@ -204,6 +204,10 @@ jobs:
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
+            rem Bake the extra MeshLib headers into the shared precompiled header
+            rem (the define is consumed in MRPch.h). CL applies it to every project
+            rem that creates or uses MRPch.pch, keeping the PCH self-consistent.
+            set "CL=%CL% /DMR_PCH_USE_EXTRA_HEADERS"
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
 

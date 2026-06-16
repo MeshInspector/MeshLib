@@ -18,6 +18,7 @@
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRFrequentHeaderOnly.h" />
     <ClInclude Include="MRHoleFillPlan.h" />
+    <ClInclude Include="MRMeshExport.h" />
     <ClInclude Include="MRImageTransform.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRLoadedMeshData.h" />
@@ -800,7 +801,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h;$(ProjectDir)MRMeshExport.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
@@ -822,7 +823,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h;$(ProjectDir)MRMeshExport.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>

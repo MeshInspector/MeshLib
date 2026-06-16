@@ -68,6 +68,9 @@
 #include "MRStdlib.h"
 
 #ifdef MR_PCH_USE_EXTRA_HEADERS
+#include "MRMesh/MRFrequentHeaderOnly.h"
+
+#ifndef _WIN32 // where MRMESH_API macro change its value depending on project
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRFunctional.h"
 #include "MRMesh/MRIOFilters.h"
@@ -90,7 +93,10 @@
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRUIStyle.h"
-#endif
-#endif
+#endif //MESHLIB_NO_VIEWER
+
+#endif //!_WIN32
+
+#endif //MR_PCH_USE_EXTRA_HEADERS
 
 #pragma warning(pop)

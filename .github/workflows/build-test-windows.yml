@@ -147,10 +147,6 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Install MSYS2 for MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
-        uses: ./.github/actions/install-msys2-mrbind
-
       - name: Build MRBind
         if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
         uses: ./.github/actions/build-mrbind
@@ -158,6 +154,9 @@ jobs:
           cache-key-prefix: windows-clang22
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
+          # Install the pinned MSYS2 toolchain in-action, but only on cache miss
+          # (a cache-restored mrbind needs no toolchain to rebuild).
+          install-msys2: true
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}

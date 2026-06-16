@@ -49,6 +49,16 @@ inputs:
       `install-msys2-mrbind` puts it). Override when MSYS2 is installed
       elsewhere -- e.g. `C:\msys64_meshlib_mrbind` for runners pre-baked
       with the bat script's default layout.
+  install-msys2:
+    required: false
+    default: 'false'
+    description: >
+      Windows-only. When `'true'`, install and sha256-verify the pinned
+      clang-22 MSYS2 toolchain (via the `install-msys2-mrbind` action) before
+      building -- but only on cache miss, since a cache-restored mrbind needs
+      no toolchain to rebuild. Leave `'false'` (the default) on runners that
+      already provide MSYS2 (e.g. MeshInspectorCode's self-hosted AMI), which
+      must NOT run the install step.
 
 runs:
   using: composite
@@ -68,6 +78,14 @@ runs:
       with:
         path: ${{ inputs.mrbind-dir }}/build
         key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
+
+    - name: Install MSYS2 for MRBind
+      # MSYS2 is only needed to *build* mrbind, so skip it whenever the build
+      # cache hit. Gated on `install-msys2` so callers that ship their own MSYS2
+      # (MeshInspectorCode's self-hosted AMI) keep using it. The action is
+      # Windows-only; the `runner.os` guard keeps non-Windows callers safe.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.install-msys2 == 'true' && runner.os == 'Windows' }}
+      uses: ./.github/actions/install-msys2-mrbind
 
     - name: Build MRBind
       # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to

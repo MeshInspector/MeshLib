@@ -63,7 +63,7 @@ COPY thirdparty/vcpkg/triplets MeshLib/triplets
 COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
 
 # bootstrap vcpkg
-ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_ROOT=/root/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
 RUN <<EOF bash
     set -e
@@ -73,6 +73,8 @@ RUN <<EOF bash
         sed -i 's/vcpkg-glibc/vcpkg-glibc-arm64/' vcpkg-init.sh
     fi
     source vcpkg-init.sh
+    # also bootstrap a clean copy for the production stage
+    VCPKG_ROOT=/opt/vcpkg source vcpkg-init.sh
 EOF
 
 # build vcpkg packages
@@ -86,7 +88,7 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     source /opt/autoconf27/enable
     # network may flake
     retry.sh -- \
-        /opt/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug
+        /root/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug
 EOF
 
 

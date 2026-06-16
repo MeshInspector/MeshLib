@@ -82,6 +82,11 @@ option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
+# Build the mrbind-generated Python bindings (mrmeshpy) with this CMake compiler, e.g. MSVC. The
+# sources are produced beforehand by scripts/mrbind/generate.mk + assemble_pybind_msvc.py and are
+# laid out under source/mrmeshpy/{generated,src}; this is OFF during the initial configure (they
+# don't exist yet) and turned ON for a follow-up configure once they've been generated.
+option(MESHLIB_BUILD_GENERATED_PYTHON_BINDINGS "Build mrbind-generated Python bindings (assuming they are already generated)" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -288,6 +293,11 @@ IF(NOT MR_EMSCRIPTEN)
       add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
       IF(MESHLIB_BUILD_MRVIEWER)
         add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
+      ENDIF()
+      # The mrbind-generated mrmeshpy: only when its sources have already been generated (see the
+      # option above), since they don't exist during the initial configure.
+      IF(MESHLIB_BUILD_GENERATED_PYTHON_BINDINGS)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
       ENDIF()
     ENDIF()
   ENDIF()

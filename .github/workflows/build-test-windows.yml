@@ -238,7 +238,7 @@ jobs:
         # compiled + linked with MSVC instead of clang, via source/mrmeshpy/mrmeshpy.vcxproj.
         # Reuses the sources the step above already generated, lays them out for an MSVC build,
         # then rebuilds mrmeshpy.pyd over the clang-built one in meshlib\ so the import/test steps
-        # below exercise the MSVC build. Only on the MSBuild lane; CMake lanes keep the clang build.
+        # below exercise the MSVC build. (CMake lanes do the same via CMake in the next step.)
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' && matrix.build_system == 'MSBuild'}}
         shell: cmd
         env:
@@ -247,6 +247,24 @@ jobs:
         run: |
           py -3 scripts\mrbind\assemble_pybind_msvc.py --temp source\TempOutput\Bindings_python\x64\${{matrix.config}} --out source\mrmeshpy --module mrmesh --pyname mrmeshpy --fragments 32 || exit /b 1
           msbuild -m source\mrmeshpy\mrmeshpy.vcxproj -p:Configuration=${{matrix.config}} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
+
+      - name: Build Python bindings (mrmeshpy) with MSVC via CMake [prototype]
+        # CMake-lane counterpart of the MSBuild step above: the headers are parsed with libclang (the
+        # generate step), then mrmeshpy is compiled + linked with MSVC by configuring source/mrmeshpy
+        # as a CMake target (MESHLIB_BUILD_GENERATED_PYTHON_BINDINGS) in the existing build tree and
+        # building just that target, then copying the .pyd over the clang-built one so the import/test
+        # steps below exercise the MSVC build. mrcudapy stays on clang.
+        if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' && matrix.build_system == 'CMake'}}
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+        run: |
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          py -3 scripts\mrbind\assemble_pybind_msvc.py --temp source\TempOutput\Bindings_python\x64\${{matrix.config}} --out source\mrmeshpy --module mrmesh --pyname mrmeshpy --fragments 32 || exit /b 1
+          cmake -B source\TempOutput -DMESHLIB_BUILD_GENERATED_PYTHON_BINDINGS=ON || exit /b 1
+          cmake --build source\TempOutput --target mrmeshpy -j || exit /b 1
+          xcopy source\TempOutput\bin\meshlib\mrmeshpy.pyd source\x64\${{matrix.config}}\meshlib\ /Y || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}

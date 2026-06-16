@@ -140,6 +140,7 @@ struct PackMapping;
 
 class ViewportId;
 class ViewportMask;
+template<typename T> class ViewportProperty;
 
 struct UnorientedTriangle;
 struct SomeLocalTriangulations;

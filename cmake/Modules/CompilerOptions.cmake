@@ -229,3 +229,10 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_compile_options(-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH})
   add_link_options(-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi)
 endif()
+
+# Linux: enable LFS globally
+# many Linux libraries' header files define _FILE_OFFSET_BITS to 64 to enable large file support
+# this might break the precompiled header usage for GCC as it requires the macro set to be consistent
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND MR_PCH)
+  add_compile_definitions(_FILE_OFFSET_BITS=64)
+endif()

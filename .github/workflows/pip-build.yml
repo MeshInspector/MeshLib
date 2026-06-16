@@ -424,9 +424,11 @@ jobs:
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64
+        # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
+        # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
-          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 || exit /b 1
 
       - name: Run Test
         working-directory: source\x64\Release

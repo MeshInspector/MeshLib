@@ -181,10 +181,13 @@ jobs:
         env:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        # `|| exit /b 1` after each command: cmd.exe does not stop on a failed
+        # command, so without these a generate_win.bat failure would be masked
+        # by the following dotnet build (see the Build step's note below).
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
-          dotnet build examples/c-sharp-examples -c ${{matrix.config}}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
+          dotnet build examples/c-sharp-examples -c ${{matrix.config}} || exit /b 1
 
       - name: Build
         shell: cmd
@@ -229,9 +232,11 @@ jobs:
         env:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
+        # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
-          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}

@@ -7,6 +7,7 @@
 #include "MRIRenderObject.h"
 #include "MRUniquePtr.h"
 #include "MREnums.h"
+#include "MRBox.h"
 
 namespace MR
 {

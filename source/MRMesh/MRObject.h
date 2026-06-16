@@ -2,7 +2,6 @@
 
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
-#include "MRBox.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
@@ -61,10 +60,10 @@ protected:
 class MRMESH_CLASS Object : public ObjectChildrenHolder
 {
 public:
-    Object() = default;
-    Object( Object && ) noexcept = default;
-    Object & operator = ( Object && ) noexcept = default;
-    virtual ~Object() = default;
+    MRMESH_API Object();
+    MRMESH_API Object( Object && ) noexcept;
+    MRMESH_API Object & operator = ( Object && ) noexcept;
+    MRMESH_API virtual ~Object();
 
     // return name of subtype for serialization purposes
     constexpr static const char* StaticTypeName() noexcept { return "Object"; }
@@ -245,7 +244,7 @@ public:
     MRMESH_API void swap( Object& other );
 
     /// returns bounding box of this object in world coordinates for default or specific viewport
-    virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const;
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
@@ -284,11 +283,11 @@ protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
 public:
     /// \note this ctor is public only for std::make_shared used inside clone()
-    Object( ProtectedStruct, const Object& obj ) : Object( obj ) {}
+    MRMESH_API Object( ProtectedStruct, const Object& obj );
 
 protected:
     /// user should not be able to call copy implicitly, use clone() function instead
-    Object( const Object& obj ) = default;
+    MRMESH_API Object( const Object& obj );
 
     /// swaps whole object (signals too)
     MRMESH_API virtual void swapBase_( Object& other );
@@ -330,6 +329,10 @@ protected:
 
     // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
     MRMESH_API virtual void onWorldXfChanged_();
+
+private:
+    struct Data;
+    std::unique_ptr<Data> data_;
 
 private:
     struct MapSharedObjects;

@@ -4,6 +4,7 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
+#include "MRBox.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
@@ -162,6 +163,36 @@ size_t ObjectChildrenHolder::heapBytes() const
             res += child->heapBytes();
     return res;
 }
+
+struct Object::Data
+{
+};
+
+Object::Object() : data_( std::make_unique<Data>() )
+{
+}
+
+Object::Object( const Object& obj ) : data_( std::make_unique<Data>( *obj.data_ ) )
+{
+}
+
+Object::Object( ProtectedStruct, const Object& obj ) : Object( obj )
+{
+}
+
+Object::Object( Object&& s ) noexcept : Object()
+{
+    data_.swap( s.data_ );
+}
+
+Object& Object::operator = ( Object&& s ) noexcept
+{
+    data_ = std::make_unique<Data>();
+    data_.swap( s.data_ );
+    return *this;
+}
+
+Object::~Object() = default;
 
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
 {
@@ -852,6 +883,11 @@ void Object::swap( Object& other )
     swapBase_( other );
     // swap signals second time to return in place
     swapSignals_( other );
+}
+
+Box3f Object::getWorldBox( ViewportId ) const
+{
+    return {}; //empty box
 }
 
 Box3f Object::getWorldTreeBox( ViewportId id ) const

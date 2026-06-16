@@ -73,8 +73,8 @@ RUN <<EOF bash
         sed -i 's/vcpkg-glibc/vcpkg-glibc-arm64/' vcpkg-init.sh
     fi
     source vcpkg-init.sh
-    # also bootstrap a clean copy for the production stage
-    VCPKG_ROOT=/opt/vcpkg source vcpkg-init.sh
+    # also prepare a clean copy for the production stage
+    cp -a vcpkg /opt/
 EOF
 
 # build vcpkg packages

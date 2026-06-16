@@ -49,6 +49,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/mrbind
 )
 
+IF(MSVC)
+  # mrbind's macro_sequence_for.h requires the conformant preprocessor (clang's is conformant by
+  # default, so this only matters when building the bindings with MSVC). The generated bindings are
+  # not meant to be warning-clean under the project's /Wall /WX, so don't treat warnings as errors.
+  target_compile_options(${PROJECT_NAME} PRIVATE /Zc:preprocessor /WX-)
+ENDIF()
+
 # The remaining bindings defines (MRBIND_HEADER, MB_PB11_*, MR_COMPILING_*, ...) come from the
 # generated src/mrbind_config.h that every TU includes; Py_LIMITED_API and the patched-pybind config
 # come transitively from MRPython (as for mrmeshnumpy).

@@ -98,6 +98,8 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <!-- mrbind's macro_sequence_for.h requires the conformant preprocessor. -->
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)generated;$(ProjectDir)..\..;$(ProjectDir)..\..\thirdparty;$(ProjectDir)..\..\thirdparty\mrbind\include;$(ProjectDir)..\..\scripts\mrbind;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -115,6 +117,8 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <!-- mrbind's macro_sequence_for.h requires the conformant preprocessor. -->
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)generated;$(ProjectDir)..\..;$(ProjectDir)..\..\thirdparty;$(ProjectDir)..\..\thirdparty\mrbind\include;$(ProjectDir)..\..\scripts\mrbind;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>

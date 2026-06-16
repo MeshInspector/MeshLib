@@ -67,7 +67,8 @@
     ],
     "configuration": {
         "default-registry": {
-            "kind": "builtin",
+            "kind": "git",
+            "repository": "https://github.com/Microsoft/vcpkg",
             "baseline": "f3e10653cc27d62a37a3763cd84b38bca07c6075",
             "$version-tag": "2026.06.01"
         },

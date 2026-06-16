@@ -229,7 +229,7 @@ jobs:
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-            DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}
+            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}
 
       # install helper utility for Python version management
       - name: Install uv
@@ -247,7 +247,7 @@ jobs:
               FOR_WHEEL=1 \
               CXX_FOR_ABI=${{ matrix.compiler }} \
               CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-              DEPS_BASE_DIR=${VCPKG_ROOT}/installed/${VCPKG_TRIPLET} \
+              DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
               PYTHON_VERSIONS=${PYTHON_VER}
           done
 

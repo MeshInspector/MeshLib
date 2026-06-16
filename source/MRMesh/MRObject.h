@@ -1,14 +1,11 @@
 #pragma once
 
-#include "MRAffineXf3.h"
 #include "MRBitSet.h"
-#include "MRBox.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
-#include "MRViewportProperty.h"
+#include "MRViewportId.h"
 
-#include <array>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -61,10 +58,10 @@ protected:
 class MRMESH_CLASS Object : public ObjectChildrenHolder
 {
 public:
-    Object() = default;
-    Object( Object && ) noexcept = default;
-    Object & operator = ( Object && ) noexcept = default;
-    virtual ~Object() = default;
+    MRMESH_API Object();
+    MRMESH_API Object( Object && ) noexcept;
+    MRMESH_API Object & operator = ( Object && ) noexcept;
+    MRMESH_API virtual ~Object();
 
     // return name of subtype for serialization purposes
     constexpr static const char* StaticTypeName() noexcept { return "Object"; }
@@ -104,13 +101,13 @@ public:
 
     /// this space to parent space transformation (to world space if no parent) for default or given viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
-    const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
+    MRMESH_API const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const;
     MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} );
     /// forgets specific transform in given viewport (or forgets all specific transforms for {} input)
     MRMESH_API virtual void resetXf( ViewportId id = {} );
 
     /// returns xfs for all viewports, combined into a single object
-    const ViewportProperty<AffineXf3f> & xfsForAllViewports() const { return xf_; }
+    MRMESH_API const ViewportProperty<AffineXf3f> & xfsForAllViewports() const;
     /// modifies xfs for all viewports at once
     MRMESH_API virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf );
 
@@ -245,7 +242,7 @@ public:
     MRMESH_API void swap( Object& other );
 
     /// returns bounding box of this object in world coordinates for default or specific viewport
-    virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const;
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
@@ -284,11 +281,11 @@ protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
 public:
     /// \note this ctor is public only for std::make_shared used inside clone()
-    Object( ProtectedStruct, const Object& obj ) : Object( obj ) {}
+    MRMESH_API Object( ProtectedStruct, const Object& obj );
 
 protected:
     /// user should not be able to call copy implicitly, use clone() function instead
-    Object( const Object& obj ) = default;
+    MRMESH_API Object( const Object& obj );
 
     /// swaps whole object (signals too)
     MRMESH_API virtual void swapBase_( Object& other );
@@ -314,7 +311,6 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
 
     std::string name_;
-    ViewportProperty<AffineXf3f> xf_;
     ViewportMask visibilityMask_ = ViewportMask::all(); // Prefer to not read directly. Use the getter, as it can be overridden.
     bool locked_ = false;
     bool parentLocked_ = false;
@@ -330,6 +326,10 @@ protected:
 
     // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
     MRMESH_API virtual void onWorldXfChanged_();
+
+private:
+    struct Data;
+    std::unique_ptr<Data> data_;
 
 private:
     struct MapSharedObjects;

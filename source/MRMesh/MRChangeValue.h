@@ -1,6 +1,5 @@
 #pragma once
 #include "MRHistoryAction.h"
-#include "MRAffineXf3.h"
 #include <memory>
 
 namespace MR

@@ -4,6 +4,8 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
+#include "MRBox.h"
+#include "MRViewportProperty.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
@@ -163,6 +165,37 @@ size_t ObjectChildrenHolder::heapBytes() const
     return res;
 }
 
+struct Object::Data
+{
+    ViewportProperty<AffineXf3f> xf;
+};
+
+Object::Object() : data_( std::make_unique<Data>() )
+{
+}
+
+Object::Object( const Object& obj ) : ObjectChildrenHolder( obj ), data_( std::make_unique<Data>( *obj.data_ ) )
+{
+}
+
+Object::Object( ProtectedStruct, const Object& obj ) : Object( obj )
+{
+}
+
+Object::Object( Object&& s ) noexcept : Object()
+{
+    data_.swap( s.data_ );
+}
+
+Object& Object::operator = ( Object&& s ) noexcept
+{
+    data_ = std::make_unique<Data>();
+    data_.swap( s.data_ );
+    return *this;
+}
+
+Object::~Object() = default;
+
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
 {
     for ( const auto & child : children_ )
@@ -171,9 +204,14 @@ std::shared_ptr<const Object> Object::find( const std::string_view & name ) cons
     return {}; // not found among recognized children
 }
 
+const AffineXf3f& Object::xf( ViewportId id, bool* isDef ) const
+{
+    return data_->xf.get( id, isDef );
+}
+
 void Object::setXf( const AffineXf3f& xf, ViewportId id )
 {
-    if ( xf_.get( id ) == xf )
+    if ( data_->xf.get( id ) == xf )
         return;
     if ( xf.A.det() == 0 )
     {
@@ -181,30 +219,35 @@ void Object::setXf( const AffineXf3f& xf, ViewportId id )
         spdlog::warn( "Object transform is degenerate" );
         return;
     }
-    xf_.set( xf, id );
+    data_->xf.set( xf, id );
     sendWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
 void Object::resetXf( ViewportId id )
 {
-    if ( !xf_.reset( id ) )
+    if ( !data_->xf.reset( id ) )
         return;
     sendWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
+const ViewportProperty<AffineXf3f>& Object::xfsForAllViewports() const
+{
+    return data_->xf;
+}
+
 void Object::setXfsForAllViewports( ViewportProperty<AffineXf3f> xf )
 {
-    if ( xf_ == xf )
+    if ( data_->xf == xf )
         return;
-    xf_ = std::move( xf );
+    data_->xf = std::move( xf );
     needRedraw_ = true;
 }
 
 AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
 {
-    auto xf = xf_.get( id, isDef );
+    auto xf = data_->xf.get( id, isDef );
     auto parent = this->parent();
     while ( parent )
     {
@@ -219,7 +262,7 @@ AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
 
 void Object::setWorldXf( const AffineXf3f& worldxf, ViewportId id )
 {
-    setXf( xf_.get( id ) * worldXf( id ).inverse() * worldxf );
+    setXf( data_->xf.get( id ) * worldXf( id ).inverse() * worldxf );
 }
 
 void Object::applyScale( float )
@@ -538,7 +581,7 @@ void Object::serializeFields_( Json::Value& root ) const
     root["ParentLocked"] = parentLocked_;
 
     // xf
-    serializeToJson( xf_.get(), root["XF"] );
+    serializeToJson( data_->xf.get(), root["XF"] );
 
     // Type
     root["Type"].append( Object::StaticTypeName() ); // will be appended in derived calls
@@ -575,7 +618,7 @@ void Object::deserializeFields_( const Json::Value& root )
     if ( root["Selected"].isBool() )
         selected_ = root["Selected"].asBool();
     if ( !root["XF"].isNull() )
-        deserializeFromJson( root["XF"], xf_.get() );
+        deserializeFromJson( root["XF"], data_->xf.get() );
     if ( root["Locked"].isBool() )
         locked_ = root["Locked"].asBool();
     if ( const auto& json = root["ParentLocked"]; json.isBool() )
@@ -852,6 +895,11 @@ void Object::swap( Object& other )
     swapBase_( other );
     // swap signals second time to return in place
     swapSignals_( other );
+}
+
+Box3f Object::getWorldBox( ViewportId ) const
+{
+    return {}; //empty box
 }
 
 Box3f Object::getWorldTreeBox( ViewportId id ) const

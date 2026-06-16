@@ -6,6 +6,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRHistoryAction.h"
 #include "MRMesh/MRViewportProperty.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRAxis.h"
 #include <MRMesh/MRObject.h>
 #include <MRMesh/MRColor.h>

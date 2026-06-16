@@ -1,13 +1,11 @@
 #pragma once
 
-#include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
-#include "MRViewportProperty.h"
+#include "MRViewportId.h"
 
-#include <array>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -103,13 +101,13 @@ public:
 
     /// this space to parent space transformation (to world space if no parent) for default or given viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
-    const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
+    MRMESH_API const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const;
     MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} );
     /// forgets specific transform in given viewport (or forgets all specific transforms for {} input)
     MRMESH_API virtual void resetXf( ViewportId id = {} );
 
     /// returns xfs for all viewports, combined into a single object
-    const ViewportProperty<AffineXf3f> & xfsForAllViewports() const { return xf_; }
+    MRMESH_API const ViewportProperty<AffineXf3f> & xfsForAllViewports() const;
     /// modifies xfs for all viewports at once
     MRMESH_API virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf );
 
@@ -313,7 +311,6 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
 
     std::string name_;
-    ViewportProperty<AffineXf3f> xf_;
     ViewportMask visibilityMask_ = ViewportMask::all(); // Prefer to not read directly. Use the getter, as it can be overridden.
     bool locked_ = false;
     bool parentLocked_ = false;

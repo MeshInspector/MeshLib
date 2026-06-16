@@ -5,7 +5,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRBox.h"
-#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRArrow.h"

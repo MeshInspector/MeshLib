@@ -8,6 +8,7 @@
 #include "MRUniquePtr.h"
 #include "MREnums.h"
 #include "MRBox.h"
+#include "MRViewportProperty.h"
 
 namespace MR
 {

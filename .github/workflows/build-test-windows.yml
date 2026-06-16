@@ -47,6 +47,12 @@ jobs:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+      # Bake the extra MeshLib headers into the shared MRPch.pch (consumed in
+      # MRPch.h). Set job-wide for MSBuild so every project that creates or uses
+      # the PCH -- including MeshLibC2Cuda, built in its own step -- compiles with
+      # the same define; otherwise MSVC reports C4651 (and /WX makes it an error).
+      # Empty for the CMake build, which does not enable the extra-header PCH.
+      CL: ${{ matrix.build_system == 'MSBuild' && '/DMR_PCH_USE_EXTRA_HEADERS' || '' }}
       # Upload a developer distributive per Visual Studio toolchain so
       # update-win-version can repackage each into MeshLibDistVS{19,22,26}.zip.
       # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build
@@ -204,10 +210,6 @@ jobs:
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            rem Bake the extra MeshLib headers into the shared precompiled header
-            rem (the define is consumed in MRPch.h). CL applies it to every project
-            rem that creates or uses MRPch.pch, keeping the PCH self-consistent.
-            set "CL=%CL% /DMR_PCH_USE_EXTRA_HEADERS"
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
           )
 

@@ -757,6 +757,15 @@ ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
 # Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
 LINKER_FLAGS += -Wl,-z,separate-loadable-segments
+# On AArch64, GCC defaults to out-of-line atomics, emitting calls to libgcc's `__aarch64_ldadd*` helpers.
+# In this huge, unoptimized (MODE=none) binding module those calls overflow the +-128MB `BL` range
+# (`relocation truncated to fit: R_AARCH64_CALL26`). Inline the atomics so there are no such calls.
+# GCC-only (Clang doesn't hit this) and aarch64-only (the flag is AArch64-specific).
+ifeq ($(CXX_FOR_BINDINGS_IS_CLANG),)
+ifneq ($(filter aarch64%,$(shell uname -m)),)
+COMPILER_FLAGS += -mno-outline-atomics
+endif
+endif
 endif
 
 # MacOS.

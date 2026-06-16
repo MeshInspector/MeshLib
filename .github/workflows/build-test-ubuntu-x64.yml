@@ -159,7 +159,9 @@ jobs:
           PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
         # Build the bindings with the same compiler as the `Build` step. For GCC lanes this means GCC;
         # for Clang lanes we keep the pinned Clang (clang_version.txt) the bindings are known to build with.
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ${{ matrix.compiler == 'GCC' && format('CXX_FOR_BINDINGS={0}', matrix.cxx-compiler) || '' }} ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}}
+        # g++-12 is excluded: it rejects mrbind's local-lambda function pointers as non-type template
+        # arguments ("_FUN has no linkage"); GCC 13+ accept them (C++17 relaxed the linkage requirement).
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ${{ (matrix.compiler == 'GCC' && matrix.cxx-compiler != '/usr/bin/g++-12') && format('CXX_FOR_BINDINGS={0}', matrix.cxx-compiler) || '' }} ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"

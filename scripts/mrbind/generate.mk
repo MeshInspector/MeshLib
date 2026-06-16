@@ -436,9 +436,10 @@ $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 
 # Enable PCH.
 # Not all modules we build use PCHs even if this is true. But if this is false, PCHs are disabled for all modules.
-# Default to off for non-Clang compilers: the baked-PCH + fragment scheme below relies on Clang's lenient PCH
-# handling (the `-DMB_FRAGMENT=...` macros differ per fragment), which GCC's stricter PCH would reject.
-ENABLE_PCH := $(if $(CXX_FOR_BINDINGS_IS_CLANG),1,0)
+# Used with GCC too: it gets a plain `.gch` (the Clang-only `-fpch-*` codegen flags are dropped below). The
+# per-fragment `-DMB_FRAGMENT=...` macros don't appear in the baked headers, so GCC accepts the shared PCH;
+# without it GCC re-parses the whole pybind/MeshLib header set per fragment, which is far slower.
+ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
 # Enables the `-fpch-codegen` flag for the PCH. This is faster but sometimes doesn't work because of Clang bugs.

@@ -246,6 +246,19 @@ else
 CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))
 endif
 
+# Detect whether the bindings compiler (the one that compiles and links the generated bindings) is Clang.
+# Several flags below are Clang-specific. When the bindings are built with a non-Clang compiler -- e.g. GCC,
+# to match a GCC `Build` step via `CXX_FOR_BINDINGS=/usr/bin/g++-NN` -- those flags must be skipped.
+# Note that the parser always runs under libclang regardless of this; only the compile/link uses this compiler.
+override CXX_FOR_BINDINGS_IS_CLANG := $(findstring clang,$(shell $(CXX_FOR_BINDINGS) --version))
+# GCC older than 13 spells C++23 as `-std=c++2b`. Our flags hardcode `-std=c++23` (accepted by Clang and by
+# GCC 13+); detect when the bindings compiler rejects it so the compile step can fall back to `-std=c++2b`.
+ifeq ($(CXX_FOR_BINDINGS_IS_CLANG),)
+override BINDINGS_REPLACE_CXX23 := $(shell $(CXX_FOR_BINDINGS) -std=c++23 -xc++ -E /dev/null >/dev/null 2>&1 || echo 1)
+endif
+# Replace `-std=c++23` with `-std=c++2b` in $1 when the bindings compiler needs it; a no-op otherwise.
+override apply_bindings_cxx_std = $(if $(BINDINGS_REPLACE_CXX23),$(subst -std=c++23,-std=c++2b,$1),$1)
+
 
 # Source directory of MRBind.
 MRBIND_SOURCE := $(makefile_dir)../../thirdparty/mrbind
@@ -293,9 +306,13 @@ ifeq ($(IS_WINDOWS),)# If not on Windows:
 $(call safe_shell_exec,which $(CXX_FOR_ABI) >/dev/null 2>/dev/null)# Make sure this compiler exists.
 ifneq ($(shell echo "template <typename T> void foo() requires true {} template void foo<int>();" | $(CXX_FOR_ABI) -xc++ - -std=c++20 -S -o - | grep -m1 '\b_Z3fooIiEvvQLb1E\b')$(filter 0,$(.SHELLSTATUS)),)
 $(info ABI check: $(CXX_FOR_ABI) DOES mangle C++20 constraints into the function names.)
-else
+else ifneq ($(CXX_FOR_BINDINGS_IS_CLANG),)
 $(info ABI check: $(CXX_FOR_ABI) DOESN'T mangle C++20 constraints into the function names, enabling `-fclang-abi-compat=17`)
 ABI_COMPAT_FLAG := -fclang-abi-compat=17
+else
+# `-fclang-abi-compat` is Clang-only. When the bindings are compiled with the same (non-Clang) compiler as
+# MeshLib itself, their ABIs already match natively, so no compatibility flag is needed.
+$(info ABI check: $(CXX_FOR_ABI) DOESN'T mangle C++20 constraints, but bindings compiler `$(CXX_FOR_BINDINGS)` is not Clang; `-fclang-abi-compat` is not applicable.)
 endif
 endif
 
@@ -419,7 +436,9 @@ $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 
 # Enable PCH.
 # Not all modules we build use PCHs even if this is true. But if this is false, PCHs are disabled for all modules.
-ENABLE_PCH := 1
+# Default to off for non-Clang compilers: the baked-PCH + fragment scheme below relies on Clang's lenient PCH
+# handling (the `-DMB_FRAGMENT=...` macros differ per fragment), which GCC's stricter PCH would reject.
+ENABLE_PCH := $(if $(CXX_FOR_BINDINGS_IS_CLANG),1,0)
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
 # Enables the `-fpch-codegen` flag for the PCH. This is faster but sometimes doesn't work because of Clang bugs.
@@ -430,7 +449,8 @@ override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
 
 # Those are passed when compiling the PCH. Can be empty.
 # If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it into the module.
-PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen)
+# The `-fpch-*` flags are Clang-only, so leave them empty for non-Clang compilers (PCH itself is also disabled there).
+PCH_CODEGEN_FLAGS := $(if $(CXX_FOR_BINDINGS_IS_CLANG),-fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen))
 
 
 
@@ -653,7 +673,10 @@ LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(
 # Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
 #   because the header override with it being constexpr is in this resource directory.
 # We certainly need this on Windows and MacOS. It's not strictly necessary on Ubuntu, but is needed on Arch, so better make it unconditional.
+# `-resource-dir` / `-print-resource-dir` are Clang-only; GCC locates its own internal headers, so skip it there.
+ifneq ($(CXX_FOR_BINDINGS_IS_CLANG),)
 COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
+endif
 
 
 MRBIND_GEN_C_FLAGS := $(call load_file,$(makefile_dir)mrbind_gen_c_flags.txt)
@@ -875,7 +898,8 @@ $(if $($1_PyNumFragments),,$(call var,$1_PyNumFragments := 1))
 $(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)))
 
 # Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
-$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$($1_PyName) $(if $($1_PyDependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_PyDependsOn))))))
+# `apply_bindings_cxx_std` adapts the `-std=c++23` spelling for the compile step when the bindings compiler needs it (older GCC).
+$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(call apply_bindings_cxx_std,$(COMPILER_FLAGS)) -DMB_PB11_MODULE_NAME=$($1_PyName) $(if $($1_PyDependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_PyDependsOn))))))
 endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_vars_py,$x)))
 endif # $(TARGET) == python

@@ -665,7 +665,10 @@ endif # TARGETING_EMSCRIPTEN
 
 
 
-LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
+# Use lld only with Clang: it lives in Clang's own bindir (not on PATH), so GCC's collect2 can't find it
+# via `-fuse-ld=lld` and fails with "cannot find 'ld'". This mirrors MeshLib's CMake, which only switches
+# to lld for Clang; the GCC build (and now GCC bindings) use GCC's default linker.
+LINKER := $(CXX_FOR_BINDINGS) $(if $(CXX_FOR_BINDINGS_IS_CLANG),-fuse-ld=lld)
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)

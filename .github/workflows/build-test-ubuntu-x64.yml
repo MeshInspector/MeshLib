@@ -47,6 +47,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Display job info
@@ -108,6 +109,12 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}

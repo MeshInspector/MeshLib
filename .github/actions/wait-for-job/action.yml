@@ -1,0 +1,83 @@
+name: 'Wait for job'
+description: >
+  Block until another job in the current workflow run finishes, so a step
+  can depend on that job without the whole job gating on it via `needs:`.
+  Returns once the matched job concludes `success`; aborts if it concludes
+  anything else (failure / cancelled / skipped / timed_out) instead of
+  waiting out the timeout.
+
+  Use it to start a job's early steps in parallel with a dependency and
+  block only the step that actually needs that dependency's output -- e.g.
+  wait for `generate-c-bindings` right before downloading its artifact.
+
+  Implemented with `actions/github-script` (a JS action) so it runs
+  identically inside container jobs and on the Windows/macOS hosts, the
+  same way `actions/checkout` / `actions/download-artifact` do. It reads the
+  run's jobs via the REST API, so the calling job needs `actions: read` on
+  its GITHUB_TOKEN -- and, because a reusable workflow's token is capped by
+  its caller, the caller workflow's `permissions:` must grant `actions: read`
+  too (see build-test-distribute.yml).
+
+inputs:
+  job-name:
+    required: true
+    description: >
+      Name of the job to wait for, matched as a substring of the run's job
+      names. A substring is used so reusable-workflow jobs (displayed as
+      "caller-job / inner-job") match on their caller-job name -- e.g.
+      `generate-c-bindings` matches `generate-c-bindings / generate-c-bindings`.
+  timeout-seconds:
+    required: false
+    default: '1800'
+    description: Maximum time to wait before failing (default 30 minutes).
+  poll-interval-seconds:
+    required: false
+    default: '5'
+    description: Delay between polls.
+
+runs:
+  using: composite
+  steps:
+    - name: Wait for ${{ inputs.job-name }} to finish
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const jobName = ${{ toJSON(inputs.job-name) }};
+          const timeoutMs = Number(${{ toJSON(inputs.timeout-seconds) }}) * 1000;
+          const intervalMs = Number(${{ toJSON(inputs.poll-interval-seconds) }}) * 1000;
+          const { owner, repo } = context.repo;
+          const runId = context.runId;
+          const deadline = Date.now() + timeoutMs;
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+          // Swallow transient API blips (5xx, secondary rate limits) and keep
+          // polling; only a real timeout or a failed job stops us.
+          const safe = async (fn) => {
+            try { return await fn(); }
+            catch (err) { core.warning(`Actions API poll failed (will retry): ${err.message}`); return null; }
+          };
+
+          core.info(
+            `Waiting for job matching "${jobName}" to finish in run ${runId} ` +
+            `(timeout ${timeoutMs / 1000}s, poll every ${intervalMs / 1000}s).`,
+          );
+
+          for (;;) {
+            const jobs = await safe(() => github.paginate(
+              github.rest.actions.listJobsForWorkflowRun,
+              { owner, repo, run_id: runId, per_page: 100 },
+            ));
+            const job = jobs && jobs.find((j) => j.name.includes(jobName));
+            if (job && job.status === 'completed') {
+              if (job.conclusion === 'success') {
+                core.info(`Job "${job.name}" finished successfully.`);
+                break;
+              }
+              throw new Error(`Job "${job.name}" concluded "${job.conclusion}".`);
+            }
+
+            if (Date.now() >= deadline) {
+              throw new Error(`Timed out after ${timeoutMs / 1000}s waiting for job "${jobName}".`);
+            }
+            await sleep(intervalMs);
+          }

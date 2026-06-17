@@ -1,6 +1,9 @@
 #include "MRSplineProject.h"
 #include "MRMarkedContour.h"
 #include "MRMesh.h"
+#include "MRSurfacePath.h"
+#include "MRSurfaceDistance.h"
+#include "MRContour.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 
@@ -12,6 +15,8 @@ Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
     MR_TIMER;
     assert( spline.firstLastMarked() );
 
+    const auto sz = spline.contour.size();
+
     const auto markSeqToPos = makeHashMapWithSeqNums( spline.marks );
     const auto numMarks = markSeqToPos.size();
     assert( markSeqToPos.size() == spline.marks.count() );
@@ -22,28 +27,48 @@ Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
         return it->second;
     };
 
-    Contour3f res = spline.contour;
-
-    // project control (marked) points of the spline
-    ParallelFor( size_t( 0 ), numMarks, [&]( size_t seq )
-    {
-        const auto i = seqToPos( seq );
-        res[i] = mesh.projectPoint( res[i] ).proj.point;
-    } );
-
-    if ( numMarks <= 1 )
-    {
-        assert( res.size() == 1 );
-        return res;
-    }
-
+    Contour3f res( sz );
     // regionBetweenMarks[i] is the region between control points markSeqToPos[i] and markSeqToPos[i+1]
     std::vector<FaceBitSet> regionBetweenMarks( numMarks - 1 );
-    ParallelFor( size_t( 0 ), numMarks - 1, [&]( size_t seq )
+    mesh.getAABBTree(); // prepare before its usage in parallel region
+    ParallelFor( size_t( 0 ), numMarks, [&]( size_t seq )
     {
+        // project control (marked) points of the spline
         const auto i0 = seqToPos( seq );
+        const auto p0 = mesh.projectPoint( spline.contour[i0] );
+        res[i0] = p0.proj.point;
+        if ( seq + 1 >= numMarks )
+            return; // last point
+
         const auto i1 = seqToPos( seq + 1 );
+        if ( i0 + 1 == i1 )
+            return; // zero not-control points in between
+        const auto p1 = mesh.projectPoint( spline.contour[i1] );
+
+        auto maybeSurfPath = computeGeodesicPath( mesh, p0.mtp, p1.mtp );
+        assert( maybeSurfPath );
+        if ( !maybeSurfPath )
+            return;
+
+        const GeodesicPath geoPath{ .start = p0.mtp, .mids = std::move( *maybeSurfPath ), .end = p1.mtp };
+        const auto geoPathAsContour = geodesicPathToContour3f( mesh, geoPath );
+        const auto geoPathLen = calcLength( geoPathAsContour );
+        const auto midPoint = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
+        (void)midPoint;
+        //const auto surfDist = computeSurfaceDistances( mesh, mesh.projectPoint( midPoint ).mtp, geoPathLen / 2 );
     } );
+
+    // for each point stores the last control (marked) point index,
+    // pos2mark[i] = i for control (marked) points, otherwise pos2mark[i] < i
+    std::vector<int> pos2mark;
+    pos2mark.reserve( sz );
+    int lastMark = 0;
+    for ( int i = 0; i < sz; ++i )
+    {
+        if ( spline.marks.test( i ) )
+            lastMark = i;
+        pos2mark.push_back( i );
+    }
 
     return res;
 }

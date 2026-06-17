@@ -57,7 +57,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-      actions: read   # lets wait-for-job read the run's jobs to wait on generate-c-bindings
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Work-around possible permission issues

@@ -28,6 +28,7 @@
 #include <mutex>
 #include <ostream>
 #include <queue>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <tuple>

@@ -67,7 +67,7 @@ Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
     {
         if ( spline.marks.test( i ) )
             lastMark = i;
-        pos2mark.push_back( i );
+        pos2mark.push_back( lastMark );
     }
 
     return res;

@@ -371,6 +371,8 @@ using Contour2f = Contour2<float>;
 using Contour3d = Contour3<double>;
 using Contour3f = Contour3<float>;
 
+struct MarkedContour3f;
+
 template <typename V> using Contours = std::vector<Contour<V>>;
 template <typename T> using Contours2 = Contours<Vector2<T>>;
 template <typename T> using Contours3 = Contours<Vector3<T>>;

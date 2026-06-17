@@ -11,6 +11,17 @@ IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
 ENDIF()
 message("MR_PCH=${MR_PCH}")
 
+# On MSVC the *_API macros expand to __declspec(dllexport) inside a library and to
+# __declspec(dllimport) in its consumers, so MeshLib's own headers cannot be baked into
+# a single shared precompiled header. Instead we enable the extra headers everywhere and
+# let MRMesh and MRViewer build their own PCH from MRPch.h in their (dllexport) context,
+# while every other target keeps reusing the shared (all-dllimport) PCH built by MRPch.
+# See source/MRMesh/CMakeLists.txt and source/MRViewer/CMakeLists.txt.
+IF(MSVC AND MR_PCH)
+  set(MR_PCH_USE_EXTRA_HEADERS ON CACHE BOOL "Add frequently used MeshLib headers to the precompiled header" FORCE)
+  add_compile_definitions(MR_PCH_USE_EXTRA_HEADERS)
+ENDIF()
+
 # make link to fail if there are unresolved symbols (GCC and Clang)
 IF(NOT APPLE)
   IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

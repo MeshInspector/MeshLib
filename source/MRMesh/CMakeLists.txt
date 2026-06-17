@@ -13,6 +13,8 @@ ENDIF()
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h" "*.hpp")
+# MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
@@ -94,7 +96,17 @@ IF(NOT MRMESH_NO_TIFF)
 ENDIF()
 
 IF(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MSVC)
+    # MRMesh exports MRMESH_API, so it cannot reuse the shared (dllimport) PCH once that PCH
+    # contains MeshLib headers; it builds its own from MRPch.h in its (dllexport) context.
+    # MESHLIB_NO_VIEWER drops the viewer/imgui section of MRPch.h, which MRMesh (a lower layer)
+    # neither needs nor has on its include path. See cmake/Modules/CompilerOptions.cmake.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
+    target_precompile_headers(${PROJECT_NAME} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
+  ELSE()
+    target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  ENDIF()
 ENDIF()
 
 install(

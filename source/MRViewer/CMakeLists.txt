@@ -17,6 +17,8 @@ ENDIF()
 
 file(GLOB HEADERS "*.h" "*.ipp")
 file(GLOB SOURCES "*.cpp")
+# MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 set(OBJCPP_SOURCES "")
 IF(APPLE)
   file(GLOB OBJCPP_SOURCES "*.mm")
@@ -120,7 +122,14 @@ IF(NOT MRVIEWER_NO_LOCALE)
 ENDIF()
 
 IF(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MSVC)
+    # MRViewer exports MRVIEWER_API, so like MRMesh it builds its own PCH from MRPch.h in its
+    # (dllexport) context instead of reusing the shared one. See cmake/Modules/CompilerOptions.cmake.
+    target_precompile_headers(${PROJECT_NAME} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
+  ELSE()
+    target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  ENDIF()
 ENDIF()
 
 IF(MESHLIB_BUILD_MCP)

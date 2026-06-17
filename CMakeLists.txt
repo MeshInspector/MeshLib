@@ -333,6 +333,28 @@ IF(BUILD_TESTING)
   ENDIF()
 ENDIF()
 
+# On non-MSVC the *_API export macros resolve via __attribute__((visibility("default"))) and
+# never consult the CMake-generated <target>_EXPORTS define (it is only used under _WIN32).
+# Leaving it defined needlessly differs the command line between a library and the shared MRPch,
+# which breaks precompiled-header reuse on GCC: a TU built with -D<target>_EXPORTS cannot reuse a
+# PCH built without it (-Winvalid-pch). Clear it for every shared/module library we build.
+IF(NOT MSVC)
+  function(_mr_clear_define_symbol _dir)
+    get_property(_subs DIRECTORY "${_dir}" PROPERTY SUBDIRECTORIES)
+    foreach(_s IN LISTS _subs)
+      _mr_clear_define_symbol("${_s}")
+    endforeach()
+    get_property(_tgts DIRECTORY "${_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_t IN LISTS _tgts)
+      get_target_property(_type ${_t} TYPE)
+      IF(_type STREQUAL "SHARED_LIBRARY" OR _type STREQUAL "MODULE_LIBRARY")
+        set_target_properties(${_t} PROPERTIES DEFINE_SYMBOL "")
+      ENDIF()
+    endforeach()
+  endfunction()
+  _mr_clear_define_symbol("${CMAKE_CURRENT_SOURCE_DIR}")
+ENDIF()
+
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}

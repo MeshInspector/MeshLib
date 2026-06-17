@@ -27,6 +27,10 @@ IF(MR_PCH)
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRStdlib.h>"
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRExpected.h>"
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRHashMap.h>"
+        # MRMeshFwd.h is parsed in nearly every TU and is mostly forward declarations, so it
+        # adds little to the PCH image. It only fits the shared PCH because <target>_EXPORTS is
+        # no longer defined on non-MSVC (see the top-level CMakeLists), avoiding -Winvalid-pch.
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRMeshFwd.h>"
     )
     return()
   endif()

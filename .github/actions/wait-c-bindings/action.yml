@@ -36,7 +36,7 @@ inputs:
     description: Maximum time to wait before failing (default 30 minutes).
   poll-interval-seconds:
     required: false
-    default: '30'
+    default: '5'
     description: Delay between polls.
 
 runs:

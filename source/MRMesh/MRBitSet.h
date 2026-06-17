@@ -433,6 +433,9 @@ template <typename I>
 }
 
 /// creates a HashMap where for each set bit of input bitset its sequential number starting from 0 is returned
+[[nodiscard]] MRMESH_API HashMap<size_t, size_t> makeHashMapWithSeqNums( const BitSet & bs );
+
+/// creates a HashMap where for each set bit of input bitset its sequential number starting from 0 is returned
 template <typename I>
 [[nodiscard]] HashMap<I, int> makeHashMapWithSeqNums( const TypedBitSet<I> & bs )
 {

@@ -343,4 +343,13 @@ std::istream& operator>>( std::istream& s, BitSet & bs )
     return s;
 }
 
+HashMap<size_t, size_t> makeHashMapWithSeqNums( const BitSet & bs )
+{
+    HashMap<size_t, size_t> res;
+    int n = 0;
+    for ( auto v : bs )
+        res[v] = n++;
+    return res;
+}
+
 } //namespace MR

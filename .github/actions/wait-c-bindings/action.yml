@@ -1,35 +1,37 @@
 name: 'Wait for C bindings'
 description: >
-  Block until the C bindings artifact produced by the `generate-c-bindings`
-  reusable workflow is available in the current run, then return so the
-  caller's "Download C bindings" step can fetch it.
+  Block until the `generate-c-bindings` reusable workflow has finished in
+  the current run, then return so the caller's "Download C bindings" step
+  can fetch the artifact it produced.
 
   This lets a build-test job start its early steps (checkout, submodules,
   thirdparty/MRBind install, base compile) in parallel with
   `generate-c-bindings`, instead of gating the whole job on it through
-  `needs:`. Only the bindings download has to wait.
+  `needs:`. Only the bindings download has to wait -- effectively the old
+  `needs: generate-c-bindings` edge, relocated to step granularity.
+
+  Waiting on the job (rather than polling for the artifact) is enough
+  because the job's final step uploads the artifact unconditionally, so it
+  cannot conclude "success" without it -- and the completion status is
+  strictly after the artifact is finalized, so there is no propagation
+  window where the job looks done but the artifact is not yet downloadable.
 
   Implemented with `actions/github-script` (a JS action) so it runs
   identically inside the Linux build containers and on the Windows/macOS
   hosts, the same way `actions/checkout` / `actions/download-artifact` do.
-  It polls the run's artifacts via the REST API, so the calling job needs
+  It reads the run's jobs via the REST API, so the calling job needs
   `actions: read` on its GITHUB_TOKEN -- and, because a reusable workflow's
   token is capped by its caller, the caller workflow's `permissions:` must
   grant `actions: read` too (see build-test-distribute.yml).
 
 inputs:
-  artifact-name:
-    required: false
-    default: CBindings
-    description: Name of the artifact to wait for.
   generating-job:
     required: false
     default: generate-c-bindings
     description: >
       Substring matched against the run's job names to find the job that
-      produces the artifact. Used only for fail-fast: if that job has already
-      finished without producing the artifact, stop waiting and fail instead
-      of polling until the timeout.
+      produces the artifact. Its successful completion is what we wait for;
+      a non-success conclusion aborts the wait instead of timing out.
   timeout-seconds:
     required: false
     default: '1800'
@@ -42,11 +44,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Wait for ${{ inputs.artifact-name }} artifact
+    - name: Wait for ${{ inputs.generating-job }} to finish
       uses: actions/github-script@v9
       with:
         script: |
-          const artifactName = ${{ toJSON(inputs.artifact-name) }};
           const generatingJob = ${{ toJSON(inputs.generating-job) }};
           const timeoutMs = Number(${{ toJSON(inputs.timeout-seconds) }}) * 1000;
           const intervalMs = Number(${{ toJSON(inputs.poll-interval-seconds) }}) * 1000;
@@ -56,47 +57,36 @@ runs:
           const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
           // Swallow transient API blips (5xx, secondary rate limits) and keep
-          // polling; only a real timeout or a failed generating job stops us.
+          // polling; only a real timeout or a failed job stops us.
           const safe = async (fn) => {
             try { return await fn(); }
             catch (err) { core.warning(`Actions API poll failed (will retry): ${err.message}`); return null; }
           };
 
           core.info(
-            `Waiting for artifact "${artifactName}" in run ${runId} ` +
+            `Waiting for job matching "${generatingJob}" to finish in run ${runId} ` +
             `(timeout ${timeoutMs / 1000}s, poll every ${intervalMs / 1000}s).`,
           );
 
-          for (let iter = 0; ; iter++) {
-            const artifacts = await safe(() => github.paginate(
-              github.rest.actions.listWorkflowRunArtifacts,
+          for (;;) {
+            const jobs = await safe(() => github.paginate(
+              github.rest.actions.listJobsForWorkflowRun,
               { owner, repo, run_id: runId, per_page: 100 },
             ));
-            if (artifacts && artifacts.some((a) => a.name === artifactName && !a.expired)) {
-              core.info(`Artifact "${artifactName}" is available.`);
-              break;
-            }
-
-            // Fail fast, on a slower cadence than the artifact check to keep the
-            // API call count down: if the generating job is done but produced no
-            // artifact, there is nothing left to wait for.
-            if (iter % 3 === 0) {
-              const jobs = await safe(() => github.paginate(
-                github.rest.actions.listJobsForWorkflowRun,
-                { owner, repo, run_id: runId, per_page: 100 },
-              ));
-              const gen = jobs && jobs.find((j) => j.name.includes(generatingJob));
-              if (gen && gen.status === 'completed' && gen.conclusion !== 'success') {
-                throw new Error(
-                  `Job "${gen.name}" concluded "${gen.conclusion}" without uploading ` +
-                  `artifact "${artifactName}"; nothing to wait for.`,
-                );
+            const gen = jobs && jobs.find((j) => j.name.includes(generatingJob));
+            if (gen && gen.status === 'completed') {
+              if (gen.conclusion === 'success') {
+                core.info(`Job "${gen.name}" finished successfully; C bindings are ready.`);
+                break;
               }
+              throw new Error(
+                `Job "${gen.name}" concluded "${gen.conclusion}"; C bindings will not be available.`,
+              );
             }
 
             if (Date.now() >= deadline) {
               throw new Error(
-                `Timed out after ${timeoutMs / 1000}s waiting for artifact "${artifactName}".`,
+                `Timed out after ${timeoutMs / 1000}s waiting for job "${generatingJob}".`,
               );
             }
             await sleep(intervalMs);

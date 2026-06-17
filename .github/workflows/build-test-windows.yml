@@ -42,6 +42,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # lets wait-c-bindings poll the run for the CBindings artifact
 
     env:
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
@@ -158,6 +159,10 @@ jobs:
           cache-key-prefix: windows-clang22
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        uses: ./.github/actions/wait-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}

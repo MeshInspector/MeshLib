@@ -57,6 +57,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # lets wait-c-bindings poll the run for the CBindings artifact
 
     steps:
       - name: Work-around possible permission issues
@@ -129,6 +130,10 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}

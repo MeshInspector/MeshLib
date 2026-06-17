@@ -47,7 +47,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-      actions: read   # lets wait-c-bindings poll the run for the CBindings artifact
+      actions: read   # lets wait-for-job read the run's jobs to wait on generate-c-bindings
 
     steps:
       - name: Display job info
@@ -112,7 +112,9 @@ jobs:
 
       - name: Wait for C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-c-bindings
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}

@@ -17,7 +17,7 @@ on:
 permissions:
   id-token: write
   contents: write
-  actions: read  # lets build-test jobs poll the run for the CBindings artifact (see .github/actions/wait-c-bindings)
+  actions: read  # lets build-test jobs read the run's jobs to wait on generate-c-bindings (see .github/actions/wait-for-job)
 
 jobs:
   # NOTE: all output values are strings

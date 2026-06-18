@@ -10,6 +10,7 @@
 #include "MRMeshTexture.h"
 #include "MRImageSave.h"
 #include "MRSerializer.h"
+#include <fstream>
 
 namespace MR
 {

@@ -14,6 +14,7 @@
 
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
+#include <fstream>
 
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )

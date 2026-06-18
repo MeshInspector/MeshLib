@@ -1,4 +1,6 @@
 #include "MRProgressReadWrite.h"
+#include <istream>
+#include <ostream>
 
 namespace MR
 {

@@ -21,6 +21,7 @@
 #include <boost/spirit/home/x3.hpp>
 
 #include <map>
+#include <fstream>
 
 namespace MR
 {

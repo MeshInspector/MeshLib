@@ -17,8 +17,13 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 # defined) openvdb type is a GCC error, so export it by compiling just this TU with default
 # visibility (the rest of the library stays -fvisibility=hidden). MSVC uses __declspec instead.
 IF(NOT MSVC)
+  # The instantiation TU is built -fvisibility=default to export the symbols; that must not mix
+  # with a PCH built -fvisibility=hidden (Clang: "visibility differs in PCH vs current file"), so
+  # this TU also opts out of the precompiled header.
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/MRVDBFloatGridInstantiation.cpp"
-    PROPERTIES COMPILE_OPTIONS "-fvisibility=default")
+    PROPERTIES
+      COMPILE_OPTIONS "-fvisibility=default"
+      SKIP_PRECOMPILE_HEADERS ON)
 ENDIF()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)

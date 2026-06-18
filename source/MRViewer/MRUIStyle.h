@@ -604,6 +604,24 @@ public:
     }
 };
 
+// drag<>() is heavy (its internal lambdas dominate UI codegen) and is instantiated in
+// many TUs. Declare the common scalar instantiations extern template here; they are
+// defined once in MRUIStyle.cpp. Vector overloads and rarer combos stay header-instantiated.
+extern template MRVIEWER_API bool drag<NoUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<NoUnit>, ImGuiSliderFlags, const int&, const int& );
+extern template MRVIEWER_API bool drag<NoUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<NoUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<NoUnit, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<NoUnit>, ImGuiSliderFlags, const int&, const int& );
+extern template MRVIEWER_API bool drag<LengthUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<LengthUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<LengthUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<LengthUnit>, ImGuiSliderFlags, const int&, const int& );
+extern template MRVIEWER_API bool drag<AngleUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<AngleUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<AngleUnit, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<AngleUnit>, ImGuiSliderFlags, const int&, const int& );
+extern template MRVIEWER_API bool drag<RatioUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<RatioUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<RatioUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<RatioUnit>, ImGuiSliderFlags, const int&, const int& );
+extern template MRVIEWER_API bool drag<PixelSizeUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<PixelSizeUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<PixelSizeUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<PixelSizeUnit>, ImGuiSliderFlags, const int&, const int& );
+extern template MRVIEWER_API bool drag<MovementSpeedUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<MovementSpeedUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<AreaUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<AreaUnit>, ImGuiSliderFlags, const float&, const float& );
+extern template MRVIEWER_API bool drag<InvLengthUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<InvLengthUnit>, ImGuiSliderFlags, const float&, const float& );
+
 } // namespace UI
 
 }

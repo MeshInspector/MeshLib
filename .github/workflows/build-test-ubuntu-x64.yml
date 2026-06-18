@@ -154,6 +154,7 @@ jobs:
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
       - name: PCH size (diagnostic)
+        if: always()
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
 
       - name: MRMesh Exported Symbols

@@ -107,6 +107,7 @@ jobs:
 
       - name: Prepare C bindings folders
         if: ${{ inputs.mrbind_c }}
+        shell: bash
         run: |
           rm -rf source/MeshLibC2
           mv MeshLib/CbindingsTmp/MeshLibC2 source

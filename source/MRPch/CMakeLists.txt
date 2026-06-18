@@ -31,6 +31,9 @@ IF(MR_PCH)
         # adds little to the PCH image. It only fits the shared PCH because <target>_EXPORTS is
         # no longer defined on non-MSVC (see the top-level CMakeLists), avoiding -Winvalid-pch.
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRMeshFwd.h>"
+        # MRViewerFwd.h is likewise forward-declaration-only (config.h, exports.h, MRMeshFwd.h,
+        # <functional>) and included across MRViewer and its consumers.
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRViewer/MRViewerFwd.h>"
     )
     return()
   endif()

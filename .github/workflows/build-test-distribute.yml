@@ -129,7 +129,6 @@ jobs:
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-      nuget_build_patch: ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
 
   emscripten-c-bindings-build-test:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
@@ -138,8 +137,6 @@ jobs:
     with:
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-      nuget_build_patch: ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}

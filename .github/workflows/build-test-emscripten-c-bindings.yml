@@ -9,9 +9,6 @@ on:
       internal_build:
         required: false
         type: boolean
-      upload_artifacts:
-        required: true
-        type: boolean
 
 jobs:
   emscripten-build:

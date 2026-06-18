@@ -24,9 +24,6 @@ IF(MR_PCH)
     # the full PCH slows the build down for GCC (it loads the whole PCH image in every TU)
     target_precompile_headers(${PROJECT_NAME}
       PRIVATE
-        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRStdlib.h>"
-        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRExpected.h>"
-        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRHashMap.h>"
         # Cache the high-fan-in but lightweight MeshLib headers (ids, vectors/matrices, xforms,
         # geometry primitives) rather than the heavy MRMesh.h: they are included in nearly every
         # TU yet add little to the PCH image. Only fits the shared PCH because <target>_EXPORTS is
@@ -52,6 +49,11 @@ IF(MR_PCH)
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRSegmPoint.h>"
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRBox.h>"
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRTriPoint.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRBuffer.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRChrono.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRBitSet.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRTimer.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRFile.h>"
         # MRViewerFwd.h is likewise forward-declaration-only (config.h, exports.h, MRMeshFwd.h,
         # <functional>) and included across MRViewer and its consumers.
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRViewer/MRViewerFwd.h>"

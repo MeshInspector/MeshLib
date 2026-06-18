@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: read  # This is required for actions/checkout
     container:
-      image: meshlib/meshlib-emscripten-c-bindings-arm64:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
       options: --user root
 
     steps:

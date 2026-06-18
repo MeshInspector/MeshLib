@@ -29,35 +29,19 @@ ENDIF()
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE HEADERS "include/*.h")
 
-IF(NOT EMSCRIPTEN)
-  add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
-  target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-      MRMesh
-      MRIOExtras
-      MRSymbolMesh
-      MRVoxels
-  )
-ELSE()
-  # libraries and plugins must be linked with `--whole-archive' option for correct auto-initialization
-  #add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-  add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
-  target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-      -Wl,--whole-archive
-      MRMesh
-      MRIOExtras
-      MRSymbolMesh
-      MRVoxels
-      -Wl,--no-whole-archive
-  )
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}")
-ENDIF()
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
   include(UnityBuildHelpers)
   mr_enable_unity_build(${PROJECT_NAME} ${SOURCES})
 ENDIF()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  MRIOExtras
+  MRSymbolMesh
+  MRVoxels
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)

@@ -131,6 +131,16 @@ jobs:
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
       nuget_build_patch: ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
 
+  emscripten-c-bindings-build-test:
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
+    needs: [ config, prepare-image, generate-c-bindings ]
+    uses: ./.github/workflows/build-test-emscripten-c-bindings.yml
+    with:
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      nuget_build_patch: ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
+
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
     needs: [ config ]
@@ -164,6 +174,7 @@ jobs:
       - linux-vcpkg-build-test
       - macos-build-test
       - emscripten-build-test
+      - emscripten-c-bindings-build-test
     timeout-minutes: 20
     runs-on: windows-2025
     steps:
@@ -200,12 +211,6 @@ jobs:
          pattern: DotNetPatchArchiveMacOs-arm64
          path: macos_arm64_runtime
 
-     - name: Download NuGet Wasm Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveWasm
-         path: macos_wasm_runtime
-
      - name: Download NuGet DLL and XML
        uses: actions/download-artifact@v8
        with:
@@ -213,10 +218,25 @@ jobs:
          path: dotnet_dll
          merge-multiple: true
 
+     - name: Download C# Wasm Archive (single thread)
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWasm-Single
+         path: browser_wasm_runtime_single
+
+     - name: Build C# Wasm package
+       run: |
+         mkdir MRDotNet2-wasm
+         mkdir MRDotNet2-wasm/native
+         move dotnet_dll/MRDotNet2Static.dll MRDotNet2-wasm
+         mkdir MRDotNet2-wasm/native/single
+         move browser_wasm_runtime_single/* MRDotNet2-wasm/native/single
+         Compress-Archive -Path MRDotNet2-wasm -DestinationPath MRDotNet2-wasm.zip
+
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime macos_wasm_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
@@ -233,6 +253,15 @@ jobs:
          path: MeshLib.nupkg
          retention-days: 1
 
+     - name: Upload C# Wasm Package
+       uses: actions/upload-artifact@v7
+       env:
+         ACTIONS_STEP_DEBUG: true
+       with:
+         name: DistributivesCSharpWasm
+         path: meshlib_csharp-wasm.zip
+         retention-days: 1
+
      - name: Delete consumed NuGet input artifacts
        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
        with:
@@ -243,6 +272,7 @@ jobs:
 
   upload-distributions:
     # Don't publish if any build failed (its distributive is missing); skipped builds are fine.
+    # Don't need `emscripten-c-bindings-build-test` here, it doesn't upload any distributions of its own.
     if: >-
       ${{ !cancelled()
         && needs.config.outputs.upload_artifacts == 'true'

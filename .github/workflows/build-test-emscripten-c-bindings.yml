@@ -1,0 +1,122 @@
+name: Build and test Emscripten
+
+on:
+  workflow_call:
+    inputs:
+      docker_image_tag:
+        required: true
+        type: string
+      internal_build:
+        required: false
+        type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
+
+jobs:
+  emscripten-build:
+    timeout-minutes: 40
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: meshlib/meshlib-emscripten-build-c-bindings-arm64:${{ inputs.docker_image_tag }}
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get AWS instance type
+        uses: ./.github/actions/get-aws-instance-type
+
+      - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
+        continue-on-error: true
+        uses: ./.github/actions/collect-runner-stats
+        with:
+          target_os: ${{ matrix.target_name }}
+          target_arch: wasm
+          cxx_compiler: emcc
+          build_config: Release
+          aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/parallel-hashmap \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/emscripten-single/include ./include
+          ln -s /usr/local/lib/emscripten-single/lib ./lib
+          ln -s /usr/local/lib/emscripten-single/share ./share
+
+      - name: Wait for C bindings
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
+      - name: Download C bindings
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        shell: bash
+        run: |
+          rm -rf source/MeshLibC2
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          # Cuda placeholders:
+          cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
+
+      - name: Build
+        env:
+          MR_EMSCRIPTEN: "ON"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
+          MR_EMSCRIPTEN_SINGLE: "ON"
+          MR_EMSCRIPTEN_WASM64: "OFF"
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_CXX_STANDARD=23
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMR_EMSCRIPTEN_MIMALLOC=OFF
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+        run: ./scripts/build_source.sh
+
+      - name: Prepare C bindings for Wasm
+        shell: bash
+        run: |
+          mkdir wasm_files
+          cp build/Release/bin/*.a wasm_files
+          cp lib/*.a wasm_files
+
+      - name: Upload Wasm files to Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: DotNetPatchArchiveWasm-Single
+          path: ./wasm_files/*
+          retention-days: 1
+          overwrite: true

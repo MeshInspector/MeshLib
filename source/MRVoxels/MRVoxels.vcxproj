@@ -44,6 +44,7 @@
     <ClCompile Include="MRTetrisNesting.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
+    <ClCompile Include="MRVDBFloatGridInstantiation.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
     <ClCompile Include="MRVoxelGraphCut.cpp" />
     <ClCompile Include="MRVoxelPath.cpp" />

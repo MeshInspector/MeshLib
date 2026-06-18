@@ -2,6 +2,7 @@
 
 #include <MRPch/MRSuppressWarning.h>
 #include <MRPch/MRTBB.h>
+#include <MRVoxels/MRVoxelsFwd.h> // for MRVOXELS_API
 
 #ifndef M_PI
 #define M_PI   3.1415926535897932384626433832795
@@ -95,6 +96,20 @@ namespace OPENVDB_VERSION_NAME
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/Dense.h>
 #include <openvdb/tools/Filter.h>
+
+// Emit the heavy openvdb::FloatGrid tree codegen once -- in MRVDBFloatGridInstantiation.cpp,
+// exported from MRVoxels -- and import it in every other TU instead of regenerating it per TU.
+// The raw tree nodes cannot be explicitly instantiated (LeafNode::str() references a missing
+// operator<< for LeafBuffer), but instantiating Grid + Tree homes the node methods reached
+// through them. FloatTree = tree::Tree4<float,5,4,3>::Type.
+#ifdef MR_VOXELS_INSTANTIATE_FLOATGRID
+#define MR_VDB_INSTANTIATE template        // the single definition (MRVDBFloatGridInstantiation.cpp)
+#else
+#define MR_VDB_INSTANTIATE extern template // every other TU skips the codegen and links to the above
+#endif
+MR_VDB_INSTANTIATE class MRVOXELS_API openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float, 3>, 4>, 5>>>;
+MR_VDB_INSTANTIATE class MRVOXELS_API openvdb::Grid<openvdb::FloatTree>;
+#undef MR_VDB_INSTANTIATE
 
 MR_SUPPRESS_WARNING_POP
 

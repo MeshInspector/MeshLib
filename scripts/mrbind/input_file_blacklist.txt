@@ -7,4 +7,5 @@
 %/MRRestoringStreamsSink.h
 %/MRTupleBindings.h
 %/MRVDBProgressInterrupter.h
+%/MRVoxelsPch.h
 %/MRStacktrace.h

@@ -12,9 +12,11 @@
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
 #include "MRVDBProgressInterrupter.h"
+#include "MRVoxelsVolumeAccess.h"
 
 namespace MR
 {
+constexpr float denseVolumeToGridTolerance = 1e-6f;
 
 void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
                        std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris )
@@ -246,6 +248,201 @@ Expected<VdbVolume> meshToVolume( const MeshPart& mp, const MeshToVolumeParams& 
     auto params = cParams;
     params.worldXf = shift.inverse() * cParams.worldXf;
     return meshToDistanceVdbVolume( mp, params );
+}
+
+VdbVolume floatGridToVdbVolume( FloatGrid grid )
+{
+    if ( !grid )
+        return {};
+    MR_TIMER;
+    VdbVolume res;
+    evalGridMinMax( grid, res.min, res.max );
+    auto dim = grid->evalActiveVoxelDim();
+    res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
+    res.data = std::move( grid );
+    return res;
+}
+
+template <>
+void putSimpleVolumeInDenseGrid(
+        openvdb::FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
+{
+    MR_TIMER;
+    if ( cb )
+        cb( 0.0f );
+    openvdb::math::Coord dimsCoord( simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z );
+    openvdb::math::CoordBBox denseBBox( toVdb( minCoord ), toVdb( minCoord ) + dimsCoord.offsetBy( -1 ) );
+    openvdb::tools::Dense<float, openvdb::tools::LayoutXYZ> dense( denseBBox, const_cast< float* >( simpleVolume.data.data() ) );
+    if ( cb )
+        cb( 0.5f );
+    openvdb::tools::copyFromDense( dense, grid, denseVolumeToGridTolerance );
+    if ( cb )
+        cb( 1.f );
+}
+
+template <>
+void putSimpleVolumeInDenseGrid(
+        FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
+{
+    openvdb::FloatGrid& gridRef = *grid;
+    putSimpleVolumeInDenseGrid( gridRef, minCoord, simpleVolume, cb );
+}
+
+template <typename VolumeType>
+void putVolumeInDenseGrid(
+        openvdb::FloatGrid::Accessor& gridAccessor,
+        const Vector3i& minCoord, const VolumeType& volume, ProgressCallback cb )
+{
+    MR_TIMER;
+    if ( cb )
+        cb( 0.0f );
+
+    VoxelsVolumeAccessor<VolumeType> volumeAccessor( volume );
+
+    for ( int z = 0; z < volume.dims.z; ++z )
+    {
+        if ( !reportProgress( cb, ( float )z / ( float )volume.dims.z ) )
+            return;
+        for ( int y = 0; y < volume.dims.y; ++y )
+        {
+            for ( int x = 0; x < volume.dims.x; ++x )
+            {
+                auto loc = Vector3i{ x, y, z };
+                auto coord = toVdb( minCoord + loc );
+                gridAccessor.setValue( coord, volumeAccessor.get( loc ) );
+            }
+        }
+    }
+}
+
+template <>
+void putSimpleVolumeInDenseGrid(
+        openvdb::FloatGrid::Accessor& gridAccessor,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
+{
+    putVolumeInDenseGrid( gridAccessor, minCoord, simpleVolume, cb );
+}
+
+FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
+                                   float background,
+                                   ProgressCallback cb )
+{
+    MR_TIMER;
+    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
+    putSimpleVolumeInDenseGrid( *grid, { 0, 0, 0 }, simpleVolume, cb );
+    openvdb::tools::changeBackground( grid->tree(), background );
+    return MakeFloatGrid( std::move( grid ) );
+}
+
+VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb /*= {} */ )
+{
+    VdbVolume res;
+    res.data = simpleVolumeToDenseGrid( simpleVolume, simpleVolume.min, cb );
+    res.dims = simpleVolume.dims;
+    res.voxelSize = simpleVolume.voxelSize;
+    res.min = simpleVolume.min;
+    res.max = simpleVolume.max;
+    return res;
+}
+
+VdbVolume functionVolumeToVdbVolume( const FunctionVolume& functoinVolume, ProgressCallback cb /*= {} */ )
+{
+    MR_TIMER;
+    VdbVolume res;
+    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
+    auto gridAccessor = grid->getAccessor();
+    putVolumeInDenseGrid( gridAccessor, { 0, 0, 0 }, functoinVolume, cb );
+    auto minMax = openvdb::tools::minMax( grid->tree() );
+    res.min = minMax.min();
+    res.max = minMax.max();
+    openvdb::tools::changeBackground( grid->tree(), res.min );
+    res.data = MakeFloatGrid( std::move( grid ) );
+    res.dims = functoinVolume.dims;
+    res.voxelSize = functoinVolume.voxelSize;
+
+    return res;
+}
+
+// make VoxelsVolume (e.g. SimpleVolume or SimpleVolumeU16) from VdbVolume
+// if VoxelsVolume values type is integral, performs mapping from the sourceScale to
+// nonnegative range of target type
+template<typename T, bool Norm>
+Expected<VoxelsVolumeMinMax<Vector<T,VoxelId>>> vdbVolumeToSimpleVolumeImpl(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> maybeSourceScale = {}, ProgressCallback cb = {} )
+{
+    MR_TIMER;
+    constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
+
+    VoxelsVolumeMinMax<Vector<T,VoxelId>> res;
+
+    res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
+    Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
+    res.voxelSize = vdbVolume.voxelSize;
+    [[maybe_unused]] const auto sourceScale = maybeSourceScale.value_or( MinMaxf{ vdbVolume.min, vdbVolume.max } );
+    float targetMin = sourceScale.min, targetMax = sourceScale.max;
+    if constexpr ( isFloat )
+    {
+        if constexpr ( Norm )
+        {
+            targetMin = 0;
+            targetMax = 1;
+        }
+        else
+        {
+            targetMin = vdbVolume.min;
+            targetMax = vdbVolume.max;
+        }
+    }
+    else
+    {
+        targetMin = 0;
+        targetMax = std::numeric_limits<T>::max();
+    }
+    [[maybe_unused]] const float k = ( targetMax - targetMin ) / ( sourceScale.max - sourceScale.min );
+    res.min = T( k * ( vdbVolume.min - sourceScale.min ) + targetMin );
+    res.max = T( k * ( vdbVolume.max - sourceScale.min ) + targetMin );
+
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    if ( !vdbVolume.data )
+        return res;
+
+    tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
+    if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
+    {
+        auto& accessor = accessorPerThread.local();
+        auto coord = indexer.toPos( i );
+        float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
+        if constexpr ( isFloat && !Norm )
+            res.data[i] = T( value );
+        else
+            res.data[i] = T( std::clamp( ( value - sourceScale.min ) * k + targetMin, targetMin, targetMax ) );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<float, false>( vdbVolume, activeBox, {}, cb );
+}
+
+Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/,
+                                                          std::optional<MinMaxf> sourceScale, ProgressCallback cb /*= {} */ )
+{
+    return vdbVolumeToSimpleVolumeImpl<float, true>( vdbVolume, activeBox, sourceScale, cb );
+}
+
+Expected<SimpleVolumeMinMaxU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox,
+                                                            std::optional<MinMaxf> sourceScale, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<uint16_t, true>( vdbVolume, activeBox, sourceScale, cb );
 }
 
 Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )

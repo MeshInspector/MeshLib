@@ -24,9 +24,6 @@
     <ClCompile Include="MRDicom.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
-    <ClCompile Include="MRFloatGridArithmetic.cpp" />
-    <ClCompile Include="MRFloatGridFilter.cpp" />
-    <ClCompile Include="MRFloatGridResample.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRMarchingCubes.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
@@ -48,8 +45,6 @@
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVDBFloatGridInstantiation.cpp" />
-    <ClCompile Include="MRVDBConversionsToVolume.cpp" />
-    <ClCompile Include="MRVDBConversionsToSimple.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
     <ClCompile Include="MRVoxelGraphCut.cpp" />
     <ClCompile Include="MRVoxelPath.cpp" />

@@ -553,6 +553,12 @@
     <ClCompile Include="MRViewerMcp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRPchCreate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMcpSettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -577,7 +583,6 @@
       <Filter>MeshModifier</Filter>
     </ClInclude>
     <ClInclude Include="exports.h" />
-    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="MRViewport.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -1008,9 +1013,6 @@
     <ClInclude Include="MRRibbonMenuUIConfig.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
-    <ClInclude Include="MRRenderImGui.h" />
-    <ClInclude Include="MRRenderToImage.h" />
-    <ClInclude Include="MRVisualObjectTag.h" />
     <ClInclude Include="MRViewportGlobalBasis.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -1074,6 +1076,21 @@
     <ClInclude Include="MRLocaleMacos.h">
       <Filter>Localization</Filter>
     </ClInclude>
+    <ClInclude Include="MRMcpSettings.h">
+      <Filter>MCP</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderImGui.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderToImage.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGui.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVisualObjectTag.h">
+      <Filter>Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -1112,8 +1129,6 @@
     <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Roboto-Medium.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="MRDarkTheme.json" />
-    <CopyFileToFolders Include="MRLightTheme.json" />
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
@@ -1125,6 +1140,12 @@
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">
       <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MRDarkTheme.json">
+      <Filter>UIStyle</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MRLightTheme.json">
+      <Filter>UIStyle</Filter>
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>

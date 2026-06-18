@@ -754,11 +754,6 @@
     <ClCompile Include="MRBitSetParallelFor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
-      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\.editorconfig" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

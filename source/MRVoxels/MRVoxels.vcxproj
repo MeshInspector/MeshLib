@@ -24,6 +24,9 @@
     <ClCompile Include="MRDicom.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
+    <ClCompile Include="MRFloatGridArithmetic.cpp" />
+    <ClCompile Include="MRFloatGridFilter.cpp" />
+    <ClCompile Include="MRFloatGridResample.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRMarchingCubes.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />

@@ -165,7 +165,7 @@ jobs:
           retention-days: 1
 
       - name: Prepare C bindings for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Singlethreaded' }}
         shell: bash
         run: |
           mkdir nuget_files
@@ -173,7 +173,7 @@ jobs:
           cp lib/*.a nuget_files
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Singlethreaded' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveWasm

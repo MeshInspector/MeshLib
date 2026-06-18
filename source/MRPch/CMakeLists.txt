@@ -22,15 +22,19 @@ IF(MR_PCH)
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # the full PCH slows the build down for GCC (it loads the whole PCH image in every TU)
+    # MRMesh.h (below) pulls Eigen, so the lean GCC PCH needs Eigen on its include path too.
+    find_package(Eigen3 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
     target_precompile_headers(${PROJECT_NAME}
       PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRStdlib.h>"
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRExpected.h>"
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRHashMap.h>"
-        # MRMeshFwd.h is parsed in nearly every TU and is mostly forward declarations, so it
-        # adds little to the PCH image. It only fits the shared PCH because <target>_EXPORTS is
-        # no longer defined on non-MSVC (see the top-level CMakeLists), avoiding -Winvalid-pch.
-        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRMeshFwd.h>"
+        # MRMesh.h is parsed in hundreds of TUs and is genuinely heavy (unlike MRMeshFwd.h), so
+        # caching it is where a real GCC parse-time saving could come from. It only fits the
+        # shared PCH because <target>_EXPORTS is no longer defined on non-MSVC (avoiding
+        # -Winvalid-pch); it pulls Eigen, linked above.
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRMesh/MRMesh.h>"
         # MRViewerFwd.h is likewise forward-declaration-only (config.h, exports.h, MRMeshFwd.h,
         # <functional>) and included across MRViewer and its consumers.
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRViewer/MRViewerFwd.h>"

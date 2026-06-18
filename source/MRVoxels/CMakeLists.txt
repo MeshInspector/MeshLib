@@ -44,11 +44,12 @@ IF(NOT MRVOXELS_NO_DICOM)
 ENDIF()
 
 IF(MR_PCH)
-  IF(MSVC)
-    # MRVoxels builds its own PCH (not the shared one) so it can additionally cache the heavy
-    # OpenVDB headers, the dominant front-end cost in the voxels TUs. MESHLIB_NO_VIEWER drops
-    # MRPch.h's viewer/imgui section, which MRVoxels (a lower layer) neither needs nor has on
-    # its include path. See cmake/Modules/CompilerOptions.cmake.
+  # MSVC and Clang (>= 15) build an own PCH that also caches the heavy OpenVDB headers (the
+  # dominant front-end cost in the voxels TUs). GCC keeps the lean shared PCH (a full PCH slows
+  # GCC down: it loads the whole image per TU), as do AppleClang and older Clang.
+  # MESHLIB_NO_VIEWER drops MRPch.h's viewer/imgui section, which MRVoxels (a lower layer)
+  # neither needs nor has on its include path. See cmake/Modules/CompilerOptions.cmake.
+  IF(MSVC OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15))
     target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
     target_precompile_headers(${PROJECT_NAME} PRIVATE
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRVoxelsPch.h>")

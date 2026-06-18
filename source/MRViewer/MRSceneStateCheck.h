@@ -2,6 +2,7 @@
 
 #include "MRISceneStateCheck.h"
 #include "MRMesh/MRObject.h"
+#include "exports.h"
 
 namespace MR
 {
@@ -81,6 +82,16 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
         "" :
         ( "Select at least " + getNObjectsLine<ObjectT>( n ) + " with valid model" );
 }
+// These instantiations are defined once in MRSceneStateCheck.cpp and imported elsewhere
+// (extern template, as in MRUITestEngine.h), so the common cases are not re-generated in
+// every consuming TU. Other object types stay header-instantiated as before.
+extern template MRVIEWER_API std::string getNObjectsLine<ObjectMesh>( unsigned );
+extern template MRVIEWER_API std::string getNObjectsLine<ObjectPoints>( unsigned );
+extern template MRVIEWER_API std::string getNObjectsLine<ObjectLines>( unsigned );
+extern template MRVIEWER_API std::string sceneSelectedExactly<ObjectMesh, true, true>( const std::vector<std::shared_ptr<const Object>>&, unsigned );
+extern template MRVIEWER_API std::string sceneSelectedExactly<ObjectPoints, true, true>( const std::vector<std::shared_ptr<const Object>>&, unsigned );
+extern template MRVIEWER_API std::string sceneSelectedExactly<ObjectLines, true, true>( const std::vector<std::shared_ptr<const Object>>&, unsigned );
+
 
 // check that given vector has exactly N objects if type ObjectT
 template<unsigned N, typename ObjectT, typename = void>

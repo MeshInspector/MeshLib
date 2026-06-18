@@ -9,7 +9,7 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MREnums.h"
-#include <fstream>
+#include <iosfwd>
 
 namespace MR
 {

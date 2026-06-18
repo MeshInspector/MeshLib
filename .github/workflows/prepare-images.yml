@@ -86,7 +86,7 @@ jobs:
               {distro:"ubuntu24",              arch:"arm64"},
               {distro:"emscripten",            arch:"arm64"},
               {distro:"emscripten-generate-c-bindings", arch:"arm64"},
-              {distro:"emscripten-build-c-bindings", arch:"arm64"}
+              {distro:"emscripten-build-c-bindings", arch:"amd64"}
              ] | map(select(
               (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
               and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)

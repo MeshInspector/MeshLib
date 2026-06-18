@@ -5,7 +5,9 @@
 
 # Have to use the old EMSDK here for compatibility with Unity. 3.1.38 uses Clang 17!
 
-FROM emscripten/emsdk:3.1.38-arm64 AS base
+# No Arm images on dockerhub for emsdk this old, have to use x64 (aka amd64).
+
+FROM emscripten/emsdk:3.1.38-amd64 AS base
 
 RUN <<EOF
     set -e

@@ -13,9 +13,9 @@ on:
 jobs:
   emscripten-build:
     timeout-minutes: 40
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04-amd
     container:
-      image: meshlib/meshlib-emscripten-build-c-bindings-arm64:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-emscripten-build-c-bindings-amd64:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
 

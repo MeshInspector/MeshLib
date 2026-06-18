@@ -9,6 +9,8 @@ ENDIF()
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
+# MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
@@ -42,7 +44,17 @@ IF(NOT MRVOXELS_NO_DICOM)
 ENDIF()
 
 IF(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MSVC)
+    # MRVoxels builds its own PCH (not the shared one) so it can additionally cache the heavy
+    # OpenVDB headers, the dominant front-end cost in the voxels TUs. MESHLIB_NO_VIEWER drops
+    # MRPch.h's viewer/imgui section, which MRVoxels (a lower layer) neither needs nor has on
+    # its include path. See cmake/Modules/CompilerOptions.cmake.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
+    target_precompile_headers(${PROJECT_NAME} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRVoxelsPch.h>")
+  ELSE()
+    target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  ENDIF()
 ENDIF()
 
 install(

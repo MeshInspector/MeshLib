@@ -19,6 +19,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRPchCreate.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="MRBoolean.cpp" />
     <ClCompile Include="MRComputeVolume.cpp" />
     <ClCompile Include="MRDicom.cpp" />
@@ -143,12 +146,12 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRVoxels_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRVoxels_EXPORTS;MESHLIB_NO_VIEWER;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)MRVoxelsPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>$(ProjectDir)MRVoxelsPch.h</ForcedIncludeFiles>
+      <PrecompiledHeaderOutputFile>$(IntDir)MRVoxelsPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,12 +166,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRVoxels_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRVoxels_EXPORTS;MESHLIB_NO_VIEWER;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)MRVoxelsPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>$(ProjectDir)MRVoxelsPch.h</ForcedIncludeFiles>
+      <PrecompiledHeaderOutputFile>$(IntDir)MRVoxelsPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

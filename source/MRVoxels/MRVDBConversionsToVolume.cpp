@@ -6,6 +6,8 @@
 #include "MRVoxelsVolumeAccess.h"
 #include "MRMesh/MRTimer.h"
 
+#include <cfloat>
+
 namespace MR
 {
 

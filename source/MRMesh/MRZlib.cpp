@@ -5,6 +5,8 @@
 #include <zlib-ng.h>
 
 #include <cassert>
+#include <istream>
+#include <ostream>
 
 namespace
 {

@@ -163,6 +163,7 @@
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
     <ClCompile Include="MRUITestEngineControl.cpp" />
+    <ClCompile Include="MRSceneStateCheck.cpp" />
     <ClCompile Include="MRUiMcp.cpp" />
     <ClCompile Include="MRSceneMcp.cpp" />
     <ClCompile Include="MRViewerMcp.cpp" />

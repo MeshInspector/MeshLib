@@ -12,6 +12,15 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+# The openvdb::FloatGrid explicit instantiation must be EXPORTED from libMRVoxels so downstream
+# modules (which see it as `extern template`) can link it. A visibility attribute on the (already
+# defined) openvdb type is a GCC error, so export it by compiling just this TU with default
+# visibility (the rest of the library stays -fvisibility=hidden). MSVC uses __declspec instead.
+IF(NOT MSVC)
+  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/MRVDBFloatGridInstantiation.cpp"
+    PROPERTIES COMPILE_OPTIONS "-fvisibility=default")
+ENDIF()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 find_package(OpenVDB 10 REQUIRED)

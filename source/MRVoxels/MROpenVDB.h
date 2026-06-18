@@ -104,8 +104,9 @@ namespace OPENVDB_VERSION_NAME
 // through them. FloatTree = tree::Tree4<float,5,4,3>::Type.
 // Linkage is split three ways -- each platform rejects a different naive form:
 //  - the one definition (MRVDBFloatGridInstantiation.cpp) is exported: __declspec(dllexport) on
-//    Windows, a `#pragma GCC visibility push(default)` elsewhere (a visibility *attribute* on an
-//    already-defined type is a GCC error; dllexport + extern is C4910 on MSVC);
+//    Windows; elsewhere a visibility *attribute* on an already-defined type is a GCC error, so
+//    that TU is compiled with -fvisibility=default instead (see MRVoxels/CMakeLists.txt). dllexport
+//    + extern is C4910 on MSVC, hence the split.
 //  - MRVoxels's other TUs use a plain `extern template` (intra-module link);
 //  - downstream consumers import: __declspec(dllimport) on Windows, plain extern elsewhere.
 #if defined(MR_VOXELS_INSTANTIATE_FLOATGRID)
@@ -123,14 +124,8 @@ namespace OPENVDB_VERSION_NAME
 #define MR_VDB_API
 #endif
 
-#if defined(MR_VOXELS_INSTANTIATE_FLOATGRID) && !defined(_WIN32)
-#pragma GCC visibility push(default)
-#endif
 MR_VDB_INST class MR_VDB_API openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float, 3>, 4>, 5>>>;
 MR_VDB_INST class MR_VDB_API openvdb::Grid<openvdb::FloatTree>;
-#if defined(MR_VOXELS_INSTANTIATE_FLOATGRID) && !defined(_WIN32)
-#pragma GCC visibility pop
-#endif
 #undef MR_VDB_INST
 #undef MR_VDB_API
 

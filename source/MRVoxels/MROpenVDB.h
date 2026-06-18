@@ -102,14 +102,24 @@ namespace OPENVDB_VERSION_NAME
 // The raw tree nodes cannot be explicitly instantiated (LeafNode::str() references a missing
 // operator<< for LeafBuffer), but instantiating Grid + Tree homes the node methods reached
 // through them. FloatTree = tree::Tree4<float,5,4,3>::Type.
-#ifdef MR_VOXELS_INSTANTIATE_FLOATGRID
-#define MR_VDB_INSTANTIATE template        // the single definition (MRVDBFloatGridInstantiation.cpp)
+// dllexport and `extern template` are incompatible (C4910), so the linkage is split three ways:
+// the one definition (in MRVDBFloatGridInstantiation.cpp) exports it; MRVoxels's other TUs use a
+// plain `extern template` (intra-DLL link); downstream consumers import it. On non-Windows
+// MRVOXELS_API (visibility) handles the export and a plain extern handles the rest.
+#if defined(MR_VOXELS_INSTANTIATE_FLOATGRID)
+#define MR_VDB_INST template
+#define MR_VDB_API MRVOXELS_API                          // single definition: dllexport / visibility-default
+#elif defined(_WIN32) && !defined(MRVoxels_EXPORTS)
+#define MR_VDB_INST extern template
+#define MR_VDB_API __declspec(dllimport)                 // downstream consumers import from MRVoxels
 #else
-#define MR_VDB_INSTANTIATE extern template // every other TU skips the codegen and links to the above
+#define MR_VDB_INST extern template
+#define MR_VDB_API                                       // MRVoxels intra-DLL, and all non-Windows externs
 #endif
-MR_VDB_INSTANTIATE class MRVOXELS_API openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float, 3>, 4>, 5>>>;
-MR_VDB_INSTANTIATE class MRVOXELS_API openvdb::Grid<openvdb::FloatTree>;
-#undef MR_VDB_INSTANTIATE
+MR_VDB_INST class MR_VDB_API openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float, 3>, 4>, 5>>>;
+MR_VDB_INST class MR_VDB_API openvdb::Grid<openvdb::FloatTree>;
+#undef MR_VDB_INST
+#undef MR_VDB_API
 
 MR_SUPPRESS_WARNING_POP
 

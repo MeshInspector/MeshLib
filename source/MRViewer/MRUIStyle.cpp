@@ -2525,19 +2525,11 @@ namespace MR::UI
 {
 
 // Definitions for the drag<>() instantiations declared extern template in MRUIStyle.h.
-template bool drag<NoUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<NoUnit>, ImGuiSliderFlags, const int&, const int& );
-template bool drag<NoUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<NoUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<NoUnit, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<NoUnit>, ImGuiSliderFlags, const int&, const int& );
-template bool drag<LengthUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<LengthUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<LengthUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<LengthUnit>, ImGuiSliderFlags, const int&, const int& );
-template bool drag<AngleUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<AngleUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<AngleUnit, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<AngleUnit>, ImGuiSliderFlags, const int&, const int& );
-template bool drag<RatioUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<RatioUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<RatioUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<RatioUnit>, ImGuiSliderFlags, const int&, const int& );
-template bool drag<PixelSizeUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<PixelSizeUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<PixelSizeUnit, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<PixelSizeUnit>, ImGuiSliderFlags, const int&, const int& );
-template bool drag<MovementSpeedUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<MovementSpeedUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<AreaUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<AreaUnit>, ImGuiSliderFlags, const float&, const float& );
-template bool drag<InvLengthUnit, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<InvLengthUnit>, ImGuiSliderFlags, const float&, const float& );
+#define MR_X( E ) \
+    template bool drag<E, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<E>, ImGuiSliderFlags, const float&, const float& ); \
+    template bool drag<E, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& ); \
+    template bool drag<E, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& );
+DETAIL_MR_UNIT_ENUMS( MR_X )
+#undef MR_X
 
 } // namespace MR::UI

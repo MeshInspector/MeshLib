@@ -126,9 +126,10 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      internal_build:   ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      nuget_build_patch: ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
@@ -162,6 +163,7 @@ jobs:
       - windows-build-test
       - linux-vcpkg-build-test
       - macos-build-test
+      - emscripten-build-test
     timeout-minutes: 20
     runs-on: windows-2025
     steps:
@@ -198,6 +200,12 @@ jobs:
          pattern: DotNetPatchArchiveMacOs-arm64
          path: macos_arm64_runtime
 
+     - name: Download NuGet Wasm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWasm
+         path: macos_wasm_runtime
+
      - name: Download NuGet DLL and XML
        uses: actions/download-artifact@v8
        with:
@@ -208,7 +216,7 @@ jobs:
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime macos_wasm_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe

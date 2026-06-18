@@ -12,6 +12,14 @@ on:
       upload_artifacts:
         required: true
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
+      nuget_build_patch:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   emscripten-build:
@@ -90,6 +98,21 @@ jobs:
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
+      - name: Download C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          rm -rf source/MeshLibC2
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          # Cuda placeholders:
+          cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
+
       - name: Build
         env:
           MR_EMSCRIPTEN: "ON"
@@ -101,6 +124,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
         run: ./scripts/build_source.sh
 
       - name: Stage MRTest bundle
@@ -139,6 +163,23 @@ jobs:
           name: Distributives_${{ matrix.package_name }}
           path: meshlib_${{ matrix.package_name }}.zip
           retention-days: 1
+
+      - name: Prepare C bindings for NuGet
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          mkdir nuget_files
+          cp build/Release/bin/*.a nuget_files
+          cp lib/*.a nuget_files
+
+      - name: Upload NuGet files to Artifacts
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DotNetPatchArchiveWasm
+          path: ./nuget_files/*
+          retention-days: 1
+          overwrite: true
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build && inputs.upload_artifacts }}

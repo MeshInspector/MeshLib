@@ -319,12 +319,6 @@ $(error Unknown MODE=$(MODE))
 endif
 $(info MODE: $(MODE))
 
-ifeq ($(MODE),release)
-CSHARP_MODE=Release
-else
-CSHARP_MODE=Debug
-endif
-
 
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
@@ -1093,6 +1087,13 @@ all: $(all_outputs)
 else # If C#:
 
 # C# needs almost none of the logic in this file, just one simple rule.
+
+# Here we support specifying `CSHARP_MODE` as `MODE` for simplicity.
+ifeq ($(MODE),release)
+CSHARP_MODE=Release
+else
+CSHARP_MODE=Debug
+endif
 
 .PHONY: generate
 generate:

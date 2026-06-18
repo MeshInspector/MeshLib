@@ -100,6 +100,7 @@
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
     <ClInclude Include="MRVoxelsFwd.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
+    <ClInclude Include="MRVoxelsPch.h" />
     <ClInclude Include="MRVoxelsSave.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
     <ClInclude Include="MRVoxelsVolumeAccess.h" />

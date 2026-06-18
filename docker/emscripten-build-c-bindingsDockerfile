@@ -54,16 +54,6 @@ RUN <<EOF
     rm -rf bin include lib share thirdparty_build
 EOF
 
-# 64-bit multi-threaded
-RUN <<EOF
-    set -e
-    export MR_EMSCRIPTEN_WASM64=ON
-    ./scripts/build_thirdparty.sh
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
-    rm -rf bin include lib share thirdparty_build
-EOF
-
-
 FROM base
 
 COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten

@@ -7,6 +7,11 @@
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTimer.h"
 
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <type_traits>
+
 namespace MR
 {
 

@@ -102,22 +102,35 @@ namespace OPENVDB_VERSION_NAME
 // The raw tree nodes cannot be explicitly instantiated (LeafNode::str() references a missing
 // operator<< for LeafBuffer), but instantiating Grid + Tree homes the node methods reached
 // through them. FloatTree = tree::Tree4<float,5,4,3>::Type.
-// dllexport and `extern template` are incompatible (C4910), so the linkage is split three ways:
-// the one definition (in MRVDBFloatGridInstantiation.cpp) exports it; MRVoxels's other TUs use a
-// plain `extern template` (intra-DLL link); downstream consumers import it. On non-Windows
-// MRVOXELS_API (visibility) handles the export and a plain extern handles the rest.
+// Linkage is split three ways -- each platform rejects a different naive form:
+//  - the one definition (MRVDBFloatGridInstantiation.cpp) is exported: __declspec(dllexport) on
+//    Windows, a `#pragma GCC visibility push(default)` elsewhere (a visibility *attribute* on an
+//    already-defined type is a GCC error; dllexport + extern is C4910 on MSVC);
+//  - MRVoxels's other TUs use a plain `extern template` (intra-module link);
+//  - downstream consumers import: __declspec(dllimport) on Windows, plain extern elsewhere.
 #if defined(MR_VOXELS_INSTANTIATE_FLOATGRID)
 #define MR_VDB_INST template
-#define MR_VDB_API MRVOXELS_API                          // single definition: dllexport / visibility-default
+#if defined(_WIN32)
+#define MR_VDB_API __declspec(dllexport)
+#else
+#define MR_VDB_API
+#endif
 #elif defined(_WIN32) && !defined(MRVoxels_EXPORTS)
 #define MR_VDB_INST extern template
-#define MR_VDB_API __declspec(dllimport)                 // downstream consumers import from MRVoxels
+#define MR_VDB_API __declspec(dllimport)
 #else
 #define MR_VDB_INST extern template
-#define MR_VDB_API                                       // MRVoxels intra-DLL, and all non-Windows externs
+#define MR_VDB_API
+#endif
+
+#if defined(MR_VOXELS_INSTANTIATE_FLOATGRID) && !defined(_WIN32)
+#pragma GCC visibility push(default)
 #endif
 MR_VDB_INST class MR_VDB_API openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float, 3>, 4>, 5>>>;
 MR_VDB_INST class MR_VDB_API openvdb::Grid<openvdb::FloatTree>;
+#if defined(MR_VOXELS_INSTANTIATE_FLOATGRID) && !defined(_WIN32)
+#pragma GCC visibility pop
+#endif
 #undef MR_VDB_INST
 #undef MR_VDB_API
 

@@ -27,6 +27,7 @@
 #include <bit>
 #include <future>
 #include <sstream>
+#include <fstream>
 
 namespace MR
 {

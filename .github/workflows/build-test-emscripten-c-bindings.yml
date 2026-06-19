@@ -95,15 +95,15 @@ jobs:
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: "ON"
           MR_EMSCRIPTEN_WASM64: "OFF"
+          MR_EMSCRIPTEN_MIMALLOC: "OFF"
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DMR_EMSCRIPTEN_MIMALLOC=OFF
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
           MR_CMAKE_BUILD_OPTIONS: >
             --target MeshLibC2
-        run: ./scripts/build_source.sh || ( cat build/Release/CMakeFiles/CMakeError.log; cat build/Release/CMakeFiles/CMakeOutput.log )
+        run: ./scripts/build_source.sh
 
       - name: Prepare C bindings for Wasm
         shell: bash

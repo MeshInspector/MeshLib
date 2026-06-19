@@ -11,9 +11,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
-      <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
@@ -153,7 +150,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OutDir)MRMesh.lib;ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -175,10 +172,19 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OutDir)MRMesh.lib;ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <!-- EXPERIMENT (MSBuild only): let MRVoxels TUs compile in parallel with MRMesh instead of
+       waiting for the whole MRMesh project. The MRMesh ProjectReference (which serializes the
+       build) is removed and MRMesh.lib is linked explicitly; this target only gates the LINK on
+       MRMesh being built. No Properties are passed, so global properties flow down and MSBuild
+       dedups the MRMesh build the solution is already doing (no double build, no node deadlock
+       -- MRMesh has no blocking wait of its own). -->
+  <Target Name="EnsureMRMeshBeforeLink" BeforeTargets="Link">
+    <MSBuild Projects="$(ProjectDir)..\MRMesh\MRMesh.vcxproj" Targets="Build" BuildInParallel="true" />
+  </Target>
 </Project>

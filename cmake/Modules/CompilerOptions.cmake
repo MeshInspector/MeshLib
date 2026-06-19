@@ -22,6 +22,16 @@ IF(MSVC AND MR_PCH)
   add_compile_definitions(MR_PCH_USE_EXTRA_HEADERS)
 ENDIF()
 
+# MRPch.h pulls in OpenVDB, which we want cached in the precompiled header. That is safe only on MSVC,
+# where MRMesh/MRViewer build their own PCH and the compiler does not emit unreferenced inline functions,
+# so the many targets that REUSE_FROM the shared PCH without linking libopenvdb still link. On GCC/Clang
+# such emission yields undefined OpenVDB symbols (e.g. openvdb::math::simplify from inline ScaleMap
+# methods). Define MRPCH_NO_OPENVDB globally there so MRPch.h skips OpenVDB AND every reuser's macro
+# state matches the shared PCH (otherwise GCC fails with -Werror=invalid-pch).
+IF(MR_PCH AND NOT MSVC)
+  add_compile_definitions(MRPCH_NO_OPENVDB)
+ENDIF()
+
 # make link to fail if there are unresolved symbols (GCC and Clang)
 IF(NOT APPLE)
   IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

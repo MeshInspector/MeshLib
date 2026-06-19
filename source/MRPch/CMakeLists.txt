@@ -20,6 +20,15 @@ IF(MR_PCH)
     $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
   )
 
+  # MRPch.h includes MRVoxels/MROpenVDB.h. Keep OpenVDB in the precompiled header only on MSVC, where
+  # MRMesh/MRViewer build their own PCH and the compiler does not emit unreferenced inline functions, so
+  # the many libraries that REUSE_FROM this shared PCH without linking libopenvdb still link cleanly.
+  # On every other compiler such emission produces undefined OpenVDB symbols (e.g. openvdb::math::simplify
+  # from inline ScaleMap methods), so exclude OpenVDB from the shared PCH there.
+  IF(NOT MSVC OR NOT MESHLIB_BUILD_VOXELS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MRPCH_NO_OPENVDB)
+  ENDIF()
+
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # the full PCH slows the build down for GCC (it loads the whole PCH image in every TU)
     target_precompile_headers(${PROJECT_NAME}
@@ -78,15 +87,13 @@ IF(MR_PCH)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
   ENDIF()
 
-  # MRPch.h includes MRVoxels/MROpenVDB.h, so the shared PCH must be compiled with the same
-  # OpenVDB definitions (OPENVDB_USE_DELAYED_LOADING, OPENVDB_ABI_VERSION_NUMBER) as the TUs that
-  # reuse it. Otherwise openvdb/version.h bakes its own defaults into the PCH and consumers that do
-  # link OpenVDB hit -Werror=macro-redefined. When voxels are disabled, drop OpenVDB from the PCH.
-  IF(MESHLIB_BUILD_VOXELS)
+  # On MSVC the shared PCH keeps OpenVDB (see MRPCH_NO_OPENVDB above), so it must be compiled with the
+  # same OpenVDB definitions (OPENVDB_USE_DELAYED_LOADING, OPENVDB_ABI_VERSION_NUMBER) as the TUs that
+  # reuse it; otherwise openvdb/version.h bakes its own defaults into the PCH and consumers that link
+  # OpenVDB hit a macro-redefinition. Linking the imported target propagates those defs.
+  IF(MSVC AND MESHLIB_BUILD_VOXELS)
     find_package(OpenVDB 10 REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
-  ELSE()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MRPCH_NO_OPENVDB)
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE

@@ -78,6 +78,17 @@ IF(MR_PCH)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
   ENDIF()
 
+  # MRPch.h includes MRVoxels/MROpenVDB.h, so the shared PCH must be compiled with the same
+  # OpenVDB definitions (OPENVDB_USE_DELAYED_LOADING, OPENVDB_ABI_VERSION_NUMBER) as the TUs that
+  # reuse it. Otherwise openvdb/version.h bakes its own defaults into the PCH and consumers that do
+  # link OpenVDB hit -Werror=macro-redefined. When voxels are disabled, drop OpenVDB from the PCH.
+  IF(MESHLIB_BUILD_VOXELS)
+    find_package(OpenVDB 10 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
+  ELSE()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MRPCH_NO_OPENVDB)
+  ENDIF()
+
   target_precompile_headers(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
   )

@@ -24,14 +24,6 @@ IF(MSVC AND MR_PCH)
   add_compile_definitions(MR_PCH_USE_EXTRA_HEADERS)
 ENDIF()
 
-# Caching OpenVDB in the precompiled header speeds up the OpenVDB-heavy translation units, but it only
-# works on MSVC: there MRMesh/MRViewer build their own PCH and the compiler does not emit unreferenced
-# inline functions, so the targets that REUSE_FROM the shared PCH without linking libopenvdb still link.
-# On GCC/Clang that emission yields undefined OpenVDB symbols (e.g. openvdb::math::simplify from inline
-# ScaleMap methods), so the option has no effect there. It also noticeably enlarges the PCH. When enabled,
-# the MRPch target defines MR_PCH_USE_OPENVDB to pull OpenVDB into the shared PCH (see source/MRPch).
-option(MR_PCH_OPENVDB "Cache OpenVDB in the precompiled header (effective on MSVC only)" OFF)
-
 # Linux: enable LFS globally
 # many Linux libraries' header files define _FILE_OFFSET_BITS to 64 to enable large file support
 # this might break the precompiled header usage for GCC as it requires the macro set to be consistent

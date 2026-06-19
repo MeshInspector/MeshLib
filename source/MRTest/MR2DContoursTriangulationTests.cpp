@@ -1,5 +1,6 @@
 #include <MRMesh/MR2DContoursTriangulation.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRBox.h>
 #include <MRMesh/MRContour.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRTorus.h>

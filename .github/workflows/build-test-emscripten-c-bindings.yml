@@ -101,7 +101,9 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMR_EMSCRIPTEN_MIMALLOC=OFF
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-        run: ./scripts/build_source.sh
+          MR_CMAKE_BUILD_OPTIONS: >
+            --target MeshLibC2
+        run: ./scripts/build_source.sh || cat build/CMakeFiles/CMakeConfigureLog.yaml
 
       - name: Prepare C bindings for Wasm
         shell: bash

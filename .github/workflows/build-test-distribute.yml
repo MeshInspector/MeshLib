@@ -132,7 +132,7 @@ jobs:
 
   emscripten-c-bindings-build-test:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
-    needs: [ config, prepare-image, generate-c-bindings ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten-c-bindings.yml
     with:
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}

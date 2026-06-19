@@ -58,11 +58,20 @@ struct SweepLinePredicates
 static SweepLinePredicates precisePredicates( const Contours2f& contours )
 {
     Box3f box;
+    int pointsSize = 0;
     for ( const auto& cont : contours )
+    {
         for ( const auto& p : cont )
             box.include( to3dim( p ) );
+        if ( cont.size() > 3 )
+        {
+            assert( cont.front() == cont.back() );
+            pointsSize += int( cont.size() ) - 1;
+        }
+    }
 
     auto pts = std::make_shared<Vector<Vector2i, VertId>>();
+    pts->reserve( pointsSize );
     auto toInt = [conv = getToIntConverter( Box3d( box ) )] ( const Vector2f& coord )
     {
         return to2dim( conv( to3dim( coord ) ) );

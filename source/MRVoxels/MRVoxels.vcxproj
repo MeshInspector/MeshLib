@@ -182,8 +182,8 @@
        waiting for the whole MRMesh project. The MRMesh ProjectReference (which serializes the
        build) is removed and MRMesh.lib is linked explicitly; this target only gates the LINK on
        MRMesh being built. No Properties are passed, so global properties flow down and MSBuild
-       dedups the MRMesh build the solution is already doing (no double build, no node deadlock
-       -- MRMesh has no blocking wait of its own). -->
+       dedups the MRMesh build the solution is already doing (no double build, and no node
+       deadlock since MRMesh has no blocking wait of its own). -->
   <Target Name="EnsureMRMeshBeforeLink" BeforeTargets="Link">
     <MSBuild Projects="$(ProjectDir)..\MRMesh\MRMesh.vcxproj" Targets="Build" BuildInParallel="true" />
   </Target>

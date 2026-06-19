@@ -6,6 +6,7 @@
 #include "MRPch/MRTBB.h"
 
 #include <boost/spirit/home/x3.hpp>
+#include <istream>
 
 // helper macro to make code cleaner
 #define floatT real_parser<T>{}

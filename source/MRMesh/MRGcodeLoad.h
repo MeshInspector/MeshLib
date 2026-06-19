@@ -4,7 +4,7 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include <filesystem>
-#include <istream>
+#include <iosfwd>
 #include <string>
 
 namespace MR

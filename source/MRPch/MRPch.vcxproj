@@ -28,6 +28,7 @@
     <ClInclude Include="MREigen.h" />
     <ClInclude Include="MRJson.h" />
     <ClInclude Include="MRPch.h" />
+    <ClInclude Include="MRPchGcc.h" />
     <ClInclude Include="MRTBB.h" />
     <ClInclude Include="MRSpdlog.h" />
     <ClInclude Include="MRSuppressWarning.h" />

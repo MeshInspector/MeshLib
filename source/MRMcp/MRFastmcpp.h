@@ -2,12 +2,7 @@
 
 // Centralised fastmcpp wrapper. Both MRMcp.cpp and MRMCPGateway.cpp must pull
 // fastmcpp in before any standard library header (fastmcpp's macro tricks rely
-// on that ordering). fastmcpp uses `_t` as a template parameter and our
-// translation macro (MRMeshFwd.h) shadows it, so suppress `_t` across the
-// fastmcpp includes. Use push_macro/pop_macro rather than a bare #undef: when
-// MRMeshFwd.h is baked into the precompiled header its `#pragma once` is already
-// satisfied, so a later #include can no longer restore `_t`; push/pop guarantees
-// the macro is reinstated for translation users (e.g. MRViewer/MRMouse.h).
+// on that ordering).
 
 #pragma push_macro( "_t" )
 #undef _t

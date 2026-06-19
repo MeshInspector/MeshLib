@@ -223,12 +223,12 @@ jobs:
 
      - name: Build C# Wasm package
        run: |
-         mkdir MRDotNet2-wasm
-         mkdir MRDotNet2-wasm/native
-         move dotnet_dll/MRDotNet2Static.dll MRDotNet2-wasm
-         mkdir MRDotNet2-wasm/native/single
-         move browser_wasm_runtime_single/* MRDotNet2-wasm/native/single
-         Compress-Archive -Path MRDotNet2-wasm -DestinationPath meshlib_csharp-wasm.zip
+         mkdir meshlib_dotnet-wasm
+         mkdir meshlib_dotnet-wasm/native
+         move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
+         mkdir meshlib_dotnet-wasm/native/single
+         move browser_wasm_runtime_single/* meshlib_dotnet-wasm/native/single
+         Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
 
      - name: Generate NuGet specification
        run: |
@@ -255,8 +255,8 @@ jobs:
        env:
          ACTIONS_STEP_DEBUG: true
        with:
-         name: DistributivesCSharpWasm
-         path: meshlib_csharp-wasm.zip
+         name: DistributivesDotNetWasm
+         path: meshlib_dotnet-wasm.zip
          retention-days: 1
 
      - name: Delete consumed NuGet input artifacts

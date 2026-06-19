@@ -1,5 +1,5 @@
 # Precompiled-header configuration.
-# Included from the top-level CMakeLists right before CompilerOptions, so it must come AFTER the
+# Included from the top-level CMakeLists right after CompilerOptions, so it must come AFTER the
 # `project' command (it relies on the detected compiler information).
 
 set(MR_PCH_DEFAULT ON)
@@ -26,15 +26,15 @@ ENDIF()
 
 # Caching OpenVDB in the precompiled header speeds up the OpenVDB-heavy translation units, but it only
 # works on MSVC: there MRMesh/MRViewer build their own PCH and the compiler does not emit unreferenced
-# inline functions, so the many targets that REUSE_FROM the shared PCH without linking libopenvdb still
-# link. On GCC/Clang that emission yields undefined OpenVDB symbols (e.g. openvdb::math::simplify from
-# inline ScaleMap methods), so the option has no effect there. It also noticeably enlarges the PCH.
-option(MR_PCH_OPENVDB "Cache OpenVDB in the precompiled header (effective on MSVC only)" ON)
+# inline functions, so the targets that REUSE_FROM the shared PCH without linking libopenvdb still link.
+# On GCC/Clang that emission yields undefined OpenVDB symbols (e.g. openvdb::math::simplify from inline
+# ScaleMap methods), so the option has no effect there. It also noticeably enlarges the PCH. When enabled,
+# the MRPch target defines MR_PCH_USE_OPENVDB to pull OpenVDB into the shared PCH (see source/MRPch).
+option(MR_PCH_OPENVDB "Cache OpenVDB in the precompiled header (effective on MSVC only)" OFF)
 
-# MRPch.h includes OpenVDB unless MRPCH_NO_OPENVDB is defined. The macro affects the shared PCH, so it
-# must be defined identically on the PCH and on every REUSE_FROM consumer (otherwise GCC errors with
-# -Werror=invalid-pch). Define it globally whenever OpenVDB must stay out of the PCH: always on non-MSVC,
-# and on MSVC when the option is disabled.
-IF(MR_PCH AND (NOT MSVC OR NOT MR_PCH_OPENVDB))
-  add_compile_definitions(MRPCH_NO_OPENVDB)
-ENDIF()
+# Linux: enable LFS globally
+# many Linux libraries' header files define _FILE_OFFSET_BITS to 64 to enable large file support
+# this might break the precompiled header usage for GCC as it requires the macro set to be consistent
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND MR_PCH)
+  add_compile_definitions(_FILE_OFFSET_BITS=64)
+endif()

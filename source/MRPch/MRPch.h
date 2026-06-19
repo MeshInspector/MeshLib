@@ -97,7 +97,7 @@
 
 // in MSVC it dramaticcaly increases the size of PCH file (from 400Mb to 800Mb),
 // but greatly improves compilation time of TUs that include OpenVDB
-#ifndef MRPCH_NO_OPENVDB
+#ifdef MR_PCH_USE_OPENVDB
 #include "MRVoxels/MROpenVDB.h"
 #endif
 

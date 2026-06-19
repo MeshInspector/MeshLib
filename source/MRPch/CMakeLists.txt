@@ -78,18 +78,14 @@ IF(MR_PCH)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
   ENDIF()
 
-  # OpenVDB stays in the shared PCH only when MR_PCH_OPENVDB is on, and only on MSVC; otherwise
-  # MRPCH_NO_OPENVDB is defined globally in the Pch module (so the PCH and every REUSE_FROM consumer
-  # agree). When OpenVDB is in the PCH it must be compiled with the same OpenVDB definitions
-  # (OPENVDB_USE_DELAYED_LOADING, OPENVDB_ABI_VERSION_NUMBER) as the TUs that reuse it, or
-  # openvdb/version.h bakes mismatched macros into the PCH.
-  IF(MSVC AND MR_PCH_OPENVDB)
-    IF(MESHLIB_BUILD_VOXELS)
-      find_package(OpenVDB 10 REQUIRED)
-      target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
-    ELSE()
-      target_compile_definitions(${PROJECT_NAME} PRIVATE MRPCH_NO_OPENVDB)
-    ENDIF()
+  # Cache OpenVDB in the shared PCH when MR_PCH_OPENVDB is enabled (effective on MSVC only; see
+  # cmake/Modules/ConfigurePch.cmake). MR_PCH_USE_OPENVDB makes MRPch.h pull in the OpenVDB headers,
+  # and linking OpenVDB compiles the PCH with the same OpenVDB definitions (OPENVDB_USE_DELAYED_LOADING,
+  # OPENVDB_ABI_VERSION_NUMBER) as the translation units that reuse it.
+  IF(MSVC AND MR_PCH_OPENVDB AND MESHLIB_BUILD_VOXELS)
+    find_package(OpenVDB 10 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_OPENVDB)
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE

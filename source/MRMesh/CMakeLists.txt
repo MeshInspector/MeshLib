@@ -100,8 +100,8 @@ IF(MR_PCH)
     # MRMesh exports MRMESH_API, so it cannot reuse the shared (dllimport) PCH once that PCH
     # contains MeshLib headers; it builds its own from MRPch.h in its (dllexport) context.
     # MESHLIB_NO_VIEWER drops the viewer/imgui section of MRPch.h, which MRMesh (a lower layer)
-    # neither needs nor has on its include path. See cmake/Modules/CompilerOptions.cmake.
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER MRPCH_NO_OPENVDB)
+    # neither needs nor has on its include path. See cmake/Modules/ConfigurePch.cmake.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
     target_precompile_headers(${PROJECT_NAME} PRIVATE
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
   ELSE()

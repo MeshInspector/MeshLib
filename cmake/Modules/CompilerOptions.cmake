@@ -1,36 +1,5 @@
 # this file must be included AFTER the `project' command because it relies on the detected compiler information
-
-set(MR_PCH_DEFAULT ON)
-# for Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15)
-  set(MR_PCH_DEFAULT OFF)
-ENDIF()
-set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
-IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-ENDIF()
-message("MR_PCH=${MR_PCH}")
-
-# On MSVC the *_API macros expand to __declspec(dllexport) inside a library and to
-# __declspec(dllimport) in its consumers, so MeshLib's own headers cannot be baked into
-# a single shared precompiled header. Instead we enable the extra headers everywhere and
-# let MRMesh and MRViewer build their own PCH from MRPch.h in their (dllexport) context,
-# while every other target keeps reusing the shared (all-dllimport) PCH built by MRPch.
-# See source/MRMesh/CMakeLists.txt and source/MRViewer/CMakeLists.txt.
-IF(MSVC AND MR_PCH)
-  set(MR_PCH_USE_EXTRA_HEADERS ON CACHE BOOL "Add frequently used MeshLib headers to the precompiled header" FORCE)
-  add_compile_definitions(MR_PCH_USE_EXTRA_HEADERS)
-ENDIF()
-
-# MRPch.h pulls in OpenVDB, which we want cached in the precompiled header. That is safe only on MSVC,
-# where MRMesh/MRViewer build their own PCH and the compiler does not emit unreferenced inline functions,
-# so the many targets that REUSE_FROM the shared PCH without linking libopenvdb still link. On GCC/Clang
-# such emission yields undefined OpenVDB symbols (e.g. openvdb::math::simplify from inline ScaleMap
-# methods). Define MRPCH_NO_OPENVDB globally there so MRPch.h skips OpenVDB AND every reuser's macro
-# state matches the shared PCH (otherwise GCC fails with -Werror=invalid-pch).
-IF(MR_PCH AND NOT MSVC)
-  add_compile_definitions(MRPCH_NO_OPENVDB)
-ENDIF()
+# Precompiled-header configuration lives in the Pch module (included from the top-level CMakeLists).
 
 # make link to fail if there are unresolved symbols (GCC and Clang)
 IF(NOT APPLE)

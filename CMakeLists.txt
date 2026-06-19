@@ -52,6 +52,7 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
   ENDIF()
 ENDIF()
 
+include(Pch)
 include(CompilerOptions)
 IF(EMSCRIPTEN)
   include(ConfigureEmscripten)

@@ -125,6 +125,7 @@ IF(MR_PCH)
   IF(MSVC)
     # MRViewer exports MRVIEWER_API, so like MRMesh it builds its own PCH from MRPch.h in its
     # (dllexport) context instead of reusing the shared one. See cmake/Modules/CompilerOptions.cmake.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MRPCH_NO_OPENVDB)
     target_precompile_headers(${PROJECT_NAME} PRIVATE
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
   ELSE()

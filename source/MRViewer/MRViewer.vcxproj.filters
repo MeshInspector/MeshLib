@@ -391,6 +391,9 @@
     <ClCompile Include="MRUITestEngineControl.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneStateCheck.cpp">
+      <Filter>StatePlugins</Filter>
+    </ClCompile>
     <ClCompile Include="MRUiMcp.cpp">
       <Filter>MCP</Filter>
     </ClCompile>

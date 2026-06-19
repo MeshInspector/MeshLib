@@ -22,10 +22,11 @@ inputs:
   job-name:
     required: true
     description: >
-      Name of the job to wait for, matched as a substring of the run's job
-      names. A substring is used so reusable-workflow jobs (displayed as
-      "caller-job / inner-job") match on their caller-job name -- e.g.
-      `generate-c-bindings` matches `generate-c-bindings / generate-c-bindings`.
+      Name of the job to wait for. Matched against the run's job names either
+      exactly, or -- for reusable-workflow jobs, displayed as
+      "caller-job / inner-job" -- on the caller-job segment before " / ". So
+      `generate-c-bindings` matches `generate-c-bindings / generate-c-bindings`
+      but not an unrelated `prepare-image / ... (emscripten-generate-c-bindings, ...)`.
   timeout-seconds:
     required: false
     default: '1800'
@@ -67,7 +68,13 @@ runs:
               github.rest.actions.listJobsForWorkflowRun,
               { owner, repo, run_id: runId, per_page: 100 },
             ));
-            const job = jobs && jobs.find((j) => j.name.includes(jobName));
+            // Match the job exactly, or by caller-job segment for reusable-
+            // workflow jobs (displayed as "caller-job / inner-job"). A plain
+            // substring would wrongly match unrelated jobs -- e.g. a prepare-
+            // image matrix job "... (emscripten-generate-c-bindings, arm64)".
+            const job = jobs && jobs.find(
+              (j) => j.name === jobName || j.name.startsWith(jobName + ' / '),
+            );
             if (job && job.status === 'completed') {
               if (job.conclusion === 'success') {
                 core.info(`Job "${job.name}" finished successfully.`);

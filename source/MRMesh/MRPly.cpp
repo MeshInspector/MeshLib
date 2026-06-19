@@ -8,6 +8,7 @@
 #include "MRMeshTexture.h"
 #include "MRTelemetry.h"
 #include "MRTimer.h"
+#include <istream>
 
 namespace MR
 {

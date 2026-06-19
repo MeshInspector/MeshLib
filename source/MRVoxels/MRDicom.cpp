@@ -29,6 +29,7 @@
 #pragma warning(pop)
 
 #include <variant>
+#include <fstream>
 
 namespace MR
 {

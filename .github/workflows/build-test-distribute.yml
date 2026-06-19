@@ -228,7 +228,7 @@ jobs:
          move dotnet_dll/MRDotNet2Static.dll MRDotNet2-wasm
          mkdir MRDotNet2-wasm/native/single
          move browser_wasm_runtime_single/* MRDotNet2-wasm/native/single
-         Compress-Archive -Path MRDotNet2-wasm -DestinationPath MRDotNet2-wasm.zip
+         Compress-Archive -Path MRDotNet2-wasm -DestinationPath meshlib_csharp-wasm.zip
 
      - name: Generate NuGet specification
        run: |

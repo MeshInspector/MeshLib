@@ -103,7 +103,7 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
           MR_CMAKE_BUILD_OPTIONS: >
             --target MeshLibC2
-        run: ./scripts/build_source.sh || cat build/CMakeFiles/CMakeConfigureLog.yaml
+        run: ./scripts/build_source.sh || cat build/Release/CMakeFiles/CMakeConfigureLog.yaml
 
       - name: Prepare C bindings for Wasm
         shell: bash

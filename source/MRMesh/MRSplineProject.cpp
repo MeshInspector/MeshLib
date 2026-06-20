@@ -53,9 +53,8 @@ Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
         const GeodesicPath geoPath{ .start = p0.mtp, .mids = std::move( *maybeSurfPath ), .end = p1.mtp };
         const auto geoPathAsContour = geodesicPathToContour3f( mesh, geoPath );
         const auto geoPathLen = calcLength( geoPathAsContour );
-        const auto midPoint = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
-        (void)midPoint;
-        //const auto surfDist = computeSurfaceDistances( mesh, mesh.projectPoint( midPoint ).mtp, geoPathLen / 2 );
+        const auto midPointId = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
+        const auto surfDist = computeSurfaceDistances( mesh, geoPath[midPointId], geoPathLen / 2 );
     } );
 
     // for each point stores the last control (marked) point index,

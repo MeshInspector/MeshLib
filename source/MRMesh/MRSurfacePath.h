@@ -23,6 +23,21 @@ struct GeodesicPath
     MeshTriPoint end;   ///< can be invalid, then the path ends in mids.back()
 
     [[nodiscard]] size_t numVertices() const { return start.valid() + mids.size() + end.valid(); }
+
+    [[nodiscard]] MeshTriPoint operator[]( size_t i ) const
+    {
+        if ( start.valid() )
+        {
+            if ( i == 0 )
+                return start;
+            --i;
+        }
+        if ( i < mids.size() )
+            return mids[i];
+        assert( end.valid() );
+        assert( i == mids.size() );
+        return end;
+    }
 };
 
 enum class PathError

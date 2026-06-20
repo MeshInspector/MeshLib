@@ -163,6 +163,7 @@
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
     <ClCompile Include="MRUITestEngineControl.cpp" />
+    <ClCompile Include="MRSceneStateCheck.cpp" />
     <ClCompile Include="MRUiMcp.cpp" />
     <ClCompile Include="MRSceneMcp.cpp" />
     <ClCompile Include="MRViewerMcp.cpp" />
@@ -477,9 +478,6 @@
     </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
-      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
       <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>

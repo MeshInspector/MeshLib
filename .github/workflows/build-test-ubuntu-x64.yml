@@ -47,6 +47,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Display job info
@@ -109,6 +110,12 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
         uses: actions/download-artifact@v8
@@ -145,6 +152,9 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
+
+      - name: PCH size (diagnostic)
+        run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt

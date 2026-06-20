@@ -2520,3 +2520,16 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
 } // namespace UI
 
 }
+
+namespace MR::UI
+{
+
+// Definitions for the drag<>() instantiations declared extern template in MRUIStyle.h.
+#define MR_X( E ) \
+    template bool drag<E, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<E>, ImGuiSliderFlags, const float&, const float& ); \
+    template bool drag<E, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& ); \
+    template bool drag<E, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& );
+DETAIL_MR_UNIT_ENUMS( MR_X )
+#undef MR_X
+
+} // namespace MR::UI

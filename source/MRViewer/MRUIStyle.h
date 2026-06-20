@@ -604,6 +604,17 @@ public:
     }
 };
 
+// drag<>() is heavy (its internal value-formatting lambdas, plus getDragRangeTooltip<>,
+// dominate UI code generation) and is instantiated in many TUs. Declare the common scalar
+// instantiations extern template here and define them once in MRUIStyle.cpp. Vector
+// overloads and rarer combos stay header-instantiated.
+#define MR_X( E ) \
+    extern template MRVIEWER_API bool drag<E, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<E>, ImGuiSliderFlags, const float&, const float& ); \
+    extern template MRVIEWER_API bool drag<E, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& ); \
+    extern template MRVIEWER_API bool drag<E, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& );
+DETAIL_MR_UNIT_ENUMS( MR_X )
+#undef MR_X
+
 } // namespace UI
 
 }

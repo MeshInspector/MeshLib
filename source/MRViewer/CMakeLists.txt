@@ -122,9 +122,10 @@ IF(NOT MRVIEWER_NO_LOCALE)
 ENDIF()
 
 IF(MR_PCH)
-  IF(MSVC)
+  IF(MSVC AND MR_PCH_USE_EXTRA_HEADERS)
     # MRViewer exports MRVIEWER_API, so like MRMesh it builds its own PCH from MRPch.h in its
     # (dllexport) context instead of reusing the shared one. See cmake/Modules/ConfigurePch.cmake.
+    # Without the extra headers the shared PCH holds no MeshLib headers, so MRViewer just reuses it.
     target_precompile_headers(${PROJECT_NAME} PRIVATE
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
   ELSE()

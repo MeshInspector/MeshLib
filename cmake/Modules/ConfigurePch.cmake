@@ -13,14 +13,19 @@ IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
 ENDIF()
 message("MR_PCH=${MR_PCH}")
 
+# Adding frequently used MeshLib headers to the PCH speeds up clean (CI) builds, but slows down local
+# iterative development (touching any of those headers invalidates the PCH). So it is OFF by default and
+# enabled only in CI (the workflows pass -DMR_PCH_USE_EXTRA_HEADERS=ON, and the MSBuild ones pass
+# -p:MR_PCH_USE_EXTRA_HEADERS=ON).
+option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
+
 # On MSVC the *_API macros expand to __declspec(dllexport) inside a library and to
-# __declspec(dllimport) in its consumers, so MeshLib's own headers cannot be baked into
-# a single shared precompiled header. Instead we enable the extra headers everywhere and
-# let MRMesh and MRViewer build their own PCH from MRPch.h in their (dllexport) context,
-# while every other target keeps reusing the shared (all-dllimport) PCH built by MRPch.
+# __declspec(dllimport) in its consumers, so MeshLib's own headers cannot be baked into a single shared
+# precompiled header. Instead MRMesh and MRViewer build their own PCH from MRPch.h in their (dllexport)
+# context, while every other target keeps reusing the shared (all-dllimport) PCH built by MRPch. When the
+# extra headers are enabled the macro must therefore be defined for every target, so define it globally.
 # See source/MRMesh/CMakeLists.txt and source/MRViewer/CMakeLists.txt.
-IF(MSVC AND MR_PCH)
-  set(MR_PCH_USE_EXTRA_HEADERS ON CACHE BOOL "Add frequently used MeshLib headers to the precompiled header" FORCE)
+IF(MSVC AND MR_PCH AND MR_PCH_USE_EXTRA_HEADERS)
   add_compile_definitions(MR_PCH_USE_EXTRA_HEADERS)
 ENDIF()
 

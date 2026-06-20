@@ -1,6 +1,6 @@
 project(MRPch CXX)
 
-option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
+# MR_PCH_USE_EXTRA_HEADERS is declared in cmake/Modules/ConfigurePch.cmake (default OFF, CI enables it).
 
 file(GLOB HEADERS "*.h")
 

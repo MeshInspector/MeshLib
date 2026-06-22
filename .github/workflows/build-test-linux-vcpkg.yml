@@ -84,6 +84,21 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
+      - name: PROBE clang availability (temporary — stops the job on purpose)
+        run: |
+          set +e
+          cat /etc/os-release | grep -E "PRETTY_NAME|VERSION_ID"
+          echo "=== current clang ==="; clang++ --version | head -2; command -v clang++ clang++-21 clang++-18
+          echo "=== llvm-toolset module streams ==="
+          dnf -y --enablerepo='*' module list llvm-toolset
+          echo "=== module info ==="
+          dnf -y --enablerepo='*' module info llvm-toolset
+          echo "=== showduplicates for clang-family ==="
+          dnf --showduplicates --enablerepo='*' list clang clang-devel llvm-devel lld compiler-rt 2>/dev/null
+          echo "=== repoquery: which repo serves each clang-family pkg ==="
+          dnf repoquery --enablerepo='*' --qf '%{name}-%{version}-%{release} @%{reponame}' clang clang-devel llvm-devel lld 2>/dev/null | sort -u
+          exit 1
+
       - name: Enable GCC 11 toolset
         run: |
           source /opt/rh/gcc-toolset-11/enable

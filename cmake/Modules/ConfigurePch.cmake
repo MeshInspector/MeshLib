@@ -15,8 +15,6 @@ message("MR_PCH=${MR_PCH}")
 
 option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
 
-# Define for every target so the shared PCH and all its consumers (and MRMesh/MRViewer's own PCH on MSVC)
-# agree on the macro.
 IF(MR_PCH AND MR_PCH_USE_EXTRA_HEADERS)
   add_compile_definitions(MR_PCH_USE_EXTRA_HEADERS)
 ENDIF()

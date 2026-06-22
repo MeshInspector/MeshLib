@@ -49,12 +49,9 @@ std::vector<MeshTriPoint> projectSplineAsMTP( const Mesh& mesh, const MarkedCont
     assert( markSeqToPos.size() == spline.marks.count() );
 
     std::vector<MeshTriPoint> res( sz );
-    // regionBetweenMarks[i] is the region between control points markSeqToPos[i] and markSeqToPos[i+1]
-    std::vector<FaceBitSet> regionBetweenMarks( numMarks - 1 );
     mesh.getAABBTree(); // prepare before its usage in parallel region
     ParallelFor( size_t( 0 ), numMarks, [&]( size_t seq )
     {
-        // project control (marked) points of the spline
         const auto i0 = markSeqToPos[seq];
         const auto p0 = mesh.projectPoint( spline.contour[i0] );
         res[i0] = p0.mtp;
@@ -76,31 +73,10 @@ std::vector<MeshTriPoint> projectSplineAsMTP( const Mesh& mesh, const MarkedCont
         const auto geoPathLen = calcLength( geoPathAsContour );
         const auto midPointId = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
         const auto surfDist = computeSurfaceDistances( mesh, geoPath[midPointId], geoPathLen / 2 );
-        regionBetweenMarks[seq] = facesWithinRange( mesh.topology, surfDist, geoPathLen / 2 );
-        assert( regionBetweenMarks[seq].any() );
-    } );
-
-    // for each point stores the last control (marked) point index,
-    // pos2mark[i] = i for control (marked) points, otherwise pos2mark[i] < i
-    std::vector<int> pos2mark;
-    pos2mark.reserve( sz );
-    int lastMark = -1;
-    for ( int i = 0; i < sz; ++i )
-    {
-        if ( spline.marks.test( i ) )
-            ++lastMark;
-        pos2mark.push_back( lastMark );
-    }
-
-    // project not control points on appropriate parts of the mesh
-    ParallelFor( size_t( 0 ), sz, [&]( size_t i )
-    {
-        if ( spline.marks.test( i ) )
-            return; // control point - already projected above
-
-        const auto& faceRegion = regionBetweenMarks[pos2mark[i]];
-        const auto p = mesh.projectPoint( spline.contour[i], FLT_MAX, &faceRegion );
-        res[i] = p.mtp;
+        const auto regionBetweenMarks = facesWithinRange( mesh.topology, surfDist, geoPathLen / 2 );
+        assert( regionBetweenMarks.any() );
+        for ( auto i = i0 + 1; i < i1; ++i )
+            res[i] = mesh.projectPoint( spline.contour[i], FLT_MAX, &regionBetweenMarks ).mtp;
     } );
 
     return res;

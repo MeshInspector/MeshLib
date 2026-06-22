@@ -72,8 +72,10 @@ std::vector<MeshTriPoint> projectSplineAsMTP( const Mesh& mesh, const MarkedCont
         const auto geoPathAsContour = geodesicPathToContour3f( mesh, geoPath );
         const auto geoPathLen = calcLength( geoPathAsContour );
         const auto midPointId = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
-        const auto surfDist = computeSurfaceDistances( mesh, geoPath[midPointId], geoPathLen / 2 );
-        const auto regionBetweenMarks = facesWithinRange( mesh.topology, surfDist, geoPathLen / 2 );
+        // note that geoPath[midPointId] is not exactly in the center of the path, and approximated distances are not symmetric
+        const auto surfDist = computeSurfaceDistances( mesh, std::vector<MeshTriPoint>{ geoPath[midPointId] },
+            std::vector<MeshTriPoint>{ p0.mtp, p1.mtp } );
+        const auto regionBetweenMarks = facesWithinRange( mesh.topology, surfDist, geoPathLen ); // geoPathLen / 2 is not enough
         assert( regionBetweenMarks.any() );
         for ( auto i = i0 + 1; i < i1; ++i )
             res[i] = mesh.projectPoint( spline.contour[i], FLT_MAX, &regionBetweenMarks ).mtp;

@@ -20,7 +20,7 @@ jobs:
           dnf install -y gettext gh git python3
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: master
           token: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?

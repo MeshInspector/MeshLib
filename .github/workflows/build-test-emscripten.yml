@@ -52,7 +52,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

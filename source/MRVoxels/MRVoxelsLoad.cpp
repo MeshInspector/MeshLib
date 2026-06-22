@@ -12,7 +12,7 @@
 #include "MRMesh/MRDirectory.h"
 #include "MROpenVDBHelper.h"
 #include "MRMesh/MRParallelFor.h"
-#include "MROpenVDB.h"
+#include "MRPch/MROpenVDB.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 

@@ -440,18 +440,9 @@ std::string GetCpuId()
         if ( c.implementer == implementer && c.part == part )
             return c.name;
 
-    // implementer-only fallback when the exact core isn't in the table above
-    const char* vendor = nullptr;
-    switch ( implementer )
-    {
-    case 0x41: vendor = "ARM";       break;  case 0x42: vendor = "Broadcom";  break;
-    case 0x43: vendor = "Cavium";    break;  case 0x48: vendor = "HiSilicon"; break;
-    case 0x4e: vendor = "NVIDIA";    break;  case 0x51: vendor = "Qualcomm";  break;
-    case 0x53: vendor = "Samsung";   break;  case 0x56: vendor = "Marvell";   break;
-    case 0x70: vendor = "Phytium";   break;  case 0xc0: vendor = "Ampere";    break;
-    }
-    if ( vendor && part >= 0 )
-        return fmt::format( "{} ARM CPU (part {:#x})", vendor, part );
+    // unknown core: report the raw implementer/part identifiers read from /proc/cpuinfo
+    if ( implementer != -1 || part != -1 )
+        return fmt::format( "ARM CPU: {:#x}, {:#x}", implementer, part );
 
     // single-board computers (Raspberry Pi etc.) expose a device-tree model name
     {

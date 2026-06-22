@@ -195,6 +195,9 @@ jobs:
       - name: Install Clang 18 for bindings (experiment)
         if: ${{ inputs.mrbind && matrix.arch == 'x64' }}
         run: |
+          # The upstream LLVM 18.1.8 (ubuntu-18.04) binaries link against libtinfo.so.5,
+          # which Rocky 8 does not ship (it has libtinfo.so.6) — provide the compat lib.
+          retry.sh -- dnf -y install ncurses-compat-libs
           mkdir -p /opt/clang18
           curl -fSL --retry 3 --retry-delay 5 -o /tmp/clang18.tar.xz \
             https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04.tar.xz

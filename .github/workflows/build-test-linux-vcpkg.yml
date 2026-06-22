@@ -186,11 +186,23 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
+      # EXPERIMENT: emit clang -ftime-trace for the bindings COMPILE only (compiler_only_flags.txt
+      # feeds the compiler, not the mrbind parser) to break down where time goes.
+      - name: ftt enable -ftime-trace
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        run: echo '-ftime-trace -ftime-trace-granularity=200' >> scripts/mrbind/compiler_only_flags.txt
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
+
+      - name: ftt aggregate -ftime-trace
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        run: |
+          echo "FTT_PLATFORM=linux-vcpkg-x64-clang18"
+          python3 scripts/ftt_aggregate.py build/binds_python
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"
@@ -315,30 +327,3 @@ jobs:
           name: DotNetPatchArchiveLinux-${{ matrix.arch }}
           path: ./patched_content/*
           retention-days: 1
-
-      # EXPERIMENT: paired same-runner timing of the bindings build with Clang 18 vs 21.
-      # Image is Clang 18 -> time a full build, then swap the image's Clang to 21
-      # (parallel-installable from Rocky AppStream), rebuild mrbind against it, time again.
-      # Same machine back-to-back => runner noise cancels. Runs LAST: the swap removes
-      # clang-18 that earlier steps depend on.
-      - name: A/B paired compiler timing (Clang 18 vs 21)
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
-        run: |
-          set -e
-          MK="make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib"
-          echo "::group::clang-18 full bindings build (timed)"
-          export CXX=/usr/bin/clang++-18
-          /usr/bin/time -o /tmp/t18 -f '%e' bash -c "$MK CXX_FOR_BINDINGS=/usr/bin/clang++-18 >/tmp/b18.log 2>&1" || { echo CLANG18_FAILED; tail -40 /tmp/b18.log; exit 1; }
-          echo "::endgroup::"
-          echo "::group::swap image clang 18 -> 21"
-          retry.sh -- dnf -y install --allowerasing 'clang-21.1.8*' 'clang-devel-21.1.8*' 'lld-21.1.8*' 'llvm-devel-21.1.8*'
-          /usr/bin/clang++-21 --version | head -1
-          echo "::endgroup::"
-          echo "::group::rebuild mrbind against clang-21"
-          bash scripts/mrbind/install_mrbind_rockylinux.sh >/tmp/mrbind21.log 2>&1 || { echo MRBIND21_FAILED; tail -40 /tmp/mrbind21.log; exit 1; }
-          echo "::endgroup::"
-          echo "::group::clang-21 full bindings build (timed)"
-          export CXX=/usr/bin/clang++-21
-          /usr/bin/time -o /tmp/t21 -f '%e' bash -c "$MK CXX_FOR_BINDINGS=/usr/bin/clang++-21 >/tmp/b21.log 2>&1" || { echo CLANG21_FAILED; tail -40 /tmp/b21.log; exit 1; }
-          echo "::endgroup::"
-          echo "AB_RESULT clang18=$(cat /tmp/t18)s clang21=$(cat /tmp/t21)s"

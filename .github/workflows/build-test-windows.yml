@@ -233,6 +233,11 @@ jobs:
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }}
 
+      - name: ftt enable -ftime-trace
+        if: ${{ inputs.mrbind && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'CMake' }}
+        shell: bash
+        run: echo '-ftime-trace -ftime-trace-granularity=200' >> scripts/mrbind/compiler_only_flags.txt
+
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         shell: cmd
@@ -244,6 +249,13 @@ jobs:
         run: |
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
+
+      - name: ftt aggregate -ftime-trace
+        if: ${{ inputs.mrbind && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'CMake' }}
+        shell: pwsh
+        run: |
+          Write-Output "FTT_PLATFORM=windows-x64-msvc2022-cmake"
+          python scripts/ftt_aggregate.py source/TempOutput/Bindings_python/x64/Release
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}

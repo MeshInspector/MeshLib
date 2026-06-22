@@ -3,6 +3,7 @@
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRContour.h>
 #include <MRMesh/MRVector2.h>
+#include <MRMesh/MRConstants.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
@@ -39,8 +40,6 @@ TEST( MRMesh, PlanarTriangulation )
 namespace
 {
 
-constexpr double cBenchPi = 3.14159265358979323846;
-
 // circle of n points (closed: first == last)
 Contour2d benchCircle( int n, double r, const Vector2d& center )
 {
@@ -48,7 +47,7 @@ Contour2d benchCircle( int n, double r, const Vector2d& center )
     cont.reserve( n + 1 );
     for ( int i = 0; i < n; ++i )
     {
-        const double a = 2.0 * cBenchPi * i / n;
+        const double a = 2.0 * PI * i / n;
         cont.push_back( center + Vector2d( r * std::cos( a ), r * std::sin( a ) ) );
     }
     cont.push_back( cont.front() );
@@ -63,7 +62,7 @@ Contour2d benchStar( int n, int step, double r, const Vector2d& center )
     for ( int i = 0; i < n; ++i )
     {
         const int idx = ( i * step ) % n;
-        const double a = 2.0 * cBenchPi * idx / n;
+        const double a = 2.0 * PI * idx / n;
         cont.push_back( center + Vector2d( r * std::cos( a ), r * std::sin( a ) ) );
     }
     cont.push_back( cont.front() );

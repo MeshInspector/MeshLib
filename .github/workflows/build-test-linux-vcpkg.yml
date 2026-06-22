@@ -47,22 +47,22 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 21, GCC 11]
+        compiler: [Clang 18, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
-          # Do not run Debug Clang 21 build on every commit (but only once a day)
+          # Do not run Debug Clang 18 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 21
+            compiler: Clang 18
             config: Debug
           # Do not run Release GCC 11 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 11
             config: Release
         include:
-          - compiler: Clang 21
-            cxx-compiler: /usr/bin/clang++-21
-            c-compiler: /usr/bin/clang-21
+          - compiler: Clang 18
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
             cxx-standard: 23
           - compiler: GCC 11
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
@@ -84,24 +84,6 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
-      - name: PROBE clang availability (temporary — stops the job on purpose)
-        run: |
-          set +e
-          DR="--disablerepo=media-*"
-          F="grep -viE media|cdrom|cdrecorder|Couldnt|mirrors|Metadata|metadata|^Last|MB/s|kB/s|^\s*$"
-          echo "=== os + current clang ==="
-          grep -E "PRETTY_NAME|VERSION_ID" /etc/os-release; clang++ --version | head -1
-          echo "=== repolist ==="; dnf $DR repolist 2>/dev/null
-          echo "=== llvm-toolset module streams (all) ==="
-          dnf $DR module list llvm-toolset 2>/dev/null | grep -viE "media|cdrom|Couldn|mirror|Metadata|MB/s|kB/s"
-          echo "=== showduplicates clang-family (all enabled repos) ==="
-          dnf $DR --showduplicates list clang clang-devel llvm-devel lld 2>/dev/null | grep -aiE "clang|llvm|lld|Available|Installed"
-          echo "=== repoquery clang*/llvm-toolset across enabled repos ==="
-          dnf $DR repoquery --qf '%{name}-%{version}-%{release} @%{reponame}' 'clang' 'clang-devel' 'llvm-devel' 'lld' 'clang1[6789]*' 'llvm1[6789]*' 2>/dev/null | sort -u
-          echo "=== EPEL only ==="
-          dnf --disablerepo=* --enablerepo=epel --showduplicates list 'clang*' 'llvm*' 2>/dev/null | grep -aiE "clang|llvm" | head -40
-          exit 1
-
       - name: Enable GCC 11 toolset
         run: |
           source /opt/rh/gcc-toolset-11/enable
@@ -204,35 +186,11 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
-      # EXPERIMENT (x64 only): the rockylinux8-vcpkg image only ships Clang 21, so the
-      # bindings are normally compiled with /usr/bin/clang++ (= clang 21). The native
-      # Ubuntu jobs compile the bindings with clang 18. Install upstream Clang 18.1.8
-      # here (ubuntu-18.04 build runs on Rocky 8's glibc 2.28; extracted to /opt so it
-      # does not conflict with the EPEL clang 21) so we can measure how much of the
-      # vcpkg vs ubuntu bindings-build-time gap is due to the compiler version alone.
-      - name: Install Clang 18 for bindings (experiment)
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' }}
-        run: |
-          # The upstream LLVM 18.1.8 (ubuntu-18.04) binaries link against libtinfo.so.5,
-          # which Rocky 8 does not ship (it has libtinfo.so.6) — provide the compat lib.
-          retry.sh -- dnf -y install ncurses-compat-libs
-          mkdir -p /opt/clang18
-          curl -fSL --retry 3 --retry-delay 5 -o /tmp/clang18.tar.xz \
-            https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04.tar.xz
-          tar -xJf /tmp/clang18.tar.xz -C /opt/clang18 --strip-components=1
-          rm -f /tmp/clang18.tar.xz
-          /opt/clang18/bin/clang++ --version
-
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-          # EXPERIMENT: on x64 use the freshly installed Clang 18 (matching the Ubuntu
-          # jobs); arm64 keeps the image default (/usr/bin/clang++ = clang 21).
-          CXX_FOR_BINDINGS: ${{ matrix.arch == 'x64' && '/opt/clang18/bin/clang++' || '/usr/bin/clang++' }}
-        run: |
-          export PATH="${{ matrix.arch == 'x64' && '/opt/clang18/bin:' || '' }}${PATH}"
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=${CXX_FOR_BINDINGS} DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"
@@ -289,19 +247,19 @@ jobs:
           cat unit_tests_report.csv
 
       - name: Create Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
         run: |
           ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
           mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
       - name: Extract Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
         run: |
           mkdir meshlib_install
           tar -xf meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz -C meshlib_install
 
       - name: Build C++ examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -313,7 +271,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18'}}
         run: |
           cmake \
             -S examples/c-examples \
@@ -325,7 +283,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload vcpkg Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
         uses: actions/upload-artifact@v7
         with:
           name: Distributives_linux-vcpkg-${{ matrix.arch }}
@@ -333,7 +291,7 @@ jobs:
           retention-days: 1
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
@@ -342,7 +300,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 18' && matrix.config == 'Release' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -351,7 +309,7 @@ jobs:
           python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.so
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 18' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveLinux-${{ matrix.arch }}

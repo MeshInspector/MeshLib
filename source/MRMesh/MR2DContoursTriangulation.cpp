@@ -46,8 +46,6 @@ struct SweepLinePredicates
     // orientation of b around pivot relative to the direction the sweep arrives from
     // (i.e. ccw with the first point placed far behind pivot, opposite to the sweep)
     std::function<bool( VertId b, VertId pivot )> ccwFromBehind;
-    // store the position of input vertex v taken from its source coordinate
-    std::function<void( VertId v, const Vector2f& coord )> addInputPoint;
     // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
     std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
     // position of vertex v in the output mesh
@@ -104,10 +102,16 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
         base.x -= 10000; // far behind pivot along -X, matching the historical sweep reference
         return MR::ccw( { PreciseVertCoords2{ VertId{}, base }, { b, ( *pts )[b] }, { pivot, ( *pts )[pivot] } } );
     };
-    p.addInputPoint = [pts, toInt] ( VertId v, const Vector2f& coord )
+    // ingest input vertex positions in the same VertId order initMeshByContours_ assigns them
+    // (closedness already asserted, and pts reserved, in the box/pointsSize loop above)
+    VertId inV{ 0 };
+    for ( const auto& cont : contours )
     {
-        pts->autoResizeSet( v, toInt( coord ) );
-    };
+        if ( cont.size() <= 3 )
+            continue;
+        for ( int i = 0; i + 1 < int( cont.size() ); ++i )
+            pts->autoResizeSet( inV++, toInt( cont[i] ) );
+    }
     p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
         pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts )[a], ( *pts )[b], ( *pts )[c], ( *pts )[d] ) );
@@ -117,6 +121,15 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
         return to3dim( toFloat( ( *pts )[v] ) );
     };
     return p;
+}
+
+// per-contour vertex counts; lets the queue build the initial edge loops independently of coordinate dimension
+static std::vector<int> getContourSizes( const Contours2f& contours )
+{
+    std::vector<int> sizes( contours.size() );
+    for ( int i = 0; i < int( contours.size() ); ++i )
+        sizes[i] = int( contours[i].size() );
+    return sizes;
 }
 
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
@@ -214,7 +227,7 @@ public:
     // constructor makes initial mesh which simply contain input contours as edges
     // if holesVertId is null - merge all vertices with same coordinates
     // otherwise only merge the ones with same initial vertId
-    SweepLineQueue( const Contours2f& contours, const SweepLineParams& params );
+    SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
 
     size_t vertSize() const { return tp_.vertSize(); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
@@ -231,7 +244,7 @@ private:
 
 // INITIALIZATION CLASS BLOCK
     // make base mesh only containing input contours as edge loops
-    void initMeshByContours_( const Contours2f& contours );
+    void initMeshByContours_( const std::vector<int>& contourSizes );
     // merge same points on base mesh
     void mergeSamePoints_( const HolesVertIds* holesVertId );
     void mergeSinglePare_( VertId unique, VertId same );
@@ -357,11 +370,11 @@ private:
     void checkIntersection_( int indexLower );
 };
 
-SweepLineQueue::SweepLineQueue( const Contours2f& contours, const SweepLineParams& params ) :
-    predicates_{ precisePredicates( contours ) },
+SweepLineQueue::SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params ) :
+    predicates_{ std::move( predicates ) },
     params_{ params }
 {
-    initMeshByContours_( contours );
+    initMeshByContours_( contourSizes );
     mergeSamePoints_( params.holesVertId );
     setupStartVertices_();
 }
@@ -422,11 +435,11 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
             mapVal.uOrg = tp_.org( inter.upper );
             mapVal.uDest = tp_.dest( inter.upper );
 
-            auto iP = to2dim( predicates_.point( inter.vId ) );
-            auto lO = to2dim( predicates_.point( mapVal.lOrg ) );
-            auto lD = to2dim( predicates_.point( mapVal.lDest ) );
-            auto uO = to2dim( predicates_.point( mapVal.uOrg ) );
-            auto uD = to2dim( predicates_.point( mapVal.uDest ) );
+            auto iP = predicates_.point( inter.vId );
+            auto lO = predicates_.point( mapVal.lOrg );
+            auto lD = predicates_.point( mapVal.lDest );
+            auto uO = predicates_.point( mapVal.uOrg );
+            auto uD = predicates_.point( mapVal.uDest );
             auto lVec = ( lD - lO );
             auto uVec = ( uD - uO );
             auto lVecLSq = lVec.lengthSq();
@@ -937,34 +950,30 @@ void SweepLineQueue::checkIntersection_( int i )
     activeSweepEdges_[i + 1].lowerInfo.interVertId = interInfo.vId;
 }
 
-void SweepLineQueue::initMeshByContours_( const Contours2f& contours )
+void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
 {
     MR_TIMER;
-    for ( const auto& c : contours )
+    for ( int contSize : contourSizes )
     {
-        if ( c.size() > 3 )
+        if ( contSize > 3 )
         {
-            assert( c.front() == c.back() );
-            for ( int i = 0; i + 1 < c.size(); ++i )
-            {
-                VertId v = tp_.addVertId();
-                predicates_.addInputPoint( v, c[i] );
-            }
+            for ( int i = 0; i + 1 < contSize; ++i )
+                tp_.addVertId();
         }
     }
 
     int boundId = -1;
     if ( params_.outBoundaries )
-        params_.outBoundaries->resize( contours.size() );
+        params_.outBoundaries->resize( contourSizes.size() );
 
     int firstVert = 0;
-    for ( const auto& c : contours )
+    for ( int contSize : contourSizes )
     {
         ++boundId;
-        if ( c.size() <= 3 )
+        if ( contSize <= 3 )
             continue;
 
-        int size = int( c.size() ) - 1;
+        int size = contSize - 1;
 
         if ( params_.outBoundaries )
             ( *params_.outBoundaries )[boundId].resize( size );
@@ -1315,7 +1324,7 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
 
 Mesh getOutlineMesh( const Contours2f& conts, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
-    SweepLineQueue triangulator( conts, { nullptr, false, params.innerType, true, params.allowMerge } );
+    SweepLineQueue triangulator( precisePredicates( conts ), getContourSizes( conts ), { nullptr, false, params.innerType, true, params.allowMerge } );
 
     if ( interMap )
         interMap->shift = triangulator.vertSize();
@@ -1386,7 +1395,7 @@ Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVe
 {
     if ( contours.empty() )
         return {};
-    SweepLineQueue triangulator( contours, { holeVertsIds, false, WindingMode::NonZero } );
+    SweepLineQueue triangulator( precisePredicates( contours ), getContourSizes( contours ), { holeVertsIds, false, WindingMode::NonZero } );
     auto res = triangulator.run();
     assert( res );
     if ( res )
@@ -1405,7 +1414,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, con
 {
     if ( contours.empty() )
         return Mesh();
-    SweepLineQueue triangulator( contours, { holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries } );
+    SweepLineQueue triangulator( precisePredicates( contours ), getContourSizes( contours ), { holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries } );
     return triangulator.run();
 }
 

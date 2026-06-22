@@ -9,6 +9,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 
@@ -394,8 +395,73 @@ std::string GetCpuId()
         spdlog::error("Apple sysctlbyname failed!");
     return CPUBrandString;
 #elif defined(__ARM_CPU__)
-    // TODO: https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8
+    // ARM has no CPUID-like brand-string instruction (see
+    // https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8 ),
+    // so the real processor name has to be obtained per platform.
+#ifdef _WIN32
+    // Windows on ARM exposes the brand string through the registry
+    wchar_t value[256] = {};
+    DWORD bufferSize = sizeof( value );
+    if ( RegGetValue( HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+            L"ProcessorNameString", RRF_RT_REG_SZ, NULL, ( PVOID )&value, &bufferSize ) == ERROR_SUCCESS )
+        return Utf16ToUtf8( value );
     return "ARM CPU";
+#else
+    // On Linux we decode the CPU implementer/part pair from /proc/cpuinfo (the same data
+    // lscpu uses), and fall back to the device-tree model name for single-board computers.
+    int implementer = -1, part = -1;
+    {
+        std::ifstream cpuinfo( "/proc/cpuinfo" );
+        for ( std::string line; std::getline( cpuinfo, line ); )
+        {
+            if ( line.rfind( "CPU implementer", 0 ) == 0 )
+                implementer = (int)std::strtol( line.c_str() + line.find( ':' ) + 1, nullptr, 0 );
+            else if ( line.rfind( "CPU part", 0 ) == 0 )
+                part = (int)std::strtol( line.c_str() + line.find( ':' ) + 1, nullptr, 0 );
+            if ( implementer >= 0 && part >= 0 )
+                break;
+        }
+    }
+
+    struct ArmCpuName { int implementer, part; const char* name; };
+    static constexpr ArmCpuName armCpuNames[] = {
+        { 0x41, 0xd03, "ARM Cortex-A53" },   { 0x41, 0xd05, "ARM Cortex-A55" },
+        { 0x41, 0xd07, "ARM Cortex-A57" },   { 0x41, 0xd08, "ARM Cortex-A72" },
+        { 0x41, 0xd09, "ARM Cortex-A73" },   { 0x41, 0xd0a, "ARM Cortex-A75" },
+        { 0x41, 0xd0b, "ARM Cortex-A76" },   { 0x41, 0xd0c, "ARM Neoverse-N1" },
+        { 0x41, 0xd0d, "ARM Cortex-A77" },   { 0x41, 0xd40, "ARM Neoverse-V1" },
+        { 0x41, 0xd41, "ARM Cortex-A78" },   { 0x41, 0xd44, "ARM Cortex-X1" },
+        { 0x41, 0xd49, "ARM Neoverse-N2" },  { 0x41, 0xd4f, "ARM Neoverse-V2" },
+        { 0xc0, 0xac3, "Ampere-1" },         { 0xc0, 0xac4, "Ampere-1a" },
+        { 0x43, 0x0af, "Marvell ThunderX2" },{ 0x46, 0x001, "Fujitsu A64FX" },
+        { 0x51, 0xc01, "Qualcomm Kryo" },
+    };
+    for ( const auto& c : armCpuNames )
+        if ( c.implementer == implementer && c.part == part )
+            return c.name;
+
+    // implementer-only fallback when the exact core isn't in the table above
+    const char* vendor = nullptr;
+    switch ( implementer )
+    {
+    case 0x41: vendor = "ARM";       break;  case 0x42: vendor = "Broadcom";  break;
+    case 0x43: vendor = "Cavium";    break;  case 0x48: vendor = "HiSilicon"; break;
+    case 0x4e: vendor = "NVIDIA";    break;  case 0x51: vendor = "Qualcomm";  break;
+    case 0x53: vendor = "Samsung";   break;  case 0x56: vendor = "Marvell";   break;
+    case 0x70: vendor = "Phytium";   break;  case 0xc0: vendor = "Ampere";    break;
+    }
+    if ( vendor && part >= 0 )
+        return fmt::format( "{} ARM CPU (part {:#x})", vendor, part );
+
+    // single-board computers (Raspberry Pi etc.) expose a device-tree model name
+    {
+        std::ifstream model( "/proc/device-tree/model" );
+        if ( std::string name; std::getline( model, name ) && !name.empty() )
+            return name;
+    }
+
+    return "ARM CPU";
+#endif
 #else
     // https://stackoverflow.com/questions/850774/how-to-determine-the-hardware-cpu-and-ram-on-a-machine
     char CPUBrandString[0x40] = {};

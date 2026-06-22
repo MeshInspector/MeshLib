@@ -1419,6 +1419,9 @@
     <ClInclude Include="MRHoleFillPlan.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRSplineProject.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRFunctional.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -2305,6 +2308,9 @@
     </ClCompile>
     <ClCompile Include="MREdgePathsBuilder.cpp">
       <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSplineProject.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRBitSetParallelFor.cpp">
       <Filter>Source Files\Basic</Filter>

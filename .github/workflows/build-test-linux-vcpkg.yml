@@ -186,11 +186,32 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
+      # EXPERIMENT (x64 only): the rockylinux8-vcpkg image only ships Clang 21, so the
+      # bindings are normally compiled with /usr/bin/clang++ (= clang 21). The native
+      # Ubuntu jobs compile the bindings with clang 18. Install upstream Clang 18.1.8
+      # here (ubuntu-18.04 build runs on Rocky 8's glibc 2.28; extracted to /opt so it
+      # does not conflict with the EPEL clang 21) so we can measure how much of the
+      # vcpkg vs ubuntu bindings-build-time gap is due to the compiler version alone.
+      - name: Install Clang 18 for bindings (experiment)
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' }}
+        run: |
+          mkdir -p /opt/clang18
+          curl -fSL --retry 3 --retry-delay 5 -o /tmp/clang18.tar.xz \
+            https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+          tar -xJf /tmp/clang18.tar.xz -C /opt/clang18 --strip-components=1
+          rm -f /tmp/clang18.tar.xz
+          /opt/clang18/bin/clang++ --version
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
+          # EXPERIMENT: on x64 use the freshly installed Clang 18 (matching the Ubuntu
+          # jobs); arm64 keeps the image default (/usr/bin/clang++ = clang 21).
+          CXX_FOR_BINDINGS: ${{ matrix.arch == 'x64' && '/opt/clang18/bin/clang++' || '/usr/bin/clang++' }}
+        run: |
+          export PATH="${{ matrix.arch == 'x64' && '/opt/clang18/bin:' || '' }}${PATH}"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=${CXX_FOR_BINDINGS} DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

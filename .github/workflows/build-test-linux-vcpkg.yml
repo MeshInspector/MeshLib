@@ -87,16 +87,19 @@ jobs:
       - name: PROBE clang availability (temporary — stops the job on purpose)
         run: |
           set +e
-          cat /etc/os-release | grep -E "PRETTY_NAME|VERSION_ID"
-          echo "=== current clang ==="; clang++ --version | head -2; command -v clang++ clang++-21 clang++-18
-          echo "=== llvm-toolset module streams ==="
-          dnf -y --enablerepo='*' module list llvm-toolset
-          echo "=== module info ==="
-          dnf -y --enablerepo='*' module info llvm-toolset
-          echo "=== showduplicates for clang-family ==="
-          dnf --showduplicates --enablerepo='*' list clang clang-devel llvm-devel lld compiler-rt 2>/dev/null
-          echo "=== repoquery: which repo serves each clang-family pkg ==="
-          dnf repoquery --enablerepo='*' --qf '%{name}-%{version}-%{release} @%{reponame}' clang clang-devel llvm-devel lld 2>/dev/null | sort -u
+          DR="--disablerepo=media-*"
+          F="grep -viE media|cdrom|cdrecorder|Couldnt|mirrors|Metadata|metadata|^Last|MB/s|kB/s|^\s*$"
+          echo "=== os + current clang ==="
+          grep -E "PRETTY_NAME|VERSION_ID" /etc/os-release; clang++ --version | head -1
+          echo "=== repolist ==="; dnf $DR repolist 2>/dev/null
+          echo "=== llvm-toolset module streams (all) ==="
+          dnf $DR module list llvm-toolset 2>/dev/null | grep -viE "media|cdrom|Couldn|mirror|Metadata|MB/s|kB/s"
+          echo "=== showduplicates clang-family (all enabled repos) ==="
+          dnf $DR --showduplicates list clang clang-devel llvm-devel lld 2>/dev/null | grep -aiE "clang|llvm|lld|Available|Installed"
+          echo "=== repoquery clang*/llvm-toolset across enabled repos ==="
+          dnf $DR repoquery --qf '%{name}-%{version}-%{release} @%{reponame}' 'clang' 'clang-devel' 'llvm-devel' 'lld' 'clang1[6789]*' 'llvm1[6789]*' 2>/dev/null | sort -u
+          echo "=== EPEL only ==="
+          dnf --disablerepo=* --enablerepo=epel --showduplicates list 'clang*' 'llvm*' 2>/dev/null | grep -aiE "clang|llvm" | head -40
           exit 1
 
       - name: Enable GCC 11 toolset

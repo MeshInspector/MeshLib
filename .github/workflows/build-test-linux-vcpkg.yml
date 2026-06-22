@@ -186,23 +186,21 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
-      # EXPERIMENT: emit clang -ftime-trace for the bindings COMPILE only (compiler_only_flags.txt
-      # feeds the compiler, not the mrbind parser) to break down where time goes.
-      - name: ftt enable -ftime-trace
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
-        run: echo '-ftime-trace -ftime-trace-granularity=200' >> scripts/mrbind/compiler_only_flags.txt
-
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
-      - name: ftt aggregate -ftime-trace
+      # EXPERIMENT: time the mrbind PARSE phase alone (re-build only the *.generated.cpp
+      # targets => libclang parses all headers, no fragment compile/link).
+      - name: measure parse phase
         if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
         run: |
-          echo "FTT_PLATFORM=linux-vcpkg-x64-clang18"
-          python3 scripts/ftt_aggregate.py build/binds_python
+          /usr/bin/time -o /tmp/tp -f '%e' bash -c "make -f scripts/mrbind/generate.mk MODE=none -B MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib build/binds_python/mrmesh.generated.cpp build/binds_python/mrcuda.generated.cpp >/tmp/parse.log 2>&1" || { echo PARSE_FAILED; tail -30 /tmp/parse.log; exit 1; }
+          echo "PARSE_SECONDS_linux_vcpkg_x64=$(cat /tmp/tp)"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

@@ -37,7 +37,7 @@ on:
 
 jobs:
   linux-vcpkg-build-test:
-    timeout-minutes: 50
+    timeout-minutes: 90
     runs-on: ${{ matrix.os }}
     container:
       image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}

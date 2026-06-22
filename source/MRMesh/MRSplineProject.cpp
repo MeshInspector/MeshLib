@@ -4,11 +4,35 @@
 #include "MRSurfacePath.h"
 #include "MRSurfaceDistance.h"
 #include "MRContour.h"
+#include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include <cfloat>
 
 namespace MR
 {
+
+namespace
+{
+
+FaceBitSet facesWithinRange( const MeshTopology& topology, const VertScalars& vertDist, float range )
+{
+    MR_TIMER;
+    FaceBitSet res( topology.faceSize() );
+    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    {
+        auto vs = topology.getTriVerts( f );
+        for ( VertId v : vs )
+            if ( vertDist[v] <= range )
+            {
+                res.set( f );
+                break;
+            }
+    } );
+    return res;
+}
+
+} //anonymous namespace
 
 Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
 {
@@ -55,6 +79,8 @@ Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
         const auto geoPathLen = calcLength( geoPathAsContour );
         const auto midPointId = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
         const auto surfDist = computeSurfaceDistances( mesh, geoPath[midPointId], geoPathLen / 2 );
+        regionBetweenMarks[seq] = facesWithinRange( mesh.topology, surfDist, geoPathLen / 2 );
+        assert( regionBetweenMarks[seq].any() );
     } );
 
     // for each point stores the last control (marked) point index,
@@ -68,6 +94,17 @@ Contour3f projectSpline( const Mesh& mesh, const MarkedContour3f& spline )
             lastMark = i;
         pos2mark.push_back( lastMark );
     }
+
+    // project not control points on appropriate parts of the mesh
+    ParallelFor( size_t( 0 ), sz, [&]( size_t i )
+    {
+        if ( spline.marks.test( i ) )
+            return; // control point - already projected above
+
+        const auto& faceRegion = regionBetweenMarks[pos2mark[i]];
+        const auto p = mesh.projectPoint( spline.contour[i], FLT_MAX, &faceRegion );
+        res[i] = p.proj.point;
+    } );
 
     return res;
 }

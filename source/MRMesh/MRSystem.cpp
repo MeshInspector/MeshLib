@@ -414,9 +414,9 @@ std::string GetCpuId()
         std::ifstream cpuinfo( "/proc/cpuinfo" );
         for ( std::string line; std::getline( cpuinfo, line ); )
         {
-            if ( line.rfind( "CPU implementer", 0 ) == 0 )
+            if ( line.starts_with( "CPU implementer" ) )
                 implementer = (int)std::strtol( line.c_str() + line.find( ':' ) + 1, nullptr, 0 );
-            else if ( line.rfind( "CPU part", 0 ) == 0 )
+            else if ( line.starts_with( "CPU part" ) )
                 part = (int)std::strtol( line.c_str() + line.find( ':' ) + 1, nullptr, 0 );
             if ( implementer >= 0 && part >= 0 )
                 break;

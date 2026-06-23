@@ -12,7 +12,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     permissions:
-      contents: read  # This is required for actions/checkout
+      # required for actions/checkout
+      # change to write if you require draft MRBind release
+      contents: write  
     container:
       image: meshlib/meshlib-emscripten-c-bindings-arm64:${{inputs.docker_image_tag}}
       options: --user root

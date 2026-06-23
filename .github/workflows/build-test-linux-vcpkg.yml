@@ -206,17 +206,20 @@ jobs:
           MK="make -f scripts/mrbind/generate.mk MODE=none -B MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib"
           prof() {
             echo "AB $1 wall=$(cat /tmp/tw)s"
-            python3 scripts/ftt_aggregate.py build/binds_python | sed "s/^/AB $1 /"
-            python3 scripts/ftt_byname.py build/binds_python | grep -E "files=|^FTN cat |is_trivially_destructible<capture>" | sed "s/^/AB $1 /"
+            python3 scripts/ftt_byname.py build/binds_python | sed "s/^/AB $1 /"
           }
           echo "::group::baseline build"
           find build/binds_python -name '*.json' -delete 2>/dev/null || true
           /usr/bin/time -o /tmp/tw -f '%e' bash -c "$MK >/tmp/base.log 2>&1" || { echo BASE_FAILED; tail -40 /tmp/base.log; exit 1; }
           echo "::endgroup::"
           prof BASELINE
-          echo "::group::patch header"
-          sed -i 's/std::is_trivially_destructible<capture>::value/__is_trivially_destructible(capture)/' thirdparty/mrbind-pybind11/include/pybind11/pybind11.h
-          grep -nE "__is_trivially_destructible\(capture\)|is_trivially_destructible<capture>" thirdparty/mrbind-pybind11/include/pybind11/pybind11.h || echo PATCH_NOT_APPLIED
+          echo "::group::patch headers (stacked builtin traits)"
+          for t in is_trivially_destructible is_trivially_copyable is_destructible is_enum is_empty is_polymorphic is_abstract is_final is_aggregate; do
+            find thirdparty/mrbind-pybind11/include -name '*.h' -exec sed -i -E "s/std::${t}<([^<>;,]+)>::value/__${t}(\1)/g" {} +
+          done
+          echo "remaining un-swapped (nested-arg) usages of these traits:"
+          grep -rhoE "std::(is_trivially_destructible|is_trivially_copyable|is_destructible|is_enum|is_empty|is_polymorphic|is_abstract|is_final|is_aggregate)<[^;]*>::value" thirdparty/mrbind-pybind11/include | wc -l
+          grep -rn "__is_trivially_destructible(capture)" thirdparty/mrbind-pybind11/include/pybind11/pybind11.h || echo PATCH_NOT_APPLIED
           echo "::endgroup::"
           echo "::group::patched build"
           find build/binds_python -name '*.json' -delete 2>/dev/null || true

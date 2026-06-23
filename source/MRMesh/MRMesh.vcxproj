@@ -250,6 +250,7 @@
     <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
+    <ClInclude Include="MRSplineProject.h" />
     <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
@@ -454,8 +455,17 @@
     <ClInclude Include="MRFunctional.h" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Reuse the shared MRPch PCH when extra headers are off: reference MRPch so it builds first and
+         its PCH object is linked. With extra headers on, MRMesh builds its own PCH and needs no reference. -->
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj" Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="MRPchCreate.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
+      <!-- Build our own PCH only with the extra headers (MSVC); otherwise reuse the shared MRPch PCH. -->
+      <PrecompiledHeader Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">Create</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
@@ -648,6 +658,7 @@
     <ClCompile Include="MRSharedThreadSafeOwner.cpp" />
     <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
+    <ClCompile Include="MRSplineProject.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
@@ -798,7 +809,8 @@
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -820,7 +832,8 @@
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

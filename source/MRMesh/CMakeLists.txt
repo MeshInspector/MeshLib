@@ -96,11 +96,12 @@ IF(NOT MRMESH_NO_TIFF)
 ENDIF()
 
 IF(MR_PCH)
-  IF(MSVC)
+  IF(MSVC AND MR_PCH_USE_EXTRA_HEADERS)
     # MRMesh exports MRMESH_API, so it cannot reuse the shared (dllimport) PCH once that PCH
     # contains MeshLib headers; it builds its own from MRPch.h in its (dllexport) context.
     # MESHLIB_NO_VIEWER drops the viewer/imgui section of MRPch.h, which MRMesh (a lower layer)
-    # neither needs nor has on its include path. See cmake/Modules/CompilerOptions.cmake.
+    # neither needs nor has on its include path. See cmake/Modules/ConfigurePch.cmake.
+    # Without the extra headers the shared PCH holds no MeshLib headers, so MRMesh just reuses it.
     target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
     target_precompile_headers(${PROJECT_NAME} PRIVATE
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")

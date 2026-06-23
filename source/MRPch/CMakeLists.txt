@@ -1,7 +1,5 @@
 project(MRPch CXX)
 
-option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
-
 file(GLOB HEADERS "*.h")
 
 install(
@@ -68,14 +66,24 @@ IF(MR_PCH)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
   ENDIF()
 
-  IF(MR_PCH_USE_EXTRA_HEADERS)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_EXTRA_HEADERS)
-  ENDIF()
   IF(NOT MESHLIB_BUILD_MRVIEWER)
     target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
   ENDIF()
   IF(MR_PCH_USE_EXTRA_HEADERS AND MESHLIB_BUILD_MRVIEWER)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
+  ENDIF()
+
+  # Cache OpenVDB in the shared PCH on MSVC when voxels are built: it speeds up the OpenVDB-heavy
+  # translation units. MSVC-only because there MRMesh/MRViewer build their own PCH and the compiler does
+  # not emit unreferenced inline functions, so the targets that REUSE_FROM this PCH without linking
+  # libopenvdb still link; on GCC/Clang that emission yields undefined OpenVDB symbols (e.g.
+  # openvdb::math::simplify from inline ScaleMap methods). MR_PCH_USE_OPENVDB makes MRPch.h pull in the
+  # OpenVDB headers, and linking OpenVDB compiles the PCH with the same OpenVDB definitions
+  # (OPENVDB_USE_DELAYED_LOADING, OPENVDB_ABI_VERSION_NUMBER) as the translation units that reuse it.
+  IF(MSVC AND MESHLIB_BUILD_VOXELS)
+    find_package(OpenVDB 10 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_OPENVDB)
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE

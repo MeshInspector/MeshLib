@@ -7,7 +7,7 @@
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
 #include <filesystem>
-#include <istream>
+#include <iosfwd>
 #include <string>
 
 namespace MR

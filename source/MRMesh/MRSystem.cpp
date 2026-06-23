@@ -97,11 +97,9 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 namespace
 {
 
-enum UserAgentField { uaArchitecture, uaBitness, uaPlatform, uaPlatformVersion };
-
 // User-Agent Client Hints (getHighEntropyValues) is asynchronous and Chromium-only, so it
 // cannot be read inline from the synchronous functions below. Kick the query off once at
-// startup and cache the result on the Emscripten Module object; userAgentField() then reads
+// startup and cache the result on the Emscripten Module object; the ua*() getters then read
 // individual fields synchronously, falling back gracefully when the cache is absent.
 void requestUserAgentData()
 {
@@ -116,19 +114,49 @@ void requestUserAgentData()
     } );
 }
 
-// returns Module.mrUserAgentData[<field>] or an empty string when the field (or the whole
-// cached object) is not available. The field is selected by integer index rather than a
-// string pointer, so nothing but an int crosses the JS boundary (MEMORY64-safe).
-std::string userAgentField( UserAgentField field )
+// takes ownership of a malloc'ed UTF-8 string returned from JS and frees it
+std::string takeJsString( char* p )
 {
-    char* p = (char*)EM_ASM_PTR( {
-        var ua = Module.mrUserAgentData;
-        var key = "architecture bitness platform platformVersion".split( " " )[$0];
-        return stringToNewUTF8( ( ua && ua[key] ) ? String( ua[key] ) : "" );
-    }, field );
     std::string res = p ? p : std::string();
     free( p );
     return res;
+}
+
+// Each getter returns the cached field, or an empty string when the field (or the whole
+// cached object) is unavailable. The field name is hard-coded in every getter, so nothing
+// crosses the JS boundary: no pointer argument (which would arrive as a BigInt under
+// MEMORY64) and no "$" placeholder (MRMesh is built with -pedantic-errors, which rejects
+// "$" in identifiers). The string is returned via EM_ASM_PTR, correct for both memory models.
+std::string uaArchitecture()
+{
+    return takeJsString( (char*)EM_ASM_PTR( {
+        var u = Module.mrUserAgentData;
+        return stringToNewUTF8( ( u && u.architecture ) ? String( u.architecture ) : "" );
+    } ) );
+}
+
+std::string uaBitness()
+{
+    return takeJsString( (char*)EM_ASM_PTR( {
+        var u = Module.mrUserAgentData;
+        return stringToNewUTF8( ( u && u.bitness ) ? String( u.bitness ) : "" );
+    } ) );
+}
+
+std::string uaPlatform()
+{
+    return takeJsString( (char*)EM_ASM_PTR( {
+        var u = Module.mrUserAgentData;
+        return stringToNewUTF8( ( u && u.platform ) ? String( u.platform ) : "" );
+    } ) );
+}
+
+std::string uaPlatformVersion()
+{
+    return takeJsString( (char*)EM_ASM_PTR( {
+        var u = Module.mrUserAgentData;
+        return stringToNewUTF8( ( u && u.platformVersion ) ? String( u.platformVersion ) : "" );
+    } ) );
 }
 
 // fire the asynchronous query during static initialization, before any getter is called
@@ -435,9 +463,9 @@ std::string GetCpuId()
     // architecture and bitness via User-Agent Client Hints (Chromium only). Fall back to a
     // generic name when those are unavailable (e.g. Firefox/Safari).
     std::string res = "Web Browser";
-    if ( const std::string arch = userAgentField( uaArchitecture ); !arch.empty() )
+    if ( const std::string arch = uaArchitecture(); !arch.empty() )
     {
-        const std::string bitness = userAgentField( uaBitness );
+        const std::string bitness = uaBitness();
         res = bitness.empty() ? arch : arch + ", " + bitness + "-bit";
     }
     if constexpr ( sizeof( void* ) == 8 )
@@ -588,9 +616,9 @@ std::string GetDetailedOSName()
 #ifdef __EMSCRIPTEN__
     // Prefer the real OS name/version from User-Agent Client Hints (Chromium only);
     // otherwise report the wasm build configuration as before.
-    if ( const std::string platform = userAgentField( uaPlatform ); !platform.empty() )
+    if ( const std::string platform = uaPlatform(); !platform.empty() )
     {
-        const std::string version = userAgentField( uaPlatformVersion );
+        const std::string version = uaPlatformVersion();
         return version.empty() ? platform : platform + ", " + version;
     }
 #ifdef __EMSCRIPTEN_PTHREADS__

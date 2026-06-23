@@ -46,6 +46,8 @@ struct SweepLinePredicates
     // orientation of b around pivot relative to the direction the sweep arrives from
     // (i.e. ccw with the first point placed far behind pivot, opposite to the sweep)
     std::function<bool( VertId b, VertId pivot )> ccwFromBehind;
+    // store the position of input vertex v, identified by its (contourId, pointId) in the source contours
+    std::function<void( VertId v, int contourId, int pointId )> addInputPoint;
     // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
     std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
     // position of vertex v in the output mesh
@@ -102,16 +104,12 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
         base.x -= 10000; // far behind pivot along -X, matching the historical sweep reference
         return MR::ccw( { PreciseVertCoords2{ VertId{}, base }, { b, ( *pts )[b] }, { pivot, ( *pts )[pivot] } } );
     };
-    // ingest input vertex positions in the same VertId order initMeshByContours_ assigns them
-    // (closedness already asserted, and pts reserved, in the box/pointsSize loop above)
-    VertId inV{ 0 };
-    for ( const auto& cont : contours )
+    // resolve an input vertex by (contourId, pointId); initMeshByContours_ drives the order, so
+    // `contours` only needs to outlive construction (every caller passes its own input by reference)
+    p.addInputPoint = [&contours, pts, toInt] ( VertId v, int contourId, int pointId )
     {
-        if ( cont.size() <= 3 )
-            continue;
-        for ( int i = 0; i + 1 < int( cont.size() ); ++i )
-            pts->autoResizeSet( inV++, toInt( cont[i] ) );
-    }
+        pts->autoResizeSet( v, toInt( contours[contourId][pointId] ) );
+    };
     p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
         pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts )[a], ( *pts )[b], ( *pts )[c], ( *pts )[d] ) );
@@ -953,13 +951,15 @@ void SweepLineQueue::checkIntersection_( int i )
 void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
 {
     MR_TIMER;
-    for ( int contSize : contourSizes )
+    for ( int contourId = 0; contourId < int( contourSizes.size() ); ++contourId )
     {
-        if ( contSize > 3 )
+        if ( contourSizes[contourId] > 3 )
         {
-            // allocate input vertices; their coordinates are set by precisePredicates in the same order
-            for ( int i = 0; i + 1 < contSize; ++i )
-                (void)tp_.addVertId();
+            for ( int pointId = 0; pointId + 1 < contourSizes[contourId]; ++pointId )
+            {
+                VertId v = tp_.addVertId();
+                predicates_.addInputPoint( v, contourId, pointId );
+            }
         }
     }
 

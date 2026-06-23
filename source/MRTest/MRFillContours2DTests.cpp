@@ -30,4 +30,33 @@ TEST( MRMesh, fillContours2D )
     }
 }
 
+// Characterizes fillContours2D on a hole lying in a plane tilted off all axes (so the projection /
+// dominant-axis path is exercised). Pins the observable result so the upcoming mesh-space rewrite
+// cannot change it blindly: the hole must close watertight, reuse the boundary vertices in place
+// (no drift or duplication), and the patch must lie in the cut plane.
+TEST( MRMesh, fillContours2DTiltedPlane )
+{
+    Mesh mesh = makeUVSphere( 1.0f, 32, 32 );
+    const Vector3f normal = Vector3f( 1.f, 2.f, 3.f ).normalized();
+    trimWithPlane( mesh, TrimWithPlaneParams{ .plane = Plane3f::fromDirAndPt( normal, Vector3f() ) } );
+    mesh.pack();
+
+    ASSERT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) );
+    const int vertsBefore = mesh.topology.numValidVerts();
+    const FaceId firstNewFace = mesh.topology.lastValidFace() + 1;
+
+    const auto res = fillContours2D( mesh, mesh.topology.findHoleRepresentiveEdges() );
+    EXPECT_TRUE( res.has_value() );
+
+    // hole closed watertight, with the boundary vertices reused in place (no new / duplicated verts)
+    EXPECT_TRUE( mesh.topology.findHoleRepresentiveEdges().empty() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), vertsBefore );
+
+    // every patch face lies in the cut plane, oriented toward the removed -normal side (this also rules
+    // out degenerate faces, whose normal would not align). Triangle quality is intentionally not pinned:
+    // the current fill emits slivers, and the exact triangulation is not a stable invariant to guard.
+    for ( FaceId f = firstNewFace; f <= mesh.topology.lastValidFace(); ++f )
+        EXPECT_GT( dot( mesh.normal( f ), -normal ), 0.99f );
+}
+
 }

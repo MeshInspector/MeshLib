@@ -512,7 +512,7 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Enable Cuda? You can set this to 0 if you don't have Cuda installed.
-# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
+# Even if this is false, we emit a dummy `getRuntimeInfo()` that always returns an error. That's what we use on Macs where there is no Cuda.
 ENABLE_CUDA := $(if $(IS_MACOS),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))

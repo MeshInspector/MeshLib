@@ -18,7 +18,7 @@ Expected<RuntimeInfo> getRuntimeInfo()
     int n;
     CUDA_RETURN_UNEXPECTED( cudaGetDeviceCount( &n ) );
     if ( n <= 0 )
-        return MR::unexpected( "NVIDIA GPU error: no single decive" );
+        return MR::unexpected( "NVIDIA GPU error: no single device" );
 
     RuntimeInfo res;
     CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );

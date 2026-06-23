@@ -442,6 +442,10 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
                     assert( false );
                     (*basisTunnels)[i].clear();
                 }
+                // select the smallest among two not-trivial co-loops
+                if ( auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, (*basisTunnels)[i], metric, &activeRegion );
+                    maybeCoLoop && calcPathMetric( maybeCoLoop.value(), metric ) < calcPathMetric( (*basisTunnels)[i], metric ) )
+                    (*basisTunnels)[i] = std::move( maybeCoLoop.value() );
             } );
             std::erase_if( *basisTunnels, [](const auto& v) { return v.empty(); } );
         }

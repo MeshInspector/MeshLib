@@ -42,7 +42,7 @@ def test_cut_by_spline_without_projection_self_intersects():
 
 
 @pytest.mark.smoke
-def test_cut_by_spline_with_projection(tmp_path):
+def test_cut_by_spline_with_projection():
     """
     Projecting the spline onto the mesh surface with projectSpline before cutting
     removes the self-intersections, so the cut succeeds.
@@ -50,12 +50,5 @@ def test_cut_by_spline_with_projection(tmp_path):
     mesh = mm.loadMesh(input_folder / "toothex.ctm")
     spline = _make_spline(mesh)
     projected_contour = mm.projectSpline(mesh, spline)
-
-    # Dump both contours (raw makeSpline output and the projectSpline output) for
-    # offline analysis. Saved before the cut so they survive a failure; uploaded to
-    # S3 when the PR carries the `upload-test-artifacts` label.
-    mm.saveLines(mm.Polyline3(spline.contour), tmp_path / "make_spline.mrlines")
-    mm.saveLines(mm.Polyline3(projected_contour), tmp_path / "project_spline.mrlines")
-
     left_faces = mm.cutMeshByContour(mesh, projected_contour)
     assert left_faces.count() > 0

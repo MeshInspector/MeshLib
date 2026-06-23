@@ -222,15 +222,12 @@ jobs:
          path: browser_wasm_runtime_single
 
      - name: Build C# Wasm package
-       # Notice that we delete `libblosc.a` here. Otherwise we get this error:
-       #   wasm-ld: error: duplicate symbol: read_long_length_no_check  - and similarly for `LZ4_decompress_safe_partial_forceExtDict`, `LZ4_decompress_safe_partial_usingDict`.
        run: |
          mkdir meshlib_dotnet-wasm
          mkdir meshlib_dotnet-wasm/native
          move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
          mkdir meshlib_dotnet-wasm/native/single
          move browser_wasm_runtime_single/* meshlib_dotnet-wasm/native/single
-         del meshlib_dotnet-wasm/native/single/libblosc.a
          Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
 
      - name: Generate NuGet specification

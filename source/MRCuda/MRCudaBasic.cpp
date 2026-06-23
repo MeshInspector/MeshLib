@@ -39,6 +39,24 @@ bool RuntimeInfo::fitForComputations() const
     return runtimeVersion <= driverVersion;
 }
 
+bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
+{
+     auto info = MR::Cuda::getRuntimeInfo();
+     if ( !info )
+         return false;
+
+    if ( driverVersionOut )
+        *driverVersionOut = info->driverVersion;
+    if ( runtimeVersionOut )
+        *runtimeVersionOut = info->runtimeVersion;
+    if ( computeMajorOut )
+        *computeMajorOut = info->computeMajor;
+    if ( computeMinorOut )
+        *computeMinorOut = info->computeMinor;
+
+    return info->fitForComputations();
+}
+
 size_t getCudaAvailableMemory()
 {
     if ( CUDA_EXEC( cudaSetDevice( 0 ) ) != cudaSuccess )

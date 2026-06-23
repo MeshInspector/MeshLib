@@ -45,7 +45,8 @@ jobs:
       - name: Download and unpack MRBind
         run: |
           MRBIND_VERSION=$(cat scripts/mrbind/mrbind_version.txt | xargs)
-          gh release download $MRBIND_VERSION \
+          curl -sL https://github.com/cli/cli/releases/download/v2.95.0/gh_2.95.0_linux_arm64.tar.gz | tar xz
+          gh_2.95.0_linux_arm64/bin/gh release download $MRBIND_VERSION \
             --repo MeshInspector/mrbind \
             --pattern "mrbind-linux-$(uname -m).zip"
           unzip "mrbind-linux-$(uname -m).zip"

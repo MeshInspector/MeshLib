@@ -92,6 +92,48 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 
 }
 
+#ifdef __EMSCRIPTEN__
+
+// User-Agent Client Hints (getHighEntropyValues) is asynchronous and Chromium-only, so it
+// cannot be read inline from the synchronous functions below. Kick the query off once at
+// startup and cache the result on the Emscripten Module object; the getters then read
+// individual fields from the cache, falling back gracefully when it is absent.
+EM_JS( void, mrRequestUserAgentData, (), {
+    if ( typeof navigator != "undefined" && navigator.userAgentData &&
+         navigator.userAgentData.getHighEntropyValues )
+    {
+        navigator.userAgentData
+            .getHighEntropyValues( [ "architecture", "bitness", "platformVersion" ] )
+            .then( function( ua ) { Module.mrUserAgentData = ua; } );
+    }
+} );
+
+// returns a malloc'ed UTF-8 copy of Module.mrUserAgentData[field], or an empty string when
+// the field (or the whole cached object) is not available
+EM_JS( char*, mrUserAgentField, ( const char* field ), {
+    var ua = Module.mrUserAgentData;
+    var key = UTF8ToString( field );
+    return stringToNewUTF8( ( ua && ua[key] ) ? String( ua[key] ) : "" );
+} );
+
+namespace
+{
+
+std::string userAgentField( const char* field )
+{
+    char* p = mrUserAgentField( field );
+    std::string res = p ? p : std::string();
+    free( p );
+    return res;
+}
+
+// fire the asynchronous query during static initialization, before any getter is called
+[[maybe_unused]] const bool g_userAgentDataRequested = [] { mrRequestUserAgentData(); return true; }();
+
+}
+
+#endif
+
 namespace MR
 {
 
@@ -385,9 +427,18 @@ std::filesystem::path GetWindowsInstallDirectory()
 std::string GetCpuId()
 {
 #ifdef __EMSCRIPTEN__
+    // The browser sandbox hides the host CPU model; the most it exposes is the coarse
+    // architecture and bitness via User-Agent Client Hints (Chromium only). Fall back to a
+    // generic name when those are unavailable (e.g. Firefox/Safari).
+    std::string res = "Web Browser";
+    if ( const std::string arch = userAgentField( "architecture" ); !arch.empty() )
+    {
+        const std::string bitness = userAgentField( "bitness" );
+        res = bitness.empty() ? arch : arch + ", " + bitness + "-bit";
+    }
     if constexpr ( sizeof( void* ) == 8 )
-        return "Web Browser (Memory64 enabled)";
-    return "Web Browser";
+        res += " (Memory64 enabled)";
+    return res;
 #elif defined(__APPLE__)
     char CPUBrandString[0x40] = {};
     size_t size = sizeof(CPUBrandString);
@@ -531,6 +582,13 @@ std::string GetDetailedOSName()
     return winName;
 #else
 #ifdef __EMSCRIPTEN__
+    // Prefer the real OS name/version from User-Agent Client Hints (Chromium only);
+    // otherwise report the wasm build configuration as before.
+    if ( const std::string platform = userAgentField( "platform" ); !platform.empty() )
+    {
+        const std::string version = userAgentField( "platformVersion" );
+        return version.empty() ? platform : platform + ", " + version;
+    }
 #ifdef __EMSCRIPTEN_PTHREADS__
     if constexpr ( sizeof( void* ) == 8 )
         return "wasm64-mt";

@@ -37,7 +37,7 @@ on:
 
 jobs:
   linux-vcpkg-build-test:
-    timeout-minutes: 50
+    timeout-minutes: 90
     runs-on: ${{ matrix.os }}
     container:
       image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
@@ -186,25 +186,43 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
-      # EXPERIMENT: profile WHICH templates dominate instantiation in the bindings compile.
-      # -ftime-trace on the compiler only (not the mrbind parser); per-template aggregation
-      # below classifies the instantiation time as MeshLib (MR::) vs libstdc++ (std::) vs
-      # pybind11, to verify what actually drives the Linux instantiation cost.
-      - name: ftn enable -ftime-trace
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
-        run: echo '-ftime-trace' >> scripts/mrbind/compiler_only_flags.txt
-
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
-      - name: ftn aggregate per-template instantiation
+      # EXPERIMENT: A/B test replacing libstdc++'s std::is_trivially_destructible<capture>
+      # (the #1 instantiation hot spot) with the clang builtin __is_trivially_destructible.
+      # Same runner, back-to-back: baseline build, patch the mrbind-pybind11 header in place,
+      # rebuild; -ftime-trace measures the instantiation drop.
+      - name: ab builtin-trait patch test
         if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
         run: |
-          echo "FTN_PLATFORM=linux-vcpkg-x64-clang21"
-          python3 scripts/ftt_byname.py build/binds_python
+          set -e
+          echo '-ftime-trace' >> scripts/mrbind/compiler_only_flags.txt
+          MK="make -f scripts/mrbind/generate.mk MODE=none -B MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib"
+          prof() {
+            echo "AB $1 wall=$(cat /tmp/tw)s"
+            python3 scripts/ftt_aggregate.py build/binds_python | sed "s/^/AB $1 /"
+            python3 scripts/ftt_byname.py build/binds_python | grep -E "files=|^FTN cat |is_trivially_destructible<capture>" | sed "s/^/AB $1 /"
+          }
+          echo "::group::baseline build"
+          find build/binds_python -name '*.json' -delete 2>/dev/null || true
+          /usr/bin/time -o /tmp/tw -f '%e' bash -c "$MK >/tmp/base.log 2>&1" || { echo BASE_FAILED; tail -40 /tmp/base.log; exit 1; }
+          echo "::endgroup::"
+          prof BASELINE
+          echo "::group::patch header"
+          sed -i 's/std::is_trivially_destructible<capture>::value/__is_trivially_destructible(capture)/' thirdparty/mrbind-pybind11/include/pybind11/pybind11.h
+          grep -nE "__is_trivially_destructible\(capture\)|is_trivially_destructible<capture>" thirdparty/mrbind-pybind11/include/pybind11/pybind11.h || echo PATCH_NOT_APPLIED
+          echo "::endgroup::"
+          echo "::group::patched build"
+          find build/binds_python -name '*.json' -delete 2>/dev/null || true
+          /usr/bin/time -o /tmp/tw -f '%e' bash -c "$MK >/tmp/patched.log 2>&1" || { echo PATCHED_FAILED; tail -40 /tmp/patched.log; exit 1; }
+          echo "::endgroup::"
+          prof PATCHED
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

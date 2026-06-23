@@ -245,19 +245,26 @@ jobs:
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
-      # EXPERIMENT: time the mrbind PARSE phase alone (re-build only the *.generated.cpp
-      # targets). generate_win.bat already wraps `time make ...`, so the msys2 `time`
-      # prints a `real` line for the parse.
-      - name: measure parse phase
+      # EXPERIMENT: schedule analysis - core count + sample running compiler procs once
+      # per second across a clean bindings rebuild, to compare parallelism with Linux.
+      - name: schedule analysis (windows)
         if: ${{ inputs.mrbind && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'CMake' }}
-        shell: cmd
+        shell: pwsh
         env:
           MSYS2_DIR: C:\msys64
         run: |
-          echo PARSE_PHASE_WINDOWS_START
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B MODE=none VS_MODE=${{matrix.config}} source/TempOutput/Bindings_python/x64/${{matrix.config}}/mrmesh.generated.cpp source/TempOutput/Bindings_python/x64/${{matrix.config}}/mrcuda.generated.cpp || exit /b 1
-          echo PARSE_PHASE_WINDOWS_END
+          Write-Output "SCHED_WIN_CORES NUMBER_OF_PROCESSORS=$env:NUMBER_OF_PROCESSORS"
+          Get-CimInstance Win32_Processor | ForEach-Object { Write-Output "SCHED_WIN_CPU cores=$($_.NumberOfCores) logical=$($_.NumberOfLogicalProcessors)" }
+          $sampler = Start-Job -ScriptBlock {
+            1..1500 | ForEach-Object {
+              $c = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'clang|lld|mrbind' }).Count
+              "$_ $c"; Start-Sleep -Seconds 1
+            }
+          }
+          cmd /c 'call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} && call scripts\mrbind\generate_win.bat -B MODE=none VS_MODE=${{matrix.config}}'
+          Stop-Job $sampler
+          Receive-Job $sampler | Set-Content sched_win.txt
+          python scripts/sched_analyze.py sched_win.txt
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}

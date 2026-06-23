@@ -192,15 +192,24 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
-      # EXPERIMENT: time the mrbind PARSE phase alone (re-build only the *.generated.cpp
-      # targets => libclang parses all headers, no fragment compile/link).
-      - name: measure parse phase
+      # EXPERIMENT: schedule analysis - sample core occupancy (running compiler/linker
+      # processes) once per second across a clean bindings rebuild, to find idle/serial
+      # segments (parse, PCH, link, fragment tail) that waste the 4 cores.
+      - name: schedule analysis
         if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: |
-          /usr/bin/time -o /tmp/tp -f '%e' bash -c "make -f scripts/mrbind/generate.mk MODE=none -B MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib build/binds_python/mrmesh.generated.cpp build/binds_python/mrcuda.generated.cpp >/tmp/parse.log 2>&1" || { echo PARSE_FAILED; tail -30 /tmp/parse.log; exit 1; }
-          echo "PARSE_SECONDS_linux_vcpkg_x64=$(cat /tmp/tp)"
+          echo "SCHED_CORES nproc=$(nproc) cpuinfo=$(grep -c ^processor /proc/cpuinfo) mem=$(free -g | awk 'NR==2{print $2}')G"
+          ( for i in $(seq 1 1500); do
+              printf '%s %s\n' "$(date +%s)" "$(ps -e -o comm= | grep -cE 'clang|lld|mrbind')"
+              sleep 1
+            done ) > /tmp/sched.txt &
+          SP=$!
+          /usr/bin/time -o /tmp/tw -f '%e' bash -c "make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib >/tmp/build.txt 2>&1" || true
+          kill $SP 2>/dev/null || true
+          echo "SCHED_WALL=$(cat /tmp/tw)s"
+          python3 scripts/sched_analyze.py /tmp/sched.txt
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

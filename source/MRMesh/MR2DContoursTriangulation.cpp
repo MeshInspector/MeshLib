@@ -957,8 +957,9 @@ void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
     {
         if ( contSize > 3 )
         {
+            // allocate input vertices; their coordinates are set by precisePredicates in the same order
             for ( int i = 0; i + 1 < contSize; ++i )
-                tp_.addVertId();
+                (void)tp_.addVertId();
         }
     }
 

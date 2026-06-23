@@ -95,11 +95,15 @@ def parse_jobs(jobs: List[dict]):
     ]
 
 def fetch_jobs(repo: str, run_id: str):
-    return requests.get(f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs', headers={
+    resp = requests.get(f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs', headers={
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',
         'X-GitHub-Api-Version': '2022-11-28',
     })
+    # Report a clear HTTP error (rate limit, auth, transient 5xx) and exit non-zero
+    # instead of a later KeyError on resp.json()['jobs']; this also lets retry.sh retry.
+    resp.raise_for_status()
+    return resp
 
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role

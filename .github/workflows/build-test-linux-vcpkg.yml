@@ -186,11 +186,25 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
+      # EXPERIMENT: profile WHICH templates dominate instantiation in the bindings compile.
+      # -ftime-trace on the compiler only (not the mrbind parser); per-template aggregation
+      # below classifies the instantiation time as MeshLib (MR::) vs libstdc++ (std::) vs
+      # pybind11, to verify what actually drives the Linux instantiation cost.
+      - name: ftn enable -ftime-trace
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        run: echo '-ftime-trace' >> scripts/mrbind/compiler_only_flags.txt
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
+
+      - name: ftn aggregate per-template instantiation
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        run: |
+          echo "FTN_PLATFORM=linux-vcpkg-x64-clang21"
+          python3 scripts/ftt_byname.py build/binds_python
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

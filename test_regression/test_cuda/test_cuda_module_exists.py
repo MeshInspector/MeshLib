@@ -1,5 +1,5 @@
 """
-Check that the `mrcudapy` module exists. Even on Mac, it should at least contain a stub `getRuntimeInfo()` reporting that CUDA is not available.
+Check that the `mrcudapy` module exists. Even on Mac, it should at least contain a stub `isCudaAvailable()` returning false.
 """
 
 from meshlib import mrcudapy
@@ -9,4 +9,4 @@ from module_helper import *
 
 @pytest.mark.smoke
 def test_cuda_module_exists():
-    assert hasattr(mrcudapy, "getRuntimeInfo")  # Check that the function exists, without calling it (it raises when no CUDA device is available).
+    mrcudapy.isCudaAvailable(); # Check that the function exists, but ignore the return value.

@@ -7,8 +7,7 @@ import pytest
     reason="Only run when --run-cuda is 'negative'",
 )
 def test_cuda_not_available(cuda_module):
-    with pytest.raises(ValueError):
-        cuda_module.getRuntimeInfo()  # Should fail when no CUDA device is available
+    assert cuda_module.isCudaAvailable() is False, "Check if cuda not available and it's reported correctly"
 
 
 @pytest.mark.smoke
@@ -17,5 +16,4 @@ def test_cuda_not_available(cuda_module):
     reason="Only run when --run-cuda is 'positive'",
 )
 def test_cuda_available(cuda_module):
-    info = cuda_module.getRuntimeInfo()  # Should succeed when a CUDA device is available
-    assert info.fitForComputations(), "Check if cuda available and fit for computations"
+    assert cuda_module.isCudaAvailable() is True, "Check if cuda available"

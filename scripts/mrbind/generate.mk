@@ -603,6 +603,19 @@ COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_C_BINDINGS
 COMPILER += -DMR_COMPILING_C_BINDINGS
 endif
 
+ifeq ($(TARGET),c)
+C_FOR_WASM := 0
+override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
+ifneq ($(C_FOR_WASM),)
+# Those libraries not built for wasm.
+# Those flags are similar to those in `source/MRIOExtras/CMakeLists.txt`.
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_PDF
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_STEP
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_TIFF
+COMPILER_FLAGS_LIBCLANG += -DMRVOXELS_NO_TIFF
+endif
+endif
+
 
 
 ifneq ($(TARGETING_EMSCRIPTEN),)

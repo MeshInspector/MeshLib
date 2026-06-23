@@ -53,9 +53,13 @@ jobs:
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
+
+      - name: Generate C bindings (Wasm version)
+        run: |
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1 C_FOR_WASM=1
+          move source/MeshLibC2 source/MeshLibC2Wasm
+
       - name: Generate C bindings
-        # I get `sh` by default.
-        shell: bash
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
@@ -65,5 +69,6 @@ jobs:
           name: CBindings
           path: |
             ./source/MeshLibC2
+            ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
           retention-days: 1

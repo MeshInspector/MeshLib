@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Wasm source/MeshLibC2Wasm
           # Cuda placeholders:
           cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 

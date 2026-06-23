@@ -7,6 +7,7 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRRegionBoundary.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
 #include <gtest/gtest.h>
 #include <chrono>
@@ -15,6 +16,7 @@
 #include <functional>
 #include <cstdio>
 #include <cmath>
+#include <limits>
 
 namespace MR
 {
@@ -35,6 +37,49 @@ TEST( MRMesh, PlanarTriangulation )
     // Must not contain degenerate faces
     EXPECT_TRUE( mesh.triangleAspectRatio( 0_f ) < 10.0f );
     EXPECT_TRUE( mesh.triangleAspectRatio( 1_f ) < 10.0f );
+}
+
+TEST( MRMesh, PlanarTriangulationMeshSpace )
+{
+    // a square boundary lying on a plane tilted off all axes, triangulated in its own 3d space
+    const Vector3f normal = Vector3f( 1.f, 2.f, 3.f ).normalized();
+    Vector3f u = cross( normal, Vector3f::plusX() );
+    if ( u.lengthSq() < 1e-6f )
+        u = cross( normal, Vector3f::plusY() );
+    u = u.normalized();
+    const Vector3f w = cross( normal, u );
+
+    const Vector3f center( 10.f, -5.f, 2.f );
+    const std::vector<Vector3f> corners = { center - u - w, center + u - w, center + u + w, center - u + w };
+
+    Mesh mesh;
+    const EdgeId e0 = mesh.addSeparateEdgeLoop( corners );
+    const EdgeLoop loop = trackRightBoundaryLoop( mesh.topology, e0 );
+    ASSERT_GE( loop.size(), size_t( 3 ) );
+
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, EdgeLoops{ loop }, normal );
+    ASSERT_TRUE( res.has_value() );
+    const Mesh& patch = *res;
+
+    EXPECT_EQ( patch.topology.numValidFaces(), 2 ); // convex quad -> 2 triangles
+
+    // output vertices keep the exact mesh coordinates (no projection round-trip)
+    for ( const EdgeId e : loop )
+    {
+        const Vector3f src = mesh.orgPnt( e );
+        float best = std::numeric_limits<float>::max();
+        for ( auto vId : patch.topology.getValidVerts() )
+            best = std::min( best, ( patch.points[vId] - src ).length() );
+        EXPECT_LE( best, 1e-4f );
+    }
+
+    // output faces are oriented consistently with the input loop's winding around +normal (validates the dominant-axis parity)
+    Vector3f loopNormal;
+    for ( const EdgeId e : loop )
+        loopNormal += cross( mesh.orgPnt( e ), mesh.destPnt( e ) );
+    const float inSign = dot( loopNormal, normal );
+    for ( auto f : patch.topology.getValidFaces() )
+        EXPECT_GT( inSign * dot( patch.normal( f ), normal ), 0.f );
 }
 
 namespace

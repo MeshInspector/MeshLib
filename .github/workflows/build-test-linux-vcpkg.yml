@@ -37,7 +37,7 @@ on:
 
 jobs:
   linux-vcpkg-build-test:
-    timeout-minutes: 50
+    timeout-minutes: 120
     runs-on: ${{ matrix.os }}
     container:
       image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
@@ -315,3 +315,34 @@ jobs:
           name: DotNetPatchArchiveLinux-${{ matrix.arch }}
           path: ./patched_content/*
           retention-days: 1
+
+      # EXPERIMENT (not for merge): measure build-time + symbol-count impact of mrbind --ignore
+      # regexes. 3 same-runner full rebuilds: baseline -> +Tier-1 (typedef-alias --ignore) ->
+      # +Tier-2 (obscure/nested container --skip-mentions-of). Flag lines appended to the shared
+      # mrbind_flags.txt at runtime (so this exact change would apply to ALL platforms). Runs LAST
+      # so the normal build + downstream tests use the unmodified flags.
+      - name: ab prune-bindings ignore test
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+        run: |
+          set -e
+          MK="make -f scripts/mrbind/generate.mk MODE=none -B MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib"
+          FLAGS=scripts/mrbind/mrbind_flags.txt
+          measure() {
+            /usr/bin/time -o /tmp/tw -f '%e' bash -c "$MK >/tmp/b.log 2>&1" || { echo "AB_RESULT $1 BUILD_FAILED"; tail -45 /tmp/b.log; exit 1; }
+            syms=$(PYTHONPATH=build/${{matrix.config}}/bin python3 -c "import meshlib.mrmeshpy as m; print(len([x for x in dir(m) if not x.startswith('__')]))" 2>/dev/null || echo import_failed)
+            echo "AB_RESULT $1 wall=$(cat /tmp/tw)s symbols=$syms"
+          }
+          echo "::group::baseline"; measure BASELINE; echo "::endgroup::"
+          echo "::group::+tier1 typedef-alias ignores"
+          echo "--ignore '/.*::(value_type|reference|const_reference|iterator|const_iterator|reverse_iterator|const_reverse_iterator|size_type|difference_type|pointer|const_pointer|allocator_type|mapped_type|key_type)/'" >> "$FLAGS"
+          tail -2 "$FLAGS"; echo "::endgroup::"
+          measure TIER1
+          echo "::group::+tier2 obscure/nested container skip-mentions-of"
+          echo "--skip-mentions-of '/std::vector<std::(vector|array|pair|tuple)<.*>/'" >> "$FLAGS"
+          echo "--skip-mentions-of '/std::optional<std::variant<.*>/'" >> "$FLAGS"
+          echo "--skip-mentions-of '/std::variant<.*Polynomial<.*>/'" >> "$FLAGS"
+          echo "--skip-mentions-of '/std::variant<.*reference_wrapper<.*>/'" >> "$FLAGS"
+          tail -5 "$FLAGS"; echo "::endgroup::"
+          measure TIER2

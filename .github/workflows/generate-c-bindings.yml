@@ -57,7 +57,7 @@ jobs:
       - name: Generate C bindings (Wasm version)
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1 C_FOR_WASM=1
-          move source/MeshLibC2 source/MeshLibC2Wasm
+          mv source/MeshLibC2 source/MeshLibC2Wasm
 
       - name: Generate C bindings
         run: |

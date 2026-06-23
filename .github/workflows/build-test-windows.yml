@@ -255,8 +255,8 @@ jobs:
         run: |
           Write-Output "SCHED_WIN_CORES NUMBER_OF_PROCESSORS=$env:NUMBER_OF_PROCESSORS"
           Get-CimInstance Win32_Processor | ForEach-Object { Write-Output "SCHED_WIN_CPU cores=$($_.NumberOfCores) logical=$($_.NumberOfLogicalProcessors)" }
-          # coarse -ftime-trace (compiler-only flag): complete per-activity Totals, negligible I/O
-          Add-Content scripts/mrbind/compiler_only_flags.txt "`n-ftime-trace -ftime-trace-granularity=100000"
+          # detailed -ftime-trace (compiler-only flag): full per-TU timeline, uploaded as artifact
+          Add-Content scripts/mrbind/compiler_only_flags.txt "`n-ftime-trace"
           $sampler = Start-Job -ScriptBlock {
             1..1500 | ForEach-Object {
               $c = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'clang|lld|mrbind' }).Count
@@ -269,6 +269,14 @@ jobs:
           Write-Output "FTR_PLATFORM=windows-x64"
           python scripts/ftt_aggregate.py source/TempOutput/Bindings_python/x64/${{matrix.config}}
           python scripts/sched_analyze.py sched_win.txt
+
+      - name: Upload ftime-trace (windows)
+        if: ${{ inputs.mrbind && matrix.cxx_compiler == 'msvc-2022' && matrix.config == 'Release' && matrix.build_system == 'CMake' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ftime-trace-windows-x64-msvc2022
+          path: source/TempOutput/Bindings_python/x64/${{matrix.config}}/*.json
+          retention-days: 5
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}

@@ -201,9 +201,9 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
         run: |
           echo "SCHED_CORES nproc=$(nproc) cpuinfo=$(grep -c ^processor /proc/cpuinfo) mem=$(free -g | awk 'NR==2{print $2}')G"
-          # coarse -ftime-trace: cumulative per-activity Totals stay complete, but few
-          # timeline events => negligible I/O overhead (compiler-only flag, not the parser)
-          echo '-ftime-trace -ftime-trace-granularity=100000' >> scripts/mrbind/compiler_only_flags.txt
+          # detailed -ftime-trace (compiler-only flag, not the parser): full per-TU timeline,
+          # uploaded below as an artifact for offline expert analysis.
+          echo '-ftime-trace' >> scripts/mrbind/compiler_only_flags.txt
           ( for i in $(seq 1 1500); do
               printf '%s %s\n' "$(date +%s)" "$(ps -e -o comm= | grep -cE 'clang|lld|mrbind')"
               sleep 1
@@ -215,6 +215,14 @@ jobs:
           echo "FTR_PLATFORM=linux-vcpkg-x64"
           python3 scripts/ftt_aggregate.py build/binds_python
           python3 scripts/sched_analyze.py /tmp/sched.txt
+
+      - name: Upload ftime-trace (linux)
+        if: ${{ inputs.mrbind && matrix.arch == 'x64' && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ftime-trace-linux-vcpkg-x64-clang18
+          path: build/binds_python/*.json
+          retention-days: 5
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

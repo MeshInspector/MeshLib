@@ -94,41 +94,45 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 
 #ifdef __EMSCRIPTEN__
 
-// User-Agent Client Hints (getHighEntropyValues) is asynchronous and Chromium-only, so it
-// cannot be read inline from the synchronous functions below. Kick the query off once at
-// startup and cache the result on the Emscripten Module object; the getters then read
-// individual fields from the cache, falling back gracefully when it is absent.
-EM_JS( void, mrRequestUserAgentData, (), {
-    if ( typeof navigator != "undefined" && navigator.userAgentData &&
-         navigator.userAgentData.getHighEntropyValues )
-    {
-        navigator.userAgentData
-            .getHighEntropyValues( [ "architecture", "bitness", "platformVersion" ] )
-            .then( function( ua ) { Module.mrUserAgentData = ua; } );
-    }
-} );
-
-// returns a malloc'ed UTF-8 copy of Module.mrUserAgentData[field], or an empty string when
-// the field (or the whole cached object) is not available
-EM_JS( char*, mrUserAgentField, ( const char* field ), {
-    var ua = Module.mrUserAgentData;
-    var key = UTF8ToString( field );
-    return stringToNewUTF8( ( ua && ua[key] ) ? String( ua[key] ) : "" );
-} );
-
 namespace
 {
 
-std::string userAgentField( const char* field )
+enum UserAgentField { uaArchitecture, uaBitness, uaPlatform, uaPlatformVersion };
+
+// User-Agent Client Hints (getHighEntropyValues) is asynchronous and Chromium-only, so it
+// cannot be read inline from the synchronous functions below. Kick the query off once at
+// startup and cache the result on the Emscripten Module object; userAgentField() then reads
+// individual fields synchronously, falling back gracefully when the cache is absent.
+void requestUserAgentData()
 {
-    char* p = mrUserAgentField( field );
+    EM_ASM( {
+        if ( typeof navigator != "undefined" && navigator.userAgentData &&
+             navigator.userAgentData.getHighEntropyValues )
+        {
+            navigator.userAgentData
+                .getHighEntropyValues( [ "architecture", "bitness", "platformVersion" ] )
+                .then( function( ua ) { Module.mrUserAgentData = ua; } );
+        }
+    } );
+}
+
+// returns Module.mrUserAgentData[<field>] or an empty string when the field (or the whole
+// cached object) is not available. The field is selected by integer index rather than a
+// string pointer, so nothing but an int crosses the JS boundary (MEMORY64-safe).
+std::string userAgentField( UserAgentField field )
+{
+    char* p = (char*)EM_ASM_PTR( {
+        var ua = Module.mrUserAgentData;
+        var key = "architecture bitness platform platformVersion".split( " " )[$0];
+        return stringToNewUTF8( ( ua && ua[key] ) ? String( ua[key] ) : "" );
+    }, field );
     std::string res = p ? p : std::string();
     free( p );
     return res;
 }
 
 // fire the asynchronous query during static initialization, before any getter is called
-[[maybe_unused]] const bool g_userAgentDataRequested = [] { mrRequestUserAgentData(); return true; }();
+[[maybe_unused]] const bool g_userAgentDataRequested = [] { requestUserAgentData(); return true; }();
 
 }
 
@@ -431,9 +435,9 @@ std::string GetCpuId()
     // architecture and bitness via User-Agent Client Hints (Chromium only). Fall back to a
     // generic name when those are unavailable (e.g. Firefox/Safari).
     std::string res = "Web Browser";
-    if ( const std::string arch = userAgentField( "architecture" ); !arch.empty() )
+    if ( const std::string arch = userAgentField( uaArchitecture ); !arch.empty() )
     {
-        const std::string bitness = userAgentField( "bitness" );
+        const std::string bitness = userAgentField( uaBitness );
         res = bitness.empty() ? arch : arch + ", " + bitness + "-bit";
     }
     if constexpr ( sizeof( void* ) == 8 )
@@ -584,9 +588,9 @@ std::string GetDetailedOSName()
 #ifdef __EMSCRIPTEN__
     // Prefer the real OS name/version from User-Agent Client Hints (Chromium only);
     // otherwise report the wasm build configuration as before.
-    if ( const std::string platform = userAgentField( "platform" ); !platform.empty() )
+    if ( const std::string platform = userAgentField( uaPlatform ); !platform.empty() )
     {
-        const std::string version = userAgentField( "platformVersion" );
+        const std::string version = userAgentField( uaPlatformVersion );
         return version.empty() ? platform : platform + ", " + version;
     }
 #ifdef __EMSCRIPTEN_PTHREADS__

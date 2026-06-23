@@ -255,6 +255,8 @@ jobs:
         run: |
           Write-Output "SCHED_WIN_CORES NUMBER_OF_PROCESSORS=$env:NUMBER_OF_PROCESSORS"
           Get-CimInstance Win32_Processor | ForEach-Object { Write-Output "SCHED_WIN_CPU cores=$($_.NumberOfCores) logical=$($_.NumberOfLogicalProcessors)" }
+          # coarse -ftime-trace (compiler-only flag): complete per-activity Totals, negligible I/O
+          Add-Content scripts/mrbind/compiler_only_flags.txt "`n-ftime-trace -ftime-trace-granularity=100000"
           $sampler = Start-Job -ScriptBlock {
             1..1500 | ForEach-Object {
               $c = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'clang|lld|mrbind' }).Count
@@ -264,6 +266,8 @@ jobs:
           cmd /c 'call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} && call scripts\mrbind\generate_win.bat -B MODE=none VS_MODE=${{matrix.config}}'
           Stop-Job $sampler
           Receive-Job $sampler | Set-Content sched_win.txt
+          Write-Output "FTR_PLATFORM=windows-x64"
+          python scripts/ftt_aggregate.py source/TempOutput/Bindings_python/x64/${{matrix.config}}
           python scripts/sched_analyze.py sched_win.txt
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports

@@ -39,6 +39,12 @@ MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
 # Extra flags for `cmake --build`.
 MR_CMAKE_BUILD_OPTIONS="${MR_CMAKE_BUILD_OPTIONS:-}"
 
+# Cross-compilation target arch (e.g. x86_64 on an arm64 macOS host via Rosetta).
+# No-op when unset, so native builds are unaffected.
+if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
@@ -101,10 +107,14 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   "
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC (e.g. to cap parallelism / limit heat);
+# otherwise default to all available cores.
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 echo "The number of concurrent build threads NPROC=${NPROC}"
 

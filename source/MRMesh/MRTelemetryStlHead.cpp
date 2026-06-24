@@ -33,10 +33,10 @@ void telemetryStlHead( const char* prefix, std::string s )
     {
         // replace specific color with underscores
         n = s.find( COLOR );
-        if ( n != std::string::npos && n + sizeof( COLOR )-1 + 4 <= s.size() )
+        if ( n != std::string::npos )
         {
             n += sizeof( COLOR )-1;
-            for ( int i = 0; i < 4; ++i, ++n )
+            for ( int i = 0; i < 4 && n < s.size(); ++i, ++n )
                 s[n] = '_';
         }
     }

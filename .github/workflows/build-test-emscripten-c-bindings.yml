@@ -11,7 +11,7 @@ on:
         type: boolean
 
 jobs:
-  emscripten-build:
+  emscripten-build-c-bindings:
     timeout-minutes: 40
     runs-on: ubuntu-24.04
     container:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
+        config: [Singlethreaded, Multithreaded]
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
@@ -42,7 +42,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

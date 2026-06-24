@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import pprint
+import time
 from pathlib import Path
 from typing import List
 
@@ -94,12 +95,24 @@ def parse_jobs(jobs: List[dict]):
         if job is not None
     ]
 
-def fetch_jobs(repo: str, run_id: str):
-    return requests.get(f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs', headers={
+def fetch_jobs(repo: str, run_id: str, attempts=3, cooldown=30):
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs'
+    headers = {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',
         'X-GitHub-Api-Version': '2022-11-28',
-    })
+    }
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = requests.get(url, headers=headers)
+        except requests.exceptions.RequestException as e:
+            if attempt == attempts:
+                raise
+            print(f'fetch_jobs: attempt {attempt}/{attempts} failed ({e}); retrying in {cooldown}s...')
+            time.sleep(cooldown)
+            continue
+        resp.raise_for_status()
+        return resp
 
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role

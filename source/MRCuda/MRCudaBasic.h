@@ -11,12 +11,12 @@ namespace MR
 namespace Cuda
 {
 
-struct RuntimeInfo
+struct DeviceInfo
 {
-    /// maximum driver supported version
+    /// maximum CUDA version supported by the driver
     int driverVersion = 0;
 
-    /// current runtime version
+    /// application's CUDA version
     int runtimeVersion = 0;
 
     /// compute capability major version
@@ -25,12 +25,18 @@ struct RuntimeInfo
     /// compute capability minor version
     int computeMinor = 0;
 
+    /// global memory on device in bytes (not all is available for our process)
+    size_t totalGlobalMem = 0;
+
+    /// name of the device
+    std::string name;
+
     /// returns true if all versions pass the checks
     [[nodiscard]] MRCUDA_API bool fitForComputations() const;
 };
 
 /// Returns an error if CUDA is not available
-MRCUDA_API Expected<RuntimeInfo> getRuntimeInfo();
+MRCUDA_API Expected<DeviceInfo> getDeviceInfo();
 
 /// Returns true if Cuda is present on this GPU
 /// optional out maximum driver supported version

@@ -8,7 +8,7 @@ int main( int argc, char** argv )
 {
     MR::setupLoggerByDefault();
 
-    auto info = MR::Cuda::getRuntimeInfo();
+    auto info = MR::Cuda::getDeviceInfo();
     if ( !info )
     {
         spdlog::critical( "CUDA error: {}", info.error() );

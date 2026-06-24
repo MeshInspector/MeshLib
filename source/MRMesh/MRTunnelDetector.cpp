@@ -472,8 +472,8 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
                     allLoops[numBasisTunnels + i] = std::move( maybeCoLoop.value() );
 
                     // second co-loop can be from the same topology class as original loop, but with smaller metric, so replace original loop
-                    if ( maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, allLoops[numBasisTunnels + i], metric, &activeRegion ) )
-                        allLoops[i] = std::move( maybeCoLoop.value() );
+                    if ( auto maybeCoLoop2 = findSmallestMetricCoLoop( mp.mesh.topology, allLoops[numBasisTunnels + i], metric, &activeRegion ) )
+                        allLoops[i] = std::move( maybeCoLoop2.value() );
                     else assert( false );
                 }
                 else assert( false );

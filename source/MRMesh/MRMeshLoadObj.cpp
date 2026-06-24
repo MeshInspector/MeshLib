@@ -913,13 +913,6 @@ void trimComment( std::string_view& line )
         return;
     }
 
-    //'Apple ModelIO OBJ File: model'
-    if ( line.starts_with( "Apple ModelIO OBJ File: " ) )
-    {
-        line = line.substr( 0, 23 ); // 'Apple ModelIO OBJ File:'
-        return;
-    }
-
     //'Wavefront OBJ file written 2018-08-03T14:33:08'
     if ( line.starts_with( "Wavefront OBJ file written " ) )
     {
@@ -963,7 +956,7 @@ void trimComment( std::string_view& line )
         return;
     }
 
-    //'Blender v2.81 (sub 16) OBJ File: 'name.obj'' or 'USDConverter OBJ File: 3DModel.obj' - drop the per-file name
+    //'Blender v2.81 (sub 16) OBJ File: 'name.obj'', 'USDConverter OBJ File: 3DModel.obj', 'Apple ModelIO OBJ File: model' - drop the per-file name
     if ( const auto p = line.find( " OBJ File:" ); p != std::string_view::npos )
     {
         line = line.substr( 0, p + 9 ); // keep through '... OBJ File', drop ': <name>'

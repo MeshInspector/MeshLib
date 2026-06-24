@@ -104,9 +104,8 @@ jobs:
           MR_EMSCRIPTEN: "ON"
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
-          MR_EMSCRIPTEN_SINGLE: "ON"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
-          MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Multithreaded-64Bit'] }}
+          MR_EMSCRIPTEN_WASM64: "OFF"
           MR_EMSCRIPTEN_MIMALLOC: "OFF"
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >

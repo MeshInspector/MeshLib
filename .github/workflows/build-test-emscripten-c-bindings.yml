@@ -1,4 +1,4 @@
-name: Build and test Emscripten
+name: Build Emscripten C bindings
 
 on:
   workflow_call:
@@ -42,7 +42,7 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
-          target_os: ${{ matrix.target_name }}
+          target_os: emscripten-singlethreaded
           target_arch: wasm
           cxx_compiler: emcc
           build_config: Release

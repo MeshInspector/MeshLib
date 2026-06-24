@@ -170,7 +170,6 @@ jobs:
       - windows-build-test
       - linux-vcpkg-build-test
       - macos-build-test
-      - emscripten-build-test
       - emscripten-c-bindings-build-test
     timeout-minutes: 20
     runs-on: windows-2025
@@ -243,8 +242,6 @@ jobs:
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v7
-       env:
-         ACTIONS_STEP_DEBUG: true
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg
@@ -252,8 +249,6 @@ jobs:
 
      - name: Upload C# Wasm Package
        uses: actions/upload-artifact@v7
-       env:
-         ACTIONS_STEP_DEBUG: true
        with:
          name: DistributivesDotNetWasm
          path: meshlib_dotnet-wasm.zip
@@ -278,6 +273,7 @@ jobs:
         && needs.ubuntu-arm64-build-test.result != 'failure'
         && needs.linux-vcpkg-build-test.result != 'failure'
         && needs.emscripten-build-test.result != 'failure'
+        && needs.emscripten-c-bindings-build-test.result != 'failure'
         && needs.macos-build-test.result != 'failure' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest

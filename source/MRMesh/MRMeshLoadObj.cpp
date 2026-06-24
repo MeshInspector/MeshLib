@@ -963,15 +963,11 @@ void trimComment( std::string_view& line )
         return;
     }
 
-    //'Blender v2.81 (sub 16) OBJ File: 'name.obj'' - keep version, drop the per-file name
-    if ( line.starts_with( "Blender v" ) )
+    //'Blender v2.81 (sub 16) OBJ File: 'name.obj'' or 'USDConverter OBJ File: 3DModel.obj' - drop the per-file name
+    if ( const auto p = line.find( " OBJ File:" ); p != std::string_view::npos )
     {
-        const auto p = line.find( " OBJ File:" );
-        if ( p != std::string_view::npos )
-        {
-            line = line.substr( 0, p );
-            return;
-        }
+        line = line.substr( 0, p + 9 ); // keep through '... OBJ File', drop ': <name>'
+        return;
     }
 }
 

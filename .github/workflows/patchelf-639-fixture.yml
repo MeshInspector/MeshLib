@@ -1,0 +1,77 @@
+name: patchelf-639-fixture
+
+# Throwaway diagnostic (NOT for merge).
+#
+# Builds the raw libpybind11nonlimitedapi_meshlib_3.12.so in the
+# rockylinux8-vcpkg image (clang-21 / lld-21) - the exact toolchain that
+# produced the crashing layout in https://github.com/NixOS/patchelf/issues/639
+# (.init packed right after the program-header table). Standard clang/lld/bfd/
+# gold and the auditwheel-repaired PyPI wheel do NOT reproduce that layout, so
+# we need the genuine pre-packaging build output to hand to patchelf PR #652 as
+# a regression fixture and to confirm the fix on the real binary.
+#
+# The artifact uploaded here is the un-patchelf'd cmake output (before
+# auditwheel / linuxdeploy run their own --set-rpath).
+
+on:
+  push:
+    branches: [patchelf-639-shim-fixture]
+  workflow_dispatch:
+
+jobs:
+  build-shim:
+    runs-on: ubuntu-latest
+    container:
+      image: meshlib/meshlib-rockylinux8-vcpkg-x64:latest
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout mrbind-pybind11 submodule
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/thirdparty/mrbind-pybind11"
+          git submodule update --init --depth 1 thirdparty/mrbind-pybind11
+
+      - name: Toolchain info
+        run: |
+          CXX="$(command -v clang++ || command -v clang++-21)"
+          echo "CXX=$CXX"; "$CXX" --version
+          (ld.lld --version || ld.lld-21 --version) 2>/dev/null || true
+          python3.12 --version; which python3.12
+
+      - name: Build shim (clang-21 + lld, SUFFIX=meshlib, Python 3.12)
+        run: |
+          CXX="$(command -v clang++ || command -v clang++-21)"
+          cmake -G Ninja -S thirdparty/mrbind-pybind11/source/non_limited_api -B build-shim \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DPython_EXECUTABLE=/usr/bin/python3.12 \
+            -DPYBIND11_NONLIMITEDAPI_SUFFIX=meshlib \
+            -DPYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX=0x030800f0
+          cmake --build build-shim -j"$(nproc)"
+          echo "=== built ==="
+          find build-shim -name '*.so' -printf '%p (%s bytes)\n'
+
+      - name: Show layout (.init offset vs PHT is the #639 trigger signal)
+        run: |
+          shim="$(find build-shim -name 'libpybind11nonlimitedapi_meshlib_3.12.so' | head -1)"
+          echo "shim=$shim"
+          readelf -hW "$shim" | grep -iE 'program headers|entry point'
+          echo "--- program headers ---"
+          readelf -lW "$shim" | sed -n '/Program Headers/,/Section to Segment/p'
+          echo "--- key sections (.init should be near the PHT to trigger) ---"
+          readelf -SW "$shim" | awk 'NR<=5 || /\.(init|fini|note|plt|text|dynstr|dynsym|gnu\.hash)\b/'
+          readelf -dW "$shim" | grep -iE 'INIT|RUNPATH|RPATH' || true
+
+      - name: Upload raw shim
+        uses: actions/upload-artifact@v4
+        with:
+          name: shim-rockylinux8-clang21
+          path: |
+            build-shim/**/libpybind11nonlimitedapi_meshlib_3.12.so
+            build-shim/**/libpybind11nonlimitedapi_stubs.so
+          if-no-files-found: error

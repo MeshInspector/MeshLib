@@ -37,6 +37,14 @@ COPY . .
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
 
+# 32-bit multi-threaded
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
+    rm -rf bin include lib share thirdparty_build
+EOF
+
 # 32-bit single-threaded
 RUN <<EOF
     set -e

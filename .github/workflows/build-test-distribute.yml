@@ -217,8 +217,9 @@ jobs:
      - name: Download C# Wasm Archive (single thread)
        uses: actions/download-artifact@v8
        with:
-         pattern: DotNetPatchArchiveWasm-Single
-         path: browser_wasm_runtime_single
+         pattern: DotNetPatchArchiveWasm-*
+         path: browser_wasm_runtime
+         merge-multiple: true
 
      - name: Build C# Wasm package
        run: |
@@ -226,7 +227,7 @@ jobs:
          mkdir meshlib_dotnet-wasm/native
          move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
          mkdir meshlib_dotnet-wasm/native/single
-         move browser_wasm_runtime_single/* meshlib_dotnet-wasm/native/single
+         move browser_wasm_runtime/* meshlib_dotnet-wasm/native
          Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
 
      - name: Generate NuGet specification

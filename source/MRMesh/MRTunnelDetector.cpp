@@ -463,17 +463,17 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
 
         if ( settings.buildCoLoops )
         {
-            allLoops.resize( numBasisTunnels * 3 );
+            allLoops.resize( numBasisTunnels * 2 );
             ParallelFor( size_t( 0 ), numBasisTunnels, [&]( size_t i )
             {
                 if ( auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, allLoops[i], metric, &activeRegion ) )
                 {
-                    // first co-loop is always from a distinct topology class than original loop
+                    // first co-loop is always from a distinct topology class than original loop, so add co-loop in the list
                     allLoops[numBasisTunnels + i] = std::move( maybeCoLoop.value() );
 
-                    // second co-loop can be from the same topology class as original loop, but with smaller metric
+                    // second co-loop can be from the same topology class as original loop, but with smaller metric, so replace original loop
                     if ( maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, allLoops[numBasisTunnels + i], metric, &activeRegion ) )
-                        allLoops[2*numBasisTunnels + i] = std::move( maybeCoLoop.value() );
+                        allLoops[i] = std::move( maybeCoLoop.value() );
                     else assert( false );
                 }
                 else assert( false );
@@ -540,7 +540,7 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
 
         if ( numSelectedTunnels == 0 )
             break;
-        if ( numSelectedTunnels >= numBasisTunnels )
+        if ( numSelectedTunnels >= numBasisTunnels && ( !settings.buildCoLoops || settings.filterEquivalentCoLoops ) )
             break; // maximal not-intersection set of tunnels has been used
     }
 

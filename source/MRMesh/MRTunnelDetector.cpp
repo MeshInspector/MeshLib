@@ -458,40 +458,46 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
         auto basisTunnels = d.detect( MR::subprogress( settings.progress, initialProgress, targetProgress ) );
         if ( !basisTunnels.has_value() )
             return unexpected( basisTunnels.error() );
+        auto& allLoops = *basisTunnels;
+        const auto numBasisTunnels = allLoops.size();
+
         if ( settings.buildCoLoops )
         {
-            ParallelFor( *basisTunnels, [&]( size_t i )
+            allLoops.resize( numBasisTunnels * 3 );
+            ParallelFor( size_t( 0 ), numBasisTunnels, [&]( size_t i )
             {
-                if ( auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, (*basisTunnels)[i], metric, &activeRegion ) )
-                    (*basisTunnels)[i] = std::move( maybeCoLoop.value() );
-                else
+                if ( auto maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, allLoops[i], metric, &activeRegion ) )
                 {
-                    assert( false );
-                    (*basisTunnels)[i].clear();
+                    // first co-loop is always from a distinct topology class than original loop
+                    allLoops[numBasisTunnels + i] = std::move( maybeCoLoop.value() );
+
+                    // second co-loop can be from the same topology class as original loop, but with smaller metric
+                    if ( maybeCoLoop = findSmallestMetricCoLoop( mp.mesh.topology, allLoops[numBasisTunnels + i], metric, &activeRegion ) )
+                        allLoops[2*numBasisTunnels + i] = std::move( maybeCoLoop.value() );
+                    else assert( false );
                 }
+                else assert( false );
             } );
-            std::erase_if( *basisTunnels, [](const auto& v) { return v.empty(); } );
+            std::erase_if( allLoops, [](const auto& v) { return v.empty(); } );
         }
 
-        const auto numBasisTunnels = basisTunnels->size();
-
         // sort loops by the sum of the given metric in ascending order
-        sortPathsByMetric( *basisTunnels, metric );
-        for ( int i = 0; i < basisTunnels->size(); ++i )
+        sortPathsByMetric( allLoops, metric );
+        for ( int i = 0; i < allLoops.size(); ++i )
         {
             // and skip too long loops by their euclidean length, and not by the given metric
-            if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > settings.maxTunnelLength )
+            if ( calcPathLength( (allLoops)[i], mp.mesh ) > settings.maxTunnelLength )
             {
-                basisTunnels->erase( basisTunnels->begin() + i, basisTunnels->end() );
+                allLoops.erase( allLoops.begin() + i, allLoops.end() );
                 break;
             }
         }
-        if ( basisTunnels->empty() )
+        if ( allLoops.empty() )
             break;
 
         tunnelVerts.set( 0_v, tunnelVerts.size(), false );
         int numSelectedTunnels = 0;
-        for ( const auto & t : *basisTunnels )
+        for ( const auto & t : allLoops )
         {
             bool touchAlreadySelectedTunnel = false;
             for ( EdgeId e : t )
@@ -526,13 +532,14 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
             addLeftBand( mp.mesh.topology, t, tunnelFaces );
             activeRegion -= tunnelFaces; // reduce region
         }
-        assert( numSelectedTunnels > 0 );
         if ( !reportProgress( settings.progress, targetProgress + 0.01f ) )
             return unexpectedOperationCanceled();
 
         initialProgress = targetProgress + 0.01f;
         targetProgress = ( ( initialProgress  + 1.0f ) * 0.5f ) - 0.01f;
 
+        if ( numSelectedTunnels == 0 )
+            break;
         if ( numSelectedTunnels >= numBasisTunnels )
             break; // maximal not-intersection set of tunnels has been used
     }

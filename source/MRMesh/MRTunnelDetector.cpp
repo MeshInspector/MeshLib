@@ -407,6 +407,33 @@ std::vector<EdgeLoop> findShortestEquivalentLoops( const MeshPart& mp, const Edg
     return findSmallestMetricEquivalentLoops( mp.mesh.topology, loop, edgeLengthMetric( mp.mesh ), mp.region );
 }
 
+bool isLoopOuter( const Mesh& mesh, const EdgeLoop& loop )
+{
+    assert( isEdgeLoop( mesh.topology, loop ) );
+    if ( loop.empty() )
+        return false;
+
+    Vector3f sumLenPos;
+    float sumLen = 0;
+    for ( EdgeId e : loop )
+    {
+        const auto elen = mesh.edgeLength( e );
+        sumLenPos += elen * mesh.edgeCenter( e );
+        sumLen += elen;
+    }
+    const Vector3f center = sumLenPos / sumLen;
+
+    float sumMetric = 0;
+    for ( EdgeId e : loop )
+    {
+        const auto elen = mesh.edgeLength( e );
+        const auto epos = mesh.edgeCenter( e );
+        const auto enorm = mesh.pseudonormal( e );
+        sumMetric += elen * dot( epos - center, enorm );
+    }
+    return sumMetric > 0;
+}
+
 Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )
 {
     MR_TIMER;
@@ -476,6 +503,11 @@ Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelS
                 }
             }
             if ( touchAlreadySelectedTunnel )
+                continue;
+
+            if ( settings.loopType == TunnelLoopType::Outer && !isLoopOuter( mp.mesh, t ) )
+                continue;
+            if ( settings.loopType == TunnelLoopType::Inner && isLoopOuter( mp.mesh, t ) )
                 continue;
 
             if ( settings.buildCoLoops && settings.filterEquivalentCoLoops && numSelectedTunnels > 0 )

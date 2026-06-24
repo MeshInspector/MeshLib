@@ -1,8 +1,13 @@
 # syntax=docker/dockerfile:1.6
 
-# Any changes in this file should probably be mirrored in `emscripten-build-c-bindingsDockerfile`.
+# This dockerfile is used to build C bindings for Wasm.
+# This is a modified version of `emscriptenDockerfile`.
 
-FROM emscripten/emsdk:4.0.10-arm64 AS base
+# Have to use the old EMSDK here for compatibility with Unity. 3.1.38 uses Clang 17!
+
+# No Arm images on dockerhub for EMSDK this old, so have to use x64,
+
+FROM emscripten/emsdk:3.1.38 AS base
 
 RUN <<EOF
     set -e
@@ -32,14 +37,6 @@ COPY . .
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
 
-# 32-bit multi-threaded
-RUN <<EOF
-    set -e
-    ./scripts/build_thirdparty.sh
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
-    rm -rf bin include lib share thirdparty_build
-EOF
-
 # 32-bit single-threaded
 RUN <<EOF
     set -e
@@ -49,21 +46,9 @@ RUN <<EOF
     rm -rf bin include lib share thirdparty_build
 EOF
 
-# 64-bit multi-threaded
-RUN <<EOF
-    set -e
-    export MR_EMSCRIPTEN_WASM64=ON
-    ./scripts/build_thirdparty.sh
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
-    rm -rf bin include lib share thirdparty_build
-EOF
-
-
 FROM base
 
-COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
-COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
 # Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
 # https://github.com/actions/checkout/issues/1014

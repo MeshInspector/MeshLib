@@ -36,6 +36,8 @@ fi
 
 # add env options to cmake
 MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
+# Extra flags for `cmake --build`.
+MR_CMAKE_BUILD_OPTIONS="${MR_CMAKE_BUILD_OPTIONS:-}"
 
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
@@ -121,7 +123,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
   fi
   cd build/Release
     cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
-    cmake --build . -j ${NPROC} | tee ${logfile}
+    cmake --build . -j ${NPROC} ${MR_CMAKE_BUILD_OPTIONS} | tee ${logfile}
   cd ../..
 fi
 
@@ -132,7 +134,7 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
   fi
   cd build/Debug
     cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
-    cmake --build . -j ${NPROC} | tee ${logfile}
+    cmake --build . -j ${NPROC} ${MR_CMAKE_BUILD_OPTIONS} | tee ${logfile}
   cd ../..
 fi
 

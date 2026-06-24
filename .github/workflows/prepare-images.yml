@@ -73,7 +73,7 @@ jobs:
           # Only `distro` and `arch` are encoded here so the auto-generated
           # cell name stays "(<distro>, <arch>)"; the runner OS and image
           # suffix are derived from `matrix.arch` inline below.
-          # `emscripten-c-bindings` (the image for generate-c-bindings) has no
+          # `emscripten-generate-c-bindings` (the image for generate-c-bindings) has no
           # disable condition: that job always runs, so the image is always built.
           MATRIX=$(jq -nc \
             --argjson dx64   "$DISABLE_UBUNTU_X64" \
@@ -85,7 +85,8 @@ jobs:
               {distro:"ubuntu22",              arch:"arm64"},
               {distro:"ubuntu24",              arch:"arm64"},
               {distro:"emscripten",            arch:"arm64"},
-              {distro:"emscripten-c-bindings", arch:"arm64"}
+              {distro:"emscripten-generate-c-bindings", arch:"arm64"},
+              {distro:"emscripten-build-c-bindings", arch:"x64"}
              ] | map(select(
               (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
               and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)

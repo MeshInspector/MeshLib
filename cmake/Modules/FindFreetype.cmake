@@ -6,7 +6,8 @@ if(PkgConfig_FOUND)
 endif()
 
 find_path(Freetype_INCLUDE_DIR
-  NAMES freetype/freetype.h
+  # The alternative spelling `freetype2/freetype.h` is used in the old EMSDK 3.1.38 that we support for Unity compatibility.
+  NAMES freetype/freetype.h freetype2/freetype.h
   HINTS ${PC_Freetype_INCLUDE_DIRS}
   PATH_SUFFIXES freetype2
 )
@@ -16,7 +17,11 @@ find_library(Freetype_LIBRARY
 )
 
 if(Freetype_INCLUDE_DIR)
-  file(READ "${Freetype_INCLUDE_DIR}/freetype/freetype.h" Freetype_VERSION_FILE)
+  if(EXISTS "${Freetype_INCLUDE_DIR}/freetype2/freetype.h")
+    file(READ "${Freetype_INCLUDE_DIR}/freetype2/freetype.h" Freetype_VERSION_FILE)
+  else()
+    file(READ "${Freetype_INCLUDE_DIR}/freetype/freetype.h" Freetype_VERSION_FILE)
+  endif()
   string(REGEX MATCH "FREETYPE_MAJOR  ([0-9]+)" _ ${Freetype_VERSION_FILE})
   set(Freetype_VERSION_MAJOR ${CMAKE_MATCH_1})
   string(REGEX MATCH "FREETYPE_MINOR  ([0-9]+)" _ ${Freetype_VERSION_FILE})

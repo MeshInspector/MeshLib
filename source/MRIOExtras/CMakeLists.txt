@@ -14,6 +14,7 @@ option(MRIOEXTRAS_NO_XML "Disable XML support (3MF, SVG)" OFF)
 option(MRIOEXTRAS_OPENCASCADE_USE_XDE "Use OpenCASCADE XDE module" ON)
 
 IF(MR_EMSCRIPTEN)
+  # Sync those with `scripts/mrbind/generate.mk`.
   set(MRIOEXTRAS_NO_PDF ON)
   set(MRIOEXTRAS_NO_STEP ON)
   set(MRIOEXTRAS_NO_TIFF ON)

@@ -319,12 +319,6 @@ $(error Unknown MODE=$(MODE))
 endif
 $(info MODE: $(MODE))
 
-ifeq ($(MODE),release)
-CSHARP_MODE=Release
-else
-CSHARP_MODE=Debug
-endif
-
 
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
@@ -552,9 +546,6 @@ endif
 ifeq ($(TARGET),c)
 C_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2
 endif
-ifeq ($(TARGET),csharp)
-CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2
-endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
@@ -610,6 +601,19 @@ COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_C_BINDINGS
 # This doesn't actually get used, since this makefile doesn't compile the C bindings, it only generates them
 # We have to set those flags in CMake.
 COMPILER += -DMR_COMPILING_C_BINDINGS
+endif
+
+ifeq ($(TARGET),c)
+C_FOR_WASM := 0
+override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
+ifneq ($(C_FOR_WASM),)
+# Those libraries not built for wasm.
+# Those flags are similar to those in `source/MRIOExtras/CMakeLists.txt`.
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_PDF
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_STEP
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_TIFF
+COMPILER_FLAGS_LIBCLANG += -DMRVOXELS_NO_TIFF
+endif
 endif
 
 
@@ -1094,13 +1098,28 @@ else # If C#:
 
 # C# needs almost none of the logic in this file, just one simple rule.
 
+# Here we support specifying `CSHARP_MODE` as `MODE` for simplicity.
+ifeq ($(MODE),release)
+CSHARP_MODE=Release
+else
+CSHARP_MODE=Debug
+endif
+
+# Set to 1 if this C# assembly (`MRDotNet2.dll`) is intended to be consumed by Wasm (e.g. in Unity).
+# This replaces the library names passed to `[[DllImport(...)]]` with the string "__Internal", which is special-cased at compile-time (by C# and/or Unity) to import the functions from statically linked libraries.
+CSHARP_STATIC_DLLIMPORT := 0
+override CSHARP_STATIC_DLLIMPORT := $(filter-out 0,$(CSHARP_STATIC_DLLIMPORT))
+
+# Where to output C# code.
+CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2$(if $(CSHARP_STATIC_DLLIMPORT),Static)
+
 .PHONY: generate
 generate:
 	$(strip $(MRBIND_GEN_CSHARP_EXE) \
 		--input-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json) \
 		--output-dir $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/src) \
 		--clean-output-dir \
-		--imported-lib-name MeshLibC2 \
+		--imported-lib-name $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,MeshLibC2) \
 		--helpers-namespace MR::Misc \
 		--force-namespace MR \
 		--dotnet-version=std2.0 \
@@ -1108,7 +1127,7 @@ generate:
 		--wrap-doc-comments-in-summary-tag \
 		--fat-objects \
 		$(call, ### Handle sub-libraries) \
-		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,$($m_CSubLibraryOutputProject)))) \
 	)
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(call, ### Now copy over the generated sub-libraries)

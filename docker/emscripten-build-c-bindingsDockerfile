@@ -56,6 +56,7 @@ EOF
 
 FROM base
 
+COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
 
 # Setup non-root user (use 1001 to play nicely with actions/checkout@v4)

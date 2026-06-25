@@ -1,9 +1,14 @@
 #include "MRMouseController.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
+#include "MRMakeSlot.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRViewport.h"
+#include "MRShortcutManager.h"
+#include "MRSpaceMouseController.h"
 #include "MRMesh/MRConstants.h"
+#include "MRI18n.h"
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRWasm.h"
@@ -75,24 +80,28 @@ std::string MouseController::getControlString( const MouseControlKey& key )
 {
     std::string res;
     if ( key.mod & GLFW_MOD_ALT )
-        res += "Alt+";
+        res += ShortcutManager::getModifierString( GLFW_MOD_ALT );
     if ( key.mod & GLFW_MOD_CONTROL )
-        res += "Ctrl+";
+        res += ShortcutManager::getModifierString( GLFW_MOD_CONTROL );
     if ( key.mod & GLFW_MOD_SHIFT )
-        res += "Shift+";
+        res += ShortcutManager::getModifierString( GLFW_MOD_SHIFT );
+    if ( key.mod & GLFW_MOD_SUPER )
+        res += ShortcutManager::getModifierString( GLFW_MOD_SUPER );
+    if ( !res.empty() )
+        res += "+";
     switch ( key.btn )
     {
     case MouseButton::Left:
-        res += "LMB";
+        res += s_tr( "LMB" );
         break;
     case MouseButton::Right:
-        res += "RMB";
+        res += s_tr( "RMB" );
         break;
     case MouseButton::Middle:
-        res += "MMB";
+        res += s_tr( "MMB" );
         break;
     default:
-        res += "Error";
+        res += s_tr( "Error" );
         break;
     }
     return res;
@@ -108,26 +117,37 @@ MouseController::MouseControlKey MouseController::keyToMouseAndMod( int key )
     return { MouseButton( key >> 6 ),key % ( 1 << 6 ) };
 }
 
-void MouseController::setMouseScroll( bool active )
-{
-    scrollActive_ = active;
-}
-
 void MouseController::connect()
 {
     downState_.resize( 3 );
     auto& viewer = getViewerInstance();
-    viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::preMouseDown_ ), boost::signals2::at_front );
-    viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::mouseDown_ ) );
-    viewer.mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
-    viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
-    viewer.mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
-    viewer.cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
+    viewer.signals().mouseDownSignal.connect( MAKE_SLOT( &MouseController::preMouseDown_ ), boost::signals2::at_front );
+    viewer.signals().mouseDownSignal.connect( MAKE_SLOT( &MouseController::mouseDown_ ) );
+    viewer.signals().mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
+    viewer.signals().dragDropSignal.connect( MAKE_SLOT( &MouseController::preDragDrop_ ), boost::signals2::at_front );
+    viewer.signals().mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
+    viewer.signals().mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
+    viewer.signals().cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
 }
 
 void MouseController::cursorEntrance_( bool entered )
 {
     isCursorInside_ = entered;
+
+    if ( entered )
+    {
+        // resync internal mouse position with the actual OS cursor when re-entering the window
+        MR::Viewer& viewer = getViewerInstance();
+        if ( viewer.window )
+        {
+            prevMousePos_ = currentMousePos_;
+
+            Vector2d pos;
+            glfwGetCursorPos( viewer.window, &pos.x, &pos.y );
+            pos *= viewer.pixelRatio;
+            currentMousePos_ = Vector2i( pos );
+        }
+    }
 }
 
 int MouseController::getMouseConflicts()
@@ -137,8 +157,8 @@ int MouseController::getMouseConflicts()
         if ( keyToMouseAndMod( key ).btn == MouseButton::Left )
             // Return relevant connections number
             return
-                int( getViewerInstance().mouseDownSignal.num_slots() ) +
-                int( getViewerInstance().dragStartSignal.num_slots() );
+                int( getViewerInstance().signals().mouseDownSignal.num_slots() ) +
+                int( getViewerInstance().signals().dragStartSignal.num_slots() );
     return 0;
 }
 
@@ -149,7 +169,7 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
         downMousePos_ = currentMousePos_;
 
     // Click behavior is enabled only if it has listeners
-    if ( getViewerInstance().mouseClickSignal.num_slots() > 0 )
+    if ( getViewerInstance().signals().mouseClickSignal.num_slots() > 0 )
     {
         clickButton_ = btn; // Support click by one button only
         // No pending button yet - so that camera operation starts only if mouseDown had not been handled by other tool
@@ -266,7 +286,7 @@ bool MouseController::preMouseMove_( int x, int y )
 
     prevMousePos_ = currentMousePos_;
     currentMousePos_ = { x,y };
-
+    
     if ( dragActive_ )
         return viewer.drag( x, y );
     if ( clickButton_ != MouseButton::NoButton )
@@ -329,12 +349,25 @@ bool MouseController::preMouseMove_( int x, int y )
     return true;
 }
 
+bool MouseController::preDragDrop_( const std::vector<std::filesystem::path>& )
+{
+    const auto& v = getViewerInstance();
+    if ( !v.window )
+        return false;
+    double x=0.0;
+    double y=0.0;
+    glfwGetCursorPos( v.window, &x, &y );
+    x *= v.pixelRatio;
+    y *= v.pixelRatio;
+    currentMousePos_ = Vector2i(int(x),int(y));
+    return false;
+}
+
 bool MouseController::mouseScroll_( float delta )
 {
     resetAllIfNeeded_();
 
-    if ( !scrollActive_ )
-        return false;
+    auto& viewer = getViewerInstance();
 
     if ( currentMode_ != MouseMode::None )
         return false;
@@ -342,7 +375,9 @@ bool MouseController::mouseScroll_( float delta )
     if ( delta == 0.0f )
         return false;
 
-    auto& viewer = getViewerInstance();
+    const auto& spController = viewer.spaceMouseController();
+    if ( spController.getParameters().suppressMouseScrollZoom && spController.canDriverSendScroll() )
+        return false;
 
     viewer.select_hovered_viewport();
 

@@ -11,6 +11,9 @@ Example of generating a triangulation from a pointcloud.
 - <b class="tab-title">Python</b>
 \include PointsToMesh.dox.py
 
+- <b class="tab-title">C</b>
+\include PointsToMesh.dox.c
+
 </div>
 
  */

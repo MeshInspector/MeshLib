@@ -16,7 +16,7 @@ enum class RibbonItemType
 
 // class to hold menu items
 // some information stored in json (icons path, tab name, subtab name)
-class RibbonMenuItem : virtual public ISceneStateCheck
+class MRVIEWER_CLASS RibbonMenuItem : virtual public ISceneStateCheck
 {
 public:
     MR_DELETE_MOVE( RibbonMenuItem );

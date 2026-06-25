@@ -9,10 +9,8 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( copyMesh,                             Mesh                                                );
     MR_ALIAS( FaceMap.vec,                          FaceMap.vec_                                        );
     MR_ALIAS( FaceNormals.vec,                      FaceNormals.vec_                                    );
-    MR_ALIAS( findUndercuts,                        FixUndercuts.findUndercuts                          );
     MR_ALIAS( FixSelfIntersectionMethod,            SelfIntersections.Settings.Method                   );
     MR_ALIAS( FixSelfIntersectionSettings,          SelfIntersections.Settings                          );
-    MR_ALIAS( fixUndercuts,                         FixUndercuts.fixUndercuts                           );
     MR_ALIAS( GeneralOffsetParametersMode,          GeneralOffsetParameters.Mode                        );
     MR_ALIAS( getAllComponents,                     MeshComponents.getAllComponents                     );
     MR_ALIAS( getAllComponentsVerts,                MeshComponents.getAllComponentsVerts                );
@@ -48,7 +46,7 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( Triangulation.vec,                    Triangulation.vec_                                  );
     MR_ALIAS( TriangulationHelpersSettings,         TriangulationHelpers.Settings                       );
     MR_ALIAS( uniteCloseVertices,                   MeshBuilder.uniteCloseVertices                      );
-    MR_ALIAS( vectorConstMeshPtr,                   std_vector_const_Mesh                               );
+    MR_ALIAS( vectorConstMeshPtr,                   std_vector_const_Mesh_ptr                           );
     MR_ALIAS( vectorEdges,                          EdgeLoop                                            );
     MR_ALIAS( VertCoords.vec,                       VertCoords.vec_                                     );
     MR_ALIAS( VertScalars.vec,                      VertScalars.vec_                                    );

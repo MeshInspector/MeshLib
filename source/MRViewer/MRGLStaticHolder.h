@@ -17,17 +17,20 @@ public:
         Mesh,
         Picker,
         MeshDesktopPicker, // only for non corner-based mode
-        TransparentMesh,
+        AlphaSortMesh,
+        DepthPeelMesh,
 
         Points,
-        TransparentPoints,
+        AlphaSortPoints,
+        DepthPeelPoints,
 
         Lines,
         LinesJoint,
         LinesPicker,
         LinesJointPicker,
 
-        TransparentLines,
+        AlphaSortLines,
+        DepthPeelLines,
 
         Labels,
 
@@ -36,23 +39,37 @@ public:
         AdditionalPointsNoOffset, // special shader for old intel gpu (Intel HD 4000)
         AdditionalQuad,
         ViewportBorder,
-        TransparencyOverlayQuad,
+        AlphaSortOverlayQuad,
         ShadowOverlayQuad,
         SimpleOverlayQuad,
+        DepthOverlayQuad,
 
         Volume,
         VolumePicker,
         Count
     };
 
-    // Creates shader if it is not and return valid id
+    /// Creates shader if it is not and return valid id
     MRVIEWER_API static GLuint getShaderId( ShaderType type );
-    // Free shader from GL
+
+    /// Free shader from GL
     MRVIEWER_API static void freeShader( ShaderType type );
-    // Free all shaders from GL
+
+    /// Free all shaders from GL
     MRVIEWER_API static void freeAllShaders();
-    // Memory buffer for objects that about to be loaded to GPU, shared among different data types
+
+    /// Memory buffer for objects that about to be loaded to GPU, shared among different data types
     MRVIEWER_API static RenderObjectBuffer& getStaticGLBuffer();
+
+    /// Returns the shader to render transparent points in the given mode
+    MRVIEWER_API static ShaderType getTransparentPointsShader( TransparencyMode m );
+
+    /// Returns the shader to render transparent lines in the given mode
+    MRVIEWER_API static ShaderType getTransparentLinesShader( TransparencyMode m );
+
+    /// Returns the shader to render transparent mesh in the given mode
+    MRVIEWER_API static ShaderType getTransparentMeshShader( TransparencyMode m );
+
 private:
     GLStaticHolder();
     ~GLStaticHolder();

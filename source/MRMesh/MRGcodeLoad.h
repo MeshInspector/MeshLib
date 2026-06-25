@@ -4,7 +4,7 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include <filesystem>
-#include <istream>
+#include <iosfwd>
 #include <string>
 
 namespace MR
@@ -13,7 +13,7 @@ namespace MR
 namespace GcodeLoad
 {
 
-/// \defgroup GcodeLoadGroup Mesh Load
+/// \defgroup GcodeLoadGroup Gcode Load
 /// \ingroup IOGroup
 /// \{
 

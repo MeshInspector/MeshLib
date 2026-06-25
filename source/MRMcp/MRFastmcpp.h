@@ -1,0 +1,33 @@
+#pragma once
+
+// Centralised fastmcpp wrapper. Both MRMcp.cpp and MRMCPGateway.cpp must pull
+// fastmcpp in before any standard library header (fastmcpp's macro tricks rely
+// on that ordering).
+
+#pragma push_macro( "_t" )
+#undef _t
+
+#if defined( __GNUC__ )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#elif defined( _MSC_VER )
+#pragma warning( push )
+#pragma warning( disable: 4100 ) // unreferenced formal parameter
+#pragma warning( disable: 4355 ) // 'this': used in base member initializer list
+#pragma warning( disable: 4800 ) // Implicit conversion from 'BrotliDecoderState *const ' to bool. Possible information loss (Visual Studio Build Tools 2019 16.11.32510.428)
+#endif
+
+#include <fastmcpp.hpp>
+#include <fastmcpp/proxy.hpp>
+#include <fastmcpp/server/sse_server.hpp>
+#include <fastmcpp/server/stdio_server.hpp>
+#include <fastmcpp/client/transports.hpp>
+#include <fastmcpp/mcp/handler.hpp>
+
+#if defined( __GNUC__ )
+#pragma GCC diagnostic pop
+#elif defined( _MSC_VER )
+#pragma warning( pop )
+#endif
+
+#pragma pop_macro( "_t" )

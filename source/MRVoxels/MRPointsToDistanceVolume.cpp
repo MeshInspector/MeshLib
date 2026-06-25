@@ -21,7 +21,7 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
 
     return FunctionVolume
     {
-        .data = [&cloud, params, inv2SgSq = -0.5f / sqr( params.sigma ), ballRadiusSq = sqr( 3 * params.sigma ),
+        .data = [&cloud, params, inv2SgSq = -params.invSigmaModifier / sqr( params.sigma ), ballRadiusSq = sqr( 3 * params.sigma ),
             &normals = params.ptNormals ? *params.ptNormals : cloud.normals] ( const Vector3i& pos ) -> float
         {
             auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
@@ -33,7 +33,11 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
             {
                 const auto w = std::exp( found.distSq * inv2SgSq );
                 sumWeight += w;
-                sumDist += dot( normals[found.vId], voxelCenter - p ) * w;
+                auto dt = dot( normals[found.vId], voxelCenter - p );
+                if ( !params.sqrtAngleWeight )
+                    sumDist += dt * w;
+                else
+                    sumDist += std::copysign( std::sqrt( std::abs( dt ) ), dt ) * w;
                 return Processing::Continue;
             } );
 

@@ -1,0 +1,321 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Language: \n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Undo"
+msgstr ""
+
+msgid "Undo the last action."
+msgstr ""
+
+msgid "Redo"
+msgstr ""
+
+msgid "Redo last undone action."
+msgstr ""
+
+msgid "New"
+msgstr ""
+
+msgid "Remove all objects from the scene."
+msgstr ""
+
+msgid "Open Files"
+msgstr ""
+
+msgid "Select files from the dialog and open them in the viewer window."
+msgstr ""
+
+msgid "Open Directory"
+msgstr ""
+
+msgid "Load all supported files from given directory and subdirectories."
+msgstr ""
+
+msgid "Open DICOMs"
+msgstr ""
+
+msgid "Load all DICOM volumes from a given directory and its subdirectories."
+msgstr ""
+
+msgid "Open RAW Voxels"
+msgstr ""
+
+msgid "Load *.raw file with user-specified parameters."
+msgstr ""
+
+msgid "Binary Operations"
+msgstr ""
+
+msgid "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference, Max, Min, Sum, Multiply, Divide, Replace."
+msgstr ""
+
+msgid "Open Voxels From TIFF"
+msgstr ""
+
+msgid "Load voxels from a set of TIFF images"
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+msgid "Save selected objects to files."
+msgstr ""
+
+msgid "Save Selected"
+msgstr ""
+
+msgid "Save scene tree branches with selected objects to MRU format."
+msgstr ""
+
+msgid "Save Scene"
+msgstr ""
+
+msgid "Save MRU scene to the file from which it was opened."
+msgstr ""
+
+msgid "Save Scene As"
+msgstr ""
+
+msgid "Saves scene in a file."
+msgstr ""
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Saves screenshot of the scene to file."
+msgstr ""
+
+msgid "Save Screenshot"
+msgstr ""
+
+msgid "Saves a screenshot of the current view to file."
+msgstr ""
+
+msgid "Screenshot to Clipboard"
+msgstr ""
+
+msgid "Copies screenshot of the scene to clipboard"
+msgstr ""
+
+msgid "Fit Data"
+msgstr ""
+
+msgid "Changes current viewport settings to fit all visible objects in the scene."
+msgstr ""
+
+msgid "Fit Selected Objects"
+msgstr ""
+
+msgid "Changes current viewport settings to fit selected visible objects in scene."
+msgstr ""
+
+msgid "Fit Selected Primitives"
+msgstr ""
+
+msgid "Changes current viewport settings to fit selection."
+msgstr ""
+
+msgid "Camera"
+msgstr ""
+
+msgid "Manually set camera."
+msgstr ""
+
+msgid "Front View"
+msgstr ""
+
+msgid "A view of XZ plane with camera looking along Y."
+msgstr ""
+
+msgid "Top View"
+msgstr ""
+
+msgid "A view of XY plane with Z axis looking in camera."
+msgstr ""
+
+msgid "Bottom View"
+msgstr ""
+
+msgid "A view of XY plane with camera looking along Z."
+msgstr ""
+
+msgid "Left View"
+msgstr ""
+
+msgid "A view of YZ plane with camera looking along X."
+msgstr ""
+
+msgid "Back View"
+msgstr ""
+
+msgid "A view of XZ plane with Y axis looking in camera."
+msgstr ""
+
+msgid "Right View"
+msgstr ""
+
+msgid "A view of YZ plane with X axis looking in camera."
+msgstr ""
+
+msgid "Isometric View"
+msgstr ""
+
+msgid "Look at the object so the axes X,Y,Z form 120 degree angles on the view."
+msgstr ""
+
+msgid "Invert View"
+msgstr ""
+
+msgid "Rotates the camera 180 degrees around the current vertical axis."
+msgstr ""
+
+msgid "Single Viewport"
+msgstr ""
+
+msgid "Setup single viewport for the whole window."
+msgstr ""
+
+msgid "Horizontal Viewports"
+msgstr ""
+
+msgid "Setup two horizontal viewports for the whole window."
+msgstr ""
+
+msgid "Vertical Viewports"
+msgstr ""
+
+msgid "Setup two vertical viewports for the whole window."
+msgstr ""
+
+msgid "Quad Viewports"
+msgstr ""
+
+msgid "Setup four equal viewports for the whole window."
+msgstr ""
+
+msgid "Add Custom Theme"
+msgstr ""
+
+msgid "Customize and save the color theme."
+msgstr ""
+
+msgid "Toggle Global Basis"
+msgstr ""
+
+msgid "Show or hide global 0 and X,Y,Z axes, also allows showing 3d grid."
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Show application settings window."
+msgstr ""
+
+msgid "Select Objects"
+msgstr ""
+
+msgid "Selects objects by clicking them in the scene"
+msgstr ""
+
+msgid "Move Object"
+msgstr ""
+
+msgid "Move an object in a scene using a mouse"
+msgstr ""
+
+msgid "Sort by Name"
+msgstr ""
+
+msgid "Sort all objects in the scene by name"
+msgstr ""
+
+msgid "Show All"
+msgstr ""
+
+msgid "Show all objects in the scene"
+msgstr ""
+
+msgid "Hide All"
+msgstr ""
+
+msgid "Hide all objects in the scene"
+msgstr ""
+
+msgid "Select All"
+msgstr ""
+
+msgid "Select all objects in the scene"
+msgstr ""
+
+msgid "Unselect All"
+msgstr ""
+
+msgid "Unselect all objects in the scene"
+msgstr ""
+
+msgid "Show Only Previous"
+msgstr ""
+
+msgid "Select and show only previous"
+msgstr ""
+
+msgid "Show Only Next"
+msgstr ""
+
+msgid "Select and show only next"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Rename object"
+msgstr ""
+
+msgid "Remove Selected"
+msgstr ""
+
+msgid "Remove selected objects"
+msgstr ""
+
+msgid "Active List"
+msgstr ""
+
+msgid "Show list of active tools"
+msgstr ""
+
+msgid "Rotator"
+msgstr ""
+
+msgid "Permanently rotates the scene around vertical axis."
+msgstr ""
+
+msgid "Object Info"
+msgstr ""
+
+msgid "Show information about currently selected object."
+msgstr ""
+
+msgctxt "Tab name"
+msgid "Home"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "View"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "Select"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "CT"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "Test"
+msgstr ""
+

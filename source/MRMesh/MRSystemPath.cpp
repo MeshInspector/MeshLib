@@ -2,6 +2,8 @@
 #include "MROnInit.h"
 #include "MRDirectory.h"
 #include "MRStringConvert.h"
+#include "MRPch/MRWasm.h"
+#include "MRPch/MRSpdlog.h"
 #include <algorithm>
 #include <map>
 
@@ -17,19 +19,11 @@
 #endif
 #endif
 
+namespace MR
+{
+
 namespace
 {
-
-using namespace MR;
-
-#if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-// If true, the resources should be loaded from the executable directory, rather than from the system directories.
-[[nodiscard]] bool resourcesAreNearExe()
-{
-    auto opt = std::getenv( "MR_LOCAL_RESOURCES" );
-    return opt && std::string_view( opt ) == "1";
-}
-#endif
 
 std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 {
@@ -40,45 +34,63 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     (void)dir;
     return SystemPath::getExecutableDirectory().value_or( "\\" );
 #elif defined( __APPLE__ )
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-    {
-        // Back out from `<AppName>.app/Contents/MacOS`. This is only needed for apps that are MacOS bundles, but we do it unconditionally for simplicity.
-        // It's easier to require all apps to be bundles (which is needed to package them anyway) than to make this conditional.
-        return SystemPath::getExecutableDirectory().value_or( "/" ) / "../../..";
-    }
+    auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    // detecting a developer build (all files are located in the same directory)
+    const auto execDir = SystemPath::getExecutableDirectory().value_or( "/" );
+    if ( libDir == execDir )
+        return libDir;
+    // detecting developer build's bundle (<AppName>.app/Contents/MacOS/<AppName>)
+    if ( execDir.filename() == "MacOS"
+        && execDir.parent_path().filename() == "Contents"
+        && execDir.parent_path().parent_path().parent_path() == libDir )
+        return libDir;
 
-    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
     using Directory = SystemPath::Directory;
     switch ( dir )
     {
         case Directory::Resources:
-            return libDir / ".." / "Resources";
+            return libDir.parent_path() / "Resources";
         case Directory::Fonts:
-            return libDir / ".." / "Resources" / "fonts";
+            return libDir.parent_path() / "Resources" / "fonts";
         case Directory::Plugins:
             return libDir;
         case Directory::PythonModules:
-            return libDir / ".." / "Frameworks";
+            return libDir.parent_path() / "Frameworks";
         case Directory::Count:
             MR_UNREACHABLE
     }
     MR_UNREACHABLE
 #else
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return SystemPath::getExecutableDirectory().value_or( "/" );
+    auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    // detecting a developer build (all files are located in the same directory)
+    const auto execDir = SystemPath::getExecutableDirectory().value_or( "/" );
+    if ( libDir == execDir )
+        return libDir;
 
-    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
-    // assuming libMRMesh.so is located at ${CMAKE_INSTALL_PREFIX}/lib/MeshLib/
-    const auto installDir = libDir / ".." / "..";
+    static const auto findResourceDir = [] ( std::filesystem::path libDir ) -> std::filesystem::path
+    {
+        std::error_code ec;
+        while ( !libDir.empty() )
+        {
+            const auto resourceDir = libDir / "share" / MR_PROJECT_NAME;
+            if ( std::filesystem::is_directory( resourceDir, ec ) )
+                return resourceDir;
+
+            if ( libDir == "/" )
+                break;
+            libDir = libDir.parent_path();
+        }
+        // assuming this is a developer build
+        return SystemPath::getExecutableDirectory().value_or( "/" );
+    };
+
     using Directory = SystemPath::Directory;
     switch ( dir )
     {
         case Directory::Resources:
-            return installDir / "share" / MR_PROJECT_NAME;
+            return findResourceDir( libDir );
         case Directory::Fonts:
-            return installDir / "share" / MR_PROJECT_NAME / "fonts";
+            return findResourceDir( libDir ) / "fonts";
         case Directory::Plugins:
         case Directory::PythonModules:
             return libDir;
@@ -89,15 +101,25 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 #endif
 }
 
-} // namespace
-
-namespace MR
-{
-
-Expected<std::filesystem::path> SystemPath::getExecutablePath()
+Expected<std::filesystem::path> getExecutablePath_()
 {
 #if defined( __EMSCRIPTEN__ )
-    return unexpected( "Not supported on Wasm" );
+    auto *jsStr = (char *)EM_ASM_PTR({
+        var wasmStr = findWasmBinary();
+        if ( wasmStr == null )
+            wasmStr = "";
+        var lengthBytes = lengthBytesUTF8( wasmStr ) + 1;
+        var stringOnWasmHeap = _malloc( lengthBytes );
+        stringToUTF8( wasmStr, stringOnWasmHeap, lengthBytes );
+        return stringOnWasmHeap;
+    });
+    std::string wasmStr;
+    if ( jsStr )
+    {
+        wasmStr = std::string( jsStr );
+        free(jsStr);
+    }
+    return std::filesystem::path { wasmStr };
 #elif defined( _WIN32 )
     wchar_t path[MAX_PATH];
     if ( auto size = GetModuleFileNameW( NULL, path, MAX_PATH ); size == 0 )
@@ -123,9 +145,66 @@ Expected<std::filesystem::path> SystemPath::getExecutablePath()
 #endif
 }
 
-Expected<std::filesystem::path> SystemPath::getLibraryPath()
+auto& directories_()
 {
-    return getLibraryPathForSymbol( (void*)MR::SystemPath::getLibraryPath );
+    static auto res = []
+    {
+        std::array<std::filesystem::path, (size_t)SystemPath::Directory::Count> dirs;
+        for ( auto dir = 0; dir < (int)SystemPath::Directory::Count; ++dir )
+            dirs[dir] = defaultDirectory( SystemPath::Directory( dir ) );
+        return dirs;
+    }();
+    return res;
+}
+
+} // anonymous namespace
+
+const Expected<std::filesystem::path>& SystemPath::getExecutablePath()
+{
+    static const Expected<std::filesystem::path> res = []
+    {
+        auto maybeRes = getExecutablePath_();
+        if ( maybeRes )
+        {
+            spdlog::info( "Executable path: {}", utf8string( *maybeRes ) );
+#ifndef __EMSCRIPTEN__ // in Wasm the path is not a file name, but starts with https://
+            std::error_code ec;
+            auto canonicalPath = canonical( *maybeRes, ec );
+            if ( ec )
+                spdlog::error( "Cannot make canonical executable path: {}", ec.message() );
+            else if ( *maybeRes != canonicalPath )
+            {
+                *maybeRes = canonicalPath;
+                spdlog::info( "Executable path in canonical form: {}", utf8string( *maybeRes ) );
+            }
+#endif
+        }
+        return maybeRes;
+    }();
+    return res;
+}
+
+const Expected<std::filesystem::path>& SystemPath::getLibraryPath()
+{
+    static const Expected<std::filesystem::path> res = []
+    {
+        auto maybeRes = getLibraryPathForSymbol( (void*)MR::SystemPath::getLibraryPath );
+        if ( maybeRes )
+        {
+            spdlog::info( "Library path: {}", utf8string( *maybeRes ) );
+            std::error_code ec;
+            auto canonicalPath = canonical( *maybeRes, ec );
+            if ( ec )
+                spdlog::error( "Cannot make canonical library path: {}", ec.message() );
+            else if ( *maybeRes != canonicalPath )
+            {
+                *maybeRes = canonicalPath;
+                spdlog::info( "Library path in canonical form: {}", utf8string( *maybeRes ) );
+            }
+        }
+        return maybeRes;
+    }();
+    return res;
 }
 
 Expected<std::filesystem::path> SystemPath::getLibraryPathForSymbol( const void* symbol )
@@ -168,20 +247,14 @@ Expected<std::filesystem::path> SystemPath::getLibraryDirectory()
     return getLibraryPath().transform( [] ( auto&& path ) { return path.parent_path(); } );
 }
 
-SystemPath& SystemPath::instance_()
-{
-    static SystemPath instance;
-    return instance;
-}
-
 std::filesystem::path SystemPath::getDirectory( SystemPath::Directory dir )
 {
-    return instance_().directories_[(size_t)dir];
+    return directories_()[(size_t)dir];
 }
 
 void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesystem::path& path )
 {
-    instance_().directories_[(size_t)dir] = path;
+    directories_()[(size_t)dir] = path;
 }
 
 const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
@@ -237,7 +310,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
             }
 
             if( isFont )
-                allSystemFonts.push_back( { font, font.filename().string() } );
+                allSystemFonts.push_back( { font, utf8string( font.filename() ) } );
         }
     }
 
@@ -285,7 +358,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         {
             for ( const auto& suffix : suffixes )
             {
-                auto curFontName = font.stem().string();
+                auto curFontName = utf8string( font.stem() );
                 for ( auto& format : supportFormat )
                 {
                     auto posEndName = curName.find( "-" + suffix + format );
@@ -331,7 +404,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 
         if ( suffixName.empty() )
         {
-            firstFontName = font.stem().string();
+            firstFontName = utf8string( font.stem() );
         }
 
         numFont = fonts.size() - 1;
@@ -357,10 +430,3 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 }
 
 } // namespace MR
-
-MR_ON_INIT
-{
-    using namespace MR;
-    for ( auto dir = 0; dir < (int)SystemPath::Directory::Count; ++dir )
-        SystemPath::overrideDirectory( SystemPath::Directory( dir ), defaultDirectory( SystemPath::Directory( dir ) ) );
-};

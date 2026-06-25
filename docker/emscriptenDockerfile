@@ -1,62 +1,78 @@
-FROM emscripten/emsdk:4.0.10-arm64
+# syntax=docker/dockerfile:1.6
 
-# Update and install req
-# install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
-RUN export DEBIAN_FRONTEND=noninteractive; \
-    export DEBCONF_NONINTERACTIVE_SEEN=true; \
-    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
-    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
-    apt-get update -qqy \
- && apt-get install -qqy --no-install-recommends gpg-agent software-properties-common \
- && echo '\
-Package: *\n\
-Pin: release o=LP-PPA-mozillateam\n\
-Pin-Priority: 1001\
-' | tee /etc/apt/preferences.d/mozilla-firefox \
- && add-apt-repository -y ppa:mozillateam/ppa \
- && apt-get install -qqy --no-install-recommends \
-        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+# Any changes in this file should probably be mirrored in `emscripten-build-c-bindingsDockerfile`.
 
-## preprare thirdparty
-RUN mkdir /home/MeshLib
-WORKDIR "/home/MeshLib"
+FROM emscripten/emsdk:4.0.10-arm64 AS base
 
-#copy files
+RUN <<EOF
+    set -e
+    # configure timezone
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    # use more reliable mirror
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # install packages
+    apt-get update -qqy
+    apt-get install -qqy --no-install-recommends \
+        tzdata git pkg-config ninja-build gettext
+    # clean downloaded files
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF
+
+
+FROM base AS builder
+
+WORKDIR /home/MeshLib
+
 COPY . .
 
-#build thirdparty
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten && \
+
+# 32-bit multi-threaded
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
     rm -rf bin include lib share thirdparty_build
+EOF
 
-ENV MR_EMSCRIPTEN_SINGLE=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-single && \
+# 32-bit single-threaded
+RUN <<EOF
+    set -e
+    export MR_EMSCRIPTEN_SINGLE=ON
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
     rm -rf bin include lib share thirdparty_build
+EOF
 
-ENV MR_EMSCRIPTEN_SINGLE=OFF
-ENV MR_EMSCRIPTEN_WASM64=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-wasm64 && \
+# 64-bit multi-threaded
+RUN <<EOF
+    set -e
+    export MR_EMSCRIPTEN_WASM64=ON
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
     rm -rf bin include lib share thirdparty_build
+EOF
 
-ENV MR_EMSCRIPTEN_WASM64=OFF
 
-# install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+FROM base
 
-WORKDIR "/home/"
-RUN rm -rf MeshLib
+COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
-# Add a new user "actions-runner" with user id 8877
-RUN useradd -u 8877 -m user && \
-    sudo chmod -R 777 /emsdk/upstream/emscripten/
+# Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
+# https://github.com/actions/checkout/issues/1014
+RUN <<EOF
+    set -e
+    groupadd -g 1001 user
+    useradd -m -u 1001 -g user -s /bin/bash user
+    chmod -R 777 /emsdk/upstream/emscripten/
+EOF
 
 # Change to non-root privilege
 USER user

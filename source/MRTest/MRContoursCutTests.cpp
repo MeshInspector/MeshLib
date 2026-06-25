@@ -1,9 +1,10 @@
 #include <MRMesh/MRContoursCut.h>
 #include <MRMesh/MRMesh.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRPlane3.h>
 
 namespace MR
 {
@@ -67,15 +68,17 @@ TEST( MRMesh, MeshCollidePrecise )
     auto meshB = makeTorus( 1.1f, 0.5f, 8, 8 );
     meshB.transform( AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), Vector3f { 0.1f, 0.8f, 0.2f } ) ) );
 
-    const auto conv = getVectorConverters( meshA, meshB );
+    auto conv = getVectorConverters( meshA, meshB );
 
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt );
     EXPECT_EQ( intersections.size(), 152 );
 
     const auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
     EXPECT_EQ( contours.size(), 4 );
-    EXPECT_EQ(   contours[0].size(), 71 );
-    EXPECT_EQ(   contours[1].size(), 7 );
+    EXPECT_TRUE( contours[0].size() == 69 || // Apple Debug
+                 contours[0].size() == 71 );
+    EXPECT_TRUE( contours[1].size() == 9 ||  // Apple Debug
+                 contours[1].size() == 7 );
     EXPECT_TRUE( contours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
                  contours[2].size() == 71 ); // with FMA instruction (modern compilers for ARM)
     EXPECT_TRUE( contours[3].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
@@ -140,6 +143,7 @@ TEST( MRMesh, MeshCollidePrecise )
     // same for self-intersections
     auto mergedMesh = meshA;
     mergedMesh.addMesh( meshB );
+    conv = getVectorConverters( mergedMesh );
     const auto selfIntersections = findSelfCollidingEdgeTrisPrecise( mergedMesh, conv.toInt );
     EXPECT_EQ( selfIntersections.size(), 152 );
 
@@ -162,12 +166,14 @@ TEST( MRMesh, MeshCollidePrecise )
             EXPECT_EQ( ei.edge, oi.edge.sym() );
         }
     }
-    EXPECT_EQ(   selfContours[0].size(), 71 );
+    EXPECT_TRUE( selfContours[0].size() == 69 || // Apple Debug
+                 selfContours[0].size() == 71 );
     EXPECT_TRUE( selfContours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
                  selfContours[2].size() == 71 ); // with FMA instruction (modern compilers for ARM)
     EXPECT_TRUE( selfContours[4].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
                  selfContours[4].size() == 7 );  // with FMA instruction (modern compilers for ARM)
-    EXPECT_EQ(   selfContours[6].size(), 7 );
+    EXPECT_TRUE( selfContours[6].size() == 9 ||  // Apple Debug
+                 selfContours[6].size() == 7 );
 
     for ( const auto & c : selfContours )
     {

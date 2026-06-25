@@ -574,10 +574,19 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
 CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
 {
-    Box3d bb;
-    bb.include( Box3d( a.mesh.computeBoundingBox() ) );
-    Box3f bMeshBox = b.mesh.computeBoundingBox( rigidB2A );
-    bb.include( Box3d( bMeshBox ) );
+    MR_TIMER;
+    Box3d bb( a.mesh.computeBoundingBox( a.region ) );
+    bb.include( Box3d( b.mesh.computeBoundingBox( b.region, rigidB2A ) ) );
+    CoordinateConverters res;
+    res.toInt = getToIntConverter( bb );
+    res.toFloat = getToFloatConverter( bb );
+    return res;
+}
+
+CoordinateConverters getVectorConverters( const MeshPart& a )
+{
+    MR_TIMER;
+    Box3d bb( a.mesh.computeBoundingBox( a.region ) );
     CoordinateConverters res;
     res.toInt = getToIntConverter( bb );
     res.toFloat = getToFloatConverter( bb );

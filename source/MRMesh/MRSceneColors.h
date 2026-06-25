@@ -1,7 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRColor.h"
-#include "MRVector4.h"
 
 #include <array>
 
@@ -26,6 +25,8 @@ struct SceneColors
         UnselectedObjectDistanceMap,
         BackFaces,
         Labels,
+        LabelsGood, // Typically green.
+        LabelsBad, // Typically red.
         Edges,
         Points,
         SelectedFaces,
@@ -38,8 +39,16 @@ struct SceneColors
         UnselectedFeatureDecorations,
         SelectedMeasurements,
         UnselectedMeasurements,
+        UnselectedMeasurementsX,
+        UnselectedMeasurementsY,
+        UnselectedMeasurementsZ,
         SelectedTemporaryMeasurements,
         UnselectedTemporaryMeasurements,
+        BrushAdd,
+        BrushRemove,
+        BrushSmooth,
+        BrushDeform,
+        BrushPatch,
         Count [[maybe_unused]],
     };
 

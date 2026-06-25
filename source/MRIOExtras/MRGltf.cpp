@@ -13,13 +13,6 @@
 
 MR_SUPPRESS_WARNING_PUSH
 
-#if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#if __EMSCRIPTEN__
-#pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
-#endif
-
 #pragma warning( disable : 4018 ) //'>=': signed/unsigned mismatch
 #pragma warning( disable : 4062 ) //enumerator 'nlohmann::json_abi_v3_11_2::detail::value_t::binary' in switch of enum 'nlohmann::json_abi_v3_11_2::detail::value_t' is not handled
 #pragma warning( disable : 4242 ) //'argument': conversion from 'int' to 'short', possible loss of data
@@ -27,14 +20,28 @@ MR_SUPPRESS_WARNING_PUSH
 #pragma warning( disable : 4267 ) //'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning( disable : 4866 ) //compiler may not enforce left-to-right evaluation order for call to 'nlohmann::json_abi_v3_11_2::basic_json<std::map,std::vector,std::basic_string<char,std::char_traits<char>,std::allocator<char> >,bool,__int64,unsigned __int64,double,std::allocator,nlohmann::json_abi_v3_11_2::adl_serializer,std::vector<unsigned char,std::allocator<unsigned char> > >::operator[]'
 
+#if __GNUC__ >= 10
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
 #if __GNUC__ >= 14
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
+
 #if __GNUC__ >= 15
 #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
-#if __clang_major__ == 20
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+// The second part of this condition is here to reject Clang 17.0.0 from EMSDK 3.1.38. Those two warnings are known to Clang 17.0.1 on godbolt, and there's no 17.0.0 on godbolt to check.
+// They were either added in 17.0.1, or the old Emscripten used a patched Clang without those flags.
+#if __clang_major__ >= 17 && !(__clang_major__ == 17 && __clang_minor__ == 0 && __clang_patchlevel__ == 0)
+#pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
+#else
+#pragma clang diagnostic ignored "-Wdeprecated"
+#endif
 #endif
 
 #define TINYGLTF_IMPLEMENTATION
@@ -152,11 +159,9 @@ Expected<int> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Mod
     }
     else
     {
-        const auto startSpan = vertexCoordinates.vec_.begin() + size_t( start );
-        ParallelFor( startSpan, vertexCoordinates.vec_.end(), [&] ( auto it )
+        ParallelFor( start, vertexCoordinates.endId(), [&] ( VertId v )
         {
-            const size_t i = std::distance( startSpan, it );
-            *it = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + i * bufferView.byteStride] );
+            vertexCoordinates[v] = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + (size_t)v.get() * bufferView.byteStride] );
         } );
     }
 
@@ -197,14 +202,17 @@ Expected<void> fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, co
 
         ParallelFor( vertsColorMap, [&] ( VertId v )
         {
+            auto byteStride = bufferView.byteStride;
+            if ( byteStride == 0 )
+                byteStride = size_t( channelCount ) * sizeof( ChannelType );
             if constexpr ( channelCount == 3 )
             {
-                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * byteStride] );
                 vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ) );
             }
             else if constexpr ( channelCount == 4 )
             {
-                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * byteStride] );
                 vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ), float( col[3] / cMax ) );
             }
         } );
@@ -559,7 +567,7 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::file
     return scene;
 }
 
-Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback )
+Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, const SceneSave::Settings& settings )
 {
     tinygltf::Model model;
     model.asset.generator = "MeshLib";
@@ -597,8 +605,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
     std::stack<std::shared_ptr<const Object>> objectStack;
     std::stack<size_t> indexStack;
 
-    if ( callback && !callback( 0.1f ) )
-        return unexpected( "Operation was cancelled" );
+    if ( !reportProgress( settings.progress, 0.1f ) )
+        return unexpectedOperationCanceled();
 
     for ( size_t childIndex = 0; childIndex < root.children().size(); ++childIndex )
     {
@@ -734,8 +742,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
             }
         }
 
-        if ( callback && !callback( 0.1f + 0.7f * childIndex / root.children().size() ) )
-            return unexpected( "Operation was cancelled" );
+        if ( !reportProgress( settings.progress, 0.1f + 0.7f * childIndex / root.children().size() ) )
+            return unexpectedOperationCanceled();
     }
 
     model.materials.resize( materials.size() );
@@ -774,8 +782,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
         model.textures[textureIt.second].sampler = 0;
     }
 
-    if ( callback && !callback( 0.9f ) )
-        return unexpected( "Operation was cancelled" );
+    if ( !reportProgress( settings.progress, 0.9f ) )
+        return unexpectedOperationCanceled();
 
     tinygltf::TinyGLTF writer;
     tinygltf::FsCallbacks fsCallbacks{ .FileExists = tinygltf::FileExists, .ExpandFilePath = tinygltf::ExpandFilePath, .ReadWholeFile = tinygltf::ReadWholeFile, .WriteWholeFile = tinygltf::WriteWholeFile };
@@ -786,8 +794,8 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
     if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ), isBinary, isBinary, true, isBinary ) )
         return unexpected( "File writing error" );
 
-    if ( callback && !callback( 1.0f ) )
-        return unexpected( "Operation was cancelled" );
+    if ( !reportProgress( settings.progress, 1.0f ) )
+        return unexpectedOperationCanceled();
 
     return {};
 }

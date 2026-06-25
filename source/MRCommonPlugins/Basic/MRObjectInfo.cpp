@@ -5,6 +5,7 @@
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -14,7 +15,7 @@ class ObjectInfo : public StatePlugin
 public:
     ObjectInfo();
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
     virtual bool blocking() const override { return false; }
 };
 
@@ -23,21 +24,21 @@ ObjectInfo::ObjectInfo():
 {
 }
 
-void ObjectInfo::drawDialog( float menuScaling, ImGuiContext* )
+void ObjectInfo::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 300 * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 300 * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
     if ( auto obj = getDepthFirstObject<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
     {
-        ImGui::Text( "Selected object: %s", obj->name().c_str() );
+        ImGui::Text( "%s: %s", _tr( "Selected object" ), obj->name().c_str() );
         for ( const auto & line : obj->getInfoLines() )
             ImGui::Text( "%s", line.c_str() );
     }
     else
     {
-        ImGui::Text( "No object selected" );
+        ImGui::Text( "%s", _tr( "No object selected" ) );
     }
 
     ImGui::EndCustomStatePlugin();

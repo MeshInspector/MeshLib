@@ -93,6 +93,11 @@ MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
     ConvertToIntVector conv, const AffineXf3f * rigidB2A = nullptr );
 
 /**
+ * \brief creates simple converters from Vector3f to Vector3i and back in mesh part area range
+ */
+MRMESH_API CoordinateConverters getVectorConverters( const MeshPart& a );
+
+/**
  * \brief creates simple converters from Vector3f to Vector3i and back in mesh parts area range
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  */

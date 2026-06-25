@@ -1,6 +1,7 @@
 #include "MRBestFitQuadric.h"
 #include "MRVector4.h"
-#include <Eigen/Dense>
+#include <MRPch/MREigenCore.h>
+#include <Eigen/QR>
 
 namespace MR
 {

@@ -3,6 +3,8 @@
 #include "MRVector3.h"
 #include "MRId.h"
 
+#include <iosfwd>
+
 namespace MR
 {
 
@@ -18,6 +20,9 @@ struct PointOnFace
     /// check for validity, otherwise the point is not defined
     [[nodiscard]] bool valid() const { return face.valid(); }
     [[nodiscard]] explicit operator bool() const { return face.valid(); }
+
+    MRMESH_API friend std::ostream& operator<<( std::ostream& s, const PointOnFace& pof );
+    MRMESH_API friend std::istream& operator>>( std::istream& s, PointOnFace& pof );
 };
 
 } //namespace MR

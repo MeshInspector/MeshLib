@@ -12,10 +12,12 @@ std::shared_ptr<ObjectT> asSelectivityType( std::shared_ptr<Object> obj, const O
     switch ( type )
     {
     case ObjectSelectivityType::Selectable:
+    case ObjectSelectivityType::LocalSelectable:
         if ( visObj->isAncillary() )
             visObj.reset();
         break;
     case ObjectSelectivityType::Selected:
+    case ObjectSelectivityType::LocalSelected:
         if ( !visObj->isSelected() )
             visObj.reset();
         break;
@@ -30,6 +32,18 @@ void appendObjectFromTreeRecursive( std::shared_ptr<Object> obj, std::vector<std
 {
     if ( !obj )
         return;
+
+    switch ( type )
+    {
+    case ObjectSelectivityType::Selectable:
+    case ObjectSelectivityType::Selected:
+        if ( obj->isAncillary() )
+            return;
+    case ObjectSelectivityType::LocalSelectable:
+    case ObjectSelectivityType::LocalSelected:
+    case ObjectSelectivityType::Any:
+        break;
+    }
 
     if ( auto visObj = asSelectivityType<ObjectT>( obj, type ) )
         res.push_back( visObj );
@@ -51,7 +65,7 @@ std::vector<std::shared_ptr<ObjectT>> getAllObjectsInTree( Object* root, const O
 }
 
 template<typename ObjectT>
-std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, const ObjectSelectivityType& type/* = ObjectSelectivityType::Selectable*/ )
+std::vector<std::shared_ptr<ObjectT>> getTopmostObjects( Object* root, const ObjectSelectivityType& type/* = ObjectSelectivityType::Selectable*/, bool visibilityCheck/* = false*/)
 {
     std::vector<std::shared_ptr<ObjectT>> res;
     if ( !root )
@@ -66,7 +80,7 @@ std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, co
         const auto & children = root->children();
         for ( const auto& child : children )
         {
-            if ( !child || !child->isVisible() )
+            if ( !child || ( visibilityCheck && !child->isVisible() ) )
                 continue;
             if ( auto visObj = asSelectivityType<ObjectT>( child, type ) )
                 res.push_back( std::move( visObj ) );

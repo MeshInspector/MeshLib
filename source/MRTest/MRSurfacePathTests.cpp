@@ -1,5 +1,5 @@
 #include <MRMesh/MRSurfacePath.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRMeshBuilder.h>
 
 namespace MR

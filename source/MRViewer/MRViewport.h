@@ -79,6 +79,7 @@ public:
     MRVIEWER_API float getAxesSize() const;
 
     /// returns projection matrix that is used for basis axes and view controller rendering
+    [[deprecated("Use (draw/getBaseRenderParams/getModelRenderParams)OrthoFixedPos functions instead of using this value")]] 
     const Matrix4f& getAxesProjectionMatrix() const { return axesProjMat_; }
 
     // Shutdown
@@ -89,20 +90,30 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clearFramebuffers();
 
+    /// Immediate draw of given object tree
+    MRVIEWER_API void recursiveDraw( const Object& obj,
+        DepthFunction depthFunc = DepthFunction::Default, const AffineXf3f& rootXf = {}, RenderModelPassMask renderType = RenderModelPassMask::All,
+        const TransparencyMode& transparentMode = {}, int* numDraws = nullptr ) const;
+
     /// Immediate draw of given object with transformation to world taken from object's scene
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Immediate draw of given object with given transformation to world
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Immediate draw of given object with given transformation to world and given projection matrix
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
-        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
+
+    /// Immediate draw of given object with given transformation to world, orthographic proj matrix and rotation component of view matrix
+    /// Returns true if something was drawn.
+    MRVIEWER_API bool drawOrthoFixedPos( const VisualObject& obj, const AffineXf3f& xf,
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, const TransparencyMode& transparentMode = {} ) const;
 
     /// Rendering parameters for immediate drawing of lines and points
     struct LinePointImmediateRenderParams : BaseRenderParams
@@ -137,22 +148,36 @@ public:
     [[nodiscard]] BaseRenderParams getBaseRenderParams( const Matrix4f & projM ) const
         { return { viewM_, projM, id, toVec4<int>( viewportRect_ ) }; }
 
+    /// Prepares base rendering parameters for this viewport with orthographic proj matrix and rotation component of view matrix
+    [[nodiscard]] BaseRenderParams getBaseRenderParamsOrthoFixedPos() const
+        { return { axesViewMat_, axesProjMat_, id, toVec4<int>( viewportRect_ ) }; }
+
     /// Prepares rendering parameters to draw a model with given transformation in this viewport
     [[nodiscard]] ModelRenderParams getModelRenderParams(
          const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
          RenderModelPassMask pass = RenderModelPassMask::All,
-         bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
+         const TransparencyMode& transparentMode = {} ///< determines how to draw transparent objects
     ) const
-    { return getModelRenderParams( modelM, projM_, normM, depthFunc, pass, allowAlphaSort ); }
+    { return getModelRenderParams( modelM, getBaseRenderParams(projM_), normM, depthFunc, pass, transparentMode ); }
 
-    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom projection matrix
-    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
+    /// Prepares rendering parameters to draw a model with orthographic proj matrix and rotation component of view matrix
+    [[nodiscard]] ModelRenderParams getModelRenderParamsOrthoFixedPos(
+         const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
          RenderModelPassMask pass = RenderModelPassMask::All,
-         bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
+         const TransparencyMode& transparentMode = {} ///< determines how to draw transparent objects
+    ) const
+    { return getModelRenderParams( modelM, getBaseRenderParamsOrthoFixedPos(), normM, depthFunc, pass, transparentMode ); }
+
+    /// Prepares rendering parameters to draw a model with given transformation in this viewport with custom BaseRenderParams
+    [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const BaseRenderParams& baseParams,
+         Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
+         DepthFunction depthFunc = DepthFunction::Default,
+         RenderModelPassMask pass = RenderModelPassMask::All,
+         const TransparencyMode& transparentMode = {} ///< determines how to draw transparent objects
     ) const;
 
     // Predicate to additionally filter objects that should be treated as pickable.
@@ -252,6 +277,10 @@ public:
     MRVIEWER_API std::unordered_map<std::shared_ptr<ObjectMesh>, FaceBitSet> findVisibleFaces( const BitSet& includePixBs,
         int maxRenderResolutionSide = 512 ) const;
 
+    /// finds all triangles of a mesh that having normals oriented toward the camera in this viewport
+    [[nodiscard]] MRVIEWER_API FaceBitSet findCameraLookingFaces( const Mesh& mesh, const AffineXf3f& meshToWorld ) const;
+
+
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     const auto [obj,pick] = pick_render_object();
@@ -312,10 +341,14 @@ public:
 
         enum class RotationCenterMode
         {
-            Static, // scene is always rotated around its center
+            Static, // scene is always rotated around its center or another manually set point
             DynamicStatic, // scene is rotated around picked point on object, or around center, if miss pick
             Dynamic // scene is rotated around picked point on object, or around last rotation pivot, if miss pick
         } rotationMode{ RotationCenterMode::Dynamic };
+
+        // in Static RotationMode, this world space point is used as rotation pivot
+        // if it is not set, scene box center is used instead
+        std::optional<Vector3f> staticRotationPivot;
 
         // if it is true, while rotation is enabled camera can be moved along forward axis
         // in order to keep constant distance to scene center
@@ -488,10 +521,18 @@ public:
     // note: this can make camera clip objects (as far as distance to scene center is not fixed)
     MRVIEWER_API void cameraRotateAround( const Line3f& axis, float angle );
 
-    // Get current rotation pivot in world space
-    MRVIEWER_API Vector3f getRotationPivot() const;
+    /// returns current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    Vector3f getRotationPivot() const { return rotationPivot_; }
 
+    /// sets world point to be used as rotation pivot in static mode
+    /// this should appear static on a screen during rotation by the user
+    /// if nullopt - scene box center is used
+    /// please note that this point should be set *before rotation starts*
+    MRVIEWER_API void resetStaticRotationPivot( const std::optional<Vector3f>& pivot = std::nullopt );
 private:
+    /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`
+    void setRotationPivot_( const Vector3f& point ) { rotationPivot_ = point; }
     // initializes view matrix based on camera position
     void setupViewMatrix_();
     // returns world space to camera space transformation
@@ -499,8 +540,8 @@ private:
 
     // initializes proj matrix based on camera angle and viewport rectangle size
     void setupProjMatrix_();
-    // initializes proj matrix for static view objects (like corner axes)
-    void setupAxesProjMatrix_();
+    // initializes view and proj matrix for static view objects (like corner axes)
+    void setupAxesViewProjMatrix_();
 
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
@@ -518,7 +559,7 @@ private:
     void draw_border() const;
     void draw_rotation_center() const;
     void draw_clipping_plane() const;
-    void draw_global_basis() const;
+    void drawGlobalBasis() const;
 
     // init basis axis in the corner
     void initBaseAxes();
@@ -527,17 +568,16 @@ private:
 
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
+    Matrix4f axesViewMat_;
     Matrix4f axesProjMat_;
     Vector2f basisAxesPos_;
     float basisAxesSize_;
 
     // basis axis params
     int pixelXoffset_{ -100 };
-    int pixelYoffset_{ -100 };
+    int pixelYoffset_{ -128 };
     int axisPixSize_{ 70 };
 
-    // Receives point in scene coordinates, that should appear static on a screen, while rotation
-    void setRotationPivot_( const Vector3f& point );
     void updateSceneBox_();
     void rotateView_();
 

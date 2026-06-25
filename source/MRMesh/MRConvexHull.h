@@ -10,4 +10,7 @@ MRMESH_API Mesh makeConvexHull( const VertCoords & points, const VertBitSet & va
 MRMESH_API Mesh makeConvexHull( const Mesh & in );
 MRMESH_API Mesh makeConvexHull( const PointCloud & in );
 
+// computes the contour of convex hull from given input points
+MRMESH_API Contour2f makeConvexHull( Contour2f points );
+
 } //namespace MR

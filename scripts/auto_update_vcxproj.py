@@ -2,7 +2,7 @@
 import codecs
 import sys
 import xml.etree.ElementTree as ET
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 VCXPROJ_NAMESPACES = {
     'msbuild': "http://schemas.microsoft.com/developer/msbuild/2003",
@@ -29,18 +29,23 @@ def add_missing_entries(vcxproj_dir, item_group, tag_name, file_suffixes):
         item.attrib['Include'].lower()
         for item in item_group.iterfind(f'msbuild:{tag_name}', VCXPROJ_NAMESPACES)
     }
-    for path in vcxproj_dir.iterdir():
-        name, suffix = path.name.lower(), path.suffix.lower()
-        if name in IGNORED_FILENAMES:
-            continue
-        if suffix in file_suffixes and name not in found_files:
-            print(f"Appending {tag_name}: Include = {path.name}")
-            item_group.append(ET.Element(
-                tag_name,
-                attrib={
-                    'Include': path.name,
-                },
-            ))
+    for root, dirs, files in vcxproj_dir.walk():
+        dir = root.relative_to(vcxproj_dir)
+        for filename in files:
+            path = PureWindowsPath(dir / filename)
+            name, suffix = path.name.lower(), path.suffix.lower()
+            if name in IGNORED_FILENAMES:
+                continue
+            if suffix not in file_suffixes:
+                continue
+            if str(path).lower() not in found_files:
+                print(f"Appending {tag_name}: Include = {path}")
+                item_group.append(ET.Element(
+                    tag_name,
+                    attrib={
+                        'Include': str(path),
+                    },
+                ))
 
 
 def fix_vcxproj(source, generated):

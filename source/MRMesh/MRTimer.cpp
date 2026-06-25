@@ -1,5 +1,7 @@
 #include "MRTimer.h"
 #include "MRTimeRecord.h"
+#include "MRPch/MRSpdlog.h"
+
 #include <sstream>
 
 using namespace std::chrono;

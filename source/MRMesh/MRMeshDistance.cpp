@@ -105,15 +105,14 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
             if ( mp.region && !mp.region->test( face ) )
                 continue;
             const auto leafTriangle = mp.mesh.getTriPoints( face );
-            Vector3f p, q;
-            const float distSq = TriDist( p, q, t.data(), leafTriangle.data() );
-            if ( distSq > rangeSq )
+            const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
+            if ( td.distSq > rangeSq )
                 continue;
-            if ( call( p, face, q, distSq ) == ProcessOneResult::ContinueProcessing )
+            if ( call( td.a, face, td.b, td.distSq ) == ProcessOneResult::ContinueProcessing )
                 continue;
             break;
         }
-        
+
         addSubTask( getSubTask( node.r ) ); // right to look later
         addSubTask( getSubTask( node.l ) ); // left to look first
     }

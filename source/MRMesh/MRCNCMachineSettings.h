@@ -2,9 +2,11 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRVector2.h"
-#include <json/forwards.h>
+
 #include <array>
 #include <optional>
+
+namespace Json { class Value; }
 
 namespace MR
 {
@@ -25,7 +27,6 @@ public:
 
     static int getAxesCount() { return int( RotationAxisName::C ) + 1; }
 
-    // rotationAxis length will be more then 0.01
     MRMESH_API void setRotationAxis( RotationAxisName paramName, const Vector3f& rotationAxis );
     MRMESH_API const Vector3f& getRotationAxis( RotationAxisName paramName ) const;
     // rotationLimits = {min, max}

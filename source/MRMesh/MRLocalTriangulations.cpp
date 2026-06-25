@@ -8,7 +8,7 @@
 #include "MRBox.h"
 #include "MRHeap.h"
 #include "MRBitSetParallelFor.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 #include <algorithm>
 #include <cassert>
 #include <cfloat>

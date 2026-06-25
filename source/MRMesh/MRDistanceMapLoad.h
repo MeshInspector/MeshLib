@@ -5,6 +5,7 @@
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
+#include "MRPch/MRBindingMacros.h"
 
 #include <filesystem>
 
@@ -25,7 +26,7 @@ namespace DistanceMapLoad
  */
 MRMESH_API Expected<DistanceMap> fromRaw( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 [[deprecated( "Use fromRaw( path, settings )")]]
-inline Expected<DistanceMap> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb )
+MR_BIND_IGNORE inline Expected<DistanceMap> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     return fromRaw( path, DistanceMapLoadSettings {
         .progress = progressCb,
@@ -34,7 +35,7 @@ inline Expected<DistanceMap> fromRaw( const std::filesystem::path& path, Progres
 
 MRMESH_API Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 [[deprecated( "Use fromMrDistanceMap( path, settings )")]]
-inline Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
+MR_BIND_IGNORE inline Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
 {
     return fromMrDistanceMap( path, {
         .distanceMapToWorld = &params,
@@ -45,7 +46,7 @@ inline Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& pat
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
 MRMESH_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 [[deprecated( "Use fromTiff( path, settings )")]]
-inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
+MR_BIND_IGNORE inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
 {
     return fromTiff( path, {
         .distanceMapToWorld = &params,
@@ -56,7 +57,7 @@ inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, Distan
 
 MRMESH_API Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 [[deprecated( "Use fromAnySupportedFormat( path, settings )" )]]
-inline Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb = {} )
+MR_BIND_IGNORE inline Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb = {} )
 {
     return fromAnySupportedFormat( path, {
         .distanceMapToWorld = params,

@@ -21,8 +21,14 @@ public:
     ObjectVoxels( ObjectVoxels&& ) noexcept = default;
     virtual ~ObjectVoxels() = default;
 
-    constexpr static const char* TypeName() noexcept { return "ObjectVoxels"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ObjectVoxels"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
+
+    constexpr static const char* StaticClassName() noexcept { return "Voxel Volume"; }
+    virtual std::string className() const override { return StaticClassName(); }
+
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Voxel Volumes"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRVOXELS_API virtual void applyScale( float scaleFactor ) override;
 
@@ -53,9 +59,6 @@ public:
 
     MRVOXELS_API virtual std::vector<std::string> getInfoLines() const override;
 
-    std::string getClassName() const override { return "Voxels"; }
-    std::string getClassNameInPlural() const override { return "Voxels"; }
-
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
     /// \param normalPlusGrad true means that iso-surface normals will be along gradient, false means opposite direction
     /// \param minmax optional data about known min and max values
@@ -78,7 +81,7 @@ public:
     /// rebuild iso surface if it is present
     MRVOXELS_API void updateHistogramAndSurface( ProgressCallback cb = {} );
 
-    /// Sets iso value and updates iso-surfaces if needed: 
+    /// Sets iso value and updates iso-surfaces if needed:
     /// Returns true if iso-value was updated, false - otherwise
     MRVOXELS_API virtual Expected<bool> setIsoValue( float iso, ProgressCallback cb = {}, bool updateSurface = true );
 
@@ -108,18 +111,18 @@ public:
 
 
     /// Sets active bounds for some simplifications (max excluded)
-    /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
+    /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty
     /// NOTE: don't forget to call `invalidateActiveBoundsCaches` if you call this function from progress bar thread
     MRVOXELS_API virtual void setActiveBounds( const Box3i& activeBox, ProgressCallback cb = {}, bool updateSurface = true );
     /// Returns active bounds (max excluded)
-    /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
+    /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty
     MRVOXELS_API const Box3i& getActiveBounds() const;
     /// Call this function in main thread post processing if you call setActiveBounds from progress bar thread
     MRVOXELS_API virtual void invalidateActiveBoundsCaches();
 
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
-    
+
     /// get active (visible) voxels
     const VoxelBitSet& getVolumeRenderActiveVoxels() const { return volumeRenderActiveVoxels_; }
     /// set active (visible) voxels (using only in Volume Rendering mode)
@@ -144,7 +147,7 @@ public:
     // it can take some time to prepare data, so you can prepare data with progress callback
     // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
     MRVOXELS_API void enableVolumeRendering( bool on );
-    // move volume rendering data to caller: basically used in RenderVolumeObject 
+    // move volume rendering data to caller: basically used in RenderVolumeObject
     [[nodiscard]] std::unique_ptr<SimpleVolume> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
     // struct to control volume rendering texture
@@ -216,9 +219,16 @@ public:
     /// nullptr means serialize in defaultSerializeVoxelsFormat()
     MRVOXELS_API void setSerializeFormat( const char * newFormat );
 
+    /// reset basic object colors to their default values from the current theme
+    MRVOXELS_API void resetFrontColor() override;
+
     /// signal about Iso-surface changes (from updateIsoSurface)
     using IsoSurfaceChangedSignal = Signal<void()>;
     IsoSurfaceChangedSignal isoSurfaceChangedSignal;
+
+    /// triggered by changes to voxels data
+    using VoxelsChangedSignal = Signal<void()>;
+    VoxelsChangedSignal voxelsChangedSignal;
 
 private:
     VolumeRenderingParams volumeRenderingParams_;

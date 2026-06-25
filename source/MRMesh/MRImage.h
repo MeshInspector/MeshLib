@@ -2,6 +2,7 @@
 
 #include "MRColor.h"
 #include "MRVector2.h"
+#include "MREnums.h"
 #include "MRHeapBytes.h"
 #include <cassert>
 #include <vector>

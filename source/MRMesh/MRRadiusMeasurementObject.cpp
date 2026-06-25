@@ -108,7 +108,7 @@ void RadiusMeasurementObject::swapBase_( Object& other )
 void RadiusMeasurementObject::serializeFields_( Json::Value& root ) const
 {
     MeasurementObject::serializeFields_( root );
-    root["Type"].append( TypeName() );
+    root["Type"].append( StaticTypeName() );
 
     root["DrawAsDiameter"] = drawAsDiameter_;
     root["IsSpherical"] = isSpherical_;

@@ -94,5 +94,14 @@ MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVert
 MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
 MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
 
+/**
+ * @brief triangulate hole boundary loops of \p mesh in the mesh's own 3d space, orienting faces around \p normal
+ * combinatorics run on the dominant-axis projection of \p normal; output vertices keep the exact mesh coordinates
+ * (no projection round-trip), and loops sharing a mesh vertex are merged by identity.
+ * @param loops one closed EdgeLoop per contour (as produced by trackRightBoundaryLoop on each hole edge)
+ * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
+ */
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries = nullptr );
+
 }
 }

@@ -1,6 +1,6 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBitSetParallelFor.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRVoxels/MRMarchingCubes.h>
 
 namespace MR
@@ -40,7 +40,8 @@ TEST( MRMesh, MarchingCubes )
     };
     BitSetParallelForAll( binVol.data, [&]( VoxelId v )
     {
-        binVol.data[v] = fltVol.data[v] > 0.5f;
+        if ( fltVol.data[v] > 0.5f )
+            binVol.data.set( v );
     } );
     auto maybeMeshB = marchingCubes( binVol, vparams );
     EXPECT_TRUE( maybeMeshB.has_value() );

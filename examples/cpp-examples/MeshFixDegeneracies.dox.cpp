@@ -1,9 +1,10 @@
+#include <MRMesh/MRBox.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshSave.h>
 
 #include <iostream>
-#include <MRMesh/MRBox.h>
-#include <MRMesh/MRMeshFixer.h>
 
 int main()
 {
@@ -19,6 +20,13 @@ int main()
         .maxDeviation = 1e-5f * mesh->computeBoundingBox().diagonal(),
         .tinyEdgeLength = 1e-3f,
     } );
+
+    // Save result
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( *mesh, "fixedMesh.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

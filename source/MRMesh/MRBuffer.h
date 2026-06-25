@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRNoDefInit.h"
 #include "MRId.h"
 #include <cassert>
@@ -68,7 +69,7 @@ public:
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
-    void resize( size_t newSize ) 
+    void resize( size_t newSize )
     {
         if ( size_.val == newSize )
             return;
@@ -83,19 +84,19 @@ public:
         size_.val = newSize;
     }
 
-    [[nodiscard]] const_reference operator[]( I i ) const
+    [[nodiscard]] const_reference operator[]( I i ) const MR_LIFETIMEBOUND
     {
         assert( i < size_.val );
         return data_[i];
     }
-    [[nodiscard]] reference operator[]( I i )
+    [[nodiscard]] reference operator[]( I i ) MR_LIFETIMEBOUND
     {
         assert( i < size_.val );
         return data_[i];
     }
 
-    [[nodiscard]] auto data() { return data_.get(); }
-    [[nodiscard]] auto data() const { return data_.get(); }
+    [[nodiscard]] auto data() MR_LIFETIMEBOUND { return data_.get(); }
+    [[nodiscard]] auto data() const MR_LIFETIMEBOUND { return data_.get(); }
 
     /// returns the identifier of the first element
     [[nodiscard]] I beginId() const { return I{ size_t(0) }; }
@@ -109,6 +110,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
+    [[nodiscard]] friend auto begin( const Buffer & a ) { return a.data(); }
+    [[nodiscard]] friend auto begin( Buffer & a ) { return a.data(); }
+    [[nodiscard]] friend auto end( const Buffer & a ) { return a.data() + a.size(); }
+    [[nodiscard]] friend auto end( Buffer & a ) { return a.data() + a.size(); }
+
 private:
     std::unique_ptr<T[]> data_;
     ZeroOnMove<size_t> capacity_, size_;
@@ -116,26 +122,10 @@ private:
 
 /// given some buffer map and a key, returns the value associated with the key, or default value if key is invalid
 template <typename T, typename I>
-inline T getAt( const Buffer<T, I> & bmap, I key, T def = {} )
+inline T getAt( const Buffer<T, I> & bmap MR_LIFETIMEBOUND_NESTED, I key, T def = {} )
 {
     return key ? T{bmap[key]} : def;
 }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto begin( const Buffer<T, I> & a )
-    { return a.data(); }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto begin( Buffer<T, I> & a )
-    { return a.data(); }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto end( const Buffer<T, I> & a )
-    { return a.data() + a.size(); }
-
-template <typename T, typename I>
-[[nodiscard]] inline auto end( Buffer<T, I> & a )
-    { return a.data() + a.size(); }
 
 /// flat map: I -> T
 template <typename T, typename I>

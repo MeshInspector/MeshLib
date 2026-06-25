@@ -41,9 +41,6 @@
     <Filter Include="History">
       <UniqueIdentifier>{3070cea7-b1d9-4627-9d06-476b27257614}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ShortcutManager">
-      <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Helpers">
       <UniqueIdentifier>{d3956742-dbdd-4b13-8187-f0add3cc770a}</UniqueIdentifier>
     </Filter>
@@ -82,6 +79,18 @@
     </Filter>
     <Filter Include="resource\textures">
       <UniqueIdentifier>{6bd35111-e84a-4284-9b50-7898d961d1fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UserInputs">
+      <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Localization">
+      <UniqueIdentifier>{29097c41-4b59-45fe-9b71-20f6095be069}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AI">
+      <UniqueIdentifier>{a9f6cb49-a0c1-4ee7-bcef-760c93bdc757}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MCP">
+      <UniqueIdentifier>{e4e7b2c1-6e0d-4a6d-9a7a-2a7e35a0a4a1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -158,28 +167,25 @@
       <Filter>Viewer</Filter>
     </ClCompile>
     <ClCompile Include="MRShortcutManager.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRRibbonFontManager.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchesHandler.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchesController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRMouseController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchpadController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRRibbonButtonDrawer.cpp">
       <Filter>RibbonMenu</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMenu.cpp">
-      <Filter>Plugins</Filter>
     </ClCompile>
     <ClCompile Include="MRDemoPlugin.cpp">
       <Filter>Plugins</Filter>
@@ -253,11 +259,8 @@
     <ClCompile Include="MRShadowsGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRSpaceMouseController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRWebRequest.cpp">
       <Filter>Requests</Filter>
@@ -280,9 +283,6 @@
     <ClCompile Include="MRShaderBlocks.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
@@ -302,7 +302,7 @@
       <Filter>Viewer</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchpadWin32Handler.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPointsHistory.cpp">
       <Filter>History</Filter>
@@ -388,6 +388,30 @@
     <ClCompile Include="MRUITestEngine.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRUITestEngineControl.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneStateCheck.cpp">
+      <Filter>StatePlugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUiMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRToolsMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSystemMcp.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMcpCommon.cpp">
+      <Filter>MCP</Filter>
+    </ClCompile>
     <ClCompile Include="MRSceneCache.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
@@ -427,9 +451,6 @@
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
-    <ClCompile Include="MRCPRTests.cpp">
-      <Filter>Requests</Filter>
-    </ClCompile>
     <ClCompile Include="MRClipboard.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -445,11 +466,8 @@
     <ClCompile Include="MRUISaveChangesPopup.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="SceneReorder.cpp">
+    <ClCompile Include="MRSceneReorder.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MRProjectMeshAttributes.cpp">
-      <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="MRViewerTitle.cpp">
       <Filter>Viewer</Filter>
@@ -469,6 +487,81 @@
     <ClCompile Include="MRModalDialog.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRDragDropWin32Handler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDragDropHandler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDragDropWasmHandler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderImGui.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderToImage.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVisualObjectTag.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportGlobalBasis.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGladGlfw.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderClickableRect.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUIQualityControl.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="MRItemEnabledPerViewport.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonFontHolder.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryPlane.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDepthPeelingGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImGuiMultiViewport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneControlMenuItems.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFileDialogPortal.cpp">
+      <Filter>CustomOpenDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="MRWin32MessageHandler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpaceMouseDevice.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLocale.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
+    <ClCompile Include="MRI18n.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerMcp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPchCreate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMcpSettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -479,9 +572,6 @@
     </ClInclude>
     <ClInclude Include="ImGuiMenu.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMenu.h">
-      <Filter>Plugins</Filter>
     </ClInclude>
     <ClInclude Include="MRViewer.h">
       <Filter>Viewer</Filter>
@@ -496,7 +586,6 @@
       <Filter>MeshModifier</Filter>
     </ClInclude>
     <ClInclude Include="exports.h" />
-    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="MRViewport.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -583,19 +672,19 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRShortcutManager.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonFontManager.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
     <ClInclude Include="MRMouseController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchesController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchpadController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonButtonDrawer.h">
       <Filter>RibbonMenu</Filter>
@@ -666,11 +755,8 @@
     <ClInclude Include="MRSpaceMouseHandler.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
-      <Filter>SpaceMouse</Filter>
-    </ClInclude>
     <ClInclude Include="MRSpaceMouseController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRWebRequest.h">
       <Filter>Requests</Filter>
@@ -693,9 +779,6 @@
     <ClInclude Include="MRShaderBlocks.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
-      <Filter>SpaceMouse</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshShader.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
@@ -715,7 +798,7 @@
       <Filter>Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchpadWin32Handler.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectPointsHistory.h">
       <Filter>History</Filter>
@@ -733,7 +816,7 @@
       <Filter>RibbonMenu</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchpadParameters.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportParametersAction.h">
       <Filter>History</Filter>
@@ -742,7 +825,7 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseParameters.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRFitData.h">
       <Filter>Viewer</Filter>
@@ -837,6 +920,12 @@
     <ClInclude Include="MRUITestEngine.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRUITestEngineControl.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMcpCommon.h">
+      <Filter>MCP</Filter>
+    </ClInclude>
     <ClInclude Include="MRSceneCache.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -894,11 +983,8 @@
     <ClInclude Include="MRUISaveChangesPopup.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="SceneReorder.h">
+    <ClInclude Include="MRSceneReorder.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MRProjectMeshAttributes.h">
-      <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MROpenObjects.h">
       <Filter>IO</Filter>
@@ -921,11 +1007,107 @@
     <ClInclude Include="MRModalDialog.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="MRDragDropHandler.h">
+      <Filter>UserInputs</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDragDropWin32Handler.h">
+      <Filter>UserInputs</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonMenuUIConfig.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewportGlobalBasis.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderClickableRect.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUIQualityControl.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRItemEnabledPerViewport.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWebResponseCallback.h">
+      <Filter>Requests</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerSignals.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileLoadOptions.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonFontHolder.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryPlane.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDepthPeelingGL.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGuiMultiViewport.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerConfigConstants.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneControlMenuItems.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogPortal.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogCocoa.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWin32MessageHandler.h">
+      <Filter>UserInputs</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseDevice.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandlerWinEvents.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRI18n.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLocale.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLocaleMacos.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMcpSettings.h">
+      <Filter>MCP</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderImGui.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderToImage.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGui.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVisualObjectTag.h">
+      <Filter>Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <Filter>Viewer</Filter>
+    </None>
+    <None Include="MRFileDialogCocoa.mm">
+      <Filter>CustomOpenDialog</Filter>
+    </None>
+    <None Include="MRLocaleNames.inl">
+      <Filter>Localization</Filter>
+    </None>
+    <None Include="MRLocaleMacos.mm">
+      <Filter>Localization</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -950,19 +1132,23 @@
     <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Roboto-Medium.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="MRDarkTheme.json" />
-    <CopyFileToFolders Include="MRLightTheme.json" />
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansCJK-Regular.ttc">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">
       <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MRDarkTheme.json">
+      <Filter>UIStyle</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MRLightTheme.json">
+      <Filter>UIStyle</Filter>
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
@@ -1112,6 +1298,24 @@
     </Image>
     <Image Include="resource\textures\controller_cube_sides.png">
       <Filter>resource\textures</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\mouse left.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\mouse right.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\mouse scroll.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\mouse left.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\mouse right.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\mouse scroll.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

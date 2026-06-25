@@ -7,17 +7,19 @@
 #include "MRRingIterator.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
-#include "MRCylinder.h"
-#include "MRGTest.h"
 #include "MRMeshDelone.h"
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
 #include "MRPriorityQueue.h"
-#include "MRMakeSphereMesh.h"
 #include "MRBuffer.h"
 #include "MRTbbThreadMutex.h"
 #include "MRMeshFixer.h"
+#include "MRObjectMeshData.h"
+#include "MRMeshAttributesToUpdate.h"
+#include "MRMeshDecimateCallbacks.h"
+#include "MRMapEdge.h"
+#include "MRObjectMesh.h"
 
 namespace MR
 {
@@ -63,7 +65,8 @@ private:
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
-    int numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
+    size_t maxRemainingFlips_ = 0; // the number of flip-edge operations that can be performed before stop adding them in the queue
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -209,31 +212,21 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     return res;
 }
 
-bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
+bool resolveMeshDegenerations( Mesh & mesh, const ResolveMeshDegenSettings & settings )
 {
     MR_TIMER;
 
-    FixMeshDegeneraciesParams fsettings
+    DecimateSettings dsettings
     {
-        .maxDeviation = settings.maxDeviation,
-        .tinyEdgeLength = settings.tinyEdgeLength,
+        .maxError = settings.maxDeviation,
         .criticalTriAspectRatio = settings.criticalAspectRatio,
-        .maxAngleChange = settings.maxAngleChange,
+        .tinyEdgeLength = settings.tinyEdgeLength,
         .stabilizer = settings.stabilizer,
+        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = settings.region,
+        .maxAngleChange = settings.maxAngleChange
     };
-    return fixMeshDegeneracies( mesh, fsettings ).has_value();
-}
-
-bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
-{
-    FixMeshDegeneraciesParams settings
-    {
-        .maxDeviation = maxDeviation,
-        .criticalTriAspectRatio = criticalAspectRatio,
-        .maxAngleChange = maxAngleChange
-    };
-    return fixMeshDegeneracies( mesh, settings ).has_value();
+    return decimateMesh( mesh, dsettings ).vertsDeleted > 0;
 }
 
 bool MeshDecimator::initialize_()
@@ -290,6 +283,8 @@ bool MeshDecimator::initialize_()
     if ( settings_.progressCallback && !settings_.progressCallback( 0.15f ) )
         return false;
 
+    // (maxRemainingFlips_ = 1) allows adding flip operations in the queue
+    maxRemainingFlips_ = settings_.maxAngleChange >= 0 ? 1 : 0;
     initializeQueue_();
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
@@ -337,6 +332,8 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
         v = {};
     }
     assert( elms.size() == queueSize );
+    // prevents never ending flips scenario, (maxRemainingFlips_ = queueSize) was not enough in real cases
+    maxRemainingFlips_ = settings_.maxAngleChange >= 0 ? 10 * queueSize : 0;
     return elms;
 }
 
@@ -420,7 +417,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     auto earlyReturn = [&]( float errSq )
     {
         EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
-        if ( settings_.maxAngleChange >= 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
+        if ( maxRemainingFlips_ > 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
@@ -523,10 +520,20 @@ void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
     assert( mesh_.topology.left( e ) );
     assert( mesh_.topology.right( e ) );
     addInQueueIfMissing_( e.undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
-    addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, e.sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.next( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+    for ( auto oe : orgRing0( mesh_.topology, mesh_.topology.prev( e ).sym() ) )
+        addInQueueIfMissing_( oe.undirected() );
+
+    if ( maxRemainingFlips_ > 0 )
+    {
+        --maxRemainingFlips_;
+        assert( maxRemainingFlips_ > 0 ); // otherwise either the limit on the number of flips is too tight or flips are in never ending cycle
+    }
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes
@@ -538,9 +545,19 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     // cannot collapse internal edge if its left and right faces share another edge
     if ( vl && vr )
     {
+        bool oDegree2 = false;
         if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
-            return { .status =  CollapseStatus::SharedEdge };
+            oDegree2 = true; // (pe) is shared between left and right faces of edgeToCollapse
+
+        bool dDegree2 = false;
         if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
+            dDegree2 = true; // (pe) is shared between left and right faces of edgeToCollapse
+        
+        // if both oDegree2 and dDegree2 are true, then vl == vr
+        assert( !oDegree2 || !dDegree2 || vl == vr );
+
+        // but can collapse if left and right faces of edgeToCollapse share all 3 edges
+        if ( oDegree2 != dDegree2 )
             return { .status =  CollapseStatus::SharedEdge };
     }
     const bool collapsingFlippable = !settings_.notFlippable || !settings_.notFlippable->test( edgeToCollapse );
@@ -588,10 +605,9 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), edgeLenSq );
     float maxNewEdgeLenSq = 0;
 
-    bool normalFlip = false; // at least one triangle flips its normal or a degenerate triangle becomes not-degenerate
     originNeis_.clear();
-    triDblAreas_.clear();
-    Vector3d sumDblArea_;
+    triDblAreas_.clear(); // new directed areas of triangles that flip their normal or became not-degenerate from degenerate
+    Vector3d sumDblArea;
     EdgeId oBdEdge; // a boundary edge !right(e) incident to org( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
@@ -617,18 +633,15 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( eDest != vr )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            if ( !normalFlip )
+            sumDblArea += Vector3d{ da };
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
             {
                 const auto oldA = cross( pDest - po, pDest2 - po );
                 if ( dot( da, oldA ) <= 0 )
-                    normalFlip = true;
+                    triDblAreas_.push_back( da );
             }
-            triDblAreas_.push_back( da );
-            sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
@@ -662,18 +675,15 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            if ( !normalFlip )
+            sumDblArea += Vector3d{ da };
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
             {
                 const auto oldA = cross( pDest - pd, pDest2 - pd );
                 if ( dot( da, oldA ) <= 0 )
-                    normalFlip = true;
+                    triDblAreas_.push_back( da );
             }
-            triDblAreas_.push_back( da );
-            sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
@@ -694,10 +704,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
         return { .status =  CollapseStatus::LongEdge }; // new edge would be longer than all of old edges and longer than allowed in settings
 
-    // if at least one triangle normal flips, checks that all new normals are consistent
-    if ( normalFlip && ( ( po != pd ) || ( po != collapsePos ) ) )
+    // if at least one remaining triangle flips its normal, checks that new normal is consistent with the average normal of new vertex neighborhood
+    if ( !triDblAreas_.empty() && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
-        auto n = Vector3f{ sumDblArea_.normalized() };
+        auto n = Vector3f{ sumDblArea.normalized() };
         for ( const auto da : triDblAreas_ )
             if ( dot( da, n ) < 0 )
                 return { .status =  CollapseStatus::NormalFlip };
@@ -744,9 +754,18 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
             if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
-                ++numOutdated_; // collapse error for of all neighbor edges with vo must increase
+            {
+                // collapse error for all the edges (including this one) incident to remaining vertex (vo) must increase,
+                // we do not put the edge in the queue again before previous (smaller) error-version is extracted from the queue
+                ++numOutdated_;
+            }
             if ( mesh_.topology.left( e ) )
+            {
+                // an edge can be missed in the queue before because some criterion did not allow collapsing it,
+                // and after just happened collapse that edge can become eligible again, so we try adding it in the queue;
+                // but if the edge was already in the queue, assume that its error does not change so numOutdated_ is not modified
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            }
         }
     }
     return vo;
@@ -857,7 +876,7 @@ DecimateResult MeshDecimator::run()
                 break; // if old queue was filled only with invalid elements
         }
         const auto topQE = queue_.top();
-        const auto ue = topQE.uedgeId();
+        auto ue = topQE.uedgeId();
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -899,33 +918,65 @@ DecimateResult MeshDecimator::run()
 
         validInQueue_.reset( ue );
 
-        UndirectedEdgeId twin;
-        if ( settings_.twinMap )
-            twin = getAt( *settings_.twinMap, ue );
-
         if ( qe->x.edgeOp == EdgeOp::Flip )
         {
             flipEdge_( ue );
-            if ( twin )
-                flipEdge_( twin );
+            if ( settings_.twinMap )
+                if ( auto twin = getAt( *settings_.twinMap, ue ) )
+                    flipEdge_( twin );
         }
         else
         {
             // edge collapse
-            const auto canCollapseRes = canCollapse_( ue, collapsePos );
+            auto canCollapseRes = canCollapse_( ue, collapsePos );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
+                {
                     addInQueue_( ue, false );
-                continue;
-            }
-            if ( twin )
-            {
-                const auto twinCollapseForm = collapseForm_( twin, collapsePos );
-                const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
-                if ( twinCollapseRes.status != CollapseStatus::Ok )
+                    continue;
+                }
+                if ( canCollapseRes.status != CollapseStatus::MultipleEdge )
+                    continue;
+
+                const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 && topQE.x.edgeOp == EdgeOp::CollapseEnd )
+                    ? mesh_.edgeLengthSq( ue ) <= sqr( settings_.tinyEdgeLength ) : false;
+                if ( !tinyEdge )
+                    continue;
+
+                // if the collapse of a tiny edge failed because of appearance of multiple edges,
+                // test whether left or right triangle contains single 3-degree vertex inside, then collapse it instead
+                const auto en = mesh_.topology.next( ue );
+                const auto ep = mesh_.topology.prev( ue );
+                // the check that left/right triangle exists is done by isOrgInnerAndHasDegree
+                ue = {};
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en.sym(), 3 ) )
+                {
+                    auto vo = mesh_.topology.org( en );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ en };
+                    ue = en;
+                }
+                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep.sym(), 3 ) )
+                {
+                    auto vo = mesh_.topology.org( ep );
+                    collapsePos = mesh_.points[vo];
+                    collapseForm = (*pVertForms_)[vo];
+                    canCollapseRes = CanCollapseRes{ ep };
+                    ue = ep;
+                }
+                if ( !ue )
                     continue;
             }
+            if ( settings_.twinMap )
+                if ( auto twin = getAt( *settings_.twinMap, ue ) )
+                {
+                    const auto twinCollapseForm = collapseForm_( twin, collapsePos );
+                    const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
+                    if ( twinCollapseRes.status != CollapseStatus::Ok )
+                        continue;
+                }
             forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
     }
@@ -1238,6 +1289,122 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
     return res;
 }
 
+DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & set0 )
+{
+    MR_TIMER;
+    DecimateResult res;
+    if ( !data.mesh )
+    {
+        assert( false );
+        return res;
+    }
+
+    DecimateSettings settings = set0;
+
+    const bool finalMeshPack = settings.packMesh;
+    settings.packMesh = false;
+
+    if ( settings.subdivideParts > 1 )
+        settings.progressCallback = subprogress( set0.progressCallback, 0.2f, 1.0f );
+
+    const bool updateUV = data.mesh->topology.lastValidVert() < data.uvCoordinates.size();
+    const bool updateColorMap = data.mesh->topology.lastValidVert() < data.vertColors.size();
+    const bool updateFaceColorMap = data.mesh->topology.lastValidFace() < data.faceColors.size();
+
+    if ( updateUV || updateColorMap )
+    {
+        MeshAttributesToUpdate meshParams;
+        if ( updateUV )
+            meshParams.uvCoords = &data.uvCoordinates;
+        if ( updateColorMap )
+            meshParams.colorMap = &data.vertColors;
+        settings.preCollapse = meshPreCollapseVertAttribute( *data.mesh, meshParams );
+    }
+
+    std::shared_ptr<UndirectedEdgeBMap> emap;
+    if ( settings.subdivideParts > 1 )
+    {
+        auto packMapping = data.mesh->packOptimally( false );
+        if ( updateUV )
+            data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
+        if ( updateColorMap )
+            data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( updateFaceColorMap )
+            data.faceColors = rearrangeVectorByMap( data.faceColors, packMapping.f );
+        if ( data.selectedFaces.any() )
+            data.selectedFaces = data.selectedFaces.getMapping( packMapping.f );
+        if ( settings.region )
+            *settings.region = settings.region->getMapping( packMapping.f );
+        emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+        if ( !reportProgress( set0.progressCallback, .2f ) )
+            return res;
+    }
+
+    res = decimateMesh( *data.mesh, settings );
+    if ( res.cancelled )
+        return res;
+
+    if ( finalMeshPack )
+    {
+        auto packMapping = data.mesh->packOptimally( false );
+        if ( updateUV )
+            data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
+        if ( updateColorMap )
+            data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( updateFaceColorMap )
+            data.faceColors = rearrangeVectorByMap( data.faceColors, packMapping.f );
+        if ( data.selectedFaces.any() )
+            data.selectedFaces = data.selectedFaces.getMapping( packMapping.f );
+        if ( settings.region )
+            *settings.region = settings.region->getMapping( packMapping.f );
+        if ( emap )
+            *emap = compose( packMapping.e, *emap );
+        else
+            emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+
+        packMapping = {}; //free memory
+        data.mesh->shrinkToFit();
+    }
+    else
+    {
+        data.selectedFaces &= data.mesh->topology.getValidFaces();
+    }
+
+    if ( emap && emap->tsize > 0 )
+    {
+        data.selectedEdges = mapEdges( *emap, data.selectedEdges );
+        data.creases = mapEdges( *emap, data.creases );
+    }
+    else
+    {
+        data.mesh->topology.excludeLoneEdges( data.selectedEdges );
+        data.mesh->topology.excludeLoneEdges( data.creases );
+    }
+
+    return res;
+}
+
+MRMESH_API std::optional<ObjectMeshData> makeDecimatedObjectMeshData( const ObjectMesh & obj, const DecimateSettings & settings,
+    DecimateResult * outRes )
+{
+    MR_TIMER;
+
+    ObjectMeshData data = obj.data();
+    if ( !data.mesh )
+    {
+        assert( false );
+        return {};
+    }
+    // clone mesh as well
+    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    auto res = decimateObjectMeshData( data, settings );
+    if ( outRes )
+        *outRes = res;
+    if ( res.cancelled )
+        return {};
+    return data;
+}
+
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 {
     MR_TIMER;
@@ -1258,6 +1425,8 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxEdgeLen = settings.targetEdgeLen;
     subs.maxEdgeSplits = settings.maxEdgeSplits;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
+    subs.subdivideBorder = !settings.frozenBoundary;
+    subs.maxSplittableTriAspectRatio = settings.maxSplittableTriAspectRatio;
     subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;
     subs.notFlippable = settings.notFlippable;
@@ -1281,6 +1450,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.maxError = FLT_MAX;
         decs.maxEdgeLen = 1.5f * settings.targetEdgeLen; // not to over-decimate when there are many notFlippable edges in the region
         decs.maxDeletedFaces = currNumTri - targetNumTri;
+        decs.touchBdVerts = !settings.frozenBoundary;
         decs.maxBdShift = settings.maxBdShift;
         decs.region = settings.region;
         decs.notFlippable = settings.notFlippable;
@@ -1321,45 +1491,6 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     }
 
     return reportProgress( settings.progressCallback, 1.0f );
-}
-
-// check if Decimator updates region
-TEST( MRMesh, MeshDecimate )
-{
-    Mesh meshCylinder = makeCylinderAdvanced(0.5f, 0.5f, 0.0f, 20.0f / 180.0f * PI_F, 1.0f, 16);
-
-    // select all faces
-    MR::FaceBitSet regionForDecimation = meshCylinder.topology.getValidFaces();
-    MR::FaceBitSet regionSaved(regionForDecimation);
-
-    // setup and run decimator
-    DecimateSettings decimateSettings;
-    decimateSettings.maxError = 0.001f;
-    decimateSettings.region = &regionForDecimation;
-    decimateSettings.maxTriangleAspectRatio = 80.0f;
-
-    auto decimateResults = decimateMesh(meshCylinder, decimateSettings);
-
-    // compare regions and deleted vertices and faces
-    ASSERT_NE(regionSaved, regionForDecimation);
-    ASSERT_GT(decimateResults.vertsDeleted, 0);
-    ASSERT_GT(decimateResults.facesDeleted, 0);
-}
-
-TEST( MRMesh, MeshDecimateParallel )
-{
-    const int cNumVerts = 400;
-    auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
-    mesh.packOptimally();
-    DecimateSettings settings
-    {
-        .maxError = 1000000, // no actual limit
-        .maxDeletedVertices = cNumVerts - 1, // also no limit, but tests limitedDeletion mode
-        .subdivideParts = 8
-    };
-    decimateMesh( mesh, settings );
-    ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
-    ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
 }
 
 } //namespace MR

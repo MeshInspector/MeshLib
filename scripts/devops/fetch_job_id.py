@@ -9,7 +9,9 @@ GITHUB_HEADERS = {
 }
 
 def fetch_jobs(repo: str, run_id: str):
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs'
+    # TODO: pagination support
+    # more info: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
     req = urllib.request.Request(url, headers=GITHUB_HEADERS)
     with urllib.request.urlopen(req) as resp:
         return json.loads(resp.read().decode())
@@ -24,6 +26,8 @@ def get_job_id():
     runner_name = os.environ.get("RUNNER_NAME")
 
     resp = fetch_jobs(repo, run_id)
+    if int(resp['total_count']) > 100:
+        print("Total job count has exceeded 100; consider enabling the pagination support")
     jobs = [
         job
         for job in resp['jobs']
@@ -38,5 +42,6 @@ def get_job_id():
 
 if __name__ == "__main__":
     if os.environ.get('CI'):
+        job_id = get_job_id()
         with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-            print(f"job_id={get_job_id()}", file=out)
+            print(f"job_id={job_id}", file=out)

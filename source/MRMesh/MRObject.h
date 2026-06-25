@@ -1,17 +1,19 @@
 #pragma once
 
 #include "MRAffineXf3.h"
-#include "MRBox.h"
 #include "MRBitSet.h"
-#include "MRViewportProperty.h"
-#include "MRProgressCallback.h"
+#include "MRBox.h"
 #include "MRExpected.h"
+#include "MRProgressCallback.h"
 #include "MRSignal.h"
-#include <memory>
-#include <vector>
+#include "MRViewportProperty.h"
+
 #include <array>
-#include <future>
 #include <filesystem>
+#include <future>
+#include <memory>
+#include <set>
+#include <vector>
 
 namespace Json
 {
@@ -52,7 +54,7 @@ public:
 protected:
     ObjectChildrenHolder * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; /// recognized ones
-    std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic
+    std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the public
 };
 
 /// named object in the data model
@@ -65,8 +67,16 @@ public:
     virtual ~Object() = default;
 
     // return name of subtype for serialization purposes
-    constexpr static const char* TypeName() noexcept { return "Object"; }
-    virtual const char* typeName() const { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "Object"; }
+    virtual const char* typeName() const { return StaticTypeName(); }
+
+    /// return human readable name of subclass
+    constexpr static const char* StaticClassName() noexcept { return "Object"; }
+    virtual std::string className() const { return StaticClassName(); }
+
+    /// return human readable name of subclass in plural form
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Objects"; }
+    virtual std::string classNameInPlural() const { return StaticClassNameInPlural(); }
 
     template <typename T>
     T * asType() { return dynamic_cast<T*>( this ); }
@@ -102,7 +112,7 @@ public:
     /// returns xfs for all viewports, combined into a single object
     const ViewportProperty<AffineXf3f> & xfsForAllViewports() const { return xf_; }
     /// modifies xfs for all viewports at once
-    virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf ) { xf_ = std::move( xf ); }
+    MRMESH_API virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf );
 
     /// this space to world space transformation for default or specific viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)
@@ -184,6 +194,8 @@ public:
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
     MRMESH_API virtual void setAncillary( bool ancillary );
     bool isAncillary() const { return ancillary_; }
+    /// returns true if the object or any of its ancestors are ancillary
+    MRMESH_API bool isGlobalAncillary() const;
 
     /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );
@@ -211,12 +223,6 @@ public:
 
     /// return several info lines that can better describe object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const;
-
-    /// return human readable name of subclass
-    virtual std::string getClassName() const { return "Object"; }
-
-    /// return human readable name of subclass in plural form
-    virtual std::string getClassNameInPlural() const { return "Objects"; }
 
     /// creates futures that save this object subtree:
     ///   models in the folder by given path and
@@ -250,8 +256,24 @@ public:
     /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
     [[nodiscard]] virtual bool hasModel() const { return false; }
 
+    /// provides read-only access to the tag storage
+    /// the storage is a set of unique strings
+    const std::set<std::string>& tags() const { return tags_; }
+    /// adds tag to the object's tag storage
+    /// additionally calls ObjectTagManager::tagAddedSignal
+    /// NOTE: tags starting with a dot are considered as service ones and might be hidden from UI
+    MRMESH_API bool addTag( std::string tag );
+    /// removes tag from the object's tag storage
+    /// additionally calls ObjectTagManager::tagRemovedSignal
+    MRMESH_API bool removeTag( const std::string& tag );
+
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
+
+    // return true if model of current object equals to model (the same) of other
+    MRMESH_API virtual bool sameModels( const Object& other ) const;
+    // return hash of model (or hash object pointer if object has no model)
+    MRMESH_API virtual size_t getModelHash() const;
 
     /// signal about xf changing
     /// triggered in setXf and setWorldXf, it is called for children too
@@ -284,6 +306,8 @@ protected:
 
     /// Reads model from file
     MRMESH_API virtual Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} );
+    /// shares model from other object
+    MRMESH_API virtual Expected<void> setSharedModel_( const Object& other );
 
     /// Reads parameters from json value
     /// \note if you override this method, please call Base::deserializeFields_(root) in the beginning
@@ -297,13 +321,25 @@ protected:
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
+    std::set<std::string> tags_;
 
     // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
     // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children
-    //   (it doesn't use a true recursion, instead imitiating one, presumably to save stack space, though this is unlikely to be an issue).
+    //   (it doesn't use a true recursion, instead imitating one, presumably to save stack space, though this is unlikely to be an issue).
     MRMESH_API void sendWorldXfChangedSignal_();
+
     // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
     MRMESH_API virtual void onWorldXfChanged_();
+
+private:
+    struct MapSharedObjects;
+    Expected<std::vector<std::future<Expected<void>>>> serializeRecursive_( const std::filesystem::path& path, Json::Value& root,
+        int childId, MapSharedObjects* mapSharedObjects ) const;
+
+    ///\ param mapLinkToSharedObjectModel for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
+    struct MapLinkToSharedObjectModel;
+    Expected<void> deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root,
+        int* objCounter, MapLinkToSharedObjectModel& mapLinkToSharedObjectModel, const ProgressCallback& progressCb );
 };
 
 template <typename T>

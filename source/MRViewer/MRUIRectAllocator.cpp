@@ -3,6 +3,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
 
 #include <imgui_internal.h>
 
@@ -139,36 +140,90 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
             auto [iter, isNew] = windows_.try_emplace( expectedWindowName );
             if ( isNew )
             {
-                // if new window, request position calculation in next frame
-                // to be sure that this frame action will not affect it (for example closing window that is present in this frame)
-                iter->second.state_ = AllocationState::Requested;
+                // the window has just appeared and may have the wrong size
+                // skip one frame to calculate the correct window size
+                iter->second.state_ = AllocationState::WaitAppearing;
             }
             else
             {
-                if ( iter->second.state_ == AllocationState::Requested )
+                if ( iter->second.state_ == AllocationState::WaitAppearing )
                 {
-                    findLocation = true;
-                    defaultPos = window->Pos;
+                    // if new window, request position calculation in next frame
+                    // to be sure that this frame action will not affect it (for example closing window that is present in this frame)
+                    iter->second.state_ = AllocationState::Requested;
                 }
-                iter->second.state_ = AllocationState::Set; // validate that window is still present
+                else
+                {
+                    if ( iter->second.state_ == AllocationState::Requested )
+                    {
+                        findLocation = true;
+                        defaultPos = window->Pos;
+                    }
+                    iter->second.state_ = AllocationState::Set; // validate that window is still present
+                }
             }
         }
     }
 
     if ( findLocation )
     {
-        // push into application window if it is out
-        const Vector2f appWindowSize = Vector2f( getViewerInstance().framebufferSize );
         auto windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
-        defaultPos.x = std::clamp( windowBox.min.x, 0.0f, std::max( 0.0f, windowBox.min.x - ( windowBox.max.x - appWindowSize.x ) ) );
-        defaultPos.y = std::clamp( windowBox.min.y, 0.0f, std::max( 0.0f, windowBox.min.y - ( windowBox.max.y - appWindowSize.y ) ) );
+        Box2f boundsFixed;
+
+        Box2f workBox;
+
+        if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+        {
+            const auto& monitors = ImGui::GetPlatformIO().Monitors;
+            for ( const auto& m : monitors )
+            {
+                Box2f mBox = Box2f::fromMinAndSize( m.WorkPos, m.WorkSize );
+                if ( mBox.intersects( windowBox ) ) // alternative way: calculate window area in current monitor
+                {
+                    workBox = mBox;
+                    break;
+                }
+            }
+            if ( !workBox.valid() )
+            {
+                const auto& fallbackMonitor = ImGui::GetCurrentContext()->FallbackMonitor;
+                workBox = Box2f::fromMinAndSize( fallbackMonitor.WorkPos, fallbackMonitor.WorkSize );
+            }
+        }
+        else
+        {
+            const Vector2f appWindowSize = Vector2f( getViewerInstance().framebufferSize );
+            workBox = Box2f::fromMinAndSize( ImGuiMV::GetMainViewportShift(), appWindowSize );
+        }
+        const float maxPosX = std::max( 0.0f, workBox.max.x - windowBox.size().x );
+        if ( maxPosX >= workBox.min.x )
+            defaultPos.x = std::clamp( windowBox.min.x, workBox.min.x, maxPosX );
+        else
+            defaultPos.x = workBox.min.x;
+        const float maxPosY = std::max( 0.0f, workBox.max.y - windowBox.size().y );
+        if ( maxPosY >= workBox.min.y )
+            defaultPos.y = std::clamp( windowBox.min.y, workBox.min.y, maxPosY );
+        else
+            defaultPos.y = workBox.min.y;
         windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
 
 
-        Box2f viewportBounds = getViewerInstance().getViewportsBounds();
-        Box2f boundsFixed = viewportBounds;
-        boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
-        boundsFixed.max.y = boundsFixed.min.y + viewportBounds.size().y;
+        if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+        {
+            boundsFixed = workBox;
+        }
+        else
+        {
+            // convert viewport bounds from local to window space
+            Box2f viewportBounds = getViewerInstance().getViewportsBounds();
+            boundsFixed = viewportBounds;
+            boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
+            boundsFixed.max.y = boundsFixed.min.y + viewportBounds.size().y;
+            // convert viewport bounds from window to screen space
+            boundsFixed.min = ImGuiMV::Window2ScreenSpaceVector2f( boundsFixed.min );
+            boundsFixed.max = ImGuiMV::Window2ScreenSpaceVector2f( boundsFixed.max );
+        }
+        // push into application window if it is out
 
         auto result = findFreeRect( windowBox, boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
         {
@@ -178,8 +233,12 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
 
             for ( const ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
             {
-                if ( ( !win->WasActive && !win->Appearing ) || ( win->Flags & ImGuiWindowFlags_ChildWindow ) )
-                    continue; // Skip inactive windows and child windows.
+                if ( !win->WasActive && !win->Appearing )
+                    continue; // Skip inactive windows.
+                if ( win->Flags & ImGuiWindowFlags_ChildWindow )
+                    continue; // Skip child windows.
+                if ( win->Flags & ImGuiWindowFlags_Tooltip )
+                    continue; // Skip tooltips.
                 std::string_view winNameView = win->Name;
                 if ( auto pos = winNameView.find( "##" ); pos != std::string_view::npos && winNameView.find( "[rect_allocator_ignore]", pos + 2 ) != std::string_view::npos)
                     continue; // Ignore if the name contains the special tag.
@@ -187,6 +246,8 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
                     continue; // Ignore ImGui tooltips.
                 if ( std::strcmp( win->Name, expectedWindowName ) == 0 )
                     continue; // Skip the target window itself.
+                if ( auto iter = windows_.find( win->Name ); iter != windows_.end() && iter->second.state_ == AllocationState::Requested )
+                    continue; // Skip half-baked windows that already exist, but didn't have their position properly selected yet.
                 func( win->Name, Box2f::fromMinAndSize( win->Pos, win->Size ) );
             }
         }, ImVec2( 5, 1 ) );

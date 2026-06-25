@@ -11,9 +11,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: "master"
+          token: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
 
       - name: Search for Tag in .github/workflows/config.yml
         id: extract-tag
@@ -30,6 +31,11 @@ jobs:
           latest_vcpkg_tag=$(gh api repos/microsoft/vcpkg/releases/latest --jq '.tag_name' | tr -d '"')
           echo "latest_vcpkg_tag=${latest_vcpkg_tag}" >> $GITHUB_OUTPUT
           echo "latest vcpkg tag: ${latest_vcpkg_tag}"
+
+          latest_vcpkg_baseline=$(gh api repos/microsoft/vcpkg/commits/${latest_vcpkg_tag} --jq '.sha')
+          [[ "${latest_vcpkg_baseline}" =~ ^[0-9a-f]{40}$ ]] || { echo "Failed to resolve baseline commit for ${latest_vcpkg_tag}"; exit 1; }
+          echo "latest_vcpkg_baseline=${latest_vcpkg_baseline}" >> $GITHUB_OUTPUT
+          echo "latest vcpkg baseline: ${latest_vcpkg_baseline}"
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,7 +57,7 @@ jobs:
           
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        id: bunmp-vcpkg
+        id: bump-vcpkg
         env:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
         run: |
@@ -60,26 +66,35 @@ jobs:
           
           # Create new branch
           new_branch="vcpkg-update-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+          echo "new_branch=${new_branch}" >> "$GITHUB_OUTPUT"
           git checkout -b ${new_branch}
 
           # Search and replace in all files except /thirdparty folder
           find . -type f -not -path './thirdparty*' ! -path './thirdparty/install.bat' -exec \
             sed -i 's/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g' {} +
 
+          # Update the vcpkg manifest and the Windows install batch
           sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./thirdparty/install.bat
+          sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./thirdparty/vcpkg/vcpkg.json
+          current_vcpkg_baseline=$(jq -r '.configuration["default-registry"].baseline' "${manifest}")
+          sed -i "s/${current_vcpkg_baseline}/${{ steps.get-latest-tag.outputs.latest_vcpkg_baseline }}/g" ./thirdparty/vcpkg/vcpkg.json
 
           # Commit the changes
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
 
           # Push the changes
-          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
+          # git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
           git push origin ${new_branch}
-      
-          # Create a pull request using GitHub CLI
+
+      - name: Create pull request
+        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
+        run: |
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base master \
-                       --head ${new_branch} \
+                       --head ${{ steps.bump-vcpkg.outputs.new_branch }} \
                        --label bump-vcpkg \
                        --reviewer MaxRayskiy,Grantim
 

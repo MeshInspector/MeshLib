@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Windows EXE-only: configure mimalloc's transparent CRT-allocator redirect.
+    Import this from EXE .vcxproj files AFTER common.props (which sets
+    $(VcpkgCurrentInstalledDir)). Never import from DLL .vcxproj — the redirect
+    works only at the EXE image level (the TLS callback must beat ucrtbase init,
+    and DLL TLS callbacks fire too late).
+
+    Two conditions must hold for the redirect to engage at runtime:
+      1. /INCLUDE:mi_version pulls mimalloc.dll into the EXE's import table.
+      2. mimalloc.dll must be the FIRST entry in the EXE's import table so
+         mimalloc-redirect.dll loads before ucrtbase.dll. Putting the import lib
+         first in AdditionalDependencies achieves this. /INCLUDE alone is not
+         enough — other libs (cpr, gmock, libcurl, ...) otherwise come earlier
+         in the link order and drag ucrtbase in first; mimalloc-redirect then
+         bails with "initialized after ucrtbase.dll … standard malloc is _not_
+         redirected!".
+
+    Lib name varies by mimalloc major version (2.x: mimalloc(-debug).lib,
+    3.x: mimalloc(-debug).dll.lib). Probe both with Exists() so the file works
+    against either vcpkg snapshot without per-runner edits.
+
+    Verified by MRTest's MRMesh.MimallocRedirectActive unit test (gated by
+    MIMALLOC_DISABLE_REDIRECT env var). See also MimallocRedirect.cmake for the
+    CMake equivalent.
+  -->
+  <PropertyGroup>
+    <MimallocDebugLib Condition="Exists('$(VcpkgCurrentInstalledDir)\debug\lib\mimalloc-debug.dll.lib')">mimalloc-debug.dll.lib</MimallocDebugLib>
+    <MimallocDebugLib Condition="'$(MimallocDebugLib)'=='' AND Exists('$(VcpkgCurrentInstalledDir)\debug\lib\mimalloc-debug.lib')">mimalloc-debug.lib</MimallocDebugLib>
+    <MimallocReleaseLib Condition="Exists('$(VcpkgCurrentInstalledDir)\lib\mimalloc.dll.lib')">mimalloc.dll.lib</MimallocReleaseLib>
+    <MimallocReleaseLib Condition="'$(MimallocReleaseLib)'=='' AND Exists('$(VcpkgCurrentInstalledDir)\lib\mimalloc.lib')">mimalloc.lib</MimallocReleaseLib>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Link>
+      <AdditionalDependencies>$(MimallocDebugLib);%(AdditionalDependencies)</AdditionalDependencies>
+      <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Link>
+      <AdditionalDependencies>$(MimallocReleaseLib);%(AdditionalDependencies)</AdditionalDependencies>
+      <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

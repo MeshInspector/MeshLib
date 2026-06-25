@@ -22,6 +22,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRJson.h"
+#include "MRViewer/MRI18n.h"
 #include <fstream>
 
 #ifndef MESHLIB_NO_VOXELS
@@ -36,32 +37,32 @@ AddCustomThemePlugin::AddCustomThemePlugin():
 {
 }
 
-void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
+void AddCustomThemePlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 450.0f * menuScaling;
-    auto menuHeight = 600.0f * menuScaling;
+    auto menuWidth = 450.0f * UI::scale();
+    auto menuHeight = 600.0f * UI::scale();
 
-    if ( !ImGuiBeginWindow_( { .width = menuWidth,.height = menuHeight, .menuScaling = menuScaling, .flags = 0 } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth,.height = menuHeight, .flags = 0 } ) )
         return;
 
     int selectedUserIdxBackup = selectedUserPreset_;
-    ImGui::PushItemWidth( 220.0f * menuScaling );
-    UI::combo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
+    ImGui::PushItemWidth( 220.0f * UI::scale() );
+    UI::combo( _tr( "Ribbon theme preset" ), &selectedUserPreset_, userThemesPresets_ );
     if ( selectedUserPreset_ != selectedUserIdxBackup )
         update_();
     ImGui::Separator();
 
-    ImGui::Text( "Scene colors:" );
+    ImGui::Text( "%s", _tr( "Scene colors:" ) );
     for ( int i = 0; i < sceneColors_.size(); ++i )
         ImGui::ColorEdit4( SceneColors::getName( SceneColors::Type( i ) ), &sceneColors_[i].x );
     ImGui::Separator();
 
-    ImGui::Text( "UI colors:" );
+    ImGui::Text( "%s", _tr( "UI colors:" ) );
     for ( int i = 0; i < ribbonColors_.size(); ++i )
         ImGui::ColorEdit4( ColorTheme::getRibbonColorTypeName( ColorTheme::RibbonColorsType( i ) ), &ribbonColors_[i].x );
     ImGui::Separator();
 
-    ImGui::Text( "Viewport colors:" );
+    ImGui::Text( "%s", _tr( "Viewport colors:" ) );
     for ( int i = 0; i < viewportColors_.size(); ++i )
     {
         std::string label = ColorTheme::getViewportColorTypeName( ColorTheme::ViewportColorsType( i ) ) +
@@ -71,17 +72,17 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::Separator();
 
     ImGui::Separator();
-    ImGui::Text( "ImGui preset:" );
-    UI::radioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
+    ImGui::Text( "%s", _tr( "ImGui preset:" ) );
+    UI::radioButton( _tr( "Dark" ), ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
     ImGui::SameLine();
-    UI::radioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
+    UI::radioButton( _tr( "Light" ), ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
 
     ImGui::Separator();
-    UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
-    ImGui::SetNextItemWidth( 150.0f * menuScaling );
-    UI::inputText( "Theme name", themeName_ );
+    UI::checkbox( _tr( "Apply to new objects only" ), &applyToNewObjectsOnly_ );
+    ImGui::SetNextItemWidth( 150.0f * UI::scale() );
+    UI::inputText( _tr( "Theme name" ), themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
-    if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
+    if ( UI::button( _tr( "Apply & Save" ), valid, Vector2f( -1, 0 ) ) )
     {
         std::error_code ec;
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
@@ -99,24 +100,25 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( !valid )
     {
-        UI::setTooltipIfHovered( themeName_.empty() ?
-            "Cannot save theme with empty name" :
-            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
+        if ( themeName_.empty() )
+            UI::setTooltipIfHovered( _tr( "Cannot save theme with empty name" ) );
+        else
+            UI::setTooltipIfHovered( s_tr( "Please do not use any of these symbols" ) + ": \? * / \\ \" < >" );
     }
 
     ModalDialog modalDialog( "File already exists", {
-        .headline = "File already exists",
-        .text = "Theme with name " + themeName_ + " already exists, override it?",
+        .headline = _tr( "File already exists" ),
+        .text = fmt::format( f_tr( "Theme with name {} already exists, override it?" ), themeName_ ),
     } );
-    if ( modalDialog.beginPopup( menuScaling ) )
+    if ( modalDialog.beginPopup() )
     {
         const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
         const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
 
-        if ( UI::buttonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( _tr( "Save" ), btnSize, ImGuiKey_Enter ) )
         {
             auto error = save_();
             if ( error.empty() )
@@ -125,14 +127,14 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
                 showError( error );
         }
         ImGui::SameLine( 0, p );
-        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( _tr( "Cancel" ), btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::PopStyleVar();
 
-        modalDialog.endPopup( menuScaling );
+        modalDialog.endPopup();
     }
 
     ImGui::PopItemWidth();
@@ -142,7 +144,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 std::string AddCustomThemePlugin::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !ColorTheme::isInitialized() )
-        return "Color theme is not initialized";
+        return _tr( "Color theme is not initialized" );
     return "";
 }
 
@@ -269,64 +271,19 @@ std::string AddCustomThemePlugin::save_()
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         std::filesystem::create_directories( saveDir.parent_path(), ec );
 
-        auto json = makeJson_();
-        std::ofstream ofs( saveDir );
-        Json::StreamWriterBuilder builder;
-        std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-        if ( !ofs || writer->write( json, &ofs ) != 0 )
+        if ( !serializeJsonValue( makeJson_(), saveDir ) )
         {
             spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( saveDir ) );
-            return "Cannot save theme with name: \"" + themeName_ + "\"";
+            return fmt::format( "{}: \"{}\"", _tr( "Cannot save theme with name" ), themeName_ );
         }
     }
 
     ColorTheme::setupUserTheme( themeName_ );
-    ColorTheme::apply();
     if ( !applyToNewObjectsOnly_ )
     {
         auto visualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get() );
         for ( auto obj : visualObjs )
-        {
-            obj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
-            obj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
-            obj->setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-            obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
-MR_SUPPRESS_WARNING_POP
-#ifndef MESHLIB_NO_VOXELS
-            if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
-            {
-                objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );
-                objVoxels->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
-            }
-            else
-#endif
-            if ( auto objDM = std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
-            {
-                objDM->setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ), true );
-                objDM->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
-            }
-            else if ( auto meshObj = std::dynamic_pointer_cast< ObjectMesh >( obj ) )
-            {
-                meshObj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
-                meshObj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
-                meshObj->setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
-                meshObj->setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
-                meshObj->setEdgesColor( SceneColors::get( SceneColors::Edges ) );
-                meshObj->setPointsColor( SceneColors::get( SceneColors::Points ) );
-            }
-            else if ( auto objPoints = std::dynamic_pointer_cast< ObjectPoints >( obj ) )
-            {
-                objPoints->setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ), true );
-                objPoints->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
-            }
-            else if ( auto objLines = std::dynamic_pointer_cast< ObjectLines >( obj ) )
-            {
-                objLines->setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ), true );
-                objLines->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
-            }
-        }
+            obj->resetColors();
     }
     updateThemeNames_();
     return {};

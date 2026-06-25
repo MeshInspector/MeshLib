@@ -60,7 +60,7 @@ bool RenderLabelObject::render( const ModelRenderParams& renderParams )
 
     update_();
 
-    if ( objLabel_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) )
+    if ( objLabel_->globalClippedByPlane( renderParams.viewportId ) )
     {
         Vector3f pos = renderParams.modelMatrix( objLabel_->getLabel().position );
         if ( dot( pos, renderParams.clipPlane.n ) > renderParams.clipPlane.d )
@@ -86,7 +86,14 @@ bool RenderLabelObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
+    if ( renderParams.transparencyMode.isDepthPeelingEnabled() && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDisable( GL_BLEND ) );
+    }
+    else
+    {
+        GL_EXEC( glEnable( GL_BLEND ) );
+    }
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
     GL_EXEC( glDepthFunc( GL_LEQUAL ) );

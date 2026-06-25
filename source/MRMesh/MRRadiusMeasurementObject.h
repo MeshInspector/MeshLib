@@ -16,14 +16,17 @@ public:
     RadiusMeasurementObject( RadiusMeasurementObject&& ) noexcept = default;
     RadiusMeasurementObject& operator=( RadiusMeasurementObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "RadiusMeasurementObject"; }
-    const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "RadiusMeasurementObject"; }
+    const char* typeName() const override { return StaticTypeName(); }
+
+    constexpr static const char* StaticClassName() noexcept { return "Radius"; }
+    virtual std::string className() const override { return StaticClassName(); }
+
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Radii"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     // For `std::make_shared()` in `clone()`.
     RadiusMeasurementObject( ProtectedStruct, const RadiusMeasurementObject& obj ) : RadiusMeasurementObject( obj ) {}
-
-    std::string getClassName() const override { return "Radius"; }
-    std::string getClassNameInPlural() const override { return "Radii"; }
 
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;

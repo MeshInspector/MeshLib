@@ -1,11 +1,15 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
 #include "MRPch/MRBindingMacros.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <iosfwd>
+#include <utility>
 #if MR_HAS_REQUIRES
 #include <concepts>
 #endif
@@ -31,7 +35,11 @@ struct Vector3
 
     T x, y, z;
 
-    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) { }
+    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 )
+    {
+        static_assert( sizeof( Vector3<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 3, "Invalid number of elements" );
+    }
     explicit Vector3( NoInit ) noexcept { }
     constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
 
@@ -42,15 +50,17 @@ struct Vector3
     static constexpr Vector3 plusX() noexcept { return Vector3( 1, 0, 0 ); }
     static constexpr Vector3 plusY() noexcept { return Vector3( 0, 1, 0 ); }
     static constexpr Vector3 plusZ() noexcept { return Vector3( 0, 0, 1 ); }
-    static constexpr Vector3 minusX() noexcept { return Vector3( -1, 0, 0 ); }
-    static constexpr Vector3 minusY() noexcept { return Vector3( 0, -1, 0 ); }
-    static constexpr Vector3 minusZ() noexcept { return Vector3( 0, 0, -1 ); }
+    static constexpr Vector3 minusX() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( -1, 0, 0 ); }
+    static constexpr Vector3 minusY() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( 0, -1, 0 ); }
+    static constexpr Vector3 minusZ() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector3( 0, 0, -1 ); }
 
-    template <typename U>
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and looks out of place there.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector3( const Vector3<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ) { }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
     T lengthSq() const { return x * x + y * y + z * z; }
     auto length() const
@@ -77,8 +87,7 @@ struct Vector3
     std::pair<Vector3, Vector3> perpendicular() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
 
     /// returns this vector transformed by xf if it is
-    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)> // Need this, otherwise the bindings try to instantiate `AffineXf3` with non-FP arguments.
-    Vector3 transformed( const AffineXf3<TT>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
+    Vector3 transformed( const AffineXf3OrPlaceholder<T>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         return xf ? ( *xf )( *this ) : *this;
     }
@@ -126,6 +135,25 @@ struct Vector3
         else
             return a *= ( 1 / b );
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector3& vec )
+    {
+        return s << vec.x << ' ' << vec.y << ' ' << vec.z;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector3& vec )
+    {
+        return s >> vec.x >> vec.y >> vec.z;
+    }
+
+
+    // We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
+    // Those don't bind correctly in C#, because there we can't overload functions based on mutable struct ref vs const struct ref parameters.
+
+    MR_BIND_IGNORE friend auto begin( const Vector3& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto begin( Vector3& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto end( const Vector3& v ) { return &v[3]; }
+    MR_BIND_IGNORE friend auto end( Vector3& v ) { return &v[3]; }
 };
 
 /// \related Vector3
@@ -207,6 +235,7 @@ template <typename T>
 inline Vector3<T> Vector3<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
     using std::abs; // This should allow boost.multiprecision numbers here.
+    using Unsigned::abs; // This silences warnings on unsigned integers.
     if ( abs( x ) < abs( y ) )
         return ( abs( x ) < abs( z ) ) ? Vector3( 1, 0, 0 ) : Vector3( 0, 0, 1 );
     else
@@ -236,19 +265,6 @@ Vector3<T> unitVector3( T azimuth, T altitude )
     };
 }
 
-
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
-
-template <typename T>
-MR_BIND_IGNORE inline auto begin( const Vector3<T> & v ) { return &v[0]; }
-template <typename T>
-MR_BIND_IGNORE inline auto begin( Vector3<T> & v ) { return &v[0]; }
-
-template <typename T>
-MR_BIND_IGNORE inline auto end( const Vector3<T> & v ) { return &v[3]; }
-template <typename T>
-MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
-
 /// \}
 
 #ifdef _MSC_VER
@@ -256,3 +272,19 @@ MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 #endif
 
 } // namespace MR
+
+template<>
+struct std::hash<MR::Vector3f>
+{
+    size_t operator()( MR::Vector3f const& p ) const noexcept
+    {
+        // standard implementation is slower:
+        // phmap::HashState().combine(phmap::Hash<float>()(p.x), p.y, p.z);
+        std::uint64_t xy;
+        std::uint32_t z;
+        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
+        std::memcpy( &z, &p.z, sizeof( std::uint32_t ) );
+        return size_t( xy ) ^ ( size_t( z ) << 16 );
+    }
+};

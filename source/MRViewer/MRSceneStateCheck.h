@@ -2,6 +2,7 @@
 
 #include "MRISceneStateCheck.h"
 #include "MRMesh/MRObject.h"
+#include "exports.h"
 
 namespace MR
 {
@@ -15,37 +16,19 @@ struct NoModelCheck {};
 template<typename ObjectT>
 std::string getNObjectsLine( unsigned n )
 {
-    std::string typeName = ObjectT::TypeName();
-    if ( typeName.starts_with( "Object" ) && !typeName.ends_with( "Object" ) )
-        typeName = typeName.substr( 6 );
-    if ( typeName == "Points" )
-        typeName = "Point Cloud";
-    else if ( typeName == "Lines" )
-        typeName = "Polyline";
-    else if ( typeName == "Voxels" )
-        typeName = "Volume";
-
-    if ( n != 1 )
-    {
-        if ( typeName.ends_with( "s" ) || typeName.ends_with( "sh" ) )
-            typeName += "es";
-        else
-            typeName += "s";
-    }
-
     switch ( n )
     {
     case 1:
-        return "one " + typeName;
+        return std::string( "one " ) + ObjectT::StaticClassName();
     case 2:
-        return "two " + typeName;
+        return std::string( "two " ) + ObjectT::StaticClassNameInPlural();
     case 3:
-        return "three " + typeName;
+        return std::string( "three " ) + ObjectT::StaticClassNameInPlural();
     case 4:
-        return "four " + typeName;
+        return std::string( "four " ) + ObjectT::StaticClassNameInPlural();
     default:
-        return std::to_string( n ) + " " + typeName;
-    }    
+        return std::to_string( n ) + " " + ObjectT::StaticClassNameInPlural();
+    }
 }
 
 // check that given vector has exactly N objects if type ObjectT
@@ -59,7 +42,7 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
     {
         auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
         if ( !tObj )
-            return std::string( "Selected object(s) must have type: " ) + ObjectT::TypeName();
+            return std::string( "Selected object(s) must be " ) + ObjectT::StaticClassName();
 
         if constexpr ( modelCheck )
             if ( !tObj->hasModel() )
@@ -95,10 +78,20 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
                 continue;
         ++i;
     }
-    return ( i >= n ) ? 
-        "" : 
+    return ( i >= n ) ?
+        "" :
         ( "Select at least " + getNObjectsLine<ObjectT>( n ) + " with valid model" );
 }
+// These instantiations are defined once in MRSceneStateCheck.cpp and imported elsewhere
+// (extern template, as in MRUITestEngine.h), so the common cases are not re-generated in
+// every consuming TU. Other object types stay header-instantiated as before.
+extern template MRVIEWER_API std::string getNObjectsLine<ObjectMesh>( unsigned );
+extern template MRVIEWER_API std::string getNObjectsLine<ObjectPoints>( unsigned );
+extern template MRVIEWER_API std::string getNObjectsLine<ObjectLines>( unsigned );
+extern template MRVIEWER_API std::string sceneSelectedExactly<ObjectMesh, true, true>( const std::vector<std::shared_ptr<const Object>>&, unsigned );
+extern template MRVIEWER_API std::string sceneSelectedExactly<ObjectPoints, true, true>( const std::vector<std::shared_ptr<const Object>>&, unsigned );
+extern template MRVIEWER_API std::string sceneSelectedExactly<ObjectLines, true, true>( const std::vector<std::shared_ptr<const Object>>&, unsigned );
+
 
 // check that given vector has exactly N objects if type ObjectT
 template<unsigned N, typename ObjectT, typename = void>

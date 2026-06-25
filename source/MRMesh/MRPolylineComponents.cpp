@@ -6,6 +6,7 @@
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 #include <climits>
 
 namespace
@@ -86,7 +87,7 @@ std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const Polyli
     MR_TIMER;
     auto unionFindStruct = getUnionFindStructure( topology );
     const auto& allRoots = unionFindStruct.roots();
-    UndirectedEdgeBitSet region( topology.lastNotLoneEdge() + 1 );
+    UndirectedEdgeBitSet region( topology.lastNotLoneUndirectedEdge() + 1 );
     for ( auto e : undirectedEdges( topology ) )
         region.set( e );
     auto [uniqueRootsMap, componentsCount] = getUniqueRootIds( allRoots, region );
@@ -139,19 +140,99 @@ UnionFind<MR::UndirectedEdgeId> getUnionFindStructure( const PolylineTopology& t
 }
 
 template <typename V>
-UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
+std::vector<UndirectedEdgeBitSet> getNLargeByLengthComponents( const Polyline<V>& polyline, const LargeByLengthComponentsSettings& settings )
+{
+    MR_TIMER;
+    std::vector<UndirectedEdgeBitSet> res;
+
+    assert( settings.maxLargeComponents > 0 );
+    if ( settings.maxLargeComponents <= 0 )
+    {
+        if ( settings.numSmallerComponents )
+            *settings.numSmallerComponents = -1; //unknown
+        return res;
+    }
+    if ( settings.maxLargeComponents == 1 )
+    {
+        res.push_back( getLargestComponent( polyline, settings.minLength, settings.numSmallerComponents ) );
+        return res;
+    }
+
+    auto unionFind = getUnionFindStructure( polyline.topology );
+    const auto& roots = unionFind.roots();
+
+    HashMap<UndirectedEdgeId, float> root2length;
+    for ( auto ue : undirectedEdges( polyline.topology ) )
+        root2length[roots[ue]] += polyline.edgeLength( EdgeId( ue ) );
+
+    struct LengthRoot
+    {
+        float length = 0;
+        UndirectedEdgeId root;
+        constexpr auto operator <=>( const LengthRoot& ) const = default;
+    };
+
+    std::vector<LengthRoot> lengthRootVec;
+    lengthRootVec.reserve( root2length.size() );
+    // fill it with not too small components
+    for ( const auto& [root, length] : root2length )
+    {
+        if ( length >= settings.minLength )
+            lengthRootVec.push_back( { length, root } );
+    }
+
+    // leave at most given number of roots sorted in descending by area order
+    if ( lengthRootVec.size() <= settings.maxLargeComponents )
+    {
+        if ( settings.numSmallerComponents )
+            *settings.numSmallerComponents = 0;
+        std::sort( lengthRootVec.begin(), lengthRootVec.end(), std::greater() );
+    }
+    else
+    {
+        if ( settings.numSmallerComponents )
+            *settings.numSmallerComponents = int( lengthRootVec.size() - settings.maxLargeComponents );
+        std::partial_sort( lengthRootVec.begin(), lengthRootVec.begin() + settings.maxLargeComponents, lengthRootVec.end(), std::greater() );
+        lengthRootVec.resize( settings.maxLargeComponents );
+    }
+
+    res.resize( lengthRootVec.size() );
+    ParallelFor( res, [&] ( size_t i )
+    {
+        const auto myRoot = lengthRootVec[i].root;
+        auto& ues = res[i];
+        ues.resize( polyline.topology.undirectedEdgeSize() );
+        for ( auto ue : undirectedEdges( polyline.topology ) )
+            if ( roots[ue] == myRoot )
+                ues.set( ue );
+    } );
+    return res;
+}
+
+template MRMESH_API std::vector<UndirectedEdgeBitSet> getNLargeByLengthComponents<Vector2f>( const Polyline2& polyline, const LargeByLengthComponentsSettings& settings );
+template MRMESH_API std::vector<UndirectedEdgeBitSet> getNLargeByLengthComponents<Vector3f>( const Polyline3& polyline, const LargeByLengthComponentsSettings& settings );
+
+template <typename V>
+UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline, float minLength, int* numSmallerComponents )
 {
     MR_TIMER;
 
     auto& topology = polyline.topology;
     auto unionFindStruct = getUnionFindStructure( topology );
 
-    UndirectedEdgeBitSet region( topology.lastNotLoneEdge() + 1 );
+    UndirectedEdgeBitSet region( topology.lastNotLoneUndirectedEdge() + 1 );
     for ( auto e : undirectedEdges( topology ) )
         region.set( e );
 
+    UndirectedEdgeBitSet maxLengthComponent;
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
+    if ( k <= 0 )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = 0;
+        return maxLengthComponent;
+    }
 
     auto maxLength = std::numeric_limits<float>::lowest();
     int maxI = 0;
@@ -168,7 +249,16 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
         }
     }
 
-    UndirectedEdgeBitSet maxLengthComponent( topology.lastNotLoneEdge() + 1 );
+    if ( maxLength < minLength )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = k;
+        return maxLengthComponent;
+    }
+    if ( numSmallerComponents )
+        *numSmallerComponents = k - 1;
+
+    maxLengthComponent.resize( topology.lastNotLoneUndirectedEdge() + 1 );
     for ( auto e : region )
     {
         auto index = uniqueRootsMap[e];
@@ -179,8 +269,8 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
     return maxLengthComponent;
 }
 
-template MRMESH_API UndirectedEdgeBitSet getLargestComponent<Vector2f>( const Polyline2& polyline );
-template MRMESH_API UndirectedEdgeBitSet getLargestComponent<Vector3f>( const Polyline3& polyline );
+template MRMESH_API UndirectedEdgeBitSet getLargestComponent<Vector2f>( const Polyline2& polyline, float minLength, int* numSmallerComponents );
+template MRMESH_API UndirectedEdgeBitSet getLargestComponent<Vector3f>( const Polyline3& polyline, float minLength, int* numSmallerComponents );
 
 }
 

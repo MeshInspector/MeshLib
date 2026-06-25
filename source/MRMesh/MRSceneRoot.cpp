@@ -109,7 +109,7 @@ void SceneRootObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
     // append base type
-    root["Type"].append( SceneRootObject::TypeName() );
+    root["Type"].append( SceneRootObject::StaticTypeName() );
 }
 
 void SceneRootObject::deserializeFields_( const Json::Value& root )

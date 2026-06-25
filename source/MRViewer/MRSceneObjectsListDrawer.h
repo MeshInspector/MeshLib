@@ -1,7 +1,7 @@
 #pragma once
 
 #include "exports.h"
-#include "SceneReorder.h"
+#include "MRSceneReorder.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -19,13 +19,13 @@ public:
 
     /// Main method for drawing all
     /// \detail Not creat window. Use in window block (between ImGui::Begin and ImGui::End)
-    MRVIEWER_API virtual void draw( float height, float scaling );
-    
+    MRVIEWER_API virtual void draw( float height );
+
     /// set flag of the object visibility activation after selection
     void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
     /// get flag of the object visibility activation after selection
     bool getShowNewSelectedObjects() { return showNewSelectedObjects_; };
-    
+
     /// set flag of deselect object after hidden
     void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
     /// get flag of deselect object after hidden
@@ -39,20 +39,23 @@ public:
     /// isDown - true if pressed F4, false - F3
     MRVIEWER_API void changeVisible( bool isDown );
 
-    // select all selectable objects
+    /// select all selectable objects
     MRVIEWER_API void selectAllObjects();
 
-    // stt visible flag all selectable objects
+    /// set visible flag all selectable objects
     MRVIEWER_API void setLeavesVisibility( bool visible );
 
     /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+    /// expands all `obj`s parents in tree and scroll scene tree window so selection becomes visible
+    MRVIEWER_API void expandObjectTreeAndScroll( const Object* obj );
+
     /// set possibility change object order
     MRVIEWER_API void allowSceneReorder( bool allow );
 
     /// helper method for fix scroll position after change available height
-    MRVIEWER_API void setNextFrameFixScroll() { nextFrameFixScroll_ = true; }
+    MRVIEWER_API void setNextFrameFixScroll( int skipFrames = 1 );
 protected:
     /// override this to customize prefix for objects in scene
     /// \detail height should be less or equal ImGui::GetFrameHeight()
@@ -105,7 +108,7 @@ protected:
 private:
     void drawObjectsList_();
 
-    float getDrawDropTargetHeight_() const { return 4.f * menuScaling_; }
+    float getDrawDropTargetHeight_() const;
     void reorderSceneIfNeeded_();
 
     /// this function should be called after BeginChild("SceneObjectsList") (child window with scene tree)
@@ -117,7 +120,6 @@ private:
                                            const std::vector<std::shared_ptr<Object>>& all );
     void updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
-    bool dragTrigger_ = false;
     bool clickTrigger_ = false;
     bool allowSceneReorder_ = true;
 
@@ -141,13 +143,16 @@ private:
         float absLinePosRatio{ 0.0f };
     } prevScrollInfo_;
     // true to fix scroll position in next frame
-    bool nextFrameFixScroll_{ false };
+    int framesTillFixScroll_ = 0;
     // flag to know if we are dragging objects now or not
     bool dragObjectsMode_{ false };
+    // dragging either just started, or just stopped
+    bool dragModeTrigger_{ false };
 
 protected:
-    float menuScaling_ = 1.f;
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
 
-}
+constexpr inline int sDefaultGroupState = 0; // 0 means closed; the other option is ImGuiTreeNodeFlags_DefaultOpen
+
+} //namespace MR

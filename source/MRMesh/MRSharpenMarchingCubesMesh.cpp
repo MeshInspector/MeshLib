@@ -3,6 +3,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBestFit.h"
+#include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
 
@@ -17,32 +18,29 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
     assert( settings.minNewVertDev < settings.maxNewRank3VertDev );
     VertNormals normals( vox.topology.vertSize() );
     // find normals and correct points
-    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, normals.endId() ), [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( normals, [&] ( VertId v )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
+        if ( !vox.topology.hasVert( v ) )
+            return;
+        const auto proj = findProjection( vox.points[v], ref );
+
+        Vector3f n = ( vox.points[v] - proj.proj.point ).normalized();
+        Vector3f np = ref.mesh.pseudonormal( proj.mtp, ref.region );
+        if ( settings.offset == 0 || n.lengthSq() <= 0 )
+            n = np;
+        else if ( dot( n, np ) < 0 )
+            n = -n;
+
+        if ( settings.maxOldVertPosCorrection > 0 )
         {
-            if ( !vox.topology.hasVert( v ) )
-                continue;
-            const auto proj = findProjection( vox.points[v], ref );
-
-            Vector3f n = ( vox.points[v] - proj.proj.point ).normalized();
-            Vector3f np = ref.mesh.pseudonormal( proj.mtp, ref.region );
-            if ( settings.offset == 0 || n.lengthSq() <= 0 )
-                n = np;
-            else if ( dot( n, np ) < 0 )
-                n = -n;
-
-            if ( settings.maxOldVertPosCorrection > 0 )
-            {
-                const auto newPos = proj.proj.point + settings.offset * n;
-                if ( ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
-                    vox.points[v] = newPos;
-                else
-                    n = Vector3f{}; //undefined
-            }
-
-            normals[v] = n;
+            const auto newPos = proj.proj.point + settings.offset * n;
+            if ( ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
+                vox.points[v] = newPos;
+            else
+                n = Vector3f{}; //undefined
         }
+
+        normals[v] = n;
     } );
 
     auto facesToProcess = vox.topology.getValidFaces();

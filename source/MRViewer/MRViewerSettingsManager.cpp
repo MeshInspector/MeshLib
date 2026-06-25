@@ -1,14 +1,17 @@
 #include "MRViewerSettingsManager.h"
 #include "MRUnitSettings.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
+#include "MRLocale.h"
 #include "MRRibbonMenu.h"
 #include "MRToolbar.h"
 #include "MRSpaceMouseHandlerHidapi.h"
-#include "MRSpaceMouseParameters.h"
+#include "MRSpaceMouseController.h"
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
@@ -18,22 +21,26 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
+#ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace
 {
-const std::string cOrthogrphicParamKey = "orthographic";
+const std::string cOrthographicParamKey = "orthographic";
+const std::string cShowRotationPivotParamKey = "showRotationPivot";
 const std::string cFlatShadingParamKey = "flatShading"; // Legacy
 const std::string cShadingModeParamKey = "defaultMeshShading";
 const MR::Config::Enum cShadingModeEnum = { "AutoDetect", "Smooth", "Flat" }; // SceneSettings::ShadingMode
 const std::string cGLPickRadiusParamKey = "glPickRadius";
 const std::string cUserUIScaleKey = "userUIScale";
 const std::string cColorThemeParamKey = "colorTheme";
-const std::string cSceneControlParamKey = "sceneControls";
+const std::string cSceneControlsParamKey = "sceneControls";
 const std::string cTopPanelPinnedKey = "topPanelPinned";
-const std::string cQuickAccesListKey = "quickAccesList";
+const std::string cQuickAccessListKey = "quickAccesList";
 const std::string cQuickAccessListVersionKey = "quickAccessListVersion";
 const std::string cMainWindowSize = "mainWindowSize";
 const std::string cMainWindowPos = "mainWindowPos";
@@ -43,7 +50,7 @@ const std::string cRibbonNotificationAllowedTags = "ribbonNotificationAllowedTag
 const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string cDeselectNewHiddenObjects = "deselectNewHiddenObjects";
 const std::string cCloseContextOnChange = "closeContextOnChange";
-const std::string lastExtentionsParamKey = "lastExtentions";
+const std::string lastExtensionsParamKey = "lastExtentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
@@ -55,6 +62,7 @@ const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
 const std::string cUnitsLeadingZero = "units.leadingZero";
 const std::string cUnitsThouSep = "units.thousandsSeparator";
 const std::string cUnitsLenUnit = "units.unitLength";
+const std::string cUnitsModelLenUnit = "units.unitModelLength";
 const std::string cUnitsDegreesMode = "units.degreesMode";
 const std::string cUnitsPrecisionLen = "units.precisionLength";
 const std::string cUnitsPrecisionAngle = "units.precisionAngle";
@@ -62,11 +70,15 @@ const std::string cUnitsPrecisionRatio = "units.precisionRatio";
 const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
 const std::string cGlobalBasisKey = "globalBasis";
 const std::string cGlobalBasisVisibleKey = "globalBasisVisible";
+const std::string cGlobalBasisGridVisibleKey = "globalBasisGridVisible";
 const std::string cGlobalBasisScaleKey = "globalBasusScale";
 const std::string cMruInnerMeshFormat = "mruInner.meshFormat";
 const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
+const std::string cScrollForceConfigKey = "scrollForce";
+const std::string cVisualObjectTags = "visualObjectTags";
+[[maybe_unused]] const std::string cLanguage = "language";
 }
 
 namespace Defaults
@@ -143,8 +155,8 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 {
     viewer.resetSettingsFunction( &viewer );
 
-    if ( viewer.globalBasisAxes )
-        viewer.globalBasisAxes->setVisible( Defaults::globalBasisEnabled );
+    if ( viewer.globalBasis )
+        viewer.globalBasis->setVisible( Defaults::globalBasisEnabled );
 
     for ( ViewportId id : viewer.getPresentViewports() )
     {
@@ -185,7 +197,6 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 #else
     ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::getPreset() ) );
 #endif
-    ColorTheme::apply();
 
     // lastExtentions_.clear();
 
@@ -193,22 +204,37 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 
     setDefaultSerializeMeshFormat( ".ply" );
     setDefaultSerializePointsFormat( ".ply" );
+#ifndef MRVIEWER_NO_VOXELS
     setDefaultSerializeVoxelsFormat( ".vdb" );
+#endif
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
 {
     auto& viewport = viewer.viewport();
     auto params = viewport.getParameters();
+
     auto& cfg = Config::instance();
-    params.orthographic = cfg.getBool( cOrthogrphicParamKey, params.orthographic );
-    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasisAxes )
+    params.orthographic = cfg.getBool( cOrthographicParamKey, params.orthographic );
+
+    if ( cfg.hasJsonValue( cScrollForceConfigKey ) && cfg.getJsonValue( cScrollForceConfigKey ).isDouble() )
+    {
+        viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
+    }
+
+    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasis )
     {
         auto val = cfg.getJsonValue( cGlobalBasisKey );
         if ( val[cGlobalBasisVisibleKey].isBool() )
         {
             auto visible = val[cGlobalBasisVisibleKey].asBool();
-            viewer.globalBasisAxes->setVisible( visible );
+            viewer.globalBasis->setVisible( visible );
+            bool gridVisible = visible;
+            if ( val[cGlobalBasisGridVisibleKey].isBool() )
+                gridVisible = val[cGlobalBasisGridVisibleKey].asBool();
+
+            gridVisible &= visible; // do not allow showing grid without basis because it is disabled by `viewer.globalBasis`
+            viewer.globalBasis->setGridVisible( gridVisible );
             if ( visible )
                 CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
         }
@@ -217,9 +243,15 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         else if ( val[cGlobalBasisScaleKey].isDouble() )
         {
             params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Fixed;
-            viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( val[cGlobalBasisScaleKey].asFloat() ) ) );
+            viewer.globalBasis->setAxesProps( val[cGlobalBasisScaleKey].asFloat(), viewer.globalBasis->getAxesWidth() );
         }
     }
+
+    if ( cfg.hasBool( cShowRotationPivotParamKey ) && viewer.rotationSphere )
+    {
+        viewer.rotationSphere->setVisible( cfg.getBool( cShowRotationPivotParamKey ) );
+    }
+
     viewport.setParameters( params );
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
@@ -253,9 +285,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
-    if ( cfg.hasJsonValue( cSceneControlParamKey ) )
+    if ( cfg.hasJsonValue( cSceneControlsParamKey ) )
     {
-        const auto& controls = cfg.getJsonValue( cSceneControlParamKey );
+        const auto& controls = cfg.getJsonValue( cSceneControlsParamKey );
         for ( int i = 0; i < int( MouseMode::Count ); ++i )
         {
             MouseMode mode = MouseMode( i );
@@ -347,7 +379,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         const bool maximized = cfg.getBool( cMainWindowMaximized );
         CommandLoop::appendCommand( [&viewer, maximized]
         {
-            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide )
+            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide
+                                || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::TryHidden )
                 return;
             if ( maximized )
             {
@@ -367,13 +400,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( cfg.hasJsonValue( cQuickAccessListVersionKey ) )
             ribbonMenu->setQuickAccessListVersion( cfg.getJsonValue( cQuickAccessListVersionKey ).asInt() );
 
-        if ( cfg.hasJsonValue( cQuickAccesListKey ) )
-            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
+        if ( cfg.hasJsonValue( cQuickAccessListKey ) )
+            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccessListKey ) );
 
         if ( cfg.hasJsonValue( cRibbonNotificationAllowedTags ) )
             ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTagMask( cfg.getJsonValue( cRibbonNotificationAllowedTags ).asUInt() );
 
-        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * ribbonMenu->menu_scaling() ), 0 } );
+        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * UI::scale() ), 0 } );
         // it is important to be called after `cMainWindowMaximized` block
         // as far as scene size is clamped by window size in each frame
         CommandLoop::appendCommand( [ribbonMenu, sceneSize]
@@ -394,9 +427,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         // setup default in this case
         ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::Preset::Default ) );
     }
-    ColorTheme::apply();
 
-    Json::Value lastExtentions = cfg.getJsonValue( lastExtentionsParamKey );
+    Json::Value lastExtentions = cfg.getJsonValue( lastExtensionsParamKey );
     if ( lastExtentions.isArray() )
     {
         const int end = std::min( (int)lastExtentions.size(), (int)lastExtentions_.size() );
@@ -407,27 +439,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cSpaceMouseSettings ) )
     {
         const auto& paramsJson = cfg.getJsonValue( cSpaceMouseSettings );
-        SpaceMouseParameters spaceMouseParams;
+        SpaceMouse::Parameters spaceMouseParams;
         if ( paramsJson.isMember( "translateScale" ) )
             deserializeFromJson( paramsJson["translateScale"], spaceMouseParams.translateScale );
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
-        viewer.setSpaceMouseParameters( spaceMouseParams );
-
-#ifdef _WIN32
         if ( paramsJson.isMember( "activeMouseScrollZoom" ) && paramsJson["activeMouseScrollZoom"].isBool() )
-        {
-            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
-            {
-                auto hidapiHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-                if ( hidapiHandler )
-                {
-                    const bool activeMouseScrollZoom = paramsJson["activeMouseScrollZoom"].asBool();
-                    hidapiHandler->activateMouseScrollZoom( activeMouseScrollZoom );
-                }
-            }
-        }
-#endif
+            spaceMouseParams.suppressMouseScrollZoom = !paramsJson["activeMouseScrollZoom"].asBool();
+        viewer.spaceMouseController().setParameters( spaceMouseParams );
     }
 
     if ( cfg.hasJsonValue( cTouchpadSettings ) )
@@ -450,7 +469,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             else
                 spdlog::warn( "Incorrect value for {}.swipeMode", cTouchpadSettings );
         }
-        viewer.setTouchpadParameters( parameters );
+        viewer.touchpadController().setParameters( parameters );
     }
 
     if ( cfg.hasJsonValue( cAmbientCoefSelectedObj ) )
@@ -473,8 +492,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 ret.try_emplace( cUnitsNoUnit, LengthUnit::_count );
                 return ret;
             }();
-            auto it = map.find( loadString( cUnitsLenUnit, "" ) );
-            UnitSettings::setUiLengthUnit( it == map.end() ? LengthUnit::mm : it->second == LengthUnit::_count ? std::nullopt : std::optional( it->second ), true );
+            auto targetIt = map.find( loadString( cUnitsLenUnit, "" ) );
+            UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::millimeters : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
+            auto sourceIt = map.find( loadString( cUnitsModelLenUnit, "" ) );
+            UnitSettings::setModelLengthUnit( ( sourceIt == map.end() || sourceIt->second == LengthUnit::_count ) ? std::nullopt : std::optional( sourceIt->second ) );
         }
 
         { // Thousands separator.
@@ -512,9 +533,25 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         setDefaultSerializeMeshFormat( format );
         format = loadString( cMruInnerPointsFormat, ".ply" );
         setDefaultSerializePointsFormat( format );
+        #ifndef MRVIEWER_NO_VOXELS
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
+        #endif
     }
+
+    if ( cfg.hasJsonValue( cVisualObjectTags ) )
+    {
+        auto& manager = VisualObjectTagManager::instance();
+        deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
+    }
+
+#ifndef MRVIEWER_NO_LOCALE
+    if ( cfg.hasJsonValue( cLanguage ) )
+    {
+        const auto lang = cfg.getJsonValue( cLanguage ).asString();
+        Locale::set( lang );
+    }
+#endif
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -522,19 +559,26 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     const auto& viewport = viewer.viewport();
     const auto& params = viewport.getParameters();
     auto& cfg = Config::instance();
-    cfg.setBool( cOrthogrphicParamKey, params.orthographic );
+    cfg.setBool( cOrthographicParamKey, params.orthographic );
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
-    if ( viewer.globalBasisAxes )
+    cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
+
+    if ( viewer.globalBasis )
     {
         Json::Value globalBasis;
-        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasisAxes->isVisible( viewport.id );
+        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasis->isVisible( viewport.id );
+        globalBasis[cGlobalBasisGridVisibleKey] = viewer.globalBasis->isGridVisible( viewport.id );
         if ( params.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto )
             globalBasis[cGlobalBasisScaleKey] = "Auto";
         else
-            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasisAxes->xf( viewport.id ).A.x.x;
+            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasis->getAxesLength( viewport.id );
         cfg.setJsonValue( cGlobalBasisKey, globalBasis );
     }
 
+    if ( viewer.rotationSphere )
+    {
+        cfg.setBool( cShowRotationPivotParamKey, viewer.rotationSphere->isVisible( viewport.id ) );
+    }
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
 
@@ -571,7 +615,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         int key = control ? MouseController::mouseAndModToKey( *control ) : -1;
         sceneControls[getMouseModeString( mode )] = key;
     }
-    cfg.setJsonValue( cSceneControlParamKey, sceneControls );
+    cfg.setJsonValue( cSceneControlsParamKey, sceneControls );
 
     // SceneSettings
     cfg.setEnum( cShadingModeEnum, cShadingModeParamKey, ( int )SceneSettings::getDefaultShadingMode() );
@@ -594,7 +638,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         for ( int i = 0; i < quickAccessList.size(); ++i )
             qaList[i]["Name"] = quickAccessList[i];
         cfg.setJsonValue( cQuickAccessListVersionKey, toolbar.getItemsListVersion() );
-        cfg.setJsonValue( cQuickAccesListKey, qaList );
+        cfg.setJsonValue( cQuickAccessListKey, qaList );
 
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );
 
@@ -604,7 +648,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     Json::Value exts = Json::arrayValue;
     for ( int i = 0; i < lastExtentions_.size(); ++i )
         exts[i] = lastExtentions_[i];
-    cfg.setJsonValue( lastExtentionsParamKey, exts );
+    cfg.setJsonValue( lastExtensionsParamKey, exts );
 
     // this is necessary for older versions of the software not to crash on reading these settings
     Json::Value xtext;
@@ -620,23 +664,14 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cShowExperimentalFeatures, viewer.experimentalFeatures );
 
     Json::Value spaceMouseParamsJson;
-    SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();
+    SpaceMouse::Parameters spaceMouseParams = viewer.spaceMouseController().getParameters();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
-#ifdef _WIN32
-    if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
-    {
-        auto hidapinHandler = std::dynamic_pointer_cast< SpaceMouseHandlerHidapi >( spaceMouseHandler );
-        if ( hidapinHandler )
-        {
-            spaceMouseParamsJson["activeMouseScrollZoom"] = hidapinHandler->isMouseScrollZoomActive();
-        }
-    }
-#endif
+    spaceMouseParamsJson["activeMouseScrollZoom"] = !spaceMouseParams.suppressMouseScrollZoom;
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 
     Json::Value touchpadParametersJson;
-    const auto& touchpadParameters = viewer.getTouchpadParameters();
+    const auto& touchpadParameters = viewer.touchpadController().getParameters();
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;
@@ -648,6 +683,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     { // Measurement units.
         saveBool( cUnitsLeadingZero, UnitSettings::getShowLeadingZero() );
         saveString( cUnitsLenUnit, UnitSettings::getUiLengthUnit() ? std::string( getUnitInfo( *UnitSettings::getUiLengthUnit() ).prettyName ) : cUnitsNoUnit );
+        saveString( cUnitsModelLenUnit, UnitSettings::getModelLengthUnit() ? std::string( getUnitInfo( *UnitSettings::getModelLengthUnit() ).prettyName ) : cUnitsModelLenUnit );
         saveString( cUnitsThouSep, std::string( 1, UnitSettings::getThousandsSeparator() ) );
         saveString( cUnitsDegreesMode, std::string( toString( UnitSettings::getDegreesMode() ) ) );
         saveInt( cUnitsPrecisionLen, UnitSettings::getUiLengthPrecision() );
@@ -659,8 +695,21 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
         saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
+#ifndef MRVIEWER_NO_VOXELS
         saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
+#endif
     }
+
+    {
+        Json::Value visualObjectTagsJson;
+        const auto& manager = VisualObjectTagManager::instance();
+        serializeToJson( manager, visualObjectTagsJson );
+        cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
+    }
+
+#ifndef MRVIEWER_NO_LOCALE
+    cfg.setJsonValue( cLanguage, Locale::getName() );
+#endif
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

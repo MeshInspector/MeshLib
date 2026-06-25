@@ -52,6 +52,8 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     p2vParams.dimensions = dimensions;
     p2vParams.sigma = params.sigma;
     p2vParams.minWeight = params.minWeight;
+    p2vParams.invSigmaModifier = params.invSigmaModifier;
+    p2vParams.sqrtAngleWeight = params.sqrtAngleWeight;
 
     MarchingCubesParams vmParams;
     vmParams.origin = p2vParams.origin;

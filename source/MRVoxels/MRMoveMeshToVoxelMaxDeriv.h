@@ -76,6 +76,8 @@ The algorithm can be used in different cases related to the CT-scanning workflow
 
 */
 
+/// \ingroup SubvoxelMeshCorrection
+/// \{
 
 /// \ingroup SubvoxelMeshCorrection
 struct MoveMeshToVoxelMaxDerivSettings
@@ -232,4 +234,7 @@ using MeshOnVoxelsSimpleC = MeshOnVoxelsT<const Mesh, SimpleVolumeMinMax>;
 
 using MeshOnVoxelsFunction = MeshOnVoxelsT<Mesh, FunctionVolume>;
 using MeshOnVoxelsFunctionC = MeshOnVoxelsT<const Mesh, FunctionVolume>;
+
+/// \}
+
 }

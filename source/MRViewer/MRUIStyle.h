@@ -1,15 +1,15 @@
 #pragma once
+
 #include "MRMesh/MRFinally.h"
-#include "MRPch/MRFmt.h"
 #include "MRNotificationType.h"
 #include "exports.h"
 #include "MRUnits.h"
 #include "MRVectorTraits.h"
 #include "MRImGui.h"
-#include "MRColorTheme.h"
 #include <span>
 #include <string>
 #include <optional>
+#include <filesystem>
 
 namespace MR
 {
@@ -18,6 +18,27 @@ class ImGuiImage;
 
 namespace UI
 {
+
+// Returns the global UI scale. Use this instead of passing around the scale in parameters.
+[[nodiscard]] MRVIEWER_API float scale();
+
+namespace detail
+{
+    // Strictly for internal use. Updates the value that `scale()` returns.
+    MRVIEWER_API void setScale( float newScale );
+}
+
+// Checks if the item with this name in the current window is active.
+[[nodiscard]] MRVIEWER_API bool isItemActive( const char* name );
+
+// Use this to store state across frames. Like what `CollapsingHeader()` uses to store it's open/close state.
+namespace StateStorage
+{
+
+[[nodiscard]] MRVIEWER_API bool readBool( std::string_view key, bool defaultValue = false );
+MRVIEWER_API void writeBool( std::string_view key, bool value );
+
+}
 
 // enumeration texture types
 enum class TextureType
@@ -40,10 +61,17 @@ MRVIEWER_API void init();
 /// parameters to customize buttonEx
 struct ButtonCustomizationParams
 {
+    /// If false, the button is grayed out and can't be clicked.
+    bool enabled = true;
+
+    /// imgui flags for this button
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
+
     /// gradient texture other than default
     /// {start, hover_start, acitve_start, disabled_start,
     ///  end, hover_end, acitve_end, disabled_end  }
     ImGuiImage* customTexture = nullptr;
+
     /// force use imgui background if !customTexture
     bool forceImGuiBackground = false;
 
@@ -57,15 +85,16 @@ struct ButtonCustomizationParams
 
     /// Allow interacting with this button from `UI::TestEngine`.
     bool enableTestEngine = true;
+
+    /// if not empty, force use this string as name in TestEngine
+    std::string testEngineName;
 };
 
-struct ButtonIconCustomizationParams : public ButtonCustomizationParams
+struct ButtonIconCustomizationParams
 {
-    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
-    // flag for buttonEx, which can be disabled
-    bool active = true;
-    // button without a gradient, always active, configurable by an external style
-    bool flatBackgroundColor = false;
+    // basic customization parameters
+    ButtonCustomizationParams baseParams;
+
     // if false - text is to the right
     bool textUnderImage = true;
 };
@@ -76,7 +105,7 @@ struct PlotAxis
     ImVec2 startAxisPoint;
 
     // size plot by axis
-    float size;
+    float size = 100.f;
     // optimal length between dashes
     float optimalLenth = 10.0f;
     // the minimum value of the axis
@@ -96,12 +125,22 @@ struct PlotAxis
     VarUnitToStringParams labelFormatParams;
 };
 
+/// returns imgui modifier Id based on current environment
+MRVIEWER_API ImGuiKey getImGuiModPrimaryCtrl();
+
+/// returns "Ctrl" by default or "Command" if ImGui has changed it internally for macos
+MRVIEWER_API const char* getImGuiPrimaryCtrlName();
+
 /// returns true if button is pressed in this frame, preserve its further processing in viewer keyboard events system if taken here
 MRVIEWER_API bool checkKey( ImGuiKey passedKey );
 
 /// draw gradient button, which can be disabled (active = false)
-MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
-    ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& custmParams = {} );
+[[deprecated( "Use UI::buttonEx( label, size, params ) instead" )]]
+MRVIEWER_API bool buttonEx( const char* label,bool active, const Vector2f& size = Vector2f( 0, 0 ),
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& customParams = {} );
+
+/// draw gradient button, which can be customized
+MRVIEWER_API bool buttonEx( const char* label, const Vector2f& size = Vector2f( 0, 0 ), const ButtonCustomizationParams& customParams = {} );
 /// draw gradient button, which can be disabled (active = false)
 /// returns true if button is clicked in this frame, or key is pressed (optional)
 MRVIEWER_API bool button( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
@@ -118,9 +157,9 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
 // draw dash with text along the horizontal axis
-MRVIEWER_API void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis );
+MRVIEWER_API void drawPoltHorizontalAxis( const PlotAxis& plotAxis );
 // draw dash with text along the vertical axis
-MRVIEWER_API void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis );
+MRVIEWER_API void drawPoltVerticalAxis( const PlotAxis& plotAxis );
 
 // draw a button with an icon and text under it
 MRVIEWER_API bool buttonIconEx(
@@ -129,43 +168,36 @@ MRVIEWER_API bool buttonIconEx(
     const std::string& text,
     const ImVec2& buttonSize,
     const ButtonIconCustomizationParams& params = {} );
-// button with a gradient and the ability to make it inactive
-inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
-{
-    ButtonIconCustomizationParams params;
-    params.active = active;
-    params.flatBackgroundColor = true;
-    return buttonIconEx(name, iconSize, text, buttonSize, params );
-}
+
 // button with a gradient, always active
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
     return buttonIconEx( name, iconSize, text, buttonSize );
 }
 // button without a gradient, always active, configurable by an external style
-inline bool buttonIconFlatBG( 
-    const std::string& name, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
+inline bool buttonIconFlatBG(
+    const std::string& name,
+    const Vector2f& iconSize,
+    const std::string& text,
     const ImVec2& buttonSize,
     bool textUnderIcon = true,
     ImGuiKey key = ImGuiKey_None )
 {
     ButtonIconCustomizationParams params;
-    params.flatBackgroundColor = true;
-    params.forceImguiTextColor = true;
+    params.baseParams.forceImGuiBackground = true;
+    params.baseParams.forceImguiTextColor = true;
     params.textUnderImage = textUnderIcon;
-    params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
+    params.baseParams.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
     return buttonIconEx( name, iconSize, text, buttonSize, params ) || checkKey( key );
 }
 /// draw button with icon same logic as radioButton
 /// the colors of the internal style are used
-MRVIEWER_API bool buttonUniqueIcon( 
-    const std::string& iconName, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
-    const ImVec2& buttonSize, 
-    int* value, 
+MRVIEWER_API bool buttonUniqueIcon(
+    const std::string& iconName,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
+    int* value,
     int ownValue,
     bool textUnderIcon = true,
     ImGuiKey key = ImGuiKey_None );
@@ -223,6 +255,10 @@ struct CheckboxOrModifierState
     // Whether the setting is currently inverted because the modifier is held.
     bool modifierHeld = false;
 
+    CheckboxOrModifierState() {}
+
+    CheckboxOrModifierState( bool baseValue ) : baseValue( baseValue ) {}
+
     // You usually want to read this instead of the variables above.
     // Returns `baseValue`, but inverted if `modifierHeld` is set.
     [[nodiscard]] explicit operator bool() const { return baseValue != modifierHeld; }
@@ -276,8 +312,15 @@ MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::strin
     bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
 /// draw custom content combo box
-MRVIEWER_API bool beginCombo( const char* label, const std::string& text = "Not selected", bool showPreview = true );
-MRVIEWER_API void endCombo( bool showPreview = true );
+/// If `enableTestEngine == true`, the ONLY thing you can call inside the combo-box is `comboElem()`. Then this function may always return true (so that we can discover the elements),
+///   but if it wasn't actually opened by the user, the `comboElem()`s called inside won't draw anything.
+/// If `enableTestEngine == false`, then you can call anything inside of this combo-box, but it won't be exposed to the test engine.
+MRVIEWER_API bool beginCombo( const char* label, const std::string& text, bool enableTestEngine = true );
+/// Only call this if `beginCombo()` returned true!
+MRVIEWER_API void endCombo();
+
+/// A replacement for `ImGui::Selectable()` that should be used with `beginCombo()` and `endCombo()` to be able to interact with the combo-box from the UI Test Engine.
+MRVIEWER_API bool comboElem( const char* label, bool selected );
 
 /// Draws text input, should be used instead of `ImGui::InputText()`.
 MRVIEWER_API bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
@@ -344,20 +387,19 @@ namespace detail
     template <UnitEnum E, VectorOrScalar T, typename F>
     [[nodiscard]] bool unitWidget( const char* label, T& v, UnitToStringParams<E>& unitParams, F&& func );
 
-    // Some default slider parameters. For now they are hardcoded here, but we can move them elsewhere later.
-
-    // Default drag speed for `UI::drag()`.
-    template <UnitEnum E, VectorOrScalar T>
-    requires ( VectorTraits<T>::size == 1 )
-    [[nodiscard]] float getDefaultDragSpeed();
-
-    // Default step speed for `UI::input()`.
-    template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
-    [[nodiscard]] T getDefaultStep( bool fast );
 }
 
 // Default flags for `slider()` and `drag()` below.
 inline constexpr int defaultSliderFlags = ImGuiSliderFlags_AlwaysClamp;
+
+// Default drag speed for `UI::drag()`.
+template <UnitEnum E, detail::VectorOrScalar T>
+requires ( VectorTraits<T>::size == 1 )
+[[nodiscard]] float getDefaultDragSpeed();
+
+// Default step speed for `UI::input()`.
+template <UnitEnum E, detail::VectorOrScalar T, detail::VectorOrScalar TargetType>
+[[nodiscard]] T getDefaultStep( bool fast );
 
 // Draw a slider.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
@@ -372,7 +414,11 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
 // If only the min limit is specified, then the max limit is assumed to be the largest number.
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = detail::getDefaultStep<E, U, T>( false ), const U& stepFast = detail::getDefaultStep<E, U, T>( true ) );
+bool drag( const char* label, T& v, SpeedType vSpeed = getDefaultDragSpeed<E, SpeedType>(), const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = getDefaultStep<E, U, T>( false ), const U& stepFast = getDefaultStep<E, U, T>( true ) );
+
+// Like `drag()`, but clicking it immediately activates text input, so it's not actually draggable.
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
+bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = getDefaultStep<E, U, T>( false ), const U& stepFast = getDefaultStep<E, U, T>( true ) );
 
 // Draw a read-only copyable value.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
@@ -382,39 +428,91 @@ template <UnitEnum E, detail::VectorOrScalar T>
 void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
 
 
+// A generic wrapper for drawing plus-minus drags/inputs/etc that can be toggled between symmetric and asymmetric mode.
+// Prefer `inputPlusMinus()` and other functions written on top of this one.
+// `func` is a `(const char* subLabel, T& value, const UnitToStringParams<E>& subUnitParams) -> bool`, draw your widget there with the automatic width,
+//   the specified label and value, and return its return value. `value` will receive either `plus` or `minus`.
+template <UnitEnum E, detail::Scalar T, typename F>
+bool plusMinusGeneric( const char* label, T& plus, T& minus, UnitToStringParams<E> unitToStringParams, F&& func );
+
+// A `drag()` for two numbers that can be toggled between symmetric and asymmetric mode.
+// Notice the `wrapFunc` parameter. If specified, it is a `(const char* subLabel, T& value, auto&& f) -> bool` lambda that must do `return f();`.
+//   That is called for each of the two plus/minus parts of the widget, and lets you e.g. set a custom style for those.
+// Here we intentionally don't allow passing the step values, that wouldn't render too well.
+template <UnitEnum E, detail::Scalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, typename F = std::nullptr_t>
+bool dragPlusMinus( const char* label, T& plus, T& minus, SpeedType speed = getDefaultDragSpeed<E, SpeedType>(), T plusMin = T{}, T plusMax = std::numeric_limits<T>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, F&& wrapFunc = nullptr );
+
+// An `input()` for two numbers that can be toggled between symmetric and asymmetric mode.
+// Notice the `wrapFunc` parameter. If specified, it is a `(const char* subLabel, T& value, auto&& f) -> bool` lambda that must do `return f();`.
+//   That is called for each of the two plus/minus parts of the widget, and lets you e.g. set a custom style for those.
+template <UnitEnum E, detail::Scalar T, typename F = std::nullptr_t>
+bool inputPlusMinus( const char* label, T& plus, T& minus, T plusMin = T{}, T plusMax = std::numeric_limits<T>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, F&& wrapFunc = nullptr );
+
+
 /// returns icons font character for given notification type, and its color
 MRVIEWER_API const std::pair<const char*, ImU32>& notificationChar( NotificationType type );
+
+/// draws hint with corresponding mouse btn icon
+MRVIEWER_API void mouseControlHint( ImGuiMouseButton btn, const std::string& hint );
 
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but also have styled background and notification type indicator
-MRVIEWER_API void notificationFrame( NotificationType type, const std::string& str, float scaling );
+MRVIEWER_API void notificationFrame( NotificationType type, const std::string& str );
 
 /// draw tooltip only if current item is hovered
-MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
+MRVIEWER_API void setTooltipIfHovered( const std::string& text );
+
+/// Parameters for drawing custom separator
+struct SeparatorParams
+{
+    /// optional icon in the left part of separator
+    const ImGuiImage* icon{ nullptr };
+
+    /// size of icon
+    Vector2f iconSize; ///< scaling is applied inside `separator` function
+
+    /// label at the left part of separator (drawn after icon if present)
+    std::string label;
+
+    /// framed text after label (might be used for some indications)
+    std::string suffix;
+
+    /// color of background frame behind suffix (if not present default ImGuiCol_FrameBg is used)
+    std::optional<Color> suffixFrameColor;
+
+    /// if set - use default spacing from ImGui::GetStyle()
+    /// otherwise overrides it with ribbon constants
+    bool forceImGuiSpacing = false;
+
+    /// The spacing is multiplied by this.
+    float extraScale = 1;
+};
+
+/// separator line with customizations
+MRVIEWER_API void separator( const SeparatorParams& params );
 
 /// add text with separator line
 /// if issueCount is greater than zero, this number will be displayed in red color after the text.
 /// If it equals zero - in green color
 /// Otherwise it will not be displayed
-MRVIEWER_API void separator( float scaling, const std::string& text = "", int issueCount = -1 );
+MRVIEWER_API void separator( const std::string& text = "", int issueCount = -1 );
 MRVIEWER_API void separator(
-    float scaling,
     const std::string& text,
     const ImVec4& color,
     const std::string& issueCount );
 // separator line with icon and text
 // iconSize icon size without scaling
-MRVIEWER_API void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
-MRVIEWER_API void separator( float scaling, const std::string& iconName, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
+MRVIEWER_API void separator( const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
+MRVIEWER_API void separator( const std::string& iconName, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
 
 /// draws progress bar
 /// note that even while scaling is given by argument size should still respect it
 /// size: x(y)  < 0 - take all available width(height)
 ///       x(y) == 0 - use default width(height)
-MRVIEWER_API void progressBar( float scaling, float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
+MRVIEWER_API void progressBar( float fraction, const Vector2f& size = Vector2f( -1, 0 ) );
 
 // create and append items into a TabBar: see corresponding ImGui:: functions
 MRVIEWER_API bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags = 0 );
@@ -437,16 +535,85 @@ MRVIEWER_API void alignTextToFramePadding( float padding );
 /// Can be used, for example, for \ref UI::button with nondefault height
 MRVIEWER_API void alignTextToControl( float controlHeight );
 /// Specialization of \ref alignTextToFramePadding for \ref UI::radioButton
-MRVIEWER_API void alignTextToRadioButton( float scaling );
+MRVIEWER_API void alignTextToRadioButton();
 /// Specialization of \ref alignTextToFramePadding for \ref UI::checkbox
-MRVIEWER_API void alignTextToCheckBox( float scaling );
+MRVIEWER_API void alignTextToCheckBox();
 /// Specialization of \ref alignTextToFramePadding for \ref UI::button with default height
-MRVIEWER_API void alignTextToButton( float scaling );
+MRVIEWER_API void alignTextToButton();
 
 /// Select the background of the part of the current window from min to max.
 /// If the min is not set, then the current position is taken.If max is not set, then the end of the window is taken.
 /// Added some indentation if min or max is not set.
-MRVIEWER_API void highlightWindowArea( float scaling, const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
+MRVIEWER_API void highlightWindowArea( const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
+
+/// Settings required for `UI::saveCustomConfigModal`
+struct CustomConfigModalSettings
+{
+    /// Name of desired config type
+    std::string configName;
+    /// Optional string added at the end of popup name to have unique names
+    std::string imGuiIdKey;
+    /// Directory where to save config
+    std::filesystem::path configDirectory;
+    /// String used by input
+    std::string* inputName{ nullptr };
+    /// If false, inputName is used (if inputName is nullptr this option is not used)
+    bool inputNameDialog = true;
+    /// if true - opens modal in this frame, or saves if (`!inputNameDialog` && inputName)
+    bool triggerSave = false;
+    /// If true - warns user before overriding existing file, otherwise override without warning
+    bool warnExisting = true;
+    /// Callback that is called when save is requested->returns true if file saved successfully (to close modal)
+    std::function<bool( const std::string& name )> onSave;
+
+    /// returns accumulated name of the popup
+    MRVIEWER_API std::string popupName() const;
+};
+
+/// Draw modal window to save user configs (for example Palettes)
+MRVIEWER_API void saveCustomConfigModal(const CustomConfigModalSettings& settings );
+
+// While this exists, it temporarily disables in the given list the flags with 0 bits in the given mask
+class Disabler
+{
+    ImDrawList& list;
+    ImDrawFlags oldFlags{};
+
+public:
+    Disabler( ImDrawList& list, ImDrawFlags mask )
+        : list( list ), oldFlags( list.Flags )
+    {
+        list.Flags &= mask;
+    }
+
+    Disabler( const Disabler& ) = delete;
+    Disabler& operator=( const Disabler& ) = delete;
+
+    ~Disabler()
+    {
+        list.Flags = oldFlags;
+    }
+};
+
+// While this exists, it temporarily disables antialiasing for the lines drawn to this list.
+class LineAntialiasingDisabler : Disabler
+{
+public:
+    LineAntialiasingDisabler( ImDrawList& list ) : Disabler( list, ~ImDrawListFlags_AntiAliasedLines )
+    {
+    }
+};
+
+// drag<>() is heavy (its internal value-formatting lambdas, plus getDragRangeTooltip<>,
+// dominate UI code generation) and is instantiated in many TUs. Declare the common scalar
+// instantiations extern template here and define them once in MRUIStyle.cpp. Vector
+// overloads and rarer combos stay header-instantiated.
+#define MR_X( E ) \
+    extern template MRVIEWER_API bool drag<E, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<E>, ImGuiSliderFlags, const float&, const float& ); \
+    extern template MRVIEWER_API bool drag<E, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& ); \
+    extern template MRVIEWER_API bool drag<E, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& );
+DETAIL_MR_UNIT_ENUMS( MR_X )
+#undef MR_X
 
 } // namespace UI
 

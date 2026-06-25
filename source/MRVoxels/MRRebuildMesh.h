@@ -45,6 +45,11 @@ struct RebuildMeshSettings
     /// If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;
 
+    /// the number of iterations to minimize summed deviation of triangle-triangle angles from plane;
+    /// this mode highlights sharp edges;
+    /// if decimation is on, this mode is performed before and after decimation and further reduces the number of triangles
+    int reduceAngleNumIters = 0;
+
     /// whether to decimate resulting mesh
     bool decimate = true;
 
@@ -63,5 +68,31 @@ struct RebuildMeshSettings
 /// fixes all types of issues in input mesh (degenerations, holes, self-intersections, etc.)
 /// by first converting mesh in voxel representation, and then backward
 [[nodiscard]] MRVOXELS_API Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings );
+
+struct MeshFromVoxelsPostProcessingParams
+{
+    /// The size of voxel that was used for mesh creation, must be set
+    float voxelSize = 0;
+
+    /// the number of iterations to minimize summed deviation of triangle-triangle angles from plane;
+    /// this mode highlights sharp edges;
+    /// if decimation is on, this mode is performed before and after decimation and further reduces the number of triangles
+    int reduceAngleNumIters = 0;
+
+    /// whether to decimate resulting mesh
+    bool decimate = true;
+
+    /// only if decimate = true:
+    /// edges not longer than this value will be collapsed even if it results in appearance of a triangle with high aspect ratio
+    float tinyEdgeLength = -1;
+
+    /// sharp edges that are maintained during post-processing
+    UndirectedEdgeBitSet* sharpEdges = nullptr;
+};
+
+/// improves mesh received from a marching cubes algorithm by 
+/// 1) flipping some edges to reduce total angle on the surface (optional)
+/// 2) decimating the mesh with a possible error smaller than voxel size (optional)
+MRVOXELS_API Expected<void> postprocessMeshFromVoxels( Mesh& mesh, const MeshFromVoxelsPostProcessingParams& params, const ProgressCallback& progress = {} );
 
 } //namespace MR

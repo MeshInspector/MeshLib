@@ -124,7 +124,7 @@ bool  BoundarySelectionWidget::isSelectedAndHoveredTheSame_()
 
 bool BoundarySelectionWidget::selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index )
 {
-    SCOPED_HISTORY( "Select Mesh Boundary" );
+    SCOPED_HISTORY( _t( "Select Mesh Boundary" ) );
     return selectHole_( object, index );
 }
 

@@ -87,7 +87,7 @@ echo "Thirdparty libs and include copy done"
 
 #call dpkg
 cd distr
-dpkg-deb --build ./meshlib-dev
+dpkg-deb --build -Zxz ./meshlib-dev
 
 if [ -f "./meshlib-dev.deb" ]; then
   echo "Dev deb package has been built."

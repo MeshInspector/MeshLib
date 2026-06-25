@@ -2,8 +2,6 @@
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRSceneColors.h"
-#include "MRMesh.h"
-#include "MRObjectMesh.h"
 #include "MRTimer.h"
 #include "MRHeapBytes.h"
 #include "MRStringConvert.h"
@@ -70,6 +68,42 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
     AllVisualizeProperties res;
     getAllVisualizePropertiesForEnum<VisualizeMaskType>( res );
     return res;
+}
+
+void VisualObject::copyAllSolidColors( const VisualObject& other )
+{
+    setFrontColorsForAllViewports( other.getFrontColorsForAllViewports( true ), true );
+    setFrontColorsForAllViewports( other.getFrontColorsForAllViewports( false ), false );
+    setBackColorsForAllViewports( other.getBackColorsForAllViewports() );
+}
+
+ViewportMask VisualObject::globalClippedByPlaneMask() const
+{
+    // do not access clipByPlane_ directly, to allow subclasses to override the behavior
+    auto res = getVisualizePropertyMask( VisualizeMaskType::ClippedByPlane );
+    auto parent = this->parent();
+    while ( parent )
+    {
+        if ( auto visParent = dynamic_cast<const VisualObject*>( parent ) )
+            res |= visParent->getVisualizePropertyMask( VisualizeMaskType::ClippedByPlane );
+        parent = parent->parent();
+    }
+    return res;
+}
+
+void VisualObject::setGlobalClippedByPlane( bool on, ViewportMask viewportMask )
+{
+    setVisualizeProperty( on, VisualizeMaskType::ClippedByPlane, viewportMask );
+    if ( on )
+        return;
+
+    auto parent = this->parent();
+    while ( parent )
+    {
+        if ( auto visParent = dynamic_cast<VisualObject*>( parent ) )
+            visParent->setVisualizeProperty( on, VisualizeMaskType::ClippedByPlane, viewportMask );
+        parent = parent->parent();
+    }
 }
 
 const Color& VisualObject::getFrontColor( bool selected /*= true */, ViewportId viewportId /*= {} */ ) const
@@ -150,62 +184,39 @@ void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val 
     needRedraw_ = true;
 }
 
-const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
-{
-    return labelsColor_.get( viewportId );
-}
-
-void VisualObject::setLabelsColor( const Color& color, ViewportId viewportId )
-{
-    labelsColor_.set( color, viewportId );
-    needRedraw_ = true;
-}
-
-const ViewportProperty<Color>& VisualObject::getLabelsColorsForAllViewports() const
-{
-    return labelsColor_;
-}
-
-void VisualObject::setLabelsColorsForAllViewports( ViewportProperty<Color> val )
-{
-    labelsColor_ = val;
-    needRedraw_ = true;
-}
-
 void VisualObject::setDirtyFlags( uint32_t mask, bool )
 {
-    if ( mask & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
-        mask |= DIRTY_POSITION | DIRTY_UV | DIRTY_VERTS_COLORMAP;
-    if ( mask & DIRTY_POSITION )
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
-    // DIRTY_POSITION because we use corner rendering and need to update render verts
-    // DIRTY_UV because we need to update UV coordinates
+    invalidateMetricsCache_( mask );
+    setDirtyFlagsFast_( mask );
+}
 
+void VisualObject::setDirtyFlagsFast_( uint32_t mask )
+{
     dirty_ |= mask;
-
     needRedraw_ = true; // this is needed to differ dirty render object and dirty scene
+}
+
+void VisualObject::invalidateMetricsCache_( uint32_t mask )
+{
+    if ( mask & ( DIRTY_POSITION | DIRTY_FACE ) )
+        boundingBoxCache_.reset();
 }
 
 void VisualObject::resetDirty() const
 {
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= DIRTY_CACHES;
+    dirty_ = 0;
 }
 
 void VisualObject::resetDirtyExceptMask( uint32_t mask ) const
 {
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= ( DIRTY_CACHES | mask );
+    dirty_ &= mask;
 }
 
 Box3f VisualObject::getBoundingBox() const
 {
-    if ( dirty_ & DIRTY_BOUNDING_BOX )
-    {
+    if ( !boundingBoxCache_ )
         boundingBoxCache_ = computeBoundingBox_();
-        dirty_ &= ~DIRTY_BOUNDING_BOX;
-    }
-    return boundingBoxCache_;
+    return *boundingBoxCache_;
 }
 
 void VisualObject::setPickable( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
@@ -251,13 +262,17 @@ bool VisualObject::render( const ModelRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
+    {
+        resetDirty();
         return false;
+    }
 
     return renderObj_->render( params );
 }
 
 void VisualObject::renderForPicker( const ModelBaseRenderParams& params, unsigned id ) const
 {
+    MR_TIMER;
     setupRenderObject_();
     if ( !renderObj_ )
         return;
@@ -296,16 +311,10 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
         case VisualizeMaskType::Visibility:
             (void)visibilityMask(); // Call this for the side effects, in case it's overridden. Can't return it directly, as it returns by value.
             return visibilityMask_;
-        case VisualizeMaskType::InvertedNormals:
-            return invertNormals_;
-        case VisualizeMaskType::Labels:
-            return showLabels_;
         case VisualizeMaskType::ClippedByPlane:
             return clipByPlane_;
         case VisualizeMaskType::Name:
             return showName_;
-        case VisualizeMaskType::CropLabelsByViewportRect:
-            return cropLabels_;
         case VisualizeMaskType::DepthTest:
             return depthTest_;
         case VisualizeMaskType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
@@ -323,11 +332,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
 void VisualObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
-    root["InvertNormals"] = !invertNormals_.empty();
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    root["ShowLabes"] = showLabels();
-MR_SUPPRESS_WARNING_POP
 
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
@@ -343,11 +347,8 @@ MR_SUPPRESS_WARNING_POP
 
     root["ShowName"] = showName_.value();
 
-    // labels
-    serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
-
     // append base type
-    root["Type"].append( VisualObject::TypeName() );
+    root["Type"].append( VisualObject::StaticTypeName() );
 
     root["UseDefaultSceneProperties"] = useDefaultScenePropertiesOnDeserialization_;
 }
@@ -356,13 +357,6 @@ void VisualObject::deserializeFields_( const Json::Value& root )
 {
     Object::deserializeFields_( root );
 
-    if ( root["InvertNormals"].isBool() ) // Support old versions
-        invertNormals_ = root["InvertNormals"].asBool() ? ViewportMask::all() : ViewportMask{};
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    if ( root["ShowLabes"].isBool() )
-        showLabels( root["ShowLabes"].asBool() );
-MR_SUPPRESS_WARNING_POP
     auto readColors = [&root]( const char* fieldName, Color& res )
     {
         const auto& colors = root["Colors"]["Faces"][fieldName];
@@ -381,11 +375,6 @@ MR_SUPPRESS_WARNING_POP
     if ( const auto& showNameJson = root["ShowName"]; showNameJson.isUInt() )
         showName_ = ViewportMask( showNameJson.asUInt() );
 
-    Vector4f resVec;
-    // labels
-    deserializeFromJson( root["Colors"]["Labels"], resVec );
-    labelsColor_.set( Color( resVec ) );
-
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
 
@@ -400,7 +389,6 @@ Box3f VisualObject::getWorldBox( ViewportId id ) const
 size_t VisualObject::heapBytes() const
 {
     return Object::heapBytes()
-        + MR::heapBytes( labels_ )
         + MR::heapBytes( renderObj_ );
 }
 
@@ -410,6 +398,19 @@ std::vector<std::string> VisualObject::getInfoLines() const
     if ( renderObj_ )
         res.push_back( "GL mem: " + bytesString( renderObj_->glBytes() ) );
     return res;
+}
+
+void VisualObject::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+}
+
+void VisualObject::resetColors()
+{
+    resetFrontColor();
+
+    setBackColor( SceneColors::get( SceneColors::BackFaces ) );
 }
 
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const
@@ -456,10 +457,6 @@ void VisualObject::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    setLabelsColor( SceneColors::get( SceneColors::Labels ) );
-MR_SUPPRESS_WARNING_POP
 }
 
 void VisualObject::setDefaultSceneProperties_()

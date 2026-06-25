@@ -26,7 +26,6 @@ public:
         RibbonButtonDrawer& btnDrawer;
         RibbonFontManager& fontManager;
         std::function<void( int )> changeTabFunc;
-        float scaling;
     };
     // draws search elements and window with its logic
     MRVIEWER_API void drawMenuUI( const Parameters& params );
@@ -35,7 +34,7 @@ public:
     void setSmallUI( bool on ) { isSmallUI_ = on; }
 
     // get width ui element in top panel
-    // return unscaled value 
+    // return unscaled value
     MRVIEWER_API float getWidthMenuUI() const;
 
     // get search string width (+ item spacing)
@@ -53,13 +52,13 @@ public:
     // this signal is emitted when tool is activated within search
     Signal<void( std::shared_ptr<RibbonMenuItem> )> onToolActivateSignal;
 private:
-    bool smallSearchButton_( const Parameters& params );
+    bool smallSearchButton_();
 
     void drawWindow_( const Parameters& params );
 
     void deactivateSearch_();
 
-    bool searchInputText_( const char* label, std::string& str, const RibbonMenuSearch::Parameters& params );
+    bool searchInputText_( const char* label, std::string& str );
 
     void updateSearchResult_();
 

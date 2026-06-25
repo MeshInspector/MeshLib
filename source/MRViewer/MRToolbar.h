@@ -49,8 +49,6 @@ public:
     /// set item list's upgrade rules
     MRVIEWER_API void setItemsListMigrations( const MenuItemsListMigrations& migrations ) { itemsListMigrations_ = migrations; }
 
-    MRVIEWER_API void setScaling( float scale ) { scaling_ = scale; }
-
     void setMaxItemCount( int maxItemCount ) { maxItemCount_ = maxItemCount; }
     int getMaxItemCount() const { return maxItemCount_; }
 
@@ -66,8 +64,6 @@ private:
     void dashedRect_( const Vector2f& leftTop, const Vector2f& rightBottom, float periodLength = 10.f, float fillRatio = 0.5f, const Color& color = Color::gray() );
 
     RibbonMenu* ribbonMenu_;
-
-    float scaling_ = 1.f;
 
     MenuItemsList itemsList_; // toolbar items list
     MenuItemsList itemsListCustomize_; // toolbar preview items list for Toolbar Customize window

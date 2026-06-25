@@ -1,8 +1,10 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRVector4.h"
-#include <limits>
 #include <cassert>
+#include <iosfwd>
+#include <limits>
 
 namespace MR
 {
@@ -27,7 +29,10 @@ struct Matrix4
     Vector4<T> z{ 0, 0, 1, 0 };
     Vector4<T> w{ 0, 0, 0, 1 };
 
-    constexpr Matrix4() noexcept = default;
+    constexpr Matrix4() noexcept
+    {
+        static_assert( sizeof( Matrix4<ValueType> ) == 4 * sizeof( VectorType ), "Struct size invalid" );
+    }
     /// initializes matrix from 4 row-vectors
     constexpr Matrix4( const Vector4<T>& x, const Vector4<T>& y, const Vector4<T>& z, const Vector4<T>& w ) : x( x ), y( y ), z( z ), w( w ) { }
 
@@ -42,11 +47,13 @@ struct Matrix4
 
     // Currently `AffineXf3<long long>` doesn't seem to compile, so we disable this constructor for `Matrix4<long long>`, because otherwise
     // mrbind instantiates the entire `AffineXf3<long long>` and chokes on it.
-    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)>
-    constexpr Matrix4( const AffineXf3<TT>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
+    constexpr Matrix4( const AffineXf3OrPlaceholder<T>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
 
-    template <typename U>
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Matrix4( const Matrix4<U> & m ) : x( m.x ), y( m.y ), z( m.z ), w( m.w ) { }
+
     static constexpr Matrix4 zero() noexcept { return Matrix4( Vector4<T>(), Vector4<T>(), Vector4<T>(), Vector4<T>() ); }
     static constexpr Matrix4 identity() noexcept { return Matrix4(); }
     /// returns a matrix that scales uniformly
@@ -57,8 +64,8 @@ struct Matrix4
     constexpr       T& operator ()( int row, int col )       noexcept { return operator[]( row )[col]; }
 
     /// row access
-    constexpr const Vector4<T> & operator []( int row ) const noexcept { return *( &x + row ); }
-    constexpr       Vector4<T> & operator []( int row )       noexcept { return *( &x + row ); }
+    constexpr const Vector4<T> & operator []( int row ) const noexcept { return *( ( VectorType* )this + row ); }
+    constexpr       Vector4<T> & operator []( int row )       noexcept { return *( ( VectorType* )this + row ); }
 
     /// column access
     constexpr Vector4<T> col( int i ) const noexcept { return { x[i], y[i], z[i], w[i] }; }
@@ -91,8 +98,7 @@ struct Matrix4
     constexpr T* data() { return (T*) (&x); };
     constexpr const T* data() const { return (T*) (&x); };
 
-    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)>
-    operator AffineXf3<TT>() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
+    operator AffineXf3OrPlaceholder<T>() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         assert( std::abs( w.x )     < std::numeric_limits<T>::epsilon() * 1000 );
         assert( std::abs( w.y )     < std::numeric_limits<T>::epsilon() * 1000 );
@@ -152,6 +158,16 @@ struct Matrix4
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const Matrix4& mat )
+    {
+        return s << mat.x << '\n' << mat.y << '\n' << mat.z << '\n' << mat.w << '\n';
+    }
+
+    friend std::istream& operator>>( std::istream& s, Matrix4& mat )
+    {
+        return s >> mat.x >> mat.y >> mat.z >> mat.w;
+    }
 };
 
 /// \related Matrix4
@@ -181,20 +197,22 @@ template <typename T>
 Matrix3<T> Matrix4<T>::submatrix3( int i, int j ) const noexcept
 {
     Matrix3<T> res;
-    auto* resM = (T*) &res.x;
-    int cur = 0;
+    int nrow = 0;
     for ( int m = 0; m < 4; m++ )
     {
         if ( m == i )
             continue;
+        auto & row = res[nrow++];
+        int ncol = 0;
         for ( int n = 0; n < 4; n++ )
         {
             if ( n == j )
                 continue;
-            resM[cur++] = (*this)[m][n];
+            row[ncol++] = ( *this )[m][n];
         }
+        assert( ncol == 3 );
     }
-    assert( cur == 9 );
+    assert( nrow == 3 );
     return res;
 }
 

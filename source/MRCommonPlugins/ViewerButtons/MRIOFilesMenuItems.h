@@ -22,7 +22,7 @@ public:
     void openDirectory( const std::filesystem::path& directory ) const;
 };
 
-class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragDropListener>
+class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragEntranceListener, DragOverListener, DragDropListener, PreDrawListener>
 {
 public:
     OpenFilesMenuItem();
@@ -31,7 +31,15 @@ public:
 
     virtual const DropItemsList& dropItems() const override;
 private:
+    virtual void dragEntrance_( bool entered ) override;
+    virtual bool dragOver_( int x, int y ) override;
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
+
+    virtual void preDraw_() override;
+
+    bool dragging_{ false };
+    Vector2i dragPos_;
+
     void parseLaunchParams_();
     void setupListUpdate_();
 
@@ -73,6 +81,7 @@ public:
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
 
 protected:
+    void saveSceneAs_();
     void saveScene_( const std::filesystem::path& savePath );
 };
 
@@ -87,11 +96,12 @@ class CaptureScreenshotMenuItem : public StatePlugin
 {
 public:
     CaptureScreenshotMenuItem();
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
     virtual bool blocking() const override { return false; }
 private:
     Vector2i resolution_;
     bool transparentBg_{ true };
+    bool hideOverlays_{ true };
 };
 
 class CaptureUIScreenshotMenuItem : public RibbonMenuItem

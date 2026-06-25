@@ -1,26 +1,27 @@
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64px" height="64px" viewBox="0 0 64 64" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>64x64</title>
     <defs>
-        <path id="df7qpum39a" d="M0 6.942 13.75 0v38.183L0 45.125z"/>
-        <path id="jikkk7isjb" d="M48.75 0 62.5 6.942v38.183l-13.75-6.942z"/>
-        <path d="M13.75 0v2.138c0 9.564 7.89 17.257 17.509 17.257 9.522 0 17.337-7.55 17.491-16.982V0l13.5 6.816C59.982 21.814 46.974 33.25 31.259 33.25S2.519 21.814.25 6.816L13.75 0z" id="8zci8922xc"/>
-        <linearGradient x1="0%" y1="50%" x2="100%" y2="50%" id="cg41ejix1d">
-            <stop stop-color="#1B83FF" offset="0%"/>
-            <stop stop-color="#003779" offset="100%"/>
-        </linearGradient>
+        <path d="M0,0 L64,0 L64,64 L0,64 L0,0 Z" id="path-1"></path>
+        <polygon id="path-2" points="0 6.94230769 13.75 0 13.75 38.1826923 0 45.125"></polygon>
+        <polygon id="path-3" points="48.75 0 62.5 6.94230769 62.5 45.125 48.75 38.1826923"></polygon>
+        <path d="M13.75,0 L13.75,2.13765539 C13.75,11.7022845 21.640611,19.3953656 31.2587252,19.3953656 C40.7806583,19.3953656 48.5962106,11.8451453 48.75,2.41260794 L48.75,0 L62.25,6.81577931 C59.9817232,21.8143559 46.9735461,33.25 31.2587252,33.25 C15.5439044,33.25 2.51827676,21.8143559 0.25,6.81577931 L13.75,0 Z" id="path-4"></path>
     </defs>
-    <g fill="none" fill-rule="evenodd">
-        <g transform="translate(.75 9.5)">
-            <use fill="#1B83FF" xlink:href="#df7qpum39a"/>
-            <use fill="#2777D6" xlink:href="#df7qpum39a"/>
-        </g>
-        <g transform="translate(.75 9.5)">
-            <use fill="#1B83FF" xlink:href="#jikkk7isjb"/>
-            <use fill="#2777D6" xlink:href="#jikkk7isjb"/>
-        </g>
-        <path d="m49.5 9.5 13.421 6.778c-.794 9.726-5.824 19.328-13.421 24.472v-7.625h-35v7.625C6.974 35.612 1.939 25.867 1.113 16.261L14.5 9.5l-.003.248v3.758c0 9.577 8.08 17.496 17.628 17.496 9.452 0 17.132-7.61 17.284-17.055l.091-.47V9.5z" fill-opacity=".3" fill="#000" fill-rule="nonzero"/>
-        <g transform="translate(.75 9.5)">
-            <use fill="#1B83FF" xlink:href="#8zci8922xc"/>
-            <use fill="url(#cg41ejix1d)" xlink:href="#8zci8922xc"/>
+    <g id="64x64" stroke="none" fill="none" xlink:href="#path-1" fill-rule="evenodd" stroke-width="1">
+        <g id="Logo-Blue-2" transform="translate(0.75, 9.5)">
+            <g id="Rectangle">
+                <use fill="#1B83FF" xlink:href="#path-2"></use>
+                <use fill="#0065DE" xlink:href="#path-2"></use>
+            </g>
+            <g id="Rectangle-Copy-17">
+                <use fill="#1B83FF" xlink:href="#path-3"></use>
+                <use fill="#0065DE" xlink:href="#path-3"></use>
+            </g>
+            <path d="M48.75,-3.55271368e-15 L62.1712222,6.77838074 C61.3770644,16.5041797 56.3469516,26.1059114 48.75,31.25 L48.75,23.625 L13.75,23.625 L13.75,31.25 C6.22448812,26.1117799 1.18899545,16.3669227 0.363423854,6.76103684 L13.75,-3.55271368e-15 L13.7470373,0.2485 L13.7470373,4.00609276 C13.7470373,13.583454 21.8277822,21.5019228 31.375,21.5019228 C40.8267456,21.5019228 48.5067952,13.8924408 48.6594511,4.4473471 L48.75,3.97682921 L48.75,-3.55271368e-15 Z" id="Path" fill-opacity="0.3" fill="#000000" fill-rule="nonzero"></path>
+            <g id="Path">
+                <use fill="#0065DE" xlink:href="#path-4"></use>
+                <use fill="#0672F3" xlink:href="#path-4"></use>
+            </g>
         </g>
     </g>
 </svg>

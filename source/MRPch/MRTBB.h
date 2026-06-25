@@ -9,6 +9,9 @@
 #pragma clang diagnostic ignored "-W#warnings"
 #endif
 
+// otherwise precompiled header in CMake+MSVC cannot be used in TBB-free projects
+#define __TBB_NO_IMPLICIT_LINKAGE 1
+
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 // disable constraints for OpenVDB 10 + TBB 2021.5 compatibility
 #if __GNUC__ <= 14
@@ -23,6 +26,9 @@
 #pragma warning(disable: 5220) //a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
+#if _MSC_VER >= 1950 // Visual Studio 2026 version 18.0
+#pragma warning(disable: 5259) //explicit specialization requires 'template <>' (VS2026 v18.0.0)
 #endif
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>

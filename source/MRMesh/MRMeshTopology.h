@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRBitSet.h"
@@ -7,10 +8,18 @@
 #include "MRMeshTriPoint.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
-#include <fstream>
+#include "MREnums.h"
+#include <iosfwd>
 
 namespace MR
 {
+
+struct VacantElements
+{
+    UndirectedEdgeBitSet edges;
+    VertBitSet verts;
+    FaceBitSet faces;
+};
 
 /// Mesh Topology
 /// \ingroup MeshGroup
@@ -23,8 +32,11 @@ public:
     /// checks whether the edge is disconnected from all other edges and disassociated from all vertices and faces (as if after makeEdge)
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
 
+    /// returns last not lone undirected edge id, or invalid id if no such edge exists
+    [[nodiscard]] MRMESH_API UndirectedEdgeId lastNotLoneUndirectedEdge() const;
+
     /// returns last not lone edge id, or invalid id if no such edge exists
-    [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
+    [[nodiscard]] EdgeId lastNotLoneEdge() const { auto ue = lastNotLoneUndirectedEdge(); return ue ? EdgeId( ue ) + 1 : EdgeId(); }
 
     /// remove all lone edges from given set
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
@@ -117,6 +129,12 @@ public:
     /// returns the number of edges around the given vertex
     [[nodiscard]] int getVertDegree( VertId v ) const { return getOrgDegree( edgeWithOrg( v ) ); }
 
+    /// returns true if the origin of given edge is inner to the mesh (no boundary passes via it), and has the given number of incident edges (including input one)
+    [[nodiscard]] MRMESH_API bool isOrgInnerAndHasDegree( EdgeId a, int d ) const;
+
+    /// returns true if the given vertex is inner to the mesh (no boundary passes via it), and has the given number of incident edges
+    [[nodiscard]] bool isVertInnerAndHasDegree( VertId v, int d ) const { return isOrgInnerAndHasDegree( edgeWithOrg( v ), d ); }
+
     /// returns the number of edges around the left face: 3 for triangular faces, ...
     [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
 
@@ -128,10 +146,13 @@ public:
 
     /// gets 3 vertices of given triangular face;
     /// the vertices are returned in counter-clockwise order if look from mesh outside
-    void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
-    void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
-    void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
+                   void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
+    MR_BIND_IGNORE void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); } // This one is not in the bindings because of the reference-to-array parameter.
+                   void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
     [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
+
+    /// return true if triangular face (f) has (v) as one of its vertices
+    [[nodiscard]] bool isTriVert( FaceId f, VertId v ) const { auto vs = getTriVerts( f ); return v == vs[0] || v == vs[1] || v == vs[2]; }
 
     /// returns three vertex ids for valid triangles, invalid triangles are skipped
     [[nodiscard]] MRMESH_API std::vector<ThreeVertIds> getAllTriVerts() const;
@@ -142,9 +163,9 @@ public:
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
-    MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
-               void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
-               void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
+    MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
+                   void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
     [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
@@ -161,8 +182,8 @@ public:
 
     /// gets 3 edges of given triangular face, oriented to have it on the left;
     /// the edges are returned in counter-clockwise order if look from mesh outside
-    void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const { getLeftTriEdges( e0 = edgeWithLeft( f ), e1, e2 ); }
-    void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getLeftTriEdges( e[0] = edgeWithLeft( f ), e[1], e[2] ); }
+                   void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const { getLeftTriEdges( e0 = edgeWithLeft( f ), e1, e2 ); }
+    MR_BIND_IGNORE void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getLeftTriEdges( e[0] = edgeWithLeft( f ), e[1], e[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
 
     /// returns true if the cell to the left of a is quadrangular
     [[nodiscard]] MRMESH_API bool isLeftQuad( EdgeId a ) const;
@@ -210,7 +231,7 @@ public:
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const
     {
         assert( region || updateValids_ ); // region shall be either given on input or maintained in validVerts_
-        assert( !updateValids_ || !region || ( *region - validVerts_ ).none() ); // if region is given and all valid vertices are known, then region must be a subset of them
+        assert( !updateValids_ || !region || region->is_subset_of( validVerts_ ) ); // if region is given and all valid vertices are known, then region must be a subset of them
         return region ? *region : validVerts_;
     }
 
@@ -245,11 +266,15 @@ public:
     /// creates new face-id not associated with any edge yet
     [[nodiscard]] FaceId addFaceId() { edgePerFace_.emplace_back(); if ( updateValids_ ) { validFaces_.push_back( false ); } return edgePerFace_.backId(); }
 
-    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces ant not in \param keepFaces
+    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
-    /// deletes multiple given faces by calling \ref deleteFace for each
-    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    /// deletes from this topology:
+    /// 1) all the gives faces,
+    /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
+    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
+    /// return bit sets of all vacant elements in this topology after deletion
+    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// explicitly increases the size of faces vector
     MRMESH_API void faceResize( size_t newSize );
@@ -276,7 +301,7 @@ public:
     [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const
     {
         assert( region || updateValids_ ); // region shall be either given on input or maintained in validFaces_
-        assert( !updateValids_ || !region || ( *region - validFaces_ ).none() ); // if region is given and all valid faces are known, then region must be a subset of them
+        assert( !updateValids_ || !region || region->is_subset_of( validFaces_ ) ); // if region is given and all valid faces are known, then region must be a subset of them
         return region ? *region : validFaces_;
     }
 
@@ -341,11 +366,13 @@ public:
     /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
     [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ); }
 
-    /// given a (region) boundary edge with no right face in given region, returns next boundary edge for the same region: dest(e)==org(res)
-    [[nodiscard]] MRMESH_API EdgeId nextLeftBd( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// given a (region) boundary edge with no right face in given region, returns next boundary edge for the same region: dest(e)==org(res);
+    /// \param turn determines the selection of next boundary edge in case of several alternatives
+    [[nodiscard]] MRMESH_API EdgeId nextLeftBd( EdgeId e, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost ) const;
 
-    /// given a (region) boundary edge with no right face in given region, returns previous boundary edge for the same region; dest(res)==org(e)
-    [[nodiscard]] MRMESH_API EdgeId prevLeftBd( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// given a (region) boundary edge with no right face in given region, returns previous boundary edge for the same region; dest(res)==org(e);
+    /// \param turn determines the selection of previous boundary edge in case of several alternatives, note the turn is from previous (returned) edge to the current edge
+    [[nodiscard]] MRMESH_API EdgeId prevLeftBd( EdgeId e, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost ) const;
 
 
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
@@ -370,15 +397,15 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> getLeftRings( const std::vector<EdgeId> & es ) const;
 
     /// returns all boundary edges, where each edge does not have valid left face
-    [[nodiscard]] [[deprecated( "Use findLeftBdEdges")]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
+    [[nodiscard]] [[deprecated( "Use findLeftBdEdges")]] MRMESH_API MR_BIND_IGNORE EdgeBitSet findBoundaryEdges() const;
 
     /// returns all boundary faces, having at least one boundary edge;
     /// \param region if given then search among faces there otherwise among all valid faces
-    [[nodiscard]] [[deprecated( "Use findBdFaces")]] MRMESH_API FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] [[deprecated( "Use findBdFaces")]] MRMESH_API MR_BIND_IGNORE FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
 
     /// returns all boundary vertices, incident to at least one boundary edge;
     /// \param region if given then search among vertices there otherwise among all valid vertices
-    [[nodiscard]] [[deprecated( "Use findBdVerts")]] MRMESH_API VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
+    [[nodiscard]] [[deprecated( "Use findBdVerts")]] MRMESH_API MR_BIND_IGNORE VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
 
 
     /// returns all vertices incident to path edges
@@ -445,21 +472,27 @@ public:
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, ///< returns mappings: from.id -> this.id
         bool rearrangeTriangles = false );
 
-    /// the same but copies only portion of (from) specified by fromFaces,
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {} );
-    void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} )
-        { addPartByMask( from, &fromFaces, map ); }
+    /// appends the portion of (from) specified by fromFaces in addition to the current topology: creates new edges, faces, verts;
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {}, VacantElements * vacant = {} );
+
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {}, VacantElements * vacant = {} )
+        { addPartByMask( from, &fromFaces, map, vacant ); }
 
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} );
-    void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+        const PartMapping & map = {}, VacantElements * vacant = {} );
+
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map ); }
+        const PartMapping & map = {}, VacantElements * vacant = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map, vacant ); }
 
     /// for each triangle selects edgeWithLeft with minimal origin vertex
     MRMESH_API void rotateTriangles();
@@ -535,11 +568,17 @@ private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
+    /// writes all valid edge_.org by calling setOrg_ for each valid edgePerVertex_
+    void fillOrg_();
+
     /// sets new left face to the full left ring including this edge, without updating edgePerFace_ table
     void setLeft_( EdgeId a, FaceId f );
 
-    /// data of every half-edge
-    struct HalfEdgeRecord
+    /// writes all valid edge_.left by calling setLeft_ for each valid edgePerFace_
+    void fillLeft_();
+
+    /// data of every half-edge, align to put whole record in one cache line
+    struct alignas( 16 ) HalfEdgeRecord
     {
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
@@ -553,6 +592,8 @@ private:
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
+    static_assert( sizeof( HalfEdgeRecord ) == 16 );
+
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>
     void translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const;
@@ -654,7 +695,5 @@ template<typename T, typename I>
     }
     return newVector;
 }
-
-MRMESH_API void loadMeshDll();
 
 } // namespace MR

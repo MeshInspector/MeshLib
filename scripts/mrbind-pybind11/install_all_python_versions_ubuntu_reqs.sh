@@ -17,6 +17,6 @@ for ver in $PY_VERSIONS; do
     else
         curl -sS https://bootstrap.pypa.io/get-pip.py | python$ver
     fi
-    python$ver -m pip install --upgrade -r ./requirements/python.txt
+    python$ver -m pip install --upgrade -r ./requirements/python/requirements.txt
     python$ver -m pip install pytest
 done

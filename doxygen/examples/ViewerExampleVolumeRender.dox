@@ -1,0 +1,16 @@
+/**
+ \page ExampleViewerVolumeRender Viewer Example Volume Rendering
+
+Example of using Viewer for Volume Rendering
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Python</b>
+\note Python API version 3 and later
+
+\include ViewerVolumeRender.dox.py
+\image html Volume_rendering.png
+
+</div>
+
+ */

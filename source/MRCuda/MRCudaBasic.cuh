@@ -2,10 +2,11 @@
 
 #include "MRCuda.cuh"
 
+#ifndef __CUDACC__ // reduce dependency of CUDA kernels from host STL
 #include "MRMesh/MRVector.h"
+#endif
 
 #include <cstdint>
-#include <vector>
 
 namespace MR
 {
@@ -18,11 +19,10 @@ class DynamicArray
 {
 public:
     DynamicArray() = default;
+
     // malloc given size on GPU
     explicit DynamicArray( size_t size );
-    // copy given vector to GPU
-    template <typename U>
-    explicit DynamicArray( const std::vector<U>& vec );
+
     // free this array from GPU (if needed)
     ~DynamicArray();
 
@@ -31,6 +31,11 @@ public:
 
     DynamicArray( const DynamicArray& ) = delete;
     DynamicArray& operator=( const DynamicArray& other ) = delete;
+
+#ifndef __CUDACC__
+    // copy given vector to GPU
+    template <typename U>
+    explicit DynamicArray( const std::vector<U>& vec );
 
     // copy given vector to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
     template <typename U>
@@ -43,15 +48,16 @@ public:
         return fromVector( vec.vec_ );
     }
 
+    // copy this GPU array to given vector
+    template <typename U>
+    cudaError_t toVector( std::vector<U>& vec ) const;
+#endif
+
     // copy given data to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
     cudaError_t fromBytes( const uint8_t* data, size_t numBytes );
 
     // copy given data to CPU (data should be already allocated)
     cudaError_t toBytes( uint8_t* data );
-
-    // copy this GPU array to given vector
-    template <typename U>
-    cudaError_t toVector( std::vector<U>& vec ) const;
 
     // copy given data to GPU (truncated if the array size is smaller that the data one)
     template <typename U>

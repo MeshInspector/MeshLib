@@ -2,7 +2,9 @@
 
 #include "config.h"
 
+#include "MRMesh/MRMacros.h"
 #include "MRMesh/MRCanonicalTypedefs.h"
+#include "MRPch/MRBindingMacros.h"
 
 // Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
 //
@@ -67,6 +69,7 @@
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
 #include <functional>
+#include <cstdint>
 
 #ifdef _WIN32
 #   ifdef MRMesh_EXPORTS
@@ -74,13 +77,17 @@
 #   else
 #       define MRMESH_API __declspec(dllimport)
 #   endif
-#   define MRMESH_CLASS
+#   define MRMESH_CLASS // VS implicitly exports typeinfo/vtable
 #else
 #   define MRMESH_API   __attribute__((visibility("default")))
 // to fix undefined reference to `typeinfo/vtable`
 // Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
 //   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
-#   define MRMESH_CLASS __attribute__((visibility("default")))
+#   ifdef __clang__ // https://stackoverflow.com/q/29717029/7325599
+#       define MRMESH_CLASS __attribute__((type_visibility("default"))) //unlike `visibility`, `type_visibility` does not make all (including private) member functions visible
+#   else
+#       define MRMESH_CLASS __attribute__((visibility("default")))
+#   endif
 #endif
 
 namespace MR
@@ -102,6 +109,7 @@ class MRMESH_CLASS ObjTag;
 class MRMESH_CLASS TextureTag;
 class MRMESH_CLASS GraphVertTag;
 class MRMESH_CLASS GraphEdgeTag;
+class MRMESH_CLASS LocaleDomainTag;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( EdgeId,           Id<EdgeTag>           )
@@ -116,7 +124,12 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( TextureId,        Id<TextureTag>        )
     ( GraphVertId,      Id<GraphVertTag>      )
     ( GraphEdgeId,      Id<GraphEdgeTag>      )
+    ( LocaleDomainId,   Id<LocaleDomainTag>   )
 )
+// Those are full specializations in `MRId.h`, so `MR_CANONICAL_TYPEDEFS` doesn't work on them.
+// Have to add this too.
+template <> class MR_BIND_PREFERRED_NAME(MR::EdgeId) Id<EdgeTag>;
+template <> class MR_BIND_PREFERRED_NAME(MR::VoxelId) Id<VoxelTag>;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), NoInitId,
     ( NoInitNodeId, NoInitId<NodeTag> )
@@ -127,6 +140,7 @@ struct PackMapping;
 
 class ViewportId;
 class ViewportMask;
+template<typename T> class ViewportProperty;
 
 struct UnorientedTriangle;
 struct SomeLocalTriangulations;
@@ -167,78 +181,110 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), SetBitIterato
 struct Color;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector2,
-    ( Vector2b,  Vector2<bool>      )
-    ( Vector2i,  Vector2<int>       )
-    ( Vector2ll, Vector2<long long> )
-    ( Vector2f,  Vector2<float>     )
-    ( Vector2d,  Vector2<double>    )
+    ( Vector2b,   Vector2<bool>   )
+    ( Vector2i,   Vector2<int>    )
+    ( Vector2i64, Vector2<std::int64_t> )
+    ( Vector2f,   Vector2<float>  )
+    ( Vector2d,   Vector2<double> )
 )
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector3,
-    ( Vector3b,  Vector3<bool>      )
-    ( Vector3i,  Vector3<int>       )
-    ( Vector3ll, Vector3<long long> )
-    ( Vector3f,  Vector3<float>     )
-    ( Vector3d,  Vector3<double>    )
+    ( Vector3b,   Vector3<bool>   )
+    ( Vector3i,   Vector3<int>    )
+    ( Vector3i64, Vector3<std::int64_t> )
+    ( Vector3f,   Vector3<float>  )
+    ( Vector3d,   Vector3<double> )
 )
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Vector4,
-    ( Vector4b,  Vector4<bool>      )
-    ( Vector4i,  Vector4<int>       )
-    ( Vector4ll, Vector4<long long> )
-    ( Vector4f,  Vector4<float>     )
-    ( Vector4d,  Vector4<double>    )
+    ( Vector4b,   Vector4<bool>   )
+    ( Vector4i,   Vector4<int>    )
+    ( Vector4i64, Vector4<std::int64_t> )
+    ( Vector4f,   Vector4<float>  )
+    ( Vector4d,   Vector4<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using Vector4ll [[deprecated("Use `Vector4i64` instead.")]] = Vector4<long long>;
+#endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix2,
-    ( Matrix2b,  Matrix2<bool>      )
-    ( Matrix2i,  Matrix2<int>       )
-    ( Matrix2ll, Matrix2<long long> )
-    ( Matrix2f,  Matrix2<float>     )
-    ( Matrix2d,  Matrix2<double>    )
+    ( Matrix2b,   Matrix2<bool>   )
+    ( Matrix2i,   Matrix2<int>    )
+    ( Matrix2i64, Matrix2<std::int64_t> )
+    ( Matrix2f,   Matrix2<float>  )
+    ( Matrix2d,   Matrix2<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using Matrix2ll [[deprecated("Use `Matrix2i64` instead.")]] = Matrix2<long long>;
+#endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix3,
-    ( Matrix3b,  Matrix3<bool>      )
-    ( Matrix3i,  Matrix3<int>       )
-    ( Matrix3ll, Matrix3<long long> )
-    ( Matrix3f,  Matrix3<float>     )
-    ( Matrix3d,  Matrix3<double>    )
+    ( Matrix3b,   Matrix3<bool>   )
+    ( Matrix3i,   Matrix3<int>    )
+    ( Matrix3i64, Matrix3<std::int64_t> )
+    ( Matrix3f,   Matrix3<float>  )
+    ( Matrix3d,   Matrix3<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using Matrix3ll [[deprecated("Use `Matrix3i64` instead.")]] = Matrix3<long long>;
+#endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix4,
-    ( Matrix4b,  Matrix4<bool>      )
-    ( Matrix4i,  Matrix4<int>       )
-    ( Matrix4ll, Matrix4<long long> )
-    ( Matrix4f,  Matrix4<float>     )
-    ( Matrix4d,  Matrix4<double>    )
+    ( Matrix4b,   Matrix4<bool>   )
+    ( Matrix4i,   Matrix4<int>    )
+    ( Matrix4i64, Matrix4<std::int64_t> )
+    ( Matrix4f,   Matrix4<float>  )
+    ( Matrix4d,   Matrix4<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using Matrix4ll [[deprecated("Use `Matrix4i64` instead.")]] = Matrix4<long long>;
+#endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix2,
-    ( SymMatrix2b,  SymMatrix2<bool>      )
-    ( SymMatrix2i,  SymMatrix2<int>       )
-    ( SymMatrix2ll, SymMatrix2<long long> )
-    ( SymMatrix2f,  SymMatrix2<float>     )
-    ( SymMatrix2d,  SymMatrix2<double>    )
+    ( SymMatrix2b,   SymMatrix2<bool>   )
+    ( SymMatrix2i,   SymMatrix2<int>    )
+    ( SymMatrix2i64, SymMatrix2<std::int64_t> )
+    ( SymMatrix2f,   SymMatrix2<float>  )
+    ( SymMatrix2d,   SymMatrix2<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using SymMatrix2ll [[deprecated("Use `SymMatrix2i64` instead.")]] = SymMatrix2<long long>;
+#endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix3,
-    ( SymMatrix3b,  SymMatrix3<bool>      )
-    ( SymMatrix3i,  SymMatrix3<int>       )
-    ( SymMatrix3ll, SymMatrix3<long long> )
-    ( SymMatrix3f,  SymMatrix3<float>     )
-    ( SymMatrix3d,  SymMatrix3<double>    )
+    ( SymMatrix3b,   SymMatrix3<bool>   )
+    ( SymMatrix3i,   SymMatrix3<int>    )
+    ( SymMatrix3i64, SymMatrix3<std::int64_t> )
+    ( SymMatrix3f,   SymMatrix3<float>  )
+    ( SymMatrix3d,   SymMatrix3<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using SymMatrix3ll [[deprecated("Use `SymMatrix3i64` instead.")]] = SymMatrix3<long long>;
+#endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
-    ( SymMatrix4b,  SymMatrix4<bool>      )
-    ( SymMatrix4i,  SymMatrix4<int>       )
-    ( SymMatrix4ll, SymMatrix4<long long> )
-    ( SymMatrix4f,  SymMatrix4<float>     )
-    ( SymMatrix4d,  SymMatrix4<double>    )
+    ( SymMatrix4b,   SymMatrix4<bool>   )
+    ( SymMatrix4i,   SymMatrix4<int>    )
+    ( SymMatrix4i64, SymMatrix4<std::int64_t> )
+    ( SymMatrix4f,   SymMatrix4<float>  )
+    ( SymMatrix4d,   SymMatrix4<double> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using SymMatrix4ll [[deprecated("Use `SymMatrix4i64` instead.")]] = SymMatrix4<long long>;
+#endif
 
-MR_CANONICAL_TYPEDEFS( (template <typename V> struct), AffineXf,
+namespace detail::AffineXf3f
+{
+    template <typename T>
+    struct VectorElemType {};
+    template <template <typename> typename T, typename U>
+    struct VectorElemType<T<U>> { using type = U; };
+
+    template <typename T>
+    static constexpr bool IsValidTemplateArg = std::is_floating_point_v<typename VectorElemType<T>::type>;
+}
+
+MR_CANONICAL_TYPEDEFS( (template <typename V> MR_REQUIRES_IF_SUPPORTED( detail::AffineXf3f::IsValidTemplateArg<V> ) struct), AffineXf,
     ( AffineXf2f, AffineXf<Vector2<float>>  )
     ( AffineXf2d, AffineXf<Vector2<double>> )
     ( AffineXf3f, AffineXf<Vector3<float>>  )
@@ -246,6 +292,15 @@ MR_CANONICAL_TYPEDEFS( (template <typename V> struct), AffineXf,
 )
 template <typename T> using AffineXf2 = AffineXf<Vector2<T>>;
 template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
+
+namespace detail::AffineXf3f
+{
+    template <typename T, typename = void> struct TypeOrPlaceholder { using type = std::nullptr_t; };
+    template <typename T> struct TypeOrPlaceholder<T, std::enable_if_t<IsValidTemplateArg<T>>> { using type = AffineXf<T>; };
+}
+
+template <typename T> using AffineXf2OrPlaceholder = typename detail::AffineXf3f::TypeOrPlaceholder<Vector2<T>>::type;
+template <typename T> using AffineXf3OrPlaceholder = typename detail::AffineXf3f::TypeOrPlaceholder<Vector3<T>>::type;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), RigidXf3,
     ( RigidXf3f, RigidXf3<float>  )
@@ -316,6 +371,8 @@ using Contour2f = Contour2<float>;
 using Contour3d = Contour3<double>;
 using Contour3f = Contour3<float>;
 
+struct MarkedContour3f;
+
 template <typename V> using Contours = std::vector<Contour<V>>;
 template <typename T> using Contours2 = Contours<Vector2<T>>;
 template <typename T> using Contours3 = Contours<Vector3<T>>;
@@ -324,31 +381,31 @@ using Contours2f = Contours2<float>;
 using Contours3d = Contours3<double>;
 using Contours3f = Contours3<float>;
 
-template <typename T> using Contour3 = Contour<Vector3<T>>;
-using Contour3d = Contour3<double>;
-using Contours3d = std::vector<Contour3d>;
-using Contour3f = Contour3<float>;
-using Contours3f = std::vector<Contour3f>;
-
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
     ( Plane3f, Plane3<float>  )
     ( Plane3d, Plane3<double> )
 )
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
-    ( Box1i,  Box<int>       )
-    ( Box1ll, Box<long long> )
-    ( Box1f,  Box<float>     )
-    ( Box1d,  Box<double>    )
-    ( Box2i,  Box<Vector2<int>>       )
-    ( Box2ll, Box<Vector2<long long>> )
-    ( Box2f,  Box<Vector2<float>>     )
-    ( Box2d,  Box<Vector2<double>>    )
-    ( Box3i,  Box<Vector3<int>>       )
-    ( Box3ll, Box<Vector3<long long>> )
-    ( Box3f,  Box<Vector3<float>>     )
-    ( Box3d,  Box<Vector3<double>>    )
+    ( Box1i,   Box<int>             )
+    ( Box1i64, Box<std::int64_t>          )
+    ( Box1f,   Box<float>           )
+    ( Box1d,   Box<double>          )
+    ( Box2i,   Box<Vector2<int>>    )
+    ( Box2i64, Box<Vector2<std::int64_t>> )
+    ( Box2f,   Box<Vector2<float>>  )
+    ( Box2d,   Box<Vector2<double>> )
+    ( Box3i,   Box<Vector3<int>>    )
+    ( Box3i64, Box<Vector3<std::int64_t>> )
+    ( Box3f,   Box<Vector3<float>>  )
+    ( Box3d,   Box<Vector3<double>> )
 )
+#if !MR_PARSING_FOR_ANY_BINDINGS
+using Box1ll [[deprecated("Use `Box1i64` instead.")]] = Box<long long>;
+using Box2ll [[deprecated("Use `Box2i64` instead.")]] = Box<Vector2<long long>>;
+using Box3ll [[deprecated("Use `Box3i64` instead.")]] = Box<Vector3<long long>>;
+#endif
+
 template <typename T> using MinMax = Box<T>;
 using MinMaxf = MinMax<float>;
 using MinMaxd = MinMax<double>;
@@ -363,8 +420,8 @@ template<typename T, typename I> struct MaxArg;
 template<typename T, typename I> struct MinMaxArg;
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Ball,
-    ( Ball1f,  Ball<float>     )
-    ( Ball1d,  Ball<double>    )
+    ( Ball1f,  Ball<float>              )
+    ( Ball1d,  Ball<double>             )
     ( Ball2f,  Ball<Vector2<float>>     )
     ( Ball2d,  Ball<Vector2<double>>    )
     ( Ball3f,  Ball<Vector3<float>>     )
@@ -420,6 +477,7 @@ using IsoLines = SurfacePaths;
 using PlaneSection = SurfacePath;
 using PlaneSections = SurfacePaths;
 struct EdgePointPair;
+struct GeodesicPath;
 class Laplacian;
 
 using VertPair = std::pair<VertId, VertId>;
@@ -432,6 +490,8 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), TriPoint,
     ( TriPointd, TriPoint<double> )
 )
 
+struct FaceFace;
+struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
 struct MeshTriPoint;
@@ -446,14 +506,26 @@ template <typename I> struct IteratorRange;
 /// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
 using UVCoord = Vector2f;
 
-/// three vertex ids describing a triangle topology
+/// two vertex ids describing an edge with the ends in vertices given by their ids
+using TwoVertIds = std::array<VertId, 2>;
+
+/// three vertex ids describing a triangle with the corners in vertices given by their ids
 using ThreeVertIds = std::array<VertId, 3>;
+
+/// three UV-coordinates describing texturing of a triangle
+using ThreeUVCoords = std::array<UVCoord, 3>;
 
 struct MRMESH_CLASS Dipole;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
+    /// mapping from UndirectedEdgeId to its end vertices
+    ( Edges,    Vector<TwoVertIds, UndirectedEdgeId> )
+
     /// mapping from FaceId to a triple of vertex indices
     ( Triangulation,  Vector<ThreeVertIds, FaceId> )
+
+    /// mapping from FaceId to a triple of UV-coordinates
+    ( TriCornerUVCoords, Vector<ThreeUVCoords, FaceId> )
 
     ( Dipoles,  Vector<Dipole, NodeId> )
 
@@ -554,6 +626,7 @@ struct MRMESH_CLASS Mesh;
 struct MRMESH_CLASS EdgeLengthMesh;
 class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
+struct MRMESH_CLASS PointCloudPart;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 class MRMESH_CLASS AABBTreeObjects;
@@ -562,6 +635,8 @@ struct MRMESH_CLASS PartMapping;
 struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
+struct FillHoleParams;
+struct FillHoleNicelySettings;
 struct TriMesh;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,
@@ -609,6 +684,7 @@ class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
 struct ObjectMeshData;
+struct LoadedMeshData;
 class ObjectPointsHolder;
 class ObjectPoints;
 class ObjectLinesHolder;
@@ -637,8 +713,13 @@ class ChangeMeshEdgeSelectionAction;
 class ChangeMeshCreasesAction;
 class ChangePointPointSelectionAction;
 class ChangeMeshAction;
+class ChangeMeshDataAction;
 class ChangeMeshPointsAction;
 class ChangeMeshTopologyAction;
+class PartialChangeMeshAction;
+class PartialChangeMeshPointsAction;
+class PartialChangeMeshTopologyAction;
+class VersatileChangeMeshPointsAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;
@@ -657,31 +738,20 @@ class WatershedGraph;
 
 struct TbbTaskArenaAndGroup;
 
+struct SaveSettings;
+namespace SceneSave  { struct Settings; }
+namespace ObjectSave { struct Settings; }
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-enum class FilterType : char
-{
-    Linear,
-    Discrete
-};
+enum class FilterType : char;
+enum class WrapType : char;
+enum class Reorder : char;
 
-enum class WrapType : char
-{
-    Repeat,
-    Mirror,
-    Clamp
-};
-
-/// determines how points to be ordered
-enum class Reorder : char
-{
-    None,              ///< the order is not changed
-    Lexicographically, ///< the order is determined by lexicographical sorting by coordinates (optimal for uniform sampling)
-    AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
-};
+struct TransparencyMode;
 
 /// squared value
 template <typename T>
@@ -726,6 +796,17 @@ struct VertDuplication;
 
 } //namespace MeshBuilder
 
+namespace Locale
+{
+
+/// special no-op inline functions to mark string literal as translatable
+constexpr inline auto translate_noop( const char* str ) noexcept { return str; }
+constexpr inline auto translate_noop( const char* ctx, const char* str ) noexcept { (void)ctx; return str; }
+constexpr inline auto translate_noop( const char* single, const char* plural, std::int64_t n ) noexcept { return n == 1 ? single : plural; }
+constexpr inline auto translate_noop( const char* ctx, const char* single, const char* plural, std::int64_t n ) noexcept { (void)ctx; return n == 1 ? single : plural; }
+
+} // namespace Locale
+
 } //namespace MR
 
 #ifdef __cpp_lib_unreachable
@@ -741,3 +822,7 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+#ifndef MR_NO_I18N_MACROS
+#define _t( ... ) MR::Locale::translate_noop( __VA_ARGS__ )
+#endif // MR_NO_I18N_MACROS

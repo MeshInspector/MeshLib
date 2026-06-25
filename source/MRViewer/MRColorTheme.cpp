@@ -25,7 +25,7 @@
 
 #ifdef __EMSCRIPTEN__
 
-extern "C" 
+extern "C"
 {
 // 0 - dark
 // 1 - light
@@ -36,7 +36,6 @@ EMSCRIPTEN_KEEPALIVE int emsChangeColorTheme( int theme )
         ColorTheme::setupDefaultDark();
     else
         ColorTheme::setupDefaultLight();
-    ColorTheme::apply();
     return 1;
 }
 
@@ -83,23 +82,20 @@ void ColorTheme::setupFromJson( const Json::Value& root, Type type )
     instance.themePreset_ = themePreset;
     instance.type_ = type;
 
+    std::vector<Color> sceneColors;
     if ( valid )
     {
-        if ( instance.sceneColors_.size() < SceneColors::Count )
-            instance.sceneColors_.resize( SceneColors::Count );
+        sceneColors.resize( SceneColors::Count );
 
         for ( int i = 0; i < SceneColors::Count; ++i )
         {
             auto name = SceneColors::getName( SceneColors::Type( i ) );
             if ( root[name].isObject() )
-                deserializeFromJson( root[name], instance.sceneColors_[i] );
+                deserializeFromJson( root[name], sceneColors[i] );
             else
                 defined = false;
         }
-    }
 
-    if ( valid )
-    {
         if ( root["Ribbon Colors"].isObject() )
         {
             const auto& ribColors = root["Ribbon Colors"];
@@ -137,7 +133,12 @@ void ColorTheme::setupFromJson( const Json::Value& root, Type type )
     if ( !valid || ( type == Type::Default && !defined ) )
     {
         spdlog::error( "Color theme deserialization failed: invalid json schema." );
-        instance.sceneColors_.clear();
+        instance.isInitialized_ = false;
+    }
+    else
+    {
+        instance.isInitialized_ = true;
+        apply_( sceneColors );
     }
 }
 
@@ -155,17 +156,10 @@ void ColorTheme::serializeCurrentToFile( const std::filesystem::path& path )
 {
     Json::Value root;
     serializeCurrentToJson( root );
-
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( path, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
+    if ( !serializeJsonValue( root, path ) )
     {
         spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( path ) );
     }
-
-    ofs.close();
 }
 
 void ColorTheme::serializeCurrentToJson( Json::Value& root )
@@ -173,18 +167,16 @@ void ColorTheme::serializeCurrentToJson( Json::Value& root )
     assert( ImGui::GetCurrentContext() );
     auto& instance = ColorTheme::instance();
 
-    if ( instance.sceneColors_.size() < SceneColors::Count )
-        instance.sceneColors_.resize( SceneColors::Count );
-
+    std::vector<Color> sceneColors( SceneColors::Count );
     for ( int i = 0; i < SceneColors::Count; ++i )
-        instance.sceneColors_[i] = SceneColors::get( SceneColors::Type( i ) );
+        sceneColors[i] = SceneColors::get( SceneColors::Type( i ) );
 
     const auto& vpParams = Viewer::instanceRef().viewport().getParameters();
     setViewportColor( vpParams.backgroundColor, ViewportColorsType::Background );
     setViewportColor( vpParams.borderColor, ViewportColorsType::Borders );
 
     for ( int i = 0; i < SceneColors::Count; ++i )
-        serializeToJson( instance.sceneColors_[i], root[SceneColors::getName( SceneColors::Type( i ) )] );
+        serializeToJson( sceneColors[i], root[SceneColors::getName( SceneColors::Type( i ) )] );
 
     root["ImGuiPreset"] = getPresetName( instance.themePreset_ );
 
@@ -197,20 +189,14 @@ void ColorTheme::serializeCurrentToJson( Json::Value& root )
         serializeToJson( instance.viewportColors_[i], vieportColors[getViewportColorTypeName( ViewportColorsType( i ) )] );
 }
 
-void ColorTheme::apply()
+void ColorTheme::apply_( const std::vector<Color>& sceneColors )
 {
-    if ( !ColorTheme::isInitialized() )
-    {
-        spdlog::warn( "Color theme is not initialized" );
-        return;
-    }
-
     spdlog::info( "Apply color theme." );
 
     const auto& instance = ColorTheme::instance();
 
     for ( int i = 0; i < SceneColors::Count; ++i )
-        SceneColors::set( SceneColors::Type( i ), instance.sceneColors_[i] );
+        SceneColors::set( SceneColors::Type( i ), sceneColors[i] );
 
     RibbonButtonDrawer::InitGradientTexture();
     UI::init();
@@ -235,7 +221,7 @@ void ColorTheme::apply()
 
 bool ColorTheme::isInitialized()
 {
-    return !ColorTheme::instance().sceneColors_.empty();
+    return ColorTheme::instance().isInitialized_;
 }
 
 void ColorTheme::setRibbonColor( const Color& color, RibbonColorsType type )
@@ -315,12 +301,13 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "HeaderBackground",
         "HeaderSeparator",
         "TopPanelBackground",
+        "TopPanelSearchBackground",
         "QuickAccessBackground",
         "Borders",
 
         "TabHovered",
         "TabClicked",
-        "TabActive",
+        "TabActive", // in update ImGui 1.90.9 ImGuiCol_TabActive renamed to ImGuiCol_TabSelected, but we keep old name for backward compatibility with old color scheme files
         "TabActiveHovered",
         "TabActiveClicked",
         "TabText",
@@ -375,7 +362,9 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "GradBtnSecStyleActiveStart",
         "GradBtnSecStyleEnd",
         "GradBtnSecStyleHoverEnd",
-        "GradBtnSecStyleActiveEnd"
+        "GradBtnSecStyleActiveEnd",
+
+        "Grid",
     };
     return colorNames[int( type )];
 }
@@ -397,7 +386,10 @@ const char* ColorTheme::getViewportColorTypeName( ViewportColorsType type )
     constexpr std::array<const char*, size_t( ViewportColorsType::Count )> colorNames
     {
         "Background",
-        "Borders"
+        "Borders",
+        "AxisX",
+        "AxisY",
+        "AxisZ"
     };
     return colorNames[int( type )];
 }
@@ -454,7 +446,7 @@ void ColorTheme::resetImGuiStyle()
     style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
     style.Colors[ImGuiCol_PopupBg] = ImVec4( popupBg.x, popupBg.y, popupBg.z, popupBg.w );
     style.Colors[ImGuiCol_Tab] = ImVec4( tabBg.x, tabBg.y, tabBg.z, tabBg.w );
-    style.Colors[ImGuiCol_TabActive] = ImVec4( tabBgActive.x, tabBgActive.y, tabBgActive.z, tabBgActive.w );
+    style.Colors[ImGuiCol_TabSelected] = ImVec4( tabBgActive.x, tabBgActive.y, tabBgActive.z, tabBgActive.w );
     style.Colors[ImGuiCol_TabHovered] = ImVec4( tabBgHovered.x, tabBgHovered.y, tabBgHovered.z, tabBgHovered.w );
 
     style.ScrollbarRounding = 4.0f;
@@ -465,16 +457,13 @@ void ColorTheme::resetImGuiStyle()
     style.ItemSpacing.y = 6.0f;
 
     style.FrameBorderSize = 1.0f;
-    style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
-    
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-    {
-        auto scaling = menu->menu_scaling();
-        ImGui::GetStyle().ScaleAllSizes( scaling );
-        style.ScrollbarSize = 4.0f * scaling + 6.0f; // 6 - is scroll background area, independent of scaling
-    }
+
+    ImGui::GetStyle().ScaleAllSizes( UI::scale() );
+    style.ScrollbarSize = 4.0f * UI::scale() + 6.0f; // 6 - is scroll background area, independent of scaling
+
+    style.FontScaleDpi = UI::scale();
 }
 
 void ColorTheme::updateUserThemesList()

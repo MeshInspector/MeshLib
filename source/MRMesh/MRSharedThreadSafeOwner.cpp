@@ -18,6 +18,33 @@ namespace MR
 {
 
 template<typename T>
+SharedThreadSafeOwner<T>::SharedThreadSafeOwner() = default;
+
+template<typename T>
+SharedThreadSafeOwner<T>::SharedThreadSafeOwner( const SharedThreadSafeOwner& b )
+    : obj_( b.obj_ ) // and do not copy construction_ to allow coping during b's construction
+{ 
+}
+
+template<typename T>
+SharedThreadSafeOwner<T>& SharedThreadSafeOwner<T>::operator =( const SharedThreadSafeOwner& b ) 
+{
+    assert( !construction_ ); // one thread constructs the object, and this thread resets it
+    obj_ = b.obj_;
+    // and do not copy construction_ to allow coping during b's construction
+    return *this; 
+}
+
+template<typename T>
+SharedThreadSafeOwner<T>::SharedThreadSafeOwner( SharedThreadSafeOwner&& b ) noexcept = default;
+
+template<typename T>
+SharedThreadSafeOwner<T>& SharedThreadSafeOwner<T>::operator =( SharedThreadSafeOwner&& b ) noexcept = default;
+
+template<typename T>
+SharedThreadSafeOwner<T>::~SharedThreadSafeOwner() = default;
+
+template<typename T>
 void SharedThreadSafeOwner<T>::reset()
 {
     assert( !construction_ ); // one thread constructs the object, and this thread resets it

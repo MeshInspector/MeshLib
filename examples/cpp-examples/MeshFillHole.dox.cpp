@@ -11,14 +11,13 @@ int main()
     // Find single edge for each hole in mesh
     std::vector<MR::EdgeId> holeEdges = mesh.topology.findHoleRepresentiveEdges();
 
+    // Setup filling parameters
+    MR::FillHoleParams params;
+    params.metric = MR::getUniversalMetric( mesh );
+
+    // Alternatively, MR::fillHoles( mesh, holeEdges, params ) fills all holes at once.
     for ( MR::EdgeId e : holeEdges )
-    {
-        // Setup filling parameters
-        MR::FillHoleParams params;
-        params.metric = MR::getUniversalMetric( mesh );
-        // Fill hole represented by `e`
         MR::fillHole( mesh, e, params );
-    }
 
     // Save result
     auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "filledMesh.stl" );

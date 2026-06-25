@@ -26,6 +26,9 @@ public:
     MR_BIND_IGNORE MRMESH_API ObjectFactoryBase( std::string className, ObjectMakerFunc * creator );
     MRMESH_API ~ObjectFactoryBase();
 
+    ObjectFactoryBase( const ObjectFactoryBase& ) = delete;
+    ObjectFactoryBase( ObjectFactoryBase&& ) noexcept = delete;
+
 private:
     std::string className_;
 };

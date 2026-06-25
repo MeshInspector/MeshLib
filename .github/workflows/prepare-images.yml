@@ -15,45 +15,103 @@ on:
       need_windows_vcpkg_rebuild:
         required: true
         type: boolean
+      vcpkg_docker_image_tag:
+        required: true
+        type: string
       vs19_vcpkg_version:
         required: true
         type: string
       vs22_vcpkg_version:
         required: true
         type: string
+      # `disable-build-<platform>` PR labels (resolved upstream in
+      # config.yml) — skip the matching image build cells / jobs so we
+      # don't burn runner time producing images no consumer will use.
+      disable_ubuntu_x64:
+        type: boolean
+        default: false
+      disable_ubuntu_arm64:
+        type: boolean
+        default: false
+      disable_emscripten:
+        type: boolean
+        default: false
+      disable_linux_vcpkg:
+        type: boolean
+        default: false
+      disable_windows:
+        type: boolean
+        default: false
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   always-success:
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     steps:
       - name: Do nothing
         run: echo
 
-  linux-image-build-upload:
+  # Build the linux-image matrix dynamically so we can drop cells the
+  # PR has opted out of via `disable-build-<platform>` labels. The
+  # `matrix` context is not available in job-level `if:` for reusable
+  # workflow inputs, so per-cell skipping must happen here.
+  compute-linux-image-matrix:
     if: ${{ inputs.need_linux_image_rebuild }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+      empty:  ${{ steps.compute.outputs.empty }}
+    steps:
+      - id: compute
+        env:
+          DISABLE_UBUNTU_X64:   ${{ inputs.disable_ubuntu_x64 }}
+          DISABLE_UBUNTU_ARM64: ${{ inputs.disable_ubuntu_arm64 }}
+          DISABLE_EMSCRIPTEN:   ${{ inputs.disable_emscripten }}
+        run: |
+          # Only `distro` and `arch` are encoded here so the auto-generated
+          # cell name stays "(<distro>, <arch>)"; the runner OS and image
+          # suffix are derived from `matrix.arch` inline below.
+          # `emscripten-generate-c-bindings` (the image for generate-c-bindings) has no
+          # disable condition: that job always runs, so the image is always built.
+          MATRIX=$(jq -nc \
+            --argjson dx64   "$DISABLE_UBUNTU_X64" \
+            --argjson darm64 "$DISABLE_UBUNTU_ARM64" \
+            --argjson demscr "$DISABLE_EMSCRIPTEN" \
+            '[
+              {distro:"ubuntu22",              arch:"x64"  },
+              {distro:"ubuntu24",              arch:"x64"  },
+              {distro:"ubuntu22",              arch:"arm64"},
+              {distro:"ubuntu24",              arch:"arm64"},
+              {distro:"emscripten",            arch:"arm64"},
+              {distro:"emscripten-generate-c-bindings", arch:"arm64"},
+              {distro:"emscripten-build-c-bindings", arch:"x64"}
+             ] | map(select(
+              (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
+              and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
+              and (((.distro=="emscripten")                              and $demscr) | not)
+             ))')
+          echo "matrix=${MATRIX}"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          if [[ "${MATRIX}" == "[]" ]]; then
+            echo "empty=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux-image-build-upload:
+    needs: compute-linux-image-matrix
+    if: ${{ needs.compute-linux-image-matrix.outputs.empty == 'false' }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        distro: [ ubuntu20, ubuntu22, ubuntu24, emscripten ]
-        arch: [ x64, arm64 ]
-        exclude:
-          - distro: emscripten
-            arch: x64
-        include:
-          - arch: x64
-            image-suffix: ''
-            os: ubuntu-latest
-          - arch: arm64
-            image-suffix: '-arm64'
-            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
-    runs-on: ${{ matrix.os }}
+        include: ${{ fromJSON(needs.compute-linux-image-matrix.outputs.matrix) }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
-      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Work-around possible permission issues
         shell: bash
@@ -79,12 +137,12 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -99,38 +157,58 @@ jobs:
         run: docker system prune --force --all --volumes
 
   linux-vcpkg-build-upload:
-    if: ${{ inputs.need_linux_vcpkg_rebuild }}
+    if: ${{ inputs.need_linux_vcpkg_rebuild && !inputs.disable_linux_vcpkg }}
+    permissions:
+      id-token: write
+      contents: read
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        arch: [ x64 ]
+        arch: [ x64, arm64 ]
+        os: [ rockylinux8 ] # also available: rockylinux9
         include:
           - arch: x64
-            image-suffix: ''
-            os: ubuntu-latest
+            runner: ubuntu-latest
           - arch: arm64
-            image-suffix: '-arm64'
-            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
-    runs-on: ${{ matrix.os }}
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     env:
-      image: meshlib/meshlib-vcpkg${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
       vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
     steps:
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Login to DockerHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          role-duration-seconds: 7200
+          retry-max-attempts: 5
+
       - name: Build Linux vcpkg image
-        run: docker build -f ./docker/vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
+        env:
+          DOCKER_BUILDKIT: 1
+        run: |
+          docker build \
+            -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+            -t ${{ env.image }} \
+            --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
+            --secret id=AWS_ACCESS_KEY_ID \
+            --secret id=AWS_SECRET_ACCESS_KEY \
+            --secret id=AWS_SESSION_TOKEN \
+            . --progress=plain
 
       - name: Push Linux vcpkg image
         run: docker push ${{ env.image }}
@@ -139,38 +217,54 @@ jobs:
         run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
-    if: ${{ inputs.need_windows_vcpkg_rebuild }}
+    if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}
     timeout-minutes: 240
     runs-on: ${{ matrix.runner }}
+    # install.bat (run inside the setup-vcpkg-windows action) picks the triplet
+    # from VCPKG_DEFAULT_TRIPLET; set it at the job level so it propagates into
+    # the composite action's steps (a step-level `env:` would not).
+    env:
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
     strategy:
       fail-fast: false
       matrix:
-        runner: [ windows-2022, windows-2019 ]
         include:
-          - runner: windows-2022
+          - vs: vs2026
+            runner: windows-2025
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
-          - runner: windows-2019
+            vcpkg_triplet: x64-windows-meshlib
+          - vs: vs2022
+            runner: windows-2025
+            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
+            vcpkg_triplet: x64-windows-vs2022-meshlib
+          - vs: vs2019
+            runner: windows-2022
             vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
+            vcpkg_triplet: x64-windows-vs2019-meshlib
+          - vs: vs2019
+            runner: windows-2022
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
+            vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
-      - name: Setup vcpkg
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{ matrix.vcpkg-version }}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+          retry-max-attempts: 5
 
       - name: Build and cache vcpkg
-        run: .\thirdparty\install.bat --write-s3
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: ${{ matrix.vcpkg-version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          # The S3 asset provider is only used for the VS2019 triplets
+          # (x64-windows-vs2019-meshlib and x64-windows-meshlib-iterator-debug);
+          # VS2022/VS2026 fetch their assets from upstream instead.
+          install-flags: ${{ (matrix.vcpkg_triplet == 'x64-windows-vs2019-meshlib' || matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug') && '--write-s3 --use-s3-asset-provider' || '--write-s3' }}

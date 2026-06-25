@@ -55,6 +55,9 @@ struct MarchingCubesParams
 
     /// this optional function is called when volume is no longer needed to deallocate it and reduce peak memory consumption
     std::function<void()> freeVolume;
+
+    // To allow passing Python lambdas into `positioner`.
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 // makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm

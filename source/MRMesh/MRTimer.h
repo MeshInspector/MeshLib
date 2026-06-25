@@ -50,5 +50,9 @@ MRMESH_API void printTimingTree( double minTimeSec = 0.1 );
 
 } // namespace MR
 
+#ifdef __GNUC__ // __FUNCTION__ in GCC/Clang returns only short function name without class name and template parameters
+#define MR_TIMER MR::Timer _timer( __PRETTY_FUNCTION__ )
+#else
 #define MR_TIMER MR::Timer _timer( __FUNCTION__ )
+#endif
 #define MR_NAMED_TIMER(name) MR::Timer _named_timer( name )

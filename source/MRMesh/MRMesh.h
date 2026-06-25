@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshMath.h"
 #include "MRMeshBuilderTypes.h"
 #include "MRMeshProject.h"
@@ -51,7 +52,7 @@ struct [[nodiscard]] Mesh
 
     /// construct mesh from point triples;
     /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;
-    /// \param duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates 
+    ///        duplicateNonManifoldVertices = true, it tries to avoid non-manifold vertices by creating duplicate vertices with same coordinates
     [[nodiscard]] MRMESH_API static Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices );
 
     /// compare that two meshes are exactly the same
@@ -82,7 +83,8 @@ struct [[nodiscard]] Mesh
     void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { return MR::getLeftTriPoints( topology, points, e, v0, v1, v2 ); }
 
     /// returns three points of left face of e: v[0] = orgPnt( e ), v[1] = destPnt( e )
-    void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { return MR::getLeftTriPoints( topology, points, e, v ); }
+    /// This one is not in the bindings because of the reference-to-array parameter.
+    MR_BIND_IGNORE void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { return MR::getLeftTriPoints( topology, points, e, v ); }
 
     /// returns three points of left face of e: res[0] = orgPnt( e ), res[1] = destPnt( e )
     [[nodiscard]] Triangle3f getLeftTriPoints( EdgeId e ) const { return MR::getLeftTriPoints( topology, points, e ); }
@@ -91,7 +93,8 @@ struct [[nodiscard]] Mesh
     void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { return MR::getTriPoints( topology, points, f, v0, v1, v2 ); }
 
     /// returns three points of given face
-    void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { return MR::getTriPoints( topology, points, f, v ); }
+    /// This one is not in the bindings because of the reference-to-array parameter.
+    MR_BIND_IGNORE void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { return MR::getTriPoints( topology, points, f, v ); }
 
     /// returns three points of given face
     [[nodiscard]] Triangle3f getTriPoints( FaceId f ) const { return MR::getTriPoints( topology, points, f ); }
@@ -104,7 +107,7 @@ struct [[nodiscard]] Mesh
 
     /// returns aspect ratio of given mesh triangle equal to the ratio of the circum-radius to twice its in-radius
     [[nodiscard]] float triangleAspectRatio( FaceId f ) const { return MR::triangleAspectRatio( topology, points, f ); }
-    
+
     /// returns squared circumcircle diameter of given mesh triangle
     [[nodiscard]] float circumcircleDiameterSq( FaceId f ) const { return MR::circumcircleDiameterSq( topology, points, f ); }
 
@@ -160,19 +163,22 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float area( FaceId f ) const { return MR::area( topology, points, f ); }
 
     /// computes the area of given face-region
-    [[nodiscard]] double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
 
     /// computes the area of given face-region (or whole mesh)
     [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return MR::area( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region
-    [[nodiscard]] Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region (or whole mesh)
     [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region as visible if look from given direction
-    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
+    /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+    [[nodiscard]] MR_BIND_IGNORE double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
     [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return MR::projArea( topology, points, dir, fs ); }
@@ -182,7 +188,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] double volume( const FaceBitSet* region = nullptr ) const { return MR::volume( topology, points, region ); }
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-    [[nodiscard]] double holePerimiter( EdgeId e ) const { return MR::holePerimiter( topology, points, e ); }
+    [[nodiscard]] double holePerimeter( EdgeId e ) const { return MR::holePerimeter( topology, points, e ); }
 
     /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
@@ -231,7 +237,6 @@ struct [[nodiscard]] Mesh
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
     /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
     [[nodiscard]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region = nullptr ) const;
-    [[deprecated]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region = nullptr ) const;
 
     /// given a point (pt) in 3D, computes the closest point on mesh, and
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
@@ -388,23 +393,19 @@ struct [[nodiscard]] Mesh
     MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
-    [[deprecated]] void addPart( const Mesh & from, FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false )
-        { addMesh( from, outFmap, outVmap, outEmap, rearrangeTriangles ); }
 
     /// appends whole or part of another mesh as separate connected component(s) to this
-    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map );
-    [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map ) { addMeshPart( { from, &fromFaces }, map ); }
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
+    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant = {} );
 
     /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
+    /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
-        PartMapping map = {} );
-    [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
-        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {}, const PartMapping & map = {} )
-        { addMeshPart( { from, &fromFaces }, flipOrientation, thisContours, fromContours, map ); }
+        PartMapping map = {}, VacantElements * vacant = {} );
 
     /// creates new mesh from given triangles of this mesh
     MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;
@@ -423,8 +424,9 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
-    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces ant not in \param keepFaces
-    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
+    /// return bit sets of all vacant elements in this mesh after deletion
+    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;
     /// \param point source location to look the closest to

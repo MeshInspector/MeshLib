@@ -25,21 +25,18 @@ public:
     CylinderObject( CylinderObject&& ) noexcept = default;
     CylinderObject& operator = ( CylinderObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept
-    {
-        return "CylinderObject";
-    }
-    virtual const char* typeName() const override
-    {
-        return TypeName();
-    }
+    constexpr static const char* StaticTypeName() noexcept { return "CylinderObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
+
+    constexpr static const char* StaticClassName() noexcept { return "Cylinder"; }
+    virtual std::string className() const override { return StaticClassName(); }
+
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Cylinders"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     CylinderObject( ProtectedStruct, const CylinderObject& obj ) : CylinderObject( obj )
     {}
-
-    std::string getClassName() const override { return "Cylinder"; }
-    std::string getClassNameInPlural() const override { return "Cylinders"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

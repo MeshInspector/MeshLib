@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
 import sys
 import xml.etree.ElementTree as ET
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 VCXPROJ_NAMESPACES = {
     'msbuild': "http://schemas.microsoft.com/developer/msbuild/2003",
+}
+
+KNOWN_ITEM_GROUPS = {
+    'ClCompile': {".c", ".cpp"},
+    'ClInclude': {".h", ".hpp", ".cuh"},
+    'CudaCompile': {".cu"},
+}
+
+IGNORED_PROJECTS = {
+    # auto-generated bindings
+    "MeshLibC2",
+    "MeshLibC2Cuda",
 }
 
 IGNORED_FILENAMES = {
@@ -12,6 +24,7 @@ IGNORED_FILENAMES = {
     "config.h",
     "config_cmake.h",
     # macOS-specific files
+    "mrdragdropcocoahandler.h",
     "mrfiledialogcocoa.h",
     "mrtouchpadcocoahandler.h",
 }
@@ -21,75 +34,60 @@ def find_missing_entries(vcxproj_path):
     vcxproj_dir = vcxproj_path.parent
 
     vcxproj = ET.parse(vcxproj_path)
-    project = vcxproj.getroot()
+    project = vcxproj.getroot() 
 
-    includes = {
-        item.attrib['Include'].lower()
-        for item in project.iterfind(
-            'msbuild:ItemGroup/msbuild:ClInclude',
-            VCXPROJ_NAMESPACES,
-        )
-    }
-    compiles = {
-        item.attrib['Include'].lower()
-        for item in project.iterfind(
-            'msbuild:ItemGroup/msbuild:ClCompile',
-            VCXPROJ_NAMESPACES,
-        )
-    }
-    cuda_compiles = {
-        item.attrib['Include'].lower()
-        for item in project.iterfind(
-            'msbuild:ItemGroup/msbuild:CudaCompile',
-            VCXPROJ_NAMESPACES,
-        )
-    }
-
-    result = {
-        'ClInclude': [],
-        'ClCompile': [],
-        'CudaCompile': [],
-    }
-    for path in vcxproj_dir.iterdir():
-        name, suffix = path.name.lower(), path.suffix.lower()
-        if name in IGNORED_FILENAMES:
-            continue
-        if suffix in {".cpp"}:
-            if name not in compiles:
-                result['ClCompile'].append(path)
-        elif suffix in {".h", ".hpp", ".cuh"}:
-            if name not in includes:
-                result['ClInclude'].append(path)
-        elif suffix in {".cu"}:
-            if name not in cuda_compiles:
-                result['CudaCompile'].append(path)
+    result = {}
+ 
+    for tag_name, file_suffixes in KNOWN_ITEM_GROUPS.items():
+        found_files = {
+            item.attrib['Include'].lower()
+            for item in project.iterfind(
+                f'msbuild:ItemGroup/msbuild:{tag_name}',
+                VCXPROJ_NAMESPACES,
+            )
+        }
+        results = []
+        for root, dirs, files in vcxproj_dir.walk():
+            dir = root.relative_to(vcxproj_dir)
+            for filename in files:
+                path = PureWindowsPath(dir / filename)
+                name, suffix = path.name.lower(), path.suffix.lower()
+                if name in IGNORED_FILENAMES:
+                    continue
+                if suffix not in file_suffixes:
+                    continue
+                if str(path).lower() not in found_files:
+                    results.append(path)
+        result[tag_name] = results
 
     return result
 
 
 def process_file(vcxproj_path):
+    if vcxproj_path.stem in IGNORED_PROJECTS:
+        return True
     result = find_missing_entries(vcxproj_path)
     ok = True
     for group_name, group in result.items():
         for path in group:
-            print(f"{vcxproj_path}: missing {group_name} item: {path.name}", file=sys.stderr)
+            print(f"{vcxproj_path}: missing {group_name} item: {path}", file=sys.stderr)
             ok = False
     return ok
 
 
 if __name__ == "__main__":
-    arg = Path(sys.argv[1])
-    if arg.is_file() and arg.suffix == '.vcxproj':
-        if process_file(arg):
-            sys.exit(0)
+    exit_code = 0
+    queue=[]
+    for arg in sys.argv[1:]:
+        path = Path(arg)
+        if path.is_dir():
+            queue += [*path.rglob('*.vcxproj')]
+        elif path.is_file() and path.suffix == '.vcxproj':
+            queue += [path]
         else:
-            sys.exit(1)
-    elif arg.is_dir():
-        exit_code = 0
-        for path in arg.rglob('*.vcxproj'):
-            if not process_file(path):
-                exit_code = 1
-        sys.exit(exit_code)
-    else:
-        print(f"Unsupported file: {arg}", file=sys.stderr)
-        sys.exit(1)
+            print(f"Unsupported file: {arg}", file=sys.stderr)
+            exit_code = 1
+    for path in queue:
+        if not process_file(path):
+            exit_code = 1
+    sys.exit(exit_code)

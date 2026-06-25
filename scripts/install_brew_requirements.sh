@@ -1,22 +1,22 @@
-#!/bin/bash
+#!/bin/bash -i
+# expand aliases defined in ~/.bashrc
+# this and -i flag may be required for multi-user configurations where brew is declared as an alias for a more complicated command
+# some examples:
+# - https://dev.to/cerico/using-brew-in-a-multi-user-system-2lnl
+# - https://www.codejam.info/2021/11/homebrew-multi-user.html
+shopt -s expand_aliases
 
-# run from repo root
-# NODE: using this script is deprecated! Better install meshlib(-dev).pkg package
+set -e
+
 # This script installs requirements by `brew` if not already installed
 
-requirements_file=requirements/macos.txt
-for req in `cat $requirements_file`
-do
-  brew install $req
-done
+BASEDIR=$(dirname $(realpath "$0"))
+MESHLIB_BREW_REQUIREMENTS=$(cat "$BASEDIR"/../requirements/macos.txt)
+if [ -n "$MESHLIB_EXTRA_BREW_REQUIREMENTS" ] ; then
+  MESHLIB_BREW_REQUIREMENTS=$MESHLIB_BREW_REQUIREMENTS$'\n'$MESHLIB_EXTRA_BREW_REQUIREMENTS
+fi
 
-brew install pybind11
 
-# check and upgrade python3 pip
-python3.10 -m ensurepip --upgrade
-python3.10 -m pip install --upgrade pip
-
-# install requirements for python libs
-python3.10 -m pip install -r requirements/python.txt
-
-exit 0
+brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
+# FIXME: build w/o pybind11
+brew install --quiet pybind11

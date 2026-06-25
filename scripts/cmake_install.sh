@@ -19,8 +19,9 @@ cmake_install () {
 }
 
 cmake_install ${BASE_DIR}/build/Release
+cmake_install ${BASE_DIR}/build/Debug
 cmake_install ${BASE_DIR}/thirdparty_build
 # Emscripten dependencies
-cmake_install ${BASE_DIR}/thirdparty_build/libE57Format_build
-cmake_install ${BASE_DIR}/thirdparty_build/libjpeg-turbo_build
-cmake_install ${BASE_DIR}/thirdparty_build/openvdb_build
+for BUILD_DIR in ${BASE_DIR}/thirdparty_build/*_build ; do
+  cmake_install ${BUILD_DIR}
+done

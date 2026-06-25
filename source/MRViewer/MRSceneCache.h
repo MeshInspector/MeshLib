@@ -4,6 +4,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "exports.h"
 #include <unordered_map>
+#include <typeindex>
 
 namespace MR
 {
@@ -23,6 +24,11 @@ public:
     template <typename ObjectType, ObjectSelectivityType SelectivityType>
     static const ObjectList<ObjectType>& getAllObjects();
 
+    // analog getTopmostObjects<ObjectType>( &SceneRoot::get(), SelectivityType ) but use cached data
+    // reference copy is valid until invalidateAll() is called
+    template <typename ObjectType, ObjectSelectivityType SelectivityType>
+    static const ObjectList<ObjectType>& getAllTopmostObjects();
+
 private:
     MRVIEWER_API static SceneCache& instance_();
     SceneCache() = default;
@@ -36,6 +42,12 @@ private:
     };
     template <typename ObjectType, ObjectSelectivityType SelectivityType>
     struct MRVIEWER_CLASS VectorHolder : BasicVectorHolder
+    {
+        ObjectList<ObjectType> value;
+    };
+    // distinct holder type so the topmost query gets its own cache slot (keyed by typeid)
+    template <typename ObjectType, ObjectSelectivityType SelectivityType>
+    struct MRVIEWER_CLASS TopmostVectorHolder : BasicVectorHolder
     {
         ObjectList<ObjectType> value;
     };
@@ -53,6 +65,25 @@ const SceneCache::ObjectList<ObjectType>& SceneCache::getAllObjects()
     {
         auto dataList = std::make_shared<ResultType>();
         dataList->value = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
+        cachedVec = dataList;
+    }
+    assert( cachedVec );
+    auto resPtr = dynamic_pointer_cast< ResultType >( cachedVec );
+    assert( resPtr );
+    return resPtr->value;
+}
+
+template <typename ObjectType, ObjectSelectivityType SelectivityType>
+const SceneCache::ObjectList<ObjectType>& SceneCache::getAllTopmostObjects()
+{
+    using ResultType = TopmostVectorHolder<ObjectType, SelectivityType>;
+    const auto typeIndex = std::type_index( typeid( ResultType ) );
+    auto& cachedData = instance_().cachedData_;
+    auto& cachedVec = cachedData[typeIndex];
+    if ( !cachedVec )
+    {
+        auto dataList = std::make_shared<ResultType>();
+        dataList->value = getTopmostObjects<ObjectType>( &SceneRoot::get(), SelectivityType );
         cachedVec = dataList;
     }
     assert( cachedVec );

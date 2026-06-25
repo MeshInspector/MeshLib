@@ -410,7 +410,7 @@ Box3f computeBoundingBox( const MeshTopology & topology, const VertCoords & poin
     return calc.box();
 }
 
-double holePerimiter( const MeshTopology & topology, const VertCoords & points, EdgeId e0 )
+double holePerimeter( const MeshTopology & topology, const VertCoords & points, EdgeId e0 )
 {
     double res = 0;
     if ( topology.left( e0 ) )

@@ -16,6 +16,7 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #if __GNUC__ >= 12
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 #endif
 #include <Eigen/Core>

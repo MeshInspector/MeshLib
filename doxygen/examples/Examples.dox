@@ -6,9 +6,12 @@
 
 This page contains some examples of using MeshLib
 
-\subsection GeneralExamples General Samples
+\subsection CppApplication C++ Application Based on MeshLib
 
  - \ref BasedApplication
+
+\subsection GeneralExamples General Samples
+
  - \ref ExampleMeshLoadSave
  - \ref ExampleMeshExport
  - \ref ExampleMeshModification
@@ -35,9 +38,16 @@ This page contains some examples of using MeshLib
  - \ref ExampleFusion
  - \ref ExampleMeshFromText
 
+\subsection Collisions Collisions
+
+ - \ref ExampleDetectCollisions
+ - \ref ExampleDetectCollisionsPrecise
+ - \ref ExampleDetectSelfIntersections
+
 \subsection PythonSpecificExamples Python Specific Samples
 
  - \ref ExampleViewer
+ - \ref ExampleViewerVolumeRender
  - \ref ExamplePlotly
  - \ref ExampleNumpy
  - \ref ExampleNumpyTriangulation

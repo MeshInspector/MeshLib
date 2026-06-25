@@ -249,7 +249,7 @@ void PlaneObject::swapBase_( Object& other )
 void PlaneObject::serializeFields_( Json::Value& root ) const
 {
     FeatureObject::serializeFields_( root );
-    root["Type"].append( PlaneObject::TypeName() );
+    root["Type"].append( PlaneObject::StaticTypeName() );
 }
 
 void PlaneObject::setupRenderObject_() const

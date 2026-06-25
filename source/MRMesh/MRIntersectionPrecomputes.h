@@ -116,7 +116,7 @@ template<typename T>
 struct IntersectionPrecomputes
 {
     // {1 / dir}
-    Vector3<T> invDir;
+    MR_BIND_IGNORE Vector3<T> invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}
     int maxDimIdxZ = 2;
@@ -124,7 +124,7 @@ struct IntersectionPrecomputes
     int idxY = 1;
 
     /// stores signs of direction vector;
-    Vector3i sign;
+    MR_BIND_IGNORE Vector3i sign;
 
     /// precomputed factors
     T Sx, Sy, Sz;
@@ -162,7 +162,8 @@ struct IntersectionPrecomputes<float>
     int idxY = 1;
 
     /// precomputed factors
-    float Sx, Sy, Sz;
+    MR_BIND_IGNORE float Sx, Sy, Sz;
+
     IntersectionPrecomputes() = default;
     IntersectionPrecomputes( const Vector3<float>& dir )
     {

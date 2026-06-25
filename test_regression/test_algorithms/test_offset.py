@@ -263,7 +263,6 @@ def test_offset_general(tmp_path, test_params):
         assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
-@pytest.mark.bindingsV3
 def test_offset_weighted_shell(tmp_path):
     """
     Tests weightedMeshShell method with vertex-based weights

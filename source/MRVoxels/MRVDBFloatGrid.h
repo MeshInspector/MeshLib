@@ -1,10 +1,11 @@
 #pragma once
 #include "MRVoxelsFwd.h"
+#include "MRFloatGrid.h"
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBox.h"
 
-#include "MROpenVDB.h"
+#include "MRPch/MROpenVDB.h"
 #include "MRPch/MRBindingMacros.h"
 
 namespace MR
@@ -46,6 +47,11 @@ MR_BIND_IGNORE inline Vector3i fromVdb( const openvdb::Coord & v )
 MR_BIND_IGNORE inline openvdb::Coord toVdb( const Vector3i & v )
 {
     return openvdb::Coord( v.x, v.y, v.z );
+}
+
+MR_BIND_IGNORE inline Box3i fromVdbBox( const openvdb::CoordBBox& box )
+{
+    return Box3i( fromVdb( box.min() ), fromVdb( box.max() ) + Vector3i::diagonal( 1 ) );
 }
 
 MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Box3i& box )

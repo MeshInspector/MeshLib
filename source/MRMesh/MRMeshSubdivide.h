@@ -19,6 +19,10 @@ struct SubdivideSettings
     /// Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
     float maxEdgeLen = 0;
 
+    /// edge length will be magnified by the squared difference of normals at edge's ends times this factor,
+    /// thus subdivision will be finer in the regions of high curvature compared to planar regions
+    float curvaturePriority = 0;
+
     /// Maximum number of edge splits allowed
     int maxEdgeSplits = 1000;
 
@@ -35,6 +39,10 @@ struct SubdivideSettings
 
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;
+
+    /// Additional region to update during subdivision: if a face from here is split, it is replaced with new sub-faces;
+    /// note that Subdivide can split faces even outside of main \p region, so it might be necessary to update another region
+    FaceBitSet * maintainRegion = nullptr;
 
     /// Edges specified by this bit-set will never be flipped, but they can be split so it is updated during the operation
     UndirectedEdgeBitSet* notFlippable = nullptr;

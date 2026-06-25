@@ -1,5 +1,4 @@
 using System.Reflection;
-using static MR.DotNet;
 
 public class MeshBooleanExample
 {
@@ -14,14 +13,14 @@ public class MeshBooleanExample
         try
         {
             // load mesh
-            Mesh meshA = MeshLoad.FromAnySupportedFormat(args[1]);
-            Mesh meshB = MeshLoad.FromAnySupportedFormat(args[2]);
+            var mesh_a = MR.MeshLoad.fromAnySupportedFormat(args[1]);
+            var mesh_b = MR.MeshLoad.fromAnySupportedFormat(args[2]);
 
             // perform boolean operation
-            var res = Boolean(meshA, meshB, BooleanOperation.Intersection);
+            MR.BooleanResult res = MR.boolean(mesh_a, mesh_b, MR.BooleanOperation.Intersection);
 
             // save result to STL file
-            MeshSave.ToAnySupportedFormat(res.mesh, "out_boolean.stl");
+            MR.MeshSave.toAnySupportedFormat(res.mesh, "out_boolean.stl");
         }
         catch (Exception e)
         {

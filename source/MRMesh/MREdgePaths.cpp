@@ -1,12 +1,12 @@
 #include "MREdgePaths.h"
 #include "MREdgePathsBuilder.h"
 #include "MREdgeIterator.h"
+#include "MREdgeMetric.h"
 #include "MRRegionBoundary.h"
 #include "MRPlane3.h"
 #include "MRTimer.h"
-#include "MRCube.h"
 #include "MRUnionFind.h"
-#include "MRGTest.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -84,6 +84,11 @@ double calcPathMetric( const EdgePath & path, EdgeMetric metric )
     return res;
 }
 
+double calcPathLength( const EdgePath & path, const Mesh & mesh )
+{
+    return calcPathMetric( path, edgeLengthMetric( mesh ) );
+}
+
 Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh )
 {
     assert( isEdgeLoop( mesh.topology, loop ) );
@@ -113,6 +118,11 @@ void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric )
         sorted[i] = std::move( paths[sortedIds[i]] );
     }
     paths = std::move( sorted );
+}
+
+void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh )
+{
+    sortPathsByMetric( paths, edgeLengthMetric( mesh ) );
 }
 
 void addLeftBand( const MeshTopology & topology, const EdgeLoop & loop, FaceBitSet & addHere )
@@ -675,23 +685,30 @@ int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f
     return found;
 }
 
-TEST(MRMesh, BuildShortestPath)
+Contour3f edgePathToContour3f( const Mesh& mesh, const EdgePath& line )
 {
-    Mesh cube = makeCube();
-    auto path = buildShortestPath( cube, 0_v, 6_v );
-    EXPECT_EQ( path.size(), 2 );
-    EXPECT_EQ( cube.topology.org( path[0] ), 0_v );
-    EXPECT_EQ( cube.topology.dest( path[0] ), cube.topology.org( path[1] ) );
-    EXPECT_EQ( cube.topology.dest( path[1] ), 6_v );
+    if ( line.empty() )
+        return {};
+    if ( !isEdgePath( mesh.topology, line ) )
+    {
+        assert( !"not supported for sparse paths" );
+        return {};
+    }
+    Contour3f res( line.size() + 1 );
+    for ( int i = 0; i < line.size(); ++i )
+        res[i] = mesh.orgPnt( line[i] );
+    res.back() = mesh.destPnt( line.back() );
+    return res;
+}
 
-    auto path34 = buildShortestPath( cube, 3_v, 4_v );
-    EXPECT_EQ( path34.size(), 2 );
-
-    std::vector<EdgePath> paths{ path, path34 };
-    auto euclid = edgeLengthMetric( cube );
-    EXPECT_GT( calcPathMetric( paths[0], euclid ), calcPathMetric( paths[1], euclid ) );
-    sortPathsByMetric( paths, euclid );
-    EXPECT_LE( calcPathMetric( paths[0], euclid ), calcPathMetric( paths[1], euclid ) );
+Contours3f edgePathsToContours3f( const Mesh& mesh, const std::vector<EdgePath>& lines )
+{
+    Contours3f res( lines.size() );
+    ParallelFor( lines, [&] ( size_t i )
+    {
+        res[i] = edgePathToContour3f( mesh, lines[i] );
+    } );
+    return res;
 }
 
 } //namespace MR

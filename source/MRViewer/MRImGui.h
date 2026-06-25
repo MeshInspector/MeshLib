@@ -11,6 +11,5 @@ MR_SUPPRESS_WARNING_PUSH
 #endif
 
 #include <imgui.h>
-#include <imgui_internal.h>
 
 MR_SUPPRESS_WARNING_POP

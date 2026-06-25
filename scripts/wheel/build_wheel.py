@@ -59,11 +59,15 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRLightTheme.json", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "thirdparty" / "fontawesome-free" / "fa-solid-900.ttf", WHEEL_SRC_DIR)
-    shutil.copy(SOURCE_DIR / "thirdparty" / "Noto_Sans" / "NotoSansSC-Regular.otf", WHEEL_SRC_DIR)
+    shutil.copytree(SOURCE_DIR / "thirdparty" / "Noto_Sans", WHEEL_SRC_DIR, dirs_exist_ok=True)
     shutil.copytree(SOURCE_DIR / "source" / "MRViewer" / "resource", WHEEL_SRC_DIR / "resource", dirs_exist_ok=True )
     icon_resources = [
         str(icon_resource.relative_to(WHEEL_SRC_DIR))
         for icon_resource in (WHEEL_SRC_DIR / "resource").rglob("*.*") # no folders
+    ]
+    font_resources = [
+        str(font_resources.relative_to(WHEEL_SRC_DIR))
+        for font_resources in (WHEEL_SRC_DIR).glob("NotoSans*.*") # no folders
     ]
     pybind_shims = []
     py_versions = []
@@ -83,7 +87,7 @@ def setup_workspace(version, modules, plat_name):
         "MRDarkTheme.json",
         "MRLightTheme.json",
         "fa-solid-900.ttf",
-        "NotoSansSC-Regular.otf"
+        *font_resources
     ]
     for module in modules:
         package_files += [
@@ -111,7 +115,7 @@ def build_wheel():
 
     if SYSTEM == "Linux":
         # see also: https://github.com/mayeut/pep600_compliance
-        manylinux_version = "2_31"
+        manylinux_version = "2_28"
 
         os.chdir(WHEEL_ROOT_DIR)
         subprocess.check_call(
@@ -138,7 +142,9 @@ def build_wheel():
                 # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
                 # to pack these dlls with original names and let system solve conflicts on import
                 # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
-                "--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
+                # UPDATE:
+                #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
+                #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
                 "--add-path", LIB_DIR,
                 # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
                 # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.

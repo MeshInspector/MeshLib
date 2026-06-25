@@ -1,10 +1,12 @@
 #include "MRConfig.h"
 #include "MRStringConvert.h"
-#include <assert.h>
+#include "MRSystem.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
+
+#include <cassert>
 #include <iostream>
 #include <fstream>
-#include "MRSystem.h"
-#include "MRPch/MRWasm.h"
 
 namespace MR
 {
@@ -48,7 +50,7 @@ void Config::writeToFile()
     std::stringstream strStream;
     strStream << config_;
     std::string str = strStream.str();
-#pragma GCC diagnostic push 
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM({ localStorage.setItem( 'config', UTF8ToString( $0 ) ) }, str.c_str() );
 #pragma GCC diagnostic pop
@@ -137,11 +139,33 @@ bool Config::getBool( const std::string& key, bool defaultValue ) const
     {
         return config_[key].asBool();
     }
-    if ( loggerHandle_ )
+    if ( loggerHandle_ && reportedMissingKeys_.insert( key ).second )
         loggerHandle_->debug( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
     return defaultValue;
 }
 void Config::setBool( const std::string& key, bool keyValue )
+{
+    config_[key] = keyValue;
+}
+
+bool Config::hasInt( const std::string& key ) const
+{
+    return config_.isMember( key ) && config_[key].isInt();
+}
+
+int Config::getInt( const std::string& key, int defaultValue ) const
+{
+    if ( !hasInt( key ) )
+    {
+        if ( loggerHandle_ && reportedMissingKeys_.insert( key ).second )
+            loggerHandle_->debug( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
+        return defaultValue;
+    }
+
+    return config_[key].asInt();
+}
+
+void Config::setInt( const std::string& key, int keyValue )
 {
     config_[key] = keyValue;
 }
@@ -161,8 +185,8 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
         deserializeFromJson( val, res );
         return res;
     }
-    if ( loggerHandle_ )
-        loggerHandle_->debug( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key, 
+    if ( loggerHandle_ && reportedMissingKeys_.insert( key ).second )
+        loggerHandle_->debug( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key,
             defaultValue.r, defaultValue.g, defaultValue.b, defaultValue.a );
     return defaultValue;
 }
@@ -242,6 +266,24 @@ int MR::Config::getEnum( const Enum& enumeration, const std::string& key, int de
 void MR::Config::setEnum( const Enum& enumeration, const std::string& key, int keyValue )
 {
     config_[key] = enumeration[keyValue];
+}
+
+bool Config::hasViewportMask( const std::string& key ) const
+{
+    return config_[key].isInt();
+}
+
+ViewportMask Config::getViewportMask( const std::string& key, ViewportMask defaultValue ) const
+{
+    if ( hasViewportMask( key ) )
+        return ViewportMask( config_[key].asInt() );
+    else
+        return defaultValue;
+}
+
+void Config::setViewportMask( const std::string& key, ViewportMask newValue )
+{
+    config_[key] = newValue.value();
 }
 
 bool Config::hasJsonValue( const std::string& key )

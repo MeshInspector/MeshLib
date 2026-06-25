@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef MR_PARSING_FOR_PB11_BINDINGS
+#ifdef MR_PARSING_FOR_ANY_BINDINGS
 
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRMesh.h"
@@ -8,6 +8,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
+#include "MRVoxels/MRFloatGrid.h"
 #include "MRVoxels/MRObjectVoxels.h"
 
 #define INST_IF(cond) MR_CONCAT(INST_IF_, cond)
@@ -19,31 +20,41 @@ namespace MR
 
 #define VEC3(T, isFloatingPoint) \
     template struct Vector3<T>; \
+    template T distanceSq( const Vector3<T> & a, const Vector3<T> & b ); \
+    INST_IF(isFloatingPoint)( \
+        template T distance( const Vector3<T> & a, const Vector3<T> & b ); \
+    ) \
     template Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b ); \
     template T dot( const Vector3<T> & a, const Vector3<T> & b ); \
     template T sqr( const Vector3<T> & a ); \
     template T mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c ); \
     template Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b ); \
+    template Vector3<T> div( const Vector3<T>& a, const Vector3<T>& b ); \
     template T angle( const Vector3<T> & a, const Vector3<T> & b ); \
     INST_IF(isFloatingPoint)( \
         template Vector3<T> unitVector3( T azimuth, T altitude ); \
     )
 
-#define VEC2(T) \
+#define VEC2(T, isFloatingPoint) \
     template struct Vector2<T>; \
+    template T distanceSq( const Vector2<T> & a, const Vector2<T> & b ); \
+    INST_IF(isFloatingPoint)( \
+        template T distance( const Vector2<T> & a, const Vector2<T> & b ); \
+    ) \
     template T cross( const Vector2<T> & a, const Vector2<T> & b ); \
     template T dot( const Vector2<T> & a, const Vector2<T> & b ); \
     template T sqr( const Vector2<T> & a ); \
     template Vector2<T> mult( const Vector2<T>& a, const Vector2<T>& b ); \
+    template Vector2<T> div( const Vector2<T>& a, const Vector2<T>& b ); \
     template T angle( const Vector2<T> & a, const Vector2<T> & b );
 
 VEC3(float, 1)
 VEC3(double, 1)
 VEC3(int, 0)
 
-VEC2(float)
-VEC2(double)
-VEC2(int)
+VEC2(float, 1)
+VEC2(double, 1)
+VEC2(int, 0)
 
 #undef VEC3
 #undef VEC2
@@ -88,8 +99,9 @@ FORCE_REGISTER_TYPE( std::vector<MR::PointCloud> );
 FORCE_REGISTER_TYPE( std::vector<MR::Polyline3> );
 // Those are needed directly for mrmeshpy:
 FORCE_REGISTER_TYPE( std::monostate );
-FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<std::shared_ptr<MR::OpenVdbFloatGrid>>>> );
+FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<FloatGrid>>> );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<Vector<float, MR::VoxelId>>>> );
+FORCE_REGISTER_RETURN_TYPE( std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> ); // For `PointsToMeshParameters::createVolumeCallbackByParts`. Using `RETURN_TYPE` because this is a callback parameter, and in callback signatures "param" and "return" are swapped.
 FORCE_REGISTER_PARAM_TYPE( double * );
 // ---
 

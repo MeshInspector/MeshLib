@@ -6,12 +6,25 @@ on:
       release_tag:
         required: true
         type: string
+      test_ubuntu_x64:
+        required: true
+        type: boolean
+      test_ubuntu_arm64:
+        required: true
+        type: boolean
+      test_macos:
+        required: true
+        type: boolean
+      test_windows:
+        required: true
+        type: boolean
     secrets:
       GH_TOKEN:
         required: true
 
 jobs:
   linux-x64-test:
+    if: ${{ inputs.test_ubuntu_x64 }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     container:
@@ -19,13 +32,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
         include:
-          - os: "ubuntu:20.04"
-            name: "ubuntu20"
-            compiler: clang-11
-            c-compiler: /usr/bin/clang-11
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
@@ -39,7 +47,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -79,22 +87,19 @@ jobs:
       - name: Install Python requirements
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python/requirements.txt
 
       - name: Install supported compiler
         run: |
           apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
-        if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -104,34 +109,28 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
 
       - name: Ubuntu python test
-        if: ${{ always() }}
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
         run: python3 -m pytest -s -v
 
   linux-arm64-test:
+    if: ${{ inputs.test_ubuntu_arm64 }}
     timeout-minutes: 30
-    runs-on: [self-hosted, linux-arm64, spot, meshinspector]
+    runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
         include:
-          - os: "ubuntu:20.04"
-            name: "ubuntu20"
-            compiler: clang-11
-            c-compiler: /usr/bin/clang-11
-            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
@@ -145,12 +144,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Install GitHub CLI
         run: |
+          # official Ubuntu ARM repo might be very slow
+          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources || true
+          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list || true
           apt-get update && apt-get install -y curl sudo
           curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
           chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -179,21 +181,18 @@ jobs:
       - name: Install Python requirements
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python/requirements.txt
 
       - name: Install supported compiler
         run: apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
-        if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
         run: meshconv --help
 
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
           mkdir build && \
@@ -203,51 +202,100 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
 
       - name: Ubuntu python test
-        if: always()
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
         run: python3 -m pytest -s -v
 
   macos-test:
-    runs-on: macos-13
+    if: ${{ inputs.test_macos }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-13
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
+            runner: macos-14
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
+            runner: macos-15
+            pkg_pattern: '*arm64.pkg'
+          - arch: arm64
+            runner: macos-26
+            pkg_pattern: '*arm64.pkg'
+          - arch: x64
+            runner: macos-12-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
+            runner: macos-15-intel
+            pkg_pattern: '*x64.pkg'
+          - arch: x64
+            runner: macos-26-intel
+            pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        # `gh auth login --with-token` validates the token by calling the
+        # GraphQL `viewer` query, which intermittently returns HTTP 401
+        # ("Bad credentials") even for a perfectly valid token -- a known
+        # transient on GitHub's side. See community discussion #101661;
+        # GitHub's official guidance is to retry after a short delay.
+        # Auth and download are wrapped in independent retry loops so a
+        # flake in one does not force the other to re-run. `--clobber`
+        # lets a download retry overwrite a partial file from a previous
+        # attempt.
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
-          gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg" --repo ${{ github.repository }}
+          scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
+      # Self-hosted runners have no passwordless sudo, so they install into
+      # ~/Library via `-target CurrentUserHomeDirectory` (enabled by the
+      # `<domains enable_currentUserHome="true">` in macos/Distribution.xml).
+      # GitHub-hosted runners keep the production sudo-into-/Library path so
+      # the end-user install scenario is still exercised.
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*x64.pkg  -target /
-          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+          if [ "${{ runner.environment }}" = "github-hosted" ]; then
+            sudo installer -pkg meshlib_*.pkg -target /
+            MESHLIB_FW=/Library/Frameworks/MeshLib.framework/Versions/Current
+          else
+            installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
+            MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
+          fi
+          xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
+          echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
+          echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
       # [error] NSGL: Failed to find a suitable pixel format
-      #- name: Run MeshViewer
-        #if: always()
-        #run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
+      - name: Run MeshViewer
+        run: MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
-        if: always()
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
+        run: meshconv --help
 
+      # Match the framework dylibs' 12.7 target on the macOS-12 SDK (which
+      # otherwise defaults to 12.0); skip on 13+ where forcing 12.7 would
+      # instead warn against brew bottles built for the host's macOS.
       - name: Build C++ examples
-        if: always()
         working-directory: examples/cpp-examples
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           mkdir build && \
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
@@ -255,8 +303,89 @@ jobs:
           ./MeshModification
 
       - name: Build C examples
-        if: always()
         working-directory: examples/c-examples
         run: |
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
+            export MACOSX_DEPLOYMENT_TARGET=12.7
+          fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+
+  windows-test:
+    if: ${{ inputs.test_windows }}
+    runs-on: windows-2025
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dist_pattern: "MeshLibDistVS19_${{ inputs.release_tag }}.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDistVS22_${{ inputs.release_tag }}.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDistVS26_${{ inputs.release_tag }}.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDist_*-IteratorDebug.zip"
+            config: Debug
+            app_subdir: Debug
+            idl: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Download Distributive
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
+
+      - name: Unpack Distributive
+        id: unpack-dist
+        run: |
+          if (Test-Path MeshLibDist*.zip) {
+            Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
+            Write-Output "C:\\meshlib-built\\install\\app\\${{ matrix.app_subdir }}" >> $env:GITHUB_PATH
+            Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Run MeshViewer
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
+        run: MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
+
+      - name: Show meshconv help
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
+        run: meshconv.exe --help
+
+      - name: Build C++ examples
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
+        working-directory: examples/cpp-examples
+        env:
+          DIST_DIR: C:\meshlib-built
+        run: |
+          cmake -S . -B build `
+            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }} `
+            -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }} /DMR_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }}"
+          cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\${{ matrix.config }}\MeshModification.exe
+
+      - name: Build C examples
+        if: ${{ steps.unpack-dist.outputs.dist_found == 'true' }}
+        working-directory: examples/c-examples
+        env:
+          DIST_DIR: C:\meshlib-built
+        run: |
+          cmake -S . -B build `
+            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
+            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}
+          cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          .\build\${{ matrix.config }}\MeshModification.exe

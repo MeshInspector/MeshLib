@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1.6
+
+# This image is used to generate C bindings (once, they are then sent to all other platforms).
+# Generating C bindings requires Emscripten SDK on most platforms, see `thirdparty/mrbind/docs/generating_c.md#option-a`.
+# We could choose a platform here that doesn't need EMSDK, but it's desirable to use EMSDK to check that the process actually works,
+#   since this can be used on all OSes, while the EMSDK-less process only works on a few of them.
+
+FROM emscripten/emsdk:4.0.10-arm64
+
+COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
+COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
+
+RUN <<EOF
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    # use more reliable mirror
+    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # MRBind dependencies
+    ./scripts/mrbind/install_deps_ubuntu.sh
+    # clean downloaded files
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF

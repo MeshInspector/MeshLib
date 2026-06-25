@@ -1,0 +1,95 @@
+/**
+\page MeshLibCSetupGuide MeshLib C Setup Guide
+
+# Setting Up MeshLib for C Development
+
+\tableofcontents
+
+\parblock
+\note Two versions of the C API currently coexist:
+
+\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the the `MRC*` directories.
+
+\note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
+\endparblock
+
+\parblock
+\note Currently, the only supported way of using the C API is via the binary releases of MeshLib.
+
+\note Starting with the next release, you will be able to compile the C bindings directly from the source code.
+\endparblock
+
+## Installing binary releases of MeshLib
+
+The installation process is \ref MeshLibCppSetupGuide "same as for C++", and is also explained below.
+
+The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
+
+### Windows
+ 1. **Download and Extract the Built Version**
+  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
+  - Download the latest **Windows built version archive** (E.g. MeshLibDist_v3.0.0.40.zip).
+  - Extract it to a directory, e.g., `C:\meshlib-built\`.
+  \n **Directory Structure After Extraction**
+\code{.cmd}
+install/
+  ├── include/       # Header files
+  ├── lib/           # Static and shared libraries
+  ├── app/           # Executables
+example_plugin/      # example solution for creating MeshLib/MeshInspector plugins
+\endcode
+ 2. **Configure and integrate with Visual Studio**
+    - **C/C++ → General → Additional Include Directories**:
+    \n Add: `C:\meshlib-built\install\include`
+    - **C/C++ → All Options → Additional Options**:
+    \n Add: `/bigobj /utf8`
+    - **Linker → Input → Additional Dependencies**:
+    \n Add: `C:\meshlib-built\install\lib\$(Configuration)\*.lib`
+    - **Copy DLLs**:
+    \n Copy all `.dll` files from: `C:\meshlib-built\install\app\$(Configuration)` to your project’s output directory: `$(TargetDir)`
+\code{.pws}
+xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
+\endcode
+
+### Linux (Ubuntu/Fedora)
+ 1. **Download and Extract the Built Version**
+  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
+  - Download the latest Linux built version
+ 2. Install Linux Build
+  - **For Ubuntu**:
+\code{.sh}
+sudo apt install ./meshlib-build-version-example.deb
+\endcode
+  - **For Fedora**:
+\code{.sh}
+sudo rpm -i ./meshlib-build-version-example.rpm
+\endcode
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ \n Add the following to your `CMakeLists.txt`:
+\code{.cmake}
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+`\endcode
+
+### macOS
+ 1. **Download the Built Version**
+ \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest macOS built version.
+ 2. **Install Using macOS Installer**
+  - Double-click the `.pkg` file included in the downloaded package, and follow the instructions to complete the installation.
+  - **Install Dependencies via Homebrew**
+  \n Open Terminal and run the following command:
+\code{.sh}
+xargs brew install < /opt/meshlib/requirements/macos.txt
+\endcode
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ \n Add the following to your `CMakeLists.txt`:
+\code{.cmake}
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+`\endcode
+
+## Try MeshLib with C Examples
+
+MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
+
+We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
+
+*/

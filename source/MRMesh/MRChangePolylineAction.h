@@ -29,6 +29,15 @@ public:
         }
     }
 
+    /// use this constructor to remember object's polyline and immediately set new polyline
+    ChangePolylineAction( std::string name, const std::shared_ptr<ObjectLines>& obj, std::shared_ptr<Polyline3> newPolyline ) :
+        objLines_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+            clonePolyline_ = obj->updatePolyline( std::move( newPolyline ) );
+    }
+
     virtual std::string name() const override
     {
         return name_;
@@ -160,6 +169,77 @@ public:
 private:
     std::shared_ptr<ObjectLines> objLines_;
     PolylineTopology cloneTopology_;
+
+    std::string name_;
+};
+
+
+/// Undo action that modifies one point's coordinates inside ObjectPolyline
+/// \ingroup HistoryGroup
+class ChangeOnePointInPolylineAction : public HistoryAction
+{
+public:
+    using Obj = ObjectLines;
+
+    /// use this constructor to remember point's coordinates before making any changes in it
+    ChangeOnePointInPolylineAction( std::string name, const std::shared_ptr<ObjectLines>& obj, VertId pointId ) :
+        objPoints_{ obj },
+        pointId_{ pointId },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            if ( auto m = obj->polyline() )
+                if ( m->points.size() > pointId_ )
+                    safeCoords_ = m->points[pointId_];
+        }
+    }
+
+    /// use this constructor to remember point's coordinates and immediate set new coordinates
+    ChangeOnePointInPolylineAction( std::string name, const std::shared_ptr<ObjectLines>& obj, VertId pointId, const Vector3f & newCoords ) :
+        objPoints_{ obj },
+        pointId_{ pointId },
+        safeCoords_{ newCoords },
+        name_{ std::move( name ) }
+    {
+        action( HistoryAction::Type::Redo );
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objPoints_ )
+            return;
+
+        if ( auto m = objPoints_->varPolyline() )
+        {
+            if ( m->points.size() > pointId_ )
+            {
+                std::swap( safeCoords_, m->points[pointId_] );
+                objPoints_->setDirtyFlags( DIRTY_POSITION );
+            }
+        }
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectLines>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_POSITION );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity();
+    }
+
+private:
+    std::shared_ptr<ObjectLines> objPoints_;
+    VertId pointId_;
+    Vector3f safeCoords_;
 
     std::string name_;
 };

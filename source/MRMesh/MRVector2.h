@@ -1,10 +1,14 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRMesh/MRUnsigned.h"
 #include "MRMeshFwd.h"
 #include "MRPch/MRBindingMacros.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <iosfwd>
+#include <utility>
 
 namespace MR
 {
@@ -30,7 +34,11 @@ struct Vector2
 
     T x, y;
 
-    constexpr Vector2() noexcept : x( 0 ), y( 0 ) { }
+    constexpr Vector2() noexcept : x( 0 ), y( 0 )
+    {
+        static_assert( sizeof( Vector2<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 2, "Invalid number of elements" );
+    }
     explicit Vector2( NoInit ) noexcept { }
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
 
@@ -40,14 +48,16 @@ struct Vector2
     static constexpr Vector2 diagonal( T a ) noexcept { return Vector2( a, a ); }
     static constexpr Vector2 plusX() noexcept { return Vector2( 1, 0 ); }
     static constexpr Vector2 plusY() noexcept { return Vector2( 0, 1 ); }
-    static constexpr Vector2 minusX() noexcept { return Vector2( -1, 0 ); }
-    static constexpr Vector2 minusY() noexcept { return Vector2( 0, -1 ); }
+    static constexpr Vector2 minusX() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector2( -1, 0 ); }
+    static constexpr Vector2 minusY() noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_unsigned_v<T> ) { return Vector2( 0, -1 ); }
 
-    template <typename U>
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and looks out of place there.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector2( const Vector2<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ) { }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
     T lengthSq() const { return x * x + y * y; }
     auto length() const
@@ -107,6 +117,25 @@ struct Vector2
         else
             return a *= ( 1 / b );
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector2& vec )
+    {
+        return s << vec.x << ' ' << vec.y;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector2& vec )
+    {
+        return s >> vec.x >> vec.y;
+    }
+
+
+    // We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
+    // Those don't bind correctly in C#, because there we can't overload functions based on mutable struct ref vs const struct ref parameters.
+
+    MR_BIND_IGNORE friend auto begin( const Vector2& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto begin( Vector2& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto end( const Vector2& v ) { return &v[2]; }
+    MR_BIND_IGNORE friend auto end( Vector2& v ) { return &v[2]; }
 };
 
 /// \related Vector2
@@ -174,24 +203,12 @@ template <typename T>
 inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
     using std::abs; // This allows boost.multiprecision numbers.
+    using Unsigned::abs; // This silences warnings on unsigned integers.
     if ( abs( x ) < abs( y ) )
         return Vector2( 1, 0 );
     else
         return Vector2( 0, 1 );
 }
-
-
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
-
-template <typename T>
-MR_BIND_IGNORE inline auto begin( const Vector2<T> & v ) { return &v[0]; }
-template <typename T>
-MR_BIND_IGNORE inline auto begin( Vector2<T> & v ) { return &v[0]; }
-
-template <typename T>
-MR_BIND_IGNORE inline auto end( const Vector2<T> & v ) { return &v[2]; }
-template <typename T>
-MR_BIND_IGNORE inline auto end( Vector2<T> & v ) { return &v[2]; }
 
 /// \}
 
@@ -200,3 +217,15 @@ MR_BIND_IGNORE inline auto end( Vector2<T> & v ) { return &v[2]; }
 #endif
 
 } // namespace MR
+
+template<>
+struct std::hash<MR::Vector2f>
+{
+    size_t operator()( MR::Vector2f const& p ) const noexcept
+    {
+        std::uint64_t xy;
+        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
+        return size_t( xy );
+    }
+};

@@ -8,6 +8,7 @@
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBox.h>
+#include <MRVoxels/MRFloatGrid.h>
 #include <MRVoxels/MRVoxelPath.h>
 
 namespace MR

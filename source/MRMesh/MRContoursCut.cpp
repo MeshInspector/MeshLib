@@ -14,8 +14,12 @@
 #include "MRSurfaceDistance.h"
 #include "MRExtractIsolines.h"
 #include "MRParallelFor.h"
+#include "MRMeshIntersect.h"
+#include "MRSurfacePath.h"
+#include "MRphmap.h"
+#include "MRFillContourByGraphCut.h"
+#include "MREdgeMetric.h"
 #include "MRPch/MRSpdlog.h"
-#include <parallel_hashmap/phmap.h>
 #include <numeric>
 
 namespace MR
@@ -43,13 +47,6 @@ struct EdgeIntersectionData
     int beforeSortIndex{ 0 }; // useful for next sort
 };
 
-enum class TrianglesSortRes
-{
-    Undetermined, // triangles positions cannot be determined
-    Left,         // second triangle is form left side of oriented ABC
-    Right         // second triangle is form right side of oriented ABC
-};
-
 using EdgeData = std::vector<EdgeIntersectionData>;
 
 struct PathsEdgeIndex
@@ -74,391 +71,16 @@ struct PreCutResult
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
 };
 
-// Indicates if one of sorted faces was reverted in contour (only can be during propagation sort)
-enum class EdgeSortState
-{
-    Straight, // both intersection edges are in original state
-    LReverted, // left sort candidate returned
-    RReverted // right sort candidate returned
-};
-
-void preparePreciseVerts( const SortIntersectionsData& sortData, const VertId* verts, PreciseVertCoords* preciseVerts, int n )
+/// prepares precise-coordinates for a vertex from the other mesh
+PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortData )
 {
     if ( sortData.isOtherA )
-    {
-        for ( int i = 0; i < n; ++i )
-            preciseVerts[i] = {verts[i],sortData.converter( sortData.otherMesh.points[verts[i]] )};
-    }
-    else
-    {
-        if ( !sortData.rigidB2A )
-        {
-            for ( int i = 0; i < n; ++i )
-                preciseVerts[i] = {verts[i] + int( sortData.meshAVertsNum ),sortData.converter( sortData.otherMesh.points[verts[i]] )};
-        }
-        else
-        {
-            for ( int i = 0; i < n; ++i )
-                preciseVerts[i] = {verts[i] + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[verts[i]] ) )};
-        }
-    }
-}
+        return { v, sortData.converter( sortData.otherMesh.points[v] ) };
 
-TrianglesSortRes sortTrianglesSharedEdge( const SortIntersectionsData& sortData, EdgeId  sharedEdge )
-{
-    const auto& topology = sortData.otherMesh.topology;
+    if ( !sortData.rigidB2A )
+        return { v + int( sortData.meshAVertsNum ), sortData.converter( sortData.otherMesh.points[v] )};
 
-    std::array<PreciseVertCoords, 4> preciseVerts;
-    std::array<VertId, 4> verts;
-    verts[0] = topology.dest( topology.next( sharedEdge ) );
-    verts[1] = topology.org( sharedEdge );
-    verts[2] = topology.dest( sharedEdge );
-    verts[3] = topology.dest( topology.prev( sharedEdge ) );
-
-    if ( verts[0] == verts[3] )
-        return TrianglesSortRes::Undetermined;
-
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
-
-    if ( orient3d( preciseVerts ) )
-        return TrianglesSortRes::Left;
-    else
-        return TrianglesSortRes::Right;
-}
-
-TrianglesSortRes sortTrianglesSharedVert( const SortIntersectionsData& sortData, FaceId fl, EdgeId sharedVertOrg )
-{
-    const auto& topology = sortData.otherMesh.topology;
-    const auto& edgePerFaces = topology.edgePerFace();
-    auto el = edgePerFaces[fl];
-
-    std::array<PreciseVertCoords, 5> preciseVerts;
-    std::array<VertId, 5> verts;
-    verts[0] = topology.org( el );
-    verts[1] = topology.dest( el );
-    verts[2] = topology.dest( topology.next( el ) );
-    verts[3] = topology.dest( sharedVertOrg );
-    verts[4] = topology.dest( topology.next( sharedVertOrg ) );
-
-    // check multiple case
-    bool multiple3 = verts[3] == verts[0] || verts[3] == verts[1] || verts[3] == verts[2];
-    bool multiple4 = verts[4] == verts[0] || verts[4] == verts[1] || verts[4] == verts[2];
-    if ( multiple3 && multiple4 )
-        return TrianglesSortRes::Undetermined;
-    if ( multiple3 )
-        std::swap( preciseVerts[3], preciseVerts[4] );
-    if ( multiple3 || multiple4 )
-    {
-        preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 4 );
-        if ( orient3d( preciseVerts.data() ) )
-            return TrianglesSortRes::Left;
-        else
-            return TrianglesSortRes::Right;
-    }
-
-    // common non-multiple case
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 5 );
-
-    bool oneRes = orient3d( preciseVerts.data() );
-    std::swap( preciseVerts[3], preciseVerts[4] );
-    bool otherRes = orient3d( preciseVerts.data() );
-
-    if ( oneRes != otherRes )
-        return TrianglesSortRes::Undetermined;
-    else if ( oneRes )
-        return TrianglesSortRes::Left;
-    else
-        return TrianglesSortRes::Right;
-}
-
-TrianglesSortRes sortTrianglesNoShared( const SortIntersectionsData& sortData, FaceId fl, FaceId fr )
-{
-    const auto& topology = sortData.otherMesh.topology;
-    const auto& edgePerFaces = topology.edgePerFace();
-    auto el = edgePerFaces[fl];
-    auto er = edgePerFaces[fr];
-
-    std::array<PreciseVertCoords, 6> preciseVerts;
-    std::array<VertId, 6> verts;
-    verts[0] = topology.org( el );
-    verts[1] = topology.dest( el );
-    verts[2] = topology.dest( topology.next( el ) );
-    verts[3] = topology.org( er );
-    verts[4] = topology.dest( er );
-    verts[5] = topology.dest( topology.next( er ) );
-
-    preparePreciseVerts( sortData, verts.data(), preciseVerts.data(), 6 );
-
-    bool arRes = orient3d( preciseVerts.data() );
-    std::swap( preciseVerts[3], preciseVerts[4] );
-    bool brRes = orient3d( preciseVerts.data() );
-    std::swap( preciseVerts[3], preciseVerts[5] );
-    bool crRes = orient3d( preciseVerts.data() );
-
-    if ( arRes != brRes || arRes != crRes )
-        return TrianglesSortRes::Undetermined;
-    else if ( arRes )
-        return TrianglesSortRes::Left;
-    else
-        return TrianglesSortRes::Right;
-}
-
-TrianglesSortRes sortTriangles( const SortIntersectionsData& sortData, FaceId fl, FaceId fr )
-{
-    const auto& topology = sortData.otherMesh.topology;
-    EdgeId sharedEdge = topology.sharedEdge( fl, fr );
-    if ( sharedEdge.valid() )
-        return sortTrianglesSharedEdge( sortData, sharedEdge );
-
-    sharedEdge = topology.sharedVertInOrg( fl, fr );
-    if ( sharedEdge.valid() )
-        return sortTrianglesSharedVert( sortData, fl, sharedEdge );
-
-    return sortTrianglesNoShared( sortData, fl, fr );
-}
-
-// Try sort left face by right, and right by left
-TrianglesSortRes sortTrianglesSymmetrical( const SortIntersectionsData& sortData,
-    EdgeId el, EdgeId er,
-    FaceId fl, FaceId fr, EdgeId baseEdgeOr, EdgeSortState state )
-{
-    // try sort right face by left
-    TrianglesSortRes res = sortTriangles( sortData, fl, fr );
-    if ( res != TrianglesSortRes::Undetermined )
-    {
-        bool correctOrder = ( state == EdgeSortState::LReverted ) ? ( el != baseEdgeOr ) : ( el == baseEdgeOr );
-        return correctOrder == ( res == TrianglesSortRes::Left ) ?
-            TrianglesSortRes::Left : TrianglesSortRes::Right;
-    }
-    // try sort left face by right
-    res = sortTriangles( sortData, fr, fl );
-    if ( res != TrianglesSortRes::Undetermined )
-    {
-        bool correctOrder = ( state == EdgeSortState::RReverted ) ? ( er != baseEdgeOr ) : ( er == baseEdgeOr );
-        return correctOrder == ( res == TrianglesSortRes::Right ) ?
-            TrianglesSortRes::Left : TrianglesSortRes::Right;
-    }
-    return TrianglesSortRes::Undetermined;
-}
-
-// try determine sort looking on next or prev intersection
-TrianglesSortRes sortPropagateContour(
-    const MeshTopology& tp,
-    const SortIntersectionsData& sortData,
-    const IntersectionData& il, const IntersectionData& ir,
-    EdgeId baseEdgeOr )
-{
-    const auto& lContour = sortData.contours[il.contourId];
-    const auto& rContour = sortData.contours[ir.contourId];
-    const EdgeId el = lContour[il.intersectionId].edge;
-    const EdgeId er = rContour[ir.intersectionId].edge;
-
-    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
-    bool sameContour = il.contourId == ir.contourId;
-    int stepRight = el == er ? 1 : -1;
-
-    // finds next/prev intersection on edge in the contour
-    auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
-    {
-        const auto& contour = left ? lContour : rContour;
-        bool closed = isClosed( contour );
-        int step = left ? 1 : stepRight;
-        if ( !next )
-            step *= -1;
-        IntersectionId nextL = interData;
-        int size = int( contour.size() );
-        for ( ;;)
-        {
-            int nextIndex = nextL + step;
-            if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
-                return {}; // reached end of non closed contour
-            nextL = IntersectionId( ( nextIndex + size ) % size );
-            if ( closed && nextL + 1 == size )
-                continue;
-            if ( nextL == stopInter )
-                return {}; // reached stop intersection in the contour
-            if ( contour[nextL].isEdgeATriB() == edgeATriB )
-                return nextL; // return next/prev intersection (on edge)
-        }
-    };
-
-    bool tryNext = true;
-    bool tryPrev = true;
-
-    IntersectionId lNext = il.intersectionId;
-    IntersectionId rNext = ir.intersectionId;
-    IntersectionId lPrev = il.intersectionId;
-    IntersectionId rPrev = ir.intersectionId;
-    EdgeId lastCommonEdgeNext = baseEdgeOr;
-    EdgeId lastCommonEdgePrev = baseEdgeOr;
-    // check if next/prev intersection can determine sort
-    auto checkOther = [&] ( bool next )->TrianglesSortRes
-    {
-        auto& tryThis = next ? tryNext : tryPrev;
-        assert( tryThis );
-
-        const auto startL = next ? lNext : lPrev;
-        const auto startR = next ? rNext : rPrev;
-
-        auto& lOtherRef = next ? lNext : lPrev;
-        auto& rOtherRef = next ? rNext : rPrev;
-        auto& lastCommonEdgeRef = next ? lastCommonEdgeNext : lastCommonEdgePrev;
-        auto otherL = getNextPrev( lOtherRef, sameContour ? rOtherRef : lOtherRef, true, next );
-        if ( !otherL )
-        {
-            tryThis = false; // terminal (end of contour reached)
-            return TrianglesSortRes::Undetermined;
-        }
-        auto otherR = getNextPrev( rOtherRef, sameContour ? lOtherRef : rOtherRef, false, next );
-        if ( !otherR )
-        {
-            tryThis = false; // terminal (end of contour reached
-            return TrianglesSortRes::Undetermined;
-        }
-        lOtherRef = otherL;
-        rOtherRef = otherR;
-        auto otherEL = lContour[lOtherRef].edge.undirected();
-        auto otherER = rContour[rOtherRef].edge.undirected();
-        bool lReturned = otherEL == lastCommonEdgeRef.undirected();
-        bool rReturned = otherER == lastCommonEdgeRef.undirected();
-        if ( lReturned || rReturned )
-        {
-            // if one of candidates return - terminal, but still can be determined
-            tryThis = false; // terminal
-            // if both of candidates return to base edge sort cannot be determined
-            if ( lReturned && rReturned )
-                return TrianglesSortRes::Undetermined;
-
-            FaceId fl;
-            FaceId fr;
-            EdgeSortState state;
-            if ( lReturned )
-            {
-                fl = lContour[lOtherRef].tri();
-                fr = rContour[startR].tri();
-                state = EdgeSortState::LReverted;
-            }
-            else
-            {
-                assert( rReturned );
-                fl = lContour[startL].tri();
-                fr = rContour[rOtherRef].tri();
-                state = EdgeSortState::RReverted;
-            }
-            return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, state );
-        }
-
-        if ( otherEL != otherER )
-        {
-            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
-            // keeping it for better understanding whats going on here, also might be useful for debugging two objects boolean failures
-
-            //assert(
-            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
-            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
-
-            // determined condition, intersections leave face in different edges (not returned)
-            if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
-                return sortData.isOtherA ? TrianglesSortRes::Right : TrianglesSortRes::Left; // terminal
-            else
-            {
-                // TODO: support this case
-                // we can be here only if doing self-boolean of non-closed contour passing through vertex
-                tryThis = false; // for now just terminate, for simplicity
-                return TrianglesSortRes::Undetermined;
-            }
-        }
-
-        // undetermined condition, but not terminal (intersections leave face in same edge (not returned))
-        assert( otherEL == otherER && !lReturned && !rReturned );
-        if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() )
-            lastCommonEdgeRef = tp.next( lastCommonEdgeRef );
-        else if ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef );
-        else if ( otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() )
-            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
-        else
-            lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
-
-        FaceId fl = lContour[lOtherRef].tri();
-        FaceId fr = rContour[rOtherRef].tri();
-
-        if ( fl == fr )
-            return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
-
-        return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
-    };
-    bool lPassedFullRing = false;
-    bool rPassedFullRing = false;
-    TrianglesSortRes res = TrianglesSortRes::Undetermined;
-    for ( ; tryNext || tryPrev; )
-    {
-        if ( tryNext )
-            res = checkOther( true );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res;
-        if ( tryPrev )
-            res = checkOther( false );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res;
-
-        if ( !lPassedFullRing && ( lNext == il.intersectionId || lPrev == il.intersectionId ) )
-            lPassedFullRing = true;
-        if ( !rPassedFullRing && ( rNext == ir.intersectionId || rPrev == ir.intersectionId ) )
-            rPassedFullRing = true;
-
-        if ( lPassedFullRing && rPassedFullRing )
-            return TrianglesSortRes::Undetermined; // both contours passed a round, so break infinite loop
-    }
-
-    return res;
-}
-
-// baseEdge - cutting edge representation with orientation of first intersection
-std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> getLessFunc(
-    const MeshTopology& tp,
-    const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
-{
-    if ( !sortData )
-    {
-        return [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-        {
-            return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
-        };
-    }
-    // sym baseEdge if other is not A:
-    // if other is A intersection edge is going inside - out
-    // otherwise it is going outside - in
-    return[&tp, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]
-    ( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-    {
-        const auto & il = l.interOnEdge;
-        const auto & ir = r.interOnEdge;
-
-        FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
-        FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
-        EdgeId el = sortData->contours[il.contourId][il.intersectionId].edge;
-        EdgeId er = sortData->contours[ir.contourId][ir.intersectionId].edge;
-        assert( el.undirected() == baseEdgeOr.undirected() );
-        assert( er.undirected() == baseEdgeOr.undirected() );
-
-        // try sort by faces (topology)
-        TrianglesSortRes res = sortTrianglesSymmetrical( *sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res == TrianglesSortRes::Left;
-
-        // try sort by next/prev intersections (topology)
-        res = sortPropagateContour( tp, *sortData, il, ir, baseEdgeOr );
-        if ( res != TrianglesSortRes::Undetermined )
-            return res == TrianglesSortRes::Left;
-
-        // try sort by geometry
-        return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
-    };
+    return { v + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[v] ) )};
 }
 
 // sets left face of given edge invalid and saves info about its old left ring
@@ -537,10 +159,33 @@ EdgeId iterateRemovedFacesInfoToFindLeftEdge( const MeshTopology& topology, cons
 PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
 {
     MR_TIMER;
+
+    int numVerts = 0;
+    int numEdges = 0;
+    int intersectedEdges = 0;
+    for ( const auto& cont : contours )
+    {
+        auto size = int( cont.intersections.size() );
+        numVerts += size;
+        numEdges += 2 * size;
+        for ( const auto& in : cont.intersections )
+            if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
+                ++intersectedEdges;
+        numEdges += 2 * intersectedEdges;
+        if ( cont.closed )
+            --numVerts;
+    }
+    const auto totalExpectedVerts = mesh.topology.vertSize() + numVerts;
+    const auto totalExpectedEdges = mesh.topology.edgeSize() + numEdges;
+
+    mesh.topology.vertReserve( totalExpectedVerts );
+    mesh.topology.edgeReserve( totalExpectedEdges );
+
     PreCutResult res;
     res.paths.resize( contours.size() );
     res.oldEdgesInfo.resize( contours.size() );
     res.removedFaces.resize( contours.size() );
+    res.edgeData.reserve( size_t( intersectedEdges ) );
     auto oldEdgesSize = mesh.topology.edgeSize();
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
     {
@@ -688,6 +333,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
                 auto& edgeData = res.edgeData[thisEdge.undirected()];
+                edgeData.reserve( 5 ); // reseve small ammount to avoid overhead on reallocating for in most common scenarios
                 edgeData.emplace_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( intersectionId )},
                     .newVert = newVertId,
@@ -838,6 +484,244 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
     }
 }
 
+enum class CompareResult
+{
+    Less,
+    Unknown,
+    Greater
+};
+
+/// compare intersections of two triangles with one edge along that edge;
+/// returns Unknown only if both triangles share the same 3 vertices
+CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
+    FaceId fl, FaceId fr )
+{
+    assert( fl != fr );
+
+    const auto& otherTopology = sortData.otherMesh.topology;
+    auto vsl = otherTopology.getTriVerts( fl );
+    std::sort( vsl.begin(), vsl.end() );
+    auto vsr = otherTopology.getTriVerts( fr );
+    std::sort( vsr.begin(), vsr.end() );
+    if ( vsl == vsr )
+        return CompareResult::Unknown;
+
+    VertId vo = mesh.topology.org( intersectedEdge );
+    VertId vd = mesh.topology.dest( intersectedEdge );
+
+    auto po = mesh.points[vo];
+    auto pd = mesh.points[vd];
+
+    if ( sortData.isOtherA )
+    {
+        vo += (int)sortData.meshAVertsNum;
+        vd += (int)sortData.meshAVertsNum;
+        if ( sortData.rigidB2A )
+        {
+            po = (*sortData.rigidB2A)( po );
+            pd = (*sortData.rigidB2A)( pd );
+        }
+    }
+
+    std::array<PreciseVertCoords, 8> preciseVerts
+    {
+        PreciseVertCoords{ vo, sortData.converter( po ) },
+        PreciseVertCoords{ vd, sortData.converter( pd ) },
+        preciseOtherVert( vsl[0], sortData ),
+        preciseOtherVert( vsl[1], sortData ),
+        preciseOtherVert( vsl[2], sortData ),
+        preciseOtherVert( vsr[0], sortData ),
+        preciseOtherVert( vsr[1], sortData ),
+        preciseOtherVert( vsr[2], sortData )
+    };
+    return segmentIntersectionOrder( preciseVerts ) ? CompareResult::Less : CompareResult::Greater;
+}
+
+/// compare intersections of two triangles with one edge along that edge;
+/// if both triangles share the same 3 vertices then goes along the contours to other intersection in hope to resolve the ambiguity
+CompareResult comparePropagateEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& mesh, const SortIntersectionsData& sortData,
+     const EdgeIntersectionData& l, const EdgeIntersectionData& r )
+{
+    const auto & il = l.interOnEdge;
+    const auto & ir = r.interOnEdge;
+    const auto& lContour = sortData.contours[il.contourId];
+    const auto& rContour = sortData.contours[ir.contourId];
+
+    FaceId fl = lContour[il.intersectionId].tri();
+    FaceId fr = rContour[ir.intersectionId].tri();
+    const EdgeId el = lContour[il.intersectionId].edge;
+    const EdgeId er = rContour[ir.intersectionId].edge;
+    assert( el.undirected() == intersectedEdge.undirected() );
+    assert( er.undirected() == intersectedEdge.undirected() );
+    auto res = compareEdgeTrisIntersections( intersectedEdge, mesh, sortData, fl, fr );
+    if ( res != CompareResult::Unknown )
+        return res;
+
+    const auto& tp = mesh.topology;
+
+    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
+    bool sameContour = il.contourId == ir.contourId;
+    int stepRight = el == er ? 1 : -1;
+
+    // finds next/prev intersection on edge in the contour
+    auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
+    {
+        const auto& contour = left ? lContour : rContour;
+        bool closed = isClosed( contour );
+        int step = left ? 1 : stepRight;
+        if ( !next )
+            step *= -1;
+        IntersectionId nextL = interData;
+        int size = int( contour.size() );
+        for ( ;;)
+        {
+            int nextIndex = nextL + step;
+            if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
+                return {}; // reached end of non closed contour
+            nextL = IntersectionId( ( nextIndex + size ) % size );
+            if ( closed && nextL + 1 == size )
+                continue;
+            if ( nextL == stopInter )
+                return {}; // reached stop intersection in the contour
+            if ( contour[nextL].isEdgeATriB() == edgeATriB )
+                return nextL; // return next/prev intersection (on edge)
+        }
+    };
+
+    bool tryNext = true;
+    bool tryPrev = true;
+
+    IntersectionId lNext = il.intersectionId;
+    IntersectionId rNext = ir.intersectionId;
+    IntersectionId lPrev = il.intersectionId;
+    IntersectionId rPrev = ir.intersectionId;
+    EdgeId lastCommonEdgeNext = intersectedEdge;
+    EdgeId lastCommonEdgePrev = intersectedEdge;
+    // check if next/prev intersection can determine sort
+    auto checkOther = [&] ( bool next )->CompareResult
+    {
+        auto& tryThis = next ? tryNext : tryPrev;
+        assert( tryThis );
+
+        const auto startL = next ? lNext : lPrev;
+        const auto startR = next ? rNext : rPrev;
+
+        auto& lOtherRef = next ? lNext : lPrev;
+        auto& rOtherRef = next ? rNext : rPrev;
+        auto& lastCommonEdgeRef = next ? lastCommonEdgeNext : lastCommonEdgePrev;
+        auto otherL = getNextPrev( lOtherRef, sameContour ? rOtherRef : lOtherRef, true, next );
+        if ( !otherL )
+        {
+            tryThis = false; // terminal (end of contour reached)
+            return CompareResult::Unknown;
+        }
+        auto otherR = getNextPrev( rOtherRef, sameContour ? lOtherRef : rOtherRef, false, next );
+        if ( !otherR )
+        {
+            tryThis = false; // terminal (end of contour reached)
+            return CompareResult::Unknown;
+        }
+        lOtherRef = otherL;
+        rOtherRef = otherR;
+        auto otherEL = lContour[lOtherRef].edge.undirected();
+        auto otherER = rContour[rOtherRef].edge.undirected();
+        bool lReturned = otherEL == lastCommonEdgeRef.undirected();
+        bool rReturned = otherER == lastCommonEdgeRef.undirected();
+        if ( lReturned || rReturned )
+        {
+            // if one of candidates return - terminal, but still can be determined
+            tryThis = false; // terminal
+            // if both of candidates return to base edge sort cannot be determined
+            if ( lReturned && rReturned )
+                return CompareResult::Unknown;
+
+            FaceId fl;
+            FaceId fr;
+            if ( lReturned )
+            {
+                fl = lContour[lOtherRef].tri();
+                fr = rContour[startR].tri();
+            }
+            else
+            {
+                assert( rReturned );
+                fl = lContour[startL].tri();
+                fr = rContour[rOtherRef].tri();
+            }
+            return compareEdgeTrisIntersections( lastCommonEdgeRef, mesh, sortData, fl, fr );
+        }
+
+        if ( otherEL != otherER )
+        {
+            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
+            // keeping it for better understanding whats going on here, also might be useful for debugging two objects boolean failures
+
+            //assert(
+            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
+
+            // determined condition, intersections leave face in different edges (not returned)
+            if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+                return sortData.isOtherA ? CompareResult::Less : CompareResult::Greater; // terminal
+            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
+                return sortData.isOtherA ? CompareResult::Greater : CompareResult::Less; // terminal
+            else
+            {
+                // TODO: support this case
+                // we can be here only if doing self-boolean of non-closed contour passing through vertex
+                tryThis = false; // for now just terminate, for simplicity
+                return CompareResult::Unknown;
+            }
+        }
+
+        // undetermined condition, but not terminal (intersections leave face in same edge (not returned))
+        assert( otherEL == otherER && !lReturned && !rReturned );
+        if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
+        else
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
+
+        FaceId fl = lContour[lOtherRef].tri();
+        FaceId fr = rContour[rOtherRef].tri();
+
+        if ( fl == fr )
+            return CompareResult::Unknown; // go next if we came to same intersection 
+
+        return compareEdgeTrisIntersections( lastCommonEdgeRef, mesh, sortData, fl, fr );
+
+    };
+    bool lPassedFullRing = false;
+    bool rPassedFullRing = false;
+    res = CompareResult::Unknown;
+    for ( ; tryNext || tryPrev; )
+    {
+        if ( tryNext )
+            res = checkOther( true );
+        if ( res != CompareResult::Unknown )
+            return res;
+        if ( tryPrev )
+            res = checkOther( false );
+        if ( res != CompareResult::Unknown )
+            return res;
+
+        if ( !lPassedFullRing && ( lNext == il.intersectionId || lPrev == il.intersectionId ) )
+            lPassedFullRing = true;
+        if ( !rPassedFullRing && ( rNext == ir.intersectionId || rPrev == ir.intersectionId ) )
+            rPassedFullRing = true;
+
+        if ( lPassedFullRing && rPassedFullRing )
+            return CompareResult::Unknown; // both contours passed a round, so break infinite loop
+    }
+
+    return res;
+}
+
 void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
 {
@@ -845,13 +729,35 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
     const auto& intInfo = edgeData.front().interOnEdge;
     EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
 
-    std::vector<double> dotProds( edgeData.size() );
-    Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
-    auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
-    for ( int i = 0; i < edgeData.size(); ++i )
-        dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
+    if ( sortData )
+    {
+        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+        {
+            auto res = comparePropagateEdgeTrisIntersections( baseEdge, mesh, *sortData, l, r );
+            if ( res != CompareResult::Unknown )
+                return res == CompareResult::Less;
 
-    std::sort( edgeData.begin(), edgeData.end(), getLessFunc( mesh.topology, dotProds, baseEdge, sortData ) );
+            assert( mesh.points[l.newVert] == mesh.points[r.newVert] );
+            assert( !"cannot compare" );
+            return false;
+        };
+        std::sort( edgeData.begin(), edgeData.end(), pred );
+    }
+    else
+    {
+        // sort using floating-point coordinates of new vertices
+        std::vector<double> dotProds( edgeData.size() );
+        Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
+        auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
+        for ( int i = 0; i < edgeData.size(); ++i )
+            dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
+
+        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
+        {
+            return dotProds[l.beforeSortIndex] < dotProds[r.beforeSortIndex];
+        };
+        std::sort( edgeData.begin(), edgeData.end(), pred );
+    }
 
     // DEBUG Output
     //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );
@@ -1230,20 +1136,33 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     EdgeBitSet allHoleEdges( mesh.topology.edgeSize() );
     std::vector<EdgeId> holeRepresentativeEdges;
     std::vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
+    std::vector<EdgeId> pseudoHoleRepresentativeEdges;
+    std::vector<FaceId> pseudoOldFaces; // of corresponding pseudoHoleRepresentativeEdges
     const bool needOldFaces = params.new2OldMap || params.new2oldEdgesMap;
-    auto addHoleDesc = [&]( EdgeId e, FaceId oldf )
+    auto addHoleDesc = [&] ( EdgeId e, FaceId oldf, bool pseudofill )
     {
         if ( allHoleEdges.test( e ) )
             return;
-        holeRepresentativeEdges.push_back( e );
-        if ( needOldFaces )
-            oldFaces.push_back( oldf );
+        if ( !pseudofill )
+        {
+            holeRepresentativeEdges.push_back( e );
+            if ( needOldFaces )
+                oldFaces.push_back( oldf );
+        }
+        else
+        {
+            pseudoHoleRepresentativeEdges.push_back( e );
+            if ( needOldFaces )
+                pseudoOldFaces.push_back( oldf );
+        }
         for ( auto ei : leftRing( mesh.topology, e ) )
         {
             [[maybe_unused]] auto v = allHoleEdges.test_set( ei );
             assert( !v );
         }
     };
+    bool fillLeft = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Left;
+    bool fillRight = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Right;
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1254,10 +1173,19 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
             if ( !oldf.valid() ||
                 ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithContourIntersections.test( oldf ) ) )
                 continue;
-            if ( oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid() )
-                addHoleDesc( path[edgeId], oldf );
-            if ( oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid() )
-                addHoleDesc( path[edgeId].sym(), oldf );
+            bool addLeftDesc = oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid();
+            bool addRightDesc = oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid();
+            // order does matter because bad holes have tunnels and passes through both left and right
+            if ( !fillLeft )
+            {
+                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );
+                if ( addLeftDesc ) addHoleDesc( path[edgeId], oldf, true ); // pseudo hole should always be second
+            }
+            else
+            {
+                if ( addLeftDesc ) addHoleDesc( path[edgeId], oldf, false ); // real hole should alwauys be first
+                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );
+            }
         }
     }
     t.finish();
@@ -1267,18 +1195,46 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     // fill contours
     t.restart( "run TriangulateContourPlans" );
-    int numTris = 0;
-    for ( const auto & plan : fillPlans )
+    int numTris = int( pseudoHoleRepresentativeEdges.size() );
+    int numEdges = 0;
+    for ( const auto& plan : fillPlans )
+    {
         numTris += plan.numTris;
+        numEdges += 2 * int( plan.items.size() );
+    }
     const auto expectedTotalTris = mesh.topology.faceSize() + numTris;
+    const auto expectedTotalEdges = mesh.topology.edgeSize() + numEdges;
 
     mesh.topology.faceReserve( expectedTotalTris );
+    mesh.topology.edgeReserve( expectedTotalEdges );
     if ( params.new2OldMap )
         params.new2OldMap->reserve( expectedTotalTris );
 
     for ( size_t i = 0; i < holeRepresentativeEdges.size(); ++i )
-        executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i], 
+    {
+        // regenerate fill plan, if the execution of the old one (prepared before filling of other holes)
+        // leads to the appearance of multiple edges
+        if ( !isFillingMultipleEdgeFree( mesh.topology, fillPlans[i] ) )
+            fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i], false );
+
+        executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i],
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );
+    }
+
+    auto pseudoFill = [&] ( EdgeId eid, FaceId of )
+    {
+        auto nf = mesh.topology.addFaceId();
+        mesh.topology.setLeft( eid, nf );
+        if ( params.new2OldMap )
+        {
+            assert( of.valid() );
+            params.new2OldMap->autoResizeSet( nf, of );
+        }
+    };
+    for ( size_t i = 0; i < pseudoHoleRepresentativeEdges.size(); ++i )
+    {
+        pseudoFill( pseudoHoleRepresentativeEdges[i], needOldFaces ? pseudoOldFaces[i] : FaceId{} );
+    }
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )
@@ -1291,32 +1247,118 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
 Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf )
 {
-    std::vector<MeshTriPoint> surfaceLine( contour.size() );
-    tbb::task_group_context ctx;
-    bool ok = true;
-    ParallelFor( (size_t)0, contour.size(), [&] ( size_t i )
+    return cutMeshByContours( mesh, { contour }, xf );
+}
+
+Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, const AffineXf3f& xf )
+{
+    MR_TIMER;
+    if ( mesh.topology.faceSize() <= 0 )
+        return unexpected( "Mesh is empty" );
+
+    std::vector<Expected<OneMeshContour>> maybeOneMeshContours( contours.size() );
+    ParallelFor( contours, [&]( size_t ic )
     {
-        PointOnFace projPt;
-        if ( !mesh.projectPoint( xf( contour[i] ), projPt ) )
+        const auto & contour = contours[ic];
+        std::vector<MeshTriPoint> surfaceLine( contour.size() );
+        ParallelFor( surfaceLine, [&] ( size_t i )
         {
-            if ( ctx.cancel_group_execution() )
-                ok = false;
-            return;
-        }
-        surfaceLine[i] = mesh.toTriPoint( projPt );
+            auto proj = findProjection( xf( contour[i] ), mesh );
+            surfaceLine[i] = proj.mtp;
+        } );
+        maybeOneMeshContours[ic] = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
     } );
-    if ( !ok )
-        return unexpected( "Cannot project point to mesh" );
 
-    auto meshContour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
-    if ( !meshContour )
-        return unexpected( "Cannot convert tri points to mesh contour: " + meshContour.error() );
+    std::vector<OneMeshContour> oneMeshContours( contours.size() );
+    for( size_t ic = 0; ic < contours.size(); ++ic )
+    {
+        if ( !maybeOneMeshContours[ic] )
+            return unexpected( std::move( maybeOneMeshContours[ic].error() ) );
+        oneMeshContours[ic] = std::move( *maybeOneMeshContours[ic] );
+    }
 
-    auto cutRes = cutMesh( mesh, { *meshContour } );
+    auto cutRes = cutMesh( mesh, oneMeshContours );
     if ( !cutRes.fbsWithContourIntersections.none() )
         return unexpected( "Cannot cut mesh because of contour self intersections" );
-    auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
+    auto sideFbv = fillContourLeftByGraphCut( mesh.topology, cutRes.resultCut, edgeLengthMetric( mesh ) );
     return sideFbv;
+}
+
+Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Contours3f& contours, const CutByProjectionSettings& settings )
+{
+    if ( settings.direction == Vector3f() )
+    {
+        assert( false );
+        return unexpected( "Invalid direction" );
+    }
+
+    OneMeshContours cutConts( contours.size() );
+    std::string error;
+    auto rayPrecomp = IntersectionPrecomputes<float>( settings.direction );
+    tbb::task_group_context ctx;
+    ParallelFor( contours, [&] ( size_t i )
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return; // fast exit before projecting
+        auto mtps = std::vector<MeshTriPoint>( contours[i].size() );
+        ParallelFor( mtps, [&] ( size_t j )
+        {
+            if ( ctx.is_group_execution_cancelled() )
+                return; // stop projecting if failed
+            auto intRes = rayMeshIntersect( mesh, Line3f( settings.cont2mesh ? ( *settings.cont2mesh )( contours[i][j] ) : contours[i][j], settings.direction ), 
+                0, FLT_MAX, &rayPrecomp );
+            if ( !intRes )
+            {
+                if ( ctx.cancel_group_execution() )
+                    error = "Some contour points have missed the mesh";
+                return;
+            }
+            mtps[j] = intRes.mtp;
+        } );
+        if ( ctx.is_group_execution_cancelled() )
+            return; // do not continue if projecting failed
+        auto cutContRes = convertMeshTriPointsToMeshContour( mesh, mtps,
+            [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int )->Expected<SurfacePath>
+        {
+            auto plPoint = mesh.triPoint( start ) - settings.direction;
+            auto ccwPath = trackSection( mesh, start, end, plPoint, true );
+            auto cwPath = trackSection( mesh, start, end, plPoint, false );
+            if ( ccwPath.has_value() && cwPath.has_value() )
+            {
+                auto ccwL = surfacePathLength( mesh, *ccwPath );
+                auto cwL = surfacePathLength( mesh, *cwPath );
+                if ( ccwL < cwL )
+                    return ccwPath;
+                else
+                    return cwPath;
+            }
+            else if ( ccwPath.has_value() )
+                return ccwPath;
+            else if ( cwPath.has_value() )
+                return cwPath;
+            else
+            {
+                auto locRes = computeGeodesicPath( mesh, start, end );
+                if ( !locRes.has_value() )
+                    return unexpected( toString( locRes.error() ) );
+                return *locRes;
+            }
+        } );
+        if ( !cutContRes.has_value() )
+        {
+            if ( ctx.cancel_group_execution() )
+                error = std::move( cutContRes.error() );
+            return;
+        }
+        cutConts[i] = std::move( *cutContRes );
+    } );
+    if ( ctx.is_group_execution_cancelled() )
+        return unexpected( std::move( error ) );
+
+    auto cutRes = cutMesh( mesh, cutConts );
+    if ( cutRes.fbsWithContourIntersections.any() )
+        return unexpected( "Some projected contours have self-intersections" );
+    return std::move( cutRes.resultCut );
 }
 
 } //namespace MR

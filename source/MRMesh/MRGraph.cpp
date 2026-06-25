@@ -6,14 +6,23 @@ namespace MR
 
 void Graph::construct( NeighboursPerVertex neighboursPerVertex, EndsPerEdge endsPerEdge )
 {
+    construct(
+        std::move( neighboursPerVertex ),
+        VertBitSet( neighboursPerVertex.size(), true ),
+        std::move( endsPerEdge ),
+        EdgeBitSet( endsPerEdge.size(), true )
+    );
+}
+
+void Graph::construct( NeighboursPerVertex neighboursPerVertex, VertBitSet validVerts,
+    EndsPerEdge endsPerEdge, EdgeBitSet validEdges )
+{
     MR_TIMER;
 
-    validVerts_.clear();
-    validVerts_.resize( neighboursPerVertex.size(), true );
+    validVerts_ = std::move( validVerts );
     neighboursPerVertex_ = std::move( neighboursPerVertex );
 
-    validEdges_.clear();
-    validEdges_.resize( endsPerEdge.size(), true );
+    validEdges_ = std::move( validEdges );
     endsPerEdge_ = std::move( endsPerEdge );
 
     assert( checkValidity() );

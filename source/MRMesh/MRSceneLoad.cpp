@@ -6,10 +6,11 @@
 
 #include <MRPch/MRSpdlog.h>
 
-namespace
+namespace MR::SceneLoad
 {
 
-using namespace MR;
+namespace
+{
 
 // check if stream is empty (has no data)
 inline bool isEmpty( std::ostream& os )
@@ -26,27 +27,22 @@ std::optional<IOFilter> findAsyncObjectLoadFilter( const std::filesystem::path& 
     ext = std::string( "*" ) + ext;
     for ( auto& c : ext )
         c = (char)std::tolower( c );
-
     const auto asyncFilters = AsyncObjectLoad::getFilters();
-    const auto asyncFilter = std::find_if( asyncFilters.begin(), asyncFilters.end(), [&ext] ( auto&& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( asyncFilter != asyncFilters.end() )
-        return *asyncFilter;
-    else
-        return std::nullopt;
+    return findFilter( asyncFilters, ext );
 }
 
 // helper class to unify scene construction process
 class SceneConstructor
 {
 public:
+    SceneConstructor( const std::optional<LengthUnit>& targetUnit ) : targetUnit_( targetUnit ) {}
+
     // gather objects and error and warning messages
     void process( const std::filesystem::path& path, Expected<LoadedObjects> res )
     {
         const auto fileName = utf8string( path );
-        spdlog::info( "Load file {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
+        if ( !res.has_value() || !res->objs.empty() ) // if not skipped folder
+            spdlog::info( "Load {} - {}", fileName, res.has_value() ? "success" : res.error().c_str() );
         if ( !res.has_value() )
         {
             // TODO: user-defined error format
@@ -72,7 +68,17 @@ public:
         const auto prevObjectCount = loadedObjects_.size();
         for ( auto& obj : res->objs )
             if ( obj )
+            {
+                if ( targetUnit_ && res->lengthUnit && *targetUnit_ != *res->lengthUnit )
+                {
+                    const auto s = getUnitInfo( *res->lengthUnit ).conversionFactor / getUnitInfo( *targetUnit_ ).conversionFactor;
+                    auto xf = obj->xf();
+                    xf.A *= s;
+                    xf.b *= s;
+                    obj->setXf( xf );
+                }
                 loadedObjects_.emplace_back( std::move( obj ) );
+            }
         if ( prevObjectCount != loadedObjects_.size() )
             loadedFiles_.emplace_back( path );
         else
@@ -80,7 +86,7 @@ public:
     }
 
     // construct a scene object
-    SceneLoad::SceneLoadResult construct() const
+    SceneLoad::Result construct() const
     {
         auto scene = std::make_shared<SceneRootObject>();
 
@@ -89,7 +95,7 @@ public:
         {
             const auto& object = loadedObjects_.front();
             auto typeName = std::string( object->typeName() );
-            if ( typeName == SceneRootObject::TypeName() || ( typeName == Object::TypeName() && object->xf() == AffineXf3f() ) )
+            if ( typeName == SceneRootObject::StaticTypeName() || ( typeName == Object::StaticTypeName() && object->xf() == AffineXf3f() ) )
             {
                 scene = createRootFormObject( object );
                 constructed = false;
@@ -107,7 +113,7 @@ public:
                 scene->addChild( object );
         }
 
-        SceneLoad::SceneLoadResult ret{
+        SceneLoad::Result ret{
             .scene = std::move( scene ),
             .isSceneConstructed = constructed,
             .loadedFiles = loadedFiles_,
@@ -117,11 +123,27 @@ public:
 
         if ( ret.loadedFiles.empty() )
             ret.scene = nullptr; // Don't emit the root object on failure.
+        else
+        {
+            // If something is loaded, consider errors as warnings
+            if ( !ret.errorSummary.empty() )
+            {
+                if ( ret.warningSummary.empty() )
+                    ret.warningSummary = std::move( ret.errorSummary );
+                else
+                {
+                    ret.warningSummary += "\n\n";
+                    ret.warningSummary += ret.errorSummary;
+                }
+                ret.errorSummary.clear();
+            }
+        }
 
         return ret;
     }
 
 private:
+    const std::optional<LengthUnit> targetUnit_;
     std::vector<std::filesystem::path> loadedFiles_;
     std::vector<std::shared_ptr<Object>> loadedObjects_;
     std::ostringstream errorSummary_;
@@ -170,28 +192,42 @@ struct AsyncLoadContext
     }
 };
 
+Expected<LoadedObjects> sLoadPath( const std::filesystem::path& path, const Settings::OpenFolder& openFolder, const ProgressCallback& callback )
+{
+    std::error_code ec;
+    if ( is_directory( path, ec ) )
+    {
+        if ( !openFolder )
+        {
+            spdlog::info( "Skipping directory {}", utf8string( path ) );
+            return {};
+        }
+
+        spdlog::info( "Loading directory {}", utf8string( path ) );
+        return openFolder( path, callback );
+    }
+
+    spdlog::info( "Loading file {}", utf8string( path ) );
+    return loadObjectFromFile( path, callback );
 }
 
-namespace MR::SceneLoad
-{
+} // anonymous namespace
 
-SceneLoadResult fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, ProgressCallback callback )
+Result fromAnySupportedFormat( const std::vector<std::filesystem::path>& files, const Settings& settings )
 {
-    SceneConstructor constructor;
+    SceneConstructor constructor( settings.targetUnit );
     for ( auto index = 0ull; index < files.size(); ++index )
     {
         const auto& path = files[index];
         if ( path.empty() )
             continue;
-
-        spdlog::info( "Loading file {}", utf8string( path ) );
-        constructor.process( path, loadObjectFromFile( path, subprogress( callback, index, files.size() ) ) );
+        constructor.process( path, sLoadPath( path, settings.openFolder, subprogress( settings.progress, index, files.size() ) ) );
     }
     return constructor.construct();
 }
 
 void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& files,
-                                  SceneLoad::PostLoadCallback postLoadCallback, ProgressCallback progressCallback )
+                                  const SceneLoad::PostLoadCallback& postLoadCallback, const Settings& settings )
 {
     auto ctx = std::make_shared<AsyncLoadContext>();
     ctx->paths = files;
@@ -212,17 +248,17 @@ void asyncFromAnySupportedFormat( const std::vector<std::filesystem::path>& file
         else
         {
             spdlog::info( "Loading file {}", utf8string( path ) );
-            ctx->results[index] = loadObjectFromFile( path, subprogress( progressCallback, syncIndex++, count ) );
+            ctx->results[index] = sLoadPath( path, settings.openFolder, subprogress( settings.progress, syncIndex++, count ) );
         }
     }
     assert( syncIndex + asyncBitSet.count() == count );
 
-    ctx->progressCallback = subprogress( progressCallback, (float)syncIndex / (float)count, 1.00f );
+    ctx->progressCallback = subprogress( settings.progress, (float)syncIndex / (float)count, 1.00f );
     ctx->initializeProgressMap( asyncBitSet );
 
-    auto postLoad = [ctx, count, postLoadCallback]
+    auto postLoad = [ctx, count, postLoadCallback, targetUnit = settings.targetUnit]
     {
-        SceneConstructor constructor;
+        SceneConstructor constructor( targetUnit );
         for ( auto index = 0ull; index < count; ++index )
             constructor.process( ctx->paths[index], ctx->results[index] );
         postLoadCallback( constructor.construct() );

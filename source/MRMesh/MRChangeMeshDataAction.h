@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRHistoryAction.h"
+#include "MRCombinedHistoryAction.h"
 #include "MRObjectMesh.h"
 
 namespace MR
@@ -16,13 +16,7 @@ public:
     using Obj = ObjectMesh;
 
     /// use this constructor to remember object's data before making any changes in it
-    ChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
-        objMesh_{ obj },
-        name_{ std::move( name ) }
-    {
-        if ( objMesh_ )
-            data_ = objMesh_->data();
-    }
+    MRMESH_API ChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, bool cloneMesh );
 
     /// use this constructor to remember object's data and immediately set new data
     ChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, ObjectMeshData&& newData ) :
@@ -60,11 +54,48 @@ public:
         return name_.capacity() + data_.heapBytes();
     }
 
+    const std::shared_ptr<ObjectMesh>& obj() const { return objMesh_; }
+
+    const ObjectMeshData& data() const { return data_; }
+
 private:
     std::shared_ptr<ObjectMesh> objMesh_;
     ObjectMeshData data_;
 
     std::string name_;
+};
+
+/// Undo action for ObjectMeshData change partially
+class MRMESH_CLASS PartialChangeMeshDataAction : public HistoryAction
+{
+public:
+    /// use this constructor to remember object's data and immediately set new data
+    MRMESH_API PartialChangeMeshDataAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, ObjectMeshData&& newData );
+
+    virtual std::string name() const override
+    {
+        if ( combinedAction_ )
+            return combinedAction_->name();
+        assert( false );
+        return "##empty_PartialChangeMeshDataAction";
+    }
+
+    virtual void action( HistoryAction::Type type) override
+    {
+        if ( combinedAction_ )
+            combinedAction_->action( type );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        if ( combinedAction_ )
+            return combinedAction_->heapBytes() + sizeof( CombinedHistoryAction );
+        else
+            return 0;
+    }
+
+private:
+    std::unique_ptr<CombinedHistoryAction> combinedAction_;
 };
 
 /// \}

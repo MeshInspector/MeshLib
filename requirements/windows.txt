@@ -2,6 +2,7 @@ boost-algorithm
 boost-dynamic-bitset
 boost-functional
 boost-integer
+boost-locale
 boost-move
 boost-multiprecision
 boost-program-options
@@ -13,15 +14,19 @@ boost-url
 libjpeg-turbo
 cpr
 eigen3
+fastmcpp
 freetype
 gdcm
 gtest
 hidapi
 jsoncpp
+laz-perf
 libe57format
 libharu
 libzip
-opencascade
+mimalloc[override]
+opencascade-minimal
+openctm
 openvdb
 python3
 spdlog
@@ -29,5 +34,6 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng
 glad
 glfw3

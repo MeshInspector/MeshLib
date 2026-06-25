@@ -9,6 +9,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 
@@ -93,6 +94,11 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 
 namespace MR
 {
+
+std::string getProductName()
+{
+    return MR_PROJECT_NAME;
+}
 
 void SetCurrentThreadName( const char * name )
 {
@@ -183,7 +189,7 @@ std::filesystem::path getUserConfigDir()
     filepath /= ".local";
     filepath /= "share";
 #endif
-    filepath /= std::string( Config::instance().getAppName() );
+    filepath /= asU8String( Config::instance().getAppName() );
     std::error_code ec;
     if ( !std::filesystem::is_directory( filepath, ec ) || ec )
     {
@@ -235,29 +241,39 @@ std::filesystem::path GetHomeDirectory()
     return {};
 }
 
-std::string GetMRVersionString()
+const char * GetMRVersionString()
 {
+    static const std::string res = []
+    {
 #ifndef __EMSCRIPTEN__
     MR_SUPPRESS_WARNING_PUSH
     MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto directory = GetResourcesDirectory();
     MR_SUPPRESS_WARNING_POP
     auto versionFilePath = directory / "mr.version";
+    std::string version = __DATE__;
     std::error_code ec;
-    std::string configPrefix = "";
-#ifndef NDEBUG
-    configPrefix = "Debug: ";
-#endif
-    if ( !std::filesystem::exists( versionFilePath, ec ) )
-        return configPrefix + "Version undefined";
-    std::ifstream versFile( versionFilePath );
-    if ( !versFile )
-        return configPrefix + "Version reading error";
-    std::string version;
-    versFile >> version;
-    if ( !versFile )
-        return configPrefix + "Version reading error";
-    return configPrefix + version;
+    if ( std::filesystem::exists( versionFilePath, ec ) )
+    {
+        std::ifstream versFile( versionFilePath );
+        if ( versFile )
+        {
+            versFile >> version;
+            if ( versFile )
+                spdlog::info( "Version file {} contains: {}", utf8string( versionFilePath ), version );
+            else
+                spdlog::error( "Error reading from version file {}", utf8string( versionFilePath ) );
+        }
+        else
+            spdlog::error( "Version file {} cannot be open for reading", utf8string( versionFilePath ) );
+    }
+    else
+        spdlog::info( "Version file {} does not exist", utf8string( versionFilePath ) );
+  #ifndef NDEBUG
+    return "Debug: " + version;
+  #else
+    return version;
+  #endif
 #else
     auto *jsStr = (char *)EM_ASM_PTR({
         var version = "undefined";
@@ -272,6 +288,8 @@ std::string GetMRVersionString()
     free( jsStr );
     return version;
 #endif
+    }();
+    return res.c_str();
 }
 
 void OpenLink( const std::string& url )
@@ -295,10 +313,21 @@ void OpenLink( const std::string& url )
     EM_ASM( open_link( UTF8ToString( $0 ) ), url.c_str() );
 #pragma clang diagnostic pop
 #else
+    // Single-quote the URL so the shell does not interpret characters common in query strings
+    // ('&', '?', ';', spaces, ...). Without quoting, everything after the first '&' is parsed as a
+    // separate command and dropped, truncating the opened URL.
+    const auto quoteForShell = []( const std::string& s )
+    {
+        std::string result = "'";
+        for ( char c : s )
+            result += ( c == '\'' ) ? std::string( "'\\''" ) : std::string( 1, c );
+        result += '\'';
+        return result;
+    };
 #ifdef __APPLE__
-    auto openres = system( ( "open " + url ).c_str() );
+    auto openres = system( ( "open " + quoteForShell( url ) ).c_str() );
 #else
-    auto openres = system( ( "xdg-open " + url + " &" ).c_str() );
+    auto openres = system( ( "xdg-open " + quoteForShell( url ) + " &" ).c_str() );
 #endif
     if ( openres == -1 )
     {
@@ -366,8 +395,77 @@ std::string GetCpuId()
         spdlog::error("Apple sysctlbyname failed!");
     return CPUBrandString;
 #elif defined(__ARM_CPU__)
-    // TODO: https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8
+    // ARM has no CPUID-like brand-string instruction (see
+    // https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8 ),
+    // so the real processor name has to be obtained per platform.
+#ifdef _WIN32
+    // Windows on ARM exposes the brand string through the registry
+    wchar_t value[256] = {};
+    DWORD bufferSize = sizeof( value );
+    if ( RegGetValue( HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+            L"ProcessorNameString", RRF_RT_REG_SZ, NULL, ( PVOID )&value, &bufferSize ) == ERROR_SUCCESS )
+        return Utf16ToUtf8( value );
     return "ARM CPU";
+#else
+    // On Linux we decode the CPU implementer/part pair from /proc/cpuinfo (the same data
+    // lscpu uses), and fall back to the device-tree model name for single-board computers.
+    int implementer = -1, part = -1;
+    {
+        std::ifstream cpuinfo( "/proc/cpuinfo" );
+        for ( std::string line; std::getline( cpuinfo, line ); )
+        {
+            if ( line.starts_with( "CPU implementer" ) )
+                implementer = (int)std::strtol( line.c_str() + line.find( ':' ) + 1, nullptr, 0 );
+            else if ( line.starts_with( "CPU part" ) )
+                part = (int)std::strtol( line.c_str() + line.find( ':' ) + 1, nullptr, 0 );
+            if ( implementer >= 0 && part >= 0 )
+                break;
+        }
+    }
+
+    struct ArmCpuName { int implementer, part; const char* name; };
+    static constexpr ArmCpuName armCpuNames[] = {
+        { 0x41, 0xd03, "ARM Cortex-A53" },   { 0x41, 0xd05, "ARM Cortex-A55" },
+        { 0x41, 0xd07, "ARM Cortex-A57" },   { 0x41, 0xd08, "ARM Cortex-A72" },
+        { 0x41, 0xd09, "ARM Cortex-A73" },   { 0x41, 0xd0a, "ARM Cortex-A75" },
+        { 0x41, 0xd0b, "ARM Cortex-A76" },   { 0x41, 0xd0c, "ARM Neoverse-N1" },
+        { 0x41, 0xd0d, "ARM Cortex-A77" },   { 0x41, 0xd40, "ARM Neoverse-V1" },
+        { 0x41, 0xd41, "ARM Cortex-A78" },   { 0x41, 0xd44, "ARM Cortex-X1" },
+        { 0x41, 0xd49, "ARM Neoverse-N2" },  { 0x41, 0xd4f, "ARM Neoverse-V2" },
+        { 0xc0, 0xac3, "Ampere-1" },         { 0xc0, 0xac4, "Ampere-1a" },
+        { 0x43, 0x0af, "Marvell ThunderX2" },{ 0x46, 0x001, "Fujitsu A64FX" },
+        { 0x51, 0xc01, "Qualcomm Kryo" },
+    };
+    for ( const auto& c : armCpuNames )
+        if ( c.implementer == implementer && c.part == part )
+            return c.name;
+
+    // implementer-only fallback when the exact core isn't in the table above
+    const char* vendor = nullptr;
+    switch ( implementer )
+    {
+    case 0x41: vendor = "ARM";       break;  case 0x42: vendor = "Broadcom";  break;
+    case 0x43: vendor = "Cavium";    break;  case 0x48: vendor = "HiSilicon"; break;
+    case 0x4e: vendor = "NVIDIA";    break;  case 0x51: vendor = "Qualcomm";  break;
+    case 0x53: vendor = "Samsung";   break;  case 0x56: vendor = "Marvell";   break;
+    case 0x70: vendor = "Phytium";   break;  case 0xc0: vendor = "Ampere";    break;
+    }
+    if ( vendor && part >= 0 )
+        return fmt::format( "{} ARM CPU (part {:#x})", vendor, part );
+
+    // unknown vendor: report the raw implementer/part identifiers read from /proc/cpuinfo
+    if ( implementer != -1 || part != -1 )
+        return fmt::format( "ARM CPU: {:#x}, {:#x}", implementer, part );
+
+    // single-board computers (Raspberry Pi etc.) expose a device-tree model name
+    {
+        std::ifstream model( "/proc/device-tree/model" );
+        if ( std::string name; std::getline( model, name ) && !name.empty() )
+            return name;
+    }
+
+    return "ARM CPU";
+#endif
 #else
     // https://stackoverflow.com/questions/850774/how-to-determine-the-hardware-cpu-and-ram-on-a-machine
     char CPUBrandString[0x40] = {};
@@ -582,14 +680,19 @@ ProccessMemoryInfo getProccessMemoryInfo()
 }
 #endif //_WIN32
 
-void setupLoggerByDefault()
+void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
 {
+    auto logger = Logger::instance().getSpdLogger();
+    if ( logger )
+        logger->sinks().clear(); // clear all sinks when setting default logger
+
 #ifndef __EMSCRIPTEN__
-#ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
     printStacktraceOnCrash();
-#endif
 #endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
+
+    if ( customLogSinkAdder )
+        customLogSinkAdder();
 
 #ifndef NDEBUG
     const auto minLevel = spdlog::level::trace;
@@ -623,8 +726,6 @@ void setupLoggerByDefault()
     msvc_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( msvc_sink );
 #endif
-
-    auto logger = Logger::instance().getSpdLogger();
 
     logger->set_level( minLevel );
 

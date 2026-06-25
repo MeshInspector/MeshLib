@@ -46,7 +46,7 @@ void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
     if ( blockThread )
-        return addCommand_( func, true, StartPosition::AfterSplashHide );
+        return addCommand_( func, true, StartPosition::BeforeWindowAppear );
     else
         return func();
 }
@@ -83,6 +83,13 @@ void CommandLoop::processCommands()
     }
     for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
         cmdToNotify->callerThreadCV.notify_one();
+}
+
+bool CommandLoop::empty()
+{
+    auto& inst = instance_();
+    std::unique_lock<std::mutex> lock( inst.mutex_ );
+    return inst.commands_.empty();
 }
 
 void CommandLoop::removeCommands( bool closeLoop )
@@ -145,6 +152,12 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         if ( exception )
             std::rethrow_exception( exception );
     }
+}
+
+void skipFramesAfterInput()
+{
+    for ( int i = 0; i < getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
+        CommandLoop::runCommandFromGUIThread( [] {} );
 }
 
 }

@@ -15,19 +15,19 @@ namespace MR
 {
 /*
 Inheritance diagram:
-   
-   EP        - End Plugin             
+
+   EP        - End Plugin
    SLP       - StateListenerPlugin (optional), if not present EP->SBP
    ML        - MultiListener
    Con       - Connectables (can be a lot of them)
    ConHold   - ConnectionHolder (one for each Connectable)
-   ICon      - IConnectable virtual (one for all ConnectionHolder)             
+   ICon      - IConnectable virtual (one for all ConnectionHolder)
    SBP       - StateBasePlugin (pointers of this type stored in Menu)
    VP        - ViewerPlugin
    RMI       - RibbonMenuItem
    ISSC      - ISceneStateCheck virtual
    SSC Block - Block of SceneStateCheck (this block can have different topology)
-               implements `isAvailable` function from ISSC, that is called from Menu's SBP* 
+               implements `isAvailable` function from ISSC, that is called from Menu's SBP*
                (leads to: warning C4250: 'EP': inherits 'SSC' via dominance, OK on clang and gcc)
    IPU      - IPluginUpdate virtual
    PCC       - Block of PluginCloseCheck (this block can have different topology)
@@ -43,7 +43,7 @@ Inheritance diagram:
     |  |  |  VP  /              |
 Con .  .  .  .  .RMI            |
      \ | /   | /                |
-      \|/    |/   IPU           | 
+      \|/    |/   IPU           |
     ML . SBP .--. (virt)     __/
         \   /  /          __/
          \ /  /        __/
@@ -70,9 +70,9 @@ enum class StatePluginTabs
 
 class Object;
 
-class MRVIEWER_CLASS StateBasePlugin : 
-    public ViewerPlugin, 
-    public RibbonMenuItem, 
+class MRVIEWER_CLASS StateBasePlugin :
+    public ViewerPlugin,
+    public RibbonMenuItem,
     public virtual IPluginUpdate,
     public virtual ISceneSelectionChange
 {
@@ -80,7 +80,7 @@ public:
     MRVIEWER_API StateBasePlugin( std::string name, StatePluginTabs tab = StatePluginTabs::Other );
     virtual ~StateBasePlugin() = default;
 
-    MRVIEWER_API virtual void drawDialog( float menuScaling, ImGuiContext* ctx );
+    MRVIEWER_API virtual void drawDialog( ImGuiContext* ctx );
 
     virtual bool action() override { return enable( !isEnabled() ); }
 

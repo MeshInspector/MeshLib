@@ -84,6 +84,15 @@ std::array<WeightedVertex, 3> MeshTriPoint::getWeightedVerts( const MeshTopology
     };
 }
 
+float MeshTriPoint::interpolate( const MeshTopology & topology, const VertScalars & field ) const
+{
+    float res = 0;
+    for ( const auto & wv : getWeightedVerts( topology ) )
+        if ( wv.weight > 0 )
+            res += wv.weight * field[wv.v];
+    return res;
+}
+
 bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs )
 {
     if ( !lhs )

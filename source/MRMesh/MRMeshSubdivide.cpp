@@ -7,7 +7,6 @@
 #include "MRTimer.h"
 #include "MRMeshBuilder.h"
 #include "MRTriMath.h"
-#include "MRGTest.h"
 #include "MRPositionVertsSmoothly.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
@@ -16,6 +15,7 @@
 #include "MRObjectMesh.h"
 #include "MRMeshSubdivideCallbacks.h"
 #include <queue>
+#include "MRMeshNormals.h"
 
 namespace MR
 {
@@ -67,6 +67,21 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     }
     auto numAboveMax = aboveMaxTriAspectRatio.count();
 
+    VertNormals ns;
+    if ( settings.curvaturePriority > 0 )
+        ns = computePerVertPseudoNormals( mesh );
+
+    auto calcEdgeLenSq = [&]( UndirectedEdgeId ue )
+    {
+        EdgeId e( ue );
+        auto o = mesh.topology.org( e );
+        auto d = mesh.topology.dest( e );
+        float lenSq = distanceSq( mesh.points[o], mesh.points[d] );
+        if ( settings.curvaturePriority > 0 )
+            lenSq *= 1 + settings.curvaturePriority * distanceSq( ns[o], ns[d] );
+        return lenSq;
+    };
+
     auto getQueueElem = [&]( UndirectedEdgeId ue )
     {
         EdgeLength x;
@@ -74,7 +89,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
             return x;
-        const float lenSq = mesh.edgeLengthSq( e );
+        const float lenSq = calcEdgeLenSq( ue );
         if ( lenSq < maxEdgeLenSq )
             return x;
         if ( !aboveMaxSplittableTriAspectRatio.empty() )
@@ -126,7 +141,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const EdgeId e = el.edge;
         queue.pop();
 
-        if ( el.lenSq != mesh.edgeLengthSq( e ) )
+        if ( el.lenSq != calcEdgeLenSq( el.edge ) )
             continue; // outdated record in the queue
 
         if ( settings.beforeEdgeSplit && !settings.beforeEdgeSplit( e ) )
@@ -134,6 +149,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
+        if ( settings.curvaturePriority > 0 )
+            ns.autoResizeSet( newVertId, ( ns[mesh.topology.org( e1 )] + ns[mesh.topology.dest( e )] ).normalized() );
 
         // in smooth mode remember all new inner vertices to reposition them at the end
         if ( ( settings.smoothMode || settings.projectOnOriginalMesh ) && mesh.topology.left( e ) && mesh.topology.right( e ) )
@@ -145,6 +162,13 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             settings.onVertCreated( newVertId );
         if ( settings.onEdgeSplit )
             settings.onEdgeSplit( e1, e );
+        if ( settings.maintainRegion )
+        {
+            if ( contains( *settings.maintainRegion, mesh.topology.left( e ) ) )
+                settings.maintainRegion->autoResizeSet( mesh.topology.left( e1 ) );
+            if ( contains( *settings.maintainRegion, mesh.topology.right( e ) ) )
+                settings.maintainRegion->autoResizeSet( mesh.topology.right( e1 ) );
+        }
         if ( settings.notFlippable && settings.notFlippable->test( e.undirected() ) )
             settings.notFlippable->autoResizeSet( e1.undirected() );
         ++splitsDone;
@@ -260,8 +284,6 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
         return 0;
     }
 
-    auto notFlippable = data.selectedEdges | data.creases;
-
     MeshAttributesToUpdate meshParams;
     if ( !data.uvCoordinates.empty() )
         meshParams.uvCoords = &data.uvCoordinates;
@@ -275,46 +297,37 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
     auto updateAttributesCb = meshOnEdgeSplitAttribute( *data.mesh, meshParams );
 
     auto subs1 = settings;
-    FaceBitSet * maintainRegion = nullptr; // if a face from here is subdivided, then new face must be added here
     if ( data.selectedFaces.any() )
     {
         if ( subs1.region )
         {
             // given region must not include any face not from current face selection
             assert( subs1.region->is_subset_of( data.selectedFaces ) );
-            // manually maintain face selection during subdivision
-            maintainRegion = &data.selectedFaces;
+            assert( !subs1.maintainRegion );
+            subs1.maintainRegion = &data.selectedFaces;
         }
         else // set face selection as subdivision region
             subs1.region = &data.selectedFaces;
     }
 
-    const auto & topology = data.mesh->topology;
     subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
     {
+        // notFlippable is updated inside subdivideMesh( *data.mesh, subs1 )
+
         if ( data.selectedEdges.test( e.undirected() ) )
-        {
             data.selectedEdges.autoResizeSet( e1.undirected() );
-            notFlippable.autoResizeSet( e1.undirected() );
-        }
+
         if ( data.creases.test( e.undirected() ) )
-        {
             data.creases.autoResizeSet( e1.undirected() );
-            notFlippable.autoResizeSet( e1.undirected() );
-        }
-        if ( maintainRegion )
-        {
-            if ( contains( *maintainRegion, topology.left( e ) ) )
-                maintainRegion->autoResizeSet( topology.left( e1 ) );
-            if ( contains( *maintainRegion, topology.right( e ) ) )
-                maintainRegion->autoResizeSet( topology.right( e1 ) );
-        }
 
         updateAttributesCb( e1, e );
         if ( settings.onEdgeSplit )
             settings.onEdgeSplit( e1, e );
     };
-    assert( !subs1.notFlippable );
+
+    auto notFlippable = data.selectedEdges | data.creases;
+    if ( subs1.notFlippable )
+        notFlippable |= *subs1.notFlippable;
     subs1.notFlippable = &notFlippable;
 
     return subdivideMesh( *data.mesh, subs1 );
@@ -334,40 +347,6 @@ ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh & obj, const Subdi
     data.mesh = std::make_shared<Mesh>( *data.mesh );
     subdivideMesh( data, settings );
     return data;
-}
-
-TEST(MRMesh, SubdivideMesh)
-{
-    Triangulation t{
-        { 0_v, 1_v, 2_v },
-        { 0_v, 2_v, 3_v }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-    mesh.points.emplace_back( 0.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 1.f, 0.f );
-    mesh.points.emplace_back( 0.f, 1.f, 0.f );
-
-    FaceBitSet region( 2 );
-    region.set( 0_f );
-
-    SubdivideSettings settings;
-    settings.maxEdgeLen = 0.3f;
-    settings.maxEdgeSplits = 1000;
-    settings.maxDeviationAfterFlip = FLT_MAX;
-    settings.region = &region;
-    int splitsDone = subdivideMesh( mesh, settings );
-    EXPECT_TRUE( splitsDone > 19 && splitsDone < 25 );
-    EXPECT_TRUE( region.count() * 2 + 3 > mesh.topology.numValidFaces() );
-    EXPECT_TRUE( region.count() * 2 - 3 > mesh.topology.numValidFaces() );
-
-    settings.maxEdgeLen = 0.1f;
-    settings.maxEdgeSplits = 10;
-    splitsDone = subdivideMesh( mesh, settings );
-    EXPECT_TRUE( splitsDone == 10 );
-    EXPECT_TRUE( region.count() * 2 + 3 > mesh.topology.numValidFaces() );
-    EXPECT_TRUE( region.count() * 2 - 3 > mesh.topology.numValidFaces() );
 }
 
 } // namespace MR

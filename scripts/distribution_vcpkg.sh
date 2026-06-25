@@ -29,10 +29,11 @@ fi
 
 mkdir ${DISTR_DIR}
 # copy vcpkg files
-cp -a ${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}/* ${DISTR_DIR}/
+VCPKG_INSTALLED_DIR=${VCPKG_INSTALLED_DIR:=${VCPKG_ROOT}/installed}
+cp -a ${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}/* ${DISTR_DIR}/
 # install MeshLib files
 cmake --install ./build/Release --prefix ${DISTR_DIR}
 # create tar.xz file
-tar --create --use-compress-program='xz -9 -T0' --file=meshlib_linux-vcpkg-x64.tar.xz --directory=${DISTR_DIR} .
+tar --create --use-compress-program='xz -9 -T0' --file=meshlib_linux-vcpkg.tar.xz --directory=${DISTR_DIR} .
 
 rm -rf ${DISTR_DIR}

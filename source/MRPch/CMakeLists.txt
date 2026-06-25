@@ -1,10 +1,4 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRPch CXX)
-
-option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
 
 file(GLOB HEADERS "*.h")
 
@@ -14,51 +8,82 @@ install(
 )
 
 IF(MR_PCH)
-  IF(MR_EMSCRIPTEN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+  add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+  find_package(tl-expected REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE tl::expected)
+  # TODO: CMake config
+  target_include_directories(${PROJECT_NAME}
+    PRIVATE
+    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+  )
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      jsoncpp
-      tbb
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # the full PCH slows the build down for GCC (it loads the whole PCH image in every TU)
+    target_precompile_headers(${PROJECT_NAME}
+      PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRStdlib.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRExpected.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRHashMap.h>"
     )
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(Boost COMPONENTS REQUIRED)
+    return()
+  endif()
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt::fmt
-      spdlog::spdlog
-      Boost::boost
-      JsonCpp::JsonCpp
-      TBB::tbb
-    )
+  # Emscripten's Boost package doesn't contain CMake config files
+  # on other systems the module mode shows a warning
+  IF(NOT EMSCRIPTEN)
+    find_package(Boost 1.73 CONFIG COMPONENTS headers REQUIRED)
   ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
+    find_package(Boost 1.73 REQUIRED)
+  ENDIF()
+  find_package(Eigen3 REQUIRED)
+  find_package(fmt 8 REQUIRED)
+  find_package(JsonCpp REQUIRED)
+  find_package(spdlog 1.9 REQUIRED)
+  find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    Boost::boost
+    Eigen3::Eigen
+    fmt::fmt
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    TBB::tbb
+  )
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
-      Boost::boost
-      JsonCpp::JsonCpp
-      tbb
+  # GTest module defines a macro for MRMesh and PCH must match it (but not for MSVC)
+  IF(BUILD_TESTING AND NOT MRMESH_NO_GTEST AND NOT MSVC)
+    find_package(GTest REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE GTest::gtest)
+  ENDIF()
+
+  IF(EMSCRIPTEN)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+      EIGEN_STACK_ALLOCATION_LIMIT=0
     )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+    # FIXME: the option is required for MeshInspector but not for MeshLib
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
   ENDIF()
 
-  IF(MR_PCH_USE_EXTRA_HEADERS)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_EXTRA_HEADERS)
-  ENDIF()
   IF(NOT MESHLIB_BUILD_MRVIEWER)
     target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
   ENDIF()
   IF(MR_PCH_USE_EXTRA_HEADERS AND MESHLIB_BUILD_MRVIEWER)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
+  ENDIF()
+
+  # Cache OpenVDB in the shared PCH on MSVC when voxels are built: it speeds up the OpenVDB-heavy
+  # translation units. MSVC-only because there MRMesh/MRViewer build their own PCH and the compiler does
+  # not emit unreferenced inline functions, so the targets that REUSE_FROM this PCH without linking
+  # libopenvdb still link; on GCC/Clang that emission yields undefined OpenVDB symbols (e.g.
+  # openvdb::math::simplify from inline ScaleMap methods). MR_PCH_USE_OPENVDB makes MRPch.h pull in the
+  # OpenVDB headers, and linking OpenVDB compiles the PCH with the same OpenVDB definitions
+  # (OPENVDB_USE_DELAYED_LOADING, OPENVDB_ABI_VERSION_NUMBER) as the translation units that reuse it.
+  IF(MSVC AND MESHLIB_BUILD_VOXELS)
+    find_package(OpenVDB 10 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenVDB::openvdb)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_OPENVDB)
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE
@@ -68,8 +93,6 @@ IF(MR_PCH)
   # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
   # Also needed for `Boost.Stacktrace` apparently.
   IF(NOT WIN32)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC
-      _GNU_SOURCE
-    )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
   ENDIF()
 ENDIF()

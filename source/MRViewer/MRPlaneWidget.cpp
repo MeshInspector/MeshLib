@@ -133,7 +133,7 @@ void PlaneWidget::updateWidget_( bool updateCameraRotation )
     planeObj_->setXf( trans1 * rot2 * rot1 * scale1 );
 }
 
-bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
+bool PlaneWidget::onDragStart_( Viewer::MouseButton button, int mod )
 {
     if ( button != Viewer::MouseButton::Left || mod != 0 )
         return false;
@@ -145,16 +145,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         const auto [obj, point] = viewer->viewport().pick_render_object();
         if ( !obj )
             return false;
-        auto planeObj = std::dynamic_pointer_cast< PlaneObject >( obj );
-        if ( !planeObj )
-            return false;
-
-        plane_ = Plane3f::fromDirAndPt( planeObj->getNormal(), planeObj->getCenter() );
-        definePlane();
-        updatePlane( plane_ );
-        setLocalMode( true );
-        importPlaneMode_ = false;
-        return true;
+        return importPlaneObj_( *obj );
     }
 
     
@@ -185,7 +176,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     return true;
 }
 
-bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
+bool PlaneWidget::onDragEnd_( Viewer::MouseButton, int )
 {
     if ( !pressed_ )
         return false;
@@ -222,7 +213,7 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
     return true;
 }
 
-bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
+bool PlaneWidget::onDrag_( int mouse_x, int mouse_y )
 {
     if ( !pressed_ )
         return false;
@@ -244,6 +235,30 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
    
     line_->setPolyline( std::make_shared<Polyline3>( polyline ) );
 
+    return true;
+}
+
+bool PlaneWidget::onNameTagClicked_( Object& object, ImGuiMenu::NameTagSelectionMode )
+{
+    if ( !importPlaneMode_ )
+        return false;
+    return importPlaneObj_( object );
+}
+
+bool PlaneWidget::importPlaneObj_( Object& obj )
+{
+    if ( !importPlaneMode_ )
+        return false;
+
+    auto planeObj = obj.asType<PlaneObject>();
+    if ( !planeObj )
+        return false;
+
+    plane_ = Plane3f::fromDirAndPt( planeObj->getNormal(), planeObj->getCenter() );
+    definePlane();
+    updatePlane( plane_ );
+    setLocalMode( true );
+    importPlaneMode_ = false;
     return true;
 }
 

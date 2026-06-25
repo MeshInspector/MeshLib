@@ -56,7 +56,21 @@ void CudaAccessor::setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDis
 {
     instance_().pointsToDistanceVolumeByPartsCallback_ = callback;
 }
+
+void CudaAccessor::setCudaComputeToolDistanceConstructor( CudaComputeToolDistanceConstructor ctdCtor )
+{
+    instance_().ctdCtor_ = std::move( ctdCtor );
+}
 #endif
+
+bool CudaAccessor::isCudaSupportedByPlarform()
+{
+#if defined(__APPLE__) || defined(__EMSCRIPTEN__)
+    return false;
+#else
+    return true;
+#endif
+}
 
 bool CudaAccessor::isCudaAvailable()
 {
@@ -133,6 +147,15 @@ CudaAccessor::CudaPointsToDistanceVolumeByPartsCallback CudaAccessor::getCudaPoi
         return {};
 
     return inst.pointsToDistanceVolumeByPartsCallback_;
+}
+
+std::unique_ptr<IComputeToolDistance> CudaAccessor::getCudaComputeToolDistance()
+{
+    auto& inst = instance_();
+    if ( !inst.ctdCtor_ )
+        return {};
+
+    return inst.ctdCtor_();
 }
 #endif
 

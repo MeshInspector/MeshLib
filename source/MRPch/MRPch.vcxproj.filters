@@ -4,6 +4,7 @@
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MREigen.h" />
     <ClInclude Include="MRJson.h" />
+    <ClInclude Include="MROpenVDB.h" />
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MRTBB.h" />
     <ClInclude Include="MRSpdlog.h" />
@@ -12,10 +13,12 @@
     <ClInclude Include="MRWasm.h" />
     <ClInclude Include="MREigenCore.h" />
     <ClInclude Include="MRFmt.h" />
-    <ClInclude Include="MRFilesystem.h" />
+    <ClInclude Include="MRStdlib.h" />
     <ClInclude Include="MRBindingMacros.h" />
     <ClInclude Include="MRWinapi.h" />
     <ClInclude Include="MRExpected.h" />
+    <ClInclude Include="MREigenSparseCore.h" />
+    <ClInclude Include="MRHashMap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

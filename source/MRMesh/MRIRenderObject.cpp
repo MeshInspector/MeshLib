@@ -1,5 +1,6 @@
 #include "MRIRenderObject.h"
 #include "MRphmap.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -20,6 +21,11 @@ public:
         auto& inst = instance_();
         inst.map_[type] = lambda;
     }
+    static void removeConstructorLambda( const std::type_index& type )
+    {
+        auto& inst = instance_();
+        inst.map_.erase( type );
+    }
 private:
     static RenderObjectConstructorsHolder& instance_()
     {
@@ -31,16 +37,23 @@ private:
 
 
 RegisterRenderObjectConstructor::RegisterRenderObjectConstructor( const std::type_index& type, IRenderObjectConstructorLambda lambda )
+    : type_( type )
 {
     RenderObjectConstructorsHolder::addConstructorLambda( type, lambda );
 }
 
+RegisterRenderObjectConstructor::~RegisterRenderObjectConstructor()
+{
+    RenderObjectConstructorsHolder::removeConstructorLambda( type_ );
+}
+
 std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type )
 {
+    MR_TIMER;
     auto lambda = RenderObjectConstructorsHolder::findConstructorLambda( type );
     if ( !lambda )
         return {};
     return lambda( visObj );
 }
 
-}
+} //namespace MR

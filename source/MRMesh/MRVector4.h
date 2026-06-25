@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cmath>
+#include <iosfwd>
+#include <type_traits>
 #include "MRPch/MRBindingMacros.h"
+#include "MRMesh/MRMacros.h"
 #include "MRVector3.h"
 
 namespace MR
@@ -25,20 +28,27 @@ struct Vector4
 
     T x, y, z, w;
 
-    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 ) { }
+    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 )
+    {
+        static_assert( sizeof( Vector4<ValueType> ) == elements * sizeof( ValueType ), "Struct size invalid" );
+        static_assert( elements == 4, "Invalid number of elements" );
+    }
     explicit Vector4( NoInit ) noexcept { }
     constexpr Vector4( T x, T y, T z, T w ) noexcept : x( x ), y( y ), z( z ), w( w ) { }
     static constexpr Vector4 diagonal( T a ) noexcept
     {
         return Vector4( a, a, a, a );
     }
-    template <typename U>
+
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and looks out of place there. Specifically for Vector4, it only gets emitted on Windows (but not on Linux) for some reason.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector4( const Vector4<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ), w( T( v.w ) )
     {
     }
 
-    constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
-    constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
+    constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
+    constexpr       T & operator []( int e )       noexcept { return *( ( ValueType* )this + e ); }
 
     T lengthSq() const
     {
@@ -101,6 +111,25 @@ struct Vector4
         else
             return a *= ( 1 / b );
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const Vector4& vec )
+    {
+        return s << vec.x << ' ' << vec.y << ' ' << vec.z << ' ' << vec.w;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Vector4& vec )
+    {
+        return s >> vec.x >> vec.y >> vec.z >> vec.w;
+    }
+
+
+    // We don't need to bind those functions in Python, because this doesn't prevent `__iter__` from being generated for the type.
+    // Those don't bind correctly in C#, because there we can't overload functions based on mutable struct ref vs const struct ref parameters.
+
+    MR_BIND_IGNORE friend auto begin( const Vector4& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto begin( Vector4& v ) { return &v[0]; }
+    MR_BIND_IGNORE friend auto end( const Vector4& v ) { return &v[4]; }
+    MR_BIND_IGNORE friend auto end( Vector4& v ) { return &v[4]; }
 };
 
 /// \related Vector4
@@ -147,19 +176,6 @@ inline Vector4<T> div( const Vector4<T>& a, const Vector4<T>& b )
 {
     return { a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w };
 }
-
-
-// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
-
-template <typename T>
-MR_BIND_IGNORE auto begin( const Vector4<T> & v ) { return &v[0]; }
-template <typename T>
-MR_BIND_IGNORE auto begin( Vector4<T> & v ) { return &v[0]; }
-
-template <typename T>
-MR_BIND_IGNORE auto end( const Vector4<T> & v ) { return &v[4]; }
-template <typename T>
-MR_BIND_IGNORE auto end( Vector4<T> & v ) { return &v[4]; }
 
 /// \}
 

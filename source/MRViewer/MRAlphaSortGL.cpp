@@ -101,7 +101,7 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( transparency_quad_vao ) );
 
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::TransparencyOverlayQuad );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AlphaSortOverlayQuad );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, transparency_quad_vbo ) );

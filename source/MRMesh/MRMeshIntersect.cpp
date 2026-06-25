@@ -37,9 +37,8 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 
-    FaceId faceId;
     TriPointf triP;
-    while( currentNode >= 0 && ( closestIntersect || !faceId ) )
+    while( currentNode >= 0 && ( closestIntersect || !res.proj.face ) )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
         {
@@ -64,11 +63,29 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                     const Vector3<T> vC = Vector3<T>( m.points[c] ) - line.p;
                     if ( auto triIsect = rayTriangleIntersect( vA, vB, vC, prec ) )
                     {
-                        if ( triIsect->t < rayEnd && triIsect->t > rayStart )
+                        const T t( triIsect->t );
+                        if ( t < rayEnd && t > rayStart )
                         {
-                            faceId = face;
+                            res.distanceAlongLine = triIsect->t;
+                            res.proj.face = face;
                             triP = triIsect->bary;
-                            rayEnd = triIsect->t;
+                            if ( t == 0 )
+                            {
+                                rayStart = rayEnd = 0;
+                                break; // intersection exactly at ray origin
+                            }
+                            if ( t < 0 )
+                            {
+                                assert( rayStart < 0 );
+                                rayStart = t;
+                                rayEnd = std::min( rayEnd, -t );
+                            }
+                            else
+                            {
+                                assert( rayEnd > 0 );
+                                rayEnd = t;
+                                rayStart = std::max( rayStart, -t );
+                            }
                         }
                     }
                 }
@@ -108,12 +125,10 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
         }
     }
 
-    if( faceId.valid() )
+    if( res.proj.face.valid() )
     {
-        res.proj.face = faceId;
-        res.proj.point = Vector3f( line.p + rayEnd * line.d );
-        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( faceId ), triP );
-        res.distanceAlongLine = float( rayEnd );
+        res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
+        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
     }
     return res;
 }

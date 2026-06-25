@@ -1,0 +1,113 @@
+name: Update Windows distribution version
+
+on:
+  workflow_call:
+    inputs:
+      vs19_vcpkg_version:
+        required: true
+        type: string
+      vs22_vcpkg_version:
+        required: true
+        type: string
+      app_version:
+        required: true
+        type: string
+
+jobs:
+  update-win-version:
+    timeout-minutes: 60
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        # One developer distributive per Visual Studio toolchain. The MREDist_*
+        # inputs are produced by the matching VS CMake build in
+        # build-test-windows.yml (named via its VS_TAG). vcpkg_baseline selects
+        # which vcpkg version the binaries were built against.
+        include:
+          - vcpkg_triplet: x64-windows-vs2019-meshlib
+            vcpkg_baseline: vs19
+            extract_release: MREDist_VS19_Release.zip
+            extract_debug: MREDist_VS19_Debug.zip
+            output_zip: MeshLibDistVS19.zip
+            artifact_name: DistributivesWin-VS19
+          - vcpkg_triplet: x64-windows-vs2022-meshlib
+            vcpkg_baseline: vs22
+            extract_release: MREDist_VS22_Release.zip
+            extract_debug: MREDist_VS22_Debug.zip
+            output_zip: MeshLibDistVS22.zip
+            artifact_name: DistributivesWin-VS22
+          - vcpkg_triplet: x64-windows-meshlib
+            vcpkg_baseline: vs22
+            extract_release: MREDist_VS26_Release.zip
+            extract_debug: MREDist_VS26_Debug.zip
+            output_zip: MeshLibDistVS26.zip
+            artifact_name: DistributivesWin-VS26
+          - vcpkg_triplet: x64-windows-meshlib-iterator-debug
+            vcpkg_baseline: vs19
+            extract_debug: MREDist_VS19_Debug-IteratorDebug.zip
+            output_zip: MeshLibDist-IteratorDebug.zip
+            artifact_name: DistributivesWin-IteratorDebug
+    env:
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-vs2019-meshlib' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: ${{ matrix.vcpkg_baseline == 'vs22' && inputs.vs22_vcpkg_version || inputs.vs19_vcpkg_version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet }}
+
+      - name: Download Windows Binaries Archive
+        uses: actions/download-artifact@v8
+        with:
+          pattern: WindowsArchive*
+          merge-multiple: true
+
+      - name: Extract Windows Binaries
+        run: |
+          if ("${{ matrix.extract_release }}") { 
+            tar -xvzf ${{ matrix.extract_release }} 
+          }
+          tar -xvzf ${{ matrix.extract_debug }}
+          tar -xvzf MeshLibC2Headers.zip
+
+      - name: Make Install Folder
+        run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Archive Distribution
+        run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
+
+      - name: Test Example Plugin # call it after archive not to pack build results
+        env:
+          IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}
+        run: |
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:MeshLibIteratorDebugLevel=$env:IDL
+          if ("${{ matrix.extract_release }}") {
+            msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
+          }
+
+      - name: Upload Windows Distribution
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.output_zip }}
+          retention-days: 1
+
+  cleanup-win-archives:
+    needs: update-win-version
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Windows Binaries Archive
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: WindowsArchive*
+          failOnError: false

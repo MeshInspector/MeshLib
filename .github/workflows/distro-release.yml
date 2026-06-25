@@ -1,0 +1,132 @@
+name: Windows Release by Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag to build Windows Release from'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    env:
+      vs19_vcpkg_version: "2024.10.21"
+      vs22_vcpkg_version: "2026.06.01"
+    outputs:
+      app_version: ${{ steps.set.outputs.app_version }}
+      release_tag: ${{ steps.set.outputs.release_tag }}
+      windows_x64_config_matrix: ${{ steps.set.outputs.matrix }}
+      full_config_build: "false"
+      internal_build: "false"
+      upload_test_artifacts: "false"
+      nuget_build: "false"
+      vs19_vcpkg_version: ${{ env.vs19_vcpkg_version }}
+      vs22_vcpkg_version: ${{ env.vs22_vcpkg_version }}
+    steps:
+      - name: Checkout matrix file
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/workflows/matrix/windows-finalize-release-config.json
+          sparse-checkout-cone-mode: false
+
+      - name: Set release config
+        id: set
+        run: |
+          TAG="${{ github.event.inputs.release_tag || github.ref_name }}"
+          APP_VERSION="${TAG}"
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "release_tag=$TAG" >> $GITHUB_OUTPUT
+
+          # Minimal matrix: Release only
+          MATRIX_FILE=".github/workflows/matrix/windows-finalize-release-config.json"
+
+          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
+          # VS2019 vcpkg baseline, everything else the VS2022 one.
+          jq \
+            --arg vs19 "${{ env.vs19_vcpkg_version }}" \
+            --arg vs22 "${{ env.vs22_vcpkg_version }}" \
+            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            "$MATRIX_FILE" > tmp.json
+
+          echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT
+
+  windows-build-test:
+    needs: [ config ]
+    uses: ./.github/workflows/build-test-windows.yml
+    with:
+      config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      true
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build:           ${{ needs.config.outputs.nuget_build == 'true' }}
+    secrets: inherit
+
+  update-win-version:
+    needs:
+      - config
+      - windows-build-test
+    uses: ./.github/workflows/update-win-version.yml
+    with:
+      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
+      app_version: ${{ needs.config.outputs.app_version }}
+    secrets: inherit
+
+  upload-distributions:
+    if: ${{ !cancelled() }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs:
+      - config
+      - update-win-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download All Developer Distributives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Distributives*
+          merge-multiple: true
+
+      - name: Rename Distributives
+        run: |
+          shopt -s nullglob
+          for PKG_FILE in MeshLibDist*.zip ; do
+            case "$PKG_FILE" in
+              # Keep the historical layout for the iterator-debug archive:
+              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
+              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
+              *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
+            esac
+          done
+
+      - name: Upload Distributives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          PKG_FILES="MeshLibDist*.zip meshlib_*.zip meshlib_*.tar.xz"
+          if [ -n "$(echo $PKG_FILES)" ] ; then
+            gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
+          fi
+
+  update-artifacts:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    needs: upload-distributions
+    if: always()
+    steps:
+        # all distribution
+      - name: Delete All MeshInspector Distribution Files
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: Distributives*
+          failOnError: false
+

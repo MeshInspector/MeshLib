@@ -7,21 +7,21 @@
   </thead>
   <tbody>
     <tr>
-      <td align="center">Windows x64</td>
+      <td align="center">Windows x64 (Visual Studio 2019)</td>
       <td align="center">
-        <a href="RELEASE_PATH/MeshLibDist_SHORT_VERSION.zip">zip</a>
+        <a href="RELEASE_PATH/MeshLibDistVS19_SHORT_VERSION.zip">zip</a>
       </td>
     </tr>
     <tr>
-      <td align="center">Ubuntu 20 LTS x64</td>
+      <td align="center">Windows x64 (Visual Studio 2022)</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu20-dev.deb">deb</a>
+        <a href="RELEASE_PATH/MeshLibDistVS22_SHORT_VERSION.zip">zip</a>
       </td>
     </tr>
     <tr>
-      <td align="center">Ubuntu 20 LTS arm64</td>
+      <td align="center">Windows x64 (Visual Studio 2026)</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu20-arm64-dev.deb">deb</a>
+        <a href="RELEASE_PATH/MeshLibDistVS26_SHORT_VERSION.zip">zip</a>
       </td>
     </tr>
     <tr>
@@ -49,9 +49,15 @@
       </td>
     </tr>
     <tr>
-      <td align="center">Linux vcpkg (glibc 2.34) x64</td>
+      <td align="center">Linux vcpkg (glibc 2.28) x64</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_linux-vcpkg-x64.tar.xz">tar.xz</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Linux vcpkg (glibc 2.28) arm64</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_linux-vcpkg-arm64.tar.xz">tar.xz</a>
       </td>
     </tr>
     <tr>

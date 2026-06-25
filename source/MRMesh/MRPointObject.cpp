@@ -3,6 +3,8 @@
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
 
+#include <cassert>
+
 namespace MR
 {
 
@@ -18,7 +20,7 @@ PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
     Vector3d center;
     for ( auto& p : pointsToApprox )
         center += Vector3d( p );
-    setPoint( Vector3f( center / double( pointsToApprox.size() ) ) );
+    setLocalPoint( Vector3f( center / double( pointsToApprox.size() ) ) );
 }
 
 std::shared_ptr<MR::Object> PointObject::clone() const
@@ -36,7 +38,7 @@ Vector3f PointObject::getPoint( ViewportId id /*= {}*/ ) const
     return xf( id ).b;
 }
 
-void PointObject::setPoint( const Vector3f& point, ViewportId id /*= {}*/ )
+void PointObject::setLocalPoint( const Vector3f& point, ViewportId id /*= {}*/ )
 {
     setXf( AffineXf3f::translation( point ), id );
 }
@@ -44,14 +46,14 @@ void PointObject::setPoint( const Vector3f& point, ViewportId id /*= {}*/ )
 std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Point", FeaturePropertyKind::position, &PointObject::getPoint, &PointObject::setPoint}
+       {"Point", FeaturePropertyKind::position, &PointObject::getPoint, &PointObject::setLocalPoint}
     };
     return ret;
 }
 
 FeatureObjectProjectPointResult PointObject::projectPoint( const Vector3f& /*point*/, ViewportId id /*= {}*/ ) const
 {
-    return { getPoint( id ) , std::nullopt };
+    return { getPoint( id ), std::nullopt };
 }
 
 void PointObject::swapBase_( Object& other )
@@ -65,7 +67,7 @@ void PointObject::swapBase_( Object& other )
 void PointObject::serializeFields_( Json::Value& root ) const
 {
     FeatureObject::serializeFields_( root );
-    root["Type"].append( PointObject::TypeName() );
+    root["Type"].append( PointObject::StaticTypeName() );
 }
 
 void PointObject::setupRenderObject_() const

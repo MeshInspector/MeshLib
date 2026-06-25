@@ -1,9 +1,10 @@
 #include "MRPolylineTopology.h"
-#include "MRGTest.h"
 #include "MRIOParsing.h"
 #include "MRMapEdge.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include <istream>
+#include <ostream>
 
 namespace MR
 {
@@ -95,10 +96,12 @@ EdgeId PolylineTopology::makeEdge()
     return he0;
 }
 
-EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
+EdgeId PolylineTopology::makeEdge( VertId a, VertId b, EdgeId e )
 {
-    assert( a.valid() && a < int( edgePerVertex_.size() ) );
-    assert( b.valid() && b < int( edgePerVertex_.size() ) );
+    if ( (size_t)a >= edgePerVertex_.size() )
+        return {};
+    if ( (size_t)b >= edgePerVertex_.size() )
+        return {};
     if ( a == b )
         return {};
 
@@ -109,19 +112,38 @@ EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
     if ( eb && next( eb ) != eb )
         return {};
 
-    const auto newe = makeEdge();
+    if ( e )
+    {
+        if ( e >= edgeSize() || !isLoneEdge( e ) )
+            return {};
+    }
+    else
+        e = makeEdge();
 
     if ( ea )
-        splice( ea, newe );
+        splice( ea, e );
     else
-        setOrg( newe, a );
+        setOrg( e, a );
 
     if ( eb )
-        splice( eb, newe.sym() );
+        splice( eb, e.sym() );
     else
-        setOrg( newe.sym(), b );
+        setOrg( e.sym(), b );
 
-    return newe;
+    return e;
+}
+
+int PolylineTopology::makeEdges( const Edges & edges )
+{
+    MR_TIMER;
+    int res = 0;
+    for ( auto ue = 0_ue; ue < edges.size(); ++ue )
+    {
+        auto e = ue < undirectedEdgeSize() ? EdgeId(ue) : makeEdge();
+        if ( makeEdge( edges[ue][0], edges[ue][1], e ) )
+            ++res;
+    }
+    return res;
 }
 
 bool PolylineTopology::isLoneEdge( EdgeId a ) const
@@ -139,10 +161,10 @@ bool PolylineTopology::isLoneEdge( EdgeId a ) const
     return true;
 }
 
-EdgeId PolylineTopology::lastNotLoneEdge() const
+UndirectedEdgeId PolylineTopology::lastNotLoneUndirectedEdge() const
 {
     assert( edges_.size() % 2 == 0 );
-    for ( EdgeId i{ (int)edges_.size() - 1 }; i.valid(); ----i ) // one decrement returns sym-edge
+    for ( UndirectedEdgeId i{ (int)undirectedEdgeSize() - 1 }; i.valid(); --i )
     {
         if ( !isLoneEdge( i ) )
             return i;
@@ -416,18 +438,14 @@ void PolylineTopology::addPart( const PolylineTopology & from, VertMap * outVmap
     }
 
     // translate edge records
-    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    ParallelFor( firstNewEdge.undirected(), edges_.endId().undirected(), [&] ( UndirectedEdgeId ue )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            const EdgeId e{ ue };
-            edges_[e].next = mapEdge( emap, edges_[e].next );
-            edges_[e.sym()].next = mapEdge( emap, edges_[e.sym()].next );
+        const EdgeId e{ ue };
+        edges_[e].next = mapEdge( emap, edges_[e].next );
+        edges_[e.sym()].next = mapEdge( emap, edges_[e.sym()].next );
 
-            edges_[e].org = vmap[edges_[e].org];
-            edges_[e.sym()].org = vmap[edges_[e.sym()].org];
-        }
+        edges_[e].org = vmap[edges_[e].org];
+        edges_[e.sym()].org = vmap[edges_[e.sym()].org];
     } );
 
     if ( outVmap )
@@ -656,38 +674,6 @@ bool PolylineTopology::isClosed() const
             return false;
     }
     return true;
-}
-
-TEST( MRMesh, PolylineTopology )
-{
-    PolylineTopology t;
-    VertId vs[4] = { 0_v, 1_v, 2_v, 0_v };
-    t.makePolyline( vs, 4 );
-    EXPECT_TRUE( t.checkValidity() );
-    EXPECT_TRUE( t.isConsistentlyOriented() );
-    EXPECT_EQ( t.org( 0_e ), 0_v );
-    EXPECT_EQ( t.dest( 0_e ), 1_v );
-
-    t.flip();
-    EXPECT_TRUE( t.checkValidity() );
-    EXPECT_TRUE( t.isConsistentlyOriented() );
-    EXPECT_EQ( t.org( 0_e ), 1_v );
-    EXPECT_EQ( t.dest( 0_e ), 0_v );
-
-    EXPECT_EQ( t.numValidVerts(), 3 );
-    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 3 );
-
-    t.deleteEdge( 0_ue );
-    EXPECT_EQ( t.numValidVerts(), 3 );
-    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 2 );
-
-    t.deleteEdge( 1_ue );
-    EXPECT_EQ( t.numValidVerts(), 2 );
-    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 1 );
-
-    t.deleteEdge( 2_ue );
-    EXPECT_EQ( t.numValidVerts(), 0 );
-    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 0 );
 }
 
 } //namespace MR

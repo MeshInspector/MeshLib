@@ -16,6 +16,10 @@ constexpr auto EXCEPTION_CXX   = 0xE06D7363L; // c++ throw ...
 constexpr auto MS_VC_EXCEPTION = 0x406D1388L; // thread renaming
 constexpr auto RPC_UNAVAILABLE = 0x000006BAL; // thrown in file dialog
 
+// we limit the number of logged stacktraces since typically only the first exception is of any interest,
+// and the following ones are either repetitions or consequences of the first exception which only make the log huge
+int numMoreStacktraces = 5;
+
 LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
 {
     thread_local bool logging = false;
@@ -70,10 +74,14 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
         spdlog::info( "Wide debug information: {}", Utf16ToUtf8( std::wstring_view( p, len ) ) );
     }
     else
-        spdlog::critical( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
+        spdlog::warn( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
 
-    spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
-    printCurrentTimerBranch();
+    if ( numMoreStacktraces > 0 )
+    {
+        --numMoreStacktraces;
+        spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
+        printCurrentTimerBranch();
+    }
     logging = false;
     return EXCEPTION_CONTINUE_SEARCH;
 }

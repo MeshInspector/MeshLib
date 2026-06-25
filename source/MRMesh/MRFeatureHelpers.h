@@ -3,6 +3,10 @@
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
 
+#if MR_COMPILING_C_BINDINGS
+#include "MRFeatureObjectImpls.h"
+#endif
+
 #include <unordered_map>
 #include <unordered_set>
 

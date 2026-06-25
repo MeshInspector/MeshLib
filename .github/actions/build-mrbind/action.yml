@@ -1,0 +1,129 @@
+name: Build MRBind
+description: >
+  Build the MRBind tool from the `mrbind` submodule, caching its
+  `build/` dir keyed on the submodule SHA, the build script's hash, and
+  any extra key passed by the caller (toolchain lockfile, clang version
+  file, etc.). On cache hit, the build step is skipped entirely.
+
+inputs:
+  cache-key-prefix:
+    required: true
+    description: >
+      Short platform/toolchain identifier (e.g. `windows-clang22`,
+      `ubuntu-clang`, `rocky-clang`, `macos-clang`). Determines the
+      cache namespace so different platforms don't collide.
+  build-script:
+    required: true
+    description: >
+      Path to the build script (relative to the repo root). On Windows
+      it must be a `.bat` (run via `cmd /c call`); elsewhere a POSIX
+      shell script run directly. Hashed into the cache key and executed
+      on cache miss.
+  mrbind-dir:
+    required: false
+    default: thirdparty/mrbind
+    description: >
+      Path to the mrbind submodule relative to the repo root. Override
+      when the action is consumed from a repo where MeshLib itself is
+      a submodule (e.g. `MeshLib/thirdparty/mrbind`).
+  extra-cache-key:
+    required: false
+    default: ''
+    description: >
+      Extra string to mix into the cache key (e.g. the output of
+      `hashFiles(...)` over a compiler lockfile or `clang_version.txt`).
+  strip-binaries:
+    required: false
+    default: 'true'
+    description: >
+      Whether to `strip` debug info from the mrbind executables before
+      saving them to cache. Default `'true'` -- gives ~5x smaller
+      caches at the cost of useful stack traces if mrbind crashes.
+      Set to `'false'` on a debugging branch to retain symbols.
+  msys2-dir:
+    required: false
+    default: 'C:\msys64'
+    description: >
+      Windows-only. Path to the MSYS2 install used by the build script
+      and the strip step. Defaults to `C:\msys64` (where
+      `install-msys2-mrbind` puts it). Override when MSYS2 is installed
+      elsewhere -- e.g. `C:\msys64_meshlib_mrbind` for runners pre-baked
+      with the bat script's default layout.
+
+runs:
+  using: composite
+  steps:
+    - name: Get MRBind submodule SHA
+      id: mrbind-sha
+      shell: bash
+      run: echo "sha=$(git -C '${{ inputs.mrbind-dir }}' rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache MRBind build
+      id: cache
+      uses: actions/cache@v5
+      # Cache-service errors (silent restore crashes, save upload failures) must
+      # not abort the build -- on miss we rebuild from scratch anyway, and the
+      # build script wipes `build/` first, so falling through is always safe.
+      continue-on-error: true
+      with:
+        path: ${{ inputs.mrbind-dir }}/build
+        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
+
+    - name: Build MRBind
+      # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to
+      # `C:\msys64_meshlib_mrbind` (a separate copy intended for local dev). Override
+      # via the `msys2-dir` input to match where MSYS2 actually lives on the runner.
+      # Only the Windows script reads MSYS2_DIR; exporting it elsewhere is harmless.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      env:
+        MSYS2_DIR: ${{ inputs.msys2-dir }}
+      run: |
+        if [ "$RUNNER_OS" = Windows ]; then
+          # cmd.exe needs a Windows-style path; `call` + `/c` propagate the
+          # .bat's exit code, and the environment (MSYS2_DIR) flows through.
+          cmd //c "call $(cygpath -wa '${{ inputs.build-script }}')"
+        else
+          '${{ inputs.build-script }}'
+        fi
+
+    # Downstream steps only invoke the three executables (mrbind, mrbind_gen_c,
+    # mrbind_gen_csharp -- see scripts/mrbind/generate.mk:191-193). Object files,
+    # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
+    # the cache (the build script wipes `build/` before rebuilding anyway, so we
+    # don't need incremental-rebuild state either).
+
+    - name: Trim MRBind build dir before cache save
+      # The `.exe` names are what the Windows build produces; GNU find ships
+      # with Git Bash, so the same command works on every runner.
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -eu
+        cd '${{ inputs.mrbind-dir }}/build'
+        find . -mindepth 1 -maxdepth 1 \
+          ! -name 'mrbind' ! -name 'mrbind_gen_c' ! -name 'mrbind_gen_csharp' \
+          ! -name 'mrbind.exe' ! -name 'mrbind_gen_c.exe' ! -name 'mrbind_gen_csharp.exe' \
+          -exec rm -rf {} +
+
+    # Stripping shrinks the cache ~5x at the cost of useful stack traces from
+    # mrbind crashes. Opt out by passing `strip-binaries: 'false'` on a debugging
+    # branch; mrbind is built with `RelWithDebInfo + -fstandalone-debug`, so a
+    # fresh local build still gives a full-info binary.
+
+    - name: Strip MRBind binaries
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.strip-binaries == 'true' }}
+      shell: bash
+      run: |
+        set -eu
+        case "$RUNNER_OS" in
+          Windows)
+            # Git Bash has no `strip` of its own, so use MSYS2's.
+            STRIP_EXE="$(cygpath -u '${{ inputs.msys2-dir }}')/clang64/bin/strip.exe"
+            "$STRIP_EXE" "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe ;;
+          macOS)
+            # -S drops debug symbols but keeps the dynamic symbol table.
+            strip -S "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp} ;;
+          *)
+            strip "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp} ;;
+        esac

@@ -85,3 +85,10 @@ def test_Vector2():
     iteration_check(double_vec)
     iteration_check(int_vec)
     iteration_check(float_vec)
+
+def test_ValidFacesIteration():
+    mesh = mrmesh.makeCube()
+    counter = 0
+    for f in mesh.topology.getValidFaces():
+        counter = counter + 1
+    assert counter == mesh.topology.getValidFaces().count()

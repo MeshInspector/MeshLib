@@ -1,12 +1,12 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #if defined( __EMSCRIPTEN__ ) || !defined( MRMESH_NO_CPR )
-#include "MRViewerFwd.h"
+#include "MRWebResponseCallback.h"
 #include "MRMesh/MRExpected.h"
-#include <json/forwards.h>
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <filesystem>
 
 namespace MR
 {
@@ -45,7 +45,7 @@ public:
     MRVIEWER_API void setHeaders( std::unordered_map<std::string, std::string> headers );
 
     // set path to the file to upload
-    MRVIEWER_API void setInputPath( std::string inputPath );
+    MRVIEWER_API void setInputPath( std::filesystem::path inputPath );
 
     // set progress callback for upload
     // NOTE: due to limitations, the upload callback won't work on web platforms when `setOutputPath` method is called
@@ -65,7 +65,7 @@ public:
     MRVIEWER_API void setBody( std::string body );
 
     // prefer to save the response to file
-    MRVIEWER_API void setOutputPath( std::string outputPath );
+    MRVIEWER_API void setOutputPath( std::filesystem::path outputPath );
 
     // set progress callback for download
     MRVIEWER_API void setDownloadProgressCallback( ProgressCallback callback );
@@ -76,7 +76,7 @@ public:
     // set log name
     MRVIEWER_API void setLogName( std::string logName );
 
-    using ResponseCallback = std::function<void( const Json::Value& response )>;
+    using ResponseCallback = MR::WebResponseCallback;
 
     /// send request, calling callback on answer,
     /// if async then callback is called in next frame after getting response
@@ -84,6 +84,9 @@ public:
     /// \param logName name for logging
     MRVIEWER_API void send( std::string url, std::string logName, ResponseCallback callback, bool async = true );
     MRVIEWER_API void send( ResponseCallback callback );
+
+    /// if any async request is still in progress, wait for it
+    MRVIEWER_API static void waitRemainingAsync();
 
 private:
     Method method_{ Method::Get };
@@ -93,10 +96,10 @@ private:
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
     std::unordered_map<std::string, std::string> headers_;
-    std::string inputPath_;
+    std::filesystem::path inputPath_;
     std::vector<FormData> formData_;
     std::string body_;
-    std::string outputPath_;
+    std::filesystem::path outputPath_;
     ProgressCallback uploadCallback_;
     ProgressCallback downloadCallback_;
 };

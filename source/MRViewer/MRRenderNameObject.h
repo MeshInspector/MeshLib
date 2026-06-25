@@ -2,6 +2,8 @@
 
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
+#include "MRViewer/MRImGuiMeasurementIndicators.h"
+#include "MRViewer/MRRenderClickableRect.h"
 #include "MRViewer/exports.h"
 #include "MRViewer/MRImGui.h"
 
@@ -10,32 +12,30 @@
 namespace MR
 {
 
-class RenderNameObject : public virtual IRenderObject
+class MRVIEWER_CLASS RenderNameObject : public virtual IRenderObject
 {
-    struct Task : BasicUiRenderTask
+    struct Task : BasicClickableRectUiRenderTask
     {
         const VisualObject* object = nullptr;
         const UiRenderParams* params = nullptr;
-
-        ImVec2 windowCornerA;
-        ImVec2 windowCornerB;
 
         ImVec2 point;
         ImVec2 point2;
         ImVec2 textCenter;
 
-        std::string text;
+        ImGuiMeasurementIndicators::Text text;
         ImVec2 textPos;
-        ImVec2 textSize;
         ImVec2 paddingA;
         ImVec2 paddingB;
 
-        bool prevFrameHovered = false;
-        bool isHovered = false;
-        bool isActive = false;
+        // Optional.
+        // This is displayed below the primary text. This one isn't clickable, and uses the standardized background color, instead of the one copied
+        //   from the target object, which helps with drawing complex colored texts.
+        ImGuiMeasurementIndicators::Text textExtra;
+        float textToExtraTextSpacing = 0;
 
-        MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& backParams ) override;
         MRVIEWER_API void renderPass() override;
+        MRVIEWER_API void onClick() override;
     };
     Task task_;
 public:
@@ -43,7 +43,13 @@ public:
 
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 
-    MRVIEWER_API virtual std::string getObjectNameString( const VisualObject& object, ViewportId viewportId ) const;
+    // The text displayed as the clickable object name.
+    MRVIEWER_API virtual ImGuiMeasurementIndicators::Text getObjectNameText( const VisualObject& object, ViewportId viewportId ) const;
+
+    // Optional. This text is displayed below the object name, and isn't clickable.
+    // This uses the standardized background color, as opposed to the primary text that copies the color from the object.
+    // So if you want to draw colored text, it's easier to do it here to avoid clashes with the object color.
+    MRVIEWER_API virtual ImGuiMeasurementIndicators::Text getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const;
 
     // The name tag is displayed as a text bubble, attached to a specific point on the model with at most 2-segment line.
     // The first segment offset is specified in 3d model coordinates, and the second offset is in screen coordinates.

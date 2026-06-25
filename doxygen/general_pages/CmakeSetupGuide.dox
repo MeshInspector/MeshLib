@@ -7,7 +7,7 @@
 
 ## CMake Integration Support
 MeshLib provides CMake integration support for \b Windows, \b Linux and \b macOS.
-Example CMake configuration files are available to demonstrate how to link against the pre-built libraries. 
+Example CMake configuration files are available to demonstrate how to link against the pre-built libraries.
 You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
 
 ## Windows Integration Guide
@@ -49,9 +49,15 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MRMesh)
 target_link_libraries(your_project_name PUBLIC MeshLib::MRMesh MeshLib::MRViewer)
 \endcode
 
+Or if you use the C API, instead link `MeshLib::MeshLibC2`:
+
+\code{.cmake}
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+\endcode
+
 ### Find Third-Party Dependencies
 
-MeshLib have extended functionality that may have additional dependencies that need to be linked. 
+MeshLib have extended functionality that may have additional dependencies that need to be linked.
 Check the example `CMakeLists.txt` provided in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) to see how to add required dependencies:
 
 \code{.cmake}

@@ -1,5 +1,7 @@
 #include "MRShadowsGL.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
+#include "MRMakeSlot.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
@@ -29,16 +31,16 @@ void ShadowsGL::enable( bool on )
     enabled_ = on;
     if ( on )
     {
-        preDrawConnection_ = getViewerInstance().preDrawSignal.connect( MAKE_SLOT( &ShadowsGL::preDraw_ ), boost::signals2::at_back );
-        postDrawConnection_ = getViewerInstance().postDrawPreViewportSignal.connect( MAKE_SLOT( &ShadowsGL::postDraw_ ), boost::signals2::at_front );
-        postResizeConnection_ = getViewerInstance().postResizeSignal.connect( MAKE_SLOT( &ShadowsGL::postResize_ ), boost::signals2::at_back );
+        preDrawConnection_ = getViewerInstance().signals().preDrawSignal.connect( MAKE_SLOT( &ShadowsGL::preDraw_ ), boost::signals2::at_back );
+        postDrawConnection_ = getViewerInstance().signals().postDrawPreViewportSignal.connect( MAKE_SLOT( &ShadowsGL::postDraw_ ), boost::signals2::at_front );
+        postResizeConnection_ = getViewerInstance().signals().postResizeSignal.connect( MAKE_SLOT( &ShadowsGL::postResize_ ), boost::signals2::at_back );
         
         glfwGetFramebufferSize( getViewerInstance().window, &sceneSize_.x, &sceneSize_.y );
         lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );
         quadObject_.gen();
-        sceneFramebuffer_.gen( sceneSize_, -1 );
-        lowSizeFramebuffer_.gen( lowSize_, 0 );
-        convolutionXFramebuffer_.gen( lowSize_, 0 );
+        sceneFramebuffer_.gen( sceneSize_, false, -1 );
+        lowSizeFramebuffer_.gen( lowSize_, false, 0 );
+        convolutionXFramebuffer_.gen( lowSize_, false, 0 );
     }
     else
     {
@@ -87,9 +89,9 @@ void ShadowsGL::postResize_( int, int )
     convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
         
-    sceneFramebuffer_.gen( sceneSize_, -1 );
-    lowSizeFramebuffer_.gen( lowSize_, 0 );
-    convolutionXFramebuffer_.gen( lowSize_, 0 );
+    sceneFramebuffer_.gen( sceneSize_, false, -1 );
+    lowSizeFramebuffer_.gen( lowSize_, false, 0 );
+    convolutionXFramebuffer_.gen( lowSize_, false, 0 );
 }
 
 void ShadowsGL::preDraw_()
@@ -155,12 +157,12 @@ void ShadowsGL::drawShadow_( bool convX )
     if ( convX )
     {
         // draw scene texture to texture with X convolution
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getColorTexture() ) );
     }
     else
     {
         // draw X convolution texture to screen
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, convolutionXFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, convolutionXFramebuffer_.getColorTexture() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
@@ -170,32 +172,14 @@ void ShadowsGL::drawShadow_( bool convX )
 void ShadowsGL::drawTexture_( bool scene, bool downsample )
 {
     const auto& size = downsample ? lowSize_ : sceneSize_;
-    GL_EXEC( glViewport( 0, 0, size.x, size.y ) );
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::SimpleOverlayQuad );
-    GL_EXEC( glUseProgram( shader ) );
-
-    quadObject_.bind();
-    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     if ( scene )
     {
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, sceneFramebuffer_.getTexture() ) );
+        sceneFramebuffer_.draw( quadObject_, { .size = size } );
     }
     else
     {
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, lowSizeFramebuffer_.getTexture() ) );
+        lowSizeFramebuffer_.draw( quadObject_, { .size = size,.simpleDepth = 0.99f } );
     }
-    if ( scene )
-    {
-        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), 0.5f ) );
-    }
-    else
-    {
-        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "depth" ), 0.99f ) );
-    }
-    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "viewportSize" ), float( size.x ), float( size.y ) ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
-    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 6 ) );
 }
 
 void ShadowsGL::setQuality( float quality )
@@ -217,8 +201,8 @@ void ShadowsGL::setQuality( float quality )
     convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
     
-    lowSizeFramebuffer_.gen( lowSize_, 0 );
-    convolutionXFramebuffer_.gen( lowSize_, 0 );
+    lowSizeFramebuffer_.gen( lowSize_, false, 0 );
+    convolutionXFramebuffer_.gen( lowSize_, false, 0 );
 
     getViewerInstance().setSceneDirty();
 }

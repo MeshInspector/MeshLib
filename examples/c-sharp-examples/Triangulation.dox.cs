@@ -1,6 +1,3 @@
-using System.Reflection;
-using static MR.DotNet;
-
 public class TriangulationExample
 {
     public static void Run()
@@ -8,7 +5,7 @@ public class TriangulationExample
         try
         {
             // Generate point cloud
-            Vector3f[] points = new Vector3f[9900];
+            MR.PointCloud pc = new();
 
             const float uConst = MathF.PI * 2 / 100;
             const float vConst = MathF.PI / 101;
@@ -19,34 +16,32 @@ public class TriangulationExample
                 {
                     float v = vConst * j;
 
-                    points[i * 99 + j - 1] = new Vector3f(
+                    pc.addPoint(new(
                         MathF.Cos(u) * MathF.Sin(v),
                         MathF.Sin(u) * MathF.Sin(v),
                         MathF.Cos(v)
-                    );
+                    ));
                 }
             }
 
-            PointCloud pc = PointCloud.FromPoints(points);
-
 
             // Triangulate it
-            TriangulationParameters parameters = new TriangulationParameters();
-            Mesh? triangulated = TriangulatePointCloud(pc, parameters);
-            if ( triangulated == null)
+            MR.TriangulationParameters parameters = new();
+            MR.Mesh? triangulated = MR.triangulatePointCloud(pc, parameters).value();
+            if (triangulated is null)
             {
                 Console.WriteLine("Error during triangulation");
                 return;
             }
 
             // Fix possible issues
-            OffsetParameters offsetParameters = new OffsetParameters();
-            MeshPart mp = new MeshPart(triangulated);
-            offsetParameters.voxelSize = Offset.SuggestVoxelSize( mp, 5e+6f);
-            Mesh mesh = Offset.OffsetMesh(mp, 0f, offsetParameters);
+            MR.OffsetParameters offsetParameters = new();
+            MR.MeshPart mp = new(triangulated);
+            offsetParameters.voxelSize = MR.suggestVoxelSize(mp, 5e+6f);
+            var offset = MR.offsetMesh(mp, 0f, offsetParameters);
 
             // Save result
-            MeshSave.ToAnySupportedFormat(mp.mesh, "meshA_icp.stl");
+            MR.MeshSave.toAnySupportedFormat(offset, "meshA_icp.stl");
         }
         catch (Exception e)
         {

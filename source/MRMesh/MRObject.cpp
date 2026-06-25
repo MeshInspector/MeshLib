@@ -1,15 +1,104 @@
 #include "MRObject.h"
 #include "MRObjectFactory.h"
+#include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRGTest.h"
-#include <filesystem>
 
 namespace MR
 {
+
+namespace
+{
+
+/// maps object pointer to the pair (first object pointer with same model, its index in SharedModels)
+using Obj2FirstSharedObj = HashMap<const Object*, std::pair<const Object*, int>>;
+
+const std::filesystem::path cSharedFolder = "SharedModels";
+
+std::string composeKey( const std::string& objectName, const int prefix )
+{
+    constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
+    return std::to_string( prefix ) + "_" + utf8substr( replaceProhibitedChars( objectName ).c_str(), 0, maxFileNameLen );
+}
+
+struct KeyObjectModel
+{
+    const Object* object = nullptr;
+    friend bool operator==( const KeyObjectModel& a, const KeyObjectModel& b );
+};
+
+// return true if model data of two Objects are equal
+bool operator==( const KeyObjectModel& a, const KeyObjectModel& b )
+{
+    if ( !a.object || !b.object )
+        return a.object == b.object;
+    return a.object->sameModels( *b.object );
+}
+
+// return hash for Object model data
+struct KeyObjectModelHasher
+{
+    std::size_t operator()( const KeyObjectModel& k ) const
+    {
+        if ( !k.object )
+            return 0;
+        return k.object->getModelHash();
+    }
+};
+
+// collect map links to shared models
+// map Object with the same model to first object in tree with that model, first object maps to oneself
+// numberSharedFileInSharedFolder - unique number for all Objects with the same shared model to avoid name collision
+// <ObjectWithSharedModelFirst, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// <ObjectWithSharedModel1, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// <ObjectWithSharedModel2, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// <ObjectWithSharedModelN, <ObjectWithSharedModelFirst, numberSharedFileInSharedFolder>>
+// return shared models count
+int collectLinks( const Object& rootObject, Obj2FirstSharedObj& links )
+{
+    links.clear();
+
+    HashSet<KeyObjectModel, KeyObjectModelHasher> uniqueObjectsModels;
+
+    std::stack<const Object*> sceneGraphVisitedList;
+    sceneGraphVisitedList.push( &rootObject );
+
+    int countSharedFiles = 0;
+    while ( !sceneGraphVisitedList.empty() )
+    {
+        auto node = sceneGraphVisitedList.top();
+        sceneGraphVisitedList.pop();
+
+        if ( node->isAncillary() )
+            continue; // consider ancillary_ objects as temporary, not requiring saving
+
+        auto [it, inserted] = uniqueObjectsModels.insert( { node } );
+        if ( !inserted ) // object with the same model exists
+        {
+            // insert first met object
+            int numFile = countSharedFiles + 1;
+            auto [itFirst, insertedFirst] = links.insert( { it->object, { it->object, numFile } } );
+            if ( insertedFirst )
+                ++countSharedFiles;
+            else
+                numFile = itFirst->second.second;
+
+            // map current object to first met object
+            links.insert( { node, { it->object, numFile } } );
+        }
+        auto children = node->children();
+        for ( int i = int( children.size() ) - 1; i >= 0; --i )
+        {
+            sceneGraphVisitedList.push( children[i].get() );
+        }
+    }
+    return countSharedFiles;
+}
+
+} // anonymous namespace
 
 MR_ADD_CLASS_FACTORY( Object )
 
@@ -102,6 +191,14 @@ void Object::resetXf( ViewportId id )
     if ( !xf_.reset( id ) )
         return;
     sendWorldXfChangedSignal_();
+    needRedraw_ = true;
+}
+
+void Object::setXfsForAllViewports( ViewportProperty<AffineXf3f> xf )
+{
+    if ( xf_ == xf )
+        return;
+    xf_ = std::move( xf );
     needRedraw_ = true;
 }
 
@@ -387,6 +484,16 @@ void Object::setAncillary( bool ancillary )
     ancillary_ = ancillary;
 }
 
+bool Object::isGlobalAncillary() const
+{
+    if ( isAncillary() )
+        return true;
+    for ( auto* parent = Object::parent(); parent != nullptr; parent = parent->parent() )
+        if ( parent->isAncillary() )
+            return true;
+    return false;
+}
+
 void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
 {
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )
@@ -434,13 +541,23 @@ void Object::serializeFields_( Json::Value& root ) const
     serializeToJson( xf_.get(), root["XF"] );
 
     // Type
-    root["Type"].append( Object::TypeName() ); // will be appended in derived calls
+    root["Type"].append( Object::StaticTypeName() ); // will be appended in derived calls
+
+    // tags
+    auto& tagsJson = root["Tags"] = Json::arrayValue;
+    for ( const auto& tag : tags_ )
+        tagsJson.append( tag );
 }
 
 Expected<void> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
 {
     if ( progressCb && !progressCb( 1.f ) )
         return unexpectedOperationCanceled();
+    return{};
+}
+
+Expected<void> Object::setSharedModel_( const Object& )
+{
     return{};
 }
 
@@ -463,6 +580,10 @@ void Object::deserializeFields_( const Json::Value& root )
         locked_ = root["Locked"].asBool();
     if ( const auto& json = root["ParentLocked"]; json.isBool() )
         parentLocked_ = json.asBool();
+    if ( const auto& tagsJson = root["Tags"]; tagsJson.isArray() )
+        for ( const auto& tagJson : tagsJson )
+            if ( tagJson.isString() )
+                tags_.emplace( tagJson.asString() );
 }
 
 void Object::sendWorldXfChangedSignal_()
@@ -518,12 +639,42 @@ std::vector<std::string> Object::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type: " + getClassName() );
+    res.push_back( "class: " + className() );
     res.push_back( "mem: " + bytesString( heapBytes() ) );
+    res.push_back( fmt::format( "tags: {}", tags_.size() ) );
+    for ( const auto& tag : tags_ )
+        res.push_back( fmt::format( "· {}", tag ) );
     return res;
 }
 
+/// used during serialization to find objects with shared models and write only one model in each group
+struct Object::MapSharedObjects
+{
+    /// maps Objects to relative Objects
+    Obj2FirstSharedObj map;
+
+    const std::filesystem::path rootFolder;
+};
+
 Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
+{
+    // collect links to shared models
+    MapSharedObjects links{ .rootFolder = path };
+    const auto countSharedFiles = collectLinks( *this, links.map );
+    if ( countSharedFiles > 0 )
+    {
+        // create shared folder
+        const std::filesystem::path sharedFolder = path / cSharedFolder;
+        std::error_code ec;
+        if ( !std::filesystem::is_directory( sharedFolder, ec ) )
+            if ( !std::filesystem::create_directories( sharedFolder, ec ) )
+                return unexpected( "Cannot create directories " + utf8string( sharedFolder ) );
+    }
+    return serializeRecursive_( path, root, childId, countSharedFiles > 0 ? &links : nullptr );
+}
+
+Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive_( const std::filesystem::path& path, Json::Value& root, int childId,
+    MapSharedObjects* mapSharedObjects ) const
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
@@ -533,13 +684,34 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
     std::vector<std::future<Expected<void>>> res;
 
     // the key must be unique among all children of same parent
-    std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );
+    const std::string key = composeKey( name_, childId );
+    auto pathToSerializeModel = path / pathFromUtf8( key );
 
-    auto model = serializeModel_( path / pathFromUtf8( key ) );
-    if ( !model.has_value() )
-        return unexpected( model.error() );
-    if ( model.value().valid() )
-        res.push_back( std::move( model.value() ) );
+    if ( mapSharedObjects )
+    {
+        if ( auto it = mapSharedObjects->map.find( this ); it != mapSharedObjects->map.end() )
+        {
+            const Object* firstSerializedObject = it->second.first;
+            // we use name of first object as name of shared model
+            const auto link = cSharedFolder / asU8String( composeKey( firstSerializedObject->name(), it->second.second ) );
+            if ( it->first == firstSerializedObject )
+                pathToSerializeModel = mapSharedObjects->rootFolder / link; // serialize model only one time
+            else
+                pathToSerializeModel.clear();
+
+            // uses forward slashes
+            root["Link"] = asString( link.generic_u8string() );
+        }
+    }
+
+    if ( !pathToSerializeModel.empty() )
+    {
+        auto model = serializeModel_( pathToSerializeModel );
+        if ( !model.has_value() )
+            return unexpected( model.error() );
+        if ( model.value().valid() )
+            res.push_back( std::move( model.value() ) );
+    }
     serializeFields_( root );
 
     root["Key"] = key;
@@ -553,7 +725,7 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
             const auto& child = children_[i];
             if ( child->isAncillary() )
                 continue; // consider ancillary_ objects as temporary, not requiring saving
-            auto sub = child->serializeRecursive( childrenPath, childrenRoot[std::to_string( i )], i );
+            auto sub = child->serializeRecursive_( childrenPath, childrenRoot[std::to_string( i )], i, mapSharedObjects );
             if ( !sub.has_value() )
                 return unexpected( sub.error() );
             for ( auto & f : sub.value() )
@@ -566,14 +738,52 @@ Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( c
     return res;
 }
 
-Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
-        ProgressCallback progressCb, int* objCounter )
+/// used during de-serialization to find objects with shared models (having same link-string)
+struct Object::MapLinkToSharedObjectModel
+{
+    HashMap<std::string, const Object*> map;
+
+    const std::filesystem::path rootFolder;
+};
+
+Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root, ProgressCallback progressCb, int* objCounter )
+{
+    // map for mapping relative path (link) to shared model file to first deserialized Object (used while deserialization)
+    MapLinkToSharedObjectModel mapLinkToSharedObjectModel{ .rootFolder = path };
+    return deserializeRecursive_( path, root, objCounter, mapLinkToSharedObjectModel, progressCb );
+}
+
+Expected<void> Object::deserializeRecursive_( const std::filesystem::path& path, const Json::Value& root,
+    int* objCounter, MapLinkToSharedObjectModel& mapLinkToSharedObjectModel, const ProgressCallback& progressCb )
 {
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();
 
-    auto res = deserializeModel_( path / pathFromUtf8( key ), progressCb );
-    if ( !res.has_value() )
-        return res;
+    std::string link;
+    if ( !root["Link"].empty() && root["Link"].isString() )
+        link = root["Link"].asString();
+
+    auto pathToDeserializeModel = path / pathFromUtf8( key );
+    if ( !link.empty() )
+    {
+        pathToDeserializeModel = mapLinkToSharedObjectModel.rootFolder / pathFromUtf8( link );
+
+        const auto [it, inserted] = mapLinkToSharedObjectModel.map.insert( { link, this } );
+        if (!inserted )
+        {
+            // model already deserialized
+            const auto res = setSharedModel_( *it->second );
+            if ( !res.has_value() )
+                return res;
+            pathToDeserializeModel.clear();
+        }
+    }
+
+    if ( !pathToDeserializeModel.empty() )
+    {
+        const auto res = deserializeModel_( pathToDeserializeModel, progressCb );
+        if ( !res.has_value() )
+            return res;
+    }
 
     deserializeFields_( root );
     if ( objCounter )
@@ -628,7 +838,7 @@ Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, 
             if ( !childObj )
                 continue;
 
-            auto childRes = childObj->deserializeRecursive( path / pathFromUtf8( key ), child, progressCb, objCounter );
+            auto childRes = childObj->deserializeRecursive_( path / pathFromUtf8( key ), child, objCounter, mapLinkToSharedObjectModel, progressCb );
             if ( !childRes.has_value() )
                 return childRes;
             addChild( childObj );
@@ -653,38 +863,36 @@ Box3f Object::getWorldTreeBox( ViewportId id ) const
     return res;
 }
 
+bool Object::addTag( std::string tag )
+{
+    const auto [it, inserted] = tags_.emplace( std::move( tag ) );
+    if ( inserted )
+        ObjectTagEventDispatcher::instance().tagAddedSignal( this, *it );
+    return inserted;
+}
+
+bool Object::removeTag( const std::string& tag )
+{
+    const auto present = bool( tags_.erase( tag ) );
+    if ( present )
+        ObjectTagEventDispatcher::instance().tagRemovedSignal( this, tag );
+    return present;
+}
+
 size_t Object::heapBytes() const
 {
     return ObjectChildrenHolder::heapBytes()
         + name_.capacity();
 }
 
-TEST( MRMesh, DataModelRemoveChild )
+bool Object::sameModels( const Object& ) const
 {
-    auto child2 = std::make_shared<Object>();
-    Object root;
-    {
-        EXPECT_EQ( root.children().size(), 0 );
-
-        auto child1 = std::make_shared<Object>();
-        EXPECT_TRUE( root.addChild( child1 ) );
-        EXPECT_FALSE( root.addChild( child1 ) );
-        EXPECT_EQ( &root, child1->parent() );
-        EXPECT_EQ( root.children().size(), 1 );
-
-
-        EXPECT_TRUE( child1->addChild( child2 ) );
-        EXPECT_FALSE( child1->addChild( child2 ) );
-        EXPECT_EQ( child1.get(), child2->parent() );
-        EXPECT_EQ( child1->children().size(), 1 );
-
-        EXPECT_TRUE( root.removeChild( child1 ) );
-        EXPECT_FALSE( root.removeChild( child1 ) );
-        EXPECT_EQ( nullptr, child1->parent() );
-        EXPECT_EQ( root.children().size(), 0 );
-    }
-
-    auto parent = child2->parent();
-    EXPECT_EQ( parent, nullptr );
+    return false;
 }
+
+size_t Object::getModelHash() const
+{
+    return std::hash<const Object*>()( this );
+}
+
 } //namespace MR

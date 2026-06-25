@@ -18,11 +18,11 @@ public:
     // Specify execution in specific time of application start
     enum class StartPosition
     {
-        AfterWindowInit, // executes right after window is initialized
-        AfterSplashAppear, // executes after splash appeared
-        AfterPluginInit, // executes during splash, after plugins init)
-        AfterSplashHide, // executes after splash, to have valid main window context
-        AfterWindowAppear // executes after window appeared to have valid opengl context
+        AfterWindowInit,    // executes right after window is initialized
+        AfterSplashAppear,  // executes after splash appeared
+        AfterPluginInit,    // executes during splash, after plugins init)
+        BeforeWindowAppear, // executes after splash is going to close, and just before main window is shown and have valid main window context
+        AfterWindowAppear   // executes after window appeared to have valid opengl context
     };
 
     // This function setups main thread id, it should be called before any command
@@ -34,7 +34,7 @@ public:
     // Adds command to the end of command loop, can be performed from any thread
     // do not block, so be careful with lambda captures
     // note: state - specify execution in specific time of application start
-    MRVIEWER_API static void appendCommand( CommandFunc func, StartPosition state = StartPosition::AfterSplashHide );
+    MRVIEWER_API static void appendCommand( CommandFunc func, StartPosition state = StartPosition::BeforeWindowAppear );
 
     // If caller thread is main - instantly run command, otherwise add command to the end of loop with
     // StartPosition state = StartPosition::AfterSplash and blocks caller thread until command is done
@@ -42,6 +42,9 @@ public:
 
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
+
+    // Return true if loop is empty
+    MRVIEWER_API static bool empty();
 
     // Clears the queue without executing the commands
     // if closeLoop is true, does not accept any new commands
@@ -58,7 +61,7 @@ private:
     struct Command
     {
         CommandFunc func;
-        StartPosition state{ StartPosition::AfterSplashHide };
+        StartPosition state{ StartPosition::BeforeWindowAppear };
         std::condition_variable callerThreadCV;
         std::thread::id threadId;
     };
@@ -71,5 +74,10 @@ private:
     std::queue<std::shared_ptr<Command>> commands_;
     std::mutex mutex_;
 };
+
+// Push a handful of empty commands onto the main thread so the Viewer advances a few frames,
+// ensuring any UI state touched by a recent input (click, write, transform) is reflected before
+// the caller's next observation.
+MRVIEWER_API void skipFramesAfterInput();
 
 }

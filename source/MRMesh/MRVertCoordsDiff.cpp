@@ -1,7 +1,9 @@
 #include "MRVertCoordsDiff.h"
 #include "MRVector.h"
+#include "MRVector3.h"
 #include "MRTimer.h"
 #include "MRHeapBytes.h"
+#include "MRId.h"
 
 namespace MR
 {

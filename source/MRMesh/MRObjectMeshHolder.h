@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
 #include "MRMeshPart.h"
@@ -35,8 +36,8 @@ public:
     ObjectMeshHolder( ObjectMeshHolder&& ) noexcept = default;
     ObjectMeshHolder& operator = ( ObjectMeshHolder&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "MeshHolder"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
@@ -63,6 +64,14 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
+    /// this is a faster version of setDirtyFlags(), which does not invalidate metrics cache (area, volume, ...);
+    /// the user is responsible for calling invalidateMetricsCache( mask ) or setDirtyFlags( mask ) at the end of mesh editing;
+    /// DANGER: all cached values returned until then can be outdated
+    MRMESH_API virtual void setDirtyFlagsFast( uint32_t mask );
+
+    /// invalidates same caches with mesh metrics (area, volume, ...) as by setDirtyFlags( mask )
+    MRMESH_API virtual void invalidateMetricsCache( uint32_t mask );
+
     const FaceBitSet& getSelectedFaces() const { return data_.selectedFaces; }
     MRMESH_API virtual void selectFaces( FaceBitSet newSelection );
     /// returns colors of selected triangles
@@ -86,8 +95,14 @@ public:
     MRMESH_API const ViewportProperty<Color>& getEdgesColorsForAllViewports() const;
     MRMESH_API virtual void setEdgesColorsForAllViewports( ViewportProperty<Color> val );
 
+    MRMESH_API const ViewportProperty<Color>& getPointsColorsForAllViewports() const;
+    MRMESH_API virtual void setPointsColorsForAllViewports( ViewportProperty<Color> val );
+
     MRMESH_API const ViewportProperty<Color>& getBordersColorsForAllViewports() const;
     MRMESH_API virtual void setBordersColorsForAllViewports( ViewportProperty<Color> val );
+
+    /// set all object solid colors (front/back/etc.) from other object for all viewports
+    MRMESH_API void copyAllSolidColors( const ObjectMeshHolder& other );
 
     /// Edges on mesh, that will have sharp visualization even with smooth shading
     const UndirectedEdgeBitSet& creases() const { return data_.creases; }
@@ -152,8 +167,8 @@ public:
     /// returns first texture in the vector. If there is no textures, returns empty texture
     MRMESH_API const MeshTexture& getTexture() const;
     // for backward compatibility
-    [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
-    [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
+    [[deprecated]] MRMESH_API MR_BIND_IGNORE virtual void setTexture( MeshTexture texture );
+    [[deprecated]] MRMESH_API MR_BIND_IGNORE virtual void updateTexture( MeshTexture& updated );
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
     virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture );  setDirtyFlags( DIRTY_TEXTURE ); }
     virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated );  setDirtyFlags( DIRTY_TEXTURE ); }
@@ -185,9 +200,6 @@ public:
 
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
-
-    /// returns dirty flag of currently using normal type if they are dirty in render representation
-    MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
 
     MRMESH_API virtual bool getRedrawFlag( ViewportMask viewportMask ) const override;
 
@@ -236,18 +248,31 @@ public:
 
     /// returns overriden file extension used to serialize mesh inside this object, nullptr means defaultSerializeMeshFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
-    [[deprecated]] const char * saveMeshFormat() const { return serializeFormat(); }
+
+    /// returns overriden file extension used to serialize mesh inside this object if set, or defaultSerializeMeshFormat().c_str() otherwise; never returns nullptr
+    [[nodiscard]] MRMESH_API const char * actualSerializeFormat() const;
 
     /// overrides file extension used to serialize mesh inside this object: must start from '.',
     /// nullptr means serialize in defaultSerializeMeshFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
-    [[deprecated]] void setSaveMeshFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
+
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API void resetFrontColor() override;
+    /// reset all object colors to their default values from the current theme
+    MRMESH_API void resetColors() override;
+
+    MRMESH_API virtual size_t getModelHash() const override;
+    MRMESH_API virtual bool sameModels( const Object& other ) const override;
 
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;
     SelectionChangedSignal faceSelectionChangedSignal;
     SelectionChangedSignal edgeSelectionChangedSignal;
     SelectionChangedSignal creasesChangedSignal;
+
+    /// signal about mesh changing, triggered in setDirtyFlag
+    using MeshChangedSignal = Signal<void( uint32_t mask )>;
+    MeshChangedSignal meshChangedSignal;
 
 protected:
     ObjectMeshData data_;
@@ -284,6 +309,7 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API virtual Expected<void> setSharedModel_( const Object& other ) override;
 
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;

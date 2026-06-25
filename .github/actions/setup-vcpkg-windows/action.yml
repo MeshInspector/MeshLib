@@ -1,0 +1,194 @@
+name: 'Set up vcpkg for MeshLib (Windows)'
+description: 'Looks up the vcpkg build cache and either restores it onto a clean C:\vcpkg or builds the tree from source. Always runs `vcpkg integrate install` at the end.'
+
+inputs:
+  vcpkg-version:
+    description: 'Vcpkg git ref (tag/branch/sha) to check out under C:\vcpkg.'
+    required: true
+  vcpkg-triplet:
+    description: 'Vcpkg triplet name. Used in the cache key and the post-install diagnostic.'
+    required: false
+    default: 'x64-windows-meshlib'
+  install-flags:
+    description: 'Extra flags forwarded to thirdparty\install.bat (e.g. "--write-s3 --use-s3-asset-provider").'
+    required: false
+    default: ''
+  internal-build:
+    description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Compute Vcpkg Cache Key
+      # Bust the cache when overlay ports, the active triplet, the package
+      # list, or install.bat change. The VS2019 overlay glob is empty for
+      # other triplets so it doesn't invalidate their caches.
+      shell: bash
+      env:
+        VS19_PORTS_GLOB: ${{ (inputs.vcpkg-triplet == 'x64-windows-vs2019-meshlib' || inputs.vcpkg-triplet == 'x64-windows-meshlib-iterator-debug') && 'thirdparty/vcpkg/ports-vs19/**' || '' }}
+      run: |
+        triplet_file="thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
+        echo "Triplet file: $triplet_file"
+        test -f "$triplet_file" || { echo "::error::Triplet file not found: $triplet_file"; exit 1; }
+        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VS19_PORTS_GLOB, format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}-slim2" >> "$GITHUB_ENV"
+
+    - name: Look up Vcpkg Cache
+      id: lookup
+      uses: actions/cache/restore@v5
+      with:
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        path: |
+          C:\vcpkg\*
+        lookup-only: true
+
+    - name: Capture cache-hit
+      # Mirror cache-hit into VCPKG_CACHE_HIT for downstream `if:` gating;
+      # an unset steps.<id>.outputs.cache-hit can misevaluate inside a
+      # composite action's if-expression.
+      shell: pwsh
+      run: |
+        $hit = "${{ steps.lookup.outputs.cache-hit }}"
+        if ([string]::IsNullOrEmpty($hit)) { $hit = 'false' }
+        "VCPKG_CACHE_HIT=$hit" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+        Write-Host "cache-hit:  $hit"
+        Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
+
+    # ----- cache HIT path: rename runner's vcpkg out of the way, then download -----
+    - name: Stash runner's C:\vcpkg
+      # Atomic same-volume rename so the cache restore extracts onto an
+      # empty path with no leftover runner-image files. The stash is left
+      # for runner teardown (this is an ephemeral runner).
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      shell: pwsh
+      run: |
+        if (Test-Path C:\vcpkg) {
+          $stash = "C:\vcpkg-stash-$(New-Guid)"
+          Move-Item C:\vcpkg $stash -Force
+          "VCPKG_STASH=$stash" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+        }
+
+    - name: Restore Vcpkg Cache
+      id: restore
+      # Tolerate a failed/partial extraction (a known actions/cache flake on
+      # Windows): don't fail here — let "Verify" below catch it and rebuild.
+      continue-on-error: true
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      uses: actions/cache/restore@v5
+      with:
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        path: |
+          C:\vcpkg\*
+
+    # A cache hit can still yield no usable tree (restore errored, or "succeeded"
+    # but tar dropped files). Discard such a restore, put the runner's vcpkg
+    # clone back, and fall through to the build path.
+    - name: Verify Restored Vcpkg Cache
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      shell: pwsh
+      run: |
+        # Discard if the restore step failed (its `outcome` stays 'failure' under
+        # continue-on-error) or left no usable tree. Combined, they also cover a
+        # partial restore and old runners where composite outcome is empty.
+        $restoreFailed = ('${{ steps.restore.outcome }}' -eq 'failure')
+        $sentinel = "C:\vcpkg\installed\${{ inputs.vcpkg-triplet }}"
+        $treeOk = (Test-Path $sentinel) -and (Get-ChildItem -Force $sentinel | Select-Object -First 1)
+        if ((-not $restoreFailed) -and $treeOk) {
+          Write-Host "Restored cache verified: '$sentinel' exists and is non-empty."
+        } else {
+          if ($restoreFailed) {
+            Write-Warning "Restore step failed (restore flake) — discarding the incomplete restore and rebuilding from source."
+          } else {
+            Write-Warning "Cache hit but '$sentinel' is missing or empty (restore flake) — treating as a cache miss and rebuilding from source."
+          }
+          # Remove-Item can leave locked remnants; if C:\vcpkg survives, rename it
+          # aside so Move-Item (which won't overwrite a dir) can restore the stash.
+          if (Test-Path C:\vcpkg) { Remove-Item C:\vcpkg -Recurse -Force -ErrorAction SilentlyContinue }
+          if (Test-Path C:\vcpkg) { Move-Item C:\vcpkg "C:\vcpkg-broken-$(New-Guid)" -Force -ErrorAction SilentlyContinue }
+          if ($env:VCPKG_STASH -and (Test-Path $env:VCPKG_STASH)) {
+            Move-Item $env:VCPKG_STASH C:\vcpkg -Force
+          }
+          "VCPKG_CACHE_HIT=false" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+        }
+
+    # ----- cache MISS path: clean + checkout + bootstrap + install + trim + save -----
+    - name: Clean Vcpkg Directory
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: git clean -ffdx --quiet
+
+    - name: Checkout & Update Vcpkg ${{ inputs.vcpkg-version }}
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: |
+        # Shallow-fetch only if the ref isn't already in the runner's vcpkg clone.
+        git rev-parse --verify --quiet "${{ inputs.vcpkg-version }}^{commit}" *> $null
+        if ($LASTEXITCODE -ne 0) {
+          git fetch --depth=1 --quiet origin "+refs/tags/${{ inputs.vcpkg-version }}:refs/tags/${{ inputs.vcpkg-version }}"
+        }
+        git checkout --quiet ${{ inputs.vcpkg-version }}
+        ./bootstrap-vcpkg.bat
+
+    - name: Configure AWS Credentials
+      if: ${{ inputs.internal-build == 'true' && env.VCPKG_CACHE_HIT != 'true' }}
+      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      with:
+        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+        aws-region: us-east-1
+        retry-max-attempts: 5
+
+    - name: Update vcpkg packages
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      shell: pwsh
+      run: |
+        ./thirdparty/install.bat ${{ inputs.install-flags }}
+
+        Write-Host "=== C:\vcpkg subfolder sizes (pre-trim) ==="
+        Get-ChildItem C:\vcpkg -Force -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              if ($_.PSIsContainer) {
+                $sizeMB = [int]((Get-ChildItem $_.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                                Measure-Object Length -Sum).Sum / 1MB)
+                [pscustomobject]@{ Path = $_.FullName; SizeMB = $sizeMB }
+              } else {
+                [pscustomobject]@{ Path = $_.FullName; SizeMB = [int]($_.Length / 1MB) }
+              }
+            } |
+            Sort-Object SizeMB -Descending |
+            Format-Table -AutoSize | Out-String | Write-Host
+
+    - name: trim vcpkg
+      # Drops scratch folders before the cache save. .git is unused at
+      # restore time (the runner image ships its own vcpkg clone).
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      shell: pwsh
+      run: |
+        foreach ($d in 'C:\vcpkg\buildtrees', 'C:\vcpkg\packages', 'C:\vcpkg\downloads', 'C:\vcpkg\.git') {
+          if (Test-Path $d) {
+            Write-Host "Removing $d"
+            Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+          }
+        }
+
+    - name: Save Vcpkg Cache
+      if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
+      uses: actions/cache/save@v5
+      with:
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        path: |
+          C:\vcpkg\*
+
+    # ----- always: register MSBuild integration and dump installed tree -----
+    - name: Vcpkg integrate install
+      shell: pwsh
+      working-directory: C:\vcpkg
+      run: vcpkg.exe integrate install
+
+    - name: Diagnostic — vcpkg installed tree
+      if: always()
+      shell: pwsh
+      continue-on-error: true
+      run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ inputs.vcpkg-triplet }}"

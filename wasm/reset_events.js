@@ -4,6 +4,41 @@ var touchId = [-1, -1];
 var reinterpretEvent = false;
 var pointerSize = 0;
 
+var overrideKeyDown = function (event) {
+    GLFW.onKeydown(event);
+    // suppress some browser hotkeys
+    if (event.key == "F1" || event.key == "F2" || event.key == "F3" || event.key == "F4" || event.ctrlKey || event.metaKey)
+        event.preventDefault();
+}
+
+var updateKeyEvents = function () {
+    window.removeEventListener("keydown", GLFW.onKeydown, true);
+    window.addEventListener("keydown", overrideKeyDown, true);
+}
+
+var keyboardEventsArePresent = true;
+
+var removeKeyboardEvents = function () {
+    if (keyboardEventsArePresent) {
+        window.removeEventListener("keydown", overrideKeyDown, true);
+        window.removeEventListener("keypress", GLFW.onKeyPress, true);
+        window.removeEventListener("keyup", GLFW.onKeyup, true);
+        keyboardEventsArePresent = false;
+    }
+};
+
+var addKeyboardEvents = function () {
+    if (!keyboardEventsArePresent) {
+        window.addEventListener("keydown", overrideKeyDown, true);
+        window.addEventListener("keypress", GLFW.onKeyPress, true);
+        window.addEventListener("keyup", GLFW.onKeyup, true);
+        keyboardEventsArePresent = true;
+    }
+    // enforce several frames to toggle animation when popup closed
+    for (var i = 0; i < 500; i += 100)
+        setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+};
+
 var getPointerSize = function () {
     if (!pointerSize) {
         pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
@@ -47,6 +82,118 @@ var preventFunc = function (event) {
     event.preventDefault();
 }
 
+var drop_files_or_dir = function (event) {
+    var callDropFunc = function (length, filenamesPtr) {
+        if (typeof (dynCall_viii) == 'function')
+            dynCall_viii(GLFW.active.dropFunc, GLFW.active.id, length, filenamesPtr);
+        else if (typeof (dynCall_vjij) == 'function')
+            dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), length, BigInt(filenamesPtr));
+        else
+            getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), length, filenamesPtr);
+    };
+
+    if (!GLFW.active || !GLFW.active.dropFunc) return;
+    if (!event.dataTransfer || !event.dataTransfer.files || event.dataTransfer.files.length == 0) return callDropFunc(0, 0);
+    event.preventDefault();
+
+    var drop_dir = ".glfw_dropped_files";
+    var filenames = _malloc(event.dataTransfer.files.length * getPointerSize());
+    var filenamesArray = [];
+    for (var i = 0; i < event.dataTransfer.files.length; ++i) {
+        var path = "/" + drop_dir + "/" + event.dataTransfer.files[i].name.replace(/\//g, "_");
+        var filename = stringToNewUTF8(path);
+        filenamesArray.push(filename);
+        if (getPointerSize() == 8)
+            HEAPU64[(filenames + i * 8) / 8] = BigInt(filename);
+        else if (typeof GROWABLE_HEAP_U32 !== 'undefined')
+            GROWABLE_HEAP_U32()[filenames + i * 4 >> 2] = filename;
+        else
+            HEAPU32[filenames + i * 4 >> 2] = filename;
+    }
+
+    // Read and save the files to emscripten's FS
+    var written = 0;
+    FS.createPath("/", drop_dir);
+    function save(file, in_path, numfiles) {
+        var path = "/" + drop_dir + in_path + "/" + file.name.replace(/\//g, "_");
+        var reader = new FileReader;
+        reader.onloadend = e => {
+            if (reader.readyState != 2) {
+                // not DONE
+                ++written;
+                out("failed to read dropped file: " + file.name + ": " + reader.error);
+                return;
+            }
+            var data = e.target.result;
+            FS.writeFile(path, new Uint8Array(data));
+            if (++written === numfiles) {
+                callDropFunc(filenamesArray.length, filenames);
+                for (var i = 0; i < filenamesArray.length; ++i) {
+                    _free(filenamesArray[i]);
+                }
+                _free(filenames);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    let filesQ = [];
+    var finalize = function () {
+        count = filesQ.length;
+        for (var i = 0; i < count; ++i)
+            save(filesQ[i].file, filesQ[i].path, count);
+    }
+
+    if (typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined") {
+        let entriesTree = {};
+        var markDone = function (fullpath, recursive) {
+            if (entriesTree[fullpath].subpaths.length != 0) return;
+            delete entriesTree[fullpath];
+            let parentpath = fullpath.substring(0, fullpath.lastIndexOf('/'));
+            if (!entriesTree.hasOwnProperty(parentpath)) {
+                if (Object.keys(entriesTree).length == 0) finalize();
+                return;
+            }
+            const fpIndex = entriesTree[parentpath].subpaths.indexOf(fullpath);
+            if (fpIndex > -1) entriesTree[parentpath].subpaths.splice(fpIndex, 1);
+            if (recursive) markDone(parentpath, true);
+            if (Object.keys(entriesTree).length == 0) finalize();
+        };
+        var processEntry = function (entry) {
+            let fp = entry.fullPath;
+            let pp = fp.substring(0, fp.lastIndexOf('/'));
+            entriesTree[fp] = { subpaths: [] };
+            if (entry.isFile) {
+                entry.file((f) => { filesQ.push({ file: f, path: pp }); markDone(fp, false); })
+            } else if (entry.isDirectory) {
+                if (entriesTree.hasOwnProperty(pp)) entriesTree[pp].subpaths.push(fp);
+                FS.createPath("/" + drop_dir + pp, entry.name);
+                var reader = entry.createReader();
+                var rRead = function (dirEntries) {
+                    if (dirEntries.length == 0) {
+                        markDone(fp, true);
+                        return;
+                    }
+                    for (const ent of dirEntries) processEntry(ent);
+                    reader.readEntries(rRead);
+                };
+                reader.readEntries(rRead);
+            }
+        };
+        for (const item of event.dataTransfer.items) {
+            processEntry(item.webkitGetAsEntry());
+        }
+    }
+    else {
+        // fallback for browsers that does not support `webkitGetAsEntry`
+        for (var i = 0; i < event.dataTransfer.files.length; ++i) {
+            filesQ.push({ file: event.dataTransfer.files[i], path: "" });
+        }
+        finalize();
+    }
+    return false;
+}
+
 var updateEvents = function () {
     // remove all touch events
     Module["canvas"].removeEventListener("touchmove", GLFW.onMousemove, true);
@@ -60,6 +207,8 @@ var updateEvents = function () {
     Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
     Module["canvas"].removeEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].removeEventListener("mousewheel", GLFW.onMouseWheel, true);
+    Module["canvas"].removeEventListener("dragover", GLFW.onDragover, true);
+    Module["canvas"].removeEventListener("drop", GLFW.onDrop, true);
 
     // make own touch events callbacks
     var touchEventProcess = function (event, funcName) {
@@ -201,6 +350,17 @@ var updateEvents = function () {
         preventFunc(event)
     }
 
+    GLFW.onDragover = function (event) {
+        if (!GLFW.active)
+            return;
+        Browser.setMouseCoords(event.pageX, event.pageY);
+        Module.ccall('emsDragOver', 'void', ['number', 'number'], [Browser.mouseX, Browser.mouseY]);
+        event.preventDefault();
+        return false
+    }
+
+    GLFW.onDrop = drop_files_or_dir;
+
     // add new events
     Module["canvas"].addEventListener("pointermove", GLFW.onMousemove, true);
     Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
@@ -208,7 +368,19 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
     Module["canvas"].addEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].addEventListener("mousewheel", GLFW.onMouseWheel, true);
-    addEventListener('blur', (event) => {
+    Module["canvas"].addEventListener("dragover", GLFW.onDragover, true);
+    Module["canvas"].addEventListener("drop", GLFW.onDrop, true);
+    Module["canvas"].addEventListener("dragenter", (e) => {
+        Module.ccall('emsDragEnter', 'void', [], []);
+    }, true);
+    Module["canvas"].addEventListener("dragleave", (e) => {
+        Module.ccall('emsDragLeave', 'void', [], []);
+        // enforce several frames to toggle animation on drag left
+        for (var i = 0; i < 500; i += 100)
+            setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+    }, true);
+
+    addEventListener('blur', (e) => {
         Module.ccall('emsDropEvents', 'void', [], []);
     });
     // prevent others

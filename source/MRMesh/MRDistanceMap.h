@@ -32,9 +32,12 @@ public:
     /// make from 2d array
     [[nodiscard]] MRMESH_API DistanceMap( const MR::Matrix<float>& m );
 
-    /// checks if X,Y element is valid (i.e. not `std::numeric_limits<float>::lowest()`; passing invalid coords to this is UB)
+    /// a constant that is treated as 'no value' or 'invalid value'
+    static constexpr float NOT_VALID_VALUE = std::numeric_limits<float>::lowest();
+
+    /// checks if X,Y element is valid (i.e. not `NOT_VALID_VALUE`; passing invalid coords to this is UB)
     [[nodiscard]] MRMESH_API bool isValid( size_t x, size_t y ) const;
-    /// checks if index element is valid (i.e. not `std::numeric_limits<float>::lowest()`; passing an invalid coord to this is UB)
+    /// checks if index element is valid (i.e. not `NOT_VALID_VALUE`; passing an invalid coord to this is UB)
     [[nodiscard]] MRMESH_API bool isValid( size_t i ) const;
 
     /// Returns true if (X,Y) coordinates are in bounds.

@@ -187,8 +187,9 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
 
     if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( params.fwn ); fwnByParts && isHoleWindingRule )
     {
-        vol.cb = {};
-        vmParams.cb = subprogress( params.callBack, 0.00f, 0.90f );
+        vol.cb = subprogress( params.callBack, 0.00f, 0.90f );
+        vmParams.cb = {}; // to avoid jumping progress between calcFromGridWithDistancesByParts and MarchingCubesByParts
+        // TODO: calcFromGridWithDistancesByParts passes subprogress into mesher.addPart
 
         assert( !mp.region ); // only whole mesh is supported for now
 
@@ -246,7 +247,7 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
     DistanceVolumeParams dvParams;
     dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
     auto absOffset = std::abs( offset );
-    const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( absOffset ) );
+    const auto box = mesh.computeBoundingBox( &region ).expanded( Vector3f::diagonal( absOffset ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
     dvParams.origin = origin;
     dvParams.voxelSize = Vector3f::diagonal( params.voxelSize );
@@ -311,7 +312,7 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
     }
 }
 
-Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
+Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params, const PartMapping & map )
 {
     MR_TIMER;
     auto res = offsetOneDirection( mesh, offset, params );
@@ -323,13 +324,13 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     if ( offset >= 0 )
     {
         // add original mesh to the result with flipping
-        resMesh.addMeshPart( mesh, true ); // true = with flipping
+        resMesh.addMeshPart( mesh, true, {}, {}, map ); // true = with flipping
     }
     else
     {
         resMesh.topology.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
-        resMesh.addMesh( mesh );
+        resMesh.addMesh( mesh, map );
     }
     return res;
 }

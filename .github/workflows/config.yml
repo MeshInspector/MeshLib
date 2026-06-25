@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2025.04.09" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.06.01" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -31,19 +31,22 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_windows_vcpkg_rebuild:
         description:
-        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
       ubuntu_x64_config_matrix:
         description: "Config matrix for Ubuntu x64 builds"
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
+      windows_x64_config_matrix:
+        description: "Config matrix for Windows builds"
+        value: ${{ jobs.prepare-config.outputs.windows_x64_config_matrix }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
-        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-upload-binaries == 'true' }}
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
@@ -51,11 +54,14 @@ on:
         description:
         value: ${{ jobs.prepare-config.outputs.vcpkg-docker-image-tag }}
       run_unity_nuget_test:
-        description: "expression to run unity-nuget-test.yml"
-        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       test_pip_build:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+      build-release-win:
+        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       # flags for disabling builds for different systems
       build_enable_ubuntu_arm64:
         description:
@@ -85,65 +91,146 @@ jobs:
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
       linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
-      # please list the required tags here
-      tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
-      tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
-      tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
-      tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
-      tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
-      tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
+      # Read PR labels live; github.event.pull_request.labels is a
+      # trigger-time snapshot (POST /pulls has no labels param —
+      # see community#24724).
+      tag-bump-vcpkg:            ${{ steps.live-labels.outputs.tag-bump-vcpkg }}
+      tag-full-ci:               ${{ steps.live-labels.outputs.tag-full-ci }}
+      tag-skip-image-rebuild:    ${{ steps.live-labels.outputs.tag-skip-image-rebuild }}
+      tag-update-doc:            ${{ steps.live-labels.outputs.tag-update-doc }}
+      tag-update-doc-only:       ${{ steps.live-labels.outputs.tag-update-doc-only }}
+      tag-upload-binaries:       ${{ steps.live-labels.outputs.tag-upload-binaries }}
+      tag-upload-test-artifacts: ${{ steps.live-labels.outputs.tag-upload-test-artifacts }}
+      tag-test-pip-build:        ${{ steps.live-labels.outputs.tag-test-pip-build }}
       # tags for disabling builds for different systems
-      tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
-      tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
-      tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
-      tag-disable-linux-vcpkg:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
-      tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
-      tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
+      tag-build-release-windows: ${{ steps.live-labels.outputs.tag-build-release-windows }}
+      tag-disable-windows:       ${{ steps.live-labels.outputs.tag-disable-windows }}
+      tag-disable-ubuntu-x64:     ${{ steps.live-labels.outputs.tag-disable-ubuntu-x64 }}
+      tag-disable-ubuntu-arm64:   ${{ steps.live-labels.outputs.tag-disable-ubuntu-arm64 }}
+      tag-disable-linux-vcpkg:    ${{ steps.live-labels.outputs.tag-disable-linux-vcpkg }}
+      tag-disable-macos:          ${{ steps.live-labels.outputs.tag-disable-macos }}
+      tag-disable-emscripten:     ${{ steps.live-labels.outputs.tag-disable-emscripten }}
 
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
 
-    env:
-      # duplicate output values here since they cannot be accessed from steps
-      full_config_build: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      upload_artifacts: ${{ github.event_name == 'push' || github.event_name == 'schedule' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
+    # `env:` block removed — its three label-derived booleans
+    # (full_config_build / upload_artifacts / version_namespace) are
+    # written to $GITHUB_ENV by the live-labels step below.
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
+        uses: actions/checkout@v7
+
+      # Read PR labels live (trigger payload is empty right after
+      # `gh pr create --label X`). Emits one step output per label and
+      # full_config_build / upload_artifacts / version_namespace to $GITHUB_ENV.
+      - name: Read live PR labels
+        id: live-labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read_labels() {
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              gh pr view ${{ github.event.pull_request.number }} \
+                --repo "${{ github.repository }}" \
+                --json labels --jq '.labels[].name'
+            fi
+          }
+
+          # Poll briefly on `pull_request.opened` to ride out the
+          # ~1–3 s gh-pr-create-label race. 3×2 s cap, so label-less PRs
+          # only pay ~4 s; synchronize/reopened runs skip the polling.
+          attempts=1
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.event.action }}" = "opened" ]; then
+            attempts=3   # up to ~4 s of polling: 0, 2, 2
+          fi
+
+          LABELS=""
+          for i in $(seq 1 $attempts); do
+            LABELS=$(read_labels)
+            if [ -n "$LABELS" ] || [ "$i" = "$attempts" ]; then
+              break
+            fi
+            echo "  (no labels yet — retry $i/$attempts in 2 s)"
+            sleep 2
+          done
+
+          echo "Live labels:"
+          if [ -n "$LABELS" ]; then echo "$LABELS" | sed 's/^/  - /'; else echo "  (none)"; fi
+
+          has() { echo "$LABELS" | grep -qFx "$1" && echo true || echo false; }
+
+          # Emit `tag-<key>=true` per label present. The `disable-build-X`
+          # family drops the middle `build-` segment to match the existing
+          # workflow_call outputs (`tag-disable-X`). Absent outputs are falsy.
+          for label in $LABELS; do
+            echo "tag-${label/disable-build-/disable-}=true"
+          done >> "$GITHUB_OUTPUT"
+
+          # Derived env vars — replaces the removed job-level `env:`
+          # block. Referenced by `if:`/`env:` in later steps (Checkout
+          # full history, Versioning, Set matrix for ubuntu-x64, etc.).
+          FULL_CI=$(has full-ci)
+          UPLOAD_BIN=$(has upload-binaries)
+          EVT="${{ github.event_name }}"
+
+          full_config_build=false
+          if [ "$EVT" = "schedule" ] || [ "$EVT" = "workflow_dispatch" ] || [ "$FULL_CI" = "true" ]; then
+            full_config_build=true
+          fi
+
+          upload_artifacts=false
+          if [ "$EVT" = "push" ] || [ "$EVT" = "schedule" ] || [ "$FULL_CI" = "true" ] || [ "$UPLOAD_BIN" = "true" ]; then
+            upload_artifacts=true
+          fi
+
+          version_namespace=""
+          if { [ "$FULL_CI" = "true" ] || [ "$UPLOAD_BIN" = "true" ]; } && [ "$EVT" != "push" ]; then
+            version_namespace="pr-test"
+          fi
+
+          {
+            echo "full_config_build=$full_config_build"
+            echo "upload_artifacts=$upload_artifacts"
+            echo "version_namespace=$version_namespace"
+          } >> "$GITHUB_ENV"
+
+      # install helper utility for Python version management
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+
+      - name: Check for errors
+        run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: linux-changes
         with:
           filters: |
             src:
-              - 'docker/(ubuntu20|ubuntu22|ubuntu24|fedora39|emscripten)Dockerfile'
-              - 'requirements/(ubuntu|fedora|distribution_python).txt'
+              - 'docker/(ubuntu22|ubuntu24|emscripten-build-c-bindings|emscripten-generate-c-bindings|emscripten)Dockerfile'
+              - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
-              - 'scripts/install_dnf_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
-              - 'scripts/mrbind/select_clang_version.sh'
-              - 'thirdparty/!(install.bat|vcpkg/**)'
+              - 'scripts/mrbind/clang_version.txt'
+              - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
 
       - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: linux-vcpkg-changes
         with:
           filters: |
             src:
-              - 'docker/vcpkgDockerfile'
-              - 'requirements/vcpkg-linux.txt'
+              - 'docker/(rockylinux8|rockylinux9)-vcpkgDockerfile'
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: windows-changes
         with:
           filters: |
@@ -179,16 +266,18 @@ jobs:
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@a8f8f59fd7f0625188492e945240f12d7ad2dca3 # v5.4.0
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
         id: version
         with:
           tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
           version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: true
@@ -201,7 +290,7 @@ jobs:
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
           echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
 
-      - name: Set matrix for ubuntu-arm64 builds
+      - name: Set matrix for ubuntu-x64 builds
         id: set-ubuntu-x64-matrix
         run: |
           if [[ "${{ env.full_config_build }}" == "true" ]]; then
@@ -209,3 +298,24 @@ jobs:
           else
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set matrix for windows-x64 builds
+        id: set-windows-x64-matrix
+        run: |
+          if [[ "${{ env.full_config_build }}" == "true" || github.event_name == 'schedule' ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-full-config.json"
+          elif [[ "${{ steps.live-labels.outputs.tag-build-release-windows }}" == "true" ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-standard-config.json"
+          else
+            MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
+          fi
+
+          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
+          # VS2019 vcpkg baseline, everything else the VS2022 one.
+          jq \
+            --arg vs19 "2024.10.21" \
+            --arg vs22 "2026.06.01" \
+            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            "$MATRIX_FILE" > tmp.json
+
+          echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

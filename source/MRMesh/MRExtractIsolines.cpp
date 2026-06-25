@@ -283,31 +283,23 @@ IsoLines Isoliner::extract( UndirectedEdgeBitSet potentiallyCrossedEdges )
 bool Isoliner::hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges ) const
 {
     std::atomic<bool> res{ false };
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( topology_.undirectedEdgeSize() ) ),
-        [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
+    ParallelFor( 0_ue, UndirectedEdgeId( topology_.undirectedEdgeSize() ), [&] ( UndirectedEdgeId ue )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            if ( res.load( std::memory_order_relaxed ) )
-                break;
-            if ( potentiallyCrossedEdges && !potentiallyCrossedEdges->test( ue ) )
-                continue;
-            VertId o = topology_.org( ue );
-            if ( !o )
-                continue;
-            VertId d = topology_.dest( ue );
-            if ( !d )
-                continue;
-            auto no = negativeVerts_.test( o );
-            auto nd = negativeVerts_.test( d );
-            if ( no != nd )
-            {
-                if ( region_ && !contains( *region_, topology_.left( ue ) ) && !contains( *region_, topology_.right( ue ) ) )
-                    continue;
+        if ( res.load( std::memory_order_relaxed ) )
+            return;
+        if ( potentiallyCrossedEdges && !potentiallyCrossedEdges->test( ue ) )
+            return;
+        VertId o = topology_.org( ue );
+        if ( !o )
+            return;
+        VertId d = topology_.dest( ue );
+        if ( !d )
+            return;
+        auto no = negativeVerts_.test( o );
+        auto nd = negativeVerts_.test( d );
+        if ( no != nd )
+            if ( !region_ || contains( *region_, topology_.left( ue ) ) || contains( *region_, topology_.right( ue ) ) )
                 res = true;
-                break;
-            }
-        }
     } );
     return res;
 }

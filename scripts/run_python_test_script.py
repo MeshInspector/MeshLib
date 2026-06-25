@@ -33,48 +33,20 @@ parser.add_argument('-multi-cmd', dest='multi_cmd', action='store_true', help='R
 parser.add_argument('-create-venv', dest='create_venv', action='store_true', help='Create a venv and install the dependencies in it. Can combine with `-multi-cmd`.')
 parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
 parser.add_argument("-s", dest="smoke", type=str, help='Run reduced smoke set')
-parser.add_argument("-bv", dest="bindings_vers", type=str,
-                    help='Version of bindings to run tests, "2" or "3"', default='3')
 parser.add_argument("-a", dest="pytest_args", type=str,
                     help='Args string to be added to pytest command', default='')
 
 args = parser.parse_args()
 print(args)
 
-python_cmds = ["py -3.11"]
+python_cmds = ["python3"]
 platformSystem = platform.system()
-
-if platformSystem == 'Linux':
-    python_cmds = ["python3"]
-
-    os_name = ""
-    os_version = ""
-    if os.path.exists('/etc/os-release'):
-        lines = open('/etc/os-release').read().split('\n')
-        for line in lines:
-            if line.startswith('NAME='):
-                os_name = line.split('=')[-1].replace('"', '')
-            if line.startswith('VERSION_ID='):
-                os_version = line.split('=')[-1].replace('"', '')
-
-    if "ubuntu" in os_name.lower():
-        python_cmds = ["python3"] # use the same python version as in venv
-    elif "fedora" in os_name.lower():
-        if os_version.startswith("35"):
-            python_cmds = ["python3.9"]
-        elif os_version.startswith("37"):
-            python_cmds = ["python3.11"]
-        elif os_version.startswith("39"):
-            python_cmds = ["python3.12"]
-
-elif platformSystem == 'Darwin':
-    python_cmds = ["python3.10"]
-
-elif platformSystem == "Windows":
+if platformSystem == "Windows":
     python_cmds = ["py -3"]
     vcpkg_root = get_vcpkg_root_from_where()
     if vcpkg_root:
-        detected_version = detect_vcpkg_python_version(vcpkg_root)
+        triplet = os.environ.get("VCPKG_DEFAULT_TRIPLET") or "x64-windows-meshlib"
+        detected_version = detect_vcpkg_python_version(vcpkg_root, triplet=triplet)
         if detected_version:
             python_cmds = [f"py -{detected_version}"]
 
@@ -107,17 +79,8 @@ os.chdir(directory)
 
 #command line to start test
 pytest_cmd = "-m pytest -s -v --basetemp=../pytest_temp --durations 30"
-if args.bindings_vers == '2':
-    pytest_cmd += ' -m "not bindingsV3'
-elif args.bindings_vers == '3':
-    pytest_cmd += ' -m "not bindingsV2'
-else:
-    print("Error: Unknown version of bindings")
-    exit(5)
 if args.smoke == "true":
-    pytest_cmd += f' and smoke"'
-else:
-    pytest_cmd += f'"'
+    pytest_cmd += f' -m "smoke"'
 
 if args.pytest_args:
     pytest_cmd += f' {args.pytest_args}'

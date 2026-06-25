@@ -53,7 +53,7 @@ MeshOrPoints MeshOrPointsObject::meshOrPoints() const
         },
         [&] ( ObjectPoints* objPnts )
         {
-            return MeshOrPoints( *objPnts->pointCloud() );
+            return MeshOrPoints( objPnts->pointCloudPart() );
         }
     }, var_ );
 }

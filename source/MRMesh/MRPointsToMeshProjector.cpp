@@ -25,10 +25,9 @@ void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& 
     AffineXf3f xf;
     auto simplifiedXfs = createProjectionTransforms( xf, objXf, refObjXf );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( points, [&] ( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-            result[i] = findProjection( simplifiedXfs.rigidXfPoint ? ( *simplifiedXfs.rigidXfPoint )( points[VertId( i )] ) : points[VertId( i )], *mesh_, upDistLimitSq, simplifiedXfs.nonRigidXfTree, loDistLimitSq );
+        result[i] = findProjection( simplifiedXfs.rigidXfPoint ? ( *simplifiedXfs.rigidXfPoint )( points[VertId( i )] ) : points[VertId( i )], *mesh_, upDistLimitSq, simplifiedXfs.nonRigidXfTree, loDistLimitSq );
     } );
 }
 

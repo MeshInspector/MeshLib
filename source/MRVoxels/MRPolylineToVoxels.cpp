@@ -60,6 +60,7 @@ Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const Polyli
     meshParams.voxelSize = params.voxelSize;
     meshParams.surfaceOffset = params.offsetCount;
     meshParams.cb = params.cb;
+    meshParams.type = MeshToVolumeParams::Type::Unsigned;
 
     auto shift = AffineXf3f::translation( mesh.computeBoundingBox( {}, &params.worldXf ).min
         - params.offsetCount * params.voxelSize );
@@ -77,6 +78,7 @@ Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const 
     MeshToDistanceVolumeParams meshParams;
     meshParams.vol = params.vol;
     meshParams.dist = { params.dist };
+    meshParams.dist.signMode = SignDetectionMode::Unsigned;
     return meshToDistanceVolume( mesh, meshParams );
 }
 
@@ -86,6 +88,7 @@ Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, co
     MeshToDistanceVolumeParams meshParams;
     meshParams.vol = params.vol;
     meshParams.dist = { params.dist };
+    meshParams.dist.signMode = SignDetectionMode::Unsigned;
     return meshToDistanceFunctionVolume( mesh, meshParams );
 }
 

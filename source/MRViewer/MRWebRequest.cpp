@@ -4,15 +4,17 @@
 
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
-#include "MRPch/MRWasm.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>
 #include <fstream>
 #include <optional>
-#include <thread>
 #else
 #include <mutex>
 #endif
@@ -57,7 +59,74 @@ std::string methodToString( MR::WebRequest::Method method )
 }
 #endif
 
+using AsyncThreads = std::unordered_map<std::thread::id, std::thread>;
+AsyncThreads& getWaitingMap_()
+{
+    static AsyncThreads waitingMap;
+    return waitingMap;
 }
+
+#ifndef __EMSCRIPTEN__
+void putIntoWaitingMap_( std::thread&& thread )
+{
+    auto& asyncMap = getWaitingMap_();
+    asyncMap[thread.get_id()] = std::move( thread );
+}
+#endif //!__EMSCRIPTEN__
+
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
+/// https://curl.se/mail/lib-2022-05/0039.html
+/// > curl searches for an appropriate CA bundle at compile time and hard-codes the one it finds.
+/// > [...] this doesn't work well for a portable binary. In that case, the application can search
+/// > for an appropriate bundle itself using whatever means it feels necessary and set it at run-time
+std::string getCaInfo( cpr::Session& session )
+{
+    std::error_code ec;
+
+    // check the default CA bundle path first
+    if ( auto curl = session.GetCurlHolder() )
+    {
+        char* caInfo = nullptr; // NOTE: the buffer should not be freed manually; see https://curl.se/libcurl/c/CURLINFO_CAINFO.html
+        curl_easy_getinfo( curl->handle, CURLINFO_CAINFO, &caInfo );
+        if ( caInfo )
+        {
+            if ( std::filesystem::is_regular_file( caInfo, ec ) )
+            {
+                // the default CA bundle path is valid, nothing to do
+                return {};
+            }
+        }
+    }
+
+    // trying to find a CA bundle in known locations
+    constexpr std::array cKnownCaInfoLocations {
+        // Debian, Ubuntu, Arch, Alpine, ...
+        "/etc/ssl/certs/ca-certificates.crt",
+        // Red Hat, Fedora
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        // some other known locations
+        "/etc/ssl/ca-bundle.pem",
+        "/etc/ssl/cert.pem",
+        "/etc/pki/tls/cert.pem",
+        "/etc/pki/tls/cacert.pem",
+        "/usr/share/ssl/certs/ca-bundle.crt",
+        "/usr/local/share/certs/ca-root-nss.crt",
+    };
+    for ( const auto& path : cKnownCaInfoLocations )
+    {
+        if ( std::filesystem::is_regular_file( path, ec ) )
+        {
+            // use the path as is, no additional check
+            return path;
+        }
+    }
+
+    // we did everything we could ¯\_(ツ)_/¯
+    return {};
+}
+#endif
+
+} // anonymous namespace
 
 #ifdef __EMSCRIPTEN__
 extern "C"
@@ -68,17 +137,12 @@ extern "C"
 EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int ctxId )
 {
     using namespace MR;
-    std::string resStr = response;
-    Json::Value resJson;
-    Json::CharReaderBuilder readerBuilder;
-    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-    std::string error;
-    if ( reader->parse( resStr.data(), resStr.data() + resStr.size(), &resJson, &error ) )
+    if ( auto resJson = deserializeJsonValue( response, std::strlen( response ) ) )
     {
         if ( !async )
         {
             auto& ctx = sRequestContextMap.at( ctxId );
-            ctx->responseCallback( resJson );
+            ctx->responseCallback( *resJson );
 
             std::unique_lock lock( sRequestContextMutex );
             sRequestContextMap.erase( ctxId );
@@ -89,7 +153,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
             CommandLoop::appendCommand( [resJson, ctxId] ()
             {
                 auto& ctx = sRequestContextMap.at( ctxId );
-                ctx->responseCallback( resJson );
+                ctx->responseCallback( *resJson );
 
                 std::unique_lock lock( sRequestContextMutex );
                 sRequestContextMap.erase( ctxId );
@@ -99,7 +163,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     }
     else
     {
-        spdlog::info(error);
+        spdlog::info( resJson.error() );
     }
     return 1;
 }
@@ -171,10 +235,10 @@ void WebRequest::clear()
     timeout_ = 10000;
     params_ = {};
     headers_ = {};
-    inputPath_ = {};
+    inputPath_ = std::filesystem::path{};
     formData_ = {};
     body_ = {};
-    outputPath_ = {};
+    outputPath_ = std::filesystem::path{};
     uploadCallback_ = {};
     downloadCallback_ = {};
 }
@@ -199,7 +263,7 @@ void WebRequest::setHeaders( std::unordered_map<std::string, std::string> header
     headers_ = std::move( headers );
 }
 
-void WebRequest::setInputPath( std::string inputPath )
+void WebRequest::setInputPath( std::filesystem::path inputPath )
 {
     inputPath_ = std::move( inputPath );
 }
@@ -219,7 +283,7 @@ void WebRequest::setBody( std::string body )
     body_ = std::move( body );
 }
 
-void WebRequest::setOutputPath( std::string outputPath )
+void WebRequest::setOutputPath( std::filesystem::path outputPath )
 {
     outputPath_ = std::move( outputPath );
 }
@@ -298,6 +362,24 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
         session.SetHeader( headers );
         session.SetParameters( params );
         session.SetTimeout( tm );
+#if defined _WIN32 || defined MRVIEWER_WITH_BUNDLED_CURL
+        if ( url.starts_with( "https" ) )
+        {
+            cpr::SslOptions sslOpts;
+#ifdef _WIN32
+            sslOpts.SetOption( cpr::ssl::NoRevoke{ true } ); // needed to avoid some firewall issues "next InitializeSecurityContext failed: CRYPT_E_NO_REVOCATION_CHECK (0x80092012)"
+#endif
+#ifdef MRVIEWER_WITH_BUNDLED_CURL
+            // set the certificate info manually; see getCaInfo for more info
+            static const auto cCaInfo = getCaInfo( session );
+            if ( !cCaInfo.empty() )
+            {
+                sslOpts.SetOption( cpr::ssl::CaInfo{ std::string{ cCaInfo } } );
+            }
+#endif
+            session.SetSslOptions( sslOpts );
+        }
+#endif
 
         if ( ctx->input.has_value() )
         {
@@ -369,7 +451,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback, logName, url = urlP] ()
+        std::thread requestThread = std::thread( protectedFunc( [sendLambda, callback, logName, url = urlP] ()
         {
             spdlog::info( "WebRequest  {}: {}", logName.c_str(), url.c_str() );
             auto res = sendLambda();
@@ -396,8 +478,8 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
             {
                 callback( resJson );
             }, CommandLoop::StartPosition::AfterPluginInit );
-        } );
-        requestThread.detach();
+        } ) );
+        putIntoWaitingMap_( std::move( requestThread ) );
     }
 #else
     (void)logName;
@@ -415,7 +497,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     },
         timeout_,
         body_.c_str(),
-        inputPath_.c_str(),
+        utf8string( inputPath_ ).c_str(),
         method.c_str(),
         (bool)uploadCallback_,
         (bool)downloadCallback_,
@@ -446,9 +528,35 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     ctx->responseCallback = callback;
 
     if ( outputPath_.empty() )
+    {
         MAIN_THREAD_EM_ASM( web_req_send( UTF8ToString( $0 ), $1, $2 ), urlP.c_str(), async, ctxId );
+    }
+#ifndef __EMSCRIPTEN_PTHREADS__
+    // Sync XHR is unavailable on the main thread in pthreads-enabled builds,
+    // so this branch is compiled out there and a sync download silently falls back to async (see warning below).
+    else if ( !async )
+    {
+        MAIN_THREAD_EM_ASM(
+            web_req_sync_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
+#endif
     else
-        MAIN_THREAD_EM_ASM( web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), urlP.c_str(), outputPath_.c_str(), ctxId );
+    {
+#ifdef __EMSCRIPTEN_PTHREADS__
+        if ( !async )
+            spdlog::warn( "WebRequest {}: sync download is not supported in pthreads builds, falling back to async", logName.c_str() );
+#endif
+        MAIN_THREAD_EM_ASM(
+            web_req_async_download( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ),
+            urlP.c_str(),
+            utf8string( outputPath_ ).c_str(),
+            ctxId
+        );
+    }
 #pragma clang diagnostic pop
 #endif
 }
@@ -464,30 +572,43 @@ void WebRequest::send( WebRequest::ResponseCallback callback )
     send( url_, logName_, std::move( callback ), async_ );
 }
 
+void WebRequest::waitRemainingAsync()
+{
+    auto& asyncMap = getWaitingMap_();
+    for ( auto& [_, thread] : asyncMap )
+        if ( thread.joinable() )
+            thread.join();
+}
+
 Expected<Json::Value> parseResponse( const Json::Value& response )
 {
-    if ( response["code"].asInt() == 0 )
-        return unexpected( "Bad internet connection." );
+    const auto code = response["code"].asInt();
+
+    std::string mayBeError;
     if ( response["error"].isString() )
-    {
-        auto error = response["error"].asString();
-        if ( !error.empty() && error != "OK" )
-            return unexpected( error );
-    }
-    if ( response["code"].asInt() == 403 )
+        mayBeError = response["error"].asString();
+
+    if ( code == 403 )
         return unexpected( "Connection to " + response["url"].asString() + " is forbidden." );
+
+    if ( ( code < 200 || code > 399 ) && !mayBeError.empty() )
+        return MR::unexpected( mayBeError );
+
+    if ( code == 0 )
+        return MR::unexpected( "Bad internet connection." );
+
+
     std::string text;
     if ( !response["text"].isString() )
         return unexpected( "Unknown error." );
 
     text = response["text"].asString();
 
-    Json::Value root;
-    Json::CharReaderBuilder readerBuilder;
-    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-    std::string error;
-    if ( !reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
+    auto rootRes = deserializeJsonValue( text );
+    if ( !rootRes )
         return unexpected( "Unknown error." );
+    auto& root = *rootRes;
+
     if ( root.isObject() && root["message"].isString() )
         return unexpected( root["message"].asString() );
     return root;

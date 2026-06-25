@@ -22,11 +22,12 @@ class MRVIEWER_CLASS PickPointManager : public MultiListener<
 public:
     using PickerPointCallBack = std::function<void( std::shared_ptr<VisualObject> obj, int index )>;
     using AllowCallBack = std::function<bool( const std::shared_ptr<VisualObject>& obj, int index )>;
+    using ChangeObjectCallBack = std::function<bool( const std::shared_ptr<VisualObject>& obj )>;
 
     struct Params
     {
         /// Modifier key for closing a contour (ordered vector of points) using the widget
-        int widgetContourCloseMod = GLFW_MOD_CONTROL;
+        int widgetContourCloseMod = getGlfwModPrimaryCtrl();
 
         /// Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
@@ -63,6 +64,10 @@ public:
         /// This callback is invoked after a point is added with its index
         PickerPointCallBack onPointAdd;
 
+        /// This callback is invoked before point move start (but not from API or history),
+        /// the move is canceled if this callback returns false
+        AllowCallBack canMovePoint;
+
         /// This callback is invoked when a point starts being dragged
         PickerPointCallBack onPointMoveStart;
 
@@ -78,6 +83,11 @@ public:
 
         /// This callback is invoked when a point is removed with its index before deletion
         PickerPointCallBack onPointRemove;
+
+        /// This callback is invoked when an object was changed and needed update of points
+        /// Return false if need to skip internal updates
+        ChangeObjectCallBack onUpdatePoints;
+
     };
     Params params;
 

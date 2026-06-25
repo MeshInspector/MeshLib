@@ -4,48 +4,178 @@
 
 \tableofcontents
 
-# Add Your Own Plugin to MeshInspector/MeshLib
+# Add Your Own Plugin to MeshInspector / MeshLib
 
-## What Is a Plugin?
+## What is a plugin?
 
-With both MeshLib and MeshInspector, a plugin is a separately compiled module that extends their functionality without modifying the core library. This modular approach enables developers to add new tools or features tailored to specific project requirements, to both MeshLib as a library and MeshInspector as a standalone app.
+A plugin is a separately compiled module that extends the functionality of MeshLib (as a library) or MeshInspector (as a standalone app) **without modifying the core**. Each plugin is one shared library plus a couple of small JSON files that describe its ribbon items and where they appear in the UI.
 
-### Why One Might Need a MeshLib Plugin
+### Why one might need a plugin
 
-- Integration with existing MeshLib-based projects. Add custom 3D processing features to enhance specialized workflows.
-- Extending the MeshInspector application. Introduce additional functionalities (e.g., new inspection or repair tools) to complement the existing toolset.
+- Integration with existing MeshLib-based projects: add custom 3D processing features to specialized workflows.
+- Extending MeshInspector: introduce additional inspection or repair tools that complement the built-in toolset.
 
-### Additional Resources
+### Prerequisites and pointers
 
-For more info, visit:
+Before deploying anything, make sure your build matches the host you are deploying to — see \ref HowtoAddPluginOverview_VersionCompatibility "Version compatibility" at the end of this page.
 
-- \ref FirstPluginTutorial "Plugin Creation Outline" with a step-by-step guide on setting up a plugin project, including compiling the plugin, configuring Visual Studio, and verifying functionality within MeshLib or MeshInspector
-- \ref ExamplePluginOverview "Plugin Example" with a full-fledged sample of a C++ plugin with Visual Studio project files, source code for basic tools, and instructions on deploying the plugin in MeshLib or MeshInspector.
+To actually build a plugin, see:
+- \ref FirstPluginTutorial — step-by-step Visual Studio walkthrough for your first "Hello World" plugin.
+- \ref ExamplePluginOverview — a fully-fledged C++ sample with CMake, source, JSON and icons.
 
-## How to Add the Plugin to MeshLib or MeshInspector
+\section HowtoAddPluginOverview_TrustModel Trust & safety
 
-Once you have compiled your plugin, follow these steps:
+A plugin is **native code** that is dynamically loaded into the host process and runs with the **same privileges as MeshInspector itself**: it can read and write the user's files, open network connections, access cameras and microphones, and call any system API. There is no sandbox.
 
-### MeshLib
+\warning Treat plugin binaries the way you treat any other executable from the internet.
+- Install only plugins from sources you trust.
+- For binaries from third parties, prefer those distributed with source code or signed by a known developer.
+- Verify checksums when offered; refuse zip files that contain unexpected extra binaries.
+- On corporate or shared machines, ask whether your security policy allows side-loading native code into `/Applications`, `/usr/lib`, or `C:\Program Files`.
 
-- Locate your plugin’s x64\\Release (or x64\\Debug) output folder.
-- Copy all files from this folder into the corresponding MeshLib install folder (e.g., install\\app\\Release or install\\app\\Debug).
-- Ensure the MeshLib version used to build your plugin matches the installed version in install\\app.
+When in doubt, install into a user-writable copy of the host (the cloned-folder approach described in the macOS section) rather than into the system-managed install. That way no audit trail or signature on the original install is touched.
 
-### MeshInspector
+## What a plugin distribution looks like
 
-- Locate your plugin’s x64\\Release output folder.
-- Copy all files from this folder into the C:\\Program Files\\MeshInspector\\MeshInspector folder (or your MeshInspector installation folder).
-- Confirm that the MeshLib version used by MeshInspector matches the one used to compile your plugin.
+Whether you built the plugin yourself or received it as an archive, it must contain three things:
 
-# Final reminder
+1. **The compiled shared library**: `MyPlugin.dll` on Windows, `libMyPlugin.so` on Linux, `libMyPlugin.dylib` on macOS.
+2. **Two JSON descriptors**: `*.items.json` (ribbon item definitions — name, tooltip, icon glyph) and `*.ui.json` (where items appear in the ribbon — tab/group, plus the host-relative load `Order`).
+3. *Optionally* a `resource/icons/{X0_5,X0_75,X1,X3}/` folder with PNG icons in four sizes. If absent, the host falls back to the FontAwesome glyph specified in `items.json`.
 
-MeshLib and MeshInspector rely on a specific SDK version. Verify that the version used during plugin compilation is the same as:
+If a colleague handed you a zip, expect that exact layout. If you compiled it yourself, see \ref ExamplePluginOverview "C++ Example Plugin Overview" for what the build output should look like and how to wire `*.items.json` / `*.ui.json` to the source.
 
-- With MeshLib, the version you have installed, keep track of it. Save it for your info. Also, depending on how you have installed MeshLib, there are two ways to find out what your version is.
-- If using the provided archive: Look for the **mr.version** file. This file is typically located in **install\\app\\Debug** and **install\\app\\Release**
-- With MeshInspector, launch MeshInspector, go to Home → About, and note the MeshInspector Version displayed.
+## How to install the plugin
 
-It is recommended to use the latest version of both MeshLib and MeshInspector to avoid mismatches and potential errors.
+\warning Quit the host application before copying. Running processes hold the dylibs open; the copy will fail or — worse — appear to succeed but be silently ignored until next restart anyway.
+
+The exact target locations differ per platform.
+
+### Windows
+
+\note On Windows, dropping files into `C:\Program Files\` requires Administrator. Open `cmd.exe` or PowerShell with **Run as administrator** (right-click the icon → "Run as administrator"), then run `copy` from there. Alternatively, use Explorer — it will pop a UAC prompt for the same purpose.
+
+For an installed MeshInspector:
+\code{.bat}
+copy MyPlugin.dll          "C:\Program Files\MeshInspector\MeshInspector\"
+copy MyPlugin.items.json   "C:\Program Files\MeshInspector\MeshInspector\"
+copy MyPlugin.ui.json      "C:\Program Files\MeshInspector\MeshInspector\"
+xcopy /E /I resource       "C:\Program Files\MeshInspector\MeshInspector\resource"
+\endcode
+
+For the MeshLib SDK archive, copy the same files into `install\app\Release` (or `install\app\Debug`).
+
+\warning On Windows, mismatching CRT (Debug-built plugin against Release-installed app, or vice versa) crashes on load. Build with the same configuration as the host you target. If the host is the official MeshInspector installer, that is **Release**.
+
+\note **Antivirus / SmartScreen**: a freshly written `.dll` in `C:\Program Files\` may be flagged or quarantined. If your plugin disappears immediately after copying, check the Windows Security → Protection History and add an exception, or sign the dylib with a developer certificate.
+
+### Linux
+
+For the official `.deb` of MeshInspector, plugin libraries live next to the other shared libraries and JSON descriptors next to other resources:
+
+\code{.sh}
+sudo cp libMyPlugin.so                     /usr/lib/MeshInspector/
+sudo cp MyPlugin.items.json MyPlugin.ui.json /usr/share/MeshInspector/
+sudo cp -R resource                        /usr/share/MeshInspector/
+\endcode
+
+\note If you installed MeshInspector via a different channel (tarball, AppImage, source build), the directory layout differs.
+For an SDK archive build, copy into `install/app/Release/` — same layout as Windows.
+
+### macOS (arm64 / Intel)
+
+There are two paths on macOS. The **first one is safer**: it does not modify the official `MeshInspector.app` bundle on your system, so the installed app remains intact and updates continue to work normally. Pick the second one only if you knowingly want a system-wide install.
+
+#### macOS — option A: install into a user-owned clone (recommended)
+
+Copy the host application to a writable folder, deploy the plugin there, and launch from the clone:
+
+\code{.sh}
+mkdir -p ~/Apps
+cp -R /Applications/MeshInspector.app ~/Apps/MI-MyPlugin     # NB: drop the .app suffix
+
+cp libMyPlugin.dylib                    ~/Apps/MI-MyPlugin/Contents/libs/
+cp MyPlugin.items.json MyPlugin.ui.json ~/Apps/MI-MyPlugin/Contents/Resources/
+cp -R resource                          ~/Apps/MI-MyPlugin/Contents/Resources/
+
+# Launch:
+~/Apps/MI-MyPlugin/Contents/MacOS/MeshInspector
+\endcode
+
+\note Why drop the `.app` suffix? macOS App Bundle Protection blocks writes inside any `.app` directory — even when you own it — unless the call comes from `sudo`. A directory without the `.app` extension is treated as a regular folder and is freely writable.
+
+\note **Gatekeeper warning on first launch.** macOS may attach `com.apple.quarantine` to files copied via `cp -R`. Launching the binary from the clone may show a "developer cannot be verified" prompt the first time, which goes away after you accept it. To suppress in advance:
+\code{.sh}
+xattr -dr com.apple.quarantine ~/Apps/MI-MyPlugin
+\endcode
+
+#### macOS — option B: install into the system MeshInspector.app (advanced)
+
+This writes directly into the notarized app bundle. **It is system-wide and breaks the bundle's code signature** — Gatekeeper may block subsequent launches or warn that the app is "damaged", and the auto-updater (Sparkle) may overwrite your plugin on the next MeshInspector update. Use this only if you understand the trade-off.
+
+\code{.sh}
+sudo cp libMyPlugin.dylib                    /Applications/MeshInspector.app/Contents/libs/
+sudo cp MyPlugin.items.json MyPlugin.ui.json /Applications/MeshInspector.app/Contents/Resources/
+sudo cp -R resource                          /Applications/MeshInspector.app/Contents/Resources/
+\endcode
+
+If Gatekeeper subsequently refuses to launch the app, re-sign the bundle with an ad-hoc signature:
+\code{.sh}
+sudo codesign --force --deep --sign - /Applications/MeshInspector.app
+\endcode
+
+\warning Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/libs/` runs every time anyone on the machine launches MeshInspector.
+
+\section HowtoAddPluginOverview_VerifyInstall Verifying the install
+
+Launch the host application and inspect the log file:
+
+| Platform | Path |
+|---|---|
+| Windows | `%TEMP%\MeshInspector\Logs\MRLog_*.txt` (typically `C:\Users\<you>\AppData\Local\Temp\MeshInspector\Logs\`) |
+| Linux | `/tmp/MeshInspector/Logs/MRLog_*.txt` |
+| macOS | `$TMPDIR/MeshInspector/Logs/MRLog_*.txt` (resolves under `/var/folders/.../`; `ls -t $TMPDIR/MeshInspector/Logs/MRLog_*.txt | head -1` shows the latest) |
+
+A successful install shows two lines per plugin:
+\code{.unparsed}
+[info] Loading library MyPlugin with priority 999
+[info] Load library MyPlugin was successful
+\endcode
+
+#### Common failure modes
+
+**"Ribbon item \"My Tool\" is not registered"** — the `Name` field in `*.items.json` does not match the string passed to `RibbonMenuItem("...")` (or `StatePlugin("...")`) in the source. Names are byte-identical strings; "My Tool" and "MyTool" are different. Fix the JSON or the source so they match exactly.
+
+**Plugin loads but ribbon button does not appear** — `*.ui.json` references a tab or group that does not exist, or the `Order` value collides with another plugin. Check that `Tabs[].Name` matches an existing tab (e.g. `Home`, `Mesh Edit`) and that `Groups[].Name` matches a group inside that tab.
+
+**Plugin loads but no items show** — your `LibName` in `*.ui.json` does not match the produced library file name (without the `lib` prefix and `.dylib`/`.so`/`.dll` suffix). For `libMyPlugin.dylib`, `LibName` must be `MyPlugin`.
+
+\section HowtoAddPluginOverview_Uninstall Uninstall
+
+Quit the host, then delete the three sets of files you copied during install. Example for the macOS user-clone case:
+
+\code{.sh}
+rm ~/Apps/MI-MyPlugin/Contents/libs/libMyPlugin.dylib
+rm ~/Apps/MI-MyPlugin/Contents/Resources/MyPlugin.items.json
+rm ~/Apps/MI-MyPlugin/Contents/Resources/MyPlugin.ui.json
+rm -rf ~/Apps/MI-MyPlugin/Contents/Resources/resource     # only if you copied it
+\endcode
+
+For the macOS option B install, the same three `rm` commands prefixed with `sudo` and pointing at `/Applications/MeshInspector.app/Contents/...`.
+
+For Windows and Linux, delete the same three sets of files from the install directory you copied them to.
+
+\section HowtoAddPluginOverview_VersionCompatibility Version compatibility
+
+A plugin is ABI-coupled to the MeshLib version it was compiled against. Mismatched versions typically manifest as either an immediate `dlopen`/`LoadLibrary` failure or a crash inside the plugin on first call.
+
+To check which version you have installed:
+
+- **MeshLib SDK archive**: open `install/app/Release/mr.version` (or the same file under `Debug`).
+- **MeshInspector**: launch it and go to **Home → About**. Note the displayed version.
+
+To check what version your plugin was built against, look at the MeshLib include headers your CMake/MSBuild project resolved against — they are tagged with the same SDK version.
+
+If the two do not match, either rebuild the plugin against the matching SDK or upgrade/downgrade the host. Always prefer the latest version of both for the smallest gap with documentation and the largest set of fixed bugs.
 
 */

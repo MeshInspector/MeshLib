@@ -1,7 +1,7 @@
 #include "MRShortcutManager.h"
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
-#include <GLFW/glfw3.h>
+#include "MRGladGlfw.h"
 
 namespace MR
 {
@@ -74,18 +74,18 @@ bool ShortcutManager::onKeyRepeat_( int key, int modifier )
     return processShortcut( { key, modifier }, Reason::KeyRepeat );
 }
 
-std::string ShortcutManager::getModifierString( int mod )
+const char* ShortcutManager::getModifierString( int mod )
 {
     switch ( mod )
     {
     case GLFW_MOD_CONTROL:
         return "Ctrl";
     case GLFW_MOD_ALT:
-        return "Alt";
+        return getAltModName();
     case GLFW_MOD_SHIFT:
         return "Shift";
     case GLFW_MOD_SUPER:
-        return "Command";
+        return getSuperModName();
     default:
         return "";
     }
@@ -108,6 +108,50 @@ std::string ShortcutManager::getKeyString( int key )
     else if ( key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9 )
     {
         return std::string( "Num " ) + std::to_string( key - GLFW_KEY_KP_0 );
+    }
+    else if ( key == GLFW_KEY_TAB )
+    {
+        return std::string( "Tab" );
+    }
+    else if ( key == GLFW_KEY_HOME )
+    {
+        return std::string( "Home" );
+    }
+    else if ( key == GLFW_KEY_END )
+    {
+        return std::string( "End" );
+    }
+    else if ( key == GLFW_KEY_PAGE_UP )
+    {
+        return std::string( "Page Up" );
+    }
+    else if ( key == GLFW_KEY_PAGE_DOWN )
+    {
+        return std::string( "Page Down" );
+    }
+    else if ( key == GLFW_KEY_PAUSE )
+    {
+        return std::string( "Pause" );
+    }
+    else if ( key == GLFW_KEY_CAPS_LOCK )
+    {
+        return std::string( "Caps Lock" );
+    }
+    else if ( key == GLFW_KEY_BACKSPACE )
+    {
+        return std::string( "Backspace" );
+    }
+    else if ( key == GLFW_KEY_ENTER )
+    {
+        return std::string( "Enter" );
+    }
+    else if ( key == GLFW_KEY_EQUAL )
+    {
+        return std::string( "=" );
+    }
+    else if ( key == GLFW_KEY_MINUS )
+    {
+        return std::string( "-" );
     }
     else
     {
@@ -132,13 +176,13 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
 {
     std::string res;
     if ( key.mod & GLFW_MOD_ALT )
-        res += getModifierString( GLFW_MOD_ALT ) + "+";
+        res += getModifierString( GLFW_MOD_ALT ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_CONTROL )
-        res += getModifierString( GLFW_MOD_CONTROL ) + "+";
+        res += getModifierString( GLFW_MOD_CONTROL ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_SHIFT )
-        res += getModifierString( GLFW_MOD_SHIFT ) + "+";
+        res += getModifierString( GLFW_MOD_SHIFT ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_SUPER )
-        res += getModifierString( GLFW_MOD_SUPER ) + "+";
+        res += getModifierString( GLFW_MOD_SUPER ) + std::string( "+" );
     if ( respectKey )
         res += getKeyString( key.key );
     return res;

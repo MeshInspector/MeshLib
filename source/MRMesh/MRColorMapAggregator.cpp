@@ -1,5 +1,4 @@
 #include "MRColorMapAggregator.h"
-#include "MRGTest.h"
 #include "MRBitSetParallelFor.h"
 
 namespace MR
@@ -159,41 +158,5 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
 template class ColorMapAggregator<VertTag>;
 template class ColorMapAggregator<UndirectedEdgeTag>;
 template class ColorMapAggregator<FaceTag>;
-
-
-TEST( MRMesh, ColorMapAggregator )
-{
-    Color cWhite = Color::white();
-    Color cRed = Color( Vector4i( 255, 0, 0, 128 ) );
-    Color cGreen = Color( Vector4i( 0, 255, 0, 128 ) );
-
-    FaceColorMapAggregator cma;
-    cma.setDefaultColor( cWhite );
-
-    int size = 5;
-    FaceBitSet faces( 5, true );
-    cma.pushBack( { FaceColors( size, cRed ), FaceBitSet( std::string( "00110" ) ) }  );
-    cma.pushBack( { FaceColors( size, cGreen ), FaceBitSet( std::string( "01100" ) ) } );
-    cma.setMode( FaceColorMapAggregator::AggregateMode::Overlay );
-    FaceColors res = cma.aggregate( faces );
-
-    ASSERT_TRUE( res.size() == size );
-    ASSERT_TRUE( res[0_f] == cWhite );
-    ASSERT_TRUE( res[1_f] == cRed );
-    ASSERT_TRUE( res[2_f] == cGreen );
-    ASSERT_TRUE( res[3_f] == cGreen );
-    ASSERT_TRUE( res[4_f] == cWhite );
-
-
-    cma.setMode( FaceColorMapAggregator::AggregateMode::Blending );
-    res = cma.aggregate( faces );
-
-    ASSERT_TRUE( res.size() == size );
-    ASSERT_TRUE( res[0_f] == cWhite );
-    ASSERT_TRUE( res[1_f] == Color( Vector4i( 255, 126, 126, 255 ) ) );
-    ASSERT_TRUE( res[2_f] == Color( Vector4i( 126, 190, 62, 255 ) ) );
-    ASSERT_TRUE( res[3_f] == Color( Vector4i( 126, 255, 126, 255 ) ) );
-    ASSERT_TRUE( res[4_f] == cWhite );
-}
 
 }

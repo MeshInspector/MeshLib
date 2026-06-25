@@ -1,7 +1,6 @@
 #include "MRRectIndexer.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -88,25 +87,6 @@ void shrinkPixelMask( PixelBitSet& mask, const RectIndexer& indexer, int shrinka
         } );
         mask -= newBitSet;
     }
-}
-
-TEST( MRMesh, ExpandShrinkPixels )
-{
-    RectIndexer indexer( Vector2i::diagonal( 8 ) );
-    PixelBitSet mask( indexer.size() );
-    mask.set( indexer.toPixelId( { 4, 4 } ) );
-
-    PixelBitSet refMask = mask;
-    refMask.set( indexer.toPixelId( { 4, 5 } ) );
-    refMask.set( indexer.toPixelId( { 5, 4 } ) );
-    refMask.set( indexer.toPixelId( { 4, 3 } ) );
-    refMask.set( indexer.toPixelId( { 3, 4 } ) );
-
-    auto storeMask = mask;
-    expandPixelMask( mask, indexer );
-    EXPECT_FALSE( ( mask - refMask ).any() );
-    shrinkPixelMask( mask, indexer );
-    EXPECT_FALSE( ( mask - storeMask ).any() );
 }
 
 } //namespace MR

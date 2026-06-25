@@ -1,7 +1,8 @@
 #pragma once
 
-#include "MRMeshFwd.h"
 #include "MRBitSet.h"
+#include "MRMeshFwd.h"
+#include "MRVector3.h"
 
 namespace MR
 {
@@ -10,6 +11,9 @@ struct MarkedContour3f
 {
     Contour3f contour;
     BitSet marks; ///< indices of control (marked) points
+
+    /// returns true if the very first and the very last points in this contour has set bits in marks
+    [[nodiscard]] MRMESH_API bool firstLastMarked() const;
 };
 
 [[nodiscard]] inline bool isClosed( const Contour3f& c ) { return c.size() > 1 && c.front() == c.back(); }

@@ -1,5 +1,6 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
+#include "MREnums.h"
 #include "MRComputeBoundingBox.h"
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
@@ -20,6 +21,11 @@ Box3f PointCloud::getBoundingBox() const
 Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return MR::computeBoundingBox( points, validPoints, toWorld );
+}
+
+Box3f PointCloud::computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld ) const
+{
+    return MR::computeBoundingBox( points, getVertIds( region ), toWorld );
 }
 
 Vector3f PointCloud::findCenterFromPoints() const
@@ -46,6 +52,20 @@ Vector3f PointCloud::findCenterFromPoints() const
 Vector3f PointCloud::findCenterFromBBox() const
 {
     return computeBoundingBox().center();
+}
+
+void PointCloud::transform( const AffineXf3f& xf, const VertBitSet* region )
+{
+    MR_TIMER;
+    invalidateCaches();
+
+    const Matrix3f normXf = xf.A.inverse().transposed();
+    BitSetParallelFor( getVertIds( region ), [&] ( const VertId v )
+    {
+        points[v] = xf( points[v] );
+        if ( v < normals.size() )
+            normals[v] = ( normXf * normals[v] ).normalized();
+    } );
 }
 
 void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap, const VertNormals * extNormals )
@@ -114,7 +134,9 @@ VertId PointCloud::addPoint(const Vector3f& point, const Vector3f& normal)
 
 const AABBTreePoints& PointCloud::getAABBTree() const
 {
-    return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
+    const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
+    assert( res.orderedPoints().size() == validPoints.count() );
+    return res;
 }
 
 size_t PointCloud::heapBytes() const

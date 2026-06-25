@@ -21,6 +21,8 @@
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRSceneCache.h"
 #include "MRViewer/MRUISaveChangesPopup.h"
+#include "MRViewer/MRViewportGlobalBasis.h"
+#include "MRViewer/MRI18n.h"
 #include <array>
 
 namespace
@@ -82,28 +84,22 @@ void ResetSceneMenuItem::preDraw_()
     if ( !globalHistory )
         return;
 
-    auto menuInstance = getViewerInstance().getMenuPlugin();
-    if ( !menuInstance )
-        return;
-    const auto scaling = menuInstance->menu_scaling();
-
     if ( openPopup_ )
     {
         ImGui::OpenPopup( popupId_ );
         openPopup_ = false;
     }
 
-    const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
+    const ImVec2 windowSize{ cModalWindowWidth * UI::scale(), -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
     UI::SaveChangesPopupSettings settings;
-    settings.scaling = scaling;
-    settings.header = "New Scene";
-    settings.shortCloseText = "New";
-    settings.saveTooltip = "Save current scene and then remove all objects";
-    settings.dontSaveTooltip = "Remove all objects without saving and ability to restore them";
-    settings.cancelTooltip = "Do not remove any objects, return back";
+    settings.header = s_tr( "New Scene" );
+    settings.shortCloseText = s_tr( "New" );
+    settings.saveTooltip = s_tr( "Save current scene and then remove all objects" );
+    settings.dontSaveTooltip = s_tr( "Remove all objects without saving and ability to restore them" );
+    settings.cancelTooltip = s_tr( "Do not remove any objects, return back" );
     settings.onOk =  [this] () { resetScene_(); };
     UI::saveChangesPopup( "New scene##new scene", settings );
 }
@@ -135,9 +131,9 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
     for ( const auto& obj : allObjs )
         if ( obj->globalVisibility() )
             return "";
-    if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible() )
+    if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible() )
         return "";
-    return "There are no visible objects.";
+    return _tr( "There are no visible objects." );
 }
 
 FitSelectedObjectsMenuItem::FitSelectedObjectsMenuItem() :
@@ -158,7 +154,7 @@ std::string FitSelectedObjectsMenuItem::isAvailable( const std::vector<std::shar
         if ( obj->globalVisibility() )
             return "";
 
-    return "There are no visible selected objects.";
+    return _tr( "There are no visible selected objects." );
 }
 
 FitSelectedPrimitivesMenuItem::FitSelectedPrimitivesMenuItem() :
@@ -179,7 +175,7 @@ std::string FitSelectedPrimitivesMenuItem::isAvailable( const std::vector<std::s
         if ( obj->globalVisibility() && obj->mesh() && ( obj->getSelectedEdges().any() || obj->getSelectedFaces().any() ) )
             return "";
 
-    return "There are no visible selected primitives.";
+    return _tr( "There are no visible selected primitives." );
 }
 
 SetViewPresetMenuItem::SetViewPresetMenuItem( Type type ) :

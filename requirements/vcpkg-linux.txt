@@ -2,6 +2,7 @@ boost-algorithm
 boost-dynamic-bitset
 boost-functional
 boost-integer
+boost-locale
 boost-move
 boost-multiprecision
 boost-program-options
@@ -12,13 +13,14 @@ boost-stacktrace
 boost-url
 clip
 cpr
+dbus[core]
 eigen3
+fastmcpp
 freetype
 gdcm
 glad
 glfw3
 gtest
-gtk3
 hidapi
 jsoncpp
 laz-perf
@@ -26,7 +28,7 @@ libe57format
 libharu
 libjpeg-turbo
 libzip
-opencascade[core]
+opencascade-minimal
 openctm
 openvdb
 parallel-hashmap
@@ -36,3 +38,4 @@ tiff
 tinygltf
 tinyxml2
 tl-expected
+zlib-ng

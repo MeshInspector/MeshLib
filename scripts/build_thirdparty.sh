@@ -32,38 +32,10 @@ else
   echo "Host system: ${OSTYPE}"
 fi
 
-MR_EMSCRIPTEN_SINGLETHREAD=0
-if [[ $OSTYPE == "linux"* ]] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N) (s - singlethreaded, l - 64-bit)" -rsn 1
-    echo;
-    case $REPLY in
-      Y|y)
-        MR_EMSCRIPTEN="ON";;
-      S|s)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_SINGLETHREAD=1;;
-      L|l)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_WASM64=1;;
-      *)
-        MR_EMSCRIPTEN="OFF";;
-    esac
-  fi  
-else
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    MR_EMSCRIPTEN="OFF"
-  fi
-fi
-echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}, 64-bit ${MR_EMSCRIPTEN_WASM64}"
+. "$SCRIPT_DIR/ask_emscripten_mode.src"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
-  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
-    MR_EMSCRIPTEN_SINGLETHREAD=1
-  fi
-  if [[ $MR_EMSCRIPTEN_WASM64 == "ON" ]]; then
-    MR_EMSCRIPTEN_WASM64=1
-  fi
+  true # Nothing.
 elif [ -n "${INSTALL_REQUIREMENTS}" ]; then
   echo "Check requirements. Running ${INSTALL_REQUIREMENTS} ..."
   ${SCRIPT_DIR}/$INSTALL_REQUIREMENTS
@@ -85,6 +57,31 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
+if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
+  CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
+  if [ -n "${CMAKE_C_COMPILER}" ] ; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  fi
+
+  CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX}}"
+  if [ -n "${CMAKE_CXX_COMPILER}" ] ; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+
+    # special conditions for Clang on macOS
+    if [[ $OSTYPE == 'darwin'* ]] && command -v brew >/dev/null 2>&1; then
+      HOMEBREW_PREFIX=$(brew --prefix)
+      if [[ "${CMAKE_CXX_COMPILER}" == "${HOMEBREW_PREFIX}"* ]] ; then
+        # use system libc++ instead of Clang's one
+        MACOS_SDK_PATH=$(xcrun --show-sdk-path | xargs)  # trim trailing whitespace
+        CXXFLAGS="-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH}"
+        LDFLAGS="-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi"
+        # use Homebrew zlib instead of system one
+        MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D ZLIB_ROOT=$(brew --prefix zlib)"
+      fi
+    fi
+  fi
+fi
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
@@ -99,12 +96,14 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   export CFLAGS=""
   export CXXFLAGS=""
   export LDFLAGS=""
+  [[ ${MR_EMSCRIPTEN_SIMD:=} ]] || export MR_EMSCRIPTEN_SIMD=1
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
     -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
     -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
+    -D MR_EMSCRIPTEN_SIMD=${MR_EMSCRIPTEN_SIMD} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
     CFLAGS="${CFLAGS} -pthread"
@@ -114,6 +113,10 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CFLAGS="${CFLAGS} -s MEMORY64=1"
     CXXFLAGS="${CFLAGS} -s MEMORY64=1"
     LDFLAGS="${LDFLAGS} -s MEMORY64=1"
+  fi
+  if [[ ${MR_EMSCRIPTEN_SIMD} == 1 ]] ; then
+    CFLAGS="${CFLAGS} -msimd128"
+    CXXFLAGS="${CXXFLAGS} -msimd128"
   fi
 fi
 
@@ -127,13 +130,24 @@ fi
 echo "Starting build..."
 pushd "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
+  # build Boost libraries separately
+  # TODO: build Boost.Locale as a standalone library
+  ${SCRIPT_DIR}/thirdparty/boost-libs-download.sh ${MESHLIB_THIRDPARTY_DIR}/boost-libs
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/boost-libs.sh ${MESHLIB_THIRDPARTY_DIR}/boost-libs
+  # remove excess header files as they're distributed by Emscripten
+  find ${MESHLIB_THIRDPARTY_ROOT_DIR}/include/boost -mindepth 1 -maxdepth 1 -not -name 'locale*' -exec rm -r "{}" \;
+
   # build libjpeg-turbo separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libjpeg-turbo.sh ${MESHLIB_THIRDPARTY_DIR}/libjpeg-turbo
+  # build MbedTLS separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/mbedtls.sh ${MESHLIB_THIRDPARTY_DIR}/mbedtls
 
   cmake -S ${MESHLIB_THIRDPARTY_DIR} -B . ${MR_CMAKE_OPTIONS}
   cmake --build . -j ${NPROC}
   cmake --install .
 
+  # build Eigen separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/eigen.sh ${MESHLIB_THIRDPARTY_DIR}/eigen
   # build libE57Format separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
   # build OpenVDB separately
@@ -142,18 +156,12 @@ else
   cmake -S ${MESHLIB_THIRDPARTY_DIR} -B . ${MR_CMAKE_OPTIONS}
   cmake --build . -j ${NPROC}
   cmake --install .
+
+  # build clip separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/clip.sh ${MESHLIB_THIRDPARTY_DIR}/clip
+  # build fastmcpp separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/fastmcpp.sh ${MESHLIB_THIRDPARTY_DIR}/fastmcpp
 fi
 popd
-
-# copy libs (some of them are handled by their `cmake --install`, but some are not)
-echo "Copying thirdparty libs.."
-if [[ $OSTYPE == 'darwin'* ]]; then
-  LIB_SUFFIX="*.dylib"
-elif [ "${MR_EMSCRIPTEN}" = "ON" ]; then
-  LIB_SUFFIX="*.a"
-else
-  LIB_SUFFIX="*.so"
-fi
-cp "${MESHLIB_THIRDPARTY_BUILD_DIR}"/${LIB_SUFFIX} "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/"
 
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

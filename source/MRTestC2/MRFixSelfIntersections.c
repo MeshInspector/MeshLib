@@ -1,0 +1,48 @@
+#include "TestMacros.h"
+#include "MRFixSelfIntersections.h"
+
+#include "MRCMesh/MRFixSelfIntersections.h"
+#include "MRCMesh/MRMesh.h"
+#include "MRCMesh/MRMeshTopology.h"
+#include "MRCMesh/MRBitSet.h"
+#include "MRCMesh/MRTorus.h"
+#include "MRCMisc/expected_MR_FaceBitSet_std_string.h"
+#include "MRCMisc/expected_void_std_string.h"
+
+void testFixSelfIntersections( void )
+{
+    float primaryRadius = 1.0f;
+    float secondaryRadius = 0.2f;
+    int primaryResolution = 32;
+    int secondaryResolution = 16;
+
+    MR_Mesh* mesh = MR_makeTorusWithSelfIntersections( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
+    size_t validFacesCount = MR_FaceBitSet_count( MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( mesh ) ) );
+    TEST_ASSERT( validFacesCount == 1024 );
+
+    MR_expected_MR_FaceBitSet_std_string* intersections_ex = MR_SelfIntersections_getFaces( mesh, false, MR_PassBy_DefaultArgument, NULL );
+    MR_FaceBitSet* intersections = MR_expected_MR_FaceBitSet_std_string_value_mut( intersections_ex );
+    TEST_ASSERT( intersections );
+    size_t intersectionsCount = MR_FaceBitSet_count( intersections );
+    TEST_ASSERT( intersectionsCount == 128 );
+    MR_expected_MR_FaceBitSet_std_string_Destroy( intersections_ex );
+
+    MR_SelfIntersections_Settings *settings = MR_SelfIntersections_Settings_DefaultConstruct();
+    MR_SelfIntersections_Settings_Set_method( settings, MR_SelfIntersections_Settings_Method_CutAndFill );
+    MR_SelfIntersections_Settings_Set_touchIsIntersection( settings, false );
+    MR_expected_void_std_string_Destroy( MR_SelfIntersections_fix( mesh, settings ) );
+    MR_SelfIntersections_Settings_Destroy( settings );
+
+    validFacesCount = MR_FaceBitSet_count( MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( mesh ) ) );
+    TEST_ASSERT( validFacesCount == 1194
+              || validFacesCount == 1196 ); //on some macOS Arm runners in Debug mode
+
+    intersections_ex = MR_SelfIntersections_getFaces( mesh, false, MR_PassBy_DefaultArgument, NULL );
+    intersections = MR_expected_MR_FaceBitSet_std_string_value_mut( intersections_ex );
+    TEST_ASSERT( intersections );
+    intersectionsCount = MR_FaceBitSet_count( intersections );
+    TEST_ASSERT( intersectionsCount == 0 );
+    MR_expected_MR_FaceBitSet_std_string_Destroy( intersections_ex );
+
+    MR_Mesh_Destroy( mesh );
+}

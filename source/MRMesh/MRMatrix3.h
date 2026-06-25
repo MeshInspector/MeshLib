@@ -1,7 +1,9 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRVector3.h"
 #include "MRConstants.h"
+#include <iosfwd>
 
 namespace MR
 {
@@ -25,11 +27,18 @@ struct Matrix3
     Vector3<T> y{ 0, 1, 0 };
     Vector3<T> z{ 0, 0, 1 };
 
-    constexpr Matrix3() noexcept = default;
+    constexpr Matrix3() noexcept
+    {
+        static_assert( sizeof( Matrix3<ValueType> ) == 3 * sizeof( VectorType ), "Struct size invalid" );
+    }
     /// initializes matrix from its 3 rows
     constexpr Matrix3( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) : x( x ), y( y ), z( z ) { }
-    template <typename U>
+
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Matrix3( const Matrix3<U> & m ) : x( m.x ), y( m.y ), z( m.z ) { }
+
     static constexpr Matrix3 zero() noexcept { return Matrix3( Vector3<T>(), Vector3<T>(), Vector3<T>() ); }
     static constexpr Matrix3 identity() noexcept { return Matrix3(); }
     /// returns a matrix that scales uniformly
@@ -53,8 +62,8 @@ struct Matrix3
     static constexpr Matrix3 fromColumns( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ).transposed(); }
 
     /// row access
-    constexpr const Vector3<T> & operator []( int row ) const noexcept { return *( &x + row ); }
-    constexpr       Vector3<T> & operator []( int row )       noexcept { return *( &x + row ); }
+    constexpr const Vector3<T> & operator []( int row ) const noexcept { return *( ( VectorType* )this + row ); }
+    constexpr       Vector3<T> & operator []( int row )       noexcept { return *( ( VectorType* )this + row ); }
 
     /// column access
     constexpr Vector3<T> col( int i ) const noexcept { return { x[i], y[i], z[i] }; }
@@ -128,6 +137,16 @@ struct Matrix3
             for ( int j = 0; j < 3; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
+    }
+
+    friend std::ostream& operator<<( std::ostream& s, const Matrix3& mat )
+    {
+        return s << mat.x << '\n' << mat.y << '\n' << mat.z << '\n';
+    }
+
+    friend std::istream& operator>>( std::istream& s, Matrix3& mat )
+    {
+        return s >> mat.x >> mat.y >> mat.z;
     }
 };
 

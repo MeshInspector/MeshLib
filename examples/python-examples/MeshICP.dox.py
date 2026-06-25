@@ -22,7 +22,7 @@ xf = icp.calculateTransformation()
 meshFloating.transform(xf)
 
 # Output information string
-print(icp.getLastICPInfo())
+print(icp.getStatusInfo())
 
 # Save result
 mrmeshpy.saveMesh(meshFloating, "meshA_icp.stl")

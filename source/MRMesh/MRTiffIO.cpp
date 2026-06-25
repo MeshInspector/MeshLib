@@ -129,17 +129,19 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
     }
 }
 
-Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params )
+Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const WriteRawTiffParams& params )
 {
+    const auto& baseParams = params.baseParams;
+
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
         return unexpected("Cannot write file: "+ utf8string( path ) );
 
-    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, params.imageSize.x );
-    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, params.imageSize.y );
-    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, params.bytesPerSample * 8 );
+    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, baseParams.imageSize.x );
+    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, baseParams.imageSize.y );
+    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, baseParams.bytesPerSample * 8 );
     int numSamples = 1;
-    switch ( params.valueType )
+    switch ( baseParams.valueType )
     {
     case BaseTiffParameters::ValueType::Scalar:
         numSamples = 1;
@@ -156,7 +158,7 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     TIFFSetField( tif, TIFFTAG_SAMPLESPERPIXEL, numSamples );
 
     int sampleType = 0;
-    switch ( params.sampleType )
+    switch ( baseParams.sampleType )
     {
     case BaseTiffParameters::SampleType::Float:
         sampleType = SAMPLEFORMAT_IEEEFP;
@@ -177,8 +179,42 @@ Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& 
     TIFFSetField( tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE );
 
-    for ( int row = 0; row < params.imageSize.y; row++ )
-        TIFFWriteScanline( tif, ( void* )( bytes + row * params.imageSize.x * numSamples * params.bytesPerSample ), row );
+    // declare non-standard tags
+    // http://geotiff.maptools.org/spec/geotiff2.6.html
+    constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;
+#ifndef TIFFTAG_GDAL_NODATA
+    // https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
+    constexpr uint32_t TIFFTAG_GDAL_NODATA = 42113;
+#endif
+    std::vector<TIFFFieldInfo> fieldInfo;
+    if ( params.xf )
+    {
+        fieldInfo.emplace_back(
+            TIFFFieldInfo{ TIFFTAG_ModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" }
+        );
+    }
+    if ( !params.noData.empty() )
+    {
+        fieldInfo.emplace_back(
+            TIFFFieldInfo{ TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" }
+        );
+    }
+
+    if ( !fieldInfo.empty() )
+        TIFFMergeFieldInfo( tif, fieldInfo.data(), (uint32_t)fieldInfo.size() );
+
+    if ( params.xf )
+    {
+        const Matrix4d matrix = AffineXf3d{ *params.xf };
+        TIFFSetField( tif, TIFFTAG_ModelTransformationTag, 16, &matrix );
+    }
+    if ( !params.noData.empty() )
+    {
+        TIFFSetField( tif, TIFFTAG_GDAL_NODATA, params.noData.c_str() );
+    }
+
+    for ( int row = 0; row < baseParams.imageSize.y; row++ )
+        TIFFWriteScanline( tif, ( void* )( bytes + row * baseParams.imageSize.x * numSamples * baseParams.bytesPerSample ), row );
 
     TIFFClose( tif );
     return {};
@@ -299,37 +335,38 @@ Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& ou
         constexpr uint32_t TIFFTAG_ModelTiePointTag = 33922;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;	/* GeoTIFF */
-        Matrix4d matrix;
-        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &matrix ) )
+        double* dataMatrix;
+        uint32_t count;
+        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &count, &dataMatrix ) && count == 16 )
         {
-            *output.p2wXf = AffineXf3f( Matrix4f( matrix ) );
+            auto* matrix = (Matrix4d*)dataMatrix;
+            *output.p2wXf = AffineXf3f( Matrix4f( *matrix ) );
         }
         else
         {
             double* dataTie;// will be freed with tiff
-            uint32_t count;
             auto statusT = TIFFGetField( tiff, TIFFTAG_ModelTiePointTag, &count, &dataTie );
             if ( statusT && count == 6 )
             {
                 Vector3d tiePoints[2];
-                tiePoints[0] = { dataTie[0],dataTie[1],dataTie[2] };
-                tiePoints[1] = { dataTie[3],dataTie[4],dataTie[5] };
+                tiePoints[0] = { dataTie[0], dataTie[1], dataTie[2] };
+                tiePoints[1] = { dataTie[3], dataTie[4], dataTie[5] };
 
                 double* dataScale;// will be freed with tiff
-                Vector3d scale;
                 auto statusS = TIFFGetField( tiff, TIFFTAG_ModelPixelScaleTag, &count, &dataScale );
                 if ( statusS && count == 3 )
                 {
-                    scale = { dataScale[0],dataScale[1],dataScale[2] };
+                    Vector3d scale { dataScale[0], dataScale[1], dataScale[2] };
 
-                    output.p2wXf->A = Matrix3f::scale( float( scale.x ), -float( scale.y ),
-                        scale.z == 0.0 ? 1.0f : float( scale.z ) );
-                    output.p2wXf->b = Vector3f( tiePoints[1] );
+                    scale.y *= -1.;
+                    if ( scale.z == 0. )
+                    {
+                        tiePoints[1].z = 0.;
+                        scale.z = 1.;
+                    }
 
-                    output.p2wXf->b.x += float( tiePoints[0].x );
-                    output.p2wXf->b.y += float( tiePoints[0].y );
-                    if ( scale.z != 0.0 )
-                        output.p2wXf->b.z += float( tiePoints[0].z );
+                    output.p2wXf->A = Matrix3f::scale( Vector3f{ scale } );
+                    output.p2wXf->b = Vector3f{ tiePoints[0] + tiePoints[1] };
                 }
             }
         }

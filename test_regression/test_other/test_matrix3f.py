@@ -1,7 +1,6 @@
 from meshlib import mrmeshpy as mm
 import pytest
 
-@pytest.mark.bindingsV3
 @pytest.mark.smoke
 def test_matrix3f():
     v1 = mm.Vector3f(1, 2, 3)
@@ -15,7 +14,6 @@ def test_matrix3f():
     print(c.col(1) == mm.Vector3f(34, 45, 56))
     print(c.col(2) == mm.Vector3f(42, 56, 70))
 
-@pytest.mark.bindingsV3
 @pytest.mark.smoke
 def test_matrix3i():
     v1 = mm.Vector3i(1, 2, 3)

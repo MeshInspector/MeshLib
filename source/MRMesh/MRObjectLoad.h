@@ -19,9 +19,9 @@ namespace MR
 /// loads mesh from given file in new object
 MRMESH_API Expected<LoadedObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 
-/// loads data from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
+/// loads data from given file and makes either ObjectMesh, ObjectLines or ObjectPoints (if the file has points or edges but not faces)
 MRMESH_API Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file, const ProgressCallback& cb = {},
-    bool returnOnlyMesh = false ); ///< if true the function can return only ObjectMesh and never ObjectPoints
+    bool returnOnlyMesh = false ); ///< if true the function can return only ObjectMesh and never other object type
 
 /// loads lines from given file in new object
 MRMESH_API Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
@@ -41,11 +41,14 @@ MRMESH_API Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem:
  */
 MRMESH_API Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filename, const ProgressCallback& callback = {} );
 
-// check if there are any supported files folder and subfolders
-MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
+/// checks if there are any supported files folder and subfolders
+[[nodiscard]] MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
 
-//tries to load scene from every format listed in SceneFormatFilters
+/// tries to load scene from every format listed in SceneFormatFilters
 MRMESH_API Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback = {} );
+
+/// constructs new ObjectMesh from the given data
+[[nodiscard]] MRMESH_API LoadedObject makeObjectMesh( std::string objName, LoadedMeshData data );
 
 /**
  * \brief loads objects tree from given scene file (zip/mru)
@@ -73,7 +76,7 @@ MRMESH_API Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::fi
 
 
 /// returns filters for all supported file formats for all types of objects
-MRMESH_API IOFilters getAllFilters();
+[[nodiscard]] MRMESH_API IOFilters getAllFilters();
 
 /// \}
 

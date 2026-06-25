@@ -87,7 +87,8 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
     VertBitSet basementVerts( mesh.topology.lastValidVert() + 1, false );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
-        basementVerts[v] = ( axisXf( mesh.points[v] ).z <= basementTop );
+        if ( axisXf( mesh.points[v] ).z <= basementTop )
+            basementVerts.set( v );
     } );
     const auto basementFaces = getInnerFaces( mesh.topology, basementVerts );
 
@@ -107,7 +108,8 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
     FaceBitSet faces( mesh.topology.lastValidFace() + 1, false );
     BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
     {
-        faces[f] = isOverhanging( f );
+        if ( isOverhanging( f ) )
+            faces.set( f );
     } );
 
     if ( !reportProgress( settings.progressCb, 0.2f ) )

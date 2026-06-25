@@ -5,18 +5,159 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRVector.h"
 #include "MRColorTheme.h"
+#include "MRI18n.h"
+#include "MRLocale.h"
+#include "MRRibbonFontManager.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRViewport.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRMeshTexture.h"
-#include "MRMesh/MRVector.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRMouseController.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
+
+namespace
+{
+
+constexpr float cControllerCubeFontSize = 20.f;  // tuned for force-emboldened NotoSans-SemiBold
+
+ImFont* loadControllerCubeFont( float fontSize )
+{
+    auto* font = loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf", fontSize, { .forceBold = true } );
+    if ( font )
+        font = loadCustomFont( SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc", fontSize, { .mergeMode = true } );
+    return font;
+}
+
+void copyTexture( int w, int h, const ImTextureData* tex, int tx0, int ty0, Image& img, int ix0, int iy0 )
+{
+    ParallelFor( 0, h, [&] ( int y )
+    {
+        for ( auto x = 0; x < w; ++x )
+        {
+            const auto* src = tex->Pixels + ( ( ty0 + y ) * tex->Width + ( tx0 + x ) ) * tex->BytesPerPixel;
+            auto& dst = img.pixels[( iy0 + y ) * img.resolution.x + ( ix0 + x )];
+            switch ( tex->Format )
+            {
+            case ImTextureFormat_RGBA32:
+                for ( auto i = 0; i < tex->BytesPerPixel; ++i )
+                    dst[i] = src[i];
+                break;
+            case ImTextureFormat_Alpha8:
+                dst = { *src, *src, *src };
+                break;
+            }
+        }
+    } );
+}
+
+void copyImage( int w, int h, const Image& src, int sx0, int sy0, Image& dst, int dx0, int dy0 )
+{
+    ParallelFor( 0, h, [&] ( int y )
+    {
+        for ( auto x = 0; x < w; ++x )
+            dst.pixels[( dy0 + y ) * dst.resolution.x + ( dx0 + x )] = src.pixels[( sy0 + y ) * src.resolution.x + ( sx0 + x )];
+    } );
+}
+
+void flipVertically( Image& img )
+{
+    const auto w = img.resolution.x, h = img.resolution.y;
+    ParallelFor( 0, h / 2, [&] ( int y )
+    {
+        for ( auto x = 0; x < w; ++x )
+            std::swap( img.pixels[y * w + x], img.pixels[( h - y - 1 ) * w + x] );
+    } );
+}
+
+Expected<Image> renderControllerSideText( const Vector2i& resolution )
+{
+    // TODO: disconnect from ImGui
+    static auto* font = loadControllerCubeFont( cControllerCubeFontSize );
+    if ( !font )
+        return unexpected( "Could not load font" );
+
+    auto* baked = font->GetFontBaked( cControllerCubeFontSize );
+    if ( !baked )
+        return unexpected( "Could not load font" );
+
+    const auto* tex = ImGui::GetIO().Fonts->TexData;
+
+    constexpr std::array cSideTexts = {
+        _t( "RIGHT" ),  _t( "LEFT" ),
+        _t( "TOP" ),    _t( "BOTTOM" ),
+        _t( "FRONT" ),  _t( "BACK" ),
+    };
+
+    Image image;
+    image.resolution = resolution;
+    image.pixels.resize( image.resolution.x * image.resolution.y, { 255, 255, 255, 0 } );
+
+    for ( auto i = 0; i < cSideTexts.size(); ++i )
+    {
+        const auto text = s_tr( cSideTexts[i] );
+
+        Image block;
+        block.resolution = {
+            image.resolution.x / 2,
+            image.resolution.y / 3,
+        };
+        block.pixels.resize( block.resolution.x * block.resolution.y, { 255, 255, 255, 0 } );
+
+        int minx = INT_MAX, miny = INT_MAX;
+        int maxx = 0, maxy = 0;
+        float penx = 0.f;
+        for ( const auto ch : utf8ToUtf32( text ) )
+        {
+            auto* glyph = baked->FindGlyph( (ImWchar)ch );
+            if ( !glyph )
+                return unexpected( fmt::format( "Could not load glyph for code point {}", (size_t)ch ) );
+
+            if ( block.resolution.x < (int)std::ceil( penx + glyph->X1 ) || block.resolution.y < (int)std::ceil( glyph->Y1 ) )
+            {
+                // TODO: adjust font size
+                assert( false );
+                break;
+            }
+
+            const auto
+                w = int( glyph->X1 - glyph->X0 ),
+                h = int( glyph->Y1 - glyph->Y0 );
+            const auto
+                tx0 = int( glyph->U0 * tex->Width ),
+                ty0 = int( glyph->V0 * tex->Height );
+            copyTexture( w, h, tex, tx0, ty0, block, (int)std::floor( penx + glyph->X0 ), (int)std::floor( glyph->Y0 ) );
+
+            if ( penx == 0.f )
+                minx = (int)std::floor( glyph->X0 );
+            miny = std::min( miny, (int)std::floor( glyph->Y0 ) );
+            maxx = (int)std::ceil( penx + glyph->X1 );
+            maxy = std::max( maxy, (int)std::ceil( glyph->Y1 ) );
+            penx += glyph->AdvanceX;
+        }
+        if ( maxx < minx || maxy < miny )
+            continue;
+
+        int offsetx = ( i % 2 ) * block.resolution.x;
+        int offsety = ( i / 2 ) * block.resolution.y;
+        offsetx += ( block.resolution.x - ( maxx - minx ) ) / 2;
+        offsety += ( block.resolution.y - ( maxy - miny ) ) / 2;
+        copyImage( maxx - minx, maxy - miny, block, minx, miny, image, offsetx, offsety );
+    }
+
+    flipVertically( image );
+    return image;
+}
+
+} // namespace
 
 Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
 {
@@ -314,30 +455,51 @@ VertUVCoords makeCornerControllerUVCoords( float cornerRatio /*= 0.2f */ )
     return uvs;
 }
 
-Vector<MR::MeshTexture, TextureId> loadCornerControllerTextures()
+Vector<MeshTexture, TextureId> loadCornerControllerTextures()
 {
-    Vector<MR::MeshTexture, TextureId> res;
-    res.resize( TextureId( 3 ) );
-
-    auto path = SystemPath::getResourcesDirectory() / "resource" / "textures";
+    const auto path = SystemPath::getResourcesDirectory() / "resource" / "textures";
     const std::array<std::filesystem::path, 3> cTexturePaths = {
         path / "controller_cube_default.png",
-        path / "controller_cube_sides.png",
-        path / "controller_cube_edges.png"
+        path / "controller_cube_hover.png",
+        path / "controller_cube_edges.png",
     };
-    for ( int i = 0; i < 3; ++i )
+
+    Vector<MeshTexture, TextureId> res;
+    res.reserve( cTexturePaths.size() );
+    for ( const auto& texPath : cTexturePaths )
     {
-        auto loaded = ImageLoad::fromAnySupportedFormat( cTexturePaths[i] );
+        auto loaded = ImageLoad::fromAnySupportedFormat( texPath );
         if ( !loaded.has_value() )
             return {};
-        res[TextureId( i )].pixels = std::move( loaded->pixels );
-        res[TextureId( i )].resolution = loaded->resolution;
-        res[TextureId( i )].filter = FilterType::Linear;
+
+        MeshTexture tex;
+        tex.pixels = std::move( loaded->pixels );
+        tex.resolution = loaded->resolution;
+        tex.filter = FilterType::Linear;
+        res.emplace_back( std::move( tex ) );
     }
+
+    if ( const auto textImage = renderControllerSideText( res.front().resolution ) )
+    {
+        const std::array<Color, 3> textColors = {
+            Color { 133, 139, 147 },
+            Color { 133, 139, 147 },
+            Color { 255, 255, 255 },
+        };
+        for ( auto i = 0; i < 3; ++i )
+        {
+            auto& tex = res.vec_[i];
+            const auto& col = textColors[i];
+            assert( tex.pixels.size() == textImage->pixels.size() );
+            for ( auto px = 0; px < tex.pixels.size(); ++px )
+                tex.pixels[px] = blend( { col.r, col.g, col.b, textImage->pixels[px].a }, tex.pixels[px] );
+        }
+    }
+
     return res;
 }
 
-const TexturePerFace& getCornerControllerTexureMap()
+const TexturePerFace& getCornerControllerTextureMap()
 {
     static TexturePerFace textures;
     if ( textures.empty() )
@@ -384,7 +546,7 @@ RegionId getCornerControllerRegionByFace( FaceId face )
 
 TexturePerFace getCornerControllerHoveredTextureMap( RegionId rId )
 {
-    auto textures = getCornerControllerTexureMap();
+    auto textures = getCornerControllerTextureMap();
     const int fOffset = 2 * 6;
     const int fOffset2 = 4 * 12;
     if ( rId < 6 )
@@ -571,13 +733,14 @@ void CornerControllerObject::initDefault()
         }
         else
         {
-            obj->setTextures( { textures.front() } );
+            if ( !textures.empty() )
+                obj->setTextures( { textures.front() } );
         }
 
         if ( !obj->getTextures().empty() )
         {
             if ( hoverable )
-                obj->setTexturePerFace( getCornerControllerTexureMap() );
+                obj->setTexturePerFace( getCornerControllerTextureMap() );
             obj->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
         }
     };
@@ -616,7 +779,7 @@ void CornerControllerObject::initDefault()
         }
     } ) );
 
-    connections_.push_back( getViewerInstance().preDrawSignal.connect( [this] ()
+    connections_.push_back( getViewerInstance().signals().preDrawSignal.connect( [this] ()
     {
         if ( !rootObj_ )
             return;
@@ -625,7 +788,7 @@ void CornerControllerObject::initDefault()
     } ) );
 
     // 5th group: we want cornerControllerMouseDown_ signal be caught before tools but after menu
-    connections_.push_back( getViewerInstance().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
+    connections_.push_back( getViewerInstance().signals().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
     {
         if ( !rootObj_ )
             return false;
@@ -633,6 +796,27 @@ void CornerControllerObject::initDefault()
             return true;
         return false;
     } ) );
+
+#ifndef MRVIEWER_NO_LOCALE
+    [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [hoverable = std::weak_ptr{ basisViewControllerHoverable }, nonhoverable = std::weak_ptr{ basisViewControllerNonHoverable }] ( const std::string& )
+    {
+        const auto textures = loadCornerControllerTextures();
+        if ( auto obj = hoverable.lock() )
+        {
+            obj->setTextures( textures );
+            obj->setDirtyFlags( DIRTY_TEXTURE );
+        }
+        if ( auto obj = nonhoverable.lock() )
+        {
+            if ( !textures.empty() )
+            {
+                obj->setTextures( { textures.front() } );
+                obj->setDirtyFlags( DIRTY_TEXTURE );
+            }
+        }
+        getViewerInstance().setSceneDirty();
+    } );
+#endif
 
     rootObj_ = std::make_shared<Object>();
     rootObj_->addChild( basisViewControllerNonHoverable );
@@ -648,6 +832,13 @@ void CornerControllerObject::enable( ViewportMask mask )
     rootObj_->setVisibilityMask( mask );
 }
 
+ViewportMask CornerControllerObject::getEnabledMask() const
+{
+    if ( !rootObj_ )
+        return {};
+    return rootObj_->visibilityMask();
+}
+
 void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, const AffineXf3f& vpInvXf )
 {
     if ( !rootObj_ || !rootObj_->isVisible( vp.id ) )
@@ -661,7 +852,7 @@ void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, 
         if ( !childern[i]->isVisible( vp.id ) )
             continue;
         if ( auto visObj = childern[i]->asType<VisualObject>() )
-            vp.draw( *visObj, xf, vp.getAxesProjectionMatrix(), DepthFunction::Always );
+            vp.drawOrthoFixedPos( *visObj, xf, DepthFunction::Always );
     }
     // second pass
     for ( const auto& child : childern )
@@ -669,7 +860,7 @@ void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, 
         if ( !child->isVisible( vp.id ) )
             continue;
         if ( auto visObj = child->asType<VisualObject>() )
-            vp.draw( *visObj, visObj->xf( vp.id ), vp.getAxesProjectionMatrix() );
+            vp.drawOrthoFixedPos( *visObj, visObj->xf( vp.id ) );
     }
 }
 
@@ -706,7 +897,7 @@ CornerControllerObject::PickedIds CornerControllerObject::pick_( const Vector2f&
         return {};
 
     const auto& children = rootObj_->children();
-    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
+    auto staticRenderParams = vp.getBaseRenderParamsOrthoFixedPos();
     auto [obj, pick] = vp.pickRenderObject( { {
             static_cast< VisualObject* >( children[0].get() ),
             static_cast< VisualObject* >( children[1].get() ),

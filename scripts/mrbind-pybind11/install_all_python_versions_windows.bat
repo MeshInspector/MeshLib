@@ -39,7 +39,7 @@ for /f %%x in (%~dp0\python_versions.txt) do (
     )
     echo Installing Pip and dependencies for Python %%x
     py -%%x -m pip install --upgrade pip
-    py -%%x -m pip install --upgrade -r %~dp0\..\..\requirements\python.txt
+    py -%%x -m pip install --upgrade -r %~dp0\..\..\requirements\python\requirements.txt
     py -%%x -m pip install pytest
 )
 
@@ -54,7 +54,7 @@ goto :eof
 rem --- Now some functions:
 
 :install_ver
-for /f %%y in ('findstr %1 %tempfile%2') do (
+for /f %%y in ('findstr %1\. %tempfile%2') do (
     if !done! == 0 (
         echo Trying version: %%y
         set installer=%tmp%\python-%%y-amd64.exe

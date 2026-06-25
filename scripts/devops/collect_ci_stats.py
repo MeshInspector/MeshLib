@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import pprint
+import time
 from pathlib import Path
 from typing import List
 
@@ -34,7 +35,18 @@ def parse_step(step: dict):
 
 def parse_job(job: dict):
     job_id = job['id']
+
+    runner_type = "self-hosted"
+    runner_name = job['runner_name'] or ""
+    if job['runner_group_name'] == "GitHub Actions" or runner_name.startswith("GitHub Actions"):
+        runner_type = "github actions"
+        runner_name = None
+    elif runner_name.startswith("i-0"):
+        runner_type = "aws instance"
+        runner_name = None
+
     stats_filename = Path(f"RunnerSysStats-{job_id}.json")
+    artifact_stats_filename = Path(f"ArtifactStats-{job_id}.json")
     if not stats_filename.exists():
         return None
 
@@ -42,6 +54,13 @@ def parse_job(job: dict):
     try:
         with open(stats_filename, 'r') as f:
             runner_stats = json.load(f)
+
+        artifact_size = None
+        if artifact_stats_filename.exists():
+            with open(artifact_stats_filename, 'r') as f:
+                artifact_stats = json.load(f)
+                artifact_size = sum(artifact_stats.values())
+
         return {
             'id':                job['id'],
             'conclusion':        job['conclusion'],
@@ -51,12 +70,13 @@ def parse_job(job: dict):
             'target_arch':       runner_stats['target_arch'],
             'compiler':          runner_stats['compiler'],
             'build_config':      runner_stats['build_config'],
-            'runner_name':       job['runner_name'],
-            'runner_group_name': job['runner_group_name'],
+            'runner_type':       runner_type,
+            'runner_name':       runner_name,
             'runner_cpu_count':  runner_stats['cpu_count'],
             'runner_ram_mb':     runner_stats['ram_mb'],
             'build_system':      runner_stats['build_system'],
             'aws_instance_type': runner_stats['aws_instance_type'],
+            'artifact_size':     artifact_size,
         }
     except:
         print("Something went wrong while parsing the job/runner info. Debug info:")
@@ -75,12 +95,24 @@ def parse_jobs(jobs: List[dict]):
         if job is not None
     ]
 
-def fetch_jobs(repo: str, run_id: str):
-    return requests.get(f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs', headers={
+def fetch_jobs(repo: str, run_id: str, attempts=3, cooldown=30):
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs'
+    headers = {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',
         'X-GitHub-Api-Version': '2022-11-28',
-    })
+    }
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = requests.get(url, headers=headers)
+        except requests.exceptions.RequestException as e:
+            if attempt == attempts:
+                raise
+            print(f'fetch_jobs: attempt {attempt}/{attempts} failed ({e}); retrying in {cooldown}s...')
+            time.sleep(cooldown)
+            continue
+        resp.raise_for_status()
+        return resp
 
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role

@@ -33,7 +33,7 @@ UndirectedEdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plan
 
 std::vector<VertPair> findSegmentEndVertices( const Polyline3& polyline, const EdgeBitSet& orgEdges )
 {
-    const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
+    const size_t numEdges = polyline.topology.lastNotLoneUndirectedEdge() + 1;
     UndirectedEdgeBitSet visited( numEdges );
 
     std::vector<VertPair> result;
@@ -100,7 +100,7 @@ void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolyl
 
     if ( params.otherPart )
     {
-        const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
+        const size_t numEdges = polyline.topology.lastNotLoneUndirectedEdge() + 1;
         UndirectedEdgeBitSet otherPartEdges( numEdges );
         for ( auto ue : undirectedEdges( polyline.topology ) )
         {

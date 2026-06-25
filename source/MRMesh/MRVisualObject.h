@@ -4,7 +4,6 @@
 #include "MRMeshTexture.h"
 #include "MRVector.h"
 #include "MRColor.h"
-#include "MRPositionedText.h"
 #include "MRIRenderObject.h"
 #include "MRUniquePtr.h"
 #include "MREnums.h"
@@ -21,10 +20,7 @@ namespace MR
 enum class MRMESH_CLASS VisualizeMaskType
 {
     Visibility,
-    InvertedNormals,
     Name,
-    Labels,
-    CropLabelsByViewportRect,
     ClippedByPlane,
     DepthTest,
     _count [[maybe_unused]],
@@ -81,8 +77,7 @@ enum DirtyFlags
     DIRTY_UV = 0x0002,
     DIRTY_VERTS_RENDER_NORMAL = 0x0004, //< gl normals
     DIRTY_FACES_RENDER_NORMAL = 0x0008, ///< gl normals
-    DIRTY_CORNERS_RENDER_NORMAL = 0x0010, ///< gl normals
-    DIRTY_RENDER_NORMALS = DIRTY_VERTS_RENDER_NORMAL | DIRTY_FACES_RENDER_NORMAL | DIRTY_CORNERS_RENDER_NORMAL,
+    DIRTY_RENDER_NORMALS = DIRTY_VERTS_RENDER_NORMAL | DIRTY_FACES_RENDER_NORMAL,
     DIRTY_SELECTION = 0x0020,
     DIRTY_TEXTURE = 0x0040,
     DIRTY_PRIMITIVES = 0x0080,
@@ -92,11 +87,10 @@ enum DirtyFlags
     DIRTY_FACES_COLORMAP = DIRTY_PRIMITIVE_COLORMAP,
     DIRTY_TEXTURE_PER_FACE = 0x0400,
     DIRTY_MESH = 0x07FF,
-    DIRTY_BOUNDING_BOX = 0x0800,
     DIRTY_BORDER_LINES = 0x1000,
     DIRTY_EDGES_SELECTION = 0x2000,
-    DIRTY_CACHES = DIRTY_BOUNDING_BOX,
-    DIRTY_ALL = 0x3FFF
+    DIRTY_VOLUME = 0x4000,
+    DIRTY_ALL = 0x7FFF
 };
 
 /// Marks dirty buffers that need to be uploaded to OpenGL.
@@ -126,11 +120,14 @@ public:
     VisualObject& operator = ( VisualObject&& ) = default;
     virtual ~VisualObject() = default;
 
-    constexpr static const char* TypeName() noexcept { return "VisualObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "VisualObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
 
-    std::string getClassName() const override { return "Visual Object"; }
-    std::string getClassNameInPlural() const override { return "Visual Objects"; }
+    constexpr static const char* StaticClassName() noexcept { return "Visual Object"; }
+    virtual std::string className() const override { return StaticClassName(); }
+
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Visual Objects"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
     [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;
@@ -154,11 +151,17 @@ public:
         setAllVisualizeProperties_( properties, counter );
     }
 
-    /// shows/hides labels
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    void showLabels( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Labels, ViewportMask::all() ); }
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    bool showLabels() const { return getVisualizeProperty( VisualizeMaskType::Labels, ViewportMask::any() ); }
+    /// set all object solid colors (front/back/etc.) from other object for all viewports
+    MRMESH_API void copyAllSolidColors( const VisualObject& other );
+
+    /// returns all viewports where this object or any of its parents is clipped by plane
+    [[nodiscard]] MRMESH_API ViewportMask globalClippedByPlaneMask() const;
+
+    /// returns true if this object or any of its parents is clipped by plane in any of given viewports
+    [[nodiscard]] bool globalClippedByPlane( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalClippedByPlaneMask() & viewportMask ).empty(); }
+
+    /// if false deactivates clipped-by-plane for this object and all of its parents, otherwise sets clipped-by-plane for this this object only
+    MRMESH_API void setGlobalClippedByPlane( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
     /// shows/hides object name in all viewports
     void showName( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Name, ViewportMask::all() ); }
@@ -195,17 +198,6 @@ public:
     /// sets global transparency alpha of object in all viewports
     MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
 
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
-
     /// sets some dirty flags for the object (to force its visual update)
     /// \param mask is a union of DirtyFlags flags
     /// \param invalidateCaches whether to automatically invalidate model caches (pass false here if you manually update the caches)
@@ -226,8 +218,7 @@ public:
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override
     {
         return Object::getRedrawFlag( viewportMask ) ||
-            ( isVisible( viewportMask ) &&
-              ( dirty_ & ( ~( DIRTY_CACHES ) ) ) );
+            ( isVisible( viewportMask ) && dirty_ );
     }
 
     /// whether the object can be picked (by mouse) in any of given viewports
@@ -255,11 +246,6 @@ public:
     float getAmbientStrength() const { return ambientStrength_; }
     /// sets intensity of non-directional light
     virtual void setAmbientStrength( float ambientStrength ) { ambientStrength_ = ambientStrength; needRedraw_ = true; }
-
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    const std::vector<PositionedText>& getLabels() const { return labels_; }
-    [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
     /// clones this object only, without its children,
     /// making new object the owner of all copied resources
@@ -292,6 +278,11 @@ public:
     MRMESH_API void setUseDefaultScenePropertiesOnDeserialization( bool useDefaultScenePropertiesOnDeserialization )
     { useDefaultScenePropertiesOnDeserialization_ = useDefaultScenePropertiesOnDeserialization; }
 
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API virtual void resetFrontColor();
+    /// reset all object colors to their default values from the current theme
+    MRMESH_API virtual void resetColors();
+
 protected:
     VisualObject( const VisualObject& obj ) = default;
 
@@ -302,20 +293,19 @@ protected:
     /// and assign renderObj_ inside
     virtual void setupRenderObject_() const {}
 
+    /// todo: make virtual and public when all children support separate fast dirty and cache invalidation
+    MRMESH_API void setDirtyFlagsFast_( uint32_t mask );
+    MRMESH_API void invalidateMetricsCache_( uint32_t mask );
+
     mutable UniquePtr<IRenderObject> renderObj_;
 
     /// Visualization options
     /// Each option is a binary mask specifying on which viewport each option is set.
     /// When using a single viewport, standard boolean can still be used for simplicity.
     ViewportMask clipByPlane_;
-    ViewportMask showLabels_;
     ViewportMask showName_;
-    ViewportMask cropLabels_ = ViewportMask::all();
     ViewportMask pickable_ = ViewportMask::all(); ///< enable picking by gl
-    ViewportMask invertNormals_; ///< invert mesh normals
     ViewportMask depthTest_ = ViewportMask::all();
-
-    ViewportProperty<Color> labelsColor_ = {};
 
     float shininess_{35.0f}; ///< specular exponent
     float specularStrength_{ 0.5f }; // reflection intensity
@@ -327,8 +317,6 @@ protected:
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;
     ViewportProperty<uint8_t> globalAlpha_{ 255 };
-
-    std::vector<PositionedText> labels_;
 
     bool useDefaultScenePropertiesOnDeserialization_{ false };
 
@@ -364,7 +352,7 @@ protected:
 private:
     mutable Dirty dirty_; // private dirty, to force all using setDirtyFlags, instead of direct change
 
-    mutable Box3f boundingBoxCache_;
+    mutable std::optional<Box3f> boundingBoxCache_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

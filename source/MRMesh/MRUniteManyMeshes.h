@@ -42,8 +42,9 @@ struct UniteManyMeshesParams
     /// If set - merges meshes instead of booleaning it if boolean operation fails
     bool mergeOnFail{ false };
 
-    /// If this option is enabled boolean will try to cut meshes even if there are self-intersections in intersecting area
-    /// it might work in some cases, but in general it might prevent fast error report and lead to other errors along the way
+    /// If this option is enabled boolean will cut meshes even if there are self-intersections in intersecting area
+    /// also applying \ref MR::MeshBuilder::uniteCloseVertices and \ref MR::fillHoles afterwards
+    /// \warning if enabled - closed meshes expected on input
     /// \warning not recommended in most cases
     bool forceCut = false;
 

@@ -5,30 +5,28 @@
 #include "MRIntersectionContour.h"
 #include "MRContoursCut.h"
 #include "MRTimer.h"
-#include "MRTorus.h"
-#include "MRMatrix3.h"
 #include "MRAffineXf3.h"
 #include "MRLog.h"
-#include "MRGTest.h"
-#include "MRPch/MRTBB.h"
 #include "MRFillContour.h"
 #include "MRPrecisePredicates3.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshComponents.h"
 #include "MRMeshCollide.h"
-#include "MRCube.h"
 #include "MRMeshBuilder.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRBox.h"
 #include "MRContoursStitch.h"
 #include "MREdgePaths.h"
 #include "MRRingIterator.h"
-#include "MRParallelFor.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRMeshFillHole.h"
+
+namespace MR
+{
 
 namespace
 {
-
-using namespace MR;
 
 enum class EdgeTriComponent
 {
@@ -78,10 +76,16 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
-}
+} //anonymous namespace
 
-namespace MR
+void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv )
 {
+    MR_TIMER;
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v] = conv.toFloat( conv.toInt( mesh.points[v] ) );
+    } );
+}
 
 BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams );
 
@@ -91,34 +95,25 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     return boolean( meshA, meshB, operation, { .rigidB2A = rigidB2A, .mapper = mapper, .cb = cb } );
 }
 
-BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
-{
-    return boolean( meshA, meshB, operation, { .rigidB2A = rigidB2A, .mapper = mapper, .cb = cb } );
-}
-
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
-    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
-    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
+    MR_TIMER;
+    Mesh maCpy, mbCpy;
     tbb::task_group taskGroup;
-    if ( needCutMeshA )
+    taskGroup.run( [&] ()
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        taskGroup.run( [&] ()
-        {
-            meshA.getAABBTree();
-        } );
-    }
-    if ( needCutMeshB )
-    {
-        // build tree for input mesh for the cloned mesh to copy the tree,
-        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        meshB.getAABBTree();
-    }
+        meshA.getAABBTree();
+        maCpy = meshA;
+    } );
+    // build tree for input mesh for the cloned mesh to copy the tree,
+    // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+    meshB.getAABBTree();
+    mbCpy = meshB;
     taskGroup.wait();
-    return booleanImpl( Mesh( meshA ), Mesh( meshB ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
+
+    return booleanImpl( std::move( maCpy ), std::move( mbCpy ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
@@ -244,6 +239,18 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
 }
 }
 
+BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& inParams /*= {} */ )
+{
+    auto params = inParams;
+    params.forceCut = true;
+    auto res = boolean( meshA, meshB, operation, params );
+    MeshBuilder::uniteCloseVertices( res.mesh, { .duplicateNonManifold = true } );
+    FillHoleParams fhp;
+    fhp.metric = getMinAreaMetric( res.mesh );
+    fillHoles( res.mesh, res.mesh.topology.findHoleRepresentiveEdges(), fhp );
+    return res;
+}
+
 Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
@@ -332,10 +339,12 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         intContours[f].closed = true;
     } );
 
-    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
+    // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
+    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt, nullptr, 0, false } );
     auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get() } );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );
+    convertIntFloatAllVerts( mesh, converters );
 
     for ( auto [f, s, r] : holePairs )
     {
@@ -381,7 +390,9 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
     auto converters = getVectorConverters( meshA, meshB, rigidB2A );
     auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
     auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
-    return extractIntersectionContours( meshA, meshB, contours, converters, rigidB2A );
+    Contours3f res;
+    getOneMeshIntersectionContours( meshA, meshB, contours, nullptr, nullptr, converters, rigidB2A, &res );
+    return res;
 }
 
 BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams )
@@ -544,6 +555,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         params.outPreCutA->contours = std::move( meshAContours );
         params.outPreCutA->mesh = std::move( meshA );
     }
+
+    bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
+    bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
     if ( needCutMeshA && !params.outPreCutA )
     {
         taskGroup.run( [&] ()
@@ -556,6 +570,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             cmParams.new2OldMap = cut2oldAPtr;
             if ( params.forceCut )
                 cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
+            else
+                cmParams.fillPart = needInsideA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right;
             auto res = cutMesh( meshA, meshAContours, cmParams );
             meshAContours.clear();
             meshAContours.shrink_to_fit(); // free memory
@@ -591,6 +607,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cmParams.new2OldMap = cut2oldBPtr;
         if ( params.forceCut )
             cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
+        else
+            cmParams.fillPart = needInsideB ? CutMeshParameters::FillPart::Right : CutMeshParameters::FillPart::Left;
         auto res = cutMesh( meshB, meshBContours, cmParams );
         meshBContours.clear();
         meshBContours.shrink_to_fit(); // free memory
@@ -633,14 +651,19 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         return {};
 
     intParams.optionalOutCut = params.outCutEdges;
+    intParams.graphCutSeparation = params.forceCut;
     // do operation
-    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), std::move( cutA ), std::move( cutB ), 
+        operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 
     if ( mainCb && !mainCb( 1.0f ) )
         return { .errorString = stringOperationCanceled() };
 
     if ( res.has_value() )
+    {
         result.mesh = std::move( res.value() );
+        convertIntFloatAllVerts( result.mesh, converters );
+    }
     else
         result.errorString = res.error();
     return result;
@@ -782,86 +805,6 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
     }
 
     return result;
-}
-
-TEST( MRMesh, MeshBoolean )
-{
-    Mesh meshA = makeTorus( 1.1f, 0.5f, 8, 8 );
-    Mesh meshB = makeTorus( 1.0f, 0.2f, 8, 8 );
-    meshB.transform( AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), Vector3f::plusY() ) ) );
-
-    const float shiftStep = 0.2f;
-    const float angleStep = PI_F;/* *1.0f / 3.0f*/;
-    const std::array<Vector3f, 3> baseAxis{Vector3f::plusX(),Vector3f::plusY(),Vector3f::plusZ()};
-    for ( int maskTrans = 0; maskTrans < 8; ++maskTrans )
-    {
-        for ( int maskRot = 0; maskRot < 8; ++maskRot )
-        {
-            for ( float shift = 0.01f; shift < 0.2f; shift += shiftStep )
-            {
-                Vector3f shiftVec;
-                for ( int i = 0; i < 3; ++i )
-                    if ( maskTrans & ( 1 << i ) )
-                        shiftVec += shift * baseAxis[i];
-                for ( float angle = PI_F * 0.01f; angle < PI_F * 7.0f / 18.0f; angle += angleStep )
-                {
-                    Matrix3f rotation;
-                    for ( int i = 0; i < 3; ++i )
-                        if ( maskRot & ( 1 << i ) )
-                            rotation = Matrix3f::rotation( baseAxis[i], angle ) * rotation;
-
-                    AffineXf3f xf;
-                    xf = AffineXf3f::translation( shiftVec ) * AffineXf3f::linear( rotation );
-
-                    EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation::Union, &xf ).valid() );
-                    EXPECT_TRUE( boolean( meshB, meshA, BooleanOperation::Intersection, &xf ).valid() );
-                }
-            }
-        }
-    }
-}
-
-
-TEST( MRMesh, BooleanMultipleEdgePropogationSort )
-{
-    Mesh meshA;
-    meshA.points = std::vector<Vector3f>
-    {
-        {0.0f,0.0f,0.0f},
-        {-0.5f,1.0f,0.0f},
-        {0.5f,1.0f,0.0f},
-        {0.0f,1.5f,0.5f},
-        {-1.0f,1.5f,0.0f},
-        {1.0f,1.5f,0.0f}
-    };
-    Triangulation tA =
-    {
-        { 0_v, 2_v, 1_v },
-        { 1_v, 2_v, 3_v },
-        { 3_v, 4_v, 1_v },
-        { 2_v, 5_v, 3_v },
-        { 3_v, 5_v, 4_v }
-    };
-    meshA.topology = MeshBuilder::fromTriangles( tA );
-    {
-        Mesh meshASup = meshA;
-        meshASup.points[3_v] = { 0.0f,1.5f,-0.5f };
-
-
-        auto border = trackRightBoundaryLoop( meshA.topology, meshA.topology.findHoleRepresentiveEdges()[0] );
-
-        meshA.addMeshPart( meshASup, true, { border }, { border } );
-    }
-
-    auto meshB = makeCube( Vector3f::diagonal( 2.0f ) );
-    meshB.transform( AffineXf3f::translation( Vector3f( -1.5f, -0.2f, -0.5f ) ) );
-
-
-    for ( int i = 0; i<int( BooleanOperation::Count ); ++i )
-    {
-        EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation( i ) ).valid() );
-        EXPECT_TRUE( boolean( meshB, meshA, BooleanOperation( i ) ).valid() );
-    }
 }
 
 } //namespace MR

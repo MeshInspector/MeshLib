@@ -11,13 +11,10 @@ on:
       release_tag:
         required: true
         type: string
-    secrets:
-      BUILD_MACHINE_TOKEN:
-        required: true
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 concurrency:
   group: unity-test
@@ -26,15 +23,16 @@ concurrency:
 jobs:
   start-unity-instance:
     name: Start unity instance
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     outputs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     steps:
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
+          retry-max-attempts: 5
       - name: Start Instance
         run: |
           instanceState=$(aws ec2 describe-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} --query 'Reservations[].Instances[].State.Name' --output text)
@@ -47,42 +45,58 @@ jobs:
           aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
 
   unity-nuget-test:
-    timeout-minutes: 10
+    # Job-level timeout is a safety net only; the real cap is on the
+    # "Run test" step below so that a timeout there is reported as a
+    # `failure` rather than `cancelled`.
+    timeout-minutes: 20
     needs: [ start-unity-instance ]
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
+          retry-max-attempts: 5
 
       - name: rm previous data
         shell: powershell
+        # clean `com.github-glitchenzo.nugetforunity` due to: https://github.com/GlitchEnzo/NuGetForUnity/issues/721
         run: |
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\unity_proj\NugetTestProj\ProjectSettings\Packages\com.github-glitchenzo.nugetforunity" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
-          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3643.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib*.nupkg" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
         env:
-          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
       
       - name: Move nuget package to repo folder
-        # We use the constant fake version 1.0.0.3643 to simplify test workflow for Install package step
         shell: powershell
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
-          if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3643.nupkg"
-          } else {
+          if (!$pkg) {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1
           }
+          $matches = $null
+          $foundVersion = $pkg.Name -match '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
+          if (!$foundVersion) {
+            Write-Error "Cannot extract version MeshLib*.nupkg"
+            exit 1
+          }
+          $pkgVersion = $matches[0]
+          Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.$pkgVersion.nupkg"
+          $xmlPath = "C:\work\unity_proj\NugetTestProj\Assets\packages.config"
+          $xml = [xml](Get-Content -Path $xmlPath)
+          $xml.packages.package.version = $pkgVersion
+          $xml.Save($xmlPath)
+
       
       - name: Install nuget package
         shell: powershell
@@ -90,6 +104,11 @@ jobs:
           C:\\Users\\ci_runner\\.dotnet\\tools\\nugetforunity.exe restore "C:\work\unity_proj\NugetTestProj"
 
       - name: Run test
+        # Step-level timeout: when the Unity Editor invocation exceeds this
+        # cap, the step ends with `failure` (not `cancelled`), and subsequent
+        # steps with `if: always()` (verify xml, upload logs) still execute,
+        # giving us actionable diagnostics.
+        timeout-minutes: 10
         shell: powershell
         run: |
           Start-Process -FilePath "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -ArgumentList "-runTests", "-batchmode", "-projectPath", "C:\work\unity_proj\NugetTestProj", "-testPlatform", "playmode", "-testResults", "C:\work\results.xml", "-logfile", "C:\work\batch_log.txt" -Wait
@@ -106,19 +125,21 @@ jobs:
         run: |
           aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/batch_log.txt
           aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
+          cat C:\work\batch_log.txt
 
 
   stop-instance:
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     needs: [ unity-nuget-test ]
     if: always()
     steps:
       - name: Configure AWS Credentials (OIDC)
         if: always()
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
+          retry-max-attempts: 5
       - name: Stop Instance
         if: always()
         run: |

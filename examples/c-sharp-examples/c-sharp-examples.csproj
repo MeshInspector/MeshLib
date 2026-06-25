@@ -23,9 +23,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="MRDotNet">
-      <HintPath>..\..\source\x64\$(Configuration)\MRDotNet.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\source\MRDotNet2\MRDotNet2.csproj" />
   </ItemGroup>
 
 </Project>

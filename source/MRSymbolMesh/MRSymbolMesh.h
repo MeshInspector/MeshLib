@@ -48,9 +48,6 @@ struct SymbolMeshParams
 // converts text string into set of contours
 MRSYMBOLMESH_API Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params );
 
-// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset (along -Z if zOffset is negative) to make a volumetric closed mesh
-MRSYMBOLMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset );
-
 // converts text string into Z-facing symbol mesh
 MRSYMBOLMESH_API Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params );
 

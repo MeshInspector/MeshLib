@@ -31,6 +31,11 @@ struct Box3
     float3 min;
     float3 max;
 
+    __device__ bool valid() const
+    {
+        return min.x <= max.x && min.y <= max.y && min.z <= max.z;
+    }
+
     __device__ float3 getBoxClosestPointTo( const float3& pt ) const
     {
         return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ), clamp( pt.z, min.z, max.z ) };
@@ -44,6 +49,18 @@ struct Box3
         if ( pt.y > max.y ) max.y = pt.y;
         if ( pt.z < min.z ) min.z = pt.z;
         if ( pt.z > max.z ) max.z = pt.z;
+    }
+
+    __device__ Box3 intersection( const Box3& b ) const
+    {
+        Box3 res;
+        res.min.x = fmax( min.x, b.min.x );
+        res.min.y = fmax( min.y, b.min.y );
+        res.min.z = fmax( min.z, b.min.z );
+        res.max.x = fmin( max.x, b.max.x );
+        res.max.y = fmin( max.y, b.max.y );
+        res.max.z = fmin( max.z, b.max.z );
+        return res;
     }
 
     __device__ float3 operator[]( const int i ) const
@@ -108,7 +125,7 @@ struct FaceToThreeVerts
 // GPU analog of CPU PointOnFace struct
 struct PointOnFace
 {
-    int faceId;
+    int faceId = -1;
     float3 point;
 };
 
@@ -124,7 +141,7 @@ struct MeshIntersectionResult
 {
     PointOnFace proj;
     MeshTriPoint tp;
-    float distanceAlongLine = -FLT_MAX;
+    float distanceAlongLine = 0;
 };
 
 struct TriIntersectResult
@@ -204,7 +221,7 @@ __device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const
     }
 
     const float vb = d5 * d2 - d1 * d6;
-    if ( vb <= 0 && d6 <= 0 )
+    if ( vb <= 0 && d6 <= 0 && d2 >= 0 )
     {
         const float v = d2 / ( d2 - d6 );
         return { { 0, v }, a + ac * v };
@@ -213,6 +230,12 @@ __device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const
     const float va = d3 * d6 - d5 * d4;
     if ( va <= 0 )
     {
+        if ( d4 < d3 )
+            return { { 1, 0 }, b };
+
+        if ( d5 < d6 )
+            return { { 0, 1 }, c };
+
         const float v = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
         return { { 1 - v, v }, b + ( c - b ) * v };
     }
@@ -245,7 +268,7 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
 {
     const float Sx = prec.Sx;
     const float Sy = prec.Sy;
-    const float Sz = prec.Sz;    
+    const float Sz = prec.Sz;
 
     const float Ax = oriA[prec.idxX] - Sx * oriA[prec.maxDimIdxZ];
     const float Ay = oriA[prec.idxY] - Sy * oriA[prec.maxDimIdxZ];
@@ -290,7 +313,6 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
 {
     const Box3& box = nodes[0].box;
     MeshIntersectionResult res;
-    res.distanceAlongLine = -FLT_MAX;
 
     float start = rayStart;
     float end = rayEnd;
@@ -312,11 +334,10 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
 
     addSubTask( 0, rayStart );
 
-    int faceId = -1;
     float baryA = 0;
     float baryB = 0;
 
-    while ( !subtasks.empty() && ( closestIntersect || faceId < 0 ) )
+    while ( !subtasks.empty() && ( closestIntersect || res.proj.faceId < 0 ) )
     {
         const auto s = subtasks.top();
         subtasks.pop();
@@ -334,10 +355,27 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
                 const auto tri = rayTriangleIntersect( ( float* ) (&a), ( float* ) (&b), ( float* ) (&c), prec );
                 if ( tri.t < rayEnd && tri.t > rayStart )
                 {
-                    faceId = face;
+                    res.distanceAlongLine = tri.t;
+                    res.proj.faceId = face;
                     baryA = tri.a;
                     baryB = tri.b;
-                    rayEnd = tri.t;
+                    if ( tri.t == 0 )
+                    {
+                        rayStart = rayEnd = 0;
+                        break; // intersection exactly at ray origin
+                    }
+                    if ( tri.t < 0 )
+                    {
+                        assert( rayStart < 0 );
+                        rayStart = tri.t;
+                        rayEnd = min( rayEnd, -tri.t );
+                    }
+                    else
+                    {
+                        assert( rayEnd > 0 );
+                        rayEnd = tri.t;
+                        rayStart = max( rayStart, -tri.t );
+                    }
                 }
             }
             else
@@ -375,18 +413,16 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
             }
         }
     }
-    if ( faceId < 0 )
+    if ( res.proj.faceId < 0 )
         return res;
 
-    res.proj.faceId = faceId;
-    res.proj.point.x = rayOrigin.x + rayEnd * prec.dir.x;
-    res.proj.point.y = rayOrigin.y + rayEnd * prec.dir.y;
-    res.proj.point.z = rayOrigin.z + rayEnd * prec.dir.z;
+    res.proj.point.x = rayOrigin.x + res.distanceAlongLine * prec.dir.x;
+    res.proj.point.y = rayOrigin.y + res.distanceAlongLine * prec.dir.y;
+    res.proj.point.z = rayOrigin.z + res.distanceAlongLine * prec.dir.z;
 
     res.tp.a = baryA;
     res.tp.b = baryB;
 
-    res.distanceAlongLine = rayEnd;
     return res;
 }
 

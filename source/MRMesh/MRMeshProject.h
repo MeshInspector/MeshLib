@@ -47,7 +47,7 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
 
 /**
  * \brief computes the closest point on mesh (or its region) to given point
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning upDistLimitSq and no valid point
  * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param validFaces if provided then only faces from there will be considered as projections
@@ -63,7 +63,7 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
 /**
  * \brief computes the closest point on mesh (or its region) to given point
  * \param tree explicitly given BVH-tree for whole mesh or part of mesh we are searching projection on,
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning upDistLimitSq and no valid point
  * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param validFaces if provided then only faces from there will be considered as projections

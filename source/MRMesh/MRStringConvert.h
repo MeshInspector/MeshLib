@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <string>
 #include "MRExpected.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -12,7 +13,7 @@ namespace MR
 /// \{
 
 /// converts UTF8-encoded string into UTF16-encoded string
-[[nodiscard]] MRMESH_API std::wstring utf8ToWide( const char* utf8 );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::wstring utf8ToWide( const char* utf8 );
 
 /// converts system encoded string to UTF8-encoded string
 [[nodiscard]] MRMESH_API std::string systemToUtf8( const std::string & system );
@@ -22,36 +23,36 @@ namespace MR
 [[nodiscard]] MRMESH_API std::string utf8ToSystem( const std::string & utf8 );
 
 /// converts wide null terminating string to UTF8-encoded string
-[[nodiscard]] MRMESH_API std::string wideToUtf8( const wchar_t * wide );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::string wideToUtf8( const wchar_t * wide );
 
 #ifdef _WIN32
 /// converts UTF16-encoded string to UTF8-encoded string
-[[nodiscard]] MRMESH_API std::string Utf16ToUtf8( const std::wstring_view & utf16 );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::string Utf16ToUtf8( const std::wstring_view & utf16 );
 #endif
 
 #if defined __cpp_lib_char8_t
 
-[[nodiscard]] inline std::string asString( const std::u8string & s ) { return { s.begin(), s.end() }; }
-[[nodiscard]] inline std::u8string asU8String( const std::string & s ) { return { s.begin(), s.end() }; }
+[[nodiscard]] MR_BIND_IGNORE inline std::string asString( const std::u8string & s ) { return { s.begin(), s.end() }; }
+[[nodiscard]] MR_BIND_IGNORE inline std::u8string asU8String( const std::string & s ) { return { s.begin(), s.end() }; }
 
 #if defined( _LIBCPP_VERSION ) && _LIBCPP_VERSION < 12000
-[[nodiscard]] inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( s ); }
-[[nodiscard]] inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( std::string( s ) ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( s ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( std::string( s ) ); }
 #else
-[[nodiscard]] inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( asU8String( s ) ); }
-[[nodiscard]] inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( asU8String( std::string( s ) ) ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( asU8String( s ) ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( asU8String( std::string( s ) ) ); }
 #endif
 
 #else // std::u8string is not defined
 
-[[nodiscard]] inline const std::string & asString( const std::string & s ) { return s; }
-[[nodiscard]] inline const std::string & asU8String( const std::string & s ) { return s; }
+[[nodiscard]] MR_BIND_IGNORE inline const std::string & asString( const std::string & s ) { return s; }
+[[nodiscard]] MR_BIND_IGNORE inline const std::string & asU8String( const std::string & s ) { return s; }
 
-[[nodiscard]] inline std::string asString( std::string && s ) { return std::move( s ); }
-[[nodiscard]] inline std::string asU8String( std::string && s ) { return std::move( s ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::string asString( std::string && s ) { return std::move( s ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::string asU8String( std::string && s ) { return std::move( s ); }
 
-[[nodiscard]] inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::u8path( s ); }
-[[nodiscard]] inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::u8path( s ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::u8path( s ); }
+[[nodiscard]] MR_BIND_IGNORE inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::u8path( s ); }
 
 #endif
 
@@ -64,7 +65,20 @@ namespace MR
     { return asString( path.u8string() ); }
 #endif
 
-/// \}
+/// it is a mistake to call the function with implicit construction of path from string
+std::string utf8string( const std::string & ) = delete;
+
+/// given on input a valid utf8-encoded string, returns its substring starting at \p pos unicode symbol,
+/// and containing at most \p count unicode symbols (but res.size() can be more than \p count since a unicode symbol can be represented by more than 1 byte)
+[[nodiscard]] MRMESH_API std::string utf8substr( const char * s, size_t pos, size_t count );
+
+/// Reads the first code point from the given UTF-8 encoded string and returns the code point and a number of consumed bytes.
+/// If the string starts from an invalid UTF-8 sequence, the replacement character (U+FFFD) is returned.
+/// Note that the function checks neither for the null pointer nor for the null character; it is user responsibility to pass correct values.
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size );
+
+/// Converts the given UTF-8 encoded string to a UTF-32 encoded string.
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::u32string utf8ToUtf32( const std::string& str );
 
 /// converts given size in string:
 /// [0,1024) -> nnn bytes
@@ -73,10 +87,15 @@ namespace MR
 /// ...
 [[nodiscard]] MRMESH_API std::string bytesString( size_t size );
 
-/// returns true if line contains any of OS prohibited chars ('?', '*', '/', '\', '"', '<', '>')
+/// returns true if the given character is any of prohibited in filenames in any of OSes
+/// https://stackoverflow.com/q/1976007/7325599
+[[nodiscard]] inline bool isProhibitedChar( char c )
+    { return c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' || c == ':' || c == '|' || (unsigned)c < 32; }
+
+/// returns true if line contains at least one character (c) for which isProhibitedChar(c)==true
 [[nodiscard]] MRMESH_API bool hasProhibitedChars( const std::string& line );
 
-/// replace OS prohibited chars ('?', '*', '/', '\', '"', '<', '>') with `replacement` char
+/// replace all characters (c), where isProhibitedChar(c)==true, with `replacement` char
 [[nodiscard]] MRMESH_API std::string replaceProhibitedChars( const std::string& line, char replacement = '_' );
 
 /// if (v) contains an error, then appends given file name to that error
@@ -101,7 +120,7 @@ template<typename T>
 /// \param digitsAfterPoint  maximal number of digits after decimal point
 /// \param precision         maximal number of not-zero decimal digits
 [[deprecated("Use `valueToString()` from `MRViewer/MRUnits.h` instead!")]]
-MRMESH_API char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision = 6 );
+MRMESH_API MR_BIND_IGNORE char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision = 6 );
 
 /// returns given value rounded to given number of decimal digits
 [[nodiscard]] MRMESH_API double roundToPrecision( double v, int precision );
@@ -115,7 +134,9 @@ MRMESH_API char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPo
     return "Loading canceled: " + utf8string( path );
 }
 
-/// return a copy of the string with all alphabetic characters replaced with upper-case variants
+/// return a copy of the string with all alphabetic ASCII characters replaced with upper-case variants
 [[nodiscard]] MRMESH_API std::string toLower( std::string str );
+
+/// \}
 
 } //namespace MR

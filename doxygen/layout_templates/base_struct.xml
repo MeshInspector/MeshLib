@@ -8,15 +8,19 @@
       <tab type="user" url="__BEGIN_URL__MeshLibPythonSetupGuide__END_URL__" title="Python"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCppSetupGuide__END_URL__" title="C++"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCSharpSetupGuide__END_URL__" title="C#"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibCSetupGuide__END_URL__" title="C"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCmakeSetupGuide__END_URL__" title="CMake"/>
     </tab>
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
     <tab type="usergroup" url="__BEGIN_URL__Tutorials__END_URL__" title="Tutorials">
       <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
+      <tab type="user" url="__BEGIN_URL__SupportGeneratorTutorial__END_URL__" title="Support Generator Tool using C++"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__" title="Examples">
-      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#GeneralExamples" title="General Samples">
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#CppApplication" title="C++ Application Based on MeshLib">
         <tab type="user" url="__BEGIN_URL__BasedApplication__END_URL__" title="Application Based on MeshLib"/>
+      </tab>
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#GeneralExamples" title="General Samples">
         <tab type="user" url="__BEGIN_URL__ExampleMeshLoadSave__END_URL__" title="Mesh Load and Save"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshExport__END_URL__" title="Export Raw Triangles"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshModification__END_URL__" title="Mesh Modification"/>
@@ -43,8 +47,14 @@
         <tab type="user" url="__BEGIN_URL__ExampleFusion__END_URL__" title="Fusion"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFromText__END_URL__" title="Text to Mesh"/>
       </tab>
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#Collisions" title="Collisions">
+        <tab type="user" url="__BEGIN_URL__ExampleDetectCollisions__END_URL__" title="Detect Collisions"/>
+        <tab type="user" url="__BEGIN_URL__ExampleDetectCollisionsPrecise__END_URL__" title="Detect Collisions Precise"/>
+        <tab type="user" url="__BEGIN_URL__ExampleDetectSelfIntersections__END_URL__" title="Detect Self-Intersections"/>
+      </tab>
       <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#PythonSpecificExamples" title="Python Specific Samples">
         <tab type="user" url="__BEGIN_URL__ExampleViewer__END_URL__" title="Viewer"/>
+        <tab type="user" url="__BEGIN_URL__ExampleViewerVolumeRender__END_URL__" title="Volume Rendering"/>
         <tab type="user" url="__BEGIN_URL__ExamplePlotly__END_URL__" title="Plotly Visualization"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpy__END_URL__" title="Using Numpy"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpyTriangulation__END_URL__" title="Numpy Triangulation"/>
@@ -62,12 +72,15 @@
       <tab type="user" url="__BEGIN_URL__ExamplePluginOverview__END_URL__" title="How to use С++ Example Plugin"/>
       <tab type="user" url="__BEGIN_URL__StatePluginsHelp__END_URL__" title="State Plugins Overview"/>
       <tab type="user" url="__BEGIN_URL__HowtoAddPluginOverview__END_URL__" title="How to Add Plugin"/>
+      <tab type="user" url="__BEGIN_URL__I18nGuide__END_URL__" title="Internationalization Guide"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__APIPage__END_URL__" title="API">
       <!-- API_CPP_PAGE -->
       <!-- API_PY_PAGE -->
+      <!-- API_C_PAGE -->
+      <!-- API_CSHARP_PAGE -->
     </tab>
-    <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Thirdparty List"/>
+    <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>
 
   <!-- Layout definition for a class page -->

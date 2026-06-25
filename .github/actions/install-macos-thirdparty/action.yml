@@ -1,0 +1,154 @@
+name: Install macOS thirdparty libs
+description: >
+  Resolve the Homebrew prefix and compiler paths, cache the thirdparty
+  build outputs (./lib and ./include), install brew requirements, and
+  build the thirdparty libs on a cache miss. Shared between
+  build-test-macos.yml and pip-build.yml so both reuse the same cache.
+
+inputs:
+  cache-instance:
+    required: true
+    description: >
+      Runner-image identifier baked into the cache key (e.g. `macos-15-intel`,
+      `macos-14`, `self-hosted-arm`). Must match across workflows for the cache
+      to be shared.
+  cache-compiler:
+    required: true
+    description: >
+      Compiler identifier baked into the cache key (e.g. `AppleClang`,
+      `brew-llvm22`). Different compilers produce incompatible thirdparty
+      .dylibs, so this discriminates their caches.
+  cxx-compiler-template:
+    required: false
+    default: /usr/bin/clang++
+    description: >
+      C++ compiler path template; literal `BREW_PREFIX` is replaced with
+      the resolved homebrew prefix.
+  c-compiler-template:
+    required: false
+    default: /usr/bin/clang
+    description: >
+      C compiler path template; literal `BREW_PREFIX` is replaced with
+      the resolved homebrew prefix.
+  cache-prefix:
+    required: false
+    default: v1-thirdparty
+    description: >
+      Cache key prefix. Bump to manually invalidate the cache.
+
+outputs:
+  brew-prefix:
+    description: Output of `brew --prefix`.
+    value: ${{ steps.setup.outputs.brew-prefix }}
+  cxx-compiler:
+    description: Resolved C++ compiler path (with BREW_PREFIX substituted).
+    value: ${{ steps.setup.outputs.cxx-compiler }}
+  c-compiler:
+    description: Resolved C compiler path (with BREW_PREFIX substituted).
+    value: ${{ steps.setup.outputs.c-compiler }}
+  brew-hash:
+    description: >
+      16-char hash of the brew prefix. Use as part of the build-mrbind
+      cache key to discriminate self-hosted ARM fleet members that share
+      the same label set but have homebrew at different paths.
+    value: ${{ steps.cache-keys.outputs.brew-hash }}
+  thirdparty-hash:
+    description: 16-char hash of all inputs influencing the thirdparty build.
+    value: ${{ steps.cache-keys.outputs.thirdparty-hash }}
+  cache-hit:
+    description: >
+      `'true'` if the thirdparty cache was restored, `'false'` if the libs
+      were rebuilt from source.
+    value: ${{ steps.thirdparty-cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Homebrew prefix and resolve compiler paths
+      id: setup
+      shell: bash
+      run: |
+        BREW_PREFIX=$(brew --prefix)
+        echo "Brew prefix: $BREW_PREFIX"
+        echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
+        echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
+
+        # Substitute BREW_PREFIX in templates and set actual compiler paths
+        CXX_COMPILER=$(echo "${{ inputs.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
+        C_COMPILER=$(echo "${{ inputs.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
+
+        echo "CXX compiler: $CXX_COMPILER"
+        echo "C compiler: $C_COMPILER"
+
+        echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
+        echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
+
+    # Cache key inputs:
+    # - brew-hash: hash of the homebrew prefix, used by Build MRBind in the
+    #   caller to discriminate self-hosted ARM fleet members that share the
+    #   `[self-hosted, macos, arm64, build]` label set but have homebrew at
+    #   different paths (e.g. `/Users/runner/.homebrew` vs `/opt/homebrew`);
+    #   the prefix is baked into mrbind's rpath.
+    # - thirdparty-hash: unified hash of everything that influences the
+    #   thirdparty ./lib + ./include outputs -- brew prefix (baked into the
+    #   rpaths of the produced .dylibs), submodule SHAs pinned in HEAD (the
+    #   source we compile), and the build-relevant scripts + CMakeLists +
+    #   brew-requirements list. `git ls-tree` reads gitlink entries from the
+    #   index, so it works whether or not the submodules are checked out.
+    - name: Compute cache key inputs
+      id: cache-keys
+      shell: bash
+      env:
+        BREW_PREFIX: ${{ steps.setup.outputs.brew-prefix }}
+      run: |
+        echo "brew-hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+        echo "thirdparty-hash=$( {
+          printf '%s\n' "$BREW_PREFIX"
+          git ls-tree HEAD \
+            thirdparty/googletest \
+            thirdparty/OpenCTM-git \
+            thirdparty/parallel-hashmap \
+            thirdparty/libE57Format \
+            thirdparty/glad \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/tinygltf \
+            thirdparty/laz-perf \
+            thirdparty/clip \
+            thirdparty/fastmcpp
+          shasum -a 256 \
+            scripts/build_thirdparty.sh \
+            scripts/install_brew_requirements.sh \
+            scripts/thirdparty/clip.sh \
+            scripts/thirdparty/fastmcpp.sh \
+            thirdparty/CMakeLists.txt \
+            requirements/macos.txt
+        } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+    # Cache only the final outputs (./lib + ./include). Intermediates like
+    # ./thirdparty_build (which holds *.o, CMake metadata, etc.) are NOT
+    # cached -- they get rebuilt on a miss and discarded on a hit.
+    # Bump the `cache-prefix` input to manually invalidate.
+    - name: Cache thirdparty build outputs
+      id: thirdparty-cache
+      uses: actions/cache@v5
+      with:
+        path: |
+          lib
+          include
+        key: ${{ inputs.cache-prefix }}-${{ inputs.cache-instance }}-${{ inputs.cache-compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
+
+    # Always run: cached thirdparty .dylibs link against brew libs at runtime,
+    # so brew packages must be installed on hosted runners even on cache hit.
+    - name: Install brew requirements
+      shell: bash
+      run: |
+        ./scripts/install_brew_requirements.sh
+        ./scripts/strip_brew_dylibs.sh
+
+    - name: Build thirdparty libs
+      if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      env:
+        CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
+        CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
+      run: ./scripts/build_thirdparty.sh

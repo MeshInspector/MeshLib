@@ -22,40 +22,60 @@ on:
       upload_test_artifacts:
         required: true
         type: boolean
+      mrbind:
+        default: true
+        required: false
+        type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
+      nuget_build_patch:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   linux-vcpkg-build-test:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    runs-on: ${{ matrix.os }}
     container:
-      image: meshlib/meshlib-vcpkg:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
       options: --user root
     strategy:
       fail-fast: false
       matrix:
         config: [Debug, Release]
-        compiler: [Clang 18, GCC 11]
+        arch: [x64, arm64]
+        compiler: [Clang 21, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
-          # Do not run Debug Clang 18 build on every commit (but only once a day)
+          # Do not run Debug Clang 21 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 18
+            compiler: Clang 21
             config: Debug
           # Do not run Release GCC 11 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 11
             config: Release
         include:
-          - compiler: Clang 18
-            cxx-compiler: /usr/bin/clang++-18
-            c-compiler: /usr/bin/clang-18
+          - compiler: Clang 21
+            cxx-compiler: /usr/bin/clang++-21
+            c-compiler: /usr/bin/clang-21
+            cxx-standard: 23
           - compiler: GCC 11
-            cxx-compiler: /usr/bin/g++
-            c-compiler: /usr/bin/gcc
+            cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
+            cxx-standard: 20
+          - arch: x64
+            os: ubuntu-latest
+          - arch: arm64
+            os: ubuntu-24.04-arm
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     env:
       # Disables AWS Instance Metadata Service (IMDS), that not in use.
@@ -64,18 +84,31 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
+      - name: Enable GCC 11 toolset
+        run: |
+          source /opt/rh/gcc-toolset-11/enable
+          for VAR in PATH ; do
+            echo "${VAR}=${!VAR}" >> $GITHUB_ENV
+            echo "${VAR}=${!VAR}"
+          done
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      - name: Get AWS instance type
+        uses: ./.github/actions/get-aws-instance-type
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
           target_os: linux-vcpkg
-          target_arch: x64
+          target_arch: ${{ matrix.arch }}
           cxx_compiler: ${{ matrix.cxx-compiler }}
           build_config: ${{ matrix.config }}
+          aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
       - name: Checkout third-party submodules
         run: |
@@ -83,7 +116,55 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --depth 1 thirdparty/imgui
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- git submodule update --init --depth 1 \
+            thirdparty/imgui \
+            thirdparty/mrbind-pybind11 \
+            thirdparty/mrbind
+          # mrbind needs deps/cppdecl; recurse only there
+          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+
+      - name: Install MRBind
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        uses: ./.github/actions/build-mrbind
+        with:
+          # Prefix is shared with pip-build.yml's rocky section, which uses the same
+          # image and script. The Dockerfile hash in extra-cache-key busts the cache
+          # whenever the toolchain inside the image changes (e.g. clang upgrade).
+          cache-key-prefix: rockylinux8-vcpkg-${{ matrix.arch }}
+          build-script: scripts/mrbind/install_mrbind_rockylinux.sh
+          extra-cache-key: ${{ hashFiles('docker/rockylinux8-vcpkgDockerfile') }}
+
+      - name: Create virtualenv
+        run: |
+          python3.12 -m venv .venv
+          . .venv/bin/activate
+          python3 -m ensurepip --upgrade
+          python3 -m pip install --upgrade pip
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python/requirements.txt
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
+      - name: Download C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c }}
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -94,39 +175,91 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_CXX_STANDARD=23
+            -DMR_PLATFORM=Linux_vcpkg
+            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DMESHLIB_PYTHON_SUPPORT=OFF
+            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMRVIEWER_NO_GTK=ON
+            -DMRVIEWER_WITH_BUNDLED_CURL=ON
+
+      - name: MRMesh Exported Symbols
+        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
+
+      - name: Generate and build Python bindings
+        if: ${{ inputs.mrbind }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: Timing_Logs_linux-vcpkg_${{matrix.config}}_${{matrix.compiler}}
+          name: Timing_Logs_linux-vcpkg-${{ matrix.arch }}_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+
+      - name: Verify meshlib.mrmeshpy import
+        if: ${{ inputs.mrbind }}
+        timeout-minutes: 3
+        uses: ./.github/actions/verify-meshlib-python-import
+        with:
+          build-bin-dir: ./build/${{ matrix.config }}/bin
 
       - name: Unit Tests
+        env:
+          GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+        timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTest
 
+      - name: C Unit Tests
+        if: ${{ inputs.mrbind_c }}
+        timeout-minutes: 10
+        run: ./build/${{ matrix.config }}/bin/MRTestC2
+
+      - name: Python Sanity Tests
+        if: ${{ inputs.mrbind }}
+        timeout-minutes: 8
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+
+      - name: Python Regression Tests
+        if: ${{ inputs.internal_build && inputs.mrbind }}
+        uses: ./.github/actions/python-regression-tests
+        with:
+          build_config: ${{ matrix.config }}
+          pytest_args: "--run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
+          smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
+          test_artifacts_path: linux-vcpkg-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}
+          upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
+
+      - name: Generate Test Performance Report
+        continue-on-error: true
+        run: |
+          scripts/junit_to_csv.py unit_tests_report.csv unit_tests_report_*.xml
+          cat unit_tests_report.csv
+
       - name: Create Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
-        run: ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        run: |
+          ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
+          mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
       - name: Extract Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
         run: |
           mkdir meshlib_install
-          tar -xf meshlib_linux-vcpkg-x64.tar.xz -C meshlib_install
+          tar -xf meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz -C meshlib_install
 
       - name: Build C++ examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -138,7 +271,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21'}}
         run: |
           cmake \
             -S examples/c-examples \
@@ -150,9 +283,35 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload vcpkg Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
-        uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        uses: actions/upload-artifact@v7
         with:
-          name: Distributives_linux-vcpkg-x64
-          path: meshlib_linux-vcpkg-x64.tar.xz
+          name: Distributives_linux-vcpkg-${{ matrix.arch }}
+          path: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          retention-days: 1
+
+      - name: Collect artifact stats
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-artifact-stats
+        with:
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+      - name: Create and fix fake Wheel for NuGet
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          python3 -m venv ./wheel_venv
+          source ./wheel_venv/bin/activate
+          python3 -m pip install auditwheel patchelf
+          python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.so
+
+      - name: Upload NuGet files to Artifacts
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DotNetPatchArchiveLinux-${{ matrix.arch }}
+          path: ./patched_content/*
           retention-days: 1

@@ -38,7 +38,10 @@
     <ClCompile Include="MRRebuildMesh.cpp" />
     <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRScanHelpers.cpp" />
+    <ClCompile Include="MRSequentialNester.cpp" />
+    <ClCompile Include="MRSweptVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRTetrisNesting.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
@@ -52,7 +55,7 @@
     <ClCompile Include="MRVoxelsApplyTransform.cpp" />
     <ClCompile Include="MRVoxelFilter.cpp" />
     <ClCompile Include="MRWeightedPointsShell.cpp" />
-    <ClCompile Include="MRMinimalSurface.cpp" />
+    <ClCompile Include="MRFillingSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBoolean.h" />
@@ -70,7 +73,6 @@
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
     <ClInclude Include="MRObjectVoxels.h" />
     <ClInclude Include="MROffset.h" />
-    <ClInclude Include="MROpenVDB.h" />
     <ClInclude Include="MROpenVDBHelper.h" />
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPointsToDistanceVolume.h" />
@@ -79,7 +81,10 @@
     <ClInclude Include="MRRebuildMesh.h" />
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRScanHelpers.h" />
+    <ClInclude Include="MRSequentialNester.h" />
+    <ClInclude Include="MRSweptVolume.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
+    <ClInclude Include="MRTetrisNesting.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
@@ -98,7 +103,7 @@
     <ClInclude Include="MRVoxelsVolumeCachingAccessor.h" />
     <ClInclude Include="MRVoxelFilter.h" />
     <ClInclude Include="MRWeightedPointsShell.h" />
-    <ClInclude Include="MRMinimalSurface.h" />
+    <ClInclude Include="MRFillingSurface.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -135,17 +140,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MRVoxels_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -156,19 +158,16 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MRVoxels_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

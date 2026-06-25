@@ -77,14 +77,14 @@ std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, cons
     }, point );
 }
 
-std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point )
+std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point, bool interpolated )
 {
     return std::visit( overloaded{
         []( const std::monostate& ) -> std::optional<Vector3f>
         {
             return {};
         },
-        [&object]( const MeshTriPoint& triPoint ) -> std::optional<Vector3f>
+        [&object,interpolated] ( const MeshTriPoint& triPoint ) -> std::optional<Vector3f>
         {
             if ( auto objMesh = dynamic_cast< const ObjectMeshHolder* >( &object ) )
             {
@@ -94,7 +94,7 @@ std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const 
                     if ( topology.hasEdge( triPoint.e ) )
                     {
                         if ( triPoint.bary.b == 0 || topology.left( triPoint.e ) )
-                            return mesh->normal( triPoint );
+                            return interpolated ? mesh->normal( triPoint ) : mesh->pseudonormal( triPoint );
                     }
                 }
             }

@@ -7,7 +7,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -292,24 +291,6 @@ Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
     if ( cb && !cb( 1.0f ) )
         return unexpectedOperationCanceled();
     return res;
-}
-
-TEST(MRMesh, makeRegularGridMesh)
-{
-     auto m = makeRegularGridMesh( 2, 2,
-         []( size_t, size_t ) { return true; },
-         []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } ).value();
-     ASSERT_TRUE( m.topology.checkValidity() );
-
-     m = makeRegularGridMesh( 2, 3,
-         []( size_t, size_t ) { return true; },
-         []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } ).value();
-     ASSERT_TRUE( m.topology.checkValidity() );
-
-     m = makeRegularGridMesh( 5, 3,
-         []( size_t, size_t ) { return true; },
-         []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } ).value();
-     ASSERT_TRUE( m.topology.checkValidity() );
 }
 
 }

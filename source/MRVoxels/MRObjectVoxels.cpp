@@ -54,8 +54,10 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
     volumeRenderActiveVoxels_.clear();
 
     updateHistogram_( vdbVolume_.min, vdbVolume_.max );
+    uint32_t dirtyMask = DIRTY_VOLUME;
     if ( volumeRendering_ )
-        setDirtyFlags( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
+        dirtyMask |= DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION;
+    setDirtyFlags( dirtyMask );
 }
 
 void ObjectVoxels::construct( const SimpleVolumeMinMax& simpleVolumeMinMax, ProgressCallback cb, bool normalPlusGrad )
@@ -86,8 +88,10 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     volumeRenderActiveVoxels_.clear();
 
     updateHistogram_( vdbVolume_.min, vdbVolume_.max );
+    uint32_t dirtyMask = DIRTY_VOLUME;
     if ( volumeRendering_ )
-        setDirtyFlags( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
+        dirtyMask |= DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION;
+    setDirtyFlags( dirtyMask );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume )
@@ -380,11 +384,14 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
             recMesh = *recRes;
         updateIsoSurface( recMesh );
     }
+    uint32_t dirtyMask = DIRTY_VOLUME;
     if ( volumeRendering_ )
     {
         prepareDataForVolumeRendering( subprogress( cb, lastProgress, 1.0f ) );
-        setDirtyFlags( DIRTY_PRIMITIVES );
+        dirtyMask |= DIRTY_PRIMITIVES;
     }
+    setDirtyFlags( dirtyMask );
+
 }
 
 void ObjectVoxels::invalidateActiveBoundsCaches()
@@ -503,8 +510,7 @@ std::shared_ptr<Object> ObjectVoxels::clone() const
     auto res = std::make_shared<ObjectVoxels>( ProtectedStruct{}, *this );
     if ( data_.mesh )
         res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
-    if ( vdbVolume_.data )
-        res->vdbVolume_.data = MakeFloatGrid( vdbVolume_.data->deepCopy() );
+    res->vdbVolume_.data = FloatGrid::deepCopy( vdbVolume_.data );
     return res;
 }
 
@@ -520,6 +526,12 @@ std::shared_ptr<Object> ObjectVoxels::shallowClone() const
 
 void ObjectVoxels::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
+    if ( mask & DIRTY_VOLUME )
+    {
+        voxelsChangedSignal();
+        mask ^= DIRTY_VOLUME;
+    }
+
     ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
 
     if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
@@ -551,6 +563,12 @@ void ObjectVoxels::setSerializeFormat( const char * newFormat )
     serializeFormat_ = newFormat;
 }
 
+void ObjectVoxels::resetFrontColor()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
+}
+
 void ObjectVoxels::swapBase_( Object& other )
 {
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
@@ -563,7 +581,10 @@ void ObjectVoxels::swapSignals_( Object& other )
 {
     ObjectMeshHolder::swapSignals_( other );
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
+    {
         std::swap( isoSurfaceChangedSignal, otherVoxels->isoSurfaceChangedSignal );
+        std::swap( voxelsChangedSignal, otherVoxels->voxelsChangedSignal );
+    }
     else
         assert( false );
 }
@@ -614,7 +635,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
 
     root["IsoValue"] = isoValue_;
     root["DualMarchingCubes"] = dualMarchingCubes_;
-    root["Type"].append( ObjectVoxels::TypeName() );
+    root["Type"].append( ObjectVoxels::StaticTypeName() );
 }
 
 Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const

@@ -24,23 +24,26 @@ namespace MR
 
 /**
  * \brief Fills region located to the left from given contour, by minimizing the sum of metric over the boundary
+ * If the computations are terminated by \p progress, then returns the best approximation found by the moment of termination
  * \ingroup MeshSegmentationGroup
  */
 MRMESH_API FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour,
-    const EdgeMetric & metric );
+    const EdgeMetric & metric, const ProgressCallback& progress = {} );
 
 /**
  * \brief Fills region located to the left from given contours, by minimizing the sum of metric over the boundary
+ * If the computations are terminated by \p progress, then returns the best approximation found by the moment of termination
  * \ingroup MeshSegmentationGroup
  */
 MRMESH_API FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours,
-    const EdgeMetric & metric );
+    const EdgeMetric & metric, const ProgressCallback& progress = {} );
 
 /**
  * \brief Finds segment that divide mesh on source and sink (source included, sink excluded), by minimizing the sum of metric over the boundary
+ * If the computations are terminated by \p progress, then returns the best approximation found by the moment of termination
  * \ingroup MeshSegmentationGroup
  */
-MRMESH_API FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, 
-    const FaceBitSet& sink, const EdgeMetric& metric );
+MRMESH_API FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source,
+    const FaceBitSet& sink, const EdgeMetric& metric, const ProgressCallback& progress = {} );
 
 } //namespace MR

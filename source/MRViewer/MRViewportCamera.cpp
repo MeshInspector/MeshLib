@@ -17,6 +17,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewportGlobalBasis.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -93,7 +94,7 @@ void Viewport::setupProjMatrix_()
     }
 }
 
-void Viewport::setupAxesProjMatrix_()
+void Viewport::setupAxesViewProjMatrix_()
 {
     float h = 1.0f;// ( cameraEye - cameraCenter ).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
@@ -103,6 +104,8 @@ void Viewport::setupAxesProjMatrix_()
     axesProjMat_( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
     axesProjMat_( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
     axesProjMat_( 3, 0 ) = 0.f; axesProjMat_( 3, 1 ) = 0.f; axesProjMat_( 3, 2 ) = 0.f; axesProjMat_( 3, 3 ) = 1.f;
+    
+    axesViewMat_ = cXf * AffineXf3f::linear( params_.cameraTrackballAngle );
 }
 
 // ================================================================
@@ -138,7 +141,7 @@ void Viewport::setRotation( bool state )
         if ( !boxUpdated )
             updateSceneBox_(); // need update here anyway, but under flag, not to update twice
         auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
-        setRotationPivot_( sceneCenter );
+        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     }
 
     auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
@@ -205,16 +208,6 @@ float Viewport::getPixelSizeAtPoint( const Vector3f& worldPoint ) const
     return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y ) * 2.0f;
 }
 
-
-Vector3f Viewport::getRotationPivot() const
-{
-    return rotationPivot_;
-}
-
-void Viewport::setRotationPivot_( const Vector3f& point )
-{
-    rotationPivot_ = point;
-}
 
 // ================================================================
 // projection part
@@ -404,28 +397,39 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
 {
     std::vector<std::shared_ptr<VisualObject>> allObj;
     if ( fitParams.mode == FitMode::CustomObjectsList )
+    {
         allObj = fitParams.objsList;
+    }
     else
     {
-        const auto type = fitParams.mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
+        ObjectSelectivityType type = ObjectSelectivityType::Any;
+        if ( fitParams.mode == FitMode::SelectedObjects )
+        {
+            type = ObjectSelectivityType::Selected;
+        }
+        else if ( fitParams.mode == FitMode::SelectableObjects )
+        {
+            type = ObjectSelectivityType::Selectable;
+        }
+
         allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
     }
 
-    preciseFitToScreenBorder_( [&] ( bool zoomFov, bool gobalBasis )
+    preciseFitToScreenBorder_( [&] ( bool zoomFov, bool globalBasis )
     {
         Space space = Space::CameraOrthographic;
         if ( !params_.orthographic )
         {
             space = zoomFov ? Space::CameraPerspective : Space::World;
         }
-        if ( !gobalBasis )
+        if ( !globalBasis )
             return calcBox_( allObj, space, fitParams.mode == FitMode::SelectedPrimitives );
         else
-            return calcBox_( { getViewerInstance().globalBasisAxes }, space, fitParams.mode == FitMode::SelectedPrimitives );
+            return calcBox_( getViewerInstance().globalBasis->axesChildren(), space, fitParams.mode == FitMode::SelectedPrimitives );
     }, fitParams );
 }
 
-void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool gobalBasis )> getBoxFn, const BaseFitParams& fitParams )
+void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& fitParams )
 {
     if ( fitParams.snapView )
         params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );
@@ -435,14 +439,14 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
 
     Box3f sceneObjsBox = getBoxFn( false, false );
     Box3f unitedBox;
-    if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible( id ) )
+    if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id ) )
         unitedBox = getBoxFn( false, true ); // calculate box of global basis separately, not to interfere with actual scene size
     unitedBox.include( sceneObjsBox );
 
     if ( !unitedBox.valid() )
     {
         params_.cameraZoom = safeZoom;
-        setRotationPivot_( Vector3f() );
+        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : Vector3f() );
         return;
     }
 
@@ -456,7 +460,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     }
     Vector3f sceneCenter = params_.orthographic ?
         getViewXf_().inverse()( unitedBox.center() ) : unitedBox.center();
-    setRotationPivot_( sceneCenter );
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
 
     params_.cameraTranslation = -sceneCenter;
     params_.cameraViewAngle = 45.0f;
@@ -491,7 +495,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
         {
             auto localSceneObjBox = getBoxFn( true, false );
             Box3f localUnitedBox;
-            if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible( id ) )
+            if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id ) )
                 localUnitedBox = getBoxFn( true, true );
             localUnitedBox.include( localSceneObjBox );
             return localUnitedBox;
@@ -504,25 +508,27 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     needRedraw_ = true;
 }
 
+using ObjectToCameraFunc = std::function<bool ( Vector3f& )>;
+
 class LimitCalc
 {
 public:
-    LimitCalc( const VertCoords & points, const VertBitSet & vregion, const std::function<bool(Vector3f&)> func )
-        : points_( points ), vregion_( vregion ), func_(func) { }
+    LimitCalc( const VertCoords & points, const VertBitSet & vregion, const ObjectToCameraFunc& obj2cam )
+        : points_( points ), vregion_( vregion ), obj2cam_( obj2cam ) { }
     LimitCalc( LimitCalc& x, tbb::split )
-        : points_( x.points_ ), vregion_( x.vregion_ ), func_(x.func_) { }
-    void join(const LimitCalc& y) { box_.include(y.box_); }
+        : points_( x.points_ ), vregion_( x.vregion_ ), obj2cam_( x.obj2cam_ ) { }
+    void join( const LimitCalc& y ) { box_.include( y.box_ ); }
 
     const Box3f& box() const { return box_; }
 
-    void operator()(const tbb::blocked_range<VertId>& r)
+    void operator ()( const tbb::blocked_range<VertId>& r )
     {
-        for (VertId v = r.begin(); v < r.end(); ++v)
+        for ( auto v = r.begin(); v < r.end(); ++v )
         {
             if ( !vregion_.test( v ) )
                 continue;
-            Vector3f pt = points_[v];
-            if( func_( pt ) )
+            auto pt = points_[v];
+            if ( obj2cam_( pt ) )
                 box_.include( pt );
         }
     }
@@ -530,7 +536,7 @@ public:
 private:
     const VertCoords & points_;
     const VertBitSet & vregion_;
-    const std::function<bool(Vector3f&)> func_;
+    const ObjectToCameraFunc& obj2cam_;
     Box3f box_;
 };
 
@@ -546,131 +552,116 @@ bool Viewport::allModelsInsideViewportRectangle() const
 Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives /*= false*/ ) const
 {
     Box3f box;
-    const AffineXf3f xfV = getViewXf_();
 
-    for( const auto& obj : objs )
+    // object space to camera space
+    const auto makeObj2Cam = [space, xfV = getViewXf_()] ( const AffineXf3f& xfObj ) -> ObjectToCameraFunc
     {
-        if( obj->globalVisibility( id ) )
+        switch ( space )
         {
-            // object space to camera space
-            auto xf = obj->worldXf( id );
-            if ( space != Space::World )
-                xf = xfV * xf;
-            VertId lastValidVert;
-            const VertCoords* coords = nullptr;
-            const VertBitSet* selectedVerts = nullptr;
-            auto objMesh = obj->asType<ObjectMeshHolder>();
-#ifndef MRVIEWER_NO_VOXELS
-            VertCoords tempVertCoords;
-            VertBitSet tempSelected;
-            auto objVox = obj->asType<ObjectVoxels>();
-            if ( objVox && objVox->isVolumeRenderingEnabled() )
+        case Space::World:
+            return [xf = xfObj] ( Vector3f& p )
             {
-                if ( !objVox->grid() )
-                    continue;
-                const auto& vdbVolume = objVox->vdbVolume();
-                Box3f voxBox;
-                voxBox.include( Vector3f() );
-                voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+                p = xf( p );
+                return true;
+            };
+        case Space::CameraOrthographic:
+            return [xf = xfV * xfObj] ( Vector3f& p )
+            {
+                p = xf( p );
+                return true;
+            };
+        case Space::CameraPerspective:
+            return [xf = xfV * xfObj] ( Vector3f& p )
+            {
+                auto v = xf( p );
+                if ( v.z == 0 )
+                    return false;
+                p = Vector3f( v.x / v.z, v.y / v.z, v.z );
+                return true;
+            };
+        }
+        MR_UNREACHABLE
+    };
 
-                tempVertCoords.resize( 8 );
-                for ( int i = 0; i < 8; ++i )
-                {
-                    Vector3i maxCoord;
-                    maxCoord.x = int( bool( i & 1 ) );
-                    maxCoord.y = int( bool( i & 2 ) );
-                    maxCoord.z = int( bool( i & 4 ) );
-                    Vector3i minCoord = Vector3i::diagonal( 1 ) - maxCoord;
-                    tempVertCoords[VertId( i )] =
-                        mult( Vector3f( minCoord ), voxBox.min ) +
-                        mult( Vector3f( maxCoord ), voxBox.max );
-                }
-                lastValidVert = 7_v;
-                tempSelected.resize( 8 );
-                tempSelected.flip();
-                coords = &tempVertCoords;
-                selectedVerts = &tempSelected;
-            }
-            else
-#endif
-                if ( objMesh )
+    const auto expandBox = [&box] ( const VertCoords& coords, const VertBitSet& region, const ObjectToCameraFunc& obj2cam )
+    {
+        LimitCalc calc( coords, region, obj2cam );
+        parallel_reduce( tbb::blocked_range( region.find_first(), region.find_last() + 1 ), calc );
+        box.include( calc.box() );
+    };
+
+    for ( const auto& obj : objs )
+    {
+        if ( !obj->globalVisibility( id ) )
+            continue;
+
+        const auto xf = obj->worldXf( id );
+        const auto obj2cam = makeObj2Cam( xf );
+
+        if ( selectedPrimitives )
+        {
+            if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
             {
                 if ( !objMesh->mesh() )
                     continue;
+
                 const auto& mesh = *objMesh->mesh();
-                lastValidVert = mesh.topology.lastValidVert();
-                coords = &mesh.points;
-                selectedVerts = &mesh.topology.getValidVerts();
+                const auto region =
+                    getIncidentVerts( mesh.topology, objMesh->getSelectedEdges() )
+                    | getIncidentVerts( mesh.topology, objMesh->getSelectedFaces() );
+                if ( region.any() )
+                    expandBox( mesh.points, region, obj2cam );
             }
-            else if ( auto objLines = obj->asType<ObjectLinesHolder>() )
-            {
-                if ( !objLines->polyline() )
-                    continue;
-                const auto& polyline = *objLines->polyline();
-                lastValidVert = polyline.topology.lastValidVert();
-                coords = &polyline.points;
-                selectedVerts = &polyline.topology.getValidVerts();
-            }
-            else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
-            {
-                if ( !objPoints->pointCloud() )
-                    continue;
-                const auto& pointCloud = *objPoints->pointCloud();
-                lastValidVert = VertId( pointCloud.validPoints.size() - 1 );// TODO: last valid
-                coords = &pointCloud.points;
-                selectedVerts = &pointCloud.validPoints;
-            }
-            else if ( obj->asType<ObjectLabel>() || obj->asType<ObjectImGuiLabel>() )
-            {
-                // do nothing
-            }
-            else if ( obj->asType<FeatureObject>() || obj->asType<MeasurementObject>() )
-            {
-                // Do nothing? Not ideal.
-            }
-            else
-            {
-                assert( false );
+
+            continue;
+        }
+
+#ifndef MRVIEWER_NO_VOXELS
+        if ( auto* objVox = obj->asType<ObjectVoxels>(); objVox && objVox->isVolumeRenderingEnabled() )
+        {
+            if ( !objVox->grid() )
                 continue;
-            }
-            VertBitSet myVerts;
-            if ( selectedPrimitives )
-            {
-                selectedVerts = nullptr;
-                if ( objMesh )
-                {
-                    myVerts = getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedEdges() ) |
-                        getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedFaces() );
-                    if ( !myVerts.any() )
-                        continue;
-                    selectedVerts = &myVerts;
-                }
-            }
-            if ( !selectedVerts )
+
+            const auto& vdbVolume = objVox->vdbVolume();
+            Box3f voxBox;
+            voxBox.include( Vector3f() );
+            voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+
+            for ( auto p : getCorners( voxBox ) )
+                if ( obj2cam( p ) )
+                    box.include( p );
+        }
+        else
+#endif
+        if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
+        {
+            if ( !objMesh->mesh() )
                 continue;
-            std::function<bool( Vector3f& )> func;
-            if( space == Space::CameraOrthographic || space == Space::World )
-            {
-                func = [&]( Vector3f& p )
-                {
-                    p = xf( p );
-                    return true;
-                };
-            }
-            else
-            {
-                func = [&]( Vector3f& p )
-                {
-                    auto v = xf( p );
-                    if ( v.z == 0 )
-                        return false;
-                    p = Vector3f( v.x / v.z, v.y / v.z, v.z );
-                    return true;
-                };
-            }
-            LimitCalc calc( *coords, *selectedVerts, func );
-            parallel_reduce( tbb::blocked_range<VertId>( VertId{ 0 }, lastValidVert + 1 ), calc );
-            box.include( calc.box() );
+
+            const auto& mesh = *objMesh->mesh();
+            expandBox( mesh.points, mesh.topology.getValidVerts(), obj2cam );
+        }
+        else if ( auto* objLines = obj->asType<ObjectLinesHolder>() )
+        {
+            if ( !objLines->polyline() )
+                continue;
+
+            const auto& polyline = *objLines->polyline();
+            expandBox( polyline.points, polyline.topology.getValidVerts(), obj2cam );
+        }
+        else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
+        {
+            if ( !objPoints->pointCloud() )
+                continue;
+
+            const auto& pointCloud = *objPoints->pointCloud();
+            expandBox( pointCloud.points, pointCloud.validPoints, obj2cam );
+        }
+        else if ( const auto objBox = obj->getBoundingBox(); objBox.valid() )
+        {
+            for ( auto p : getCorners( objBox ) )
+                if ( obj2cam( p ) )
+                    box.include( p );
         }
     }
     return box;
@@ -718,11 +709,11 @@ void Viewport::fitBox( const Box3f& newSceneBox, float fill /*= 1.0f*/, bool sna
     sceneBox_ = newSceneBox;
     if ( !newSceneBox.valid() )
     {
-        setRotationPivot_( Vector3f() );
+        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : Vector3f() );
         return;
     }
     auto sceneCenter = sceneBox_.center();
-    setRotationPivot_( sceneCenter );
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     params_.cameraTranslation = -sceneCenter;
 
     auto dif = sceneBox_.max - sceneBox_.min;

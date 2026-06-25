@@ -6,6 +6,7 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
@@ -20,6 +21,7 @@ namespace MR
 
 Json::Value GetSystemInfoJson()
 {
+    MR_TIMER;
     Json::Value root;
     root["Version"] = GetMRVersionString();
     root["OS Version"] = GetDetailedOSName();
@@ -37,10 +39,8 @@ Json::Value GetSystemInfoJson()
         GL_EXEC();
         glInfo["OpenGL Version"] = std::string( ( const char* )glGetString( GL_VERSION ) );
         GL_EXEC();
-        int curSamples = 0;
-        GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
 
-        glInfo["MSAA"] = std::to_string( curSamples );
+        glInfo["MSAA"] = std::to_string( getViewerInstance().getMSAA() );
 
         glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?
             bytesString( CudaAccessor::getCudaFreeMemory() ) :
@@ -86,6 +86,7 @@ Json::Value GetSystemInfoJson()
             monitorInfo["Height"] = maxHeight;
             monitorInfo["ScalingPercent"] = maxScale;
         }
+        windowInfo["Number of monitors"] = count;
     }
     else
     {
@@ -93,9 +94,9 @@ Json::Value GetSystemInfoJson()
     }
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
-        windowInfo["Pixel ratio"] = fmt::format( "{}", menu->pixel_ratio() );
-        windowInfo["System scaling"] = fmt::format( "{}", menu->hidpi_scaling() );
-        windowInfo["Menu scaling"] = fmt::format( "{}", menu->menu_scaling() );
+        windowInfo["Pixel ratio"] = fmt::format( "{}", menu->pixelRatio() );
+        windowInfo["System scaling"] = fmt::format( "{}", menu->hidpiScaling() );
+        windowInfo["Menu scaling"] = fmt::format( "{}", menu->menuScaling() );
     }
 
 #ifdef _WIN32

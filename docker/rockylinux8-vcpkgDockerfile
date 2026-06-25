@@ -1,0 +1,107 @@
+# syntax=docker/dockerfile:1
+ARG VCPKG_VERSION=2026.06.01
+ARG VCPKG_TRIPLET=x64-linux-meshlib
+
+
+FROM rockylinux:8 AS base
+
+COPY scripts/retry.sh /usr/local/bin/retry.sh
+
+RUN <<EOF
+    set -e
+    # don't install excess dependencies
+    echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
+    # configure CUDA repo
+    case "$(uname -m)" in
+        x86_64)  CUDA_REPO_ARCH=x86_64 ;;
+        aarch64) CUDA_REPO_ARCH=sbsa ;;
+    esac
+    # network may flake
+    retry.sh -- dnf -y install 'dnf-command(config-manager)' epel-release
+    retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
+    retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+    retry.sh -- dnf -y install --enablerepo powertools \
+        git cmake gcc-toolset-11 ninja-build clang-devel-21* \
+        $(: minimal CUDA toolkit - nvcc, cudart ) \
+        cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
+        $(: vcpkg requirements ) \
+        curl zip unzip tar \
+        $(: vcpkg package requirements ) \
+        autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
+        $(: mrbind requirements ) \
+        lld-21* llvm-devel-21* python3.12-devel which zlib-devel \
+        $(: CI environment ) \
+        gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
+    dnf clean all
+    # install aws cli
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+    rm -rf awscliv2.zip aws/
+    # override system autoconf
+    mkdir -p /opt/autoconf27/bin/
+    for APP in autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames; do
+        ln -s /usr/bin/${APP}27 /opt/autoconf27/bin/${APP}
+    done
+    echo 'export PATH=/opt/autoconf27/bin:$PATH' > /opt/autoconf27/enable
+EOF
+ENV PATH=/usr/local/cuda/bin:$PATH
+
+
+FROM base AS build
+
+ARG VCPKG_VERSION
+ARG VCPKG_TRIPLET
+ENV VCPKG_VERSION=$VCPKG_VERSION
+ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
+
+WORKDIR /root
+
+COPY thirdparty/vcpkg/vcpkg.json MeshLib/vcpkg.json
+COPY thirdparty/vcpkg/ports MeshLib/ports
+COPY thirdparty/vcpkg/triplets MeshLib/triplets
+COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
+
+# bootstrap vcpkg
+ENV VCPKG_ROOT=/root/vcpkg
+ENV VCPKG_DISABLE_METRICS=1
+RUN <<EOF bash
+    set -e
+    curl -LO https://aka.ms/vcpkg-init.sh
+    # the bootstrap script ignores the system architecture
+    if [ $(uname -m) == "aarch64" ] ; then
+        sed -i 's/vcpkg-glibc/vcpkg-glibc-arm64/' vcpkg-init.sh
+    fi
+    source vcpkg-init.sh
+    # also prepare a clean copy for the production stage
+    cp -a vcpkg /opt/
+EOF
+
+# build vcpkg packages
+ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
+RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
+    --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
+    --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
+    set -e
+    source /root/MeshLib/configure_s3_cache.sh
+    source /opt/rh/gcc-toolset-11/enable
+    source /opt/autoconf27/enable
+    # network may flake
+    retry.sh -- \
+        /root/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug
+EOF
+
+
+FROM base AS production
+
+COPY --from=build /opt/vcpkg /opt/vcpkg
+COPY --from=build /opt/vcpkg_installed /opt/vcpkg_installed
+
+ENV MR_STATE=DOCKER_BUILD
+ENV MESHLIB_USE_VCPKG=ON
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_MANIFEST_MODE=ON
+ENV VCPKG_INSTALLED_DIR=/opt/vcpkg_installed
+
+ARG VCPKG_TRIPLET
+ENV VCPKG_TRIPLET=$VCPKG_TRIPLET

@@ -2,6 +2,7 @@
 
 #include "config.h"
 
+// see explanation in MRMesh/MRMeshFwd.h
 #ifdef _WIN32
 #   ifdef MRVoxels_EXPORTS
 #       define MRVOXELS_API __declspec(dllexport)
@@ -11,7 +12,11 @@
 #   define MRVOXELS_CLASS
 #else
 #   define MRVOXELS_API   __attribute__((visibility("default")))
-#   define MRVOXELS_CLASS __attribute__((visibility("default")))
+#   ifdef __clang__
+#       define MRVOXELS_CLASS __attribute__((type_visibility("default")))
+#   else
+#       define MRVOXELS_CLASS __attribute__((visibility("default")))
+#   endif
 #endif
 
 #include <MRMesh/MRMeshFwd.h>
@@ -21,8 +26,7 @@ namespace MR
 
 class ObjectVoxels;
 
-struct MRVOXELS_CLASS OpenVdbFloatGrid;
-using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
+class FloatGrid;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRVOXELS_CLASS VoxelsVolumeMinMax,
     ( SimpleVolumeMinMax, VoxelsVolumeMinMax<Vector<float, VoxelId>> )

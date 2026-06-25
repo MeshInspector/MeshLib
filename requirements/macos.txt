@@ -1,9 +1,12 @@
 boost
 cmake
+cpp-httplib
 cpr
+eigen
 fmt
 gdcm
 glfw
+googletest
 hidapi
 jpeg-turbo
 jsoncpp
@@ -11,8 +14,8 @@ libharu
 libpng
 libtiff
 libzip
-llvm@14
 ninja
+nlohmann-json
 opencascade
 openssl@3
 openvdb
@@ -21,4 +24,6 @@ python@3.10
 spdlog
 tbb
 tinyxml2
+tl-expected
 zlib
+zlib-ng

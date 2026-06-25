@@ -8,7 +8,8 @@ SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
 
 [[ -v MRBIND_DIR ]] || MRBIND_DIR="$(realpath "$SCRIPT_DIR/../../thirdparty/mrbind")"
 
-CLANG_VER="$("$SCRIPT_DIR/select_clang_version.sh")"
+# Read the Clang version from `clang_version.txt`. `xargs` trims the whitespace.
+CLANG_VER="$(cat "$SCRIPT_DIR/clang_version.txt" | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 cd "$MRBIND_DIR"
@@ -20,5 +21,5 @@ rm -rf build
 
 # `Clang_DIR` is needed when several versions of libclang are installed.
 # By default CMake picks an arbitrary one. Supposedly whatever globbing `clang-*` returns first.
-CC=clang-$CLANG_VER CXX=clang++-$CLANG_VER cmake -B build -DClang_DIR=/usr/lib/cmake/clang-$CLANG_VER -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+CC=clang-$CLANG_VER CXX=clang++-$CLANG_VER cmake -B build -DClang_DIR=/usr/lib/cmake/clang-$CLANG_VER -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD
 cmake --build build -j$JOBS

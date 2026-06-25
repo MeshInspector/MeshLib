@@ -1,10 +1,12 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRVectorTraits.h"
 #include <algorithm>
 #include <cassert>
+#include <iosfwd>
 #include <limits>
 #include <type_traits>
 
@@ -41,13 +43,21 @@ public:
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
 
     /// skip initialization of min/max
+    #if MR_HAS_REQUIRES
+    // If the compiler supports `requires`, use that instead of `std::enable_if` here.
+    // Not (only) because it looks cooler, but because of a bug in our binding generator that makes it choke on it: https://github.com/MeshInspector/mrbind/issues/19
+    explicit Box( NoInit ) requires (VectorTraits<V>::supportNoInit) : min{ noInit }, max{ noInit } { }
+    explicit Box( NoInit ) requires (!VectorTraits<V>::supportNoInit) { }
+    #else
     template <typename VV = V, typename std::enable_if_t<VectorTraits<VV>::supportNoInit, int> = 0>
     explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
-
     template <typename VV = V, typename std::enable_if_t<!VectorTraits<VV>::supportNoInit, int> = 0>
     explicit Box( NoInit ) { }
+    #endif
 
-    template <typename U>
+    // Here `V == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<V, U> )
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
 
     static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min, V( min + size ) }; }
@@ -65,8 +75,8 @@ public:
     V center() const { assert( valid() ); return ( min + max ) / T(2); }
 
     /// returns the corner of this box as specified by given bool-vector:
-    /// 1 element in (c) means take min's coordinate,
-    /// 0 element in (c) means take max's coordinate
+    /// 0 element in (c) means take min's coordinate,
+    /// 1 element in (c) means take max's coordinate
     V corner( const Vb& c ) const
     {
         V res;
@@ -209,6 +219,36 @@ public:
         return res;
     }
 
+    /// returns the closest point on the box to the given point
+    /// for points outside the box this is equivalent to getBoxClosestPointTo
+    V getProjection( const V & pt ) const
+    {
+        assert( valid() );
+        if ( !contains( pt ) )
+            return getBoxClosestPointTo( pt );
+
+        T minDist = std::numeric_limits<T>::max();
+        int minDistDim {};
+        T minDistPos {};
+
+        for ( auto dim = 0; dim < elements; ++dim )
+        {
+            for ( const auto& border : { min, max } )
+            {
+                if ( auto dist = std::abs( VTraits::getElem( dim, border ) - VTraits::getElem( dim, pt ) ); dist < minDist )
+                {
+                    minDist = dist;
+                    minDistDim = dim;
+                    minDistPos = VTraits::getElem( dim, border );
+                }
+            }
+        }
+
+        auto proj = pt;
+        VTraits::getElem( minDistDim, proj ) = minDistPos;
+        return proj;
+    }
+
     /// decreases min and increased max on given value
     Box expanded( const V & expansion ) const
     {
@@ -233,6 +273,16 @@ public:
         { return min == a.min && max == a.max;  }
     bool operator != ( const Box & a ) const
         { return !( *this == a ); }
+
+    friend std::ostream& operator<<( std::ostream& s, const Box<V>& box )
+    {
+        return s << box.min << '\n' << box.max;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Box<V>& box )
+    {
+        return s >> box.min >> box.max;
+    }
 };
 
 template <typename T>
@@ -361,7 +411,7 @@ namespace std
 template<size_t I, typename V>
 struct tuple_element<I, MR::Box<V>> { using type = V; };
 
-template <typename V> 
+template <typename V>
 struct tuple_size<MR::Box<V>> : integral_constant<size_t, 2> {};
 
 } //namespace std

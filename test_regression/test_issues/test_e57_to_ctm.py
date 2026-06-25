@@ -6,7 +6,6 @@ from constants import test_files_path
 from helpers.meshlib_helpers import compare_points_similarity
 
 
-@pytest.mark.bindingsV3
 @pytest.mark.timeout(5)
 def test_e57_to_ctm(tmp_path):
     """

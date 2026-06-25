@@ -1,0 +1,8 @@
+<!--
+    This file is included for .NET Framework projects (as opposed to newer .NET) to ensure that the native libraries get copied to the build output directory.
+-->
+<Project>
+  <ItemGroup Condition="$([MSBuild]::VersionLessThan('$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))','5.0'))">
+    <ContentWithTargetPath Include="$(MSBuildThisFileDirectory)\..\runtimes\win-x64\native\*" TargetPath="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

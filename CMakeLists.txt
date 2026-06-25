@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(DefaultOptions)
 include(ConfigureVcpkg)
 
@@ -10,12 +10,53 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
 ENDIF()
 
+IF(APPLE)
+    # assume built-in pthreads on macOS
+    # https://stackoverflow.com/a/54606606/7325599
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+    # Pin LC_BUILD_VERSION minos so dylibs stay loadable on older macOS
+    # releases regardless of the build host's SDK. 12.7 matches the
+    # MACOS_MIN_VER passed by scripts/mrbind/generate.mk and the
+    # macosx_12_0_* wheel filenames. Caller's -D or env wins.
+    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET AND NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET})
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "12.7" CACHE STRING "Minimum macOS version to target for deployment")
+    endif()
+ENDIF()
+
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
+# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
+# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
+# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
+# AppImage-packaged anyway).
+IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  include(CheckLinkerFlag)
+  check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
+  IF(MESHLIB_HAVE_LLD)
+    # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
+    # older CMakes (our minimum is 3.18).
+    IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
+      set(CMAKE_LINKER_TYPE LLD)
+    ELSE()
+      add_link_options("-fuse-ld=lld")
+    ENDIF()
+    add_link_options("LINKER:-z,separate-loadable-segments")
+  ENDIF()
+ENDIF()
+
 include(CompilerOptions)
+include(ConfigurePch)
+IF(EMSCRIPTEN)
+  include(ConfigureEmscripten)
+ENDIF()
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -37,10 +78,11 @@ option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library" ON)
 option(MESHLIB_BUILD_MESHVIEWER "Build MeshViewer application" ON)
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
-option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" ON)
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
+option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
+option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -59,7 +101,16 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
-  set(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING OFF)
+  set(MESHLIB_BUILD_MCP OFF)
+ENDIF()
+
+# Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the
+# vcpkg python3 port ships pre-built Release binaries (IDL=0) that cannot load
+# .pyd files built against a different debug CRT (error 1114 on Windows).
+# Only affects Debug builds; Release with this triplet uses IDL=0 (the default).
+IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(MESHLIB_PYTHON_SUPPORT OFF)
+  set(MESHLIB_BUILD_PYTHON_MODULES OFF)
 ENDIF()
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
@@ -94,12 +145,6 @@ IF(APPLE)
   # TODO: revise
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
-  IF(BUILD_TESTING)
-    set(GTest_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/GTest)
-    find_package(GTest REQUIRED CONFIG)
-    include_directories(${GTEST_INCLUDE_DIRS})
-  ENDIF()
 ENDIF()
 
 include(DetectPlatform)
@@ -133,45 +178,11 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   IF(APPLE)
     # TODO: revise
     link_directories(${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MESHLIB_PYTHON_VERSION}/lib/)
-    find_package(pybind11 REQUIRED)
   ENDIF()
 ENDIF()
 
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
-
-IF(NOT MR_EMSCRIPTEN)
-  IF(NOT TARGET JsonCpp::JsonCpp)
-    IF(MSVC)
-      find_package(JsonCpp REQUIRED)
-    ELSE()
-      # fix compatibility with Ubuntu 22.04
-      if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
-        set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-      endif()
-      find_package(jsoncpp)
-      IF(NOT JsonCpp_FOUND)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
-        IF(CMAKE_VERSION VERSION_LESS 3.18)
-          set_target_properties(PkgConfig::jsoncpp PROPERTIES IMPORTED_GLOBAL TRUE)
-        ENDIF()
-        add_library(JsonCpp::JsonCpp ALIAS PkgConfig::jsoncpp)
-      ENDIF()
-    ENDIF()
-  ENDIF()
-
-  find_package(fmt)
-  find_package(spdlog REQUIRED)
-  find_package(TBB REQUIRED)
-  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
-    add_compile_definitions(SPDLOG_FMT_EXTERNAL)
-  ENDIF()
-  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
-ENDIF() # NOT MR_EMSCRIPTEN
-
-include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)
-include_directories(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include)
 
 IF(NOT $ENV{MR_VERSION} STREQUAL "")
   set(MESHLIB_VERSION $ENV{MR_VERSION})
@@ -180,24 +191,25 @@ ELSE()
 ENDIF()
 message("version: ${MESHLIB_VERSION}")
 
+set(MESHLIB_LIB_SUBDIR "${MESHLIB_PROJECT_NAME}" CACHE STRING "Subdirectory in the library directory to place the MeshLib libraries at")
 IF(MESHLIB_USE_VCPKG)
   # use OS-agnostic directory structure for vcpkg
   set(MR_BIN_DIR bin)
   set(MR_INCLUDE_DIR include/MeshLib)
-  set(MR_MAIN_LIB_DIR lib/${MESHLIB_PROJECT_NAME})
-  set(MR_PY_LIB_DIR lib/${MESHLIB_PROJECT_NAME}/meshlib)
+  set(MR_MAIN_LIB_DIR lib/${MESHLIB_LIB_SUBDIR})
+  set(MR_PY_LIB_DIR lib/${MESHLIB_LIB_SUBDIR}/meshlib)
   set(MR_CONFIG_DIR lib/cmake/MeshLib)
   set(MR_RESOURCES_DIR share/${MESHLIB_PROJECT_NAME})
   set(MR_FONTS_DIR share/${MESHLIB_PROJECT_NAME}/fonts)
   # set rpath manually for both executables and shared libraries
   # related issue: https://gitlab.kitware.com/cmake/cmake/-/issues/23727
-  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_PROJECT_NAME}")
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_LIB_SUBDIR}")
 ELSEIF(NOT APPLE)
   include(GNUInstallDirs)
   set(MR_BIN_DIR "${CMAKE_INSTALL_BINDIR}")
   set(MR_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/MeshLib")
-  set(MR_MAIN_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_PROJECT_NAME}")
-  set(MR_PY_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_PROJECT_NAME}/meshlib")
+  set(MR_MAIN_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}")
+  set(MR_PY_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}/meshlib")
   set(MR_CONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/MeshLib")
   set(MR_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}")
   set(MR_FONTS_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}/fonts")
@@ -205,14 +217,13 @@ ELSE()
   # TODO: correct directory structure for macOS
   # TODO: https://cmake.org/cmake/help/latest/prop_tgt/RESOURCE.html
   IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(MR_ROOT "./Library/Frameworks/MeshLib.framework/Versions/${MESHLIB_VERSION}")
-    set(MR_BIN_DIR "${MR_ROOT}/bin")
-    set(MR_INCLUDE_DIR "${MR_ROOT}/include")
-    set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib")
-    set(MR_PY_LIB_DIR "${MR_ROOT}/lib/meshlib")
-    set(MR_RESOURCES_DIR "${MR_ROOT}/Resources")
-    set(MR_FONTS_DIR "${MR_ROOT}/Resources/fonts")
-    set(MR_CONFIG_DIR "${MR_ROOT}/Resources/cmake")
+    set(MR_BIN_DIR       "bin")
+    set(MR_INCLUDE_DIR   "include")
+    set(MR_MAIN_LIB_DIR  "lib")
+    set(MR_PY_LIB_DIR    "lib/meshlib")
+    set(MR_RESOURCES_DIR "Resources")
+    set(MR_CONFIG_DIR    "Resources/cmake")
+    set(MR_FONTS_DIR     "Resources/fonts")
   ELSE()
     set(MESHLIB_MACOS_INSTALL_PATH "./usr/local" CACHE PATH "")
     set(MR_ROOT ${MESHLIB_MACOS_INSTALL_PATH})
@@ -234,6 +245,15 @@ IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRIOExtras ./MRIOExtras)
 ENDIF()
 
+IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
+  option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
+
+  # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
+ENDIF()
+
 IF(MESHLIB_BUILD_SYMBOLMESH)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRSymbolMesh ./MRSymbolMesh)
 ENDIF()
@@ -243,10 +263,6 @@ IF(MESHLIB_BUILD_VOXELS)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)
-  IF(NOT MR_EMSCRIPTEN)
-    find_package(glfw3 CONFIG REQUIRED)
-  ENDIF()
-
   IF(MR_EMSCRIPTEN)
     include(EmscriptenHelpers)
     mr_emscripten_pack_directory("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets" "/")
@@ -291,11 +307,6 @@ IF(MESHLIB_PYTHON_SUPPORT)
   add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/source/non_limited_api ./meshlib)
 ENDIF()
 
-IF(MSVC)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/laz-perf)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/OpenCTM)
-ENDIF()
-
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_BUILD_MESHCONV)
     add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
@@ -310,8 +321,9 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE)
   ENDIF()
 ENDIF()
 
-IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMeshC ./MRMeshC)
+IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMcp ./MRMcp)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMCPGateway ./MRMCPGateway)
 ENDIF()
 
 IF(BUILD_TESTING)
@@ -320,15 +332,12 @@ IF(BUILD_TESTING)
   IF(MESHLIB_BUILD_MRCUDA)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestCuda ./MRTestCuda)
   ENDIF()
-  IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC ./MRTestC)
-  ENDIF()
 ENDIF()
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR MR_RESOURCES_DIR
 )
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
@@ -340,6 +349,11 @@ install(
   FILES
     ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+  DESTINATION ${MR_CONFIG_DIR}
+)
+
+install(
+  DIRECTORY cmake/Modules
   DESTINATION ${MR_CONFIG_DIR}
 )
 

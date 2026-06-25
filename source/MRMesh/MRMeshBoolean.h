@@ -16,6 +16,8 @@ namespace MR
   * This chapter represents documentation of MeshLib CSG
   */
 
+/// \ingroup BooleanGroup
+/// \{
 
 /** \struct MR::BooleanResult
   * \ingroup BooleanGroup
@@ -59,8 +61,7 @@ struct BooleanResult
   */
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
-MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
-                                  const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
+// no version of the function with rvalue-referenced meshes, because meshes' copies are currently used for sorting intersections
 
 
 struct BooleanPreCutResult
@@ -95,10 +96,10 @@ struct BooleanParameters
     bool mergeAllNonIntersectingComponents = false;
     
     /// If this option is enabled boolean will try to cut meshes even if there are self-intersections in intersecting area
-    /// it might work in some cases, but in general it might prevent fast error report and lead to other errors along the way
+    /// if enabled returned meshes will not be stitched but merged, consider \ref MR::MeshBuilder::uniteCloseVertices and \ref MR::fillHoles afterwards
     /// \warning not recommended in most cases
     bool forceCut = false;
-    
+
     ProgressCallback cb = {};
 };
 
@@ -106,6 +107,13 @@ MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanO
                                   const BooleanParameters& params = {} );
 MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
+
+/// calls boolean in force mode, also unites close vertices and fills holes afterwards
+/// \note expects closed mesh on input, and fills all holes
+/// \warning params.mapper might be not correctly updated when new holes are filled
+MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+                                  const BooleanParameters& params = {} );
+
 
 /// performs boolean operation on mesh with itself, cutting simple intersections contours and flipping their connectivity
 /// this function is experimental and likely to change signature and/or behavior in future 
@@ -135,4 +143,13 @@ struct BooleanResultPoints
  MRMESH_API Expected<BooleanResultPoints,std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                                                const AffineXf3f* rigidB2A = nullptr );
 
-} //namespace MR
+
+/// converts all vertices of the mesh first in integer-coordinates, and then back in float-coordinates;
+/// this is necessary to avoid small self-intersections near newly introduced vertices on cut-contours;
+/// this actually sligntly moves only small perentage of vertices near x=0 or y=0 or z=0 planes, where float-precision is higher than int-precision;
+/// newly introduced vertices on cut-contours are also converted, but we expected that they remain unchanged due to idempotent property of the conversion
+MRMESH_API void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv );
+
+/// \}
+
+} // end namespace MR

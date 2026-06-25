@@ -1,0 +1,43 @@
+#pragma once
+
+#include "MRMesh/MRIRenderObject.h"
+#include "MRViewer/exports.h"
+
+#include "MRViewer/MRImGui.h"
+
+namespace MR
+{
+
+// This is a helper base class for writing `BasicUiRenderTask`s that let you click a rectangle in the scene.
+// Note, this task relies on preserving state between the frames.
+class MRVIEWER_CLASS BasicClickableRectUiRenderTask : public BasicUiRenderTask
+{
+public:
+    BasicClickableRectUiRenderTask() = default;
+
+    // Don't assign the memebers (except the base), because we want to preserve the state across frames.
+    BasicClickableRectUiRenderTask( const BasicClickableRectUiRenderTask& other ) : BasicUiRenderTask( other ) {}
+    BasicClickableRectUiRenderTask& operator=( const BasicClickableRectUiRenderTask& other ) { BasicUiRenderTask::operator=( other ); return *this; }
+
+    virtual ~BasicClickableRectUiRenderTask() = default;
+
+    // This is called when the click happens.
+    virtual void onClick() = 0;
+
+    // This is what ultimately calls `onClick()` if the certain conditions hold.
+    MRVIEWER_API void earlyBackwardPass( const BackwardPassParams& backParams ) override;
+
+    // Set those to set the clickable area. Zero both to hovers and clicks.
+    ImVec2 clickableCornerA;
+    ImVec2 clickableCornerB;
+
+    // Set to false to disable hovers and clicks (`isHovered` will always be false),
+    //   but still consume the mouse hover to prevent other buttons below this one from being clicked.
+    bool enabled = true;
+
+    // Read these to decide how to render.
+    bool isHovered = false;
+    bool isActive = false;
+};
+
+}

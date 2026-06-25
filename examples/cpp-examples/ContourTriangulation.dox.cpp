@@ -25,7 +25,7 @@ int main()
     auto pl2 = MR::distanceMapTo2DIsoPolyline( *dmRes, 210.0f );
     auto triangulationRes = MR::PlanarTriangulation::triangulateContours( pl2.contours() );
 
-    auto saveRes = MR::MeshSave::toAnySupportedFormat( triangulationRes, "LogoMesh.ctms" );
+    auto saveRes = MR::MeshSave::toAnySupportedFormat( triangulationRes, "LogoMesh.ctm" );
     if ( !saveRes.has_value() )
     {
         std::cerr << saveRes.error() << "\n";

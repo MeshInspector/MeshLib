@@ -20,7 +20,6 @@ void RenderImGuiLabelObject::renderUi( const UiRenderParams& params )
         point = p->worldXf()( point );
 
     task_ = UI::NonOverlappingLabelTask( {
-        .menuScaling = params.scale,
         .viewportId = params.viewportId,
         .worldPos = point,
         .id = fmt::format( "{}", (void*)this ),

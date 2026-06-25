@@ -1,9 +1,16 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRBindingMacros.h"
+
 #include <filesystem>
+
+namespace spdlog
+{
+class logger;
+namespace sinks { class sink; }
+using sink_ptr = std::shared_ptr<sinks::sink>;
+}
 
 namespace MR
 {

@@ -8,7 +8,9 @@
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRVisualObject.h"
-#include <GLFW/glfw3.h>
+#include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRViewer/ImGuiMenu.h"
 
 namespace MR
 {
@@ -18,7 +20,7 @@ SelectObjectByClick::SelectObjectByClick() :
 {
 }
 
-void SelectObjectByClick::drawDialog( float, ImGuiContext* )
+void SelectObjectByClick::drawDialog( ImGuiContext* )
 {
     if ( !picked_ )
         return;
@@ -28,17 +30,18 @@ void SelectObjectByClick::drawDialog( float, ImGuiContext* )
     Box2i rect;
     rect.include( downPos );
     rect.include( currPos );
-    drawList->AddRect( ImVec2( float( rect.min.x ), float( rect.min.y ) ), ImVec2( float( rect.max.x ), float( rect.max.y ) ),
+    drawList->AddRect( ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( float( rect.min.x ), float( rect.min.y ) ) ),
+                       ImGuiMV::Window2ScreenSpaceImVec2( ImVec2( float( rect.max.x ), float( rect.max.y ) ) ),
                        Color::white().getUInt32() );
 }
 
 bool SelectObjectByClick::onMouseDown_( MouseButton button, int modifiers )
 {
-    if ( button != MouseButton::Left || ( modifiers & ~GLFW_MOD_CONTROL ) != 0 )
+    if ( button != MouseButton::Left || ( modifiers & ~getGlfwModPrimaryCtrl() ) != 0 )
         return false;
 
     picked_ = true;
-    ctrl_ = modifiers == GLFW_MOD_CONTROL;
+    ctrl_ = modifiers == getGlfwModPrimaryCtrl();
     return true;
 }
 
@@ -84,10 +87,17 @@ void SelectObjectByClick::select_( bool up )
         newSelection = getViewerInstance().viewport().findObjectsInRect( rect );
     }
 
+    std::shared_ptr<Object> highlightInTreeObj;
     if ( up && smallPick && ctrl_ )
     {
+
         for ( auto obj : newSelection )
-            obj->select( !obj->isSelected() );
+        {
+            bool newSelectionState = !obj->isSelected();
+            obj->select( newSelectionState );
+            if ( !highlightInTreeObj && newSelectionState )
+                highlightInTreeObj = obj;
+        }
     }
     else
     {
@@ -96,7 +106,16 @@ void SelectObjectByClick::select_( bool up )
             object->select( false );
 
         for ( auto obj : newSelection )
+        {
+            if ( !highlightInTreeObj )
+                highlightInTreeObj = obj;
             obj->select( true );
+        }
+    }
+    if ( highlightInTreeObj )
+    {
+        if ( auto menu = getViewerInstance().getMenuPlugin() )
+            menu->expandObjectTreeAndScroll( highlightInTreeObj.get() );
     }
 }
 

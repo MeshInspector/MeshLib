@@ -25,11 +25,13 @@ struct Settings
     Method method = Method::Relax;
     /// Maximum relax iterations
     int relaxIterations = 5;
-    /// Maximum expand count (edge steps from self-intersecting faces), should be > 0
+    /// Maximum expand count (edge steps from self-intersecting faces), should be >= 0
     int maxExpand = 3;
     /// Edge length for subdivision of holes covers (0.0f means auto)
     /// FLT_MAX to disable subdivision
     float subdivideEdgeLen = 0.0f;
+    /// trying to stay close to initial surface when patching
+    bool mimicPatch = false;
     /// Callback function
     ProgressCallback callback = {};
 };

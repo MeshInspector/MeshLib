@@ -8,39 +8,9 @@ logfile="`pwd`/build_source_${dt}.log"
 echo "Project build script started."
 echo "You could find output in ${logfile}"
 
-MR_EMSCRIPTEN_SINGLETHREAD=0
-if [[ $OSTYPE == "linux"* ]]; then
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N) (s - singlethreaded, l - 64-bit)" -rsn 1
-    echo;
-    case $REPLY in
-      Y|y)
-        MR_EMSCRIPTEN="ON";;
-      S|s)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_SINGLETHREAD=1;;
-      L|l)
-        MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_WASM64=1;;
-      *)
-        MR_EMSCRIPTEN="OFF";;
-    esac
-  fi
-else
-  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    MR_EMSCRIPTEN="OFF"
-  fi
-fi
-echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}, 64-bit ${MR_EMSCRIPTEN_WASM64}"
+SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
-if [ $MR_EMSCRIPTEN == "ON" ]; then
-  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
-    MR_EMSCRIPTEN_SINGLETHREAD=1
-  fi
-  if [[ $MR_EMSCRIPTEN_WASM64 == "ON" ]]; then
-    MR_EMSCRIPTEN_WASM64=1
-  fi
-fi
+. "$SCRIPT_DIR/ask_emscripten_mode.src"
 
 if [ ! -n "$MESHLIB_BUILD_RELEASE" ]; then
   read -t 5 -p "Build MeshLib Release? Press (n) in 5 seconds to cancel (Y/n)" -rsn 1
@@ -66,6 +36,8 @@ fi
 
 # add env options to cmake
 MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
+# Extra flags for `cmake --build`.
+MR_CMAKE_BUILD_OPTIONS="${MR_CMAKE_BUILD_OPTIONS:-}"
 
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
@@ -75,6 +47,7 @@ if [ "${MESHLIB_USE_VCPKG}" == "ON" ]; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D MESHLIB_USE_VCPKG=ON \
     -D VCPKG_TARGET_TRIPLET=${VCPKG_TRIPLET:?VCPKG_TRIPLET must be set} \
+    -D VCPKG_MANIFEST_MODE=${VCPKG_MANIFEST_MODE:=OFF} \
   "
 fi
 
@@ -97,12 +70,16 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
   EMSCRIPTEN_ROOT="${EMSDK}/upstream/emscripten"
 
+  [[ ${MR_EMSCRIPTEN_SIMD:=} ]] || export MR_EMSCRIPTEN_SIMD=1
+  [[ ${MR_EMSCRIPTEN_MIMALLOC:=} ]] || export MR_EMSCRIPTEN_MIMALLOC=1
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
     -D CMAKE_FIND_ROOT_PATH=${PWD} \
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
     -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
+    -D MR_EMSCRIPTEN_SIMD=${MR_EMSCRIPTEN_SIMD} \
+    -D MR_EMSCRIPTEN_MIMALLOC=${MR_EMSCRIPTEN_MIMALLOC} \
   "
 fi
 
@@ -118,8 +95,6 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}
 
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
-    -D CMAKE_C_COMPILER=clang \
-    -D CMAKE_CXX_COMPILER=clang++ \
     -D PYTHON_LIBRARY=${PYTHON_LIBRARY} \
     -D PYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} \
     -D PYTHON_EXECUTABLE:FILEPATH=${PYTHON_EXECUTABLE} \
@@ -131,6 +106,7 @@ if [[ $OSTYPE == 'darwin'* ]]; then
 else
   NPROC=$(nproc)
 fi
+echo "The number of concurrent build threads NPROC=${NPROC}"
 
 # exit if any command failed
 set -eo pipefail
@@ -146,8 +122,8 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
     mkdir -p build/Release
   fi
   cd build/Release
-    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
-    cmake --build . -j ${NPROC} | tee ${logfile}
+    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
+    cmake --build . -j ${NPROC} ${MR_CMAKE_BUILD_OPTIONS} | tee ${logfile}
   cd ../..
 fi
 
@@ -157,8 +133,8 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
     mkdir -p build/Debug
   fi
   cd build/Debug
-    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} | tee ${logfile}
-    cmake --build . -j ${NPROC} | tee ${logfile}
+    cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
+    cmake --build . -j ${NPROC} ${MR_CMAKE_BUILD_OPTIONS} | tee ${logfile}
   cd ../..
 fi
 

@@ -7,9 +7,8 @@ MODULES = [
     "mrmeshpy",
     "mrmeshnumpy",
     "mrviewerpy",
+    "mrcudapy",
 ]
-if SYSTEM != "Darwin":
-    MODULES.append("mrcudapy")
 
 
 WHEEL_SCRIPT_DIR = Path(__file__).parent.resolve()

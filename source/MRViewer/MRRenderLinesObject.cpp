@@ -1,18 +1,21 @@
 #include "MRRenderLinesObject.h"
-#include "MRMesh/MRObjectLinesHolder.h"
-#include "MRMesh/MRTimer.h"
-#include "MRCreateShader.h"
-#include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRPlane3.h"
-#include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
-#include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRVector2.h"
-#include "MRRenderGLHelpers.h"
-#include "MRRenderHelpers.h"
+#include "MRCreateShader.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRRenderGLHelpers.h"
+#include "MRRenderHelpers.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
+#include "MRMesh/MRObjectLinesHolder.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRVector2.h"
+#include "MRViewport.h"
+#include "MRMesh/MR2to3.h"
+
 
 namespace MR
 {
@@ -32,8 +35,10 @@ RenderLinesObject::~RenderLinesObject()
 
 bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
+    MR_TIMER;
+    bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
-        !objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
@@ -45,34 +50,30 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
         return false;
     }
 
+    objectPreRenderSetup( renderParams.transparencyMode,desiredPass, depthTest );
+
+    needUpdateScreenLengths_ = needAccumLengthDirtyUpdate_( renderParams );
+
     update_();
 
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
 
-    if ( objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
 
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-
-    render_( renderParams, false );
+    render_( renderParams, false, desiredPass );
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
-        render_( renderParams, true );
+        render_( renderParams, true, desiredPass );
+
+    objectPostRenderSetup( renderParams.transparencyMode, desiredPass, depthTest );
 
     return true;
 }
 
 void RenderLinesObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
+    MR_TIMER;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
@@ -99,6 +100,7 @@ size_t RenderLinesObject::glBytes() const
     return
         positionsTex_.size()
         + vertColorsTex_.size()
+        + accumScreenLengthTex_.size()
         + lineColorsTex_.size();
 }
 
@@ -109,11 +111,23 @@ void RenderLinesObject::forceBindAll()
     bindLines_( GLStaticHolder::LinesJoint );
 }
 
-void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points )
+void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool points, RenderModelPassMask desiredPass )
 {
-    auto shaderType = points ? GLStaticHolder::LinesJoint : GLStaticHolder::Lines;
+    auto shaderType = GLStaticHolder::LinesJoint;
+    if ( !points )
+    {
+        shaderType = GLStaticHolder::Lines;
+        if ( desiredPass == RenderModelPassMask::Transparent )
+            shaderType = GLStaticHolder::getTransparentLinesShader( renderParams.transparencyMode );
+    }
     bindLines_( shaderType );
+
     auto shader = GLStaticHolder::getShaderId( shaderType );
+    if ( shaderType == GLStaticHolder::DepthPeelLines )
+        bindDepthPeelingTextures( shader, renderParams.transparencyMode, GL_TEXTURE4 );
+
+
+    calcAndBindLength_( renderParams, shader );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -129,8 +143,10 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objLines_->getColoringType() == ColoringType::VertsColorMap ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), objLines_->getColoringType() == ColoringType::LinesColorMap ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dashed" ), objLines_->getVisualizeProperty( LinesVisualizePropertyType::Dashed, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1iv( glGetUniformLocation( shader, "dashPattern" ), 1, ( const int* )&objLines_->getDashPattern( renderParams.viewportId ) ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
@@ -185,7 +201,7 @@ void RenderLinesObject::renderPicker_( const ModelBaseRenderParams& parameters, 
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "width" ), objLines_->getLineWidth() ) );
     }
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, parameters.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->globalClippedByPlane( parameters.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         parameters.clipPlane.n.x, parameters.clipPlane.n.y,
         parameters.clipPlane.n.z, parameters.clipPlane.d ) );
@@ -244,22 +260,19 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
             // important to be last edge org for points picker,
             // real last point will overlap invalid points so picker will return correct id
             auto lastValidEdgeOrg = lastValid.valid() ? topology.org( lastValid ) : VertId();
-            tbb::parallel_for( tbb::blocked_range<int>( 0, lineIndicesSize_ ), [&] ( const tbb::blocked_range<int>& range )
+            ParallelFor( 0, lineIndicesSize_, [&] ( int ue )
             {
-                for ( int ue = range.begin(); ue < range.end(); ++ue )
+                auto o = topology.org( UndirectedEdgeId( ue ) );
+                auto d = topology.dest( UndirectedEdgeId( ue ) );
+                if ( !o || !d )
                 {
-                    auto o = topology.org( UndirectedEdgeId( ue ) );
-                    auto d = topology.dest( UndirectedEdgeId( ue ) );
-                    if ( !o || !d )
-                    {
-                        positions[2 * ue] = polyline->points[lastValidEdgeOrg];
-                        positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
-                    }
-                    else
-                    {
-                        positions[2 * ue] = polyline->points[o];
-                        positions[2 * ue + 1] = polyline->points[d];
-                    }
+                    positions[2 * ue] = polyline->points[lastValidEdgeOrg];
+                    positions[2 * ue + 1] = polyline->points[lastValidEdgeOrg];
+                }
+                else
+                {
+                    positions[2 * ue] = polyline->points[o];
+                    positions[2 * ue + 1] = polyline->points[d];
                 }
             } );
         }
@@ -270,6 +283,65 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
     else
         positionsTex_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "vertices" ), 0 ) );
+}
+
+void RenderLinesObject::calcAndBindLength_( const ModelRenderParams& params, GLuint shaderId )
+{
+    GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
+    if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Dashed, params.viewportId ) && needUpdateScreenLengths_ )
+    {
+        int maxTexSize = 0;
+        GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
+        assert( maxTexSize > 0 );
+        RenderBufferRef<float> accumScreenLength;
+        Vector2i res;
+        if ( objLines_->polyline() )
+        {
+            const auto& polyline = objLines_->polyline();
+            const auto& topology = polyline->topology;
+            auto lastValid = topology.lastNotLoneEdge();
+            auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
+
+            auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+            res = calcTextureRes( int( 2 * numL ), maxTexSize );
+            accumScreenLength = glBuffer.prepareBuffer<float>( res.x * res.y );
+            std::fill( accumScreenLength.data(), accumScreenLength.data() + accumScreenLength.size(), 0.0f );
+            lineIndicesSize_ = numL;
+            auto validVerts = topology.getValidVerts();
+            while ( validVerts.any() )
+            {
+                auto oid = validVerts.find_first();
+                auto e = topology.edgeWithOrg( oid );
+                for ( ;; )
+                {
+                    validVerts.reset( oid );
+                    auto did = topology.dest( e );
+                    auto o = getViewerInstance().viewport( params.viewportId ).projectToViewportSpace( params.modelMatrix( polyline->points[oid] ) );
+                    auto d = getViewerInstance().viewport( params.viewportId ).projectToViewportSpace( params.modelMatrix( polyline->points[did] ) );
+                    accumScreenLength[e] = accumScreenLength[topology.next( e )];
+                    accumScreenLength[e.sym()] = accumScreenLength[e] + MR::distance( to2dim( o ), to2dim( d ) );
+                    if ( !validVerts.test( did ) )
+                        break;
+                    auto nextE = topology.next( e.sym() );
+                    if ( nextE == e.sym() )
+                        break;
+                    e = nextE;
+                    oid = topology.org( e );
+                }
+            }
+        }
+        accumScreenLengthTex_.loadData(
+            { .resolution = GlTexture2::ToResolution( res ), .internalFormat = GL_R32F, .format = GL_RED, .type = GL_FLOAT },
+            accumScreenLength );
+        resetAccumLengthDirty_( params );
+    }
+    else
+    {
+        if ( !accumScreenLengthTex_.valid() )
+            accumScreenLengthTex_.gen();
+        accumScreenLengthTex_.bind();
+    }
+    GL_EXEC( glUniform1i( glGetUniformLocation( shaderId, "accumScnLength" ), 3 ) );
 }
 
 void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
@@ -290,7 +362,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
         GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
         assert( maxTexSize > 0 );
 
-        bool useColorMap = objLines_->getColoringType() == ColoringType::VertsColorMap;
+        bool useColorMap = objLines_->getColoringType() == ColoringType::VertsColorMap && !objLines_->getVertsColorMap().empty();
         RenderBufferRef<Color> textVertColorMap;
         Vector2i res;
         if ( useColorMap && objLines_->polyline() )
@@ -298,30 +370,16 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
             auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
-            auto lastValid = topology.lastNotLoneEdge();
-            auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
-            res = calcTextureRes( int( 2 * numL ), maxTexSize );
+            res = calcTextureRes( (int)topology.edgeSize(), maxTexSize );
             textVertColorMap = glBuffer.prepareBuffer<Color>( res.x * res.y );
-            auto undirEdgesSize = numL;
             const auto& vertsColorMap = objLines_->getVertsColorMap();
-            auto lastValidVert = topology.lastValidVert() - 1;
-            tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
+            ParallelFor( 0_ue, UndirectedEdgeId( topology.undirectedEdgeSize() ), [&]( UndirectedEdgeId ue )
             {
-                for ( int ue = range.begin(); ue < range.end(); ++ue )
-                {
-                    auto o = topology.org( UndirectedEdgeId( ue ) );
-                    auto d = topology.dest( UndirectedEdgeId( ue ) );
-                    if ( !o || !d )
-                    {
-                        textVertColorMap[2 * ue] = vertsColorMap[lastValidVert];
-                        textVertColorMap[2 * ue + 1] = vertsColorMap[lastValidVert];
-                    }
-                    else
-                    {
-                        textVertColorMap[2 * ue] = vertsColorMap[o];
-                        textVertColorMap[2 * ue + 1] = vertsColorMap[d];
-                    }
-                }
+                auto o = topology.org( ue );
+                textVertColorMap[2 * ue] = (size_t)o >= vertsColorMap.size() ? vertsColorMap.back() : vertsColorMap[o];
+
+                auto d = topology.dest( ue );
+                textVertColorMap[2 * ue + 1] = (size_t)d >= vertsColorMap.size() ? vertsColorMap.back() : vertsColorMap[d];
             } );
         }
         vertColorsTex_.loadData(
@@ -358,6 +416,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
 
 void RenderLinesObject::bindLinesPicker_( GLStaticHolder::ShaderType shaderType )
 {
+    MR_TIMER;
     auto shader = GLStaticHolder::getShaderId( shaderType );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
@@ -388,8 +447,36 @@ void RenderLinesObject::freeBuffers_()
 
 void RenderLinesObject::update_()
 {
-    dirty_ |= objLines_->getDirtyFlags();
+    auto objDirty = objLines_->getDirtyFlags();
+    // DIRTY_POSITION because we use corner rendering and need to update render verts
+    if ( objDirty & DIRTY_FACE ) // first to also activate all flags due to DIRTY_POSITION later
+        objDirty |= DIRTY_POSITION | DIRTY_VERTS_COLORMAP;
+    dirty_ |= objDirty;
     objLines_->resetDirty();
+}
+
+bool RenderLinesObject::needAccumLengthDirtyUpdate_( const ModelRenderParams& params )
+{
+    if ( dirty_ & ( DIRTY_POSITION | DIRTY_FACE ) )
+        return true;
+    if ( params.viewMatrix != prevView_ )
+        return true;
+    if ( params.projMatrix != prevProj_ )
+        return true;
+    if ( params.modelMatrix != prevModel_ )
+        return true;
+    if ( params.viewport != prevViewport_ )
+        return true;
+    return false;
+}
+
+void RenderLinesObject::resetAccumLengthDirty_( const ModelRenderParams& params )
+{
+    prevModel_ = params.modelMatrix;
+    prevView_ = params.viewMatrix;
+    prevProj_ = params.projMatrix;
+    prevViewport_ = params.viewport;
+    needUpdateScreenLengths_ = false;
 }
 
 const Vector2f& GetAvailableLineWidthRange()

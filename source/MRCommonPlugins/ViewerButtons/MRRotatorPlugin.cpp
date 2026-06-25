@@ -10,6 +10,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -19,7 +20,7 @@ class RotatorPlugin : public StateListenerPlugin<PreDrawListener>
 public:
     RotatorPlugin();
 
-    void drawDialog( float menuScaling, ImGuiContext* ) override;
+    void drawDialog( ImGuiContext* ) override;
     bool blocking() const override { return false; }
 
 private:
@@ -40,18 +41,18 @@ RotatorPlugin::RotatorPlugin() :
 {
 }
 
-void RotatorPlugin::drawDialog( float menuScaling, ImGuiContext* )
+void RotatorPlugin::drawDialog( ImGuiContext* )
 {
-    auto menuWidth = 150.0f * menuScaling;
-    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+    auto menuWidth = 150.0f * UI::scale();
+    if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
 
-    ImGui::SetNextItemWidth( 90.0f * menuScaling );
-    UI::drag<AngleUnit>( "Speed", rotationSpeed_, 0.01f, -2 * PI_F, 2 * PI_F );
-    UI::setTooltipIfHovered( "The speed of camera rotation in degrees per second. The sign of this value specifies the direction of rotation.", menuScaling );
+    ImGui::SetNextItemWidth( 90.0f * UI::scale() );
+    UI::drag<AngleUnit>( _tr( "Speed" ), rotationSpeed_, 0.01f, -2 * PI_F, 2 * PI_F );
+    UI::setTooltipIfHovered( _tr( "The speed of camera rotation in degrees per second. The sign of this value specifies the direction of rotation." ) );
 
-    UI::checkbox( "Rotate Camera", &rotateCamera_ ); 
-    UI::setTooltipIfHovered( "If selected then camera is rotated around scene's center. Otherwise selected objects are rotated, each around its center.", menuScaling );
+    UI::checkbox( _tr( "Rotate Camera" ), &rotateCamera_ );
+    UI::setTooltipIfHovered( _tr( "If selected then camera is rotated around scene's center. Otherwise selected objects are rotated, each around its center." ) );
 
     ImGui::EndCustomStatePlugin();
 }
@@ -111,7 +112,7 @@ void RotatorPlugin::preDraw_()
         std::optional<ScopeHistory> scope;
         if ( appendHistory )
         {
-            scope.emplace( "Rotator" );
+            scope.emplace( _t( "Rotator" ) );
             myLastHistoryAction_ = scope->combinedAction();
         }
         const auto rotMat = Matrix3f::rotation( viewport.getUpDirection(), deltaAngle );

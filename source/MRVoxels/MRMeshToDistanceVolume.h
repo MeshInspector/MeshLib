@@ -19,16 +19,30 @@ struct MeshToDistanceVolumeParams
 };
 
 /// makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings
-MRVOXELS_API Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
+MRVOXELS_API Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params );
 
 /// makes FunctionVolume representing (signed or unsigned) distances from Mesh with given settings
-MRVOXELS_API FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
+MRVOXELS_API FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params );
 
-/// returns a volume filled with the values:
+struct CloseToMeshVolumeParams
+{
+    /// a resulting voxel will get 1 if that voxel's center is not further than unsigned (closeDist) from the surface, and 0 otherwise
+    float closeDist = 0;
+
+    /// dimensions, location, and scaling in world space of the expected volume
+    DistanceVolumeParams vol;
+
+    /// optional transformation from mesh space to world space
+    const AffineXf3f* meshToWorld = nullptr;
+};
+
+/// makes a binary volume with close-to-surface predicate values according to the given parameters
+MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params );
+
+/// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part
 MRVOXELS_API Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params );
-
 
 struct MeshToDirectionVolumeParams
 {

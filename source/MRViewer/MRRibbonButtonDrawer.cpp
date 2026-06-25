@@ -9,18 +9,12 @@
 #include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRUIStyle.h"
+#include "MRRibbonFontHolder.h"
 #include "imgui_internal.h"
+#include "MRI18n.h"
 
 namespace MR
 {
-
-float getScaling()
-{
-    const auto menu = ImGuiMenu::instance();
-    if ( menu )
-        return menu->menu_scaling();
-    return 1.f;
-}
 
 std::vector<std::unique_ptr<MR::ImGuiImage>> RibbonButtonDrawer::textures_ = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( RibbonButtonDrawer::TextureType::Count ) );
 
@@ -98,18 +92,18 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
     ImGui::SameLine( 0.f, spacing );
     const float height = ImGui::GetTextLineHeight();
-    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / scaling_,
+    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / UI::scale(),
                                            .rootType = DrawButtonParams::RootType::Toolbar } );
     ImGui::SameLine( 0.f, spacing );
-    std::string name = item.caption.empty() ? item.item->name() : item.caption;
-    ImGui::Text( "%s", name.c_str());
+    const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+    ImGui::Text( "%s", caption.c_str() );
     return res;
 }
 
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
     const bool bulletMode = bool( flags & ImGuiTreeNodeFlags_Bullet );
-    const auto& style = ImGui::GetStyle();
+    auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
     pos.x += style.FramePadding.x;
     pos.y += style.FramePadding.y;
@@ -125,7 +119,26 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( auto forcedState = UI::TestEngine::createValueTentative<bool>( label ) )
         ImGui::SetNextItemOpen( *forcedState );
 
+
+    auto touchPaddingX = style.TouchExtraPadding.x;
+    if ( ( flags & ImGuiTreeNodeFlags_OpenOnArrow ) == 0 )
+    {
+        // Dear ImGui changes click behavior based on hitting the arrow:
+        //  arrow hit works on MouseDown
+        //  frame hit works on MouseUp
+        // for arrow hit test style.TouchExtraPadding.x is used, so we abuse it to imitate that whole frame is that arrow: to have same behavior
+        ImRect frameRect;
+        frameRect.Min = ImGui::GetCursorScreenPos();
+        frameRect.Min.x -= style.WindowPadding.x * 0.5f;
+        frameRect.Max = frameRect.Min;
+        frameRect.Max.x += ImGui::GetContentRegionAvail().x + style.WindowPadding.x;
+        frameRect.Max.y += height + 2 * style.FramePadding.y;
+        if ( frameRect.Contains( ImGui::GetIO().MousePos ) ) // only do the hack if header is hovered
+            style.TouchExtraPadding.x = FLT_MAX; // force all header be treated as arrow (e.g. react on MouseDown instead of default MouseRelease)
+    }
     bool res = ImGui::CollapsingHeader( label, flags );
+    style.TouchExtraPadding.x = touchPaddingX; // restore hacked value
+
 
     (void)UI::TestEngine::createValue( label, res, false, true );
 
@@ -139,12 +152,12 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( bool( flags & ImGuiTreeNodeFlags_AllowOverlap ) )
     {
         setOverlap = true;
-        ImGui::GetCurrentContext()->LastItemData.InFlags |= ImGuiItemFlags_AllowOverlap;
+        ImGui::GetCurrentContext()->LastItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap;
     }
     const auto isHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
     if ( setOverlap )
     {
-        ImGui::GetCurrentContext()->LastItemData.InFlags &= ( ~ImGuiItemFlags_AllowOverlap );
+        ImGui::GetCurrentContext()->LastItemData.ItemFlags &= ( ~ImGuiItemFlags_AllowOverlap );
     }
 
     const auto windowBgColor = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
@@ -200,17 +213,17 @@ RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const Men
     ButtonItemWidth res;
     if ( sizeType == DrawButtonParams::SizeType::Big )
     {
-        const float cMinItemSize = cRibbonItemMinWidth * scaling_;
+        const float cMinItemSize = cRibbonItemMinWidth * UI::scale();
 
         float maxTextWidth = 0.f;
         for ( const auto& i : item.captionSize.splitInfo )
             maxTextWidth = std::max( maxTextWidth, i.second );
 
-        res.baseWidth = maxTextWidth + 2 * cRibbonButtonWindowPaddingX * scaling_;
+        res.baseWidth = maxTextWidth + 2 * cRibbonButtonWindowPaddingX * UI::scale();
 
         if ( item.item->type() == RibbonItemType::ButtonWithDrop )
         {
-            auto additionalSize = 3 * cSmallIconSize * scaling_;
+            auto additionalSize = 3 * cSmallIconSize * UI::scale();
             if ( cMinItemSize - res.baseWidth < additionalSize )
                 res.baseWidth += additionalSize;
         }
@@ -223,15 +236,15 @@ RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const Men
     {
         res.baseWidth = ( cSmallIconSize +
                           2.0f * cRibbonButtonWindowPaddingX +
-                          2.0f * cRibbonItemInterval ) * scaling_ +
+                          2.0f * cRibbonItemInterval ) * UI::scale() +
             item.captionSize.baseSize;
 
         if ( item.item->type() == RibbonItemType::ButtonWithDrop )
-            res.additionalWidth = cSmallItemDropSizeModifier * ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * scaling_;
+            res.additionalWidth = cSmallItemDropSizeModifier * ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * UI::scale();
     }
     else
     {
-        res.baseWidth = ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * scaling_;
+        res.baseWidth = ( cSmallIconSize + 2.0f * cRibbonButtonWindowPaddingX ) * UI::scale();
 
         if ( item.item->type() == RibbonItemType::ButtonWithDrop )
             res.additionalWidth = cSmallItemDropSizeModifier * res.baseWidth;
@@ -258,7 +271,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
-    ImGui::BeginChild( ( "##childGroup" + item.item->name() ).c_str(), itemSize, false,
+    ImGui::BeginChild( ( "##childGroup" + item.item->name() ).c_str(), itemSize, ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
     ImGui::PopStyleVar();
 
@@ -269,21 +282,21 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         pushRibbonButtonColors( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
-    pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
+    pressed = UI::TestEngine::createButton(
+        item.item->name(),
+        { .disabledReason = requirements } ) || pressed; // Must not short-circuit.
     pressed = pressed || params.forcePressed;
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
-    if ( font ) {
-        if ( params.iconSize != 0 )
-            font->Scale = params.iconSize / cBigIconSize;
-        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-            font->Scale = cSmallIconSize / cBigIconSize;
-        fontScale = font->Scale;
-        ImGui::PushFont( font );
-    }
+    if ( params.iconSize != 0 )
+        fontScale = params.iconSize / cBigIconSize;
+    else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+        fontScale = cSmallIconSize / cBigIconSize;
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
+    if ( !iconsFont.isPushed() )
+        fontScale = 1.f;
 
-    auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
+    auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needTextColor = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon;
     bool needChangeColor = needTextColor || monochrome_.has_value();
@@ -311,9 +324,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     else
     {
         if ( !imageIcon )
-            ImGui::SetCursorPosY( 3 * scaling_ + 2.0f * ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * UI::scale() + 2.0f * ImGui::GetStyle().WindowPadding.y );
         else
-            ImGui::SetCursorPosY( 3 * scaling_ + ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * UI::scale() + ImGui::GetStyle().WindowPadding.y );
     }
 
     if ( !imageIcon )
@@ -334,11 +347,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    iconsFont.popFont();
 
     if ( params.sizeType == DrawButtonParams::SizeType::Big )
     {
@@ -347,21 +356,24 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         const float textHeight = numLines * ImGui::GetTextLineHeight() + ( numLines - 1 ) * ImGui::GetStyle().ItemSpacing.y;
 
         if ( !imageIcon )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f + 3 * scaling_ );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f + 3 * UI::scale() );
         else
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * scaling_ );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * UI::scale() );
 
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+        size_t pos = 0;
         for ( const auto& i : item.captionSize.splitInfo )
         {
             ImGui::SetCursorPosX( ( params.itemSize.x - i.second ) * 0.5f );
-            ImGui::TextUnformatted( &i.first.front(), &i.first.back() + 1 );
+            ImGui::TextUnformatted( caption.data() + pos, caption.data() + pos + i.first );
+            pos += i.first + 1;
         }
     }
     else if ( params.sizeType == DrawButtonParams::SizeType::SmallText )
     {
         ImGui::SameLine();
         ImGui::SetCursorPosY( ( params.itemSize.y - ImGui::GetTextLineHeight() ) * 0.5f );
-        const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
+        const auto caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
         ImGui::Text( "%s", caption.c_str() );
     }
 
@@ -392,19 +404,16 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 
     int colorChanged = pushRibbonButtonColors( true, false, params.forceHovered, params.rootType );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
-    if ( font )
-    {
-        if ( params.iconSize != 0 )
-            font->Scale = params.iconSize / cBigIconSize;
-        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-            font->Scale = cSmallIconSize / cBigIconSize;
-        fontScale = font->Scale;
-        ImGui::PushFont( font );
-    }
+    if ( params.iconSize != 0 )
+        fontScale = params.iconSize / cBigIconSize;
+    else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+        fontScale = cSmallIconSize / cBigIconSize;
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
+    if ( !iconsFont.isPushed() )
+        fontScale = 1.f;
 
-    auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
+    auto imageRequiredSize = std::round( 32.0f * fontScale * UI::scale() );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needTextColor = params.rootType != DrawButtonParams::Ribbon;
     bool needChangeColor = needTextColor || monochrome_.has_value();
@@ -422,8 +431,8 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 
     if ( !imageIcon )
     {
-        ( !needTextColor && monochrome_.has_value() ) ? 
-            ImGui::TextColored( ImVec4( Vector4f( *monochrome_ ) ), "%s", item.icon.c_str() ) : 
+        ( !needTextColor && monochrome_.has_value() ) ?
+            ImGui::TextColored( ImVec4( Vector4f( *monochrome_ ) ), "%s", item.icon.c_str() ) :
             ImGui::Text( "%s", item.icon.c_str() );
     }
     else
@@ -438,11 +447,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    iconsFont.popFont();
 
     if ( colorChanged > 0 )
         ImGui::PopStyleColor( colorChanged );
@@ -457,20 +462,11 @@ bool RibbonButtonDrawer::drawTabArrowButton( const char* icon, const ImVec2& siz
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        font->Scale = iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGui::PushFont( font );
-    }
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) );
 
     bool pressed = ImGui::Button( icon, size );
-
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    
+    iconsFont.popFont();
 
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar();
@@ -485,16 +481,14 @@ void RibbonButtonDrawer::setMonochrome( const std::optional<Color>& color )
 void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const
 {
     float iconSize = params.iconSize * 0.5f;
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( params.sizeType == DrawButtonParams::SizeType::Big )
-            font->Scale = iconSize / fontSize;
-        else
-            font->Scale = iconSize * 1.5f / fontSize;
-        ImGui::PushFont( font );
-    }
+    float fontScale = 1.f;
+    const float baseFontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
+    if ( params.sizeType == DrawButtonParams::SizeType::Big )
+        fontScale = iconSize / baseFontSize;
+    else
+        fontScale = iconSize * 1.5f / baseFontSize;
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, fontScale );
+
     auto frameHeight = ImGui::GetFrameHeight();
     ImVec2 itemSize = ImVec2( frameHeight, frameHeight );
     ImVec2 dropBtnPos;
@@ -544,11 +538,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( pushedColors );
 
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    iconsFont.popFont();
 
     // manage menu popup
     if ( comboPressed && !menuOpened )
@@ -571,12 +561,11 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         }
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    ImGui::SetNextWindowSizeConstraints( ImVec2(), ImVec2( -1, 200 * scaling_ ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2(), ImVec2( -1, 200 * UI::scale() ) );
     ImGui::Begin( nameWindow.c_str(), NULL, window_flags );
     if ( menuOpened )
     {
-        UI::TestEngine::pushTree( item.item->name() + "##DropDownList" );
-        MR_FINALLY{ UI::TestEngine::popTree(); };
+        UI::TestEngine::TreeGuard testEngineGuard( item.item->name() + "##DropDownList" );
 
         drawDropList_( item.item );
         ImGui::EndPopup();
@@ -612,17 +601,14 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
         {
             const auto& item = it->second;
 
-            if ( !item.caption.empty() )
-                caption = item.caption;
-
-            const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling_;
+            const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * UI::scale();
             const auto width = calcItemWidth( item, DrawButtonParams::SizeType::SmallText );
 
             DrawButtonParams params;
             params.sizeType = DrawButtonParams::SizeType::SmallText;
             params.iconSize = cSmallIconSize;
             params.itemSize.y = ySize;
-            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling_;
+            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * UI::scale();
             drawButtonItem( item, params );
         }
 
@@ -641,16 +627,14 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
 
 void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const
 {
-    auto sFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
-    if ( sFont )
-        ImGui::PushFont( sFont );
+    RibbonFontHolder smallFont( RibbonFontManager::FontType::Small );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * scaling_, cRibbonButtonWindowPaddingY * scaling_ ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * UI::scale(), cRibbonButtonWindowPaddingY * UI::scale() ) );
     std::string tooltip = item.item->getDynamicTooltip();
     if ( tooltip.empty() )
-        tooltip = item.tooltip;
+        tooltip = Locale::translate( item.tooltip.c_str(), item.localeDomainId );
 
-    const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
+    std::string caption = Locale::translate( item.getCaption().c_str(), item.localeDomainId );
 
     std::string fullText;
     fullText = caption;
@@ -695,8 +679,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
     }
     ImGui::EndTooltip();
     ImGui::PopStyleVar( 2 );
-    if ( sFont )
-        ImGui::PopFont();
+    smallFont.popFont();
 }
 
 

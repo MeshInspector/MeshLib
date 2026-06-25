@@ -165,10 +165,15 @@ FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh )
 FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir )
 {
     FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, up = upDir.normalized()]( VertId a, VertId b, VertId c )
+    // perform computations in doubles to avoid overflow even for very large float coordinates in points
+    metric.triangleMetric = [&mesh, up = Vector3d( upDir ).normalized()]( VertId a, VertId b, VertId c )
     {
-        auto ab = mesh.points[b] - mesh.points[a];
-        auto ac = mesh.points[c] - mesh.points[a];
+        const Vector3d ap( mesh.points[a] );
+        const Vector3d bp( mesh.points[b] );
+        const Vector3d cp( mesh.points[c] );
+        const auto ab = bp - ap;
+        const auto ac = cp - ap;
+        const auto bc = cp - bp;
 
         auto norm = cross( ab, ac ); // dbl area
         auto parallelPenalty = std::abs( dot( up, norm ) );
@@ -179,8 +184,22 @@ FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir 
         // side length sq sq - m^4
         return
             norm.lengthSq() +
-            100.0f * sqr( parallelPenalty ) + // this should be big
-            sqr( ab.lengthSq() + ac.lengthSq() + ( mesh.points[c] - mesh.points[b] ).lengthSq() ) * 0.5f;
+            100 * sqr( parallelPenalty ) + // this should be big
+            sqr( ab.lengthSq() + ac.lengthSq() + bc.lengthSq() ) * 0.5;
+    };
+    return metric;
+}
+
+FillHoleMetric getVerticalStitchMetricEdgeBased( const Mesh& mesh, const Vector3f& upDir )
+{
+    MR::FillHoleMetric metric;
+    metric.edgeMetric = [&mesh, up = Vector3d( upDir ).normalized()] ( MR::VertId a, MR::VertId b, MR::VertId, MR::VertId )
+    {
+        const Vector3d ap( mesh.points[a] );
+        const Vector3d bp( mesh.points[b] );
+        const auto ab = bp - ap;
+        // larger orthogonal component of AB - larger penalty
+        return ( ab - dot( ab, up ) * up ).lengthSq();
     };
     return metric;
 }
@@ -278,21 +297,24 @@ FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh )
 FillHoleMetric getUniversalMetric( const Mesh& mesh )
 {
     FillHoleMetric metric;
-    metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
+    metric.triangleMetric = [&points = mesh.points] ( VertId a, VertId b, VertId c )
     {
-        return circumcircleDiameter( mesh.points[a], mesh.points[b], mesh.points[c] );
+        return circumcircleDiameter( points[a], points[b], points[c] );
     };
-    metric.edgeMetric = [&] ( VertId a, VertId b, VertId l, VertId r ) -> double
+    metric.edgeMetric = [&points = mesh.points] ( VertId a, VertId b, VertId l, VertId r ) -> double
     {
-        const auto& aP = mesh.points[a];
-        const auto& bP = mesh.points[b];
-        const auto& lP = mesh.points[l];
-        const auto& rP = mesh.points[r];
-        auto ab = bP - aP;
-        auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
-        auto normR = cross( ab, rP - aP );
-        // exp(10* angle) - was too big and broke even double precision
-        return ab.length() * std::exp( 5 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
+        const auto& aP = points[a];
+        const auto& bP = points[b];
+        const auto& lP = points[l];
+        const auto& rP = points[r];
+        const auto ab = bP - aP;
+        const auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
+        const auto normR = cross( ab, rP - aP );
+        // double sum of triangles' area
+        const auto dblArea = normL.length() + normR.length();
+
+        return std::sqrt( dblArea ) // the same angle for large triangles is much more visible than for small ones (even if shared edge's length is the same)
+             * std::exp( 5 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) ); // exp(10*angle) - was too big and broke even double precision
     };
     return metric;
 }
@@ -320,6 +342,73 @@ FillHoleMetric getMinAreaMetric( const Mesh& mesh )
         return dblArea( aP, bP, cP );
     };
     return metric;
+}
+
+FillHoleMetric getCloseSurfaceFillMetric( const Mesh& mesh, const Mesh& closeSurface )
+{
+    FillHoleMetric metric;
+    metric.triangleMetric = [&mesh, &closeSurface] ( VertId a, VertId b, VertId c )
+    {
+        Vector3f center = ( mesh.points[a] + mesh.points[b] + mesh.points[c] ) / 3.0f;
+        return findProjection( center, closeSurface ).distSq;
+    };
+    return metric;
+}
+
+FillHoleMetric mixMetrics( const FillHoleMetric& f, const FillHoleMetric& g, const FillCombineMetric& mix /*= {} */ )
+{
+    FillHoleMetric res;
+    // using [=] copy capture to ensure f,g,op lifetime during filling
+    if ( f.triangleMetric || g.triangleMetric )
+    {
+        res.triangleMetric = [=] ( VertId a, VertId b, VertId c )->double
+        {
+            auto fRes = f.triangleMetric ? f.triangleMetric( a, b, c ) : 0.0;
+            auto gRes = g.triangleMetric ? g.triangleMetric( a, b, c ) : 0.0;
+            if ( f.triangleMetric && g.triangleMetric )
+            {
+                return mix ? mix( fRes, gRes ) : fRes + gRes;
+            }
+            else if ( f.triangleMetric )
+                return fRes;
+            else
+                return gRes;
+        };
+    }
+    if ( f.edgeMetric || g.edgeMetric )
+    {
+        res.edgeMetric = [=] ( VertId a, VertId b, VertId l, VertId r )->double
+        {
+            auto fRes = f.edgeMetric ? f.edgeMetric( a, b, l, r ) : 0.0;
+            auto gRes = g.edgeMetric ? g.edgeMetric( a, b, l, r ) : 0.0;
+            if ( f.edgeMetric && g.edgeMetric )
+            {
+                return mix ? mix( fRes, gRes ) : fRes + gRes;
+            }
+            else if ( f.edgeMetric )
+                return fRes;
+            else
+                return gRes;
+        };
+    }
+    if ( f.combineMetric || g.combineMetric )
+    {
+        res.combineMetric = [=] ( double a, double b )->double
+        {
+            auto fRes = f.combineMetric ? f.combineMetric( a, b ) : 0.0;
+            auto gRes = g.combineMetric ? g.combineMetric( a, b ) : 0.0;
+            if ( f.combineMetric && g.combineMetric )
+            {
+                return mix ? mix( fRes, gRes ) : fRes + gRes;
+            }
+            else if ( f.combineMetric )
+                return fRes;
+            else
+                return gRes;
+        };
+    }
+
+    return res;
 }
 
 }

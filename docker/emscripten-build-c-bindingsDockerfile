@@ -31,7 +31,7 @@ RUN <<EOF
     rm -rf /var/lib/apt/lists/*
 EOF
 
-ENV EMSDK=/emsdk EM_CONFIG=/emsdk/.emscripten EMSDK_NODE=/emsdk/node/14.18.2_64bit/bin/node
+ENV EMSDK=/emsdk EM_CONFIG=/emsdk/.emscripten EMSDK_NODE=/emsdk/node/14.18.2_64bit/bin/node CMAKE_CROSSCOMPILING_EMULATOR=node
 
 
 FROM base AS builder

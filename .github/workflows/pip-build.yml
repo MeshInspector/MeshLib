@@ -297,19 +297,11 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        run: |
-          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
+      - name: Generate C bindings
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+        run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib CXX_FOR_BINDINGS=/usr/bin/clang++
 
       - name: Upload C bindings headers
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}

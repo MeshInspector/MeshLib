@@ -732,8 +732,6 @@ endif # Windows
 # Linux.
 ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
-# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
-LINKER_FLAGS += -Wl,-z,separate-loadable-segments
 endif
 
 # MacOS.

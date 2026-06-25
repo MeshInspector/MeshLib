@@ -2,18 +2,16 @@ name: patchelf-639-fixture
 
 # Throwaway diagnostic (NOT for merge).
 #
-# Reproduces the genuine crashing layout of libpybind11nonlimitedapi_meshlib_3.12.so
-# from https://github.com/NixOS/patchelf/issues/639 by running MeshLib's REAL
-# shim build (full build_source.sh + `make shims` via generate.mk) in the
-# rockylinux8-vcpkg image (clang-21/lld-21), with the
-# `-Wl,-z,separate-loadable-segments` workaround (generate.mk) reverted on this
-# branch. Standalone cmake builds and the auditwheel-repaired wheel do NOT
-# reproduce it; the real generate.mk link (-shared, -lMRPython, -lopenvdb
-# -lTKernel -ljsoncpp, libpython, -flto=thin -Oz -s) does.
+# The patchelf#639 crash needs the shim's .init packed right after the PHT.
+# Toolchain is unchanged since May (clang/lld 21.1.8), but the mrbind-pybind11
+# shim source (non_limited_api.cpp / .h) changed between the May submodule pin
+# (e5169301, in use when #639 reproduced) and current master (b747f677).
 #
-# Scoped to x86_64 + Python 3.12 to keep it cheap. Uploads the raw, un-patchelf'd
-# shim so it can verify patchelf PR #652 and serve as the missing regression
-# fixture.
+# This isolates that single variable: build the shim standalone (clang-21/lld)
+# from BOTH pins in the rockylinux8-vcpkg image and compare .init placement. If
+# the MAY source puts .init next to the PHT and current source doesn't, the shim
+# source change is what made the bug stop reproducing - and the MAY .so is the
+# triggering fixture.
 
 on:
   push:
@@ -21,82 +19,63 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-shim:
-    timeout-minutes: 90
+  shim-source-diff:
     runs-on: ubuntu-latest
     container:
       image: meshlib/meshlib-rockylinux8-vcpkg-x64:latest
       options: --user root
-    env:
-      CXX_BIND: /usr/bin/clang++
     steps:
-      - name: Work-around possible permission issues
-        shell: bash
+      - name: Toolchain info
         run: |
-          if test -d "$GITHUB_WORKSPACE" && test -n "$(find "$GITHUB_WORKSPACE" -user root)"; then
-            mv "$GITHUB_WORKSPACE" "${GITHUB_WORKSPACE}_${RANDOM}"
-            mkdir "$GITHUB_WORKSPACE"
-          fi
+          CXX="$(command -v clang++ || command -v clang++-21)"; echo "CXX=$CXX"; "$CXX" --version | head -1
+          (ld.lld --version || ld.lld-21 --version) 2>/dev/null | head -1 || true
+          python3.12 --version
 
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Checkout third-party submodules
+      - name: Build shim standalone for MAY vs NOW mrbind-pybind11 source
         run: |
-          export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          for sm in imgui parallel-hashmap mrbind-pybind11 mrbind; do
-            git config --global --add safe.directory "$GITHUB_WORKSPACE/thirdparty/$sm"
-          done
-          git config --global --add safe.directory "$GITHUB_WORKSPACE/thirdparty/mrbind/deps/cppdecl"
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          set -e
+          CXX="$(command -v clang++ || command -v clang++-21)"
+          PYINC="$(python3.12 -c 'import sysconfig; print(sysconfig.get_path("include"))')"
+          LIBDIR="$(python3.12 -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')"
+          PYLIB="$LIBDIR/libpython3.12.so"
+          [ -e "$PYLIB" ] || PYLIB="$LIBDIR/$(python3.12 -c 'import sysconfig; print(sysconfig.get_config_var("LDLIBRARY"))')"
+          mkdir -p /tmp/out
 
-      - name: Confirm workaround is reverted
-        run: grep -n "separate-loadable-segments" scripts/mrbind/generate.mk || echo "workaround line not active (good)"
+          init_off() { readelf -SW "$1" | awk '{for(i=1;i<=NF;i++) if($i==".init") print $(i+2)}'; }
 
-      - name: Build MeshLib (full, Release) - needed for libMRPython.so + stub
-        run: ./scripts/build_source.sh
-        env:
-          MESHLIB_BUILD_RELEASE: "ON"
-          MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: /usr/bin/clang++
-          MR_CMAKE_OPTIONS: >
-            -DMRVIEWER_NO_GTK=ON
-            -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+          build_one() {
+            tag="$1"; pin="$2"
+            git clone -q https://github.com/MeshInspector/mrbind-pybind11 "/tmp/mp-$tag"
+            git -C "/tmp/mp-$tag" checkout -q "$pin"
+            cmake -G Ninja -S "/tmp/mp-$tag/source/non_limited_api" -B "/tmp/b-$tag" \
+              -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="$CXX" \
+              -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+              -DPython_EXECUTABLE=/usr/bin/python3.12 -DPython_INCLUDE_DIR="$PYINC" -DPython_LIBRARY="$PYLIB" \
+              -DPYBIND11_NONLIMITEDAPI_SUFFIX=meshlib -DPYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX=0x030800f0 >/dev/null
+            cmake --build "/tmp/b-$tag" -j"$(nproc)" >/dev/null
+            so="$(find "/tmp/b-$tag" -name 'libpybind11nonlimitedapi_meshlib_3.12.so' | head -1)"
+            cp "$so" "/tmp/out/shim-$tag.so"
+            echo "================ $tag  ($pin) ================"
+            echo "  .init sh_addr = $(init_off "$so")   (PHDR ends ~0x230)"
+            echo "  -- LOAD/PHDR segments --"
+            readelf -lW "$so" | awk '/Type +Offset/{p=1} p&&/LOAD|PHDR/{print "   "$0} /Section to Segment/{p=0}'
+            echo "  -- section order (first executable run) --"
+            readelf -lW "$so" | awk '/02 +/{print "   exec-seg:",$0}' | head -1
+            echo "  -- key sections --"
+            readelf -SW "$so" | awk '/\.(init|note|plt|text|dynstr|dynsym)\b/{print "   "$0}' | head
+            echo
+          }
 
-      - name: Install uv (Python version management)
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+          build_one MAY e51693015e81b3fc927f1b442c024b62e35996b8
+          build_one NOW b747f677ab30ec62aca834c78383cd92c90e6b32
 
-      - name: Build the shim via generate.mk (the real link path) for Python 3.12
-        run: |
-          export PKG_CONFIG_PATH=$(uv run --python 3.12 "${PWD}/scripts/wheel/get_sysconfig_var.py" LIBPC)
-          make shims -f scripts/mrbind/generate.mk -B --trace \
-            FOR_WHEEL=1 \
-            CXX_FOR_ABI=/usr/bin/clang++ \
-            CXX_FOR_BINDINGS=/usr/bin/clang++ \
-            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
-            PYTHON_VERSIONS=3.12
+          echo "==================== SUMMARY ===================="
+          for t in MAY NOW; do echo "  $t: .init = $(init_off "/tmp/out/shim-$t.so")"; done
+          echo "(low .init, just past the PHT ~0x230, = #639-triggering layout)"
 
-      - name: Locate + dump layout (.init offset vs PHT is the #639 signal)
-        run: |
-          shim="$(find . -name 'libpybind11nonlimitedapi_meshlib_3.12.so' | head -1)"
-          echo "shim=$shim"; ls -l "$shim"
-          readelf -hW "$shim" | grep -iE 'program headers|entry point'
-          echo "--- program headers ---"
-          readelf -lW "$shim" | sed -n '/Program Headers/,/Section to Segment/p'
-          echo "--- key sections (.init near the PHT => triggers) ---"
-          readelf -SW "$shim" | awk 'NR<=5 || /\.(init|fini|note|plt|text|dynstr|dynsym|gnu\.hash)\b/'
-          readelf -dW "$shim" | grep -iE 'INIT|RUNPATH|RPATH|NEEDED' || true
-          mkdir -p /tmp/out && cp "$shim" /tmp/out/
-          stub="$(find . -name 'libpybind11nonlimitedapi_stubs*.so' | head -1)"
-          [ -n "$stub" ] && cp "$stub" /tmp/out/ || true
-
-      - name: Upload raw (un-patchelf'd) shim
+      - name: Upload both shims
         uses: actions/upload-artifact@v4
         with:
-          name: shim-real-rockylinux8-clang21-no-workaround
+          name: shim-source-may-vs-now
           path: /tmp/out/*.so
           if-no-files-found: error

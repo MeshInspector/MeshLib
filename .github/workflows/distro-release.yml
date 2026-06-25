@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write # This is required for requesting the JWT (windows-build-test)
+  actions: read   # This is required for wait-for-job (windows-build-test)
 
 jobs:
   config:

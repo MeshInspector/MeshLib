@@ -147,7 +147,7 @@ jobs:
     needs: setup
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
-      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag }}
+      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
 
   manylinux-pip-build:

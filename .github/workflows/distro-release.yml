@@ -60,7 +60,7 @@ jobs:
     needs: config
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
-      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag }}
+      docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
       version_tag: ${{ needs.config.outputs.release_tag }}
 
   windows-build-test:

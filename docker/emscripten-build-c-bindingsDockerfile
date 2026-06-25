@@ -26,12 +26,18 @@ RUN <<EOF
     git clone https://github.com/emscripten-core/emsdk.git /emsdk
     /emsdk/emsdk install 3.1.8
     /emsdk/emsdk activate 3.1.8
+    # Destroy a buggy cmake module, causing fallback to the host one.
+    # It compiles tiny programs to check type `sizeof`. The old EMSDK can't run wasm applications on the builder using `node`, seemingly because the apps themselves don't include the necessary code in EMSDK this old.
+    # In the version of this module shipped with emsdk, cmake just chokes because of this.
+    # But in the newer version of the module (the one in `/usr`, coming with the host cmake), the resulting app isn't being ran, and the sizeof is instead stored in a constant string variable
+    #   that's extracted from the compiled binary without running it. This works.
+    rm /emsdk/upstream/emscripten/cmake/Modules/CheckTypeSize.cmake
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 EOF
 
-ENV EMSDK=/emsdk EM_CONFIG=/emsdk/.emscripten EMSDK_NODE=/emsdk/node/14.18.2_64bit/bin/node CMAKE_CROSSCOMPILING_EMULATOR=node
+ENV EMSDK=/emsdk EM_CONFIG=/emsdk/.emscripten EMSDK_NODE=/emsdk/node/14.18.2_64bit/bin/node
 
 
 FROM base AS builder

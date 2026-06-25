@@ -7,7 +7,7 @@
 
 # No Arm images on dockerhub for EMSDK this old, so have to use x64,
 
-FROM emscripten/emsdk:3.1.38 AS base
+FROM emscripten/emsdk:3.1.8 AS base
 
 RUN <<EOF
     set -e

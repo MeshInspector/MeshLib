@@ -44,12 +44,22 @@ jobs:
       - name: Build shim (clang-21 + lld, SUFFIX=meshlib, Python 3.12)
         run: |
           CXX="$(command -v clang++ || command -v clang++-21)"
+          PYINC="$(python3.12 -c 'import sysconfig; print(sysconfig.get_path("include"))')"
+          LIBDIR="$(python3.12 -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')"
+          PYLIB="$LIBDIR/libpython3.12.so"
+          if [ ! -e "$PYLIB" ]; then
+            PYLIB="$LIBDIR/$(python3.12 -c 'import sysconfig; print(sysconfig.get_config_var("LDLIBRARY"))')"
+          fi
+          echo "PYINC=$PYINC"; ls -l "$PYINC/Python.h"
+          echo "PYLIB=$PYLIB"; ls -l "$PYLIB"
           cmake -G Ninja -S thirdparty/mrbind-pybind11/source/non_limited_api -B build-shim \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
             -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
             -DPython_EXECUTABLE=/usr/bin/python3.12 \
+            -DPython_INCLUDE_DIR="$PYINC" \
+            -DPython_LIBRARY="$PYLIB" \
             -DPYBIND11_NONLIMITEDAPI_SUFFIX=meshlib \
             -DPYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX=0x030800f0
           cmake --build build-shim -j"$(nproc)"

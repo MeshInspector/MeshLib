@@ -1,26 +1,32 @@
 #include <gtest/gtest.h>
 
-#ifdef _WIN32
+#if defined( MR_MIMALLOC_ENABLED )
+
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRCube.h>
 
 #include <cstdlib>
 #include <string_view>
 
-// mimalloc.h declares these as `bool`. Matching the actual return type is
-// critical: MSVC returns `bool` in the low byte of EAX, so reading the call
-// site as `int` picks up garbage in the upper 24 bits (e.g. -980287487).
-// Local Debug happened to zero those bits; Release CI didn't.
-extern "C" bool mi_is_redirected();
+// Declared here to avoid <mimalloc.h>. Return type MUST be bool, not int: MSVC
+// returns bool in AL, so an int read picks up garbage in the upper bits (broke Release CI).
 extern "C" bool mi_is_in_heap_region( const void* p );
+#ifdef _WIN32
+extern "C" bool mi_is_redirected();
+#endif
 
 namespace MR
 {
 
-// Verifies mimalloc's transparent CRT-allocator redirect engaged for this EXE.
-// Wired in MeshLib/source/MimallocRedirect.props (MSBuild) and
-// MeshLib/cmake/Modules/MimallocRedirect.cmake (CMake). Skipped when
-// MIMALLOC_DISABLE_REDIRECT=1 (mimalloc's own runtime kill-switch).
+// Confirms mimalloc services real allocations, not just that the lib is linked.
+// Wired by Mimalloc.cmake (CMake) / MimallocRedirect.props (MSBuild) via the
+// MR_MIMALLOC_ENABLED define. Each allocation below must land in a mimalloc region:
+// C malloc, C++ operator new, and an allocation made INSIDE MRMesh (cross-library -
+// the real goal, what the process-wide override must reach, esp. macOS two-level ns).
+// On Windows also asserts the redirect engaged; MIMALLOC_DISABLE_REDIRECT=1 skips that.
 TEST( MRMesh, MimallocRedirectActive )
 {
+#ifdef _WIN32
     if ( const char* disable = std::getenv( "MIMALLOC_DISABLE_REDIRECT" );
          disable && std::string_view( disable ) == "1" )
     {
@@ -28,13 +34,26 @@ TEST( MRMesh, MimallocRedirectActive )
     }
 
     EXPECT_TRUE( mi_is_redirected() );
+#endif
 
+    // C malloc, in this executable
     void* p = std::malloc( 64 );
     ASSERT_NE( p, nullptr );
     EXPECT_TRUE( mi_is_in_heap_region( p ) );
     std::free( p );
+
+    // C++ operator new, in this executable
+    int* q = new int[16];
+    EXPECT_TRUE( mi_is_in_heap_region( q ) );
+    delete[] q;
+
+    // cross-library: makeCube() fills points via operator new compiled into MRMesh,
+    // so its buffer must be a mimalloc region too (proves the override reaches the libs)
+    const Mesh cube = makeCube();
+    ASSERT_NE( cube.points.data(), nullptr );
+    EXPECT_TRUE( mi_is_in_heap_region( cube.points.data() ) );
 }
 
 } // namespace MR
 
-#endif // _WIN32
+#endif // MR_MIMALLOC_ENABLED

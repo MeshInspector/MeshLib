@@ -28,6 +28,7 @@ libe57format
 libharu
 libjpeg-turbo
 libzip
+mimalloc[override]
 opencascade-minimal
 openctm
 openvdb

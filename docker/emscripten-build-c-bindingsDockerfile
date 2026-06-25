@@ -21,7 +21,7 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build gettext cmake ca-certificates python3 xz-utils lbzip2
+        tzdata git pkg-config ninja-build gettext cmake ca-certificates python3 xz-utils lbzip2 curl
     # install emsdk
     git clone https://github.com/emscripten-core/emsdk.git /emsdk
     /emsdk/emsdk install 3.1.8

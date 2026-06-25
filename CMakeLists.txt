@@ -54,9 +54,6 @@ ENDIF()
 
 include(CompilerOptions)
 include(ConfigurePch)
-IF(EMSCRIPTEN)
-  include(ConfigureEmscripten)
-ENDIF()
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -83,6 +80,7 @@ option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
+option(MESHLIB_BUILD_WASM_MODULE "Build the headless WebAssembly module" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -97,11 +95,14 @@ IF(MESHLIB_BUILD_MRCUDA)
   ENDIF()
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
+  include(ConfigureEmscripten)
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
   set(MESHLIB_BUILD_MCP OFF)
+ELSE()
+  set(MESHLIB_BUILD_WASM_MODULE OFF)
 ENDIF()
 
 # Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the
@@ -324,6 +325,10 @@ ENDIF()
 IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRMcp ./MRMcp)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRMCPGateway ./MRMCPGateway)
+ENDIF()
+
+IF(MESHLIB_BUILD_WASM_MODULE)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRWasmModule ./MRWasmModule)
 ENDIF()
 
 IF(BUILD_TESTING)

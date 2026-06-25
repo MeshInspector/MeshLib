@@ -1,0 +1,10 @@
+{
+  "name": "meshlib-threejs-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Three.js interop example and headless round-trip test for the MeshLib WebAssembly module",
+  "scripts": {
+    "test": "node roundtrip.test.mjs"
+  }
+}

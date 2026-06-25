@@ -7,7 +7,7 @@
 
 # No Arm images on dockerhub for EMSDK this old, so have to use x64,
 
-FROM emscripten/emsdk:3.1.8 AS base
+FROM ubuntu:24.04 AS base
 
 RUN <<EOF
     set -e
@@ -21,11 +21,17 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build gettext
+        tzdata git pkg-config ninja-build gettext cmake
+    # install emsdk
+    git clone https://github.com/emscripten-core/emsdk.git /emsdk
+    /emsdk/emsdk install 3.1.8
+    /emsdk/emsdk activate 3.1.8
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 EOF
+
+ENV EMSDK=/emsdk EM_CONFIG=/emsdk/.emscripten EMSDK_NODE=/emsdk/node/14.18.2_64bit/bin/node
 
 
 FROM base AS builder

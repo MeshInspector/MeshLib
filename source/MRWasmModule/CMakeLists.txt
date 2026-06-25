@@ -1,6 +1,8 @@
 project(MRWasmModule CXX)
 
-add_executable(${PROJECT_NAME} MRWasmBindings.cpp)
+file(GLOB SOURCES "*.cpp")
+file(GLOB HEADERS "*.h")
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 target_compile_options(${PROJECT_NAME} PRIVATE "-fexceptions")
 

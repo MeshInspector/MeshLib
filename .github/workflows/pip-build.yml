@@ -324,16 +324,6 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
-      - name: Upload C bindings headers
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: CBindings
-          path: |
-            ./source/MeshLibC2/include
-            ./source/MeshLibC2Cuda/include
-          retention-days: 1
-
       - name: Generate C# bindings # generate only sources
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate

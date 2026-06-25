@@ -52,11 +52,15 @@ jobs:
           fi
           echo "PYINC=$PYINC"; ls -l "$PYINC/Python.h"
           echo "PYLIB=$PYLIB"; ls -l "$PYLIB"
+          # Mirror generate.mk's release shim flags (-Oz -flto=thin -s, lld),
+          # but WITHOUT the -Wl,-z,separate-loadable-segments workaround that
+          # generate.mk:731 added for #639 - we want the pre-workaround layout.
           cmake -G Ninja -S thirdparty/mrbind-pybind11/source/non_limited_api -B build-shim \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER="$CXX" \
-            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_CXX_FLAGS="-Oz -flto=thin -DNDEBUG" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Oz -flto=thin -s" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Oz -flto=thin -s" \
             -DPython_EXECUTABLE=/usr/bin/python3.12 \
             -DPython_INCLUDE_DIR="$PYINC" \
             -DPython_LIBRARY="$PYLIB" \

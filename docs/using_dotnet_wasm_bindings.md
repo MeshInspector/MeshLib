@@ -24,19 +24,21 @@ If you also have installed MeshLib in Nuget-for-Unity (which is a good idea to b
 
   2. Click on `meshlib_vA.B.C.D_dotnet-wasm/MRDotNet2Static.dll`.
 
-     * On the right panel, uncheck `Any Platform`, and check `Include Platforms`->`WebGL`.
+     * On the right panel, uncheck `Any Platform`, and enable only `Include Platforms`->`WebGL`.
 
      * Click `Apply`.
 
-  3. Open `meshlib_vA.B.C.D_dotnet-wasm/native/single/`.
+  3. Open `meshlib_vA.B.C.D_dotnet-wasm/native/singlethreaded/` or `.../multithreaded/`.
 
-  4. Select all files there (`.a` files).
+     This must match your Wasm build settings in Unity. If you enabled Wasm multithreading in Unity, use the multithreaded version of the files. If you don't know what you're doing, you probably have a single-threaded build.
 
-     * On the right panel, similarly uncheck `Any Platform`, and check `Include Platforms`->`WebGL`.
+     * Select all files there (`.a` files).
+
+     * On the right panel, similarly uncheck `Any Platform`, and enable only `Include Platforms`->`WebGL`.
 
      * Click `Apply`.
 
-  5. Uncheck specific libraries that conflcit with Unity:
+  4. Uncheck specific libraries that conflcit with Unity:
 
      * Select only `libblosc.a` and uncheck `WebGL`. Click `Apply`.
 
@@ -44,8 +46,8 @@ If you also have installed MeshLib in Nuget-for-Unity (which is a good idea to b
 
      We still add them to the distribution for use outside of Unity.
 
-## Different kinds of binaries
+  5. Uncheck the unused libraries:
 
-Right now we only ship one set of C++ binaries (`meshlib_vA.B.C.D_dotnet-wasm/native/single`). Those are single-threaded.
+     * If you used `.../singlethreaded/` libraries, then disable the `.../multithreaded/` ones, or vice versa.
 
-We plan to add more configurations (at least a multithreaded one), and possibly have versions built with different versions of Emscripten SDK (to match different versions of Unity).
+     * To disable them, open the respective directory, select all files there (`.a` files), uncheck `Any Platform` and uncheck all platforms.

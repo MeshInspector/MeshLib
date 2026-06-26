@@ -7,6 +7,7 @@ def test_fix_tunnels():
 
     settings = mrmesh.DetectTunnelSettings()
     settings.maxTunnelLength = 100500
+    settings.filterEquivalentCoLoops = True
     tunnelFaces = mrmesh.detectTunnelFaces(torus, settings)
 
     # one circle with 2-faces width

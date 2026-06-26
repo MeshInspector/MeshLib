@@ -6,6 +6,10 @@ on:
       docker_image_tag:
         required: true
         type: string
+      version_tag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   generate-c-bindings:
@@ -20,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{inputs.version_tag}}
 
       - name: Checkout third-party submodules
         run: |

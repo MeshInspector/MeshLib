@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write # This is required for requesting the JWT (windows-build-test)
+  actions: read   # This is required for wait-for-job (windows-build-test)
 
 jobs:
   config:
@@ -53,6 +55,13 @@ jobs:
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT
+
+  generate-c-bindings:
+    needs: config
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
+      version_tag: ${{ needs.config.outputs.release_tag }}
 
   windows-build-test:
     needs: [ config ]

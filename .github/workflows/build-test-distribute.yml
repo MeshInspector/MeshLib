@@ -226,7 +226,6 @@ jobs:
          mkdir meshlib_dotnet-wasm
          mkdir meshlib_dotnet-wasm/native
          move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
-         mkdir meshlib_dotnet-wasm/native/single
          move browser_wasm_runtime/* meshlib_dotnet-wasm/native
          Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
 

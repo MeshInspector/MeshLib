@@ -82,6 +82,32 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
         "" :
         ( "Select at least " + getNObjectsLine<ObjectT>( n ) + " with valid model" );
 }
+
+// checks that given vector has at most N objects if type ObjectT
+// returns error message if requirements are not satisfied
+template<typename ObjectT, bool visualRepresentationCheck, bool modelCheck>
+std::string sceneSelectedAtMost( const std::vector<std::shared_ptr<const Object>>& objs, unsigned n )
+{
+    unsigned i = 0;
+    for ( const auto& obj : objs )
+    {
+        auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
+        if ( !tObj )
+            continue;
+
+        if constexpr ( modelCheck )
+            if ( !tObj->hasModel() )
+                continue;
+
+        if constexpr ( visualRepresentationCheck )
+            if ( !tObj->hasVisualRepresentation() )
+                continue;
+        ++i;
+    }
+    return ( i <= n ) ?
+        "" :
+        ( "Select at most " + getNObjectsLine<ObjectT>( n ) );
+}
 // These instantiations are defined once in MRSceneStateCheck.cpp and imported elsewhere
 // (extern template, as in MRUITestEngine.h), so the common cases are not re-generated in
 // every consuming TU. Other object types stay header-instantiated as before.
@@ -158,6 +184,40 @@ public:
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
     {
         return sceneSelectedAtLeast<ObjectT, false, false>( objs, N );
+    }
+};
+
+// checks that given vector has at most N objects if type ObjectT
+template<unsigned N, typename ObjectT, typename = void>
+class SceneStateAtMostCheck : virtual public ISceneStateCheck
+{
+public:
+    virtual ~SceneStateAtMostCheck() = default;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
+    {
+        return sceneSelectedAtMost<ObjectT, true, true>( objs, N );
+    }
+};
+
+template<unsigned N, typename ObjectT>
+class SceneStateAtMostCheck<N, ObjectT, NoVisualRepresentationCheck> : virtual public ISceneStateCheck
+{
+public:
+    virtual ~SceneStateAtMostCheck() = default;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
+    {
+        return sceneSelectedAtMost<ObjectT, false, true>( objs, N );
+    }
+};
+
+template<unsigned N, typename ObjectT>
+class SceneStateAtMostCheck<N, ObjectT, NoModelCheck> : virtual public ISceneStateCheck
+{
+public:
+    virtual ~SceneStateAtMostCheck() = default;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
+    {
+        return sceneSelectedAtMost<ObjectT, false, false>( objs, N );
     }
 };
 

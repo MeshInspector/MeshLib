@@ -34,6 +34,17 @@ val toUint32Array( const uint32_t* data, size_t count )
     return out;
 }
 
+std::function<bool( float )> jsToCppCallback( val cb )
+{
+    if ( cb.isUndefined() || cb.isNull() )
+        return {};
+    return [cb]( float progress ) -> bool
+    {
+        val r = cb( progress );
+        return r.isUndefined() ? true : r.as<bool>();
+    };
+}
+
 int main()
 {
     return 0;

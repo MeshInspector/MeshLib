@@ -36,6 +36,6 @@ export function geometryToThree( THREE, exported ) {
 }
 
 export function meshToThree( ml, THREE, mesh, { normals = false } = {} ) {
-  const exported = normals ? mesh.toGeometryWithNormals() : mesh.toGeometry();
+  const exported = ml.meshToGeometry( mesh, normals );
   return geometryToThree( THREE, exported );
 }

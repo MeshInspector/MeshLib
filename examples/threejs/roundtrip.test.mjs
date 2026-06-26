@@ -38,14 +38,11 @@ function isClosedGenus0( verts, tris ) {
 {
   const c = cube( 0, 0, 0, 2 );
   const m = ml.meshFromGeometry( c.positions, c.indices );
-  assert.equal( m.numVerts(), 8, 'cube welds to 8 vertices' );
-  assert.equal( m.numTris(), 12, 'cube has 12 triangles' );
-
-  const g = m.toGeometry();
+  const g = ml.meshToGeometry( m, false );
   assert.ok( g.positions instanceof Float32Array, 'positions is a Float32Array' );
   assert.ok( g.indices instanceof Uint32Array, 'indices is a Uint32Array' );
-  assert.equal( g.positions.length, 8 * 3 );
-  assert.equal( g.indices.length, 12 * 3 );
+  assert.equal( g.positions.length, 8 * 3, 'cube welds to 8 vertices' );
+  assert.equal( g.indices.length, 12 * 3, 'cube has 12 triangles' );
 
   const nv = g.positions.length / 3;
   for ( let i = 0; i < g.indices.length; i++ )
@@ -68,31 +65,36 @@ function isClosedGenus0( verts, tris ) {
   const ma = ml.meshFromGeometry( A.positions, A.indices );
   const mb = ml.meshFromGeometry( B.positions, B.indices );
 
-  const u = ml.boolean( ma, mb, ml.BooleanOp.Union );
-  const vBefore = u.numVerts();
-  const fBefore = u.numTris();
+  const res = ml.boolean( ma, mb, ml.BooleanOperation.Union );
+  assert.ok( res.valid(), 'union succeeded' );
+  const u = res.mesh;
+
+  const gBefore = ml.meshToGeometry( u, false );
+  const vBefore = gBefore.positions.length / 3;
+  const fBefore = gBefore.indices.length / 3;
   assert.ok( fBefore > 12, 'union has more triangles than a single cube' );
   assert.ok( isClosedGenus0( vBefore, fBefore ),
     `union should be a closed genus-0 solid (V=${vBefore}, F=${fBefore})` );
 
-  const res = ml.decimate( u, { targetRatio: 0.5 } );
-  assert.ok( res.facesDeleted >= 0, 'facesDeleted is non-negative' );
-  assert.ok( u.numTris() <= fBefore, 'decimate never increases triangle count' );
-  assert.ok( u.numTris() >= 4, 'decimate does not destroy the mesh' );
-  assert.ok( u.numTris() >= Math.floor( fBefore * 0.25 ), 'decimate did not wildly over-simplify' );
+  const s = new ml.DecimateSettings();
+  s.maxDeletedFaces = Math.floor( fBefore / 2 );
+  const dr = ml.decimateMesh( u, s );
+  assert.ok( dr.facesDeleted >= 0, 'facesDeleted is non-negative' );
+  assert.ok( dr.facesDeleted <= Math.floor( fBefore / 2 ), 'decimate honors maxDeletedFaces' );
 
-  const g = u.toGeometry();
-  assert.equal( g.positions.length / 3, u.numVerts(), 'exported vertex count matches packed mesh' );
-  assert.equal( g.indices.length / 3, u.numTris(), 'exported triangle count matches packed mesh' );
-  const nv = g.positions.length / 3;
-  for ( let i = 0; i < g.indices.length; i++ )
-    assert.ok( g.indices[i] < nv, 'all indices in range after pack' );
+  const gAfter = ml.meshToGeometry( u, false );
+  const fAfter = gAfter.indices.length / 3;
+  const vAfter = gAfter.positions.length / 3;
+  assert.ok( fAfter <= fBefore, 'decimate never increases triangle count' );
+  assert.ok( fAfter >= 4, 'decimate does not destroy the mesh' );
+  for ( let i = 0; i < gAfter.indices.length; i++ )
+    assert.ok( gAfter.indices[i] < vAfter, 'all indices in range after decimate' );
 
-  const gn = u.toGeometryWithNormals();
+  const gn = ml.meshToGeometry( u, true );
   assert.ok( gn.normals instanceof Float32Array && gn.normals.length === gn.positions.length,
     'normals array parallels positions' );
 
-  ma.delete(); mb.delete(); u.delete();
+  s.delete(); u.delete(); res.delete(); ma.delete(); mb.delete();
 }
 
 {
@@ -100,14 +102,31 @@ function isClosedGenus0( verts, tris ) {
   const Far = cube( 100, 100, 100, 2 );
   const ma = ml.meshFromGeometry( A.positions, A.indices );
   const mf = ml.meshFromGeometry( Far.positions, Far.indices );
-  try {
-    const x = ml.boolean( ma, mf, ml.BooleanOp.Intersection );
-    assert.ok( x.numTris() >= 0, 'intersection returned a (possibly empty) mesh' );
-    x.delete();
-  } catch ( e ) {
-    assert.ok( e !== undefined, 'a failed boolean surfaces as a catchable error' );
-  }
-  ma.delete(); mf.delete();
+
+  const res = ml.boolean( ma, mf, ml.BooleanOperation.Intersection );
+  assert.ok( res.valid(), 'disjoint intersection is still valid' );
+  const x = res.mesh;
+  assert.equal( ml.meshToGeometry( x, false ).indices.length, 0, 'intersection of disjoint meshes is empty' );
+
+  x.delete(); res.delete(); ma.delete(); mf.delete();
+}
+
+{
+  const c = cube( 0, 0, 0, 2 );
+  const m = ml.meshFromGeometry( c.positions, c.indices );
+
+  const s = new ml.SelfIntersectionsSettings();
+  let calls = 0;
+  s.callback = ( progress ) => { calls++; return true; };
+  ml.fixSelfIntersections( m, s );
+  assert.ok( calls >= 1, 'fix invoked the JS progress callback' );
+
+  const s2 = new ml.SelfIntersectionsSettings();
+  s2.callback = () => false;
+  assert.throws( () => ml.fixSelfIntersections( m, s2 ), /cancel/i,
+    'a cancelled fix surfaces the Expected<void> error as a JS exception' );
+
+  s.delete(); s2.delete(); m.delete();
 }
 
 console.log( 'OK' );

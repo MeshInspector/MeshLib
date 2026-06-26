@@ -4,8 +4,6 @@ file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
-target_compile_options(${PROJECT_NAME} PRIVATE "-fexceptions")
-
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
     -Wl,--whole-archive
@@ -19,7 +17,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "meshlib")
 
 target_link_options(${PROJECT_NAME} PRIVATE
   "--bind"
-  "-fexceptions"
   "-sMODULARIZE=1"
   "-sEXPORT_NAME=createMeshLib"
   "-sEXPORT_ES6=1"

@@ -6,48 +6,36 @@
 
 #include <emscripten/bind.h>
 
-#include <stdexcept>
-#include <utility>
+#include <memory>
 
 using namespace emscripten;
 
 namespace
 {
 
-enum class JsBooleanOp { Union, Intersection, DifferenceAB, DifferenceBA };
-
-MR::BooleanOperation toCoreOp( JsBooleanOp op )
+MR::BooleanResult booleanWrap( std::shared_ptr<MR::Mesh> a, std::shared_ptr<MR::Mesh> b, MR::BooleanOperation op )
 {
-    switch ( op )
-    {
-    case JsBooleanOp::Union:        return MR::BooleanOperation::Union;
-    case JsBooleanOp::Intersection: return MR::BooleanOperation::Intersection;
-    case JsBooleanOp::DifferenceAB: return MR::BooleanOperation::DifferenceAB;
-    case JsBooleanOp::DifferenceBA: return MR::BooleanOperation::DifferenceBA;
-    }
-    throw std::runtime_error( "boolean: unknown operation" );
-}
-
-MR::Mesh booleanOp( const MR::Mesh& a, const MR::Mesh& b, JsBooleanOp op )
-{
-    return guarded( [&]() -> MR::Mesh
-    {
-        MR::BooleanResult res = MR::boolean( a, b, toCoreOp( op ) );
-        if ( !res.valid() )
-            throw std::runtime_error( res.errorString.empty() ? "boolean operation failed" : res.errorString );
-        return std::move( res.mesh );
-    } );
+    return MR::boolean( *a, *b, op );
 }
 
 }
 
 EMSCRIPTEN_BINDINGS( meshlib_boolean )
 {
-    enum_<JsBooleanOp>( "BooleanOp" )
-        .value( "Union", JsBooleanOp::Union )
-        .value( "Intersection", JsBooleanOp::Intersection )
-        .value( "DifferenceAB", JsBooleanOp::DifferenceAB )
-        .value( "DifferenceBA", JsBooleanOp::DifferenceBA );
+    enum_<MR::BooleanOperation>( "BooleanOperation" )
+        .value( "InsideA", MR::BooleanOperation::InsideA )
+        .value( "InsideB", MR::BooleanOperation::InsideB )
+        .value( "OutsideA", MR::BooleanOperation::OutsideA )
+        .value( "OutsideB", MR::BooleanOperation::OutsideB )
+        .value( "Union", MR::BooleanOperation::Union )
+        .value( "Intersection", MR::BooleanOperation::Intersection )
+        .value( "DifferenceBA", MR::BooleanOperation::DifferenceBA )
+        .value( "DifferenceAB", MR::BooleanOperation::DifferenceAB );
 
-    function( "boolean", &booleanOp );
+    class_<MR::BooleanResult>( "BooleanResult" )
+        .property( "errorString", &MR::BooleanResult::errorString )
+        .property( "mesh", +[]( const MR::BooleanResult& r ) { return std::make_shared<MR::Mesh>( r.mesh ); } )
+        .function( "valid", &MR::BooleanResult::valid );
+
+    function( "boolean", &booleanWrap );
 }

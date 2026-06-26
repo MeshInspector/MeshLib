@@ -8,34 +8,27 @@
 
 #include <memory>
 
-using namespace emscripten;
-
-namespace
-{
-
-MR::BooleanResult booleanWrap( std::shared_ptr<MR::Mesh> a, std::shared_ptr<MR::Mesh> b, MR::BooleanOperation op )
-{
-    return MR::boolean( *a, *b, op );
-}
-
-}
+using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_boolean )
 {
-    enum_<MR::BooleanOperation>( "BooleanOperation" )
-        .value( "InsideA", MR::BooleanOperation::InsideA )
-        .value( "InsideB", MR::BooleanOperation::InsideB )
-        .value( "OutsideA", MR::BooleanOperation::OutsideA )
-        .value( "OutsideB", MR::BooleanOperation::OutsideB )
-        .value( "Union", MR::BooleanOperation::Union )
-        .value( "Intersection", MR::BooleanOperation::Intersection )
-        .value( "DifferenceBA", MR::BooleanOperation::DifferenceBA )
-        .value( "DifferenceAB", MR::BooleanOperation::DifferenceAB );
+    emscripten::enum_<BooleanOperation>( "BooleanOperation" )
+        .value( "InsideA", BooleanOperation::InsideA )
+        .value( "InsideB", BooleanOperation::InsideB )
+        .value( "OutsideA", BooleanOperation::OutsideA )
+        .value( "OutsideB", BooleanOperation::OutsideB )
+        .value( "Union", BooleanOperation::Union )
+        .value( "Intersection", BooleanOperation::Intersection )
+        .value( "DifferenceBA", BooleanOperation::DifferenceBA )
+        .value( "DifferenceAB", BooleanOperation::DifferenceAB );
 
-    class_<MR::BooleanResult>( "BooleanResult" )
-        .property( "errorString", &MR::BooleanResult::errorString )
-        .property( "mesh", +[]( const MR::BooleanResult& r ) { return std::make_shared<MR::Mesh>( r.mesh ); } )
-        .function( "valid", &MR::BooleanResult::valid );
+    emscripten::class_<BooleanResult>( "BooleanResult" )
+        .property( "errorString", &BooleanResult::errorString )
+        .property( "mesh", +[]( const BooleanResult& r ) { return std::make_shared<Mesh>( r.mesh ); } )
+        .function( "valid", &BooleanResult::valid );
 
-    function( "boolean", &booleanWrap );
+    emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b, BooleanOperation op )
+    {
+        return boolean( *a, *b, op );
+    } );
 }

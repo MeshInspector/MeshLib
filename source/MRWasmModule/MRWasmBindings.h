@@ -9,6 +9,9 @@
 #include <type_traits>
 #include <utility>
 
+namespace Wasm
+{
+
 [[noreturn]] void throwJsError( const std::string& msg );
 
 template <typename E>
@@ -24,3 +27,5 @@ emscripten::val toFloat32Array( const float* data, size_t count );
 emscripten::val toUint32Array( const uint32_t* data, size_t count );
 
 std::function<bool( float )> jsToCppCallback( emscripten::val cb );
+
+}

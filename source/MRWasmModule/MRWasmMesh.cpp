@@ -15,45 +15,47 @@
 #include <memory>
 #include <vector>
 
-using namespace emscripten;
+using namespace MR;
 
-namespace
+namespace Wasm
 {
 
-std::shared_ptr<MR::Mesh> meshFromGeometry( val positions, val indices )
+struct Helpers {};
+
+std::shared_ptr<Mesh> meshFromGeometry( emscripten::val positions, emscripten::val indices )
 {
-    const std::vector<float> pos = convertJSArrayToNumberVector<float>( positions );
-    const std::vector<uint32_t> idx = convertJSArrayToNumberVector<uint32_t>( indices );
+    const auto pos = emscripten::convertJSArrayToNumberVector<float>( positions );
+    const auto idx = emscripten::convertJSArrayToNumberVector<uint32_t>( indices );
 
     const size_t numVerts = pos.size() / 3;
     const size_t numTris = idx.size() / 3;
 
-    MR::VertCoords coords;
+    VertCoords coords;
     coords.vec_.resize( numVerts );
     if ( numVerts != 0 )
         std::memcpy( coords.vec_.data(), pos.data(), numVerts * 3 * sizeof( float ) );
 
-    MR::Triangulation tris;
+    Triangulation tris;
     tris.vec_.resize( numTris );
     for ( size_t f = 0; f < numTris; ++f )
-        tris.vec_[f] = MR::ThreeVertIds{
-            MR::VertId( (int)idx[3 * f + 0] ),
-            MR::VertId( (int)idx[3 * f + 1] ),
-            MR::VertId( (int)idx[3 * f + 2] ) };
+        tris.vec_[f] = ThreeVertIds{
+            VertId( (int)idx[3 * f + 0] ),
+            VertId( (int)idx[3 * f + 1] ),
+            VertId( (int)idx[3 * f + 2] ) };
 
-    return std::make_shared<MR::Mesh>( MR::Mesh::fromTriangles( std::move( coords ), tris ) );
+    return std::make_shared<Mesh>( Mesh::fromTriangles( std::move( coords ), tris ) );
 }
 
-val meshToGeometry( std::shared_ptr<MR::Mesh> meshIn, bool wantNormals )
+emscripten::val meshToGeometry( std::shared_ptr<Mesh> meshIn, bool wantNormals )
 {
-    MR::Mesh mesh = *meshIn;
+    auto mesh = *meshIn;
     mesh.pack();
 
     const size_t numVerts = mesh.points.size();
-    val positions = toFloat32Array(
+    auto positions = toFloat32Array(
         reinterpret_cast<const float*>( mesh.points.vec_.data() ), numVerts * 3 );
 
-    const std::vector<MR::ThreeVertIds> tris = mesh.topology.getAllTriVerts();
+    const auto tris = mesh.topology.getAllTriVerts();
     std::vector<uint32_t> flatIdx( tris.size() * 3 );
     for ( size_t f = 0; f < tris.size(); ++f )
     {
@@ -61,15 +63,15 @@ val meshToGeometry( std::shared_ptr<MR::Mesh> meshIn, bool wantNormals )
         flatIdx[3 * f + 1] = (uint32_t)(int)tris[f][1];
         flatIdx[3 * f + 2] = (uint32_t)(int)tris[f][2];
     }
-    val indices = toUint32Array( flatIdx.data(), flatIdx.size() );
+    auto indices = toUint32Array( flatIdx.data(), flatIdx.size() );
 
-    val result = val::object();
+    auto result = emscripten::val::object();
     result.set( "positions", positions );
     result.set( "indices", indices );
 
     if ( wantNormals )
     {
-        const MR::VertNormals normals = MR::computePerVertNormals( mesh );
+        const auto normals = computePerVertNormals( mesh );
         result.set( "normals", toFloat32Array(
             reinterpret_cast<const float*>( normals.vec_.data() ), normals.size() * 3 ) );
     }
@@ -80,9 +82,10 @@ val meshToGeometry( std::shared_ptr<MR::Mesh> meshIn, bool wantNormals )
 
 EMSCRIPTEN_BINDINGS( meshlib_mesh )
 {
-    class_<MR::Mesh>( "Mesh" )
-        .smart_ptr<std::shared_ptr<MR::Mesh>>( "MeshPtr" );
+    emscripten::class_<Mesh>( "Mesh" )
+        .smart_ptr<std::shared_ptr<Mesh>>( "MeshPtr" );
 
-    function( "meshFromGeometry", &meshFromGeometry );
-    function( "meshToGeometry", &meshToGeometry );
+    emscripten::class_<Wasm::Helpers>( "Wasm" )
+        .class_function( "meshFromGeometry", &Wasm::meshFromGeometry )
+        .class_function( "meshToGeometry", &Wasm::meshToGeometry );
 }

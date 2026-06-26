@@ -21,7 +21,7 @@ export function meshFromThree( ml, THREE, geometry, { mergeVertices } = {} ) {
     ? idxArr
     : Uint32Array.from( idxArr );
 
-  return ml.meshFromGeometry( positions, indices );
+  return ml.Wasm.meshFromGeometry( positions, indices );
 }
 
 export function geometryToThree( THREE, exported ) {
@@ -36,6 +36,6 @@ export function geometryToThree( THREE, exported ) {
 }
 
 export function meshToThree( ml, THREE, mesh, { normals = false } = {} ) {
-  const exported = ml.meshToGeometry( mesh, normals );
+  const exported = ml.Wasm.meshToGeometry( mesh, normals );
   return geometryToThree( THREE, exported );
 }

@@ -7,52 +7,45 @@
 
 #include <memory>
 
-using namespace emscripten;
-
-namespace
-{
-
-MR::DecimateResult decimateMeshWrap( std::shared_ptr<MR::Mesh> mesh, const MR::DecimateSettings& settings )
-{
-    return MR::decimateMesh( *mesh, settings );
-}
-
-}
+using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_decimate )
 {
-    enum_<MR::DecimateStrategy>( "DecimateStrategy" )
-        .value( "MinimizeError", MR::DecimateStrategy::MinimizeError )
-        .value( "ShortestEdgeFirst", MR::DecimateStrategy::ShortestEdgeFirst );
+    emscripten::enum_<DecimateStrategy>( "DecimateStrategy" )
+        .value( "MinimizeError", DecimateStrategy::MinimizeError )
+        .value( "ShortestEdgeFirst", DecimateStrategy::ShortestEdgeFirst );
 
-    value_object<MR::DecimateResult>( "DecimateResult" )
-        .field( "vertsDeleted", &MR::DecimateResult::vertsDeleted )
-        .field( "facesDeleted", &MR::DecimateResult::facesDeleted )
-        .field( "errorIntroduced", &MR::DecimateResult::errorIntroduced )
-        .field( "cancelled", &MR::DecimateResult::cancelled );
+    emscripten::value_object<DecimateResult>( "DecimateResult" )
+        .field( "vertsDeleted", &DecimateResult::vertsDeleted )
+        .field( "facesDeleted", &DecimateResult::facesDeleted )
+        .field( "errorIntroduced", &DecimateResult::errorIntroduced )
+        .field( "cancelled", &DecimateResult::cancelled );
 
-    class_<MR::DecimateSettings>( "DecimateSettings" )
+    emscripten::class_<DecimateSettings>( "DecimateSettings" )
         .constructor<>()
-        .property( "strategy", &MR::DecimateSettings::strategy )
-        .property( "maxError", &MR::DecimateSettings::maxError )
-        .property( "maxEdgeLen", &MR::DecimateSettings::maxEdgeLen )
-        .property( "maxBdShift", &MR::DecimateSettings::maxBdShift )
-        .property( "maxTriangleAspectRatio", &MR::DecimateSettings::maxTriangleAspectRatio )
-        .property( "criticalTriAspectRatio", &MR::DecimateSettings::criticalTriAspectRatio )
-        .property( "tinyEdgeLength", &MR::DecimateSettings::tinyEdgeLength )
-        .property( "stabilizer", &MR::DecimateSettings::stabilizer )
-        .property( "angleWeightedDistToPlane", &MR::DecimateSettings::angleWeightedDistToPlane )
-        .property( "optimizeVertexPos", &MR::DecimateSettings::optimizeVertexPos )
-        .property( "maxDeletedVertices", &MR::DecimateSettings::maxDeletedVertices )
-        .property( "maxDeletedFaces", &MR::DecimateSettings::maxDeletedFaces )
-        .property( "collapseNearNotFlippable", &MR::DecimateSettings::collapseNearNotFlippable )
-        .property( "touchNearBdEdges", &MR::DecimateSettings::touchNearBdEdges )
-        .property( "touchBdVerts", &MR::DecimateSettings::touchBdVerts )
-        .property( "maxAngleChange", &MR::DecimateSettings::maxAngleChange )
-        .property( "packMesh", &MR::DecimateSettings::packMesh )
-        .property( "subdivideParts", &MR::DecimateSettings::subdivideParts )
-        .property( "decimateBetweenParts", &MR::DecimateSettings::decimateBetweenParts )
-        .property( "minFacesInPart", &MR::DecimateSettings::minFacesInPart );
+        .property( "strategy", &DecimateSettings::strategy )
+        .property( "maxError", &DecimateSettings::maxError )
+        .property( "maxEdgeLen", &DecimateSettings::maxEdgeLen )
+        .property( "maxBdShift", &DecimateSettings::maxBdShift )
+        .property( "maxTriangleAspectRatio", &DecimateSettings::maxTriangleAspectRatio )
+        .property( "criticalTriAspectRatio", &DecimateSettings::criticalTriAspectRatio )
+        .property( "tinyEdgeLength", &DecimateSettings::tinyEdgeLength )
+        .property( "stabilizer", &DecimateSettings::stabilizer )
+        .property( "angleWeightedDistToPlane", &DecimateSettings::angleWeightedDistToPlane )
+        .property( "optimizeVertexPos", &DecimateSettings::optimizeVertexPos )
+        .property( "maxDeletedVertices", &DecimateSettings::maxDeletedVertices )
+        .property( "maxDeletedFaces", &DecimateSettings::maxDeletedFaces )
+        .property( "collapseNearNotFlippable", &DecimateSettings::collapseNearNotFlippable )
+        .property( "touchNearBdEdges", &DecimateSettings::touchNearBdEdges )
+        .property( "touchBdVerts", &DecimateSettings::touchBdVerts )
+        .property( "maxAngleChange", &DecimateSettings::maxAngleChange )
+        .property( "packMesh", &DecimateSettings::packMesh )
+        .property( "subdivideParts", &DecimateSettings::subdivideParts )
+        .property( "decimateBetweenParts", &DecimateSettings::decimateBetweenParts )
+        .property( "minFacesInPart", &DecimateSettings::minFacesInPart );
 
-    function( "decimateMesh", &decimateMeshWrap );
+    emscripten::function( "decimateMesh", +[]( std::shared_ptr<Mesh> mesh, const DecimateSettings& settings )
+    {
+        return decimateMesh( *mesh, settings );
+    } );
 }

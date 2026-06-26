@@ -6,35 +6,28 @@
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 
-using namespace emscripten;
-
-namespace
-{
-
-void fixSelfIntersections( MR::Mesh& mesh, const MR::SelfIntersections::Settings& settings )
-{
-    unwrap( MR::SelfIntersections::fix( mesh, settings ) );
-}
-
-}
+using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_fix_self_intersections )
 {
-    enum_<MR::SelfIntersections::Settings::Method>( "SelfIntersectionsMethod" )
-        .value( "Relax", MR::SelfIntersections::Settings::Method::Relax )
-        .value( "CutAndFill", MR::SelfIntersections::Settings::Method::CutAndFill );
+    emscripten::enum_<SelfIntersections::Settings::Method>( "SelfIntersectionsMethod" )
+        .value( "Relax", SelfIntersections::Settings::Method::Relax )
+        .value( "CutAndFill", SelfIntersections::Settings::Method::CutAndFill );
 
-    class_<MR::SelfIntersections::Settings>( "SelfIntersectionsSettings" )
+    emscripten::class_<SelfIntersections::Settings>( "SelfIntersectionsSettings" )
         .constructor<>()
-        .property( "touchIsIntersection", &MR::SelfIntersections::Settings::touchIsIntersection )
-        .property( "method", &MR::SelfIntersections::Settings::method )
-        .property( "relaxIterations", &MR::SelfIntersections::Settings::relaxIterations )
-        .property( "maxExpand", &MR::SelfIntersections::Settings::maxExpand )
-        .property( "subdivideEdgeLen", &MR::SelfIntersections::Settings::subdivideEdgeLen )
-        .property( "mimicPatch", &MR::SelfIntersections::Settings::mimicPatch )
+        .property( "touchIsIntersection", &SelfIntersections::Settings::touchIsIntersection )
+        .property( "method", &SelfIntersections::Settings::method )
+        .property( "relaxIterations", &SelfIntersections::Settings::relaxIterations )
+        .property( "maxExpand", &SelfIntersections::Settings::maxExpand )
+        .property( "subdivideEdgeLen", &SelfIntersections::Settings::subdivideEdgeLen )
+        .property( "mimicPatch", &SelfIntersections::Settings::mimicPatch )
         .property( "callback",
-            +[]( const MR::SelfIntersections::Settings& ) { return val::undefined(); },
-            +[]( MR::SelfIntersections::Settings& s, val cb ) { s.callback = jsToCppCallback( cb ); } );
+            +[]( const SelfIntersections::Settings& ) { return emscripten::val::undefined(); },
+            +[]( SelfIntersections::Settings& s, emscripten::val cb ) { s.callback = Wasm::jsToCppCallback( cb ); } );
 
-    function( "fixSelfIntersections", &fixSelfIntersections );
+    emscripten::function( "fixSelfIntersections", +[]( Mesh& mesh, const SelfIntersections::Settings& settings )
+    {
+        Wasm::unwrap( SelfIntersections::fix( mesh, settings ) );
+    } );
 }

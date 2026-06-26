@@ -7,6 +7,9 @@
 
 using namespace emscripten;
 
+namespace Wasm
+{
+
 [[noreturn]] void throwJsError( const std::string& msg )
 {
 #pragma clang diagnostic push
@@ -20,7 +23,7 @@ using namespace emscripten;
 // heap grows, so it must never be retained or returned to JS.
 val toFloat32Array( const float* data, size_t count )
 {
-    val out = val::global( "Float32Array" ).new_( count );
+    auto out = val::global( "Float32Array" ).new_( count );
     if ( count != 0 )
         out.call<void>( "set", val( typed_memory_view( count, data ) ) );
     return out;
@@ -28,7 +31,7 @@ val toFloat32Array( const float* data, size_t count )
 
 val toUint32Array( const uint32_t* data, size_t count )
 {
-    val out = val::global( "Uint32Array" ).new_( count );
+    auto out = val::global( "Uint32Array" ).new_( count );
     if ( count != 0 )
         out.call<void>( "set", val( typed_memory_view( count, data ) ) );
     return out;
@@ -40,9 +43,11 @@ std::function<bool( float )> jsToCppCallback( val cb )
         return {};
     return [cb]( float progress ) -> bool
     {
-        val r = cb( progress );
+        auto r = cb( progress );
         return r.isUndefined() ? true : r.as<bool>();
     };
+}
+
 }
 
 int main()

@@ -221,7 +221,7 @@ static FaceBitSet getLocalRegion( FaceBitSet * region, size_t tSize )
     return res;
 }
 
-static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, const BuildSettings & settings = {} )
+static size_t addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, const BuildSettings & settings = {} )
 {
     MR_TIMER;
 
@@ -230,6 +230,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
     FaceBitSet active = getLocalRegion( settings.region, t.size() );
     // these are triangles that cannot be added even after other triangles
     FaceBitSet bad;
+    size_t triAddedTotal = 0;
     for (;;)
     {
         size_t triAddedOnThisPass = 0;
@@ -247,6 +248,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
 
         if ( triAddedOnThisPass == 0 )
             break; // no single triangle added during the pass
+        triAddedTotal += triAddedOnThisPass;
     }
     if ( settings.region || settings.skippedFaceCount )
     {
@@ -256,6 +258,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
         if ( settings.region )
             *settings.region = std::move( active );
     }
+    return triAddedTotal;
 }
 
 MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
@@ -315,18 +318,18 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
     return res;
 }
 
-void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
+size_t addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
 {
     MR_TIMER;
     if ( t.empty() )
-        return;
+        return 0;
 
     // reserve enough elements for faces and vertices
     const auto maxVertId = findMaxVertId( t, settings.region );
     res.faceResize( t.size() + settings.shiftFaceId );
     res.vertResize( maxVertId + 1 );
 
-    addTrianglesSeqCore( res, t, settings );
+    return addTrianglesSeqCore( res, t, settings );
 }
 
 void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,

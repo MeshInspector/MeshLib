@@ -206,8 +206,18 @@ bool PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2
     if ( !reportProgress( progressCb, 0.2f ) )
         return false;
 
-    // remove bad triangles
-    targetMesh_.deleteFaces( findHoleComplicatingFaces( targetMesh_ ) );
+    // remove bad triangles, then try adding remaining triangles
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto badFaces = findHoleComplicatingFaces( targetMesh_ );
+        if ( badFaces.none() )
+            break;
+        targetMesh_.deleteFaces( badFaces );
+        if ( !MeshBuilder::addTriangles( targetMesh_.topology, t3, bsettings ) )
+            break;
+    }
+    if ( !reportProgress( progressCb, 0.25f ) )
+        return false;
 
     // fill small holes
     const auto maxHolePerimeterToFill = params_.critHoleLength >= 0.0f ?

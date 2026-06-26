@@ -256,6 +256,12 @@ std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const T
     return {};
 }
 
+bool triangulateHoles( Mesh & mesh, const TriangulateHolesParams& params, const ProgressCallback& progressCb )
+{
+    PointCloud empty;
+    return fillHolesWithExtraPoints( mesh, empty, params, progressCb );
+}
+
 bool fillHolesWithExtraPoints( Mesh & mesh, PointCloud& extraPoints,
     const FillHolesWithExtraPointsParams& params, const ProgressCallback& progressCb )
 {

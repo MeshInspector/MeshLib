@@ -87,7 +87,7 @@ struct TriangulationParameters
     const TriangulationParameters& params = {}, const ProgressCallback& progressCb = {} );
 
 /// \ingroup PointCloudTriangulationGroup
-struct FillHolesWithExtraPointsParams
+struct TriangulateHolesParams
 {
     TriangulationParameters triangulation;
 
@@ -95,6 +95,14 @@ struct FillHolesWithExtraPointsParams
     /// otherwise only vertices from modifyBdVertices can get new triangles
     const VertBitSet* modifyBdVertices = nullptr;
 };
+
+/// fills the holes in the mesh by adding triangles to it with the vertices in existing boundary vertices
+/// \ingroup PointCloudTriangulationGroup
+/// \return false if the operation was canceled or incorrect input
+[[nodiscard]] MRMESH_API bool triangulateHoles( Mesh & mesh,
+    const TriangulateHolesParams& params = {}, const ProgressCallback& progressCb = {} );
+
+using FillHolesWithExtraPointsParams = TriangulateHolesParams;
 
 /// fills the holes in the mesh by adding triangles to it with the vertices in existing boundary vertices or given extra points (in any combination)
 /// \ingroup PointCloudTriangulationGroup

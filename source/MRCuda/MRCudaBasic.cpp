@@ -15,18 +15,16 @@ namespace Cuda
 
 Expected<DeviceInfo> getDeviceInfo()
 {
-    int drv = 0;
-    CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &drv ) );
-    if ( drv <= 0 )
+    DeviceInfo res;
+    CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );
+    if ( res.driverVersion <= 0 )
         return MR::unexpected( "NVIDIA GPU error: no CUDA driver found" );
 
     int n;
     CUDA_RETURN_UNEXPECTED( cudaGetDeviceCount( &n ) );
     if ( n <= 0 )
-        return MR::unexpected( "NVIDIA GPU error: no single device" );
+        return MR::unexpected( "NVIDIA GPU error: no CUDA-capable device found" );
 
-    DeviceInfo res;
-    CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );
     CUDA_RETURN_UNEXPECTED( cudaRuntimeGetVersion( &res.runtimeVersion ) );
 
     cudaDeviceProp prop;

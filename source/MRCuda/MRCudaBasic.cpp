@@ -20,10 +20,16 @@ Expected<DeviceInfo> getDeviceInfo()
     if ( res.driverVersion <= 0 )
         return MR::unexpected( "NVIDIA GPU error: no CUDA driver found" );
 
-    int n;
-    CUDA_RETURN_UNEXPECTED( cudaGetDeviceCount( &n ) );
-    if ( n <= 0 )
-        return MR::unexpected( "NVIDIA GPU error: no CUDA-capable device found" );
+    {
+        int n = 0;
+        auto code = cudaGetDeviceCount( &n );
+        if ( code != cudaSuccess || n <= 0 )
+        {
+            auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
+            err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
+            return MR::unexpected( err );
+        }
+    }
 
     CUDA_RETURN_UNEXPECTED( cudaRuntimeGetVersion( &res.runtimeVersion ) );
 

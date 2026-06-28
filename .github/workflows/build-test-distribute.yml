@@ -140,6 +140,7 @@ jobs:
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
+    # Gate on prepare-image like the other build jobs: generate-c-bindings needs it, and macOS downloads that job's CBindings artifact (else the 'Wait for C bindings' step times out).
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-macos.yml
     with:

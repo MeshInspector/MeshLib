@@ -221,6 +221,12 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
           )
 
+      - name: Log precompiled header sizes
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-pch-sizes.ps1"
+
       - name: Build C bindings with MSBuild
         if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
         shell: cmd

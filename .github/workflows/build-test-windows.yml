@@ -222,31 +222,10 @@ jobs:
           )
 
       - name: Log precompiled header sizes
-        if: ${{ always() }}
         shell: pwsh
         continue-on-error: true
-        # Report the size of the precompiled headers produced by the MRPch,
-        # MRMesh and MRViewer projects so PCH growth is visible in the build log.
-        # Both build systems write under source\TempOutput: MSBuild emits one
-        # MRPch.pch per project's IntDir, CMake/Ninja emits cmake_pch.hxx.pch
-        # (only MRPch builds one; MRMesh/MRViewer REUSE_FROM it).
         run: |
-          $pchRoot = Join-Path $Env:GITHUB_WORKSPACE 'source\TempOutput'
-          if (-not (Test-Path $pchRoot)) {
-            Write-Host "Build output directory '$pchRoot' does not exist - skipping PCH size report."
-            exit 0
-          }
-          $files = Get-ChildItem -Path $pchRoot -Recurse -Filter *.pch -File -ErrorAction SilentlyContinue
-          if (-not $files) {
-            Write-Host "No .pch files found under '$pchRoot'."
-            exit 0
-          }
-          $files |
-            Sort-Object FullName |
-            Select-Object `
-              @{ N = 'Size (MB)'; E = { '{0,8:N2}' -f ($_.Length / 1MB) } },
-              @{ N = 'Path'; E = { $_.FullName.Substring($Env:GITHUB_WORKSPACE.Length + 1) } } |
-            Format-Table -AutoSize | Out-String -Width 4096 | Write-Host
+          & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-pch-sizes.ps1"
 
       - name: Build C bindings with MSBuild
         if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}

@@ -140,7 +140,7 @@ jobs:
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
-    needs: [ config ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}

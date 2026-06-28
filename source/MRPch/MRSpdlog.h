@@ -56,6 +56,7 @@ class __attribute__((visibility("default"))) ansicolor_stderr_sink;
 #pragma warning(disable:4275) // non dll-interface class 'std::runtime_error' used as base for dll-interface class 'fmt::v10::format_error'
 #pragma warning(disable:4251)
 #pragma warning(disable:4273)
+#pragma warning(disable:4996) // 'fmt::v12::fstring<const std::string &,bool &>::operator const fmt::v12::string_view &': was declared deprecated
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>

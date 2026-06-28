@@ -195,7 +195,7 @@ jobs:
         #   by the following dotnet build (see the Build step's note below).
         # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
           dotnet build examples/c-sharp-examples -c ${{matrix.config}} || exit /b 1
@@ -246,7 +246,7 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
@@ -347,7 +347,7 @@ jobs:
           rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the
           rem step env: value so MESHLIB_INCLUDE_DIRS resolves to the project vcpkg.
           set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake --version || exit /b 1
           cmake ^
@@ -363,7 +363,7 @@ jobs:
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake --version || exit /b 1
           cmake ^
             -S examples/c-examples ^

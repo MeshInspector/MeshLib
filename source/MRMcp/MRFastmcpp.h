@@ -13,6 +13,7 @@
 #elif defined( _MSC_VER )
 #pragma warning( push )
 #pragma warning( disable: 4100 ) // unreferenced formal parameter
+#pragma warning( disable: 4127 ) // conditional expression is constant (vcpkg 2026.06.24 + vs2022)
 #pragma warning( disable: 4355 ) // 'this': used in base member initializer list
 #pragma warning( disable: 4800 ) // Implicit conversion from 'BrotliDecoderState *const ' to bool. Possible information loss (Visual Studio Build Tools 2019 16.11.32510.428)
 #endif

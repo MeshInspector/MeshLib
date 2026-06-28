@@ -211,7 +211,7 @@ jobs:
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
             cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1

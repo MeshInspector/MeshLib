@@ -275,19 +275,22 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     }
     catch ( const fastmcpp::NotFoundError& e )
     {
-        TelemetrySignal( "MCP Tool Failed: " + toolId );
+        // Distinctive per-type failure signals (vs. one generic string) so analytics
+        // can break failures down by cause; append e.what() — the same text returned
+        // to the caller — for diagnostic detail.
+        TelemetrySignal( "MCP Tool Not Found Failed: " + toolId + ": " + e.what() );
         writeJsonError( res, 404, e.what(), RpcErrorCode::MethodNotFound );
         return;
     }
     catch ( const fastmcpp::ValidationError& e )
     {
-        TelemetrySignal( "MCP Tool Failed: " + toolId );
+        TelemetrySignal( "MCP Tool Validation Failed: " + toolId + ": " + e.what() );
         writeJsonError( res, 400, e.what(), RpcErrorCode::InvalidParams );
         return;
     }
     catch ( const std::exception& e )
     {
-        TelemetrySignal( "MCP Tool Failed: " + toolId );
+        TelemetrySignal( "MCP Tool Failed: " + toolId + ": " + e.what() );
         writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
         return;
     }

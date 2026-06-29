@@ -216,6 +216,28 @@ jobs:
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
 
+  # Repoint `:latest` at master's current content-addressed vcpkg image, so
+  # the pip-build `:latest` fallback stays current even when the build above
+  # was skipped via reuse.
+  tag-vcpkg-latest:
+    needs: linux-vcpkg-build-upload
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/master' && !inputs.disable_linux_vcpkg && (needs.linux-vcpkg-build-upload.result == 'success' || needs.linux-vcpkg-build-upload.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ x64, arm64 ]
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Point :latest at the content-addressed vcpkg image
+        run: |
+          repo="meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}"
+          docker buildx imagetools create -t "${repo}:latest" "${repo}:${{ inputs.vcpkg_docker_image_tag }}"
+
   windows-vcpkg-build-upload:
     if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}
     timeout-minutes: 240

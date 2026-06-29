@@ -28,7 +28,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_linux_vcpkg_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.vcpkg-image-missing == 'true' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
@@ -90,6 +90,7 @@ jobs:
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
       linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
+      vcpkg-image-missing:      ${{ steps.check-vcpkg-image.outputs.missing }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
@@ -256,13 +257,26 @@ jobs:
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
-          else
-            IMAGE_TAG="latest"
-          fi
+          IMAGE_TAG=source-checksum-$(git ls-files -s -- \
+            docker/rockylinux8-vcpkgDockerfile \
+            docker/rockylinux9-vcpkgDockerfile \
+            thirdparty/vcpkg \
+            | git hash-object --stdin | cut -c1-16)
+          echo "image_tag=${IMAGE_TAG}"
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Check vcpkg Docker image presence
+        id: check-vcpkg-image
+        env:
+          IMAGE_TAG: ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
+        run: |
+          if scripts/docker_image_exists.sh \
+            "meshlib/meshlib-rockylinux8-vcpkg-x64:${IMAGE_TAG}" \
+            "meshlib/meshlib-rockylinux8-vcpkg-arm64:${IMAGE_TAG}"; then
+            echo "missing=false" >> $GITHUB_OUTPUT
+          else
+            echo "missing=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}

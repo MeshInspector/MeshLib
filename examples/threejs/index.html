@@ -123,7 +123,12 @@
       }
       const out = res.mesh;
 
-      const trisAfterBool = ml.Wasm.meshToGeometry( out, false ).indices.length / 3;
+      out.pack();
+      const outTopology = out.topology;
+      const outTris = outTopology.getTriangulation();
+      const trisAfterBool = outTris.toArray().length / 3;
+      outTopology.delete();
+      outTris.delete();
       let decimated = { facesDeleted: 0 };
       if ( ratio < 1 ) {
         const s = new ml.DecimateSettings();

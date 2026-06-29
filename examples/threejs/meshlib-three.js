@@ -21,7 +21,12 @@ export function meshFromThree( ml, THREE, geometry, { mergeVertices } = {} ) {
     ? idxArr
     : Uint32Array.from( idxArr );
 
-  return ml.Wasm.meshFromGeometry( positions, indices );
+  const coords = ml.VertCoords.fromArray( positions );
+  const tris = ml.Triangulation.fromArray( indices );
+  const mesh = ml.Mesh.fromTriangles( coords, tris );
+  coords.delete();
+  tris.delete();
+  return mesh;
 }
 
 export function geometryToThree( THREE, exported ) {
@@ -36,6 +41,21 @@ export function geometryToThree( THREE, exported ) {
 }
 
 export function meshToThree( ml, THREE, mesh, { normals = false } = {} ) {
-  const exported = ml.Wasm.meshToGeometry( mesh, normals );
+  mesh.pack(); // getTriangulation() is undefined on deleted faces; pack removes them
+  const points = mesh.points;
+  const topology = mesh.topology;
+  const tris = topology.getTriangulation();
+  const exported = {
+    positions: points.toArray(),
+    indices: tris.toArray(),
+  };
+  points.delete();
+  topology.delete();
+  tris.delete();
+  if ( normals ) {
+    const vertNormals = ml.computePerVertNormals( mesh );
+    exported.normals = vertNormals.toArray();
+    vertNormals.delete();
+  }
   return geometryToThree( THREE, exported );
 }

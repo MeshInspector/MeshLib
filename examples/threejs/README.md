@@ -21,21 +21,48 @@ The module itself (`meshlib.mjs` + `meshlib.wasm`) is **built**, not checked in.
 import createMeshLib from './meshlib.mjs';
 const ml = await createMeshLib();
 
-const a   = ml.meshFromGeometry(positionsFloat32, indicesUint32); // -> Mesh
-const b   = ml.meshFromGeometry(/* ... */);
-const out = ml.boolean(a, b, ml.BooleanOp.Union);                 // Union | Intersection | DifferenceAB | DifferenceBA
-const res = ml.decimate(out, { targetRatio: 0.5 });               // mutates `out`; -> { vertsDeleted, facesDeleted, errorIntroduced, cancelled }
+// Build a Mesh from flat typed arrays, via the native MeshLib containers:
+const coords = ml.VertCoords.fromArray( positionsFloat32 );  // 3 floats per vertex
+const tris   = ml.Triangulation.fromArray( indicesUint32 );  // 3 vertex ids per triangle
+const a = ml.Mesh.fromTriangles( coords, tris );             // MR::Mesh::fromTriangles
+coords.delete(); tris.delete();
+// const b = ... built the same way from its own VertCoords + Triangulation
 
-const geo = out.toGeometry();             // { positions: Float32Array, indices: Uint32Array }
-const geoN = out.toGeometryWithNormals(); // + normals: Float32Array
+// Process (CSG, decimation, ...):
+const res = ml.boolean( a, b, ml.BooleanOperation.Union );   // Union | Intersection | DifferenceAB | DifferenceBA
+const out = res.mesh;
+const s = new ml.DecimateSettings();
+s.maxDeletedFaces = 1000;                                    // any DecimateSettings field
+ml.decimateMesh( out, s );                                   // mutates `out`
+s.delete();
 
-a.delete(); b.delete(); out.delete();     // free the C++ meshes (embind handles)
+// Export back to flat typed arrays (pack first: getTriangulation needs a gap-free mesh):
+out.pack();
+const points   = out.points;                                 // MR::Mesh::points    -> VertCoords
+const topology = out.topology;                               // MR::Mesh::topology  -> MeshTopology
+const tri      = topology.getTriangulation();                // MR::MeshTopology::getTriangulation
+const positions = points.toArray();                          // Float32Array
+const indices   = tri.toArray();                             // Uint32Array
+points.delete(); topology.delete(); tri.delete();
+
+const vn = ml.computePerVertNormals( out );                  // MR::computePerVertNormals -> VertNormals
+const normals = vn.toArray();                                // Float32Array
+vn.delete();
+
+a.delete(); b.delete(); out.delete(); res.delete();
 ```
 
-`decimate` accepts any of: `targetRatio` (fraction of triangles to keep, 0..1),
-`targetTriangleCount`, `maxDeletedFaces`, `maxError`, `maxEdgeLen`,
-`strategy` (`'minimizeError'` | `'shortestEdgeFirst'`). At least one stopping
-criterion is required.
+The JS surface mirrors MeshLib 1:1 — real classes (`Mesh`, `MeshTopology`, `VertCoords`,
+`Triangulation`), the real field accessors `mesh.points` / `mesh.topology`, and real functions
+(`Mesh.fromTriangles`, `MeshTopology.getTriangulation`, `computePerVertNormals`, `boolean`,
+`decimateMesh`). The only non-MeshLib additions are the `fromArray` / `toArray` bridges between a
+container and a flat `Float32Array` / `Uint32Array`.
+
+**Memory:** every value returned across the boundary is an embind handle you must `.delete()` —
+the meshes and every container (`VertCoords` / `Triangulation`, and the results of `mesh.points`,
+`mesh.topology`, `getTriangulation()`, `computePerVertNormals()`). Don't chain
+`mesh.topology.getTriangulation()` without keeping the intermediate, or the `MeshTopology` handle
+leaks.
 
 ## Build the module
 

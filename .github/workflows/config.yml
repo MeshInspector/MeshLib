@@ -270,10 +270,13 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
         run: |
-          missing=$(scripts/docker_image_missing.sh \
+          if scripts/docker_image_exists.sh \
             "meshlib/meshlib-rockylinux8-vcpkg-x64:${IMAGE_TAG}" \
-            "meshlib/meshlib-rockylinux8-vcpkg-arm64:${IMAGE_TAG}")
-          echo "missing=${missing}" >> $GITHUB_OUTPUT
+            "meshlib/meshlib-rockylinux8-vcpkg-arm64:${IMAGE_TAG}"; then
+            echo "missing=false" >> $GITHUB_OUTPUT
+          else
+            echo "missing=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}

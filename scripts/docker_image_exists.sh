@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Print "true" if any of the given public Docker Hub image references
-# (repo:tag) is absent from the registry, otherwise "false".
-# Usage: docker_image_missing.sh repo:tag [repo:tag ...]
+# Exit 0 if every given public Docker Hub image reference (repo:tag) exists in
+# the registry; exit 1 if any is missing.
+# Usage: docker_image_exists.sh repo:tag [repo:tag ...]
 set -euo pipefail
 
-missing=false
 for ref in "$@"; do
   repo="${ref%:*}"
   tag="${ref##*:}"
@@ -15,9 +14,5 @@ for ref in "$@"; do
     -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
     -H "Accept: application/vnd.oci.image.index.v1+json" \
     "https://registry-1.docker.io/v2/${repo}/manifests/${tag}")
-  echo "  ${ref} -> HTTP ${code}" >&2
-  if [ "${code}" != "200" ]; then
-    missing=true
-  fi
+  [ "${code}" = "200" ] || exit 1
 done
-echo "${missing}"

@@ -31,7 +31,7 @@ template <typename S>
 emscripten::val makeTypedArray( const S* data, size_t count )
 {
     // The view aliases WASM heap memory and detaches on growth; copy out, never retain or return it.
-    auto out = emscripten::val::global( TypedArrayName<S>::value ).new_( count );
+    emscripten::val out = emscripten::val::global( TypedArrayName<S>::value ).new_( count );
     if ( count != 0 )
         out.call<void>( "set", emscripten::val( emscripten::typed_memory_view( count, data ) ) );
     return out;
@@ -55,7 +55,7 @@ V packedFromTypedArray( emscripten::val arr )
     v.vec_.resize( len / Arity );
     if ( len != 0 )
     {
-        auto view = emscripten::val( emscripten::typed_memory_view(
+        emscripten::val view = emscripten::val( emscripten::typed_memory_view(
             len, reinterpret_cast<S*>( v.data() ) ) );
         view.call<void>( "set", arr );
     }

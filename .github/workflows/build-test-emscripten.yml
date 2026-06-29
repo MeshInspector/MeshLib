@@ -214,10 +214,9 @@ jobs:
 
       - name: Headless round-trip test
         run: |
-          cp build/Release/bin/meshlib.mjs build/Release/bin/meshlib.wasm examples/threejs/
           NODE="$(command -v node || true)"
           if [ -z "$NODE" ]; then NODE="$(ls -d "$EMSDK"/node/*/bin/node 2>/dev/null | head -n1)"; fi
-          "$NODE" examples/threejs/roundtrip.test.mjs
+          MESHLIB_MODULE=build/Release/bin/meshlib.mjs "$NODE" source/MRWasmTest/roundtrip.test.mjs
 
       - name: Upload meshlib module
         uses: actions/upload-artifact@v7

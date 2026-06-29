@@ -10,8 +10,6 @@ This directory contains:
 | --- | --- |
 | `meshlib-three.js` | Thin adapter between `THREE.BufferGeometry` and the MeshLib module (THREE is injected; no bundled dependency). |
 | `index.html` | Interactive browser demo: box &cup; sphere &rarr; decimate &rarr; render. |
-| `roundtrip.test.mjs` | Headless Node test (no browser/THREE) asserting import &rarr; boolean &rarr; decimate &rarr; export correctness. |
-| `package.json` | Marks the directory as an ES module package and defines `npm test`. |
 
 The module itself (`meshlib.mjs` + `meshlib.wasm`) is **built**, not checked in.
 
@@ -95,11 +93,5 @@ python3 -m http.server 8080
 
 ## Run the headless test
 
-```sh
-cd examples/threejs
-node roundtrip.test.mjs           # expects meshlib.mjs/.wasm in this dir
-# or point it elsewhere:
-MESHLIB_MODULE=/path/to/meshlib.mjs node roundtrip.test.mjs
-```
-
-It prints `OK` and exits 0 on success.
+The headless round-trip test now lives in [`source/MRWasmTest`](../../source/MRWasmTest) — see its
+README for how to run it.

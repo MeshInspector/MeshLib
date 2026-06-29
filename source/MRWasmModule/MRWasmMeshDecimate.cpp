@@ -48,4 +48,23 @@ EMSCRIPTEN_BINDINGS( meshlib_decimate )
     {
         return decimateMesh( *mesh, settings );
     } );
+
+    emscripten::class_<RemeshSettings>( "RemeshSettings" )
+        .constructor<>()
+        .property( "targetEdgeLen", &RemeshSettings::targetEdgeLen )
+        .property( "maxEdgeSplits", &RemeshSettings::maxEdgeSplits )
+        .property( "maxAngleChangeAfterFlip", &RemeshSettings::maxAngleChangeAfterFlip )
+        .property( "frozenBoundary", &RemeshSettings::frozenBoundary )
+        .property( "maxBdShift", &RemeshSettings::maxBdShift )
+        .property( "useCurvature", &RemeshSettings::useCurvature )
+        .property( "maxSplittableTriAspectRatio", &RemeshSettings::maxSplittableTriAspectRatio )
+        .property( "finalRelaxIters", &RemeshSettings::finalRelaxIters )
+        .property( "finalRelaxNoShrinkage", &RemeshSettings::finalRelaxNoShrinkage )
+        .property( "packMesh", &RemeshSettings::packMesh )
+        .property( "projectOnOriginalMesh", &RemeshSettings::projectOnOriginalMesh );
+
+    emscripten::function( "remesh", +[]( std::shared_ptr<Mesh> m, const RemeshSettings& s )
+    {
+        return remesh( *m, s );
+    } );
 }

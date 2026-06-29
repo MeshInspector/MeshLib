@@ -26,6 +26,7 @@ auto unwrap( E&& e )
 template <typename S> struct TypedArrayName;
 template <> struct TypedArrayName<float>    { static constexpr const char* value = "Float32Array"; };
 template <> struct TypedArrayName<uint32_t> { static constexpr const char* value = "Uint32Array";  };
+template <> struct TypedArrayName<uint8_t>  { static constexpr const char* value = "Uint8Array";   };
 
 template <typename S>
 emscripten::val makeTypedArray( const S* data, size_t count )
@@ -37,7 +38,7 @@ emscripten::val makeTypedArray( const S* data, size_t count )
     return out;
 }
 
-template <typename V, typename S, size_t Arity>
+template <typename V, typename S, size_t Arity = 1>
 emscripten::val packedToTypedArray( const V& v )
 {
     using Elem = typename V::value_type;
@@ -45,7 +46,7 @@ emscripten::val packedToTypedArray( const V& v )
     return makeTypedArray<S>( reinterpret_cast<const S*>( v.data() ), v.size() * Arity );
 }
 
-template <typename V, typename S, size_t Arity>
+template <typename V, typename S, size_t Arity = 1>
 V packedFromTypedArray( emscripten::val arr )
 {
     using Elem = typename V::value_type;

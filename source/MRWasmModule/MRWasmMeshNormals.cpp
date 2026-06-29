@@ -15,4 +15,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_normals )
 {
     emscripten::function( "computePerVertNormals",
         +[]( std::shared_ptr<Mesh> m ) { return computePerVertNormals( *m ); } );
+
+    emscripten::function( "computePerFaceNormals",
+        +[]( std::shared_ptr<Mesh> m ) { return computePerFaceNormals( *m ); } );
 }

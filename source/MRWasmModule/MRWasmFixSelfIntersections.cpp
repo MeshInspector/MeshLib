@@ -2,11 +2,17 @@
 
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRFixSelfIntersections.h"
+#include "MRMesh/MRBitSet.h"
 
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 
 using namespace MR;
+
+namespace
+{
+struct SelfIntersectionsModule {};
+}
 
 EMSCRIPTEN_BINDINGS( meshlib_fix_self_intersections )
 {
@@ -26,8 +32,13 @@ EMSCRIPTEN_BINDINGS( meshlib_fix_self_intersections )
             +[]( const SelfIntersections::Settings& ) { return emscripten::val::undefined(); },
             +[]( SelfIntersections::Settings& s, emscripten::val cb ) { s.callback = Wasm::jsToCppCallback( cb ); } );
 
-    emscripten::function( "fixSelfIntersections", +[]( Mesh& mesh, const SelfIntersections::Settings& settings )
-    {
-        Wasm::unwrap( SelfIntersections::fix( mesh, settings ) );
-    } );
+    emscripten::class_<SelfIntersectionsModule>( "SelfIntersections" )
+        .class_function( "getFaces", +[]( const Mesh& mesh, bool touchIsIntersection )
+        {
+            return Wasm::unwrap( SelfIntersections::getFaces( mesh, touchIsIntersection ) );
+        } )
+        .class_function( "fix", +[]( Mesh& mesh, const SelfIntersections::Settings& settings )
+        {
+            Wasm::unwrap( SelfIntersections::fix( mesh, settings ) );
+        } );
 }

@@ -1,8 +1,7 @@
 # MRWasmTest
 
-Headless Node tests for the MeshLib WebAssembly bindings ([`source/MRWasmModule`](../MRWasmModule)).
-`roundtrip.test.mjs` asserts the import &rarr; boolean &rarr; decimate &rarr; export round-trip, with
-no browser or Three.js dependency.
+Headless Node tests for the MeshLib WebAssembly bindings ([`source/MRWasmModule`](../MRWasmModule)),
+`index.mjs` runs every `*.test.mjs` topic file.
 
 ## Build the bindings
 
@@ -20,7 +19,7 @@ Point `MESHLIB_MODULE` at the built module (its `meshlib.wasm` is loaded from th
 
 ```sh
 # from the MeshLib root
-MESHLIB_MODULE=build/Release/bin/meshlib.mjs node source/MRWasmTest/roundtrip.test.mjs
+MESHLIB_MODULE=build/Release/bin/meshlib.mjs node source/MRWasmTest/index.mjs
 ```
 
 Or copy `meshlib.mjs` + `meshlib.wasm` into this directory and run `npm test`. The test prints `OK`

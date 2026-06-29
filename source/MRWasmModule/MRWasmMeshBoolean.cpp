@@ -3,6 +3,8 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRBooleanOperation.h"
+#include "MRMesh/MRBitSet.h"
+#include "MRMesh/MRVector.h"
 
 #include <emscripten/bind.h>
 
@@ -30,5 +32,34 @@ EMSCRIPTEN_BINDINGS( meshlib_boolean )
     emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b, BooleanOperation op )
     {
         return boolean( *a, *b, op );
+    } );
+
+    emscripten::enum_<BooleanResultMapper::MapObject>( "BooleanMapObject" )
+        .value( "A", BooleanResultMapper::MapObject::A )
+        .value( "B", BooleanResultMapper::MapObject::B );
+
+    emscripten::class_<BooleanResultMapper>( "BooleanResultMapper" )
+        .constructor<>()
+        .function( "mapFaces", +[]( const BooleanResultMapper& m, const FaceBitSet& bs, BooleanResultMapper::MapObject obj )
+        {
+            return m.map( bs, obj );
+        } )
+        .function( "mapVerts", +[]( const BooleanResultMapper& m, const VertBitSet& bs, BooleanResultMapper::MapObject obj )
+        {
+            return m.map( bs, obj );
+        } )
+        .function( "newFaces", +[]( const BooleanResultMapper& m ) { return m.newFaces(); } )
+        .function( "filteredOldFaceBitSet", +[]( const BooleanResultMapper& m, const FaceBitSet& bs, BooleanResultMapper::MapObject obj )
+        {
+            return m.filteredOldFaceBitSet( bs, obj );
+        } )
+        .function( "getNew2OldFaceMap", +[]( const BooleanResultMapper& m, BooleanResultMapper::MapObject obj )
+        {
+            return m.getNew2OldFaceMap( obj );
+        } );
+
+    emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b, BooleanOperation op, BooleanResultMapper& mapper )
+    {
+        return boolean( *a, *b, op, nullptr, &mapper );
     } );
 }

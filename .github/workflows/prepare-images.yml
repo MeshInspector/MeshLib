@@ -216,12 +216,9 @@ jobs:
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
 
-  # Keep the floating `:latest` vcpkg tag pointing at master's current
-  # content-addressed image. The build job above is skipped on master whenever
-  # the image was already built by the PR (reuse), so `:latest` must be
-  # refreshed here independently — otherwise standalone pip-build runs, which
-  # fall back to `:latest`, would keep pulling a stale image. `imagetools
-  # create` retags server-side: no pull, no rebuild.
+  # Repoint `:latest` at master's current content-addressed vcpkg image, so
+  # the pip-build `:latest` fallback stays current even when the build above
+  # was skipped via reuse. Server-side retag: no pull, no rebuild.
   tag-vcpkg-latest:
     needs: linux-vcpkg-build-upload
     if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/master' && !inputs.disable_linux_vcpkg && (needs.linux-vcpkg-build-upload.result == 'success' || needs.linux-vcpkg-build-upload.result == 'skipped') }}

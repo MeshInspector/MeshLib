@@ -19,12 +19,8 @@ IF(MR_EMSCRIPTEN_SIMD)
   )
 ENDIF()
 string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS
-  "-s EXPORTED_RUNTIME_METHODS=[ccall]"
   "-s ALLOW_MEMORY_GROWTH=1"
   "-s LLD_REPORT_UNDEFINED=1"
-  "-s USE_WEBGL2=1"
-  "-s USE_GLFW=3"
-  "-s FULL_ES3=1"
   "-s STACK_SIZE=1048576" # required for GDCM
 )
 
@@ -59,14 +55,23 @@ ELSE()
   )
 ENDIF()
 
-IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+IF(MESHLIB_BUILD_MRVIEWER)
   string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}
-    "-s ASYNCIFY"
-    # FIXME: comment required
-    "-Wno-limited-postlink-optimizations"
+    "-s EXPORTED_RUNTIME_METHODS=[ccall]"
+    "-s USE_WEBGL2=1"
+    "-s USE_GLFW=3"
+    "-s FULL_ES3=1"
   )
 
-  add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
+  IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+    string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}
+      "-s ASYNCIFY"
+      # FIXME: comment required
+      "-Wno-limited-postlink-optimizations"
+    )
+
+    add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
+  ENDIF()
 ENDIF()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}")

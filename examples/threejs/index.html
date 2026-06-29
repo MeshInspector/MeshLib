@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeshLib &times; Three.js</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #1a1c20; color: #e7e9ee; overflow: hidden; }
+    #app { position: fixed; inset: 0; }
+    #panel {
+      position: fixed; top: 12px; left: 12px; z-index: 10; width: 248px;
+      background: rgba(28,30,36,.92); border: 1px solid #3a3f4b; border-radius: 10px;
+      padding: 14px 16px; backdrop-filter: blur(6px); font-size: 13px; line-height: 1.5;
+    }
+    #panel h1 { font-size: 14px; margin: 0 0 10px; font-weight: 650; }
+    #panel label { display: block; margin: 10px 0 4px; color: #aeb4c2; font-size: 12px; }
+    select, input[type=range], button {
+      width: 100%; box-sizing: border-box; background: #23262e; color: #e7e9ee;
+      border: 1px solid #3a3f4b; border-radius: 6px; padding: 6px 8px; font: inherit;
+    }
+    button { cursor: pointer; margin-top: 12px; background: #2f6df0; border-color: #2f6df0; font-weight: 600; }
+    button:hover { background: #3b78f5; }
+    button:disabled { opacity: .5; cursor: default; }
+    #stats { margin-top: 12px; font-size: 12px; color: #aeb4c2; white-space: pre-line; }
+    #err { color: #ff8d8d; margin-top: 8px; font-size: 12px; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="panel">
+    <h1>MeshLib &times; Three.js</h1>
+    <div>A box and a sphere, combined by MeshLib's CSG kernel and simplified with its
+      decimator &mdash; all in WebAssembly, rendered by Three.js.</div>
+
+    <label for="op">Boolean operation</label>
+    <select id="op">
+      <option value="Union" selected>Union (A &cup; B)</option>
+      <option value="Intersection">Intersection (A &cap; B)</option>
+      <option value="DifferenceAB">Difference (A &minus; B)</option>
+      <option value="DifferenceBA">Difference (B &minus; A)</option>
+    </select>
+
+    <label for="ratio">Keep <span id="ratioVal">100</span>% of triangles</label>
+    <input id="ratio" type="range" min="5" max="100" value="100" step="5" />
+
+    <button id="run">Recompute</button>
+    <div id="stats"></div>
+    <div id="err"></div>
+  </div>
+  <div id="app"></div>
+
+  <script type="module" src="./demo.js"></script>
+</body>
+</html>

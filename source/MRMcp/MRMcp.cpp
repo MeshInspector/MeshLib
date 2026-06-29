@@ -6,6 +6,7 @@
 #include "MRMesh/MRBase64.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRUITestEngineControl.h"
@@ -237,6 +238,11 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         return;
     }
 
+    // Analytics: one event per genuine tool invocation. Emit the tool id only
+    // (bounded, low-cardinality) — never args, which can carry file paths or
+    // object names. Consumed by the host application's telemetry listener.
+    TelemetrySignal( "MCP Tool: " + toolId );
+
     nlohmann::json args = nlohmann::json::object();
     if ( isGet )
     {
@@ -269,16 +275,24 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     }
     catch ( const fastmcpp::NotFoundError& e )
     {
+        // Distinctive per-type failure signals (vs. one generic string) so analytics
+        // can break failures down by cause. Tool id only — never e.what(), which is
+        // unbounded and may carry object names or file paths (PII / high cardinality),
+        // matching the invocation event above. The text is still returned to the
+        // caller via writeJsonError below.
+        TelemetrySignal( "MCP Tool Not Found Failed: " + toolId );
         writeJsonError( res, 404, e.what(), RpcErrorCode::MethodNotFound );
         return;
     }
     catch ( const fastmcpp::ValidationError& e )
     {
+        TelemetrySignal( "MCP Tool Validation Failed: " + toolId );
         writeJsonError( res, 400, e.what(), RpcErrorCode::InvalidParams );
         return;
     }
     catch ( const std::exception& e )
     {
+        TelemetrySignal( "MCP Tool Failed: " + toolId );
         writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
         return;
     }
